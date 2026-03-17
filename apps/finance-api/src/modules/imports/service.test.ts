@@ -12,7 +12,7 @@ import { clearCache } from "./lib/ai-categorizer.js";
  */
 
 /** Shape of a row returned from the entities SQLite table. */
-type EntityRow = { name: string; id: string; last_edited_time: string };
+type EntityRow = { name: string; id: string; notion_id: string | null; last_edited_time: string };
 
 // Mock Notion client
 const mockNotionQuery = vi.fn();
