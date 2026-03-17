@@ -154,12 +154,12 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     INSERT INTO transactions (
       id, notion_id, description, account, amount, date, type, tags,
       entity_id, entity_name, location, country,
-      related_transaction_id, notes, last_edited_time
+      related_transaction_id, notes, checksum, raw_row, last_edited_time
     )
     VALUES (
       @id, @notionId, @description, @account, @amount, @date, @type, @tags,
       @entityId, @entityName, @location, @country,
-      @relatedTransactionId, @notes, @lastEditedTime
+      @relatedTransactionId, @notes, @checksum, @rawRow, @lastEditedTime
     )
   `
   ).run({
@@ -177,6 +177,8 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     country: input.country ?? null,
     relatedTransactionId: input.relatedTransactionId ?? null,
     notes: input.notes ?? null,
+    checksum: input.checksum ?? null,
+    rawRow: input.rawRow ?? null,
     lastEditedTime: now,
   });
 
