@@ -29,8 +29,8 @@ async function main(): Promise<void> {
   // 1. Parse ING CSV format
   // 2. Normalise dates and amounts
   // 3. Match entities via entity-matcher
-  // 4. Deduplicate against existing Notion records
-  // 5. Write new transactions to Notion (if --execute)
+  // 4. Deduplicate against existing SQLite records
+  // 5. Write new transactions to SQLite (if --execute)
 
   console.log('[import-ing] Not yet implemented');
 }

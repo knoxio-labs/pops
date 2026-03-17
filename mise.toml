@@ -204,11 +204,6 @@ description = "Show database statistics"
 dir = "packages/import-tools"
 run = "yarn audit"
 
-[tasks."migrate:tags"]
-description = "Migrate Notion Category + booleans → Tags (dry-run by default, add --execute to write)"
-dir = "packages/import-tools"
-run = "yarn tsx src/migrate-notion-tags.ts $@"
-
 # ============================================================================
 # Docker Operations
 # ============================================================================

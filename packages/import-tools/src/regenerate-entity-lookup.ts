@@ -1,6 +1,6 @@
 /**
- * Rebuild entity_lookup.json from the Notion Entities database.
- * Maps entity name -> Notion page URL for use by import scripts.
+ * Rebuild entity_lookup.json from the entities table.
+ * Maps entity name -> entity ID for use by import scripts.
  *
  * Usage: yarn entities:lookup
  */

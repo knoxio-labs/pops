@@ -1,5 +1,5 @@
 /**
- * Batch create entities in Notion Entities database.
+ * Batch create entities in the entities table.
  * Also regenerates entity_lookup.json after creation.
  *
  * Usage: yarn entities:create [--execute]
