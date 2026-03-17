@@ -48,7 +48,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.list({});
     const item = result.data[0];
-    expect(item).toHaveProperty("notionId");
+    expect(item).toHaveProperty("id");
     expect(item).toHaveProperty("itemName", "MacBook Pro");
     expect(item).toHaveProperty("purchaseDate", "2025-01-15");
     expect(item).toHaveProperty("warrantyExpires", "2027-01-15");
@@ -56,7 +56,6 @@ describe("inventory.list", () => {
     expect(item).toHaveProperty("resaleValue", 1800.0);
     expect(item).toHaveProperty("lastEditedTime", "2025-06-15T10:00:00.000Z");
     // No snake_case leaking
-    expect(item).not.toHaveProperty("notion_id");
     expect(item).not.toHaveProperty("item_name");
     expect(item).not.toHaveProperty("last_edited_time");
   });
@@ -214,7 +213,7 @@ describe("inventory.get", () => {
     const id = seedInventoryItem(db, { item_name: "MacBook Pro" });
 
     const result = await caller.inventory.get({ id });
-    expect(result.data.notionId).toBe(id);
+    expect(result.data.id).toBe(id);
     expect(result.data.itemName).toBe("MacBook Pro");
   });
 
@@ -232,7 +231,7 @@ describe("inventory.create", () => {
 
     expect(result.message).toBe("Inventory item created");
     expect(result.data.itemName).toBe("MacBook Pro");
-    expect(result.data.notionId).toBeDefined();
+    expect(result.data.id).toBeDefined();
     expect(result.data.inUse).toBe(false);
     expect(result.data.deductible).toBe(false);
     expect(result.data.brand).toBeNull();
@@ -371,7 +370,7 @@ describe("inventory.update", () => {
     await caller.inventory.update({ id, data: { brand: "Apple" } });
 
     const row = db
-      .prepare("SELECT last_edited_time FROM home_inventory WHERE notion_id = ?")
+      .prepare("SELECT last_edited_time FROM home_inventory WHERE id = ?")
       .get(id) as { last_edited_time: string };
     expect(row.last_edited_time).not.toBe("2020-01-01T00:00:00.000Z");
   });
@@ -413,7 +412,7 @@ describe("inventory.delete", () => {
     expect(result.message).toBe("Inventory item deleted");
 
     // Verify gone from DB
-    const row = db.prepare("SELECT * FROM home_inventory WHERE notion_id = ?").get(id);
+    const row = db.prepare("SELECT * FROM home_inventory WHERE id = ?").get(id);
     expect(row).toBeUndefined();
   });
 
