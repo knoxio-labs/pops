@@ -1,6 +1,7 @@
 /**
  * Shared test utilities for finance-api.
- * Provides in-memory SQLite setup, tRPC caller factory, Notion mocking, and seed helpers.
+ * Provides in-memory SQLite setup, tRPC caller factory, and seed helpers.
+ * Notion mocking is re-exported for the imports module which still uses Notion.
  */
 import type { Database } from "better-sqlite3";
 import BetterSqlite3 from "better-sqlite3";
@@ -11,20 +12,20 @@ import type { Context } from "../trpc.js";
 import {
   createMockNotionClient,
   resetNotionMock,
-  getMockPages,
   seedMockPage,
 } from "./notion-mock.js";
 import { setMockNotionClient, clearMockNotionClient, getMockNotionClient } from "./test-globals.js";
 
 /**
- * Re-export Notion mock utilities for use in tests.
+ * Re-export Notion mock utilities for use in tests that still need them
+ * (e.g. imports module tests).
  */
 export {
   resetNotionMock,
-  getMockPages,
   setMockNotionClient,
   clearMockNotionClient,
   getMockNotionClient,
+  seedMockPage,
 };
 
 /**
@@ -39,7 +40,7 @@ export function createCaller(authenticated = true): ReturnType<typeof appRouter.
 }
 
 /**
- * Create an in-memory SQLite DB with the entities table schema.
+ * Create an in-memory SQLite DB with the full schema.
  * Call this in beforeEach to get a fresh DB per test.
  */
 export function createTestDb(): Database {
@@ -155,7 +156,6 @@ export function createTestDb(): Database {
 
 /**
  * Seed a single entity row into the test DB.
- * Inserts into both SQLite and mock Notion to keep stores in sync.
  * Returns the id.
  */
 export function seedEntity(
@@ -174,7 +174,6 @@ export function seedEntity(
 ): string {
   const id = overrides.id ?? crypto.randomUUID();
 
-  // Insert into SQLite
   db.prepare(
     `
     INSERT INTO entities (id, name, type, abn, aliases, default_transaction_type, default_tags, notes, last_edited_time)
@@ -192,17 +191,11 @@ export function seedEntity(
     last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
   });
 
-  // Also seed into mock Notion
-  seedMockPage(id, {
-    Name: { title: [{ text: { content: overrides.name ?? "Test Entity" } }] },
-  });
-
   return id;
 }
 
 /**
  * Seed a single transaction row into the test DB.
- * Inserts into both SQLite and mock Notion to keep stores in sync.
  * Returns the id.
  */
 export function seedTransaction(
@@ -226,7 +219,6 @@ export function seedTransaction(
 ): string {
   const id = overrides.id ?? crypto.randomUUID();
 
-  // Insert into SQLite
   db.prepare(
     `
     INSERT INTO transactions (
@@ -257,17 +249,11 @@ export function seedTransaction(
     last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
   });
 
-  // Also seed into mock Notion
-  seedMockPage(id, {
-    Description: { title: [{ text: { content: overrides.description ?? "Test Transaction" } }] },
-  });
-
   return id;
 }
 
 /**
  * Seed a single inventory item row into the test DB.
- * Inserts into both SQLite and mock Notion to keep stores in sync.
  * Returns the id.
  */
 export function seedInventoryItem(
@@ -296,7 +282,6 @@ export function seedInventoryItem(
 ): string {
   const id = overrides.id ?? crypto.randomUUID();
 
-  // Insert into SQLite
   db.prepare(
     `
     INSERT INTO home_inventory (
@@ -332,17 +317,11 @@ export function seedInventoryItem(
     last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
   });
 
-  // Also seed into mock Notion
-  seedMockPage(id, {
-    "Item Name": { title: [{ text: { content: overrides.item_name ?? "Test Item" } }] },
-  });
-
   return id;
 }
 
 /**
  * Seed a single budget row into the test DB.
- * Inserts into both SQLite and mock Notion to keep stores in sync.
  * Returns the id.
  */
 export function seedBudget(
@@ -359,7 +338,6 @@ export function seedBudget(
 ): string {
   const id = overrides.id ?? crypto.randomUUID();
 
-  // Insert into SQLite
   db.prepare(
     `
     INSERT INTO budgets (id, category, period, amount, active, notes, last_edited_time)
@@ -375,17 +353,11 @@ export function seedBudget(
     last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
   });
 
-  // Also seed into mock Notion
-  seedMockPage(id, {
-    Category: { title: [{ text: { content: overrides.category ?? "Test Category" } }] },
-  });
-
   return id;
 }
 
 /**
  * Seed a single wish list item row into the test DB.
- * Inserts into both SQLite and mock Notion to keep stores in sync.
  * Returns the id.
  */
 export function seedWishListItem(
@@ -403,7 +375,6 @@ export function seedWishListItem(
 ): string {
   const id = overrides.id ?? crypto.randomUUID();
 
-  // Insert into SQLite
   db.prepare(
     `
     INSERT INTO wish_list (id, item, target_amount, saved, priority, url, notes, last_edited_time)
@@ -420,24 +391,21 @@ export function seedWishListItem(
     last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
   });
 
-  // Also seed into mock Notion
-  seedMockPage(id, {
-    Item: { title: [{ text: { content: overrides.item ?? "Test Wish List Item" } }] },
-  });
-
   return id;
 }
 
 /**
  * Setup helper for test suites. Call in beforeEach/afterEach.
  * Returns the test DB, a tRPC caller, and the mock Notion client.
+ * Note: Notion mocking is still initialized because the imports module
+ * still uses Notion (until tb-008 removes it).
  */
 export function setupTestContext() {
   let db: Database;
   let notionMock: Client;
 
   function setup(): { db: Database; caller: ReturnType<typeof createCaller>; notionMock: Client } {
-    // Set required env vars for tests
+    // Set required env vars for tests (still needed by imports module)
     process.env.NOTION_API_TOKEN = "test-token";
     process.env.NOTION_BALANCE_SHEET_ID = "test-balance-sheet-id";
     process.env.NOTION_ENTITIES_DB_ID = "test-entities-db-id";
@@ -448,7 +416,7 @@ export function setupTestContext() {
     db = createTestDb();
     setDb(db);
 
-    // Initialize Notion mock
+    // Initialize Notion mock (still needed by imports module)
     notionMock = createMockNotionClient();
     setMockNotionClient(notionMock);
     resetNotionMock();
