@@ -181,7 +181,7 @@ ssh -p 2222 pops@pops.local
 cd /opt/pops
 docker compose logs -f finance-api
 docker compose logs -f pops-pwa
-docker compose logs -f moltbot
+docker compose logs -f metabase
 
 # Check service health
 docker compose ps

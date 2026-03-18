@@ -63,10 +63,16 @@
   ansible.builtin.command:
     cmd: >-
       docker compose run --rm finance-api
-      node -e "require('./dist/db/schema.js').initializeSchema(require('better-sqlite3')('/data/sqlite/pops.db'))"
+      node -e "const s=require('./dist/db/schema.js');const b=require('better-sqlite3');s.initializeSchema(b('/data/sqlite/pops.db'));console.log('Database initialized')"
     chdir: "{{ docker_compose_dir }}"
   become: true
   become_user: "{{ pops_user }}"
   when: sqlite_db_check.rc == 1
+  register: db_init_result
   async: 120
   poll: 10
+
+- name: Report database initialization failure
+  ansible.builtin.fail:
+    msg: "Database initialization failed: {{ db_init_result.stderr | default('unknown error') }}"
+  when: db_init_result is defined and db_init_result.rc is defined and db_init_result.rc != 0
