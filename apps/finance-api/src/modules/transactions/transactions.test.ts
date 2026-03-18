@@ -56,6 +56,7 @@ describe("transactions.list", () => {
     expect(txn).toHaveProperty("relatedTransactionId", "txn-456");
     expect(txn).toHaveProperty("lastEditedTime", "2025-06-15T10:00:00.000Z");
     // No snake_case leaking
+    expect(txn).not.toHaveProperty("notion_id");
     expect(txn).not.toHaveProperty("entity_id");
     expect(txn).not.toHaveProperty("last_edited_time");
     // Removed boolean fields

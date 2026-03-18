@@ -63,6 +63,7 @@ describe("budgets.list", () => {
     expect(budget).toHaveProperty("notes", "Monthly grocery budget");
     expect(budget).toHaveProperty("lastEditedTime", "2025-06-15T10:00:00.000Z");
     // No snake_case leaking
+    expect(budget).not.toHaveProperty("notion_id");
     expect(budget).not.toHaveProperty("last_edited_time");
   });
 

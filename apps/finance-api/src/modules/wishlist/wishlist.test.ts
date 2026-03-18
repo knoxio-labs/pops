@@ -52,6 +52,7 @@ describe("wishlist.list", () => {
     expect(wishItem).toHaveProperty("remainingAmount");
     expect(wishItem).toHaveProperty("lastEditedTime", "2025-06-15T10:00:00.000Z");
     // No snake_case leaking
+    expect(wishItem).not.toHaveProperty("notion_id");
     expect(wishItem).not.toHaveProperty("target_amount");
     expect(wishItem).not.toHaveProperty("last_edited_time");
   });

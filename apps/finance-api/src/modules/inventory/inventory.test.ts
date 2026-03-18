@@ -56,6 +56,7 @@ describe("inventory.list", () => {
     expect(item).toHaveProperty("resaleValue", 1800.0);
     expect(item).toHaveProperty("lastEditedTime", "2025-06-15T10:00:00.000Z");
     // No snake_case leaking
+    expect(item).not.toHaveProperty("notion_id");
     expect(item).not.toHaveProperty("item_name");
     expect(item).not.toHaveProperty("last_edited_time");
   });

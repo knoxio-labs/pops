@@ -26,6 +26,10 @@ const INCLUDED_MIGRATIONS = [
  * Initialize a fresh SQLite database with the full POPS schema.
  * Safe to call on an empty file or an already-initialized database
  * (all statements use CREATE TABLE IF NOT EXISTS).
+ *
+ * Note: SQLite DEFAULTs use `lower(hex(randomblob(16)))` (32-char hex) as a
+ * fallback for direct SQL inserts. Service code always provides proper UUIDs
+ * via `crypto.randomUUID()` (RFC 4122 format with dashes).
  */
 export function initializeSchema(db: BetterSqlite3.Database): void {
   db.exec(`

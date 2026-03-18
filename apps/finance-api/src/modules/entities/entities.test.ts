@@ -54,6 +54,7 @@ describe("entities.list", () => {
     expect(entity).toHaveProperty("defaultTags", ["Groceries"]);
     expect(entity).toHaveProperty("lastEditedTime", "2025-06-15T10:00:00.000Z");
     // No snake_case leaking
+    expect(entity).not.toHaveProperty("notion_id");
     expect(entity).not.toHaveProperty("last_edited_time");
   });
 
