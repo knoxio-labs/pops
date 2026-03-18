@@ -1,5 +1,5 @@
 /**
- * Match novated lease reimbursement pairs in Notion Balance Sheet.
+ * Match novated lease reimbursement pairs in the transactions table.
  * Links payroll deductions to the original lease charges.
  *
  * Usage: yarn match:novated [--execute]
