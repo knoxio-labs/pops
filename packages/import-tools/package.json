@@ -23,7 +23,7 @@
     "match:novated": "tsx src/match-novated.ts",
     "entities:create": "tsx src/create-entities.ts",
     "entities:lookup": "tsx src/regenerate-entity-lookup.ts",
-    "audit": "echo 'audit: not yet implemented for SQLite'"
+    "audit": "tsx src/audit.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
