@@ -11,7 +11,6 @@ import type { Context } from "../trpc.js";
 import {
   createMockNotionClient,
   resetNotionMock,
-  getMockPages,
   seedMockPage,
 } from "./notion-mock.js";
 import { setMockNotionClient, clearMockNotionClient, getMockNotionClient } from "./test-globals.js";
@@ -22,7 +21,6 @@ import { setMockNotionClient, clearMockNotionClient, getMockNotionClient } from 
  */
 export {
   resetNotionMock,
-  getMockPages,
   setMockNotionClient,
   clearMockNotionClient,
   getMockNotionClient,
