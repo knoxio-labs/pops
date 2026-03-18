@@ -1,6 +1,6 @@
 /**
  * Up Bank API batch import script.
- * Fetches transactions from Up Bank API and imports to Notion.
+ * Fetches transactions from Up Bank API and imports to SQLite.
  *
  * Usage: yarn import:up [--since 2026-01-01] [--execute]
  */
@@ -24,8 +24,8 @@ async function main(): Promise<void> {
   // 1. Fetch transactions from Up Bank API (with optional --since filter)
   // 2. Normalise to ParsedTransaction format
   // 3. Match entities via entity-matcher
-  // 4. Deduplicate against existing Notion records
-  // 5. Write new transactions to Notion (if --execute)
+  // 4. Deduplicate against existing SQLite records
+  // 5. Write new transactions to SQLite (if --execute)
 
   console.log('[import-up] Not yet implemented — migrate from extract_personal_accounts.js');
 }

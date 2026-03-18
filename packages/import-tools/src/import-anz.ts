@@ -3,7 +3,7 @@
  * Imports transactions from ANZ Everyday and ANZ Frequent Flyer Black accounts.
  *
  * Usage: yarn import:anz --csv path/to/anz-export.csv [--execute]
- * Without --execute, runs in dry-run mode (no writes to Notion).
+ * Without --execute, runs in dry-run mode (no writes to database).
  */
 
 import type { RunMode } from './lib/types.js';
@@ -30,8 +30,8 @@ async function main(): Promise<void> {
   // 1. Parse CSV with csv-parser
   // 2. Normalise dates and amounts
   // 3. Match entities via entity-matcher
-  // 4. Deduplicate against existing Notion records
-  // 5. Write new transactions to Notion (if --execute)
+  // 4. Deduplicate against existing SQLite records
+  // 5. Write new transactions to SQLite (if --execute)
 
   console.log('[import-anz] Not yet implemented — migrate from import_anz.js');
 }

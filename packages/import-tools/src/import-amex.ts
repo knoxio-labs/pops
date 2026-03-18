@@ -29,8 +29,8 @@ async function main(): Promise<void> {
   // 1. Parse Amex CSV (handles multiline fields, Town/City extraction)
   // 2. Normalise dates and amounts
   // 3. Match entities via entity-matcher
-  // 4. Deduplicate against existing Notion records
-  // 5. Write new transactions to Notion (if --execute)
+  // 4. Deduplicate against existing SQLite records
+  // 5. Write new transactions to SQLite (if --execute)
 
   console.log('[import-amex] Not yet implemented — migrate from import_amex.js');
 }

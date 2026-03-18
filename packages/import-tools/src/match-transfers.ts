@@ -1,6 +1,6 @@
 /**
- * Match inter-account transfer pairs in Notion Balance Sheet.
- * Links matching debit/credit transactions across accounts via Related Transaction relation.
+ * Match inter-account transfer pairs in the transactions table.
+ * Links matching debit/credit transactions across accounts via related_transaction_id.
  *
  * Usage: yarn match:transfers [--execute]
  */
@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   console.log(`[match-transfers] Mode: ${mode}`);
 
   // TODO: Migrate from ~/Downloads/transactions/match_transfers.js
-  // 1. Query Notion for unlinked transactions
+  // 1. Query SQLite for unlinked transactions
   // 2. Find matching pairs (same date, opposite amounts, different accounts)
   // 3. Link via Related Transaction relation (if --execute)
 
