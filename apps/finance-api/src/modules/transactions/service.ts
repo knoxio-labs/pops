@@ -71,10 +71,10 @@ export function listTransactions(
   return { rows, total: countRow.total };
 }
 
-/** Get a single transaction by notion_id. Throws NotFoundError if missing. */
+/** Get a single transaction by id. Throws NotFoundError if missing. */
 export function getTransaction(id: string): TransactionRow {
   const db = getDb();
-  const row = db.prepare("SELECT * FROM transactions WHERE notion_id = ?").get(id) as
+  const row = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as
     | TransactionRow
     | undefined;
 
@@ -94,18 +94,18 @@ export function createTransaction(input: CreateTransactionInput): TransactionRow
   db.prepare(
     `
     INSERT INTO transactions (
-      notion_id, description, account, amount, date, type, tags,
+      id, description, account, amount, date, type, tags,
       entity_id, entity_name, location, country,
       related_transaction_id, notes, last_edited_time
     )
     VALUES (
-      @notionId, @description, @account, @amount, @date, @type, @tags,
+      @id, @description, @account, @amount, @date, @type, @tags,
       @entityId, @entityName, @location, @country,
       @relatedTransactionId, @notes, @lastEditedTime
     )
   `
   ).run({
-    notionId: id,
+    id,
     description: input.description,
     account: input.account,
     amount: input.amount,
@@ -138,7 +138,7 @@ export function updateTransaction(
   getTransaction(id);
 
   const fields: string[] = [];
-  const params: Record<string, string | number | null> = { notionId: id };
+  const params: Record<string, string | number | null> = { id };
 
   if (input.description !== undefined) {
     fields.push("description = @description");
@@ -193,7 +193,7 @@ export function updateTransaction(
     fields.push("last_edited_time = @lastEditedTime");
     params["lastEditedTime"] = new Date().toISOString();
 
-    db.prepare(`UPDATE transactions SET ${fields.join(", ")} WHERE notion_id = @notionId`).run(
+    db.prepare(`UPDATE transactions SET ${fields.join(", ")} WHERE id = @id`).run(
       params
     );
   }
@@ -211,6 +211,6 @@ export function deleteTransaction(id: string): void {
   // Verify it exists first
   getTransaction(id);
 
-  const result = db.prepare("DELETE FROM transactions WHERE notion_id = ?").run(id);
+  const result = db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
   if (result.changes === 0) throw new NotFoundError("Transaction", id);
 }

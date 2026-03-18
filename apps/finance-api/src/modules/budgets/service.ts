@@ -3,7 +3,6 @@
  * SQLite is the source of truth. All operations are local.
  * All SQL uses parameterized queries (no string interpolation).
  */
-import crypto from "crypto";
 import { getDb } from "../../db.js";
 import { NotFoundError, ConflictError } from "../../shared/errors.js";
 import type { BudgetRow, CreateBudgetInput, UpdateBudgetInput } from "./types.js";
@@ -57,10 +56,10 @@ export function listBudgets(
   return { rows, total: countRow.total };
 }
 
-/** Get a single budget by notion_id. Throws NotFoundError if missing. */
+/** Get a single budget by id. Throws NotFoundError if missing. */
 export function getBudget(id: string): BudgetRow {
   const db = getDb();
-  const row = db.prepare("SELECT * FROM budgets WHERE notion_id = ?").get(id) as
+  const row = db.prepare("SELECT * FROM budgets WHERE id = ?").get(id) as
     | BudgetRow
     | undefined;
 
@@ -79,10 +78,10 @@ export function createBudget(input: CreateBudgetInput): BudgetRow {
   // Check for duplicate category+period combination
   const existing = db
     .prepare(
-      "SELECT notion_id FROM budgets WHERE category = ? AND (period = ? OR (period IS NULL AND ? IS NULL))"
+      "SELECT id FROM budgets WHERE category = ? AND (period = ? OR (period IS NULL AND ? IS NULL))"
     )
     .get(input.category, input.period ?? null, input.period ?? null) as
-    | { notion_id: string }
+    | { id: string }
     | undefined;
 
   if (existing) {
@@ -97,11 +96,11 @@ export function createBudget(input: CreateBudgetInput): BudgetRow {
 
   db.prepare(
     `
-    INSERT INTO budgets (notion_id, category, period, amount, active, notes, last_edited_time)
-    VALUES (@notionId, @category, @period, @amount, @active, @notes, @lastEditedTime)
+    INSERT INTO budgets (id, category, period, amount, active, notes, last_edited_time)
+    VALUES (@id, @category, @period, @amount, @active, @notes, @lastEditedTime)
   `
   ).run({
-    notionId: id,
+    id,
     category: input.category,
     period: input.period ?? null,
     amount: input.amount ?? null,
@@ -124,7 +123,7 @@ export function updateBudget(id: string, input: UpdateBudgetInput): BudgetRow {
   getBudget(id);
 
   const fields: string[] = [];
-  const params: Record<string, string | number | null> = { notionId: id };
+  const params: Record<string, string | number | null> = { id };
 
   if (input.category !== undefined) {
     fields.push("category = @category");
@@ -151,7 +150,7 @@ export function updateBudget(id: string, input: UpdateBudgetInput): BudgetRow {
     fields.push("last_edited_time = @lastEditedTime");
     params["lastEditedTime"] = new Date().toISOString();
 
-    db.prepare(`UPDATE budgets SET ${fields.join(", ")} WHERE notion_id = @notionId`).run(params);
+    db.prepare(`UPDATE budgets SET ${fields.join(", ")} WHERE id = @id`).run(params);
   }
 
   return getBudget(id);
@@ -167,6 +166,6 @@ export function deleteBudget(id: string): void {
   // Verify it exists first
   getBudget(id);
 
-  const result = db.prepare("DELETE FROM budgets WHERE notion_id = ?").run(id);
+  const result = db.prepare("DELETE FROM budgets WHERE id = ?").run(id);
   if (result.changes === 0) throw new NotFoundError("Budget", id);
 }

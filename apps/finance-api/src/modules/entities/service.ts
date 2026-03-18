@@ -47,10 +47,10 @@ export function listEntities(
   return { rows, total: countRow.total };
 }
 
-/** Get a single entity by notion_id. Throws NotFoundError if missing. */
+/** Get a single entity by id. Throws NotFoundError if missing. */
 export function getEntity(id: string): EntityRow {
   const db = getDb();
-  const row = db.prepare("SELECT * FROM entities WHERE notion_id = ?").get(id) as
+  const row = db.prepare("SELECT * FROM entities WHERE id = ?").get(id) as
     | EntityRow
     | undefined;
 
@@ -65,8 +65,8 @@ export function getEntity(id: string): EntityRow {
 export function createEntity(input: CreateEntityInput): EntityRow {
   const db = getDb();
 
-  const existing = db.prepare("SELECT notion_id FROM entities WHERE name = ?").get(input.name) as
-    | { notion_id: string }
+  const existing = db.prepare("SELECT id FROM entities WHERE name = ?").get(input.name) as
+    | { id: string }
     | undefined;
   if (existing) {
     throw new ConflictError(`Entity with name '${input.name}' already exists`);
@@ -77,11 +77,11 @@ export function createEntity(input: CreateEntityInput): EntityRow {
 
   db.prepare(
     `
-    INSERT INTO entities (notion_id, name, type, abn, aliases, default_transaction_type, default_tags, notes, last_edited_time)
-    VALUES (@notionId, @name, @type, @abn, @aliases, @defaultTransactionType, @defaultTags, @notes, @lastEditedTime)
+    INSERT INTO entities (id, name, type, abn, aliases, default_transaction_type, default_tags, notes, last_edited_time)
+    VALUES (@id, @name, @type, @abn, @aliases, @defaultTransactionType, @defaultTags, @notes, @lastEditedTime)
   `
   ).run({
-    notionId: id,
+    id,
     name: input.name,
     type: input.type ?? null,
     abn: input.abn ?? null,
@@ -106,7 +106,7 @@ export function updateEntity(id: string, input: UpdateEntityInput): EntityRow {
   getEntity(id);
 
   const fields: string[] = [];
-  const params: Record<string, string | number | null> = { notionId: id };
+  const params: Record<string, string | number | null> = { id };
 
   if (input.name !== undefined) {
     fields.push("name = @name");
@@ -141,7 +141,7 @@ export function updateEntity(id: string, input: UpdateEntityInput): EntityRow {
     fields.push("last_edited_time = @lastEditedTime");
     params["lastEditedTime"] = new Date().toISOString();
 
-    db.prepare(`UPDATE entities SET ${fields.join(", ")} WHERE notion_id = @notionId`).run(params);
+    db.prepare(`UPDATE entities SET ${fields.join(", ")} WHERE id = @id`).run(params);
   }
 
   return getEntity(id);
@@ -157,6 +157,6 @@ export function deleteEntity(id: string): void {
   // Verify it exists first
   getEntity(id);
 
-  const result = db.prepare("DELETE FROM entities WHERE notion_id = ?").run(id);
+  const result = db.prepare("DELETE FROM entities WHERE id = ?").run(id);
   if (result.changes === 0) throw new NotFoundError("Entity", id);
 }

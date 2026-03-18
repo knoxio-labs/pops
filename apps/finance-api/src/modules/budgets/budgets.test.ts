@@ -283,8 +283,8 @@ describe("budgets.create", () => {
 
     // Verify all fields persisted in SQLite
     const row = db
-      .prepare("SELECT * FROM budgets WHERE notion_id = ?")
-      .get(result.data.notionId) as Record<string, unknown>;
+      .prepare("SELECT * FROM budgets WHERE id = ?")
+      .get(result.data.id) as Record<string, unknown>;
     expect(row).toBeDefined();
     expect(row.category).toBe("Groceries");
     expect(row.period).toBe("2025-06");
@@ -383,7 +383,7 @@ describe("budgets.update", () => {
     await caller.budgets.update({ id, data: { amount: 600 } });
 
     // Verify SQLite was updated
-    const row = db.prepare("SELECT amount FROM budgets WHERE notion_id = ?").get(id) as {
+    const row = db.prepare("SELECT amount FROM budgets WHERE id = ?").get(id) as {
       amount: number;
     };
     expect(row.amount).toBe(600);
@@ -425,7 +425,7 @@ describe("budgets.delete", () => {
     await caller.budgets.delete({ id });
 
     // Verify row is gone from SQLite
-    const row = db.prepare("SELECT * FROM budgets WHERE notion_id = ?").get(id);
+    const row = db.prepare("SELECT * FROM budgets WHERE id = ?").get(id);
     expect(row).toBeUndefined();
   });
 });
