@@ -147,6 +147,22 @@ describe("comparisons.record", () => {
       }),
     ).rejects.toThrow(TRPCError);
   });
+
+  it("throws BAD_REQUEST when winner does not match either media", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    await expect(
+      caller.media.comparisons.record({
+        dimensionId: dimId,
+        mediaAType: "movie",
+        mediaAId: 1,
+        mediaBType: "movie",
+        mediaBId: 2,
+        winnerType: "movie",
+        winnerId: 999,
+      }),
+    ).rejects.toThrow(TRPCError);
+  });
 });
 
 describe("comparisons.listForMedia", () => {

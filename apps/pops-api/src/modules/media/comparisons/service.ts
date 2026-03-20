@@ -2,13 +2,13 @@
  * Comparisons service — dimensions, 1v1 comparisons, and Elo scores.
  */
 import { eq, and, or, asc, count, desc } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
+import { getDb, getDrizzle } from "../../../db.js";
 import {
   comparisonDimensions,
   comparisons,
   mediaScores,
 } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { NotFoundError, ConflictError, ValidationError } from "../../../shared/errors.js";
 import type {
   ComparisonDimensionRow,
   ComparisonRow,
@@ -105,38 +105,57 @@ function expectedScore(ratingA: number, ratingB: number): number {
 
 /**
  * Record a 1v1 comparison and update Elo scores.
+ * Validates that the winner matches one of the two media items.
+ * Wraps insert + Elo update in a transaction for consistency.
  */
 export function recordComparison(
   input: RecordComparisonInput,
 ): ComparisonRow {
-  const db = getDrizzle();
+  const drizzleDb = getDrizzle();
 
   // Verify dimension exists
   getDimension(input.dimensionId);
 
-  // Insert comparison
-  const result = db
-    .insert(comparisons)
-    .values({
-      dimensionId: input.dimensionId,
-      mediaAType: input.mediaAType,
-      mediaAId: input.mediaAId,
-      mediaBType: input.mediaBType,
-      mediaBId: input.mediaBId,
-      winnerType: input.winnerType,
-      winnerId: input.winnerId,
-    })
-    .run();
+  // Validate winner matches one of the two media items
+  const winnerIsA =
+    input.winnerType === input.mediaAType && input.winnerId === input.mediaAId;
+  const winnerIsB =
+    input.winnerType === input.mediaBType && input.winnerId === input.mediaBId;
 
-  // Update Elo scores
-  updateEloScores(input);
+  if (!winnerIsA && !winnerIsB) {
+    throw new ValidationError(
+      "Winner must match either media A or media B",
+    );
+  }
 
-  const row = db
-    .select()
-    .from(comparisons)
-    .where(eq(comparisons.id, Number(result.lastInsertRowid)))
-    .get();
-  if (!row) throw new Error("Failed to retrieve recorded comparison");
+  // Wrap insert + Elo update in a transaction
+  const rawDb = getDb();
+  const row = rawDb.transaction(() => {
+    const result = drizzleDb
+      .insert(comparisons)
+      .values({
+        dimensionId: input.dimensionId,
+        mediaAType: input.mediaAType,
+        mediaAId: input.mediaAId,
+        mediaBType: input.mediaBType,
+        mediaBId: input.mediaBId,
+        winnerType: input.winnerType,
+        winnerId: input.winnerId,
+      })
+      .run();
+
+    // Update Elo scores
+    updateEloScores(input);
+
+    const inserted = drizzleDb
+      .select()
+      .from(comparisons)
+      .where(eq(comparisons.id, Number(result.lastInsertRowid)))
+      .get();
+    if (!inserted) throw new Error("Failed to retrieve recorded comparison");
+    return inserted;
+  })();
+
   return row;
 }
 
