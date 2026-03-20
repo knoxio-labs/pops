@@ -43,6 +43,13 @@
       "when": 1773997925421,
       "tag": "0005_fancy_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1773998093484,
+      "tag": "0006_motionless_speed_demon",
+      "breakpoints": true
     }
   ]
 }
