@@ -63,6 +63,12 @@ export function getTvShow(id: number): TvShowRow {
   return row;
 }
 
+/** Look up a TV show by TVDB ID. Returns null if not found. */
+export function getTvShowByTvdbId(tvdbId: number): TvShowRow | null {
+  const db = getDrizzle();
+  return db.select().from(tvShows).where(eq(tvShows.tvdbId, tvdbId)).get() ?? null;
+}
+
 export function createTvShow(input: CreateTvShowInput): TvShowRow {
   const db = getDrizzle();
 
