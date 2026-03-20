@@ -79,7 +79,7 @@ describe("addToWatchlist", () => {
       mediaId: 100,
     });
 
-    expect(entry.priority).toBeNull();
+    expect(entry.priority).toBe(0); // Drizzle schema default
     expect(entry.notes).toBeNull();
   });
 
