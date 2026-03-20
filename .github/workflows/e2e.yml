@@ -48,15 +48,9 @@ jobs:
         env:
           CI: true
           # finance-api is started by Playwright's webServer config.
-          # These dummy values satisfy env.ts validation. Integration tests use named
-          # envs (?env=e2e), which automatically skip all external API calls (Notion,
-          # Claude) — no real network traffic is made during E2E tests.
-          NOTION_API_TOKEN: test-dummy-token
-          NOTION_BALANCE_SHEET_ID: test-balance-sheet-id
-          NOTION_ENTITIES_DB_ID: test-entities-db-id
-          NOTION_HOME_INVENTORY_ID: test-home-inventory-id
-          NOTION_BUDGET_ID: test-budget-id
-          NOTION_WISH_LIST_ID: test-wish-list-id
+          # These dummy values satisfy validation. Integration tests use named
+          # envs (?env=e2e), which automatically skip external API calls —
+          # no real network traffic is made during E2E tests.
           CLAUDE_API_KEY: test-dummy-key
           # Path is relative to the API server's working directory (apps/finance-api)
           SQLITE_PATH: ./data/pops.db
