@@ -14,12 +14,18 @@ See [roadmap.md](../roadmap.md) for sequencing and dependencies.
 | **AI — Inference** | Proactive monitoring, anomaly detection, smart automations. Autonomous — "do it for me." Moltbot alerts, scheduled analysis | 3 |
 | **Mobile** | Native iOS app and wall-mounted dashboard/HomePad mode | 5 |
 
+## Retroactive Specs
+
+| Theme | One-liner | Phase |
+|-------|-----------|-------|
+| **Finance — Product Spec** | Document what finance does as a product: data model, user flows, import pipeline, entity matching. Implementation-agnostic — survives a rewrite. [Fully specced](finance-spec/README.md) | — |
+
 ## App Themes
 
 | Theme | One-liner | Phase |
 |-------|-----------|-------|
-| **Media** | Movies and TV show tracking, categorisation, recommendations. Plex/Radarr/Sonarr/TMDB integration | 2 |
-| **Inventory** | Home inventory — items, warranties, purchase linking, Paperless-ngx receipts. Highest daily-use app | 2 |
+| **Media** | Movies and TV show tracking, preference learning, recommendations. Plex/Radarr/Sonarr/TMDB/TheTVDB integration | 2 |
+| **Inventory** | Home inventory — connectivity graph, hierarchical locations, photos, Paperless-ngx receipts, insurance reports. Highest daily-use app. [Fully specced](inventory/README.md) | 2 |
 | **Finance** | Polish existing finance app, reduce friction, add subscriptions tracking as a built-in feature | 2 |
 | **Fitness** | Gym and training log — exercises, sets, reps, progress. Health integrations (Apple Health, meals) come later | 2 |
 | **Documents** | Surfaces Paperless-ngx within POPS. Links receipts, warranties, manuals to items and transactions | 2 |
