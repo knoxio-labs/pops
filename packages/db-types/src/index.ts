@@ -18,6 +18,9 @@ import type { movies } from "./schema/movies.js";
 import type { tvShows } from "./schema/tv-shows.js";
 import type { seasons } from "./schema/seasons.js";
 import type { episodes } from "./schema/episodes.js";
+import type { comparisonDimensions } from "./schema/comparison-dimensions.js";
+import type { comparisons } from "./schema/comparisons.js";
+import type { mediaScores } from "./schema/media-scores.js";
 
 // Re-export Drizzle table objects for use in queries
 export {
@@ -33,6 +36,9 @@ export {
   tvShows,
   seasons,
   episodes,
+  comparisonDimensions,
+  comparisons,
+  mediaScores,
 } from "./schema/index.js";
 
 // Select types (what you get back from a SELECT query)
@@ -48,6 +54,9 @@ export type MovieRow = InferSelectModel<typeof movies>;
 export type TvShowRow = InferSelectModel<typeof tvShows>;
 export type SeasonRow = InferSelectModel<typeof seasons>;
 export type EpisodeRow = InferSelectModel<typeof episodes>;
+export type ComparisonDimensionRow = InferSelectModel<typeof comparisonDimensions>;
+export type ComparisonRow = InferSelectModel<typeof comparisons>;
+export type MediaScoreRow = InferSelectModel<typeof mediaScores>;
 
 // Insert types (what you pass to an INSERT statement)
 export type TransactionInsert = InferInsertModel<typeof transactions>;
@@ -62,6 +71,9 @@ export type MovieInsert = InferInsertModel<typeof movies>;
 export type TvShowInsert = InferInsertModel<typeof tvShows>;
 export type SeasonInsert = InferInsertModel<typeof seasons>;
 export type EpisodeInsert = InferInsertModel<typeof episodes>;
+export type ComparisonDimensionInsert = InferInsertModel<typeof comparisonDimensions>;
+export type ComparisonInsert = InferInsertModel<typeof comparisons>;
+export type MediaScoreInsert = InferInsertModel<typeof mediaScores>;
 
 // Constants
 export const ENTITY_TYPES = [

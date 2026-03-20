@@ -7,30 +7,8 @@
  */
 import { Link, useLocation } from "react-router";
 import { registeredApps } from "@/app/nav/registry";
+import { iconMap } from "@/app/nav/icon-map";
 import type { AppNavConfig } from "@/app/nav/types";
-import {
-  LayoutDashboard,
-  CreditCard,
-  Building2,
-  PiggyBank,
-  Package,
-  Star,
-  Download,
-  Bot,
-  type LucideIcon,
-} from "lucide-react";
-
-/** Map icon name strings from navConfig to Lucide components. */
-const iconMap: Record<string, LucideIcon> = {
-  LayoutDashboard,
-  CreditCard,
-  Building2,
-  PiggyBank,
-  Package,
-  Star,
-  Download,
-  Bot,
-};
 
 /** Check if pathname matches a prefix at a path-segment boundary. */
 function matchesAtBoundary(pathname: string, prefix: string): boolean {

@@ -10,3 +10,6 @@ export { movies } from "./movies.js";
 export { tvShows } from "./tv-shows.js";
 export { seasons } from "./seasons.js";
 export { episodes } from "./episodes.js";
+export { comparisonDimensions } from "./comparison-dimensions.js";
+export { comparisons } from "./comparisons.js";
+export { mediaScores } from "./media-scores.js";
