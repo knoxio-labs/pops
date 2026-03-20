@@ -1,6 +1,6 @@
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, Link } from "react-router";
 import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "../lib/trpc";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -44,7 +44,6 @@ function MovieDetailSkeleton() {
 
 export function MovieDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const movieId = Number(id);
 
   const { data, isLoading, error } = trpc.media.movies.get.useQuery(
@@ -140,7 +139,7 @@ export function MovieDetailPage() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/20" />
 
-        <div className="relative h-full flex flex-col md:flex-row items-end md:items-end p-6 gap-4 md:gap-6">
+        <div className="relative h-full flex flex-col md:flex-row items-end p-6 gap-4 md:gap-6">
           <img
             src={posterSrc}
             alt={`${movie.title} poster`}
@@ -148,17 +147,17 @@ export function MovieDetailPage() {
           />
 
           <div className="flex-1 pb-1">
-            {logoSrc ? (
-              <img
-                src={logoSrc}
-                alt={movie.title}
-                className="h-12 md:h-16 object-contain mb-2"
-              />
-            ) : (
-              <h1 className="text-2xl md:text-4xl font-bold text-foreground">
-                {movie.title}
-              </h1>
-            )}
+            <h1 className="text-2xl md:text-4xl font-bold text-foreground">
+              {logoSrc ? (
+                <img
+                  src={logoSrc}
+                  alt={movie.title}
+                  className="h-12 md:h-16 object-contain"
+                />
+              ) : (
+                movie.title
+              )}
+            </h1>
 
             {movie.tagline && (
               <p className="text-sm md:text-base text-muted-foreground italic mt-1">
@@ -193,16 +192,17 @@ export function MovieDetailPage() {
             <h2 className="text-lg font-semibold mb-2">Genres</h2>
             <div className="flex flex-wrap gap-2">
               {movie.genres.map((genre) => (
-                <Badge
+                <Link
                   key={genre}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-secondary/80"
-                  onClick={() =>
-                    navigate(`/media?genre=${encodeURIComponent(genre)}`)
-                  }
+                  to={`/media?genre=${encodeURIComponent(genre)}`}
                 >
-                  {genre}
-                </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer hover:bg-secondary/80"
+                  >
+                    {genre}
+                  </Badge>
+                </Link>
               ))}
             </div>
           </section>
