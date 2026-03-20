@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 export const environments = sqliteTable(
   "environments",
   {
+    // CHECK: name != 'prod'
     name: text("name").primaryKey(),
     dbPath: text("db_path").notNull(),
     seedType: text("seed_type", { enum: ["none", "test"] })
