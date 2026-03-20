@@ -7,19 +7,10 @@
  */
 import { useNavigate, useLocation } from "react-router";
 import { registeredApps } from "@/app/nav/registry";
-import {
-  DollarSign,
-  PanelLeftClose,
-  PanelLeftOpen,
-  type LucideIcon,
-} from "lucide-react";
+import { iconMap } from "@/app/nav/icon-map";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pops/ui";
-
-/** Map app-level icon names to Lucide components. */
-const appIconMap: Record<string, LucideIcon> = {
-  DollarSign,
-};
 
 interface AppRailProps {
   className?: string;
@@ -65,7 +56,7 @@ export function AppRail({ className }: AppRailProps) {
     >
       {registeredApps.map((app) => {
         const isActive = location.pathname.startsWith(app.basePath);
-        const Icon = appIconMap[app.icon];
+        const Icon = iconMap[app.icon];
 
         return (
           <Tooltip key={app.id}>
