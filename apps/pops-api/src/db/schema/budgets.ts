@@ -6,7 +6,7 @@ export const budgets = sqliteTable("budgets", {
     .$defaultFn(() => crypto.randomUUID()),
   notionId: text("notion_id").unique(),
   category: text("category").notNull(),
-  period: text("period").notNull(),
+  period: text("period"),
   amount: real("amount"),
   active: integer("active").notNull().default(1),
   notes: text("notes"),
