@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TmdbClient } from "./client.js";
 import { TmdbApiError } from "./types.js";
+import { TokenBucketRateLimiter } from "./rate-limiter.js";
 import type { RawTmdbSearchResponse, RawTmdbMovieDetail, RawTmdbImageResponse } from "./types.js";
 
 /** Helper to create a mocked Response. */
@@ -432,5 +433,35 @@ describe("error handling", () => {
       expect((err as TmdbApiError).status).toBe(500);
       expect((err as TmdbApiError).message).toContain("500");
     }
+  });
+});
+
+describe("rate limiter integration", () => {
+  it("calls acquire() before each request when rate limiter is provided", async () => {
+    const limiter = new TokenBucketRateLimiter(40, 4);
+    const acquireSpy = vi.spyOn(limiter, "acquire");
+    const rateLimitedClient = new TmdbClient(FAKE_KEY, limiter);
+
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({ page: 1, results: [], total_results: 0, total_pages: 0 }),
+    );
+
+    await rateLimitedClient.searchMovies("test");
+
+    expect(acquireSpy).toHaveBeenCalledOnce();
+
+    limiter.destroy();
+  });
+
+  it("does not call acquire() when no rate limiter is provided", async () => {
+    // Default client has no rate limiter
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({ page: 1, results: [], total_results: 0, total_pages: 0 }),
+    );
+
+    await client.searchMovies("test");
+
+    // Just verify the request succeeded without rate limiting
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });

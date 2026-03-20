@@ -15,17 +15,20 @@ import {
   type RawTmdbMovieDetail,
   type RawTmdbImageResponse,
 } from "./types.js";
+import type { TokenBucketRateLimiter } from "./rate-limiter.js";
 
 const BASE_URL = "https://api.themoviedb.org";
 
 export class TmdbClient {
   private readonly apiKey: string;
+  private readonly rateLimiter: TokenBucketRateLimiter | null;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, rateLimiter?: TokenBucketRateLimiter) {
     if (!apiKey) {
       throw new Error("TMDB API key is required");
     }
     this.apiKey = apiKey;
+    this.rateLimiter = rateLimiter ?? null;
   }
 
   /** Search movies by query string. */
@@ -121,8 +124,12 @@ export class TmdbClient {
     );
   }
 
-  /** Generic GET with Bearer auth and error handling. */
+  /** Generic GET with Bearer auth, rate limiting, and error handling. */
   private async get<T>(path: string): Promise<T> {
+    if (this.rateLimiter) {
+      await this.rateLimiter.acquire();
+    }
+
     let response: Response;
 
     try {
