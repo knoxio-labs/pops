@@ -27,7 +27,7 @@ export interface TagEditorProps {
   onSuggest?: () => Promise<string[]>;
   /**
    * Available tags for autocomplete — sourced dynamically from the
-   * transactions.availableTags endpoint (Notion Tags multi_select options).
+   * transactions.availableTags endpoint.
    * Users may still type any free-form string not in this list.
    */
   availableTags?: string[];

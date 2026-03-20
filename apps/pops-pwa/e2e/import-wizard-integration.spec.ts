@@ -6,7 +6,7 @@
  *   - imports.getImportProgress → real progress polling
  *   - entities.list → real entity list from seeded DB
  *
- * What's mocked (require Notion writes with real credentials):
+ * What's mocked (write operations):
  *   - imports.executeImport → returns a fake session ID
  *   - imports.createEntity → returns a fake entity ID
  *   - corrections.createOrUpdate → returns success
@@ -19,8 +19,8 @@
  * The CSV used by these tests is designed so the backend's prefix/alias matching
  * returns deterministic results from the seeded data.
  *
- * Note: Notion deduplication is skipped entirely via SKIP_NOTION_DEDUP=true (set in
- * e2e.yml). No Notion API calls are made during these tests.
+ * Note: Deduplication is handled against SQLite. No external API calls are
+ * made during these tests.
  */
 import { test, expect, type Page } from '@playwright/test';
 import { useRealEndpoint } from './helpers/use-real-api';
@@ -70,12 +70,12 @@ const navigateToReview = async (page: Page, csvContent: string) => {
   await page.getByRole('button', { name: /next/i }).click();
 
   // Real backend processes in background. Named env context automatically skips
-  // Notion dedup and AI calls, so processing is fast. 30s is a safe upper bound.
+  // external API calls, so processing is fast. 30s is a safe upper bound.
   await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible({ timeout: 30000 });
 };
 
-/** Mock Notion-write endpoints (executeImport, createEntity, corrections). */
-const mockNotionWrites = async (page: Page) => {
+/** Mock write endpoints (executeImport, createEntity, corrections). */
+const mockWriteEndpoints = async (page: Page) => {
   await page.route(/\/trpc\/imports\.executeImport/, async (route) => {
     const isBatch = new URL(route.request().url()).searchParams.has('batch');
     const body = isBatch
@@ -147,7 +147,7 @@ test.describe('Import Wizard — real entity matching against seeded DB', () => 
     // processImport and process-phase getImportProgress are real
     await useRealEndpoint(page, 'imports\\.processImport');
     await useRealEndpoint(page, 'entities\\.list');
-    await mockNotionWrites(page);
+    await mockWriteEndpoints(page);
 
     await page.goto('/import');
     await expect(page.getByText('Upload CSV')).toBeVisible();

@@ -52,7 +52,7 @@ export const Success: Story = {
       <CircleCheckIcon />
       <AlertTitle>Success</AlertTitle>
       <AlertDescription>
-        All transactions have been successfully synced from Notion.
+        All transactions have been successfully imported.
       </AlertDescription>
     </Alert>
   ),
@@ -129,7 +129,7 @@ export const MultipleAlerts: Story = {
         <OctagonXIcon />
         <AlertTitle>Sync Error</AlertTitle>
         <AlertDescription>
-          Unable to connect to Notion API. Retrying in 5 minutes.
+          Unable to connect to API. Retrying in 5 minutes.
         </AlertDescription>
       </Alert>
     </div>

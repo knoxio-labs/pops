@@ -15,7 +15,7 @@ function normaliseDate(dateStr: string): string {
 
 /**
  * Normalize amount - Amex amounts are positive for charges (money out)
- * We need to invert for Notion format (negative = expense)
+ * We need to invert so negative = expense
  */
 function normaliseAmount(amountStr: string): number {
   const amount = parseFloat(amountStr);

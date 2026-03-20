@@ -56,8 +56,7 @@ router.post("/webhooks/up", (req, res) => {
 
   // TODO: Re-fetch transaction from Up API to verify it exists
   // TODO: Run entity matching
-  // TODO: Write to Notion Balance Sheet
-  // TODO: Optionally write to SQLite immediately
+  // TODO: Write to SQLite
 
   // Acknowledge quickly — process async if needed
   res.status(200).json({ received: true });

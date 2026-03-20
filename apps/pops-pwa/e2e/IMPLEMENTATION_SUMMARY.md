@@ -71,7 +71,7 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 #### 7. **Import Wizard - Warnings and Errors** (4 tests)
 - ✅ Display deduplication warning (non-blocking)
 - ✅ Display AI categorization warning
-- ✅ Block on critical Notion error
+- ✅ Block on critical database error
 - ✅ Handle write failures in execute phase
 
 #### 8. **Import Wizard - Review Tab Navigation** (3 tests)

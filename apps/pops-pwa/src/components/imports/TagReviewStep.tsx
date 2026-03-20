@@ -59,7 +59,7 @@ function buildTagMetaMap(suggestedTags: SuggestedTag[]): Map<string, TagMetaEntr
 // ---------------------------------------------------------------------------
 
 /**
- * Step 5: Tag Review — review and adjust tags before writing to Notion.
+ * Step 5: Tag Review — review and adjust tags before the final import.
  *
  * Confirmed transactions arrive with tags pre-populated from AI/rule/entity
  * suggestions. This step lets the user accept, modify, or clear tags before
