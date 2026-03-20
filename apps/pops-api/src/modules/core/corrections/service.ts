@@ -1,11 +1,31 @@
 /**
  * Transaction corrections service
- * Manages learned patterns from user edits
+ * Manages learned patterns from user edits — Drizzle ORM
  */
-import { getDb } from "../../../db.js";
+import { eq, gte, desc, count, sql, and } from "drizzle-orm";
+import { getDrizzle } from "../../../db.js";
+import { transactionCorrections } from "../../../db/schema/corrections.js";
 import { NotFoundError } from "../../../shared/errors.js";
 import type { CorrectionRow, CreateCorrectionInput, UpdateCorrectionInput } from "./types.js";
 import { normalizeDescription } from "./types.js";
+
+/** Map a Drizzle result row to the snake_case CorrectionRow interface. */
+function toRow(row: typeof transactionCorrections.$inferSelect): CorrectionRow {
+  return {
+    id: row.id,
+    description_pattern: row.descriptionPattern,
+    match_type: row.matchType as CorrectionRow["match_type"],
+    entity_id: row.entityId,
+    entity_name: row.entityName,
+    location: row.location,
+    tags: row.tags,
+    transaction_type: row.transactionType as CorrectionRow["transaction_type"],
+    confidence: row.confidence,
+    times_applied: row.timesApplied,
+    created_at: row.createdAt,
+    last_used_at: row.lastUsedAt,
+  };
+}
 
 /**
  * Find the best matching correction for a description
@@ -14,42 +34,44 @@ export function findMatchingCorrection(
   description: string,
   minConfidence: number = 0.7
 ): CorrectionRow | null {
-  const db = getDb();
+  const db = getDrizzle();
   const normalized = normalizeDescription(description);
 
   // Try exact match first (highest priority)
-  const exactMatch = db
-    .prepare(
-      `
-    SELECT * FROM transaction_corrections
-    WHERE match_type = 'exact'
-      AND description_pattern = ?
-      AND confidence >= ?
-    ORDER BY confidence DESC, times_applied DESC
-    LIMIT 1
-  `
+  const [exactMatch] = db
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.matchType, "exact"),
+        eq(transactionCorrections.descriptionPattern, normalized),
+        gte(transactionCorrections.confidence, minConfidence)
+      )
     )
-    .get(normalized, minConfidence) as CorrectionRow | undefined;
+    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
+    .limit(1)
+    .all();
 
-  if (exactMatch) return exactMatch;
+  if (exactMatch) return toRow(exactMatch);
 
   // Try contains match (pattern is substring of description)
-  const containsMatch = db
-    .prepare(
-      `
-    SELECT * FROM transaction_corrections
-    WHERE match_type = 'contains'
-      AND ? LIKE '%' || description_pattern || '%'
-      AND confidence >= ?
-    ORDER BY confidence DESC, times_applied DESC
-    LIMIT 1
-  `
+  // This uses SQL LIKE which needs raw SQL for the dynamic pattern
+  const [containsMatch] = db
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.matchType, "contains"),
+        sql`${normalized} LIKE '%' || ${transactionCorrections.descriptionPattern} || '%'`,
+        gte(transactionCorrections.confidence, minConfidence)
+      )
     )
-    .get(normalized, minConfidence) as CorrectionRow | undefined;
+    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
+    .limit(1)
+    .all();
 
-  if (containsMatch) return containsMatch;
+  if (containsMatch) return toRow(containsMatch);
 
-  // TODO: Regex matching if needed (more expensive)
   return null;
 }
 
@@ -61,204 +83,195 @@ export function listCorrections(
   limit: number = 50,
   offset: number = 0
 ): { rows: CorrectionRow[]; total: number } {
-  const db = getDb();
-  const whereClause = minConfidence !== undefined ? "WHERE confidence >= ?" : "";
-  const params = minConfidence !== undefined ? [minConfidence] : [];
+  const db = getDrizzle();
 
-  const total = (
-    db
-      .prepare(`SELECT COUNT(*) as count FROM transaction_corrections ${whereClause}`)
-      .get(...params) as { count: number }
-  ).count;
+  const condition = minConfidence !== undefined
+    ? gte(transactionCorrections.confidence, minConfidence)
+    : undefined;
+
+  const [countResult] = db
+    .select({ count: count() })
+    .from(transactionCorrections)
+    .where(condition)
+    .all();
 
   const rows = db
-    .prepare(
-      `
-    SELECT * FROM transaction_corrections
-    ${whereClause}
-    ORDER BY confidence DESC, times_applied DESC
-    LIMIT ? OFFSET ?
-  `
-    )
-    .all(...params, limit, offset) as CorrectionRow[];
+    .select()
+    .from(transactionCorrections)
+    .where(condition)
+    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
+    .limit(limit)
+    .offset(offset)
+    .all();
 
-  return { rows, total };
+  return { rows: rows.map(toRow), total: countResult.count };
 }
 
 /**
  * Get a single correction by ID
  */
 export function getCorrection(id: string): CorrectionRow {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM transaction_corrections WHERE id = ?").get(id) as
-    | CorrectionRow
-    | undefined;
+  const db = getDrizzle();
+  const [row] = db
+    .select()
+    .from(transactionCorrections)
+    .where(eq(transactionCorrections.id, id))
+    .all();
 
   if (!row) {
     throw new NotFoundError("Correction", id);
   }
 
-  return row;
+  return toRow(row);
 }
 
 /**
  * Find all corrections that match a description (for tag union across all rules)
  */
 export function findAllMatchingCorrections(description: string): CorrectionRow[] {
-  const db = getDb();
+  const db = getDrizzle();
   const normalized = normalizeDescription(description);
 
   const exactMatches = db
-    .prepare(
-      `
-    SELECT * FROM transaction_corrections
-    WHERE match_type = 'exact' AND description_pattern = ?
-    ORDER BY confidence DESC, times_applied DESC
-  `
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.matchType, "exact"),
+        eq(transactionCorrections.descriptionPattern, normalized)
+      )
     )
-    .all(normalized) as CorrectionRow[];
+    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
+    .all();
 
   const containsMatches = db
-    .prepare(
-      `
-    SELECT * FROM transaction_corrections
-    WHERE match_type = 'contains'
-      AND ? LIKE '%' || description_pattern || '%'
-    ORDER BY confidence DESC, times_applied DESC
-  `
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.matchType, "contains"),
+        sql`${normalized} LIKE '%' || ${transactionCorrections.descriptionPattern} || '%'`
+      )
     )
-    .all(normalized) as CorrectionRow[];
+    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
+    .all();
 
-  return [...exactMatches, ...containsMatches];
+  return [...exactMatches.map(toRow), ...containsMatches.map(toRow)];
 }
 
 /**
  * Create a new correction or update existing one
  */
 export function createOrUpdateCorrection(input: CreateCorrectionInput): CorrectionRow {
-  const db = getDb();
+  const db = getDrizzle();
   const normalized = normalizeDescription(input.descriptionPattern);
 
   // Check if pattern already exists
-  const existing = db
-    .prepare(
-      `
-    SELECT * FROM transaction_corrections
-    WHERE description_pattern = ? AND match_type = ?
-  `
+  const [existing] = db
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.descriptionPattern, normalized),
+        eq(transactionCorrections.matchType, input.matchType)
+      )
     )
-    .get(normalized, input.matchType) as CorrectionRow | undefined;
+    .all();
 
   if (existing) {
     // Update existing correction
     const newConfidence = Math.min(existing.confidence + 0.1, 1.0);
-    const newTimesApplied = existing.times_applied + 1;
+    const newTimesApplied = existing.timesApplied + 1;
 
-    db.prepare(
-      `
-      UPDATE transaction_corrections
-      SET confidence = ?,
-          times_applied = ?,
-          last_used_at = datetime('now'),
-          entity_id = COALESCE(?, entity_id),
-          entity_name = COALESCE(?, entity_name),
-          location = COALESCE(?, location),
-          tags = ?,
-          transaction_type = COALESCE(?, transaction_type)
-      WHERE id = ?
-    `
-    ).run(
-      newConfidence,
-      newTimesApplied,
-      input.entityId ?? null,
-      input.entityName ?? null,
-      input.location ?? null,
-      JSON.stringify(input.tags ?? []),
-      input.transactionType ?? null,
-      existing.id
-    );
+    db.update(transactionCorrections)
+      .set({
+        confidence: newConfidence,
+        timesApplied: newTimesApplied,
+        lastUsedAt: sql`datetime('now')`,
+        entityId: input.entityId ?? existing.entityId,
+        entityName: input.entityName ?? existing.entityName,
+        location: input.location ?? existing.location,
+        tags: JSON.stringify(input.tags ?? []),
+        transactionType: input.transactionType ?? existing.transactionType,
+      })
+      .where(eq(transactionCorrections.id, existing.id))
+      .run();
 
     return getCorrection(existing.id);
   }
 
   // Insert new correction
   const result = db
-    .prepare(
-      `
-    INSERT INTO transaction_corrections (
-      description_pattern, match_type, entity_id, entity_name,
-      location, tags, transaction_type
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `
-    )
-    .run(
-      normalized,
-      input.matchType,
-      input.entityId ?? null,
-      input.entityName ?? null,
-      input.location ?? null,
-      JSON.stringify(input.tags ?? []),
-      input.transactionType ?? null
-    );
+    .insert(transactionCorrections)
+    .values({
+      descriptionPattern: normalized,
+      matchType: input.matchType,
+      entityId: input.entityId ?? null,
+      entityName: input.entityName ?? null,
+      location: input.location ?? null,
+      tags: JSON.stringify(input.tags ?? []),
+      transactionType: input.transactionType ?? null,
+    })
+    .run();
 
   // lastInsertRowid is the integer rowid, not the UUID text primary key.
   // Look up by rowid to retrieve the auto-generated UUID.
-  const inserted = db
-    .prepare("SELECT * FROM transaction_corrections WHERE rowid = ?")
-    .get(result.lastInsertRowid) as CorrectionRow | undefined;
+  const [inserted] = db
+    .select()
+    .from(transactionCorrections)
+    .where(sql`rowid = ${result.lastInsertRowid}`)
+    .all();
 
   if (!inserted) {
     throw new NotFoundError("Correction", String(result.lastInsertRowid));
   }
 
-  return inserted;
+  return toRow(inserted);
 }
 
 /**
  * Update an existing correction
  */
 export function updateCorrection(id: string, input: UpdateCorrectionInput): CorrectionRow {
-  const db = getDb();
+  const db = getDrizzle();
   const existing = getCorrection(id); // Throws if not found
 
-  const updates: string[] = [];
-  const values: unknown[] = [];
+  const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
+  let hasUpdates = false;
 
   if (input.entityId !== undefined) {
-    updates.push("entity_id = ?");
-    values.push(input.entityId);
+    updates.entityId = input.entityId;
+    hasUpdates = true;
   }
   if (input.entityName !== undefined) {
-    updates.push("entity_name = ?");
-    values.push(input.entityName);
+    updates.entityName = input.entityName;
+    hasUpdates = true;
   }
   if (input.location !== undefined) {
-    updates.push("location = ?");
-    values.push(input.location);
+    updates.location = input.location;
+    hasUpdates = true;
   }
   if (input.tags !== undefined) {
-    updates.push("tags = ?");
-    values.push(JSON.stringify(input.tags));
+    updates.tags = JSON.stringify(input.tags);
+    hasUpdates = true;
   }
   if (input.transactionType !== undefined) {
-    updates.push("transaction_type = ?");
-    values.push(input.transactionType);
+    updates.transactionType = input.transactionType;
+    hasUpdates = true;
   }
   if (input.confidence !== undefined) {
-    updates.push("confidence = ?");
-    values.push(input.confidence);
+    updates.confidence = input.confidence;
+    hasUpdates = true;
   }
 
-  if (updates.length === 0) {
+  if (!hasUpdates) {
     return existing; // No changes
   }
 
-  values.push(id);
-
-  db.prepare(`UPDATE transaction_corrections SET ${updates.join(", ")} WHERE id = ?`).run(
-    ...values
-  );
+  db.update(transactionCorrections)
+    .set(updates)
+    .where(eq(transactionCorrections.id, id))
+    .run();
 
   return getCorrection(id);
 }
@@ -267,8 +280,11 @@ export function updateCorrection(id: string, input: UpdateCorrectionInput): Corr
  * Delete a correction
  */
 export function deleteCorrection(id: string): void {
-  const db = getDb();
-  const result = db.prepare("DELETE FROM transaction_corrections WHERE id = ?").run(id);
+  const db = getDrizzle();
+  const result = db
+    .delete(transactionCorrections)
+    .where(eq(transactionCorrections.id, id))
+    .run();
 
   if (result.changes === 0) {
     throw new NotFoundError("Correction", id);
@@ -279,29 +295,28 @@ export function deleteCorrection(id: string): void {
  * Increment usage stats for a correction
  */
 export function incrementCorrectionUsage(id: string): void {
-  const db = getDb();
-  db.prepare(
-    `
-    UPDATE transaction_corrections
-    SET times_applied = times_applied + 1,
-        last_used_at = datetime('now')
-    WHERE id = ?
-  `
-  ).run(id);
+  const db = getDrizzle();
+  db.update(transactionCorrections)
+    .set({
+      timesApplied: sql`${transactionCorrections.timesApplied} + 1`,
+      lastUsedAt: sql`datetime('now')`,
+    })
+    .where(eq(transactionCorrections.id, id))
+    .run();
 }
 
 /**
  * Adjust confidence score
  */
 export function adjustConfidence(id: string, delta: number): void {
-  const db = getDb();
+  const db = getDrizzle();
   const existing = getCorrection(id);
   const newConfidence = Math.max(0, Math.min(1, existing.confidence + delta));
 
-  db.prepare(`UPDATE transaction_corrections SET confidence = ? WHERE id = ?`).run(
-    newConfidence,
-    id
-  );
+  db.update(transactionCorrections)
+    .set({ confidence: newConfidence })
+    .where(eq(transactionCorrections.id, id))
+    .run();
 
   // Auto-delete if confidence too low
   if (newConfidence < 0.3) {
