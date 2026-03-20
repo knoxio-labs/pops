@@ -103,8 +103,8 @@ export function Sidebar({ open }: SidebarProps) {
           "w-64 bg-card border-r border-border fixed z-50",
           // Mobile: full height overlay from top
           "top-0 left-0 h-full",
-          // Desktop: below top bar
-          "md:top-14 md:h-[calc(100vh-3.5rem)] lg:top-16 lg:h-[calc(100vh-4rem)]",
+          // Desktop: below top bar (md:h-16 = 4rem)
+          "md:top-16 md:h-[calc(100vh-4rem)]",
           // Desktop: z-index below overlay
           "md:z-30",
         ].join(" ")}
