@@ -23,7 +23,6 @@ CREATE TABLE `movies` (
 	`updated_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `movies_tmdb_id_unique` ON `movies` (`tmdb_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_movies_tmdb_id` ON `movies` (`tmdb_id`);--> statement-breakpoint
 CREATE INDEX `idx_movies_title` ON `movies` (`title`);--> statement-breakpoint
 CREATE INDEX `idx_movies_release_date` ON `movies` (`release_date`);--> statement-breakpoint
@@ -52,7 +51,6 @@ CREATE TABLE `tv_shows` (
 	`updated_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `tv_shows_tvdb_id_unique` ON `tv_shows` (`tvdb_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_tv_shows_tvdb_id` ON `tv_shows` (`tvdb_id`);--> statement-breakpoint
 CREATE INDEX `idx_tv_shows_name` ON `tv_shows` (`name`);--> statement-breakpoint
 CREATE INDEX `idx_tv_shows_first_air_date` ON `tv_shows` (`first_air_date`);

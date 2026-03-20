@@ -5,7 +5,7 @@ export const tvShows = sqliteTable(
   "tv_shows",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    tvdbId: integer("tvdb_id").unique().notNull(),
+    tvdbId: integer("tvdb_id").notNull(),
     name: text("name").notNull(),
     originalName: text("original_name"),
     overview: text("overview"),

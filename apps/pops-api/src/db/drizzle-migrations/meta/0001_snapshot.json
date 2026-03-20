@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "992142e9-536a-4c44-ae11-11240960acdc",
+  "id": "f1e3be59-63d7-48cf-b7df-237c2afda7db",
   "prevId": "f4505410-7a7b-4c47-a651-a4b8e04e0db8",
   "tables": {
     "ai_usage": {
@@ -807,13 +807,6 @@
         }
       },
       "indexes": {
-        "movies_tmdb_id_unique": {
-          "name": "movies_tmdb_id_unique",
-          "columns": [
-            "tmdb_id"
-          ],
-          "isUnique": true
-        },
         "idx_movies_tmdb_id": {
           "name": "idx_movies_tmdb_id",
           "columns": [
@@ -1182,13 +1175,6 @@
         }
       },
       "indexes": {
-        "tv_shows_tvdb_id_unique": {
-          "name": "tv_shows_tvdb_id_unique",
-          "columns": [
-            "tvdb_id"
-          ],
-          "isUnique": true
-        },
         "idx_tv_shows_tvdb_id": {
           "name": "idx_tv_shows_tvdb_id",
           "columns": [

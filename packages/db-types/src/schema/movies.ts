@@ -5,7 +5,7 @@ export const movies = sqliteTable(
   "movies",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    tmdbId: integer("tmdb_id").unique().notNull(),
+    tmdbId: integer("tmdb_id").notNull(),
     imdbId: text("imdb_id"),
     title: text("title").notNull(),
     originalTitle: text("original_title"),
