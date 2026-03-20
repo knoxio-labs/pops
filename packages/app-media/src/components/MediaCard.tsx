@@ -2,8 +2,9 @@
  * MediaCard — poster card for a movie or TV show in the library grid.
  * Displays poster image, title (2-line truncate), year, and type badge.
  */
-import { useState, type MouseEvent } from "react";
-import { cn, Skeleton } from "@pops/ui";
+import { useState } from "react";
+import { cn, Badge, Skeleton } from "@pops/ui";
+import { Film } from "lucide-react";
 
 export type MediaType = "movie" | "tv";
 
@@ -41,8 +42,7 @@ export function MediaCard({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const handleClick = (e: MouseEvent) => {
-    e.preventDefault();
+  const handleClick = () => {
     onClick?.(id, type);
   };
 
@@ -51,6 +51,7 @@ export function MediaCard({
   return (
     <button
       type="button"
+      aria-label={`${title} (${TYPE_LABELS[type]})`}
       className={cn(
         "group flex w-full cursor-pointer flex-col gap-2 text-left",
         "rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -61,16 +62,12 @@ export function MediaCard({
       {/* Poster container with 2:3 aspect ratio */}
       <div className="relative w-full overflow-hidden rounded-md bg-muted aspect-[2/3]">
         {/* Type badge */}
-        <span
-          className={cn(
-            "absolute top-2 left-2 z-10 rounded px-1.5 py-0.5 text-xs font-semibold",
-            type === "movie"
-              ? "bg-primary text-primary-foreground"
-              : "bg-info text-white",
-          )}
+        <Badge
+          variant={type === "movie" ? "default" : "secondary"}
+          className="absolute top-2 left-2 z-10"
         >
           {TYPE_LABELS[type]}
-        </span>
+        </Badge>
 
         {/* Poster image */}
         {!showPlaceholder && (
@@ -96,23 +93,7 @@ export function MediaCard({
         {/* No-poster placeholder */}
         {showPlaceholder && (
           <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              className="h-10 w-10 opacity-40"
-            >
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
-              <line x1="7" y1="2" x2="7" y2="22" />
-              <line x1="17" y1="2" x2="17" y2="22" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <line x1="2" y1="7" x2="7" y2="7" />
-              <line x1="2" y1="17" x2="7" y2="17" />
-              <line x1="17" y1="7" x2="22" y2="7" />
-              <line x1="17" y1="17" x2="22" y2="17" />
-            </svg>
+            <Film className="h-10 w-10 opacity-40" />
           </div>
         )}
       </div>
