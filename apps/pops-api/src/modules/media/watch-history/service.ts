@@ -5,8 +5,8 @@
  * watchlist entry is removed automatically (movies immediately,
  * TV shows only when all episodes have been watched).
  */
-import { count, desc, eq, and, type SQL } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
+import { count, desc, eq, and, inArray, type SQL } from "drizzle-orm";
+import { getDrizzle, getDb } from "../../../db.js";
 import { watchHistory, mediaWatchlist, episodes, seasons } from "@pops/db-types";
 import { NotFoundError } from "../../../shared/errors.js";
 import type {
@@ -72,31 +72,35 @@ export function getWatchHistoryEntry(id: number): WatchHistoryRow {
 
 /** Log a watch event. Auto-removes from watchlist when applicable. Returns the created row. */
 export function logWatch(input: LogWatchInput): WatchHistoryRow {
-  const db = getDrizzle();
+  const rawDb = getDb();
 
-  const result = db
-    .insert(watchHistory)
-    .values({
-      mediaType: input.mediaType,
-      mediaId: input.mediaId,
-      watchedAt: input.watchedAt ?? new Date().toISOString(),
-      completed: input.completed ?? 1,
-    })
-    .run();
+  return rawDb.transaction(() => {
+    const db = getDrizzle();
 
-  const row = getWatchHistoryEntry(Number(result.lastInsertRowid));
+    const result = db
+      .insert(watchHistory)
+      .values({
+        mediaType: input.mediaType,
+        mediaId: input.mediaId,
+        watchedAt: input.watchedAt ?? new Date().toISOString(),
+        completed: input.completed ?? 1,
+      })
+      .run();
 
-  // Auto-remove from watchlist on completed watch
-  const completed = input.completed ?? 1;
-  if (completed === 1) {
-    if (input.mediaType === "movie") {
-      autoRemoveMovie(input.mediaId);
-    } else if (input.mediaType === "episode") {
-      autoRemoveShowByEpisode(input.mediaId);
+    const row = getWatchHistoryEntry(Number(result.lastInsertRowid));
+
+    // Auto-remove from watchlist on completed watch
+    const completed = input.completed ?? 1;
+    if (completed === 1) {
+      if (input.mediaType === "movie") {
+        autoRemoveMovie(input.mediaId);
+      } else if (input.mediaType === "episode") {
+        autoRemoveShowByEpisode(input.mediaId);
+      }
     }
-  }
 
-  return row;
+    return row;
+  })();
 }
 
 /**
@@ -140,7 +144,7 @@ function autoRemoveShowByEpisode(episodeId: number): void {
 
   const tvShowId = season.tvShowId;
 
-  // Check if this show is on the watchlist at all
+  // Check if this show is on the watchlist at all (early exit)
   const entry = db
     .select({ id: mediaWatchlist.id })
     .from(mediaWatchlist)
@@ -153,43 +157,6 @@ function autoRemoveShowByEpisode(episodeId: number): void {
     .get();
   if (!entry) return;
 
-  // Count total episodes in the show (across all seasons)
-  const [totalRow] = db
-    .select({ total: count() })
-    .from(episodes)
-    .innerJoin(seasons, eq(episodes.seasonId, seasons.id))
-    .where(eq(seasons.tvShowId, tvShowId))
-    .all();
-
-  // Count distinct watched episodes (completed=1) for this show
-  const [watchedRow] = db
-    .select({ watched: count() })
-    .from(watchHistory)
-    .where(
-      and(
-        eq(watchHistory.mediaType, "episode"),
-        eq(watchHistory.completed, 1),
-      ),
-    )
-    .innerJoin(episodes, eq(watchHistory.mediaId, episodes.id))
-    .innerJoin(seasons, eq(episodes.seasonId, seasons.id))
-    .all();
-
-  // Filter to this show's episodes — drizzle join doesn't support WHERE on joined table
-  // easily after the join, so let's use a raw approach with subquery.
-  // Actually, let me restructure: count watched episodes that belong to this show.
-  const watchedEpisodeIds = db
-    .select({ mediaId: watchHistory.mediaId })
-    .from(watchHistory)
-    .where(
-      and(
-        eq(watchHistory.mediaType, "episode"),
-        eq(watchHistory.completed, 1),
-      ),
-    )
-    .all()
-    .map((r) => r.mediaId);
-
   // Get all episode IDs for this show
   const showEpisodeIds = db
     .select({ id: episodes.id })
@@ -201,11 +168,20 @@ function autoRemoveShowByEpisode(episodeId: number): void {
 
   if (showEpisodeIds.length === 0) return;
 
-  // Count how many show episodes have been watched
-  const watchedSet = new Set(watchedEpisodeIds);
-  const watchedCount = showEpisodeIds.filter((id) => watchedSet.has(id)).length;
+  // Count watched episodes scoped to this show's episode IDs
+  const [watchedRow] = db
+    .select({ watched: count() })
+    .from(watchHistory)
+    .where(
+      and(
+        eq(watchHistory.mediaType, "episode"),
+        eq(watchHistory.completed, 1),
+        inArray(watchHistory.mediaId, showEpisodeIds),
+      ),
+    )
+    .all();
 
-  if (watchedCount >= showEpisodeIds.length) {
+  if (watchedRow.watched >= showEpisodeIds.length) {
     db.delete(mediaWatchlist)
       .where(eq(mediaWatchlist.id, entry.id))
       .run();
