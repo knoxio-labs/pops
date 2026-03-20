@@ -45,6 +45,12 @@ describe("findActiveApp", () => {
     expect(findActiveApp("/settings", mockApps)).toBeUndefined();
     expect(findActiveApp("/", mockApps)).toBeUndefined();
   });
+
+  it("does not match prefix collisions", () => {
+    expect(findActiveApp("/fin", mockApps)).toBeUndefined();
+    expect(findActiveApp("/finances", mockApps)).toBeUndefined();
+    expect(findActiveApp("/media-player", mockApps)).toBeUndefined();
+  });
 });
 
 describe("isPageActive", () => {
@@ -73,5 +79,15 @@ describe("isPageActive", () => {
     expect(isPageActive("/finance/budgets", "/finance", "/transactions")).toBe(
       false,
     );
+  });
+
+  it("does not match prefix collisions on sub-pages", () => {
+    expect(
+      isPageActive(
+        "/finance/transactions-pending",
+        "/finance",
+        "/transactions",
+      ),
+    ).toBe(false);
   });
 });
