@@ -71,11 +71,13 @@ Sidebar state is persisted to localStorage via Zustand. Default is `sidebarOpen:
 
 Tables use **horizontal scroll** on mobile. The table container allows overflow scrolling when content exceeds viewport width. No card/list view alternative is provided — horizontal scroll is the current pattern.
 
-**Toolbar:** Search input and column toggle are laid out with `flex items-center justify-between gap-4`.
+**Toolbar:** Stacks vertically on mobile, side-by-side on desktop (`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`). Search input is full-width on mobile (`w-full sm:max-w-sm`).
 
-**Pagination:** Row controls use `flex items-center justify-between`.
+**Pagination:** Stacks vertically on mobile (`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`). "Rows per page" label is hidden on mobile (`hidden sm:block`).
 
 ### DataTableFilters (`packages/ui/src/components/DataTableFilters.tsx`)
+
+**Mobile collapse:** On mobile (<768px), filters are hidden behind a toggle button with a `SlidersHorizontal` icon. An active filter count badge shows when filters are applied. On desktop (>=768px), filters are always visible. The toggle uses `useState` (`mobileOpen`) and CSS classes (`hidden md:grid`).
 
 The filter grid adapts across breakpoints:
 
@@ -93,7 +95,7 @@ The filter grid adapts across breakpoints:
 
 **Text filters** use `w-full sm:max-w-sm` — full width on mobile, constrained on desktop.
 
-**Clear all** button: `h-8 px-2 lg:px-3` — tighter padding on mobile.
+**Clear all** button: `size="default"` with `px-3`.
 
 ### Dialog (`packages/ui/src/primitives/dialog.tsx`)
 
@@ -130,7 +132,7 @@ Forms should use the `default` or `lg` size variant on touch-focused pages. Inpu
 
 - Popover width matches trigger: `w-[var(--radix-popover-trigger-width)]`
 - Positioned `side="bottom" align="start"` to prevent viewport clipping
-- Multi-select chips wrap with `flex flex-wrap gap-1.5`
+- Multi-select chips wrap with `flex flex-wrap gap-2`
 - Command list items use `py-2.5 min-h-11` (44px) for touch targets
 
 ## Touch Target Standards
@@ -152,12 +154,12 @@ Per Apple HIG and WCAG 2.5.8:
 | **Sidebar close** | `min-w-[44px] min-h-[44px]` explicit |
 | **Command items** (dropdowns) | `py-2.5 min-h-11` (44px) |
 | **Form inputs** | `h-10` (default) or `h-11` (lg) |
-| **Chip remove buttons** | Included in chip padding area |
+| **Chip remove buttons** | `min-w-[32px] min-h-[32px]` explicit sizing |
 
 ### Spacing
 
 Interactive elements are separated by `gap-2` (8px) minimum throughout the component library. Common spacing classes:
-- `gap-1` / `gap-1.5` — within tight groups (chip collections)
+- `gap-1.5` / `gap-2` — within tight groups (chip collections)
 - `gap-2` — standard spacing between interactive elements
 - `gap-4` — spacing between groups or larger controls
 - `space-y-1` — vertical nav item spacing
@@ -175,11 +177,9 @@ Both light and dark themes work on all viewports. The theme system uses oklch co
 
 2. **DataTable column hiding:** No automatic column hiding on mobile. Tables rely on horizontal scroll. A future enhancement could hide less important columns at narrower breakpoints.
 
-3. **DataTableFilters mobile collapse:** Filters are always visible in a responsive grid. A future enhancement could collapse them behind a "Filters" button on mobile (<640px) that opens a sheet or drawer.
+3. **Button `sm` variant:** At `h-9` (36px), the small button variant is below the 44px touch target minimum. Use `default` or `lg` for touch-focused interfaces.
 
-4. **Button `sm` variant:** At `h-9` (36px), the small button variant is below the 44px touch target minimum. Use `default` or `lg` for touch-focused interfaces.
-
-5. **Form input `sm` variant:** At `h-9` (36px), also below minimum. Prefer `default` (`h-10`) or `lg` (`h-11`) on touch interfaces.
+4. **Form input `sm` variant:** At `h-9` (36px), also below minimum. Prefer `default` (`h-10`) or `lg` (`h-11`) on touch interfaces.
 
 ### Not in Scope
 
