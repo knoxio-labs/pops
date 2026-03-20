@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6773919e-525c-4e89-8cda-0d7f30d82b21",
-  "prevId": "f1e3be59-63d7-48cf-b7df-237c2afda7db",
+  "id": "0b4f1d78-fac1-4b98-96b1-bc8409b7e219",
+  "prevId": "6773919e-525c-4e89-8cda-0d7f30d82b21",
   "tables": {
     "ai_usage": {
       "name": "ai_usage",
@@ -636,6 +636,131 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "episodes": {
+      "name": "episodes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "season_id": {
+          "name": "season_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tvdb_id": {
+          "name": "tvdb_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "episode_number": {
+          "name": "episode_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "overview": {
+          "name": "overview",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "air_date": {
+          "name": "air_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "still_path": {
+          "name": "still_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vote_average": {
+          "name": "vote_average",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "runtime": {
+          "name": "runtime",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {
+        "idx_episodes_tvdb_id": {
+          "name": "idx_episodes_tvdb_id",
+          "columns": [
+            "tvdb_id"
+          ],
+          "isUnique": true
+        },
+        "idx_episodes_season_number": {
+          "name": "idx_episodes_season_number",
+          "columns": [
+            "season_id",
+            "episode_number"
+          ],
+          "isUnique": true
+        },
+        "idx_episodes_season_id": {
+          "name": "idx_episodes_season_id",
+          "columns": [
+            "season_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "episodes_season_id_seasons_id_fk": {
+          "name": "episodes_season_id_seasons_id_fk",
+          "tableFrom": "episodes",
+          "tableTo": "seasons",
+          "columnsFrom": [
+            "season_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "home_inventory": {
       "name": "home_inventory",
       "columns": {
@@ -1098,6 +1223,124 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "seasons": {
+      "name": "seasons",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tv_show_id": {
+          "name": "tv_show_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tvdb_id": {
+          "name": "tvdb_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "season_number": {
+          "name": "season_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "overview": {
+          "name": "overview",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "poster_path": {
+          "name": "poster_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "air_date": {
+          "name": "air_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "episode_count": {
+          "name": "episode_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {
+        "idx_seasons_tvdb_id": {
+          "name": "idx_seasons_tvdb_id",
+          "columns": [
+            "tvdb_id"
+          ],
+          "isUnique": true
+        },
+        "idx_seasons_show_number": {
+          "name": "idx_seasons_show_number",
+          "columns": [
+            "tv_show_id",
+            "season_number"
+          ],
+          "isUnique": true
+        },
+        "idx_seasons_tv_show_id": {
+          "name": "idx_seasons_tv_show_id",
+          "columns": [
+            "tv_show_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "seasons_tv_show_id_tv_shows_id_fk": {
+          "name": "seasons_tv_show_id_tv_shows_id_fk",
+          "tableFrom": "seasons",
+          "tableTo": "tv_shows",
+          "columnsFrom": [
+            "tv_show_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

@@ -1,12 +1,13 @@
 /**
- * Root layout - top bar + sidebar + content area
+ * Root layout — top bar + two-level navigation + content area
  *
- * Responsive behaviour:
- * - Desktop (≥768px): Sidebar pushes content with left margin
- * - Mobile (<768px): Content is always full-width; sidebar overlays
+ * Desktop (≥768px): AppRail (icons) + PageNav (page links) push content
+ * Mobile (<768px): Hamburger opens Sidebar overlay with all pages
  */
 import { Outlet } from "react-router";
 import { TopBar } from "./TopBar";
+import { AppRail } from "./AppRail";
+import { PageNav } from "./PageNav";
 import { Sidebar } from "./Sidebar";
 import { ErrorBoundary } from "@pops/ui";
 import { useUIStore } from "@/store/uiStore";
@@ -17,13 +18,17 @@ export function RootLayout() {
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
-      <div className="flex">
+      <div className="flex pt-16">
+        {/* Desktop: two-level nav (app rail + page nav) */}
+        <div className="hidden md:flex h-[calc(100vh-4rem)] sticky top-16">
+          <AppRail />
+          <PageNav />
+        </div>
+
+        {/* Mobile: overlay sidebar */}
         <Sidebar open={sidebarOpen} />
-        <main
-          className={`flex-1 transition-all duration-300 min-w-0 ${
-            sidebarOpen ? "md:ml-64" : "ml-0"
-          }`}
-        >
+
+        <main className="flex-1 min-w-0">
           <ErrorBoundary>
             <div className="p-4 md:p-6">
               <Outlet />
