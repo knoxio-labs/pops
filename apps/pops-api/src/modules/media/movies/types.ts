@@ -39,7 +39,7 @@ export function toMovie(row: MovieRow): Movie {
   // 2. Local cache (downloaded from TMDB)
   // 3. TMDB CDN fallback
   // 4. Null (placeholder in UI)
-  
+
   let posterUrl: string | null = null;
   if (row.posterOverridePath) {
     posterUrl = row.posterOverridePath;

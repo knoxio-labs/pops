@@ -70,7 +70,7 @@ export function toTvShow(row: TvShowRow): TvShow {
   // 3. Original path (TheTVDB returns full URLs usually)
   // 4. TMDB fallback (if path starts with /)
   // 5. Null (placeholder in UI)
-  
+
   let posterUrl: string | null = null;
   if (row.posterOverridePath) {
     posterUrl = row.posterOverridePath;
