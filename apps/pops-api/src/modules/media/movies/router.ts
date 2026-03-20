@@ -13,7 +13,7 @@ import {
   type MovieFilters,
 } from "./types.js";
 import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+import { NotFoundError, ConflictError } from "../../../shared/errors.js";
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -52,11 +52,18 @@ export const moviesRouter = router({
 
   /** Create a new movie. */
   create: protectedProcedure.input(CreateMovieSchema).mutation(({ input }) => {
-    const row = service.createMovie(input);
-    return {
-      data: toMovie(row),
-      message: "Movie created",
-    };
+    try {
+      const row = service.createMovie(input);
+      return {
+        data: toMovie(row),
+        message: "Movie created",
+      };
+    } catch (err) {
+      if (err instanceof ConflictError) {
+        throw new TRPCError({ code: "CONFLICT", message: err.message });
+      }
+      throw err;
+    }
   }),
 
   /** Update an existing movie. */

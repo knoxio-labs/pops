@@ -121,7 +121,7 @@ export type UpdateMovieInput = z.infer<typeof UpdateMovieSchema>;
 export const MovieQuerySchema = z.object({
   search: z.string().optional(),
   genre: z.string().optional(),
-  limit: z.coerce.number().positive().optional(),
+  limit: z.coerce.number().positive().max(500).optional(),
   offset: z.coerce.number().nonnegative().optional(),
 });
 export type MovieQueryRaw = z.infer<typeof MovieQuerySchema>;

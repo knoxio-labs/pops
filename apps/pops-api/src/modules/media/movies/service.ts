@@ -4,7 +4,7 @@
 import { count, desc, eq, like, and, sql, type SQL } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { movies } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
+import { NotFoundError, ConflictError } from "../../../shared/errors.js";
 import type {
   MovieRow,
   CreateMovieInput,
@@ -69,36 +69,43 @@ export function getMovie(id: number): MovieRow {
   return row;
 }
 
-/** Create a new movie. Returns the created row. */
+/** Create a new movie. Returns the created row. Throws ConflictError on duplicate tmdbId. */
 export function createMovie(input: CreateMovieInput): MovieRow {
   const db = getDrizzle();
 
-  const result = db
-    .insert(movies)
-    .values({
-      tmdbId: input.tmdbId,
-      imdbId: input.imdbId ?? null,
-      title: input.title,
-      originalTitle: input.originalTitle ?? null,
-      overview: input.overview ?? null,
-      tagline: input.tagline ?? null,
-      releaseDate: input.releaseDate ?? null,
-      runtime: input.runtime ?? null,
-      status: input.status ?? null,
-      originalLanguage: input.originalLanguage ?? null,
-      budget: input.budget ?? null,
-      revenue: input.revenue ?? null,
-      posterPath: input.posterPath ?? null,
-      backdropPath: input.backdropPath ?? null,
-      logoPath: input.logoPath ?? null,
-      posterOverridePath: input.posterOverridePath ?? null,
-      voteAverage: input.voteAverage ?? null,
-      voteCount: input.voteCount ?? null,
-      genres: JSON.stringify(input.genres ?? []),
-    })
-    .run();
+  try {
+    const result = db
+      .insert(movies)
+      .values({
+        tmdbId: input.tmdbId,
+        imdbId: input.imdbId ?? null,
+        title: input.title,
+        originalTitle: input.originalTitle ?? null,
+        overview: input.overview ?? null,
+        tagline: input.tagline ?? null,
+        releaseDate: input.releaseDate ?? null,
+        runtime: input.runtime ?? null,
+        status: input.status ?? null,
+        originalLanguage: input.originalLanguage ?? null,
+        budget: input.budget ?? null,
+        revenue: input.revenue ?? null,
+        posterPath: input.posterPath ?? null,
+        backdropPath: input.backdropPath ?? null,
+        logoPath: input.logoPath ?? null,
+        posterOverridePath: input.posterOverridePath ?? null,
+        voteAverage: input.voteAverage ?? null,
+        voteCount: input.voteCount ?? null,
+        genres: JSON.stringify(input.genres ?? []),
+      })
+      .run();
 
-  return getMovie(Number(result.lastInsertRowid));
+    return getMovie(Number(result.lastInsertRowid));
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+      throw new ConflictError(`Movie with tmdbId ${input.tmdbId} already exists`);
+    }
+    throw err;
+  }
 }
 
 /** Update an existing movie. Returns the updated row. */
