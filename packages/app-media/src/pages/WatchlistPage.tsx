@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
 import { trpc } from "../lib/trpc";
@@ -32,6 +33,8 @@ interface WatchlistItemProps {
   year: number | null;
   onRemove: (id: number) => void;
   isRemoving: boolean;
+  onUpdateNotes: (id: number, notes: string | null) => void;
+  isUpdating: boolean;
 }
 
 function WatchlistItem({
@@ -40,12 +43,44 @@ function WatchlistItem({
   year,
   onRemove,
   isRemoving,
+  onUpdateNotes,
+  isUpdating,
 }: WatchlistItemProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry.notes ?? "");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const href =
     entry.mediaType === "movie"
       ? `/media/movies/${entry.mediaId}`
       : `/media/tv/${entry.mediaId}`;
   const posterSrc = `/media/images/${entry.mediaType === "movie" ? "movie" : "tv"}/${entry.mediaId}/poster.jpg`;
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.selectionStart = textareaRef.current.value.length;
+    }
+  }, [editing]);
+
+  const handleSave = () => {
+    const trimmed = draft.trim();
+    onUpdateNotes(entry.id, trimmed || null);
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setDraft(entry.notes ?? "");
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
 
   return (
     <div className="flex gap-4 p-3 rounded-lg border">
@@ -90,10 +125,54 @@ function WatchlistItem({
           </button>
         </div>
 
-        {entry.notes && (
-          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+        {editing ? (
+          <div className="mt-1.5 space-y-1">
+            <textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Add a note..."
+              rows={2}
+              className="w-full text-xs bg-muted/50 border border-border rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="text-xs text-muted-foreground hover:underline"
+              >
+                Cancel
+              </button>
+              <span className="text-xs text-muted-foreground ml-auto">
+                Ctrl+Enter to save
+              </span>
+            </div>
+          </div>
+        ) : entry.notes ? (
+          <button
+            type="button"
+            onClick={() => { setDraft(entry.notes ?? ""); setEditing(true); }}
+            className="mt-1.5 text-xs text-muted-foreground line-clamp-2 text-left hover:text-foreground transition-colors cursor-pointer"
+          >
             {entry.notes}
-          </p>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setDraft(""); setEditing(true); }}
+            className="mt-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer"
+          >
+            Add note...
+          </button>
         )}
       </div>
     </div>
@@ -120,7 +199,12 @@ export function WatchlistPage() {
   const utils = trpc.useUtils();
   const removeMutation = trpc.media.watchlist.remove.useMutation({
     onSuccess: () => {
-      utils.media.watchlist.list.invalidate();
+      void utils.media.watchlist.list.invalidate();
+    },
+  });
+  const updateMutation = trpc.media.watchlist.update.useMutation({
+    onSuccess: () => {
+      void utils.media.watchlist.list.invalidate();
     },
   });
 
@@ -211,6 +295,10 @@ export function WatchlistPage() {
                 year={meta?.year ?? null}
                 onRemove={(id) => removeMutation.mutate({ id })}
                 isRemoving={removeMutation.isPending}
+                onUpdateNotes={(id, notes) =>
+                  updateMutation.mutate({ id, data: { notes } })
+                }
+                isUpdating={updateMutation.isPending}
               />
             );
           })}
