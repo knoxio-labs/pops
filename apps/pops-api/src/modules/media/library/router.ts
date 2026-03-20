@@ -4,9 +4,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../../../trpc.js";
-import { TmdbClient } from "../tmdb/client.js";
-import { TokenBucketRateLimiter } from "../tmdb/rate-limiter.js";
-import { TmdbApiError } from "../tmdb/types.js";
+import { getTmdbClient, TmdbClient, TmdbApiError } from "../tmdb/index.js";
 import { NotFoundError } from "../../../shared/errors.js";
 import { toMovie } from "../movies/types.js";
 import { toTvShow, toSeason } from "../tv-shows/types.js";
@@ -17,18 +15,15 @@ import { TvdbApiError } from "../thetvdb/types.js";
 import { refreshTvShow } from "../thetvdb/service.js";
 import * as tvShowService from "./tv-show-service.js";
 
-/** Shared rate limiter: TMDB allows 40 req / 10 s → 4 req/s. */
-const tmdbRateLimiter = new TokenBucketRateLimiter(40, 4);
-
-function getTmdbClient(): TmdbClient {
-  const apiKey = process.env["TMDB_API_KEY"];
-  if (!apiKey) {
+function requireTmdbClient(): TmdbClient {
+  const client = getTmdbClient();
+  if (!client) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "TMDB_API_KEY is not configured",
     });
   }
-  return new TmdbClient(apiKey, tmdbRateLimiter);
+  return client;
 }
 
 export const libraryRouter = router({
@@ -39,7 +34,7 @@ export const libraryRouter = router({
   addMovie: protectedProcedure
     .input(z.object({ tmdbId: z.number().int().positive() }))
     .mutation(async ({ input }) => {
-      const client = getTmdbClient();
+      const client = requireTmdbClient();
       try {
         const { movie, created } = await libraryService.addMovie(input.tmdbId, client);
         return {
@@ -66,7 +61,7 @@ export const libraryRouter = router({
 
   /** Refresh movie metadata from TMDB. */
   refreshMovie: protectedProcedure.input(RefreshMovieSchema).mutation(async ({ input }) => {
-    const tmdbClient = getTmdbClient();
+    const tmdbClient = requireTmdbClient();
     try {
       const row = await libraryService.refreshMovie(input.id, tmdbClient);
       return {
