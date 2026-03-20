@@ -16,6 +16,7 @@ import {
   type RawTvdbSeriesExtendedResponse,
   type RawTvdbEpisodesResponse,
   type RawTvdbSeasonSummary,
+  type RawTvdbArtwork,
 } from "./types.js";
 
 const BASE_URL = "https://api4.thetvdb.com/v4";
@@ -64,7 +65,7 @@ export class TheTvdbClient {
       episodeCount: Array.isArray(s.episodes) ? s.episodes.length : 0,
     });
 
-    const mapArtwork = (a: { id: number; type: number; image: string; language: string | null; score: number }): TvdbArtwork => ({
+    const mapArtwork = (a: RawTvdbArtwork): TvdbArtwork => ({
       id: a.id,
       type: a.type,
       imageUrl: a.image,
