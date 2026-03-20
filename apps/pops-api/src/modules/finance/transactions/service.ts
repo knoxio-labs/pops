@@ -1,10 +1,11 @@
 /**
- * Transaction service — CRUD operations against SQLite.
+ * Transaction service — CRUD operations against SQLite via Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
- * All SQL uses parameterized queries (no string interpolation).
  */
 import crypto from "crypto";
-import { getDb } from "../../../db.js";
+import { count, desc, eq, like, gte, lte, and, sql, type SQL, type InferSelectModel } from "drizzle-orm";
+import { getDrizzle } from "../../../db.js";
+import { transactions } from "../../../db/schema/transactions.js";
 import { NotFoundError } from "../../../shared/errors.js";
 import type {
   TransactionRow,
@@ -12,6 +13,30 @@ import type {
   UpdateTransactionInput,
   TransactionFilters,
 } from "./types.js";
+
+/** Map Drizzle's camelCase result to the snake_case TransactionRow interface. */
+type DrizzleRow = InferSelectModel<typeof transactions>;
+function toDbRow(row: DrizzleRow): TransactionRow {
+  return {
+    id: row.id,
+    notion_id: row.notionId,
+    description: row.description,
+    account: row.account,
+    amount: row.amount,
+    date: row.date,
+    type: row.type,
+    tags: row.tags,
+    entity_id: row.entityId,
+    entity_name: row.entityName,
+    location: row.location,
+    country: row.country,
+    related_transaction_id: row.relatedTransactionId,
+    notes: row.notes,
+    checksum: row.checksum,
+    raw_row: row.rawRow,
+    last_edited_time: row.lastEditedTime,
+  };
+}
 
 /** Count + rows for a paginated list. */
 export interface TransactionListResult {
@@ -25,61 +50,65 @@ export function listTransactions(
   limit: number,
   offset: number
 ): TransactionListResult {
-  const db = getDb();
-  const conditions: string[] = [];
-  const params: Record<string, string | number> = {};
+  const db = getDrizzle();
+  const conditions: SQL[] = [];
 
   if (filters.search) {
-    conditions.push("description LIKE @search");
-    params["search"] = `%${filters.search}%`;
+    conditions.push(like(transactions.description, `%${filters.search}%`));
   }
   if (filters.account) {
-    conditions.push("account = @account");
-    params["account"] = filters.account;
+    conditions.push(eq(transactions.account, filters.account));
   }
   if (filters.startDate) {
-    conditions.push("date >= @startDate");
-    params["startDate"] = filters.startDate;
+    conditions.push(gte(transactions.date, filters.startDate));
   }
   if (filters.endDate) {
-    conditions.push("date <= @endDate");
-    params["endDate"] = filters.endDate;
+    conditions.push(lte(transactions.date, filters.endDate));
   }
   if (filters.tag) {
-    conditions.push("EXISTS (SELECT 1 FROM json_each(tags) WHERE json_each.value = @tag)");
-    params["tag"] = filters.tag;
+    conditions.push(
+      sql`EXISTS (SELECT 1 FROM json_each(${transactions.tags}) WHERE json_each.value = ${filters.tag})`
+    );
   }
   if (filters.entityId) {
-    conditions.push("entity_id = @entityId");
-    params["entityId"] = filters.entityId;
+    conditions.push(eq(transactions.entityId, filters.entityId));
   }
   if (filters.type) {
-    conditions.push("type = @type");
-    params["type"] = filters.type;
+    conditions.push(eq(transactions.type, filters.type));
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const rows = db
-    .prepare(`SELECT * FROM transactions ${where} ORDER BY date DESC LIMIT @limit OFFSET @offset`)
-    .all({ ...params, limit, offset }) as TransactionRow[];
+    .select()
+    .from(transactions)
+    .where(where)
+    .orderBy(desc(transactions.date))
+    .limit(limit)
+    .offset(offset)
+    .all()
+    .map(toDbRow);
 
-  const countRow = db
-    .prepare(`SELECT COUNT(*) as total FROM transactions ${where}`)
-    .get(params) as { total: number };
+  const [countRow] = db
+    .select({ total: count() })
+    .from(transactions)
+    .where(where)
+    .all();
 
   return { rows, total: countRow.total };
 }
 
 /** Get a single transaction by id. Throws NotFoundError if missing. */
 export function getTransaction(id: string): TransactionRow {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM transactions WHERE id = ?").get(id) as
-    | TransactionRow
-    | undefined;
+  const db = getDrizzle();
+  const row = db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.id, id))
+    .get();
 
   if (!row) throw new NotFoundError("Transaction", id);
-  return row;
+  return toDbRow(row);
 }
 
 /**
@@ -87,41 +116,30 @@ export function getTransaction(id: string): TransactionRow {
  * Generates a local UUID and inserts directly into SQLite.
  */
 export function createTransaction(input: CreateTransactionInput): TransactionRow {
-  const db = getDb();
+  const db = getDrizzle();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  db.prepare(
-    `
-    INSERT INTO transactions (
-      id, description, account, amount, date, type, tags,
-      entity_id, entity_name, location, country,
-      related_transaction_id, notes, checksum, raw_row, last_edited_time
-    )
-    VALUES (
-      @id, @description, @account, @amount, @date, @type, @tags,
-      @entityId, @entityName, @location, @country,
-      @relatedTransactionId, @notes, @checksum, @rawRow, @lastEditedTime
-    )
-  `
-  ).run({
-    id,
-    description: input.description,
-    account: input.account,
-    amount: input.amount,
-    date: input.date,
-    type: input.type || "",
-    tags: JSON.stringify(input.tags ?? []),
-    entityId: input.entityId ?? null,
-    entityName: input.entityName ?? null,
-    location: input.location ?? null,
-    country: input.country ?? null,
-    relatedTransactionId: input.relatedTransactionId ?? null,
-    notes: input.notes ?? null,
-    checksum: input.checksum ?? null,
-    rawRow: input.rawRow ?? null,
-    lastEditedTime: now,
-  });
+  db.insert(transactions)
+    .values({
+      id,
+      description: input.description,
+      account: input.account,
+      amount: input.amount,
+      date: input.date,
+      type: input.type || "",
+      tags: JSON.stringify(input.tags ?? []),
+      entityId: input.entityId ?? null,
+      entityName: input.entityName ?? null,
+      location: input.location ?? null,
+      country: input.country ?? null,
+      relatedTransactionId: input.relatedTransactionId ?? null,
+      notes: input.notes ?? null,
+      checksum: input.checksum ?? null,
+      rawRow: input.rawRow ?? null,
+      lastEditedTime: now,
+    })
+    .run();
 
   return getTransaction(id);
 }
@@ -134,70 +152,52 @@ export function updateTransaction(
   id: string,
   input: UpdateTransactionInput
 ): TransactionRow {
-  const db = getDb();
-
   // Verify it exists first
   getTransaction(id);
 
-  const fields: string[] = [];
-  const params: Record<string, string | number | null> = { id };
+  const updates: Partial<DrizzleRow> = {};
 
   if (input.description !== undefined) {
-    fields.push("description = @description");
-    params["description"] = input.description;
+    updates.description = input.description;
   }
   if (input.account !== undefined) {
-    fields.push("account = @account");
-    params["account"] = input.account;
+    updates.account = input.account;
   }
   if (input.amount !== undefined) {
-    fields.push("amount = @amount");
-    params["amount"] = input.amount;
+    updates.amount = input.amount;
   }
   if (input.date !== undefined) {
-    fields.push("date = @date");
-    params["date"] = input.date;
+    updates.date = input.date;
   }
   if (input.type !== undefined) {
-    fields.push("type = @type");
-    params["type"] = input.type ?? "";
+    updates.type = input.type ?? "";
   }
   if (input.tags !== undefined) {
-    fields.push("tags = @tags");
-    params["tags"] = JSON.stringify(input.tags);
+    updates.tags = JSON.stringify(input.tags);
   }
   if (input.entityId !== undefined) {
-    fields.push("entity_id = @entityId");
-    params["entityId"] = input.entityId ?? null;
+    updates.entityId = input.entityId ?? null;
   }
   if (input.entityName !== undefined) {
-    fields.push("entity_name = @entityName");
-    params["entityName"] = input.entityName ?? null;
+    updates.entityName = input.entityName ?? null;
   }
   if (input.location !== undefined) {
-    fields.push("location = @location");
-    params["location"] = input.location ?? null;
+    updates.location = input.location ?? null;
   }
   if (input.country !== undefined) {
-    fields.push("country = @country");
-    params["country"] = input.country ?? null;
+    updates.country = input.country ?? null;
   }
   if (input.relatedTransactionId !== undefined) {
-    fields.push("related_transaction_id = @relatedTransactionId");
-    params["relatedTransactionId"] = input.relatedTransactionId ?? null;
+    updates.relatedTransactionId = input.relatedTransactionId ?? null;
   }
   if (input.notes !== undefined) {
-    fields.push("notes = @notes");
-    params["notes"] = input.notes ?? null;
+    updates.notes = input.notes ?? null;
   }
 
-  if (fields.length > 0) {
-    fields.push("last_edited_time = @lastEditedTime");
-    params["lastEditedTime"] = new Date().toISOString();
+  if (Object.keys(updates).length > 0) {
+    updates.lastEditedTime = new Date().toISOString();
 
-    db.prepare(`UPDATE transactions SET ${fields.join(", ")} WHERE id = @id`).run(
-      params
-    );
+    getDrizzle().update(transactions).set(updates).where(eq(transactions.id, id)).run();
   }
 
   return getTransaction(id);
@@ -208,11 +208,12 @@ export function updateTransaction(
  * Deletes directly from SQLite.
  */
 export function deleteTransaction(id: string): void {
-  const db = getDb();
-
   // Verify it exists first
   getTransaction(id);
 
-  const result = db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
+  const result = getDrizzle()
+    .delete(transactions)
+    .where(eq(transactions.id, id))
+    .run();
   if (result.changes === 0) throw new NotFoundError("Transaction", id);
 }
