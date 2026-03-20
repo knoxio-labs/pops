@@ -34,7 +34,7 @@ export function attachPhoto(input: AttachPhotoInput): ItemPhotoRow {
 
   assertItemExists(input.itemId);
 
-  db.insert(itemPhotos)
+  const result = db.insert(itemPhotos)
     .values({
       itemId: input.itemId,
       filePath: input.filePath,
@@ -43,16 +43,8 @@ export function attachPhoto(input: AttachPhotoInput): ItemPhotoRow {
     })
     .run();
 
-  // Fetch the created row (last inserted)
-  const [created] = db
-    .select()
-    .from(itemPhotos)
-    .where(eq(itemPhotos.itemId, input.itemId))
-    .orderBy(asc(itemPhotos.id))
-    .all()
-    .slice(-1);
-
-  return created;
+  const id = Number(result.lastInsertRowid);
+  return getPhoto(id);
 }
 
 /** Remove a photo by ID. */
