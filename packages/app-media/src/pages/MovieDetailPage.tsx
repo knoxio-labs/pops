@@ -136,11 +136,14 @@ export function MovieDetailPage() {
           <div className="flex-1 pb-1">
             <h1 className="text-2xl md:text-4xl font-bold text-foreground">
               {logoSrc ? (
-                <img
-                  src={logoSrc}
-                  alt={movie.title}
-                  className="h-12 md:h-16 object-contain"
-                />
+                <>
+                  <img
+                    src={logoSrc}
+                    alt={movie.title}
+                    className="h-12 md:h-16 object-contain"
+                  />
+                  <span className="sr-only">{movie.title}</span>
+                </>
               ) : (
                 movie.title
               )}
