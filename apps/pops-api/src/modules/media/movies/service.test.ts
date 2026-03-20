@@ -95,6 +95,13 @@ describe("createMovie", () => {
     expect(movie.overview).toBeNull();
     expect(movie.genres).toBe("[]");
   });
+
+  it("throws ConflictError on duplicate tmdbId", () => {
+    service.createMovie({ tmdbId: 550, title: "Fight Club", genres: [] });
+    expect(() =>
+      service.createMovie({ tmdbId: 550, title: "Fight Club Copy", genres: [] })
+    ).toThrow("already exists");
+  });
 });
 
 describe("updateMovie", () => {
