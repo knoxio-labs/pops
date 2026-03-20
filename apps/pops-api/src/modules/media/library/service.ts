@@ -3,9 +3,11 @@
  * by fetching metadata from external APIs and inserting records.
  */
 import type { TmdbClient } from "../tmdb/client.js";
-import { getMovieByTmdbId, createMovie } from "../movies/service.js";
+import type { TmdbMovieDetail } from "../tmdb/types.js";
+import { getMovieByTmdbId, getMovie, createMovie, updateMovie } from "../movies/service.js";
 import { toMovie } from "../movies/types.js";
-import type { Movie } from "../movies/types.js";
+import type { Movie, UpdateMovieInput } from "../movies/types.js";
+import type { MovieRow } from "@pops/db-types";
 
 /**
  * Add a movie to the library by TMDB ID.
@@ -52,4 +54,50 @@ export async function addMovie(
   // TODO: download images in background when image cache service is available (tb-058)
 
   return { movie: toMovie(row), created: true };
+}
+
+/** Map a TMDB movie detail response to an update input, preserving poster_override_path. */
+function mapTmdbDetailToUpdate(detail: TmdbMovieDetail): UpdateMovieInput {
+  return {
+    imdbId: detail.imdbId,
+    title: detail.title,
+    originalTitle: detail.originalTitle,
+    overview: detail.overview,
+    tagline: detail.tagline,
+    releaseDate: detail.releaseDate,
+    runtime: detail.runtime,
+    status: detail.status,
+    originalLanguage: detail.originalLanguage,
+    budget: detail.budget,
+    revenue: detail.revenue,
+    posterPath: detail.posterPath,
+    backdropPath: detail.backdropPath,
+    voteAverage: detail.voteAverage,
+    voteCount: detail.voteCount,
+    genres: detail.genres.map((g) => g.name),
+    // NOTE: posterOverridePath is intentionally omitted to preserve user overrides
+  };
+}
+
+/**
+ * Refresh movie metadata from TMDB.
+ *
+ * Fetches fresh detail from TMDB and updates the local record.
+ * Preserves poster_override_path (user-uploaded override).
+ */
+export async function refreshMovie(
+  id: number,
+  tmdbClient: TmdbClient,
+): Promise<MovieRow> {
+  // Get existing movie (throws NotFoundError if missing)
+  const existing = getMovie(id);
+
+  // Fetch fresh detail from TMDB
+  const detail = await tmdbClient.getMovie(existing.tmdbId);
+
+  // Map TMDB detail to update input (preserves poster_override_path)
+  const updateInput = mapTmdbDetailToUpdate(detail);
+
+  // Update the local record
+  return updateMovie(id, updateInput);
 }

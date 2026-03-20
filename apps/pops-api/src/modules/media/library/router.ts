@@ -5,8 +5,15 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../../../trpc.js";
 import { TmdbClient } from "../tmdb/client.js";
+import { TokenBucketRateLimiter } from "../tmdb/rate-limiter.js";
 import { TmdbApiError } from "../tmdb/types.js";
+import { NotFoundError } from "../../../shared/errors.js";
+import { toMovie } from "../movies/types.js";
+import { RefreshMovieSchema } from "./types.js";
 import * as libraryService from "./service.js";
+
+/** Shared rate limiter: TMDB allows 40 req / 10 s → 4 req/s. */
+const tmdbRateLimiter = new TokenBucketRateLimiter(40, 4);
 
 function getTmdbClient(): TmdbClient {
   const apiKey = process.env["TMDB_API_KEY"];
@@ -16,7 +23,7 @@ function getTmdbClient(): TmdbClient {
       message: "TMDB_API_KEY is not configured",
     });
   }
-  return new TmdbClient(apiKey);
+  return new TmdbClient(apiKey, tmdbRateLimiter);
 }
 
 export const libraryRouter = router({
@@ -46,6 +53,34 @@ export const libraryRouter = router({
               message: `Movie not found on TMDB (ID: ${input.tmdbId})`,
             });
           }
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `TMDB API error: ${err.message}`,
+          });
+        }
+        throw err;
+      }
+    }),
+
+  /** Refresh movie metadata from TMDB. */
+  refreshMovie: protectedProcedure
+    .input(RefreshMovieSchema)
+    .mutation(async ({ input }) => {
+      const tmdbClient = getTmdbClient();
+      try {
+        const row = await libraryService.refreshMovie(
+          input.id,
+          tmdbClient,
+        );
+        return {
+          data: toMovie(row),
+          message: "Movie metadata refreshed",
+        };
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        }
+        if (err instanceof TmdbApiError) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `TMDB API error: ${err.message}`,
