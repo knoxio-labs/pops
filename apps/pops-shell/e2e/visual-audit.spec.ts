@@ -35,8 +35,10 @@ test.describe("Visual Audit", () => {
 
       await page.goto(route.path, { waitUntil: "networkidle" });
 
-      // Wait for lazy-loaded content to render
-      await page.waitForTimeout(500);
+      // Wait for lazy-loaded content and tRPC queries to resolve.
+      // Some pages load data via tRPC after initial render — networkidle
+      // may fire before queries complete.
+      await page.waitForTimeout(2000);
 
       await page.screenshot({
         path: `e2e/screenshots/${route.name}.png`,
