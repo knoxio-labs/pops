@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { Alert, AlertTitle, AlertDescription, Badge, Skeleton, Textarea } from "@pops/ui";
 import { trpc } from "../lib/trpc";
@@ -97,7 +97,7 @@ function WatchlistItem({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       handleSave();
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && !isUpdating) {
       handleCancel();
     }
   };
@@ -260,26 +260,34 @@ export function WatchlistPage() {
     year: number | null;
   }
 
-  const movieMap = new Map<number, MediaMeta>(
-    (moviesData?.data ?? []).map((m: { id: number; title: string; releaseDate: string | null }) => [
-      m.id,
-      {
-        title: m.title,
-        year: m.releaseDate ? new Date(m.releaseDate).getFullYear() : null,
-      },
-    ])
+  const movieMap = useMemo(
+    () =>
+      new Map<number, MediaMeta>(
+        (moviesData?.data ?? []).map((m: { id: number; title: string; releaseDate: string | null }) => [
+          m.id,
+          {
+            title: m.title,
+            year: m.releaseDate ? new Date(m.releaseDate).getFullYear() : null,
+          },
+        ])
+      ),
+    [moviesData?.data]
   );
 
-  const tvMap = new Map<number, MediaMeta>(
-    (tvShowsData?.data ?? []).map((s: { id: number; name: string; firstAirDate: string | null }) => [
-      s.id,
-      {
-        title: s.name,
-        year: s.firstAirDate
-          ? new Date(s.firstAirDate).getFullYear()
-          : null,
-      },
-    ])
+  const tvMap = useMemo(
+    () =>
+      new Map<number, MediaMeta>(
+        (tvShowsData?.data ?? []).map((s: { id: number; name: string; firstAirDate: string | null }) => [
+          s.id,
+          {
+            title: s.name,
+            year: s.firstAirDate
+              ? new Date(s.firstAirDate).getFullYear()
+              : null,
+          },
+        ])
+      ),
+    [tvShowsData?.data]
   );
 
   // Sort by priority (higher first), then by addedAt (newest first)
