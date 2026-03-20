@@ -103,7 +103,7 @@ export class TmdbClient {
       aspectRatio: img.aspect_ratio,
       voteAverage: img.vote_average,
       voteCount: img.vote_count,
-      iso_639_1: img.iso_639_1,
+      languageCode: img.iso_639_1,
     });
 
     return {

@@ -68,7 +68,7 @@ export interface TmdbImage {
   aspectRatio: number;
   voteAverage: number;
   voteCount: number;
-  iso_639_1: string | null;
+  languageCode: string | null;
 }
 
 /** Response from TMDB movie images endpoint. */

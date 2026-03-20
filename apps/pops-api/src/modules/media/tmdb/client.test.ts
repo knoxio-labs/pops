@@ -285,8 +285,10 @@ describe("getMovieImages", () => {
     expect(result.backdrops[0].width).toBe(1920);
     expect(result.posters).toHaveLength(1);
     expect(result.posters[0].filePath).toBe("/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg");
+    expect(result.posters[0].languageCode).toBe("en");
     expect(result.logos).toHaveLength(1);
     expect(result.logos[0].filePath).toBe("/logo123.png");
+    expect(result.backdrops[0].languageCode).toBeNull();
   });
 
   it("calls correct images URL", async () => {
@@ -359,6 +361,7 @@ describe("error handling", () => {
   });
 
   it("throws TmdbApiError on 401 unauthorized", async () => {
+    expect.assertions(3);
     fetchMock.mockResolvedValueOnce(
       mockResponse(
         { status_message: "Invalid API key: You must be granted a valid key." },
@@ -421,6 +424,7 @@ describe("error handling", () => {
   });
 
   it("uses fallback message when error response has no status_message", async () => {
+    expect.assertions(3);
     fetchMock.mockResolvedValueOnce(
       mockResponse({}, 500, "Internal Server Error"),
     );
