@@ -1,7 +1,7 @@
 /**
  * Dashboard page - overview of finances
  */
-import { trpc } from "@/lib/trpc";
+import { trpc } from "../lib/trpc";
 import { Card } from "@pops/ui";
 import { Alert, AlertTitle, AlertDescription } from "@pops/ui";
 import { Skeleton } from "@pops/ui";

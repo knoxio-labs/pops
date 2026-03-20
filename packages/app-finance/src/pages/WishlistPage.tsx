@@ -2,7 +2,7 @@
  * Wishlist page - savings goals
  */
 import type { ColumnDef } from "@tanstack/react-table";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "../lib/trpc";
 import { DataTable, SortableHeader } from "@pops/ui";
 import { Badge } from "@pops/ui";
 import { Alert } from "@pops/ui";

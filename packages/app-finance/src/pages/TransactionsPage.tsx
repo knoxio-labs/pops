@@ -3,12 +3,12 @@
  */
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback } from "react";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "../lib/trpc";
 import { DataTable, SortableHeader } from "@pops/ui";
 import { Badge } from "@pops/ui";
 import { Alert } from "@pops/ui";
 import { Skeleton } from "@pops/ui";
-import { TagEditor } from "@/components/TagEditor";
+import { TagEditor } from "../components/TagEditor";
 import type { ColumnFilter } from "@pops/ui";
 
 interface Transaction {
