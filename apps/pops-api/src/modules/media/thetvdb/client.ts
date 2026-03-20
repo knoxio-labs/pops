@@ -5,6 +5,7 @@
  * and automatic 401 re-authentication retry.
  */
 import { TheTvdbAuth } from "./auth.js";
+import { fetchWithRetry } from "./rate-limiter.js";
 import {
   TvdbApiError,
   type TvdbSearchResult,
@@ -122,13 +123,15 @@ export class TheTvdbClient {
     let response: Response;
 
     try {
-      response = await fetch(`${BASE_URL}${path}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
+      response = await fetchWithRetry(() =>
+        fetch(`${BASE_URL}${path}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }),
+      );
     } catch (err) {
       throw new TvdbApiError(
         0,
