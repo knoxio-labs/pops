@@ -117,6 +117,34 @@ export function createTestDb(): Database {
       last_edited_time TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS movies (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      tmdb_id            INTEGER NOT NULL,
+      imdb_id            TEXT,
+      title              TEXT NOT NULL,
+      original_title     TEXT,
+      overview           TEXT,
+      tagline            TEXT,
+      release_date       TEXT,
+      runtime            INTEGER,
+      status             TEXT,
+      original_language  TEXT,
+      budget             INTEGER,
+      revenue            INTEGER,
+      poster_path        TEXT,
+      backdrop_path      TEXT,
+      logo_path          TEXT,
+      poster_override_path TEXT,
+      vote_average       REAL,
+      vote_count         INTEGER,
+      genres             TEXT,
+      created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_movies_tmdb_id ON movies(tmdb_id);
+    CREATE INDEX IF NOT EXISTS idx_movies_title ON movies(title);
+    CREATE INDEX IF NOT EXISTS idx_movies_release_date ON movies(release_date);
+
     CREATE TABLE IF NOT EXISTS transaction_corrections (
       id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
       description_pattern TEXT NOT NULL,
@@ -419,6 +447,74 @@ export function seedWishListItem(
   });
 
   return id;
+}
+
+/**
+ * Seed a single movie row into the test DB.
+ * Returns the auto-generated id.
+ */
+export function seedMovie(
+  db: Database,
+  overrides: Partial<{
+    tmdb_id: number;
+    imdb_id: string | null;
+    title: string;
+    original_title: string | null;
+    overview: string | null;
+    tagline: string | null;
+    release_date: string | null;
+    runtime: number | null;
+    status: string | null;
+    original_language: string | null;
+    budget: number | null;
+    revenue: number | null;
+    poster_path: string | null;
+    backdrop_path: string | null;
+    logo_path: string | null;
+    poster_override_path: string | null;
+    vote_average: number | null;
+    vote_count: number | null;
+    genres: string | null;
+  }> = {}
+): number {
+  const result = db.prepare(
+    `
+    INSERT INTO movies (
+      tmdb_id, imdb_id, title, original_title, overview, tagline,
+      release_date, runtime, status, original_language,
+      budget, revenue, poster_path, backdrop_path, logo_path, poster_override_path,
+      vote_average, vote_count, genres
+    )
+    VALUES (
+      @tmdb_id, @imdb_id, @title, @original_title, @overview, @tagline,
+      @release_date, @runtime, @status, @original_language,
+      @budget, @revenue, @poster_path, @backdrop_path, @logo_path, @poster_override_path,
+      @vote_average, @vote_count, @genres
+    )
+  `
+  ).run({
+    tmdb_id: overrides.tmdb_id ?? 12345,
+    imdb_id: overrides.imdb_id ?? null,
+    title: overrides.title ?? "Test Movie",
+    original_title: overrides.original_title ?? null,
+    overview: overrides.overview ?? null,
+    tagline: overrides.tagline ?? null,
+    release_date: overrides.release_date ?? null,
+    runtime: overrides.runtime ?? null,
+    status: overrides.status ?? null,
+    original_language: overrides.original_language ?? null,
+    budget: overrides.budget ?? null,
+    revenue: overrides.revenue ?? null,
+    poster_path: overrides.poster_path ?? null,
+    backdrop_path: overrides.backdrop_path ?? null,
+    logo_path: overrides.logo_path ?? null,
+    poster_override_path: overrides.poster_override_path ?? null,
+    vote_average: overrides.vote_average ?? null,
+    vote_count: overrides.vote_count ?? null,
+    genres: overrides.genres ?? "[]",
+  });
+
+  return Number(result.lastInsertRowid);
 }
 
 /**
