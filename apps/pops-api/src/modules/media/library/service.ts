@@ -3,7 +3,6 @@
  * by fetching metadata from external APIs and inserting records.
  */
 import type { TmdbClient } from "../tmdb/client.js";
-import type { MovieRow } from "@pops/db-types";
 import { getMovieByTmdbId, createMovie } from "../movies/service.js";
 import { toMovie } from "../movies/types.js";
 import type { Movie } from "../movies/types.js";
