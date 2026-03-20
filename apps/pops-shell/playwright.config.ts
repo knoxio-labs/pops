@@ -9,7 +9,7 @@ import { defineConfig, devices } from '@playwright/test';
  *     The API webServer is still started but irrelevant for these tests.
  *
  *   Integration tests (*-integration.spec.ts):
- *     Real API calls route through Vite proxy → finance-api → 'e2e' named environment.
+ *     Real API calls route through Vite proxy → backend API → 'e2e' named environment.
  *     globalSetup creates the seeded env before tests; globalTeardown deletes it after.
  */
 export default defineConfig({
@@ -47,7 +47,7 @@ export default defineConfig({
   ],
 
   webServer: [
-    // Vite dev server (PWA) — runs on port 5567 (separate from dev server on 5566)
+    // Vite dev server (Shell) — runs on port 5567 (separate from dev server on 5566)
     // so VITE_E2E=true always takes effect regardless of whether a dev server is running.
     // ReactQueryDevtools SVG logo renders at r=316.5px and intercepts pointer events,
     // so it must be disabled in E2E via VITE_E2E=true.
