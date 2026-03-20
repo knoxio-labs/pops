@@ -1,15 +1,7 @@
 import { useParams, Link } from "react-router";
 import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
 import { trpc } from "../lib/trpc";
-import { formatRuntime } from "../lib/utils";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { formatCurrency, formatRuntime } from "../lib/format";
 
 function MovieDetailSkeleton() {
   return (

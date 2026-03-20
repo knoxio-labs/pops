@@ -13,12 +13,7 @@ import {
   BreadcrumbSeparator,
 } from "@pops/ui";
 import { trpc } from "../lib/trpc";
-
-function formatRuntime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
+import { formatRuntime } from "../lib/format";
 
 function TvShowDetailSkeleton() {
   return (
@@ -193,11 +188,14 @@ export function TvShowDetailPage() {
           <div className="flex-1 pb-1">
             <h1 className="text-2xl md:text-4xl font-bold text-foreground">
               {logoSrc ? (
-                <img
-                  src={logoSrc}
-                  alt={show.name}
-                  className="h-12 md:h-16 object-contain"
-                />
+                <>
+                  <img
+                    src={logoSrc}
+                    alt={show.name}
+                    className="h-12 md:h-16 object-contain"
+                  />
+                  <span className="sr-only">{show.name}</span>
+                </>
               ) : (
                 show.name
               )}
@@ -326,7 +324,7 @@ export function TvShowDetailPage() {
                   <Link
                     key={season.id}
                     to={`/media/tv/${show.id}/season/${season.seasonNumber}`}
-                    className="flex gap-4 rounded-lg border p-3 transition-colors hover:bg-accent"
+                    className="flex gap-4 rounded-lg border p-3 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {seasonPosterSrc ? (
                       <img
