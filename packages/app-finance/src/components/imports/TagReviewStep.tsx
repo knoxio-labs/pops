@@ -7,7 +7,7 @@ import { Badge } from "@pops/ui";
 import { TagEditor, type TagMetaEntry } from "../TagEditor";
 import { toast } from "sonner";
 import type { ConfirmedTransaction, SuggestedTag } from "@pops/finance-api/modules/imports";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types

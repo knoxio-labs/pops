@@ -17,6 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@pops/app-finance": "workspace:*",
     "@pops/finance-api": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.90.20",

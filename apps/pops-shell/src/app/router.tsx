@@ -2,10 +2,32 @@
  * Shell router configuration
  *
  * RootLayout provides the top bar + sidebar chrome.
- * US-3 will wire in lazy-loaded app routes from @pops/app-finance.
+ * Finance routes are lazily loaded from @pops/app-finance.
  */
+import { Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router";
+import { routes as financeRoutes } from "@pops/app-finance";
 import { RootLayout } from "./layout/RootLayout";
+
+/**
+ * Wrap lazy-loaded routes with Suspense so React can show a fallback
+ * while the chunk loads.
+ */
+const withSuspense = (routes: typeof financeRoutes) =>
+  routes.map((route) => ({
+    ...route,
+    element: route.element ? (
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center h-64 text-muted-foreground">
+            Loading…
+          </div>
+        }
+      >
+        {route.element}
+      </Suspense>
+    ) : undefined,
+  }));
 
 export const router = createBrowserRouter([
   {
@@ -15,17 +37,9 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/finance" replace /> },
       {
         path: "finance",
-        children: [
-          {
-            index: true,
-            element: (
-              <div className="p-6 text-muted-foreground">
-                Shell layout ready — finance routes will be wired in US-3
-              </div>
-            ),
-          },
-        ],
+        children: withSuspense(financeRoutes),
       },
+      // Future: { path: 'media', children: mediaRoutes }
     ],
   },
 ]);

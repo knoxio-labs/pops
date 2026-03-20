@@ -337,6 +337,9 @@ importers:
 
   apps/pops-shell:
     dependencies:
+      '@pops/app-finance':
+        specifier: workspace:*
+        version: link:../../packages/app-finance
       '@pops/finance-api':
         specifier: workspace:*
         version: link:../finance-api

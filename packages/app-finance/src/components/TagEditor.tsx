@@ -7,7 +7,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import { Chip, Popover, PopoverContent, PopoverTrigger, Badge } from "@pops/ui";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils";
 
 /** Source attribution for a tag — from AI, correction rule, or entity defaults. */
 export type TagSource = "ai" | "rule" | "entity";
