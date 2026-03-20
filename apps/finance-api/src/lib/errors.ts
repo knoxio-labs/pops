@@ -55,50 +55,11 @@ export function formatImportError(error: unknown, context: ErrorContext = {}): F
     };
   }
 
-  // Notion API errors
-  if (error && typeof error === "object" && "code" in error) {
-    const notionError = error as { code: string; message?: string; status?: number };
-
-    if (notionError.code === "object_not_found") {
-      return {
-        message: "Notion database not found",
-        suggestion:
-          "Check NOTION_BALANCE_SHEET_ID in .env and verify database is shared with your integration",
-        details: "See docs/NOTION_SETUP.md for setup instructions",
-      };
-    }
-
-    if (notionError.code === "unauthorized") {
-      return {
-        message: "Notion API authentication failed",
-        suggestion: "Check NOTION_API_TOKEN in .env and verify it hasn't expired",
-        details: notionError.message,
-      };
-    }
-
-    if (notionError.code === "validation_error") {
-      return {
-        message: "Notion API validation error",
-        suggestion: "Check that all required properties exist in your Notion database",
-        details: notionError.message,
-      };
-    }
-
-    if (notionError.code === "rate_limited") {
-      return {
-        message: "Notion API rate limit exceeded",
-        suggestion:
-          "Wait a moment and try again. Large imports may need to be split into smaller batches.",
-        details: notionError.message,
-      };
-    }
-  }
-
   // Network errors
   if (error instanceof Error && error.message.includes("ECONNREFUSED")) {
     return {
       message: "Connection refused",
-      suggestion: "Check that the Notion API is reachable and your internet connection is working",
+      suggestion: "Check your internet connection and try again",
       details: error.message,
     };
   }

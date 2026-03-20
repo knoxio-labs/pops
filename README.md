@@ -217,7 +217,7 @@ See `mise.toml` for all available tasks and [CLAUDE.md](CLAUDE.md) for detailed 
 POPS uses Playwright for end-to-end tests with two modes:
 
 - **Mocked** — fast, no real API/DB, suitable for UI logic tests
-- **Integration** — real SQLite DB via the named env system, no Notion/Claude calls
+- **Integration** — real SQLite DB via the named env system, no external API calls
 
 ```bash
 # Run all E2E tests
@@ -229,7 +229,7 @@ cd apps/pops-pwa && pnpm test:e2e --ui
 
 The `globalSetup` creates an isolated `e2e` named environment (seeded SQLite DB) before the run. Tests route through `?env=e2e` so they hit real data without touching production. `globalTeardown` deletes the env after the run.
 
-Named envs auto-skip external API calls (Notion, Claude) — safe to run in CI without real credentials.
+Named envs auto-skip external API calls (Claude) — safe to run in CI without real credentials.
 
 ### Local Development Setup
 

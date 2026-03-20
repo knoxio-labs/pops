@@ -24,7 +24,7 @@ export const Single: Story = {
         <AccordionTrigger>What is POPS?</AccordionTrigger>
         <AccordionContent>
           POPS (Personal Operations System) is a self-hosted financial tracking
-          and automation platform that uses Notion as the source of truth for
+          and automation platform that uses SQLite as the source of truth for
           all data.
         </AccordionContent>
       </AccordionItem>
@@ -33,8 +33,7 @@ export const Single: Story = {
         <AccordionTrigger>How does it work?</AccordionTrigger>
         <AccordionContent>
           Bank data is imported via CSV or API, matched with entities using a
-          5-stage pipeline, and synced to Notion. The system then mirrors Notion
-          data to SQLite for fast queries.
+          5-stage pipeline, and written directly to SQLite for fast queries.
         </AccordionContent>
       </AccordionItem>
 
@@ -69,7 +68,6 @@ export const Multiple: Story = {
         <AccordionTrigger>Integrations</AccordionTrigger>
         <AccordionContent>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Notion API</li>
             <li>Up Bank API</li>
             <li>ANZ CSV Import</li>
             <li>Amex CSV Import</li>
@@ -112,7 +110,7 @@ export const DefaultOpen: Story = {
       <AccordionItem value="item-2">
         <AccordionTrigger>Configuration</AccordionTrigger>
         <AccordionContent>
-          Configure your environment variables and Notion integration settings.
+          Configure your environment variables and integration settings.
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -166,8 +164,8 @@ export const FAQ: Story = {
         <AccordionItem value="q4">
           <AccordionTrigger>Can I export my data?</AccordionTrigger>
           <AccordionContent>
-            Yes, since Notion is your source of truth, you can export your data
-            directly from Notion at any time in CSV, Markdown, or HTML format.
+            Yes, SQLite is the source of truth, so you can export your data
+            at any time in CSV or other formats via the API.
           </AccordionContent>
         </AccordionItem>
 

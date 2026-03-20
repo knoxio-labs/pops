@@ -89,10 +89,10 @@ export function getDb(): BetterSqlite3.Database {
  * Returns true when the current async context is a named environment (i.e.
  * the request included ?env=NAME and the env middleware called withEnvDb).
  *
- * Named envs are ephemeral, isolated SQLite databases with no Notion
- * counterpart. Code that would otherwise call external services (Notion,
- * Claude) should skip those calls when this returns true — the operations
- * are meaningless against a fresh test DB.
+ * Named envs are ephemeral, isolated SQLite databases. Code that would
+ * otherwise call external services (Claude API) should skip those calls
+ * when this returns true — the operations are meaningless against a
+ * fresh test DB.
  */
 export function isNamedEnvContext(): boolean {
   return asyncDb.getStore() !== undefined;

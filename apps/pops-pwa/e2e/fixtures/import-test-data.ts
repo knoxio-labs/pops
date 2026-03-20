@@ -410,8 +410,8 @@ export const createErrorMockData = (): MockImportResult => ({
   skipped: [],
   warnings: [
     {
-      type: 'NOTION_DATABASE_NOT_FOUND',
-      message: 'Notion database not found. Check your .env configuration.',
+      type: 'DATABASE_ERROR',
+      message: 'Database error. Check your configuration.',
     },
   ],
 });
@@ -489,7 +489,7 @@ export const createDuplicatesMockData = (): MockImportResult => ({
 /**
  * Warning scenarios
  */
-export const createWarningMockData = (warningType: 'deduplication' | 'ai' | 'notion'): MockImportResult => {
+export const createWarningMockData = (warningType: 'deduplication' | 'ai' | 'database'): MockImportResult => {
   const baseData = createSimpleMockData();
 
   const warnings = {
@@ -502,9 +502,9 @@ export const createWarningMockData = (warningType: 'deduplication' | 'ai' | 'not
       message: 'AI categorization service unavailable. Manual review recommended.',
       affectedCount: 5,
     },
-    notion: {
-      type: 'NOTION_DATABASE_NOT_FOUND',
-      message: 'Notion database not found. Check your .env configuration.',
+    database: {
+      type: 'DATABASE_ERROR',
+      message: 'Database error. Check your configuration.',
     },
   };
 

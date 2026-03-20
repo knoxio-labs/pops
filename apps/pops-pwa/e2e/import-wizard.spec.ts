@@ -1121,16 +1121,16 @@ test.describe('Import Wizard - Warnings and Errors', () => {
     // Verify warning shown with affected transaction count
   });
 
-  test('should block on critical Notion error', async ({ page }) => {
+  test('should block on critical database error', async ({ page }) => {
     await setupMockAPIs(page, { scenario: 'errors' });
 
     await uploadCSVFile(page, simpleCSV);
     await page.getByRole('button', { name: /next/i }).click();
     await page.getByRole('button', { name: /next/i }).click();
 
-    // Should show red error alert - the heading shows "Notion Database Not Found"
+    // Should show red error alert - the heading shows "Database Error"
     // Use first() because the message text also matches this pattern
-    await expect(page.getByText(/notion database not found/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/database error/i).first()).toBeVisible({ timeout: 10000 });
 
     // Should NOT auto-advance - the Review heading should not appear
     await expect(page.getByRole('heading', { name: 'Review' })).not.toBeVisible();

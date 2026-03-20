@@ -220,34 +220,6 @@ Bank Feeds:
 - **Chat:** Moltbot (Telegram)
 - **Backup:** Backblaze B2 via rclone (encrypted)
 
-## Notion Databases (Legacy Reference)
-
-**NOTE:** Notion database IDs are still used by the import pipeline during migration. These will be removed once all import functionality moves to SQLite-only. Database IDs are loaded from environment variables (`.env` file locally, Ansible Vault in production).
-
-### Balance Sheet
-- **Env Var:** `NOTION_BALANCE_SHEET_ID`
-- **Records:** 15,000+ transactions across 11 accounts
-- **Properties:** Description (title), Account (select), Amount (number), Date (date), Type (select), Category (multi_select), Entity (relation → Entities), Location (select), Country (select), Online (checkbox), Novated Lease (checkbox), Tax Return (checkbox), Related Transaction (relation)
-
-### Entities
-- **Env Var:** `NOTION_ENTITIES_DB_ID`
-- **Records:** 940+ merchants/payees
-- **Properties:** Name (title)
-
-### Home Inventory
-- **Env Var:** `NOTION_HOME_INVENTORY_ID`
-- **Data source:** `collection://7784d712-0114-4371-90c1-cb15ea003fe2`
-- **Properties:** Item Name (title), Brand/Manufacturer, Model, ID, Room, Location, Type, Condition, In-use, Deductible, Purchase Date, Warranty Expires, Est. Replacement Value, Est. Resale Value, Purchase Transaction (relation → Balance Sheet), Purchased From (relation → Entities)
-- **Missing:** Receipt attachment
-
-### Budget
-- **Env Var:** `NOTION_BUDGET_ID`
-- **Properties:** Category (title), Period (select), Amount (number), Active (checkbox), Notes (rich_text)
-
-### Wish List
-- **Env Var:** `NOTION_WISH_LIST_ID`
-- **Properties:** Item (title), Target Amount (number), Saved (number), Priority (select: Needing/Soon/One Day/Dreaming), URL (url), Notes (rich_text)
-
 ## Import Tools
 
 Stubs in `tools/src/`. Original implementations in `~/Downloads/transactions/` need migration.

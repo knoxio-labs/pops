@@ -347,7 +347,7 @@ function parseAmount(amountStr: string | undefined): number | null {
 
   if (isNaN(amount)) return null;
 
-  // Invert for Notion format (negative = expense)
+  // Invert so negative = expense
   return -amount;
 }
 

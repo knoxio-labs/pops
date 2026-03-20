@@ -105,7 +105,7 @@ export const WithSaveLatency: Story = {
   },
 };
 
-// Available tags loaded from the database (dynamic Notion Tags)
+// Available tags loaded from the database
 export const WithAvailableTags: Story = {
   args: {
     currentTags: [],

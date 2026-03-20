@@ -10,7 +10,7 @@ import { logger } from "../../../lib/logger.js";
 
 /**
  * Load all distinct tag values from existing transactions.
- * Used to inform LLM prompts with real tags from the user's Notion database.
+ * Used to inform LLM prompts with real tags from the database.
  */
 function loadAvailableTagsFromDb(): string[] {
   try {

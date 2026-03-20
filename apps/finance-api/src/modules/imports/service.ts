@@ -5,7 +5,7 @@
  * - Universal entity matching (same algorithm for all banks)
  * - Checksum-based deduplication against SQLite
  * - AI fallback with full row context
- * - Batch writes to SQLite (no Notion dependency)
+ * - Batch writes to SQLite
  */
 import { getDb } from "../../db.js";
 import { logger } from "../../lib/logger.js";

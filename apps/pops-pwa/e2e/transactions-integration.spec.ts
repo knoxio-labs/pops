@@ -6,9 +6,8 @@
  * mocked tests miss (e.g. missing columns, broken WHERE clauses).
  *
  * Constraints:
- *   - Write operations (transactions.update) still call Notion first, which
- *     fails with test credentials. The update endpoint is mocked to return
- *     success — we test the UI flow and request payload, not the DB write.
+ *   - Write operations (transactions.update) are mocked to return success —
+ *     we test the UI flow and request payload, not the DB write.
  *   - Read operations (transactions.list, suggestTags) are fully real.
  *
  * Seeded data reference (from src/db/seeder.ts):
@@ -25,7 +24,7 @@ import { useRealApi, useRealEndpoint } from './helpers/use-real-api';
 
 const getPopover = (page: Page) => page.locator('[data-slot="popover-content"]');
 
-/** Fulfill transactions.update with a mocked success (Notion write would fail in test). */
+/** Fulfill transactions.update with a mocked success. */
 async function mockUpdateSuccess(page: Page): Promise<void> {
   await page.route(/\/trpc\/transactions\.update/, async (route) => {
     const isBatch = new URL(route.request().url()).searchParams.has('batch');
@@ -43,7 +42,7 @@ async function mockUpdateSuccess(page: Page): Promise<void> {
 test.describe('Transactions — real data loads from seeded DB', () => {
   test.beforeEach(async ({ page }) => {
     await useRealApi(page);
-    // transactions.update writes to Notion — mock success so save tests work
+    // transactions.update is mocked so save tests work without real writes
     await mockUpdateSuccess(page);
     await page.goto('/transactions');
   });
@@ -91,7 +90,7 @@ test.describe('Transactions — real data loads from seeded DB', () => {
 
 test.describe('Transactions — TagEditor save flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Real list (reads seeded data), real suggestTags, mocked update (Notion write fails in test)
+    // Real list (reads seeded data), real suggestTags, mocked update
     await useRealEndpoint(page, 'transactions\\.list');
     await useRealEndpoint(page, 'transactions\\.suggestTags');
     await mockUpdateSuccess(page);
