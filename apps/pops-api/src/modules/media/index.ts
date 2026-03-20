@@ -8,6 +8,7 @@ import { comparisonsRouter } from "./comparisons/index.js";
 import { watchlistRouter } from "./watchlist/router.js";
 import { watchHistoryRouter } from "./watch-history/router.js";
 import { libraryRouter } from "./library/index.js";
+import { searchRouter } from "./search/index.js";
 
 export const mediaRouter = router({
   movies: moviesRouter,
@@ -16,4 +17,5 @@ export const mediaRouter = router({
   watchlist: watchlistRouter,
   watchHistory: watchHistoryRouter,
   library: libraryRouter,
+  search: searchRouter,
 });
