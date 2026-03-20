@@ -8,9 +8,21 @@
  * Failures are logged, not thrown.
  */
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
+
+/** Allowed hostnames for image downloads. */
+const ALLOWED_IMAGE_HOSTS = new Set([
+  "image.tmdb.org",
+  "artworks.thetvdb.com",
+]);
+
+/** Map media type to directory name. */
+export const MEDIA_DIR_NAMES: Record<string, string> = {
+  movie: "movies",
+  tv: "tv",
+};
 
 const IMAGE_SIZES = {
   poster: "w780",
@@ -119,7 +131,7 @@ export class ImageCacheService {
     id: number,
     imageType: ImageType,
   ): Promise<string | null> {
-    const dirName = mediaType === "tv" ? "tv" : "movies";
+    const dirName = MEDIA_DIR_NAMES[mediaType] ?? `${mediaType}s`;
     const filePath = join(
       this.imagesDir,
       dirName,
@@ -156,6 +168,20 @@ export class ImageCacheService {
   }
 
   private async downloadImage(url: string, destPath: string): Promise<void> {
+    // Validate URL hostname against allowlist (SSRF defense)
+    try {
+      const parsed = new URL(url);
+      if (!ALLOWED_IMAGE_HOSTS.has(parsed.hostname)) {
+        console.warn(
+          `[ImageCache] Blocked download from untrusted host: ${parsed.hostname}`,
+        );
+        return;
+      }
+    } catch {
+      console.warn(`[ImageCache] Invalid URL: ${url}`);
+      return;
+    }
+
     // Skip if file already exists
     try {
       await stat(destPath);
