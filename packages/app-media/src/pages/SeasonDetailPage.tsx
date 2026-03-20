@@ -1,7 +1,18 @@
 import { useParams, Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Skeleton } from "@pops/ui";
-import { trpc } from "@/lib/trpc";
-import { EpisodeList } from "@/components/EpisodeList";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  Skeleton,
+} from "@pops/ui";
+import { trpc } from "../lib/trpc";
+import { EpisodeList } from "../components/EpisodeList";
 
 function SeasonDetailSkeleton() {
   return (
@@ -120,17 +131,25 @@ export function SeasonDetailPage() {
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link to="/media" className="hover:text-foreground">
-          Media
-        </Link>
-        <span>›</span>
-        <Link to={`/media/tv/${show.id}`} className="hover:text-foreground">
-          {show.name}
-        </Link>
-        <span>›</span>
-        <span className="text-foreground font-medium">{seasonLabel}</span>
-      </nav>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/media">Media</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={`/media/tv/${show.id}`}>{show.name}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{seasonLabel}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       {/* Season header */}
       <div className="flex flex-col sm:flex-row gap-4">
