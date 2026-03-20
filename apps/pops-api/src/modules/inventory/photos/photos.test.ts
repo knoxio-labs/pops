@@ -100,6 +100,46 @@ describe("inventory.photos.attach", () => {
     expect(row).toBeDefined();
     expect(row!.file_path).toBe("items/tv/photo.jpg");
   });
+
+  it("rejects path traversal with '..'", async () => {
+    const itemId = seedInventoryItem(db, { item_name: "TV" });
+
+    await expect(
+      caller.inventory.photos.attach({
+        itemId,
+        filePath: "../../../etc/passwd",
+      })
+    ).rejects.toThrow(TRPCError);
+
+    try {
+      await caller.inventory.photos.attach({
+        itemId,
+        filePath: "../../../etc/passwd",
+      });
+    } catch (err) {
+      expect((err as TRPCError).code).toBe("BAD_REQUEST");
+    }
+  });
+
+  it("rejects absolute file paths", async () => {
+    const itemId = seedInventoryItem(db, { item_name: "TV" });
+
+    await expect(
+      caller.inventory.photos.attach({
+        itemId,
+        filePath: "/etc/passwd",
+      })
+    ).rejects.toThrow(TRPCError);
+
+    try {
+      await caller.inventory.photos.attach({
+        itemId,
+        filePath: "/etc/passwd",
+      });
+    } catch (err) {
+      expect((err as TRPCError).code).toBe("BAD_REQUEST");
+    }
+  });
 });
 
 describe("inventory.photos.remove", () => {

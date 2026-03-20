@@ -2,10 +2,17 @@
  * Item photos service — attach/remove/reorder photos using Drizzle ORM.
  */
 import { eq, count, asc } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
+import { getDrizzle, getDb } from "../../../db.js";
 import { itemPhotos, homeInventory } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
+import { NotFoundError, ValidationError } from "../../../shared/errors.js";
 import type { ItemPhotoRow, AttachPhotoInput, UpdatePhotoInput } from "./types.js";
+
+/** Reject path traversal attempts in file paths. */
+function assertSafeFilePath(filePath: string): void {
+  if (filePath.includes("..") || filePath.startsWith("/")) {
+    throw new ValidationError("File path must be relative and cannot contain '..'");
+  }
+}
 
 /** Count + rows for a paginated list. */
 export interface PhotoListResult {
@@ -33,6 +40,7 @@ export function attachPhoto(input: AttachPhotoInput): ItemPhotoRow {
   const db = getDrizzle();
 
   assertItemExists(input.itemId);
+  assertSafeFilePath(input.filePath);
 
   const result = db.insert(itemPhotos)
     .values({
@@ -111,19 +119,27 @@ export function listPhotosForItem(
  */
 export function reorderPhotos(itemId: string, orderedIds: number[]): ItemPhotoRow[] {
   const db = getDrizzle();
+  const rawDb = getDb();
 
   assertItemExists(itemId);
 
-  for (let i = 0; i < orderedIds.length; i++) {
-    const photo = getPhoto(orderedIds[i]);
+  // Validate all photos exist and belong to this item before mutating
+  for (const photoId of orderedIds) {
+    const photo = getPhoto(photoId);
     if (photo.itemId !== itemId) {
-      throw new NotFoundError("Item photo", String(orderedIds[i]));
+      throw new NotFoundError("Item photo", String(photoId));
     }
-    db.update(itemPhotos)
-      .set({ sortOrder: i })
-      .where(eq(itemPhotos.id, orderedIds[i]))
-      .run();
   }
+
+  // Apply all sort order updates in a single transaction
+  rawDb.transaction(() => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      db.update(itemPhotos)
+        .set({ sortOrder: i })
+        .where(eq(itemPhotos.id, orderedIds[i]))
+        .run();
+    }
+  })();
 
   // Return all photos in new order
   return db

@@ -13,7 +13,7 @@ import {
   toPhoto,
 } from "./types.js";
 import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+import { NotFoundError, ValidationError } from "../../../shared/errors.js";
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -30,6 +30,9 @@ export const photosRouter = router({
     } catch (err) {
       if (err instanceof NotFoundError) {
         throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      if (err instanceof ValidationError) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
       }
       throw err;
     }
