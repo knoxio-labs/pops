@@ -74,7 +74,7 @@ export function addToWatchlist(input: AddToWatchlistInput): MediaWatchlistRow {
       .values({
         mediaType: input.mediaType,
         mediaId: input.mediaId,
-        priority: input.priority ?? null,
+        priority: input.priority !== undefined ? input.priority : undefined,
         notes: input.notes ?? null,
       })
       .run();
