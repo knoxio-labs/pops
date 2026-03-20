@@ -2,10 +2,7 @@
  * Media search router tests — TMDB movie search and TheTVDB series search.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  setupTestContext,
-  createCaller,
-} from "../../../shared/test-utils.js";
+import { setupTestContext, createCaller } from "../../../shared/test-utils.js";
 import { TRPCError } from "@trpc/server";
 
 const ctx = setupTestContext();
@@ -55,8 +52,8 @@ function mockTmdbSearch(results: unknown[], page = 1, totalResults = 1, totalPag
         total_results: totalResults,
         total_pages: totalPages,
         results,
-      }),
-    ),
+      })
+    )
   );
 }
 
@@ -86,13 +83,11 @@ function mockTvdbSearch(results: unknown[]): void {
     vi.fn().mockImplementation((url: string) => {
       if (typeof url === "string" && url.includes("/login")) {
         return Promise.resolve(
-          mockResponse({ status: "success", data: { token: "test-jwt-token" } }),
+          mockResponse({ status: "success", data: { token: "test-jwt-token" } })
         );
       }
-      return Promise.resolve(
-        mockResponse({ status: "success", data: results }),
-      );
-    }),
+      return Promise.resolve(mockResponse({ status: "success", data: results }));
+    })
   );
 }
 
@@ -131,24 +126,18 @@ describe("media.search.movies", () => {
   });
 
   it("rejects page exceeding max", async () => {
-    await expect(
-      caller.media.search.movies({ query: "test", page: 501 }),
-    ).rejects.toThrow();
+    await expect(caller.media.search.movies({ query: "test", page: 501 })).rejects.toThrow();
   });
 
   it("rejects query exceeding max length", async () => {
-    await expect(
-      caller.media.search.movies({ query: "a".repeat(201) }),
-    ).rejects.toThrow();
+    await expect(caller.media.search.movies({ query: "a".repeat(201) })).rejects.toThrow();
   });
 
   it("throws INTERNAL_SERVER_ERROR on TMDB API failure", async () => {
     expect.assertions(2);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        mockResponse({ status_message: "Invalid API key" }, 401, false),
-      ),
+      vi.fn().mockResolvedValue(mockResponse({ status_message: "Invalid API key" }, 401, false))
     );
 
     try {
@@ -161,9 +150,7 @@ describe("media.search.movies", () => {
 
   it("requires authentication", async () => {
     const unauthCaller = createCaller(false);
-    await expect(
-      unauthCaller.media.search.movies({ query: "test" }),
-    ).rejects.toThrow(TRPCError);
+    await expect(unauthCaller.media.search.movies({ query: "test" })).rejects.toThrow(TRPCError);
   });
 });
 
@@ -201,9 +188,7 @@ describe("media.search.tvShows", () => {
   });
 
   it("rejects query exceeding max length", async () => {
-    await expect(
-      caller.media.search.tvShows({ query: "a".repeat(201) }),
-    ).rejects.toThrow();
+    await expect(caller.media.search.tvShows({ query: "a".repeat(201) })).rejects.toThrow();
   });
 
   it("throws INTERNAL_SERVER_ERROR on TheTVDB API failure", async () => {
@@ -214,13 +199,11 @@ describe("media.search.tvShows", () => {
       vi.fn().mockImplementation((url: string) => {
         if (typeof url === "string" && url.includes("/login")) {
           return Promise.resolve(
-            mockResponse({ status: "success", data: { token: "test-jwt-token" } }),
+            mockResponse({ status: "success", data: { token: "test-jwt-token" } })
           );
         }
-        return Promise.resolve(
-          mockResponse({ message: "Server error" }, 500, false),
-        );
-      }),
+        return Promise.resolve(mockResponse({ message: "Server error" }, 500, false));
+      })
     );
 
     try {
@@ -233,8 +216,6 @@ describe("media.search.tvShows", () => {
 
   it("requires authentication", async () => {
     const unauthCaller = createCaller(false);
-    await expect(
-      unauthCaller.media.search.tvShows({ query: "test" }),
-    ).rejects.toThrow(TRPCError);
+    await expect(unauthCaller.media.search.tvShows({ query: "test" })).rejects.toThrow(TRPCError);
   });
 });

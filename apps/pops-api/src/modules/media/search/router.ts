@@ -19,57 +19,53 @@ const SearchTvShowsSchema = z.object({
 
 export const searchRouter = router({
   /** Search movies via TMDB. */
-  movies: protectedProcedure
-    .input(SearchMoviesSchema)
-    .query(async ({ input }) => {
-      const client = getTmdbClient();
-      if (!client) {
+  movies: protectedProcedure.input(SearchMoviesSchema).query(async ({ input }) => {
+    const client = getTmdbClient();
+    if (!client) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "TMDB_API_KEY is not configured",
+      });
+    }
+    try {
+      const response = await client.searchMovies(input.query, input.page);
+      return {
+        results: response.results,
+        totalResults: response.totalResults,
+        totalPages: response.totalPages,
+        page: response.page,
+      };
+    } catch (err) {
+      if (err instanceof TmdbApiError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "TMDB_API_KEY is not configured",
+          message: `TMDB API error: ${err.message}`,
         });
       }
-      try {
-        const response = await client.searchMovies(input.query, input.page);
-        return {
-          results: response.results,
-          totalResults: response.totalResults,
-          totalPages: response.totalPages,
-          page: response.page,
-        };
-      } catch (err) {
-        if (err instanceof TmdbApiError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `TMDB API error: ${err.message}`,
-          });
-        }
-        throw err;
-      }
-    }),
+      throw err;
+    }
+  }),
 
   /** Search TV shows via TheTVDB. */
-  tvShows: protectedProcedure
-    .input(SearchTvShowsSchema)
-    .query(async ({ input }) => {
-      const client = getTvdbClient();
-      if (!client) {
+  tvShows: protectedProcedure.input(SearchTvShowsSchema).query(async ({ input }) => {
+    const client = getTvdbClient();
+    if (!client) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "THETVDB_API_KEY is not configured",
+      });
+    }
+    try {
+      const results = await client.searchSeries(input.query);
+      return { results };
+    } catch (err) {
+      if (err instanceof TvdbApiError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "THETVDB_API_KEY is not configured",
+          message: `TheTVDB API error: ${err.message}`,
         });
       }
-      try {
-        const results = await client.searchSeries(input.query);
-        return { results };
-      } catch (err) {
-        if (err instanceof TvdbApiError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `TheTVDB API error: ${err.message}`,
-          });
-        }
-        throw err;
-      }
-    }),
+      throw err;
+    }
+  }),
 });
