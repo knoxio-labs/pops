@@ -18,6 +18,8 @@ import type { movies } from "./schema/movies.js";
 import type { tvShows } from "./schema/tv-shows.js";
 import type { seasons } from "./schema/seasons.js";
 import type { episodes } from "./schema/episodes.js";
+import type { mediaWatchlist } from "./schema/media-watchlist.js";
+import type { watchHistory } from "./schema/watch-history.js";
 import type { comparisonDimensions } from "./schema/comparison-dimensions.js";
 import type { comparisons } from "./schema/comparisons.js";
 import type { mediaScores } from "./schema/media-scores.js";
@@ -36,6 +38,8 @@ export {
   tvShows,
   seasons,
   episodes,
+  mediaWatchlist,
+  watchHistory,
   comparisonDimensions,
   comparisons,
   mediaScores,
@@ -54,6 +58,8 @@ export type MovieRow = InferSelectModel<typeof movies>;
 export type TvShowRow = InferSelectModel<typeof tvShows>;
 export type SeasonRow = InferSelectModel<typeof seasons>;
 export type EpisodeRow = InferSelectModel<typeof episodes>;
+export type MediaWatchlistRow = InferSelectModel<typeof mediaWatchlist>;
+export type WatchHistoryRow = InferSelectModel<typeof watchHistory>;
 export type ComparisonDimensionRow = InferSelectModel<typeof comparisonDimensions>;
 export type ComparisonRow = InferSelectModel<typeof comparisons>;
 export type MediaScoreRow = InferSelectModel<typeof mediaScores>;
@@ -71,6 +77,8 @@ export type MovieInsert = InferInsertModel<typeof movies>;
 export type TvShowInsert = InferInsertModel<typeof tvShows>;
 export type SeasonInsert = InferInsertModel<typeof seasons>;
 export type EpisodeInsert = InferInsertModel<typeof episodes>;
+export type MediaWatchlistInsert = InferInsertModel<typeof mediaWatchlist>;
+export type WatchHistoryInsert = InferInsertModel<typeof watchHistory>;
 export type ComparisonDimensionInsert = InferInsertModel<typeof comparisonDimensions>;
 export type ComparisonInsert = InferInsertModel<typeof comparisons>;
 export type MediaScoreInsert = InferInsertModel<typeof mediaScores>;
