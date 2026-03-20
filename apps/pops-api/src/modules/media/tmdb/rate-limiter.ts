@@ -14,7 +14,7 @@ export class TokenBucketRateLimiter {
 
   constructor(
     private readonly capacity: number,
-    private readonly refillRate: number,
+    private readonly refillRate: number
   ) {
     this.tokens = capacity;
     this.lastRefill = Date.now();

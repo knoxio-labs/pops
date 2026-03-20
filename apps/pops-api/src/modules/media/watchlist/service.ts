@@ -42,11 +42,7 @@ export function listWatchlist(
     .offset(offset)
     .all();
 
-  const [countRow] = db
-    .select({ total: count() })
-    .from(mediaWatchlist)
-    .where(where)
-    .all();
+  const [countRow] = db.select({ total: count() }).from(mediaWatchlist).where(where).all();
 
   return { rows, total: countRow.total };
 }
@@ -54,11 +50,7 @@ export function listWatchlist(
 /** Get a single watchlist entry by id. Throws NotFoundError if missing. */
 export function getWatchlistEntry(id: number): MediaWatchlistRow {
   const db = getDrizzle();
-  const row = db
-    .select()
-    .from(mediaWatchlist)
-    .where(eq(mediaWatchlist.id, id))
-    .get();
+  const row = db.select().from(mediaWatchlist).where(eq(mediaWatchlist.id, id)).get();
 
   if (!row) throw new NotFoundError("WatchlistEntry", String(id));
   return row;
@@ -89,10 +81,7 @@ export function addToWatchlist(input: AddToWatchlistInput): MediaWatchlistRow {
 }
 
 /** Update a watchlist entry. Returns the updated row. */
-export function updateWatchlistEntry(
-  id: number,
-  input: UpdateWatchlistInput
-): MediaWatchlistRow {
+export function updateWatchlistEntry(id: number, input: UpdateWatchlistInput): MediaWatchlistRow {
   getWatchlistEntry(id);
 
   const updates: Partial<typeof mediaWatchlist.$inferSelect> = {};
@@ -111,9 +100,6 @@ export function updateWatchlistEntry(
 export function removeFromWatchlist(id: number): void {
   getWatchlistEntry(id);
 
-  const result = getDrizzle()
-    .delete(mediaWatchlist)
-    .where(eq(mediaWatchlist.id, id))
-    .run();
+  const result = getDrizzle().delete(mediaWatchlist).where(eq(mediaWatchlist.id, id)).run();
   if (result.changes === 0) throw new NotFoundError("WatchlistEntry", String(id));
 }

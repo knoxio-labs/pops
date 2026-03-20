@@ -6,7 +6,12 @@ import { eq, asc } from "drizzle-orm";
 import { locations } from "@pops/db-types";
 import { getDrizzle } from "../../../db.js";
 import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { LocationRow, CreateLocationInput, UpdateLocationInput, LocationTreeNode } from "./types.js";
+import type {
+  LocationRow,
+  CreateLocationInput,
+  UpdateLocationInput,
+  LocationTreeNode,
+} from "./types.js";
 import { toLocation } from "./types.js";
 
 /** Count + rows for a paginated list. */
@@ -31,11 +36,7 @@ export function listLocations(): LocationListResult {
 /** Get a single location by ID. Throws NotFoundError if missing. */
 export function getLocation(id: string): LocationRow {
   const db = getDrizzle();
-  const row = db
-    .select()
-    .from(locations)
-    .where(eq(locations.id, id))
-    .get();
+  const row = db.select().from(locations).where(eq(locations.id, id)).get();
 
   if (!row) throw new NotFoundError("Location", id);
   return row;
