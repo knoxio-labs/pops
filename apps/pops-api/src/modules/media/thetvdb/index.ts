@@ -1,5 +1,7 @@
-export { TheTvdbAuth } from "./auth.js";
-export { TheTvdbClient } from "./client.js";
+import { TheTvdbAuth } from "./auth.js";
+import { TheTvdbClient } from "./client.js";
+
+export { TheTvdbAuth, TheTvdbClient };
 export { TvdbApiError } from "./types.js";
 export type {
   TvdbSearchResult,
@@ -8,3 +10,22 @@ export type {
   TvdbArtwork,
   TvdbEpisode,
 } from "./types.js";
+
+/**
+ * Shared TheTVDB client singleton — reuses JWT token across requests.
+ * Returns null if THETVDB_API_KEY is not set.
+ */
+let _tvdbClient: TheTvdbClient | null = null;
+
+export function getTvdbClient(): TheTvdbClient | null {
+  if (_tvdbClient) return _tvdbClient;
+  const apiKey = process.env["THETVDB_API_KEY"];
+  if (!apiKey) return null;
+  _tvdbClient = new TheTvdbClient(new TheTvdbAuth(apiKey));
+  return _tvdbClient;
+}
+
+/** Reset the shared client (for testing). */
+export function setTvdbClient(client: TheTvdbClient | null): void {
+  _tvdbClient = client;
+}
