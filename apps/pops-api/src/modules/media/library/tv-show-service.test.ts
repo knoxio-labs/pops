@@ -105,7 +105,7 @@ describe("addTvShow", () => {
     expect(result.show.tvdbId).toBe(81189);
     expect(result.show.name).toBe("Breaking Bad");
     expect(result.show.status).toBe("Ended");
-    expect(result.show.numberOfSeasons).toBe(2);
+    expect(result.show.numberOfSeasons).toBe(1); // excludes specials (S0)
     expect(result.show.numberOfEpisodes).toBe(5);
     expect(result.show.episodeRunTime).toBe(47);
     expect(result.show.posterPath).toBe("https://artworks.thetvdb.com/poster.jpg");
@@ -120,7 +120,7 @@ describe("addTvShow", () => {
   });
 
   it("returns existing show without re-fetching (idempotent)", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+    seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
 
     const client = makeMockClient(makeShowDetail(), new Map());
     const result = await addTvShow(81189, client);
@@ -163,6 +163,7 @@ describe("addTvShow", () => {
     const result = await addTvShow(81189, client);
 
     expect(result.created).toBe(true);
+    expect(result.show.numberOfSeasons).toBe(0); // specials don't count
     expect(result.seasons).toHaveLength(1);
     expect(result.seasons[0].seasonNumber).toBe(0);
     expect(result.show.numberOfEpisodes).toBe(3);
@@ -195,6 +196,73 @@ describe("addTvShow", () => {
 
     expect(result.show.genres).toBeNull();
     expect(result.show.networks).toBeNull();
+  });
+
+  it("inserts episodes with correct data", async () => {
+    const detail = makeShowDetail({
+      seasons: [
+        {
+          tvdbId: 30002,
+          seasonNumber: 1,
+          name: "Season 1",
+          overview: "The beginning.",
+          imageUrl: "https://artworks.thetvdb.com/s1.jpg",
+          episodeCount: 2,
+        },
+      ],
+    });
+    const eps: TvdbEpisode[] = [
+      {
+        tvdbId: 5001,
+        episodeNumber: 1,
+        seasonNumber: 1,
+        name: "Pilot",
+        overview: "Walter White begins.",
+        airDate: "2008-01-20",
+        runtime: 58,
+        imageUrl: "https://artworks.thetvdb.com/ep1.jpg",
+      },
+      {
+        tvdbId: 5002,
+        episodeNumber: 2,
+        seasonNumber: 1,
+        name: "Cat's in the Bag...",
+        overview: null,
+        airDate: "2008-01-27",
+        runtime: 48,
+        imageUrl: null,
+      },
+    ];
+    const episodeMap = new Map([[1, eps]]);
+    const client = makeMockClient(detail, episodeMap);
+
+    const result = await addTvShow(81189, client);
+
+    // Verify episodes in DB via the season
+    const seasonId = result.seasons[0].id;
+    const dbEpisodes = db
+      .prepare("SELECT * FROM episodes WHERE season_id = ? ORDER BY episode_number")
+      .all(seasonId) as Array<Record<string, unknown>>;
+
+    expect(dbEpisodes).toHaveLength(2);
+    expect(dbEpisodes[0]).toMatchObject({
+      tvdb_id: 5001,
+      episode_number: 1,
+      name: "Pilot",
+      overview: "Walter White begins.",
+      air_date: "2008-01-20",
+      runtime: 58,
+      still_path: "https://artworks.thetvdb.com/ep1.jpg",
+    });
+    expect(dbEpisodes[1]).toMatchObject({
+      tvdb_id: 5002,
+      episode_number: 2,
+      name: "Cat's in the Bag...",
+      overview: null,
+      air_date: "2008-01-27",
+      runtime: 48,
+      still_path: null,
+    });
   });
 
   it("propagates TheTVDB API errors", async () => {

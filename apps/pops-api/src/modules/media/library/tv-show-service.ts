@@ -42,21 +42,41 @@ export async function addTvShow(
   // Fetch show detail from TheTVDB
   const detail = await client.getSeriesExtended(tvdbId);
 
-  // Fetch episodes for each season
+  // Fetch episodes for all seasons concurrently
   const seasonEpisodes = new Map<number, TvdbEpisode[]>();
-  for (const season of detail.seasons) {
-    const eps = await client.getSeriesEpisodes(tvdbId, season.seasonNumber);
-    seasonEpisodes.set(season.seasonNumber, eps);
+  const episodeResults = await Promise.all(
+    detail.seasons.map(async (season) => {
+      const eps = await client.getSeriesEpisodes(tvdbId, season.seasonNumber);
+      return { seasonNumber: season.seasonNumber, eps };
+    }),
+  );
+  for (const { seasonNumber, eps } of episodeResults) {
+    seasonEpisodes.set(seasonNumber, eps);
   }
 
   // Select best artwork
   const { posterUrl, backdropUrl } = selectBestArtwork(detail.artworks);
 
-  // Insert in a single transaction
+  // Insert in a single transaction (re-check for race condition inside tx)
   const db = getDrizzle();
   const now = new Date().toISOString();
 
   const result = db.transaction((tx) => {
+    // Re-check inside transaction to prevent race condition
+    const raceCheck = tx
+      .select()
+      .from(tvShows)
+      .where(eq(tvShows.tvdbId, detail.tvdbId))
+      .get();
+    if (raceCheck) {
+      const showSeasons = tx
+        .select()
+        .from(seasons)
+        .where(eq(seasons.tvShowId, raceCheck.id))
+        .all();
+      return { show: raceCheck, seasons: showSeasons, created: false as const };
+    }
+
     // Count total episodes across all seasons
     let totalEpisodes = 0;
     for (const eps of seasonEpisodes.values()) {
@@ -75,7 +95,7 @@ export async function addTvShow(
         lastAirDate: detail.lastAirDate,
         status: detail.status,
         originalLanguage: detail.originalLanguage,
-        numberOfSeasons: detail.seasons.length,
+        numberOfSeasons: detail.seasons.filter((s) => s.seasonNumber > 0).length,
         numberOfEpisodes: totalEpisodes,
         episodeRunTime: detail.averageRuntime,
         posterPath: posterUrl,
@@ -143,10 +163,10 @@ export async function addTvShow(
       .where(eq(tvShows.id, showId))
       .get()!;
 
-    return { show: showRow, seasons: insertedSeasons };
+    return { show: showRow, seasons: insertedSeasons, created: true as const };
   });
 
-  return { ...result, created: true };
+  return result;
 }
 
 /** Select the best poster and backdrop from TheTVDB artworks. */
