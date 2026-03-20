@@ -226,7 +226,7 @@ describe("downloadTvShowImages", () => {
   it("skips null URLs", async () => {
     fetchMock.mockResolvedValue(mockImageResponse());
 
-    await service.downloadTvShowImages(81189, "https://example.com/p.jpg", null);
+    await service.downloadTvShowImages(81189, "https://artworks.thetvdb.com/p.jpg", null);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fs.writeFile).toHaveBeenCalledTimes(1);
@@ -247,7 +247,7 @@ describe("downloadTvShowImages", () => {
 
     await service.downloadTvShowImages(
       81189,
-      "https://example.com/poster.jpg",
+      "https://artworks.thetvdb.com/poster.jpg",
       null,
     );
 
@@ -255,16 +255,46 @@ describe("downloadTvShowImages", () => {
     expect(fs.writeFile).not.toHaveBeenCalled();
   });
 
-  it("handles download failures gracefully", async () => {
+  it("handles network failures gracefully", async () => {
     fetchMock.mockRejectedValueOnce(new Error("Network error"));
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await expect(
-      service.downloadTvShowImages(81189, "https://example.com/p.jpg", null),
+      service.downloadTvShowImages(81189, "https://artworks.thetvdb.com/p.jpg", null),
     ).resolves.toBeUndefined();
 
     expect(fs.writeFile).not.toHaveBeenCalled();
     expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
+  });
+
+  it("handles HTTP error status gracefully", async () => {
+    fetchMock.mockResolvedValueOnce(mockImageResponse(new ArrayBuffer(0), 404));
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(
+      service.downloadTvShowImages(81189, "https://artworks.thetvdb.com/p.jpg", null),
+    ).resolves.toBeUndefined();
+
+    expect(fs.writeFile).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledOnce();
+    consoleSpy.mockRestore();
+  });
+
+  it("blocks downloads from untrusted hosts (SSRF defense)", async () => {
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await service.downloadTvShowImages(
+      81189,
+      "http://169.254.169.254/latest/meta-data",
+      null,
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fs.writeFile).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Blocked download from untrusted host"),
+    );
     consoleSpy.mockRestore();
   });
 });
@@ -278,6 +308,14 @@ describe("getImagePath — tv", () => {
     const result = await service.getImagePath("tv", 81189, "poster");
 
     expect(result).toBe(path.join(IMAGES_DIR, "tv", "81189", "poster.jpg"));
+  });
+
+  it("returns null when tv file does not exist", async () => {
+    vi.mocked(fs.stat).mockRejectedValueOnce(new Error("ENOENT"));
+
+    const result = await service.getImagePath("tv", 81189, "poster");
+
+    expect(result).toBeNull();
   });
 });
 
