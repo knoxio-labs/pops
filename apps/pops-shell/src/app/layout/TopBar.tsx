@@ -17,7 +17,7 @@ export function TopBar() {
     <header className="bg-card border-b border-border h-14 md:h-16 flex items-center px-3 md:px-4 sticky top-0 z-40">
       <button
         onClick={toggleSidebar}
-        className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-lg mr-2 md:mr-4"
+        className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-lg mr-2 md:hidden"
         aria-label="Toggle sidebar"
       >
         <Menu className="h-5 w-5" />
