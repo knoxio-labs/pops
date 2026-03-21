@@ -2,8 +2,8 @@
  * Location service — CRUD operations for the location tree.
  * SQLite is the source of truth. All operations are local.
  */
-import { eq, asc } from "drizzle-orm";
-import { locations } from "@pops/db-types";
+import { eq, asc, count } from "drizzle-orm";
+import { locations, homeInventory } from "@pops/db-types";
 import { getDrizzle } from "../../../db.js";
 import { NotFoundError, ConflictError } from "../../../shared/errors.js";
 import type {
@@ -198,4 +198,71 @@ export function deleteLocation(id: string): void {
   const db = getDrizzle();
   const result = db.delete(locations).where(eq(locations.id, id)).run();
   if (result.changes === 0) throw new NotFoundError("Location", id);
+}
+
+/** Stats for confirming a location deletion. */
+export interface DeleteStats {
+  childCount: number;
+  itemCount: number;
+  totalDescendantItems: number;
+}
+
+/**
+ * Get stats about what would be affected by deleting a location.
+ * Counts direct children, items at this location, and items at all descendants.
+ */
+export function getDeleteStats(id: string): DeleteStats {
+  const db = getDrizzle();
+
+  // Verify it exists
+  getLocation(id);
+
+  // Count direct children
+  const [childResult] = db
+    .select({ total: count() })
+    .from(locations)
+    .where(eq(locations.parentId, id))
+    .all();
+
+  // Count items at this location
+  const [itemResult] = db
+    .select({ total: count() })
+    .from(homeInventory)
+    .where(eq(homeInventory.locationId, id))
+    .all();
+
+  // Count items at all descendant locations (BFS)
+  let totalDescendantItems = itemResult.total;
+  const queue = [id];
+  const visited = new Set<string>([id]);
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    if (!currentId) break;
+
+    const children = db
+      .select({ id: locations.id })
+      .from(locations)
+      .where(eq(locations.parentId, currentId))
+      .all();
+
+    for (const child of children) {
+      if (visited.has(child.id)) continue;
+      visited.add(child.id);
+      queue.push(child.id);
+
+      const [childItems] = db
+        .select({ total: count() })
+        .from(homeInventory)
+        .where(eq(homeInventory.locationId, child.id))
+        .all();
+      totalDescendantItems += childItems.total;
+    }
+  }
+
+  return {
+    childCount: childResult.total,
+    itemCount: itemResult.total,
+    totalDescendantItems,
+  };
 }

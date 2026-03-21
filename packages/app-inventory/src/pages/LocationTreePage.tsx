@@ -474,6 +474,12 @@ export function LocationTreePage() {
     },
   });
 
+  const { data: deleteStatsData } =
+    trpc.inventory.locations.deleteStats.useQuery(
+      { id: deletingNode?.id ?? "" },
+      { enabled: !!deletingNode },
+    );
+
   const treeNodes = data?.data ?? [];
   const nodeMap = useMemo(() => {
     const map = new Map<string, LocationTreeNode>();
@@ -558,18 +564,9 @@ export function LocationTreePage() {
     [treeNodes, nodeMap, updateMutation]
   );
 
-  const handleDelete = useCallback(
-    (node: LocationTreeNode) => {
-      if (node.children.length === 0) {
-        // Empty location — delete immediately
-        deleteMutation.mutate({ id: node.id });
-      } else {
-        // Has children — show confirmation dialog
-        setDeletingNode(node);
-      }
-    },
-    [deleteMutation],
-  );
+  const handleDelete = useCallback((node: LocationTreeNode) => {
+    setDeletingNode(node);
+  }, []);
 
   const movingNode = movingId ? nodeMap.get(movingId) : null;
 
@@ -677,11 +674,30 @@ export function LocationTreePage() {
               Delete &ldquo;{deletingNode?.name}&rdquo;?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This location has{" "}
-              {deletingNode ? countDescendants(deletingNode) : 0} sub-location
-              {deletingNode && countDescendants(deletingNode) !== 1 ? "s" : ""}{" "}
-              that will also be deleted. Items at these locations will become
-              unlocated.
+              {deleteStatsData?.data ? (
+                <>
+                  {deleteStatsData.data.childCount > 0 && (
+                    <>
+                      {deleteStatsData.data.childCount} sub-location
+                      {deleteStatsData.data.childCount !== 1 ? "s" : ""} will
+                      also be deleted.{" "}
+                    </>
+                  )}
+                  {deleteStatsData.data.totalDescendantItems > 0 ? (
+                    <>
+                      {deleteStatsData.data.totalDescendantItems} item
+                      {deleteStatsData.data.totalDescendantItems !== 1
+                        ? "s"
+                        : ""}{" "}
+                      will become unlocated.
+                    </>
+                  ) : (
+                    <>No items will be affected.</>
+                  )}
+                </>
+              ) : (
+                <>This action cannot be undone.</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

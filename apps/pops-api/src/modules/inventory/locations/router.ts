@@ -96,4 +96,17 @@ export const locationsRouter = router({
       throw err;
     }
   }),
+
+  /** Get stats for a location deletion confirmation. */
+  deleteStats: protectedProcedure.input(z.object({ id: z.string() })).query(({ input }) => {
+    try {
+      const stats = service.getDeleteStats(input.id);
+      return { data: stats };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      throw err;
+    }
+  }),
 });
