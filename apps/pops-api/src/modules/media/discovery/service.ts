@@ -107,9 +107,7 @@ function getGenreDistribution(): { genres: GenreDistribution[]; totalWatched: nu
 function getTotalComparisons(): number {
   const db = getDb();
 
-  const result = db
-    .prepare(`SELECT COUNT(*) AS cnt FROM comparisons`)
-    .get() as { cnt: number };
+  const result = db.prepare(`SELECT COUNT(*) AS cnt FROM comparisons`).get() as { cnt: number };
 
   return result.cnt;
 }
