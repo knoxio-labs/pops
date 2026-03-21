@@ -6,7 +6,7 @@ import { eq, and, or, count } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { itemConnections, homeInventory } from "@pops/db-types";
 import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { ItemConnectionRow, TraceNode } from "./types.js";
+import type { ItemConnectionRow, TraceNode, GraphData, GraphNode, GraphEdge } from "./types.js";
 
 /** Count + rows for a paginated list. */
 export interface ConnectionListResult {
@@ -180,4 +180,79 @@ export function traceConnections(itemId: string, maxDepth: number): TraceNode {
   }
 
   return root;
+}
+
+/**
+ * Get the connection subgraph for an item as flat nodes + edges.
+ * Uses BFS like trace, but returns all edges (including cross-links
+ * between already-visited nodes).
+ */
+export function getConnectionGraph(itemId: string, maxDepth: number): GraphData {
+  const db = getDrizzle();
+
+  // Validate starting item
+  const [startItem] = db
+    .select({
+      id: homeInventory.id,
+      itemName: homeInventory.itemName,
+      assetId: homeInventory.assetId,
+      type: homeInventory.type,
+    })
+    .from(homeInventory)
+    .where(eq(homeInventory.id, itemId))
+    .all();
+
+  if (!startItem) throw new NotFoundError("Inventory item", itemId);
+
+  const nodes: GraphNode[] = [startItem];
+  const edges: GraphEdge[] = [];
+  const visitedNodes = new Set<string>([itemId]);
+  const visitedEdges = new Set<string>();
+  const queue: { nodeId: string; depth: number }[] = [{ nodeId: itemId, depth: 0 }];
+
+  while (queue.length > 0) {
+    const entry = queue.shift();
+    if (!entry) break;
+    const { nodeId, depth } = entry;
+    if (depth >= maxDepth) continue;
+
+    const connections = db
+      .select()
+      .from(itemConnections)
+      .where(or(eq(itemConnections.itemAId, nodeId), eq(itemConnections.itemBId, nodeId)))
+      .all();
+
+    for (const conn of connections) {
+      const neighborId = conn.itemAId === nodeId ? conn.itemBId : conn.itemAId;
+
+      // Always add the edge (both directions normalized to A<B)
+      const edgeKey = `${conn.itemAId}-${conn.itemBId}`;
+      if (!visitedEdges.has(edgeKey)) {
+        visitedEdges.add(edgeKey);
+        edges.push({ source: conn.itemAId, target: conn.itemBId });
+      }
+
+      // Only add unvisited nodes to the queue
+      if (visitedNodes.has(neighborId)) continue;
+      visitedNodes.add(neighborId);
+
+      const [neighbor] = db
+        .select({
+          id: homeInventory.id,
+          itemName: homeInventory.itemName,
+          assetId: homeInventory.assetId,
+          type: homeInventory.type,
+        })
+        .from(homeInventory)
+        .where(eq(homeInventory.id, neighborId))
+        .all();
+
+      if (!neighbor) continue;
+
+      nodes.push(neighbor);
+      queue.push({ nodeId: neighborId, depth: depth + 1 });
+    }
+  }
+
+  return { nodes, edges };
 }
