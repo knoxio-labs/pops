@@ -146,7 +146,7 @@ export function InsuranceReportPage(): React.ReactElement {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-3 w-10 print:hidden">Photo</th>
+                  <th className="py-2 pr-3 w-10">Photo</th>
                   <th className="py-2 pr-3">Name</th>
                   <th className="py-2 pr-3">Asset ID</th>
                   <th className="py-2 pr-3">Brand</th>
@@ -164,7 +164,7 @@ export function InsuranceReportPage(): React.ReactElement {
                       className="border-b last:border-0 hover:bg-muted/30 cursor-pointer print:hover:bg-transparent print:cursor-default"
                       onClick={() => navigate(`/inventory/items/${item.id}`)}
                     >
-                      <td className="py-2 pr-3 print:hidden">
+                      <td className="py-2 pr-3">
                         {item.photoPath ? (
                           <img
                             src={`/inventory/photos/${item.photoPath}`}
@@ -210,16 +210,7 @@ export function InsuranceReportPage(): React.ReactElement {
               {group.items.some((i) => i.replacementValue) && (
                 <tfoot>
                   <tr className="font-semibold">
-                    <td
-                      colSpan={6}
-                      className="py-2 pr-3 text-right print:hidden"
-                    >
-                      Subtotal
-                    </td>
-                    <td
-                      colSpan={5}
-                      className="py-2 pr-3 text-right hidden print:table-cell"
-                    >
+                    <td colSpan={6} className="py-2 pr-3 text-right">
                       Subtotal
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
