@@ -96,6 +96,16 @@ export function ItemDetailPage() {
     { enabled: !!id }
   );
 
+  // Extract connected item IDs to fetch their details
+  const connectedItemIds = connectionsData?.data.map((conn) =>
+    conn.itemAId === id ? conn.itemBId : conn.itemAId
+  ) ?? [];
+
+  const { data: connectedItemsData } = trpc.inventory.items.list.useQuery(
+    { limit: 100 },
+    { enabled: connectedItemIds.length > 0 }
+  );
+
   const { data: locationsResponse } = trpc.inventory.locations.tree.useQuery();
   const locationsTree = locationsResponse?.data;
 
@@ -158,13 +168,21 @@ export function ItemDetailPage() {
     locationSegments.push(...findPath(locationsTree, item.locationId));
   }
 
-  // Map connections to ConnectedItem shape
-  const connections = (connectionsData?.data ?? []).map((conn) => ({
-    id: conn.itemAId === id ? conn.itemBId : conn.itemAId,
-    itemName: conn.itemAId === id ? conn.itemBId : conn.itemAId,
-    assetId: null as string | null,
-    type: null as string | null,
-  }));
+  // Build lookup of all items by ID for connection enrichment
+  const itemsById = new Map(
+    (connectedItemsData?.data ?? []).map((i) => [i.id, i])
+  );
+
+  // Map connections to ConnectedItem shape with enriched data
+  const connections = connectedItemIds.map((connectedId) => {
+    const connectedItem = itemsById.get(connectedId);
+    return {
+      id: connectedId,
+      itemName: connectedItem?.itemName ?? connectedId,
+      assetId: connectedItem?.assetId ?? null,
+      type: connectedItem?.type ?? null,
+    };
+  });
 
   const condition = item.condition as Condition | null;
 
