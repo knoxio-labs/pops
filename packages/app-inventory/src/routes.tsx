@@ -8,20 +8,7 @@ import { lazy } from "react";
 import type { RouteObject } from "react-router";
 
 const ItemsPage = lazy(() =>
-  import("./pages/ItemsPage").then((m) => ({ default: m.ItemsPage })),
-);
-const ItemDetailPage = lazy(() =>
-  import("./pages/ItemDetailPage").then((m) => ({
-    default: m.ItemDetailPage,
-  })),
-);
-const ItemFormPage = lazy(() =>
-  import("./pages/ItemFormPage").then((m) => ({ default: m.ItemFormPage })),
-);
-const WarrantiesPage = lazy(() =>
-  import("./pages/WarrantiesPage").then((m) => ({
-    default: m.WarrantiesPage,
-  })),
+  import("./pages/ItemsPage").then((m) => ({ default: m.ItemsPage }))
 );
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
@@ -38,16 +25,9 @@ export const navConfig = {
   label: "Inventory",
   icon: "Package",
   basePath: "/inventory",
-  items: [
-    { path: "", label: "Items", icon: "Package" },
-    { path: "/warranties", label: "Warranties", icon: "ShieldCheck" },
-  ],
+  items: [{ path: "", label: "Items", icon: "Package" }],
 } satisfies AppNavConfigShape;
 
 export const routes: RouteObject[] = [
   { index: true, element: <ItemsPage /> },
-  { path: "items/new", element: <ItemFormPage /> },
-  { path: "items/:id", element: <ItemDetailPage /> },
-  { path: "items/:id/edit", element: <ItemFormPage /> },
-  { path: "warranties", element: <WarrantiesPage /> },
 ];
