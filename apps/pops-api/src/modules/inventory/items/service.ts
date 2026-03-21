@@ -3,7 +3,7 @@
  * SQLite is the source of truth. All operations are local.
  */
 import crypto from "crypto";
-import { eq, like, count, and } from "drizzle-orm";
+import { eq, like, count, and, sum } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { homeInventory } from "@pops/db-types";
 import { NotFoundError } from "../../../shared/errors.js";
@@ -13,6 +13,8 @@ import type { InventoryRow, CreateInventoryItemInput, UpdateInventoryItemInput }
 export interface InventoryListResult {
   rows: InventoryRow[];
   total: number;
+  totalReplacementValue: number;
+  totalResaleValue: number;
 }
 
 /** List inventory items with optional filters. */
@@ -32,6 +34,13 @@ export function listInventoryItems(
 
   let query = db.select().from(homeInventory).$dynamic();
   let countQuery = db.select({ total: count() }).from(homeInventory).$dynamic();
+  let aggregateQuery = db
+    .select({
+      totalReplacementValue: sum(homeInventory.replacementValue),
+      totalResaleValue: sum(homeInventory.resaleValue),
+    })
+    .from(homeInventory)
+    .$dynamic();
 
   const conditions = [];
   if (search) {
@@ -63,13 +72,20 @@ export function listInventoryItems(
     const where = conditions.length === 1 ? conditions[0] : and(...conditions);
     query = query.where(where);
     countQuery = countQuery.where(where);
+    aggregateQuery = aggregateQuery.where(where);
   }
 
   const rows = query.orderBy(homeInventory.itemName).limit(limit).offset(offset).all();
 
   const [countResult] = countQuery.all();
+  const [aggregates] = aggregateQuery.all();
 
-  return { rows: rows, total: countResult.total };
+  return {
+    rows,
+    total: countResult.total,
+    totalReplacementValue: Number(aggregates.totalReplacementValue ?? 0),
+    totalResaleValue: Number(aggregates.totalResaleValue ?? 0),
+  };
 }
 
 /** Get a single inventory item by id. Throws NotFoundError if missing. */
