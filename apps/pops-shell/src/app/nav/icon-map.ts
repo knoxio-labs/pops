@@ -21,6 +21,8 @@ import {
   Bookmark,
   Search,
   ArrowLeftRight,
+  Compass,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,4 +41,6 @@ export const iconMap: Record<string, LucideIcon> = {
   Bookmark,
   Search,
   ArrowLeftRight,
+  Compass,
+  Trophy,
 };
