@@ -13,6 +13,7 @@ import {
 } from "@pops/ui";
 import { trpc } from "../lib/trpc";
 import { EpisodeList } from "../components/EpisodeList";
+import { ProgressBar } from "../components/ProgressBar";
 
 function SeasonDetailSkeleton() {
   return (
@@ -66,6 +67,15 @@ export function SeasonDetailPage() {
   } = trpc.media.tvShows.listEpisodes.useQuery(
     { seasonId: season?.id ?? 0 },
     { enabled: !!season?.id }
+  );
+
+  const { data: progressData } = trpc.media.watchHistory.progress.useQuery(
+    { tvShowId: showId },
+    { enabled: !Number.isNaN(showId) }
+  );
+
+  const seasonProgress = progressData?.data?.seasons?.find(
+    (s: { seasonNumber: number }) => s.seasonNumber === seasonNum
   );
 
   if (Number.isNaN(showId) || Number.isNaN(seasonNum)) {
@@ -178,6 +188,15 @@ export function SeasonDetailPage() {
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
               {season.overview}
             </p>
+          )}
+
+          {seasonProgress && seasonProgress.total > 0 && (
+            <div className="mt-3">
+              <ProgressBar
+                watched={seasonProgress.watched}
+                total={seasonProgress.total}
+              />
+            </div>
           )}
         </div>
       </div>
