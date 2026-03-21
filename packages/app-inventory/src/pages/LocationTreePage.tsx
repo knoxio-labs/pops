@@ -7,13 +7,23 @@
  */
 import { useState, useCallback } from "react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Badge,
+  Button,
   Skeleton,
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@pops/ui";
-import { MapPin, ChevronRight, ChevronDown, FolderOpen, Folder } from "lucide-react";
+import { toast } from "sonner";
+import { MapPin, ChevronRight, ChevronDown, FolderOpen, Folder, Trash2 } from "lucide-react";
 import { trpc } from "../lib/trpc";
 
 interface LocationTreeNode {
@@ -73,9 +83,10 @@ interface LocationNodeProps {
   depth: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDelete: (node: LocationTreeNode) => void;
 }
 
-function LocationNode({ node, depth, selectedId, onSelect }: LocationNodeProps) {
+function LocationNode({ node, depth, selectedId, onSelect, onDelete }: LocationNodeProps) {
   const [open, setOpen] = useState(depth < 1);
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
@@ -83,7 +94,7 @@ function LocationNode({ node, depth, selectedId, onSelect }: LocationNodeProps) 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div
-        className={`flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer transition-colors hover:bg-muted/50 ${
+        className={`group/node flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer transition-colors hover:bg-muted/50 ${
           isSelected ? "bg-primary/10 text-primary" : ""
         }`}
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
@@ -124,6 +135,20 @@ function LocationNode({ node, depth, selectedId, onSelect }: LocationNodeProps) 
             {countDescendants(node) + 1}
           </Badge>
         )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(node);
+          }}
+          className={`p-0.5 rounded text-destructive opacity-0 group-hover/node:opacity-100 transition-opacity hover:bg-destructive/10 ${
+            !hasChildren ? "ml-auto" : ""
+          }`}
+          aria-label={`Delete ${node.name}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {hasChildren && (
@@ -136,6 +161,7 @@ function LocationNode({ node, depth, selectedId, onSelect }: LocationNodeProps) 
                 depth={depth + 1}
                 selectedId={selectedId}
                 onSelect={onSelect}
+                onDelete={onDelete}
               />
             ))}
           </div>
@@ -148,9 +174,11 @@ function LocationNode({ node, depth, selectedId, onSelect }: LocationNodeProps) 
 function SelectedLocationPanel({
   nodeId,
   nodeMap,
+  onDelete,
 }: {
   nodeId: string;
   nodeMap: Map<string, LocationTreeNode>;
+  onDelete: (node: LocationTreeNode) => void;
 }) {
   const node = nodeMap.get(nodeId);
   if (!node) return null;
@@ -164,7 +192,18 @@ function SelectedLocationPanel({
       <div className="text-xs text-muted-foreground">
         {breadcrumb.join(" / ")}
       </div>
-      <h2 className="text-lg font-semibold">{node.name}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{node.name}</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+          onClick={() => onDelete(node)}
+          aria-label={`Delete ${node.name}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
       <div className="flex gap-4 text-sm text-muted-foreground">
         {childCount > 0 && (
           <span>
@@ -198,8 +237,23 @@ function SelectedLocationPanel({
 
 export function LocationTreePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LocationTreeNode | null>(null);
 
+  const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.inventory.locations.tree.useQuery();
+
+  const deleteMutation = trpc.inventory.locations.delete.useMutation({
+    onSuccess: (_data, variables) => {
+      utils.inventory.locations.tree.invalidate();
+      if (selectedId === variables.id) {
+        setSelectedId(null);
+      }
+      toast.success("Location deleted");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to delete location");
+    },
+  });
 
   const nodeMap = new Map<string, LocationTreeNode>();
   if (data?.data) {
@@ -209,6 +263,25 @@ export function LocationTreePage() {
   const handleSelect = useCallback((id: string) => {
     setSelectedId((prev) => (prev === id ? null : id));
   }, []);
+
+  const handleDelete = useCallback(
+    (node: LocationTreeNode) => {
+      if (node.children.length === 0) {
+        // Empty location — delete immediately
+        deleteMutation.mutate({ id: node.id });
+      } else {
+        // Has children — show confirmation dialog
+        setDeleteTarget(node);
+      }
+    },
+    [deleteMutation],
+  );
+
+  const confirmDelete = useCallback(() => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate({ id: deleteTarget.id });
+    setDeleteTarget(null);
+  }, [deleteTarget, deleteMutation]);
 
   if (error) {
     return (
@@ -250,13 +323,18 @@ export function LocationTreePage() {
                 depth={0}
                 selectedId={selectedId}
                 onSelect={handleSelect}
+                onDelete={handleDelete}
               />
             ))}
           </div>
 
           <div className="md:w-3/5">
             {selectedId ? (
-              <SelectedLocationPanel nodeId={selectedId} nodeMap={nodeMap} />
+              <SelectedLocationPanel
+                nodeId={selectedId}
+                nodeMap={nodeMap}
+                onDelete={handleDelete}
+              />
             ) : (
               <div className="border rounded-lg p-4 text-sm text-muted-foreground text-center">
                 Select a location to see details
@@ -265,6 +343,36 @@ export function LocationTreePage() {
           </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This location has{" "}
+              {deleteTarget ? countDescendants(deleteTarget) : 0} sub-location
+              {deleteTarget && countDescendants(deleteTarget) !== 1 ? "s" : ""}{" "}
+              that will also be deleted. Items in these locations will become
+              unlocated. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
