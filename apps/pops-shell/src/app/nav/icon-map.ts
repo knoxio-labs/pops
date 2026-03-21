@@ -19,6 +19,7 @@ import {
   Film,
   Library,
   Bookmark,
+  Clock,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -36,5 +37,6 @@ export const iconMap: Record<string, LucideIcon> = {
   Film,
   Library,
   Bookmark,
+  Clock,
   Search,
 };
