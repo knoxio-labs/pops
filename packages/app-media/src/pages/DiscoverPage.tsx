@@ -158,6 +158,8 @@ export function DiscoverPage() {
             isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
             onAddToLibrary={handleAddToLibrary}
             onAddToWatchlist={handleAddToWatchlist}
+            matchPercentage={item.matchPercentage}
+            matchReason={item.matchReason}
           />
         ))}
       </HorizontalScrollRow>
@@ -212,6 +214,8 @@ export function DiscoverPage() {
             isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
             onAddToLibrary={handleAddToLibrary}
             onAddToWatchlist={handleAddToWatchlist}
+            matchPercentage={item.matchPercentage}
+            matchReason={item.matchReason}
           />
         ))}
       </HorizontalScrollRow>
