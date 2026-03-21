@@ -33,7 +33,9 @@ import {
   ArrowDown,
   MoveRight,
   Trash2,
+  FileText,
 } from "lucide-react";
+import { Link } from "react-router";
 import { trpc } from "../lib/trpc";
 import { LocationContentsPanel } from "../components/LocationContentsPanel";
 
@@ -372,6 +374,14 @@ function LocationNode({
           >
             <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
+          <Link
+            to={`/inventory/report?locationId=${node.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="p-0.5 rounded hover:bg-muted"
+            title={`Insurance report for ${node.name}`}
+          >
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+          </Link>
           <button
             type="button"
             className="p-0.5 rounded hover:bg-muted"
@@ -629,17 +639,26 @@ export function LocationTreePage() {
           <MapPin className="h-6 w-6 text-muted-foreground" />
           <h1 className="text-2xl font-bold">Locations</h1>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setAddingRoot(true);
-            setAddingChildOf(null);
-          }}
-          className="flex items-center gap-1.5 text-sm text-primary hover:underline"
-        >
-          <Plus className="h-4 w-4" />
-          Add Root Location
-        </button>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/inventory/report"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <FileText className="h-4 w-4" />
+            Insurance Report
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setAddingRoot(true);
+              setAddingChildOf(null);
+            }}
+            className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <Plus className="h-4 w-4" />
+            Add Root Location
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

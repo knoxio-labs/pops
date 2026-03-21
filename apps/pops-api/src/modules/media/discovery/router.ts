@@ -44,7 +44,7 @@ export const discoveryRouter = router({
     }
   }),
 
-  /** Get recommendations based on top-rated library movies. */
+  /** Get recommendations based on top-rated library movies, scored by preference profile. */
   recommendations: protectedProcedure.input(RecommendationsQuerySchema).query(async ({ input }) => {
     const client = getTmdbClient();
     if (!client) {
@@ -54,7 +54,10 @@ export const discoveryRouter = router({
       });
     }
     try {
-      return await tmdbService.getRecommendations(client, input.sampleSize);
+      const raw = await tmdbService.getRecommendations(client, input.sampleSize);
+      const profile = service.getPreferenceProfile();
+      const scored = service.scoreRecommendations(raw.results, profile);
+      return { results: scored, sourceMovies: raw.sourceMovies };
     } catch (err) {
       if (err instanceof TmdbApiError) {
         throw new TRPCError({
