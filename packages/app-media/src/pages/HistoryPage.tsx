@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
-import { Button } from "@pops/ui/components";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  Badge,
+  Button,
+  Skeleton,
+} from "@pops/ui";
 import { trpc } from "../lib/trpc";
 
 const PAGE_SIZE = 50;
@@ -64,9 +70,10 @@ function HistoryItem({ entry }: HistoryItemProps) {
     : null;
 
   const title = entry.title ?? "Unknown";
-  const subtitle = isEpisode && entry.showName
-    ? `${entry.showName} · S${entry.seasonNumber ?? "?"}E${entry.episodeNumber ?? "?"}`
-    : null;
+  const subtitle =
+    isEpisode && entry.showName
+      ? `${entry.showName} · S${entry.seasonNumber ?? "?"}E${entry.episodeNumber ?? "?"}`
+      : null;
 
   return (
     <div className="flex gap-3 p-3 rounded-lg border">
@@ -90,7 +97,9 @@ function HistoryItem({ entry }: HistoryItemProps) {
               <h3 className="text-sm font-medium truncate">{title}</h3>
             </Link>
             {subtitle && (
-              <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {subtitle}
+              </p>
             )}
           </div>
           <Badge variant="secondary" className="text-xs shrink-0">
@@ -115,7 +124,8 @@ export function HistoryPage() {
     offset,
   };
 
-  const { data, isLoading, error } = trpc.media.watchHistory.listRecent.useQuery(queryInput);
+  const { data, isLoading, error } =
+    trpc.media.watchHistory.listRecent.useQuery(queryInput);
 
   const entries = data?.data ?? [];
   const total = data?.pagination?.total ?? 0;
