@@ -3,7 +3,7 @@ import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
 import { trpc } from "../lib/trpc";
 import { formatCurrency, formatRuntime } from "../lib/format";
 import { WatchlistToggle } from "../components/WatchlistToggle";
-import { MarkAsWatchedButton } from "../components/MarkAsWatchedButton";
+import { WatchToggle } from "../components/WatchToggle";
 
 function MovieDetailSkeleton() {
   return (
@@ -159,9 +159,9 @@ export function MovieDetailPage() {
               {movie.runtime && <span>{formatRuntime(movie.runtime)}</span>}
             </div>
 
-            <div className="flex items-start gap-3 mt-3">
+            <div className="flex flex-wrap items-center gap-2 mt-3">
               <WatchlistToggle mediaType="movie" mediaId={movie.id} />
-              <MarkAsWatchedButton mediaId={movie.id} />
+              <WatchToggle mediaType="movie" mediaId={movie.id} />
             </div>
           </div>
         </div>
