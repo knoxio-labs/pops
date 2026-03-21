@@ -41,7 +41,7 @@ describe("inventory.documents.link", () => {
       title: "Purchase Receipt",
     });
     expect(result.data.id).toBeTypeOf("number");
-    expect(result.data.createdAt).toBeTypeOf("string");
+    expect(result.data.linkedAt).toBeTypeOf("string");
     expect(result.message).toBe("Document linked");
   });
 
@@ -173,11 +173,11 @@ describe("inventory.documents.unlink", () => {
   });
 });
 
-describe("inventory.documents.listForItem", () => {
+describe("inventory.documents.listByItem", () => {
   it("returns empty list when no documents linked", async () => {
     const itemId = seedInventoryItem(db, { item_name: "Lonely Item" });
 
-    const result = await caller.inventory.documents.listForItem({ itemId });
+    const result = await caller.inventory.documents.listByItem({ itemId });
 
     expect(result.data).toEqual([]);
     expect(result.pagination.total).toBe(0);
@@ -188,7 +188,7 @@ describe("inventory.documents.listForItem", () => {
     seedItemDocument(db, { item_id: itemId, paperless_document_id: 10, document_type: "receipt" });
     seedItemDocument(db, { item_id: itemId, paperless_document_id: 20, document_type: "warranty" });
 
-    const result = await caller.inventory.documents.listForItem({ itemId });
+    const result = await caller.inventory.documents.listByItem({ itemId });
 
     expect(result.data).toHaveLength(2);
     expect(result.pagination.total).toBe(2);
@@ -200,7 +200,7 @@ describe("inventory.documents.listForItem", () => {
     seedItemDocument(db, { item_id: itemA, paperless_document_id: 10 });
     seedItemDocument(db, { item_id: itemB, paperless_document_id: 20 });
 
-    const result = await caller.inventory.documents.listForItem({ itemId: itemA });
+    const result = await caller.inventory.documents.listByItem({ itemId: itemA });
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0].paperlessDocumentId).toBe(10);
@@ -213,7 +213,7 @@ describe("inventory.documents.listForItem", () => {
       seedItemDocument(db, { item_id: itemId, paperless_document_id: i + 1 });
     }
 
-    const page1 = await caller.inventory.documents.listForItem({
+    const page1 = await caller.inventory.documents.listByItem({
       itemId,
       limit: 2,
       offset: 0,
@@ -223,7 +223,7 @@ describe("inventory.documents.listForItem", () => {
     expect(page1.pagination.total).toBe(3);
     expect(page1.pagination.hasMore).toBe(true);
 
-    const page2 = await caller.inventory.documents.listForItem({
+    const page2 = await caller.inventory.documents.listByItem({
       itemId,
       limit: 2,
       offset: 2,
@@ -251,9 +251,9 @@ describe("inventory.documents auth", () => {
     await expect(unauthCaller.inventory.documents.unlink({ id: 1 })).rejects.toThrow(TRPCError);
   });
 
-  it("throws UNAUTHORIZED without auth on listForItem", async () => {
+  it("throws UNAUTHORIZED without auth on listByItem", async () => {
     const unauthCaller = createCaller(false);
-    await expect(unauthCaller.inventory.documents.listForItem({ itemId: "a" })).rejects.toThrow(
+    await expect(unauthCaller.inventory.documents.listByItem({ itemId: "a" })).rejects.toThrow(
       TRPCError
     );
   });

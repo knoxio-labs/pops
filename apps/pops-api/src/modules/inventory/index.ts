@@ -1,5 +1,5 @@
 /**
- * Inventory domain — home inventory items, locations, connections, and photos.
+ * Inventory domain — home inventory items, locations, connections, photos, and documents.
  */
 import { router } from "../../trpc.js";
 import { inventoryRouter as itemsRouter } from "./items/router.js";

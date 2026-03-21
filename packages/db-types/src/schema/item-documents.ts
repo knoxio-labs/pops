@@ -18,7 +18,7 @@ export const itemDocuments = sqliteTable(
     paperlessDocumentId: integer("paperless_document_id").notNull(),
     documentType: text("document_type").notNull(),
     title: text("title"),
-    createdAt: text("created_at")
+    linkedAt: text("linked_at")
       .notNull()
       .default(sql`(datetime('now'))`),
   },

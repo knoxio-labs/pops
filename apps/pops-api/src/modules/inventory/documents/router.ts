@@ -5,7 +5,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../../../trpc.js";
 import { paginationMeta } from "../../../shared/pagination.js";
-import { LinkDocumentSchema, DocumentQuerySchema, toItemDocument } from "./types.js";
+import { LinkDocumentSchema, DocumentQuerySchema, toDocument } from "./types.js";
 import * as service from "./service.js";
 import { NotFoundError, ConflictError } from "../../../shared/errors.js";
 
@@ -16,14 +16,9 @@ export const documentsRouter = router({
   /** Link a Paperless-ngx document to an inventory item. */
   link: protectedProcedure.input(LinkDocumentSchema).mutation(({ input }) => {
     try {
-      const row = service.linkDocument(
-        input.itemId,
-        input.paperlessDocumentId,
-        input.documentType,
-        input.title
-      );
+      const row = service.linkDocument(input);
       return {
-        data: toItemDocument(row),
+        data: toDocument(row),
         message: "Document linked",
       };
     } catch (err) {
@@ -37,7 +32,7 @@ export const documentsRouter = router({
     }
   }),
 
-  /** Unlink a document from an item by link ID. */
+  /** Unlink a document by link ID. */
   unlink: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ input }) => {
@@ -53,14 +48,14 @@ export const documentsRouter = router({
     }),
 
   /** List all documents linked to an item. */
-  listForItem: protectedProcedure.input(DocumentQuerySchema).query(({ input }) => {
+  listByItem: protectedProcedure.input(DocumentQuerySchema).query(({ input }) => {
     const limit = input.limit ?? DEFAULT_LIMIT;
     const offset = input.offset ?? DEFAULT_OFFSET;
 
     const { rows, total } = service.listDocumentsForItem(input.itemId, limit, offset);
 
     return {
-      data: rows.map(toItemDocument),
+      data: rows.map(toDocument),
       pagination: paginationMeta(total, limit, offset),
     };
   }),

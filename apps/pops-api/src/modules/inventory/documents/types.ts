@@ -6,34 +6,34 @@ export type { ItemDocumentRow };
 export const DOCUMENT_TYPES = ["receipt", "warranty", "manual", "invoice", "other"] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
-/** API response shape for an item document link. */
+/** API response shape for a linked document. */
 export interface ItemDocument {
   id: number;
   itemId: string;
   paperlessDocumentId: number;
   documentType: string;
   title: string | null;
-  createdAt: string;
+  linkedAt: string;
 }
 
-/** Map a DB row to the API response shape. */
-export function toItemDocument(row: ItemDocumentRow): ItemDocument {
+/** Map a SQLite row to the API response shape. */
+export function toDocument(row: ItemDocumentRow): ItemDocument {
   return {
     id: row.id,
     itemId: row.itemId,
     paperlessDocumentId: row.paperlessDocumentId,
     documentType: row.documentType,
     title: row.title,
-    createdAt: row.createdAt,
+    linkedAt: row.linkedAt,
   };
 }
 
 /** Zod schema for linking a document to an item. */
 export const LinkDocumentSchema = z.object({
   itemId: z.string().min(1, "Item ID is required"),
-  paperlessDocumentId: z.number().int().positive("Document ID must be a positive integer"),
+  paperlessDocumentId: z.number().int().positive("Document ID is required"),
   documentType: z.enum(DOCUMENT_TYPES),
-  title: z.string().optional(),
+  title: z.string().nullable().optional(),
 });
 export type LinkDocumentInput = z.infer<typeof LinkDocumentSchema>;
 
