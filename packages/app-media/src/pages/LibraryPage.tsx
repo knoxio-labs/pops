@@ -1,5 +1,6 @@
 import { useSearchParams, Link } from "react-router";
-import { Badge, Skeleton } from "@pops/ui";
+import { Badge, Skeleton, Button } from "@pops/ui";
+import { Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { MediaGrid } from "../components/MediaGrid";
 import {
@@ -47,9 +48,7 @@ function MediaCard({
   };
 }) {
   const href =
-    item.type === "movie"
-      ? `/media/movies/${item.id}`
-      : `/media/tv/${item.id}`;
+    item.type === "movie" ? `/media/movies/${item.id}` : `/media/tv/${item.id}`;
   const posterSrc = item.posterUrl ?? "";
 
   return (
@@ -75,7 +74,9 @@ function MediaCard({
           {item.type === "movie" ? "Movie" : "TV"}
         </Badge>
       </div>
-      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-indigo-400">{item.title}</h3>
+      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-indigo-400">
+        {item.title}
+      </h3>
       {item.year && (
         <p className="text-xs text-muted-foreground">{item.year}</p>
       )}
@@ -122,7 +123,11 @@ export function LibraryPage() {
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Type toggle */}
-        <div className="flex rounded-lg border bg-muted/30 p-0.5" role="group" aria-label="Filter by type">
+        <div
+          className="flex rounded-lg border bg-muted/30 p-0.5"
+          role="group"
+          aria-label="Filter by type"
+        >
           {TYPE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -200,6 +205,17 @@ export function LibraryPage() {
           ))}
         </MediaGrid>
       )}
+
+      {/* Quick Pick FAB */}
+      <Link
+        to="/media/quick-pick"
+        className="fixed bottom-6 right-6 z-50"
+        aria-label="What should I watch tonight?"
+      >
+        <Button className="h-14 w-14 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25 p-0">
+          <Sparkles className="h-6 w-6" />
+        </Button>
+      </Link>
     </div>
   );
 }
