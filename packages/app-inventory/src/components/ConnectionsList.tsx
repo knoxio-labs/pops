@@ -4,7 +4,7 @@
  * and a "Connect to…" button placeholder.
  */
 import { cn, AssetIdBadge, TypeBadge } from "@pops/ui";
-import { Link2, Plus } from "lucide-react";
+import { Link2, Plus, X } from "lucide-react";
 
 export interface ConnectedItem {
   id: string;
@@ -17,6 +17,7 @@ export interface ConnectionsListProps {
   connections: ConnectedItem[];
   onItemClick?: (id: string) => void;
   onConnect?: () => void;
+  onDisconnect?: (itemId: string) => void;
   className?: string;
 }
 
@@ -24,6 +25,7 @@ export function ConnectionsList({
   connections,
   onItemClick,
   onConnect,
+  onDisconnect,
   className,
 }: ConnectionsListProps) {
   return (
@@ -64,6 +66,19 @@ export function ConnectionsList({
                 <div className="flex shrink-0 items-center gap-1">
                   {item.assetId && <AssetIdBadge assetId={item.assetId} />}
                   {item.type && <TypeBadge type={item.type} />}
+                  {onDisconnect && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDisconnect(item.id);
+                      }}
+                      className="ml-1 p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      aria-label={`Disconnect ${item.itemName}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </button>
             </li>

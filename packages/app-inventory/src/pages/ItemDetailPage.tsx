@@ -3,6 +3,7 @@
  * Shows header with badges, photo placeholder, metadata grid,
  * notes section, and connections list.
  */
+import { useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   Alert,
@@ -17,9 +18,11 @@ import {
 } from "@pops/ui";
 import type { Condition, LocationSegment } from "@pops/ui";
 import { Button } from "@pops/ui";
+import { toast } from "sonner";
 import { ArrowLeft, Pencil, Trash2, Package, Calendar, DollarSign, ShieldCheck, MapPin } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { ConnectionsList } from "../components/ConnectionsList";
+import { ConnectDialog } from "../components/ConnectDialog";
 
 function ItemDetailSkeleton() {
   return (
@@ -84,6 +87,9 @@ function formatCurrency(value: number | null): string {
 export function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [connectOpen, setConnectOpen] = useState(false);
+
+  const utils = trpc.useUtils();
 
   const { data: itemResponse, isLoading, error } = trpc.inventory.items.get.useQuery(
     { id: id! },
@@ -94,6 +100,27 @@ export function ItemDetailPage() {
   const { data: connectionsData } = trpc.inventory.connections.listForItem.useQuery(
     { itemId: id! },
     { enabled: !!id }
+  );
+
+  const disconnectMutation = trpc.inventory.connections.disconnect.useMutation({
+    onSuccess: () => {
+      utils.inventory.connections.listForItem.invalidate({ itemId: id! });
+      toast.success("Items disconnected");
+    },
+    onError: (err) => toast.error(err.message || "Failed to disconnect"),
+  });
+
+  const handleDisconnect = useCallback(
+    (connectedItemId: string) => {
+      // Find the connection by the connected item's ID
+      const conn = connectionsData?.data.find(
+        (c) => (c.itemAId === id ? c.itemBId : c.itemAId) === connectedItemId,
+      );
+      if (conn) {
+        disconnectMutation.mutate({ id: conn.id });
+      }
+    },
+    [connectionsData, id, disconnectMutation],
   );
 
   // Extract connected item IDs to fetch their details
@@ -292,6 +319,16 @@ export function ItemDetailPage() {
       <ConnectionsList
         connections={connections}
         onItemClick={(itemId) => navigate(`/inventory/items/${itemId}`)}
+        onConnect={() => setConnectOpen(true)}
+        onDisconnect={handleDisconnect}
+      />
+
+      {/* Connect dialog */}
+      <ConnectDialog
+        open={connectOpen}
+        onOpenChange={setConnectOpen}
+        currentItemId={id}
+        connectedIds={connectedItemIds}
       />
     </div>
   );
