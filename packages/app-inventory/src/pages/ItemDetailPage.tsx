@@ -1,5 +1,5 @@
 /**
- * Item detail page — shows item info and connected items.
+ * Item detail page — shows item info, connected items, and linked documents.
  * Route: /inventory/items/:id
  */
 import { useParams, Link } from "react-router";
@@ -15,6 +15,7 @@ import {
 import { ArrowLeft, Pencil, Link2, Unlink } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { ConnectDialog } from "../components/ConnectDialog";
+import { DocumentsSection } from "../components/DocumentsSection";
 
 export function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -194,6 +195,9 @@ export function ItemDetailPage() {
           </p>
         )}
       </section>
+
+      {/* Documents */}
+      <DocumentsSection itemId={id!} />
     </div>
   );
 }
