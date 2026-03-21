@@ -8,6 +8,7 @@ import type {
   DimensionWeight,
   GenreDistribution,
   PreferenceProfile,
+  QuickPickMovie,
 } from "./types.js";
 
 /**
@@ -110,6 +111,31 @@ function getTotalComparisons(): number {
   const result = db.prepare(`SELECT COUNT(*) AS cnt FROM comparisons`).get() as { cnt: number };
 
   return result.cnt;
+}
+
+/**
+ * Get random unwatched movies from the library for quick pick.
+ * Excludes movies already on the watchlist or already watched.
+ */
+export function getQuickPickMovies(count: number): QuickPickMovie[] {
+  const db = getDb();
+
+  return db
+    .prepare(
+      `SELECT m.id, m.tmdb_id AS tmdbId, m.title, m.release_date AS releaseDate,
+              m.poster_path AS posterPath, m.backdrop_path AS backdropPath,
+              m.overview, m.vote_average AS voteAverage, m.genres, m.runtime
+       FROM movies m
+       WHERE m.id NOT IN (
+         SELECT DISTINCT media_id FROM watch_history WHERE media_type = 'movie'
+       )
+       AND m.id NOT IN (
+         SELECT media_id FROM media_watchlist WHERE media_type = 'movie'
+       )
+       ORDER BY RANDOM()
+       LIMIT ?`
+    )
+    .all(count) as QuickPickMovie[];
 }
 
 /**
