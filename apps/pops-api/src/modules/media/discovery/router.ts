@@ -23,50 +23,46 @@ export const discoveryRouter = router({
     }),
 
   /** Get trending movies from TMDB. */
-  trending: protectedProcedure
-    .input(TrendingQuerySchema)
-    .query(async ({ input }) => {
-      const client = getTmdbClient();
-      if (!client) {
+  trending: protectedProcedure.input(TrendingQuerySchema).query(async ({ input }) => {
+    const client = getTmdbClient();
+    if (!client) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "TMDB_API_KEY is not configured",
+      });
+    }
+    try {
+      return await tmdbService.getTrending(client, input.timeWindow, input.page);
+    } catch (err) {
+      if (err instanceof TmdbApiError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "TMDB_API_KEY is not configured",
+          message: `TMDB API error: ${err.message}`,
         });
       }
-      try {
-        return await tmdbService.getTrending(client, input.timeWindow, input.page);
-      } catch (err) {
-        if (err instanceof TmdbApiError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `TMDB API error: ${err.message}`,
-          });
-        }
-        throw err;
-      }
-    }),
+      throw err;
+    }
+  }),
 
   /** Get recommendations based on top-rated library movies. */
-  recommendations: protectedProcedure
-    .input(RecommendationsQuerySchema)
-    .query(async ({ input }) => {
-      const client = getTmdbClient();
-      if (!client) {
+  recommendations: protectedProcedure.input(RecommendationsQuerySchema).query(async ({ input }) => {
+    const client = getTmdbClient();
+    if (!client) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "TMDB_API_KEY is not configured",
+      });
+    }
+    try {
+      return await tmdbService.getRecommendations(client, input.sampleSize);
+    } catch (err) {
+      if (err instanceof TmdbApiError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "TMDB_API_KEY is not configured",
+          message: `TMDB API error: ${err.message}`,
         });
       }
-      try {
-        return await tmdbService.getRecommendations(client, input.sampleSize);
-      } catch (err) {
-        if (err instanceof TmdbApiError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `TMDB API error: ${err.message}`,
-          });
-        }
-        throw err;
-      }
-    }),
+      throw err;
+    }
+  }),
 });

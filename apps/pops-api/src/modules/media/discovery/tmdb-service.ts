@@ -17,10 +17,7 @@ function getLibraryTmdbIds(): Set<number> {
 }
 
 /** Map TMDB search results to discover results with library status. */
-function toDiscoverResults(
-  results: TmdbSearchResult[],
-  libraryIds: Set<number>,
-): DiscoverResult[] {
+function toDiscoverResults(results: TmdbSearchResult[], libraryIds: Set<number>): DiscoverResult[] {
   return results.map((r) => ({
     tmdbId: r.tmdbId,
     title: r.title,
@@ -40,7 +37,7 @@ function toDiscoverResults(
 export async function getTrending(
   client: TmdbClient,
   timeWindow: "day" | "week",
-  page: number,
+  page: number
 ): Promise<{ results: DiscoverResult[]; totalResults: number; page: number }> {
   const [response, libraryIds] = await Promise.all([
     client.getTrendingMovies(timeWindow, page),
@@ -57,7 +54,7 @@ export async function getTrending(
 /** Get top-rated library movies by voteAverage, then fetch recommendations for each. */
 export async function getRecommendations(
   client: TmdbClient,
-  sampleSize: number,
+  sampleSize: number
 ): Promise<{ results: DiscoverResult[]; sourceMovies: string[] }> {
   const db = getDrizzle();
 
@@ -77,9 +74,7 @@ export async function getRecommendations(
   const libraryIds = getLibraryTmdbIds();
 
   // Fetch recommendations for each top movie in parallel
-  const recPromises = topMovies.map((m) =>
-    client.getMovieRecommendations(m.tmdbId, 1),
-  );
+  const recPromises = topMovies.map((m) => client.getMovieRecommendations(m.tmdbId, 1));
   const recResponses = await Promise.all(recPromises);
 
   // Merge and deduplicate

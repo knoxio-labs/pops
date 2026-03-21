@@ -116,7 +116,7 @@ export class TmdbClient {
   /** Get trending movies (daily or weekly). */
   async getTrendingMovies(
     timeWindow: "day" | "week" = "week",
-    page = 1,
+    page = 1
   ): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       page: String(page),
@@ -124,7 +124,7 @@ export class TmdbClient {
     });
 
     const raw = await this.get<RawTmdbTrendingResponse>(
-      `/3/trending/movie/${timeWindow}?${params.toString()}`,
+      `/3/trending/movie/${timeWindow}?${params.toString()}`
     );
 
     return {
@@ -149,17 +149,14 @@ export class TmdbClient {
   }
 
   /** Get movie recommendations based on a specific movie. */
-  async getMovieRecommendations(
-    tmdbId: number,
-    page = 1,
-  ): Promise<TmdbSearchResponse> {
+  async getMovieRecommendations(tmdbId: number, page = 1): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       page: String(page),
       language: "en-US",
     });
 
     const raw = await this.get<RawTmdbRecommendationsResponse>(
-      `/3/movie/${tmdbId}/recommendations?${params.toString()}`,
+      `/3/movie/${tmdbId}/recommendations?${params.toString()}`
     );
 
     return {
