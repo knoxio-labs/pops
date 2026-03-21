@@ -33,18 +33,30 @@ export function ArrStatusBadge({ kind, externalId }: ArrStatusBadgeProps) {
 
   const movieStatus = trpc.media.arr.getMovieStatus.useQuery(
     { tmdbId: externalId },
-    { enabled: kind === "movie" && isConfigured === true },
+    { enabled: kind === "movie" && isConfigured === true, retry: false },
   );
 
   const showStatus = trpc.media.arr.getShowStatus.useQuery(
     { tvdbId: externalId },
-    { enabled: kind === "show" && isConfigured === true },
+    { enabled: kind === "show" && isConfigured === true, retry: false },
   );
 
   if (!isConfigured) return null;
 
   const query = kind === "movie" ? movieStatus : showStatus;
-  if (query.isLoading || !query.data?.data) return null;
+
+  if (query.isLoading) return null;
+
+  if (query.isError) {
+    const label = kind === "movie" ? "Radarr unavailable" : "Sonarr unavailable";
+    return (
+      <Badge className={STATUS_STYLES.not_found}>
+        {label}
+      </Badge>
+    );
+  }
+
+  if (!query.data?.data) return null;
 
   const result = query.data.data;
   const colorClass = STATUS_STYLES[result.status] ?? STATUS_STYLES.not_found;

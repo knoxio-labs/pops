@@ -12,23 +12,15 @@ export const arrRouter = router({
   testRadarr: protectedProcedure.query(async () => {
     const client = arrService.getRadarrClient();
     if (!client) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "Radarr is not configured (RADARR_URL / RADARR_API_KEY not set)",
-      });
+      return { data: null, connected: false, error: "Radarr is not configured" };
     }
 
     try {
       const status = await client.testConnection();
-      return { data: status, message: "Radarr connection successful" };
+      return { data: status, connected: true, message: "Radarr connection successful" };
     } catch (err) {
-      if (err instanceof ArrApiError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Radarr error: ${err.message}`,
-        });
-      }
-      throw err;
+      const message = err instanceof ArrApiError ? err.message : "Connection failed";
+      return { data: null, connected: false, error: message };
     }
   }),
 
@@ -36,23 +28,15 @@ export const arrRouter = router({
   testSonarr: protectedProcedure.query(async () => {
     const client = arrService.getSonarrClient();
     if (!client) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "Sonarr is not configured (SONARR_URL / SONARR_API_KEY not set)",
-      });
+      return { data: null, connected: false, error: "Sonarr is not configured" };
     }
 
     try {
       const status = await client.testConnection();
-      return { data: status, message: "Sonarr connection successful" };
+      return { data: status, connected: true, message: "Sonarr connection successful" };
     } catch (err) {
-      if (err instanceof ArrApiError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Sonarr error: ${err.message}`,
-        });
-      }
-      throw err;
+      const message = err instanceof ArrApiError ? err.message : "Connection failed";
+      return { data: null, connected: false, error: message };
     }
   }),
 
@@ -65,18 +49,8 @@ export const arrRouter = router({
   getMovieStatus: protectedProcedure
     .input(z.object({ tmdbId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      try {
-        const result = await arrService.getMovieStatus(input.tmdbId);
-        return { data: result };
-      } catch (err) {
-        if (err instanceof ArrApiError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Radarr error: ${err.message}`,
-          });
-        }
-        throw err;
-      }
+      const result = await arrService.getMovieStatus(input.tmdbId);
+      return { data: result };
     }),
 
   /** Get combined download queue from Radarr + Sonarr. */
@@ -99,17 +73,7 @@ export const arrRouter = router({
   getShowStatus: protectedProcedure
     .input(z.object({ tvdbId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      try {
-        const result = await arrService.getShowStatus(input.tvdbId);
-        return { data: result };
-      } catch (err) {
-        if (err instanceof ArrApiError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Sonarr error: ${err.message}`,
-          });
-        }
-        throw err;
-      }
+      const result = await arrService.getShowStatus(input.tvdbId);
+      return { data: result };
     }),
 });

@@ -39,7 +39,7 @@ export function getArrConfig(): ArrConfig {
   };
 }
 
-/** Get movie status from Radarr with caching. */
+/** Get movie status from Radarr with caching. Serves stale cache on failure. */
 export async function getMovieStatus(tmdbId: number): Promise<ArrStatusResult> {
   const cached = movieStatusCache.get(tmdbId);
   if (cached && cached.expiresAt > Date.now()) {
@@ -51,16 +51,24 @@ export async function getMovieStatus(tmdbId: number): Promise<ArrStatusResult> {
     return { status: "not_found", label: "Radarr not configured" };
   }
 
-  const result = await client.getMovieStatus(tmdbId);
-  movieStatusCache.set(tmdbId, {
-    result,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
-
-  return result;
+  try {
+    const result = await client.getMovieStatus(tmdbId);
+    movieStatusCache.set(tmdbId, {
+      result,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+    return result;
+  } catch (err) {
+    console.warn(
+      `Radarr connection failed for tmdbId=${tmdbId}:`,
+      err instanceof Error ? err.message : err
+    );
+    if (cached) return cached.result;
+    return { status: "not_found", label: "Radarr unavailable" };
+  }
 }
 
-/** Get TV show status from Sonarr with caching. */
+/** Get TV show status from Sonarr with caching. Serves stale cache on failure. */
 export async function getShowStatus(tvdbId: number): Promise<ArrStatusResult> {
   const cached = showStatusCache.get(tvdbId);
   if (cached && cached.expiresAt > Date.now()) {
@@ -72,13 +80,21 @@ export async function getShowStatus(tvdbId: number): Promise<ArrStatusResult> {
     return { status: "not_found", label: "Sonarr not configured" };
   }
 
-  const result = await client.getShowStatus(tvdbId);
-  showStatusCache.set(tvdbId, {
-    result,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
-
-  return result;
+  try {
+    const result = await client.getShowStatus(tvdbId);
+    showStatusCache.set(tvdbId, {
+      result,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+    return result;
+  } catch (err) {
+    console.warn(
+      `Sonarr connection failed for tvdbId=${tvdbId}:`,
+      err instanceof Error ? err.message : err
+    );
+    if (cached) return cached.result;
+    return { status: "not_found", label: "Sonarr unavailable" };
+  }
 }
 
 const QUEUE_CACHE_TTL_MS = 30 * 1000; // 30 seconds
