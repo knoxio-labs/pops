@@ -6,8 +6,10 @@
  * inline renaming, move-to-parent modal, and sibling reordering.
  */
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import {
   Badge,
+  Button,
   Skeleton,
   Collapsible,
   CollapsibleTrigger,
@@ -17,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@pops/ui";
 import {
   MapPin,
@@ -29,6 +32,7 @@ import {
   ArrowUp,
   ArrowDown,
   MoveRight,
+  Trash2,
   FileText,
 } from "lucide-react";
 import { Link } from "react-router";
@@ -224,6 +228,7 @@ interface LocationNodeProps {
   onRename: (id: string, newName: string) => void;
   onMoveStart: (id: string) => void;
   onReorder: (id: string, direction: "up" | "down") => void;
+  onDelete: (id: string) => void;
   addingChildOf: string | null;
   onNewChildSave: (name: string) => void;
   onNewChildCancel: () => void;
@@ -240,6 +245,7 @@ function LocationNode({
   onRename,
   onMoveStart,
   onReorder,
+  onDelete,
   addingChildOf,
   onNewChildSave,
   onNewChildCancel,
@@ -376,6 +382,18 @@ function LocationNode({
           >
             <FileText className="h-3.5 w-3.5 text-muted-foreground" />
           </Link>
+          <button
+            type="button"
+            className="p-0.5 rounded hover:bg-muted"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(node.id);
+            }}
+            aria-label={`Delete ${node.name}`}
+            title="Delete location"
+          >
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </button>
         </div>
 
         {hasChildren && (
@@ -399,6 +417,7 @@ function LocationNode({
                 onRename={onRename}
                 onMoveStart={onMoveStart}
                 onReorder={onReorder}
+                onDelete={onDelete}
                 addingChildOf={addingChildOf}
                 onNewChildSave={onNewChildSave}
                 onNewChildCancel={onNewChildCancel}
@@ -432,6 +451,16 @@ export function LocationTreePage() {
   const [addingChildOf, setAddingChildOf] = useState<string | null>(null);
   const [addingRoot, setAddingRoot] = useState(false);
   const [movingId, setMovingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    name: string;
+    stats: {
+      childCount: number;
+      descendantCount: number;
+      itemCount: number;
+      totalItemCount: number;
+    };
+  } | null>(null);
 
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.inventory.locations.tree.useQuery();
@@ -449,6 +478,39 @@ export function LocationTreePage() {
       utils.inventory.locations.tree.invalidate();
     },
   });
+
+  const deleteMutation = trpc.inventory.locations.delete.useMutation({
+    onSuccess: (result) => {
+      if (result.requiresConfirmation && result.stats) {
+        // Need user confirmation — show dialog
+        const node = deleteConfirm
+          ? { id: deleteConfirm.id, name: deleteConfirm.name }
+          : pendingDeleteRef.current;
+        if (node) {
+          setDeleteConfirm({
+            id: node.id,
+            name: node.name,
+            stats: result.stats,
+          });
+        }
+        return;
+      }
+      toast.success("Location deleted");
+      utils.inventory.locations.tree.invalidate();
+      if (selectedId === pendingDeleteRef.current?.id) {
+        setSelectedId(null);
+      }
+      setDeleteConfirm(null);
+      pendingDeleteRef.current = null;
+    },
+    onError: (err) => {
+      toast.error(`Failed to delete: ${err.message}`);
+      setDeleteConfirm(null);
+      pendingDeleteRef.current = null;
+    },
+  });
+
+  const pendingDeleteRef = useRef<{ id: string; name: string } | null>(null);
 
   const treeNodes = data?.data ?? [];
   const nodeMap = useMemo(() => {
@@ -499,6 +561,22 @@ export function LocationTreePage() {
   const handleNewRootCancel = useCallback(() => {
     setAddingRoot(false);
   }, []);
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      const node = nodeMap.get(id);
+      if (!node) return;
+      pendingDeleteRef.current = { id, name: node.name };
+      // Try without force first — server will return requiresConfirmation if non-empty
+      deleteMutation.mutate({ id });
+    },
+    [nodeMap, deleteMutation],
+  );
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteConfirm) return;
+    deleteMutation.mutate({ id: deleteConfirm.id, force: true });
+  }, [deleteConfirm, deleteMutation]);
 
   const handleMoveStart = useCallback((id: string) => {
     setMovingId(id);
@@ -610,6 +688,7 @@ export function LocationTreePage() {
                 onRename={handleRename}
                 onMoveStart={handleMoveStart}
                 onReorder={handleReorder}
+                onDelete={handleDelete}
                 addingChildOf={addingChildOf}
                 onNewChildSave={handleNewChildSave}
                 onNewChildCancel={handleNewChildCancel}
@@ -681,6 +760,57 @@ export function LocationTreePage() {
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete &ldquo;{deleteConfirm?.name}&rdquo;?
+            </DialogTitle>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          {deleteConfirm && (
+            <div className="space-y-2 text-sm">
+              {deleteConfirm.stats.childCount > 0 && (
+                <p>
+                  This location has{" "}
+                  <strong>{deleteConfirm.stats.childCount}</strong> direct{" "}
+                  {deleteConfirm.stats.childCount === 1
+                    ? "sub-location"
+                    : "sub-locations"}
+                  {deleteConfirm.stats.descendantCount >
+                    deleteConfirm.stats.childCount &&
+                    ` (${deleteConfirm.stats.descendantCount} total)`}
+                  . They will all be deleted.
+                </p>
+              )}
+              {deleteConfirm.stats.totalItemCount > 0 && (
+                <p>
+                  <strong>{deleteConfirm.stats.totalItemCount}</strong>{" "}
+                  {deleteConfirm.stats.totalItemCount === 1 ? "item" : "items"}{" "}
+                  will become unlocated.
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
