@@ -6,7 +6,7 @@ import { eq, and, or, count } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { itemConnections, homeInventory } from "@pops/db-types";
 import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { ItemConnectionRow } from "./types.js";
+import type { ItemConnectionRow, TraceNode } from "./types.js";
 
 /** Count + rows for a paginated list. */
 export interface ConnectionListResult {
@@ -100,4 +100,77 @@ export function listConnectionsForItem(
   const [countResult] = db.select({ total: count() }).from(itemConnections).where(condition).all();
 
   return { rows, total: countResult.total };
+}
+
+/**
+ * Trace the connection chain from a given item using DFS.
+ * Returns a tree of TraceNode with item metadata.
+ * Handles circular references via a visited set.
+ */
+export function traceConnections(itemId: string, maxDepth: number): TraceNode {
+  const db = getDrizzle();
+
+  // Verify root item exists
+  const rootItem = db
+    .select({
+      id: homeInventory.id,
+      itemName: homeInventory.itemName,
+      assetId: homeInventory.assetId,
+      type: homeInventory.type,
+    })
+    .from(homeInventory)
+    .where(eq(homeInventory.id, itemId))
+    .get();
+
+  if (!rootItem) throw new NotFoundError("Inventory item", itemId);
+
+  const visited = new Set<string>();
+
+  function buildTree(currentId: string, depth: number): TraceNode {
+    visited.add(currentId);
+
+    const item = db
+      .select({
+        id: homeInventory.id,
+        itemName: homeInventory.itemName,
+        assetId: homeInventory.assetId,
+        type: homeInventory.type,
+      })
+      .from(homeInventory)
+      .where(eq(homeInventory.id, currentId))
+      .get();
+
+    const node: TraceNode = {
+      id: currentId,
+      itemName: item?.itemName ?? currentId,
+      assetId: item?.assetId ?? null,
+      type: item?.type ?? null,
+      children: [],
+    };
+
+    if (depth >= maxDepth) return node;
+
+    // Find all connections for this item
+    const connections = db
+      .select()
+      .from(itemConnections)
+      .where(
+        or(
+          eq(itemConnections.itemAId, currentId),
+          eq(itemConnections.itemBId, currentId),
+        ),
+      )
+      .all();
+
+    for (const conn of connections) {
+      const neighborId = conn.itemAId === currentId ? conn.itemBId : conn.itemAId;
+      if (!visited.has(neighborId)) {
+        node.children.push(buildTree(neighborId, depth + 1));
+      }
+    }
+
+    return node;
+  }
+
+  return buildTree(itemId, 0);
 }
