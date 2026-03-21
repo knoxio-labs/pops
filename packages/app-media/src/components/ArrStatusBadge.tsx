@@ -49,9 +49,5 @@ export function ArrStatusBadge({ kind, externalId }: ArrStatusBadgeProps) {
   const result = query.data.data;
   const colorClass = STATUS_STYLES[result.status] ?? STATUS_STYLES.not_found;
 
-  return (
-    <Badge className={colorClass}>
-      {result.label}
-    </Badge>
-  );
+  return <Badge className={colorClass}>{result.label}</Badge>;
 }

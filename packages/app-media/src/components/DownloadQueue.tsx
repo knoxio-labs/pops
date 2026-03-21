@@ -32,10 +32,7 @@ export function DownloadQueue() {
             key={item.id}
             className="flex items-center gap-3 rounded-lg border bg-card p-3"
           >
-            <Badge
-              variant="outline"
-              className="text-[10px] uppercase shrink-0"
-            >
+            <Badge variant="outline" className="text-[10px] uppercase shrink-0">
               {item.mediaType === "movie" ? "Movie" : "Episode"}
             </Badge>
 

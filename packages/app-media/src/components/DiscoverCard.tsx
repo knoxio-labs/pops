@@ -155,9 +155,7 @@ export function DiscoverCard({
         <h3 className="text-sm font-medium leading-tight line-clamp-2">
           {title}
         </h3>
-        {year && (
-          <p className="text-xs text-muted-foreground">{year}</p>
-        )}
+        {year && <p className="text-xs text-muted-foreground">{year}</p>}
       </div>
     </div>
   );
