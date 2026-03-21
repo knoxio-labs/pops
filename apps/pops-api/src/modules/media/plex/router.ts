@@ -7,6 +7,7 @@ import { router, protectedProcedure } from "../../../trpc.js";
 import { PlexApiError } from "./types.js";
 import type { PlexClient } from "./client.js";
 import * as plexService from "./service.js";
+import * as scheduler from "./scheduler.js";
 
 function requirePlexClient(): PlexClient {
   const client = plexService.getPlexClient();
@@ -99,5 +100,32 @@ export const plexRouter = router({
   getSyncStatus: protectedProcedure.query(() => {
     const client = plexService.getPlexClient();
     return { data: plexService.getSyncStatus(client) };
+  }),
+
+  /** Start the periodic sync scheduler. */
+  startScheduler: protectedProcedure
+    .input(
+      z
+        .object({
+          intervalMs: z.number().int().positive().optional(),
+          movieSectionId: z.string().min(1).optional(),
+          tvSectionId: z.string().min(1).optional(),
+        })
+        .optional()
+    )
+    .mutation(({ input }) => {
+      const status = scheduler.startScheduler(input ?? {});
+      return { data: status };
+    }),
+
+  /** Stop the periodic sync scheduler. */
+  stopScheduler: protectedProcedure.mutation(() => {
+    const status = scheduler.stopScheduler();
+    return { data: status };
+  }),
+
+  /** Get scheduler status. */
+  getSchedulerStatus: protectedProcedure.query(() => {
+    return { data: scheduler.getSchedulerStatus() };
   }),
 });
