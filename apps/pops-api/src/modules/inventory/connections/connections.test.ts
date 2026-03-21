@@ -271,8 +271,8 @@ describe("inventory.connections.trace", () => {
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairBC = [idB, idC].sort() as [string, string];
-    seedConnection(db, { item_a_id: pairAB[0], item_b_id: pairAB[1] });
-    seedConnection(db, { item_a_id: pairBC[0], item_b_id: pairBC[1] });
+    seedItemConnection(db, pairAB[0], pairAB[1]);
+    seedItemConnection(db, pairBC[0], pairBC[1]);
 
     const result = await caller.inventory.connections.trace({ itemId: idA });
 
@@ -296,13 +296,16 @@ describe("inventory.connections.trace", () => {
       [idA, idC].sort() as [string, string],
     ];
     for (const [a, b] of pairs) {
-      seedConnection(db, { item_a_id: a, item_b_id: b });
+      seedItemConnection(db, a, b);
     }
 
     const result = await caller.inventory.connections.trace({ itemId: idA });
 
     // Should complete without hanging. Total unique nodes = 3
-    const collectIds = (node: { id: string; children: { id: string; children: unknown[] }[] }): string[] => {
+    const collectIds = (node: {
+      id: string;
+      children: { id: string; children: unknown[] }[];
+    }): string[] => {
       const ids = [node.id];
       for (const child of node.children) {
         ids.push(...collectIds(child as typeof node));
@@ -326,7 +329,7 @@ describe("inventory.connections.trace", () => {
       [idC, idD].sort() as [string, string],
     ];
     for (const [a, b] of pairs) {
-      seedConnection(db, { item_a_id: a, item_b_id: b });
+      seedItemConnection(db, a, b);
     }
 
     // maxDepth=1: should only get A and its direct neighbor B (no C or D)
@@ -346,7 +349,7 @@ describe("inventory.connections.trace", () => {
 
     for (const devId of [dev1, dev2, dev3]) {
       const pair = [hub, devId].sort() as [string, string];
-      seedConnection(db, { item_a_id: pair[0], item_b_id: pair[1] });
+      seedItemConnection(db, pair[0], pair[1]);
     }
 
     const result = await caller.inventory.connections.trace({ itemId: hub });
@@ -358,9 +361,9 @@ describe("inventory.connections.trace", () => {
   });
 
   it("throws NOT_FOUND for nonexistent item", async () => {
-    await expect(
-      caller.inventory.connections.trace({ itemId: "nonexistent" })
-    ).rejects.toThrow(TRPCError);
+    await expect(caller.inventory.connections.trace({ itemId: "nonexistent" })).rejects.toThrow(
+      TRPCError
+    );
 
     try {
       await caller.inventory.connections.trace({ itemId: "nonexistent" });
