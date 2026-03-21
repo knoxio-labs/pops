@@ -1,6 +1,7 @@
 import { useSearchParams, Link } from "react-router";
-import { Badge, Skeleton } from "@pops/ui";
+import { Badge, Button, Skeleton } from "@pops/ui";
 import { useEffect } from "react";
+import { Sparkles } from "lucide-react";
 import { MediaGrid } from "../components/MediaGrid";
 import {
   useMediaLibrary,
@@ -47,9 +48,7 @@ function MediaCard({
   };
 }) {
   const href =
-    item.type === "movie"
-      ? `/media/movies/${item.id}`
-      : `/media/tv/${item.id}`;
+    item.type === "movie" ? `/media/movies/${item.id}` : `/media/tv/${item.id}`;
   const posterSrc = item.posterUrl ?? "";
 
   return (
@@ -75,7 +74,9 @@ function MediaCard({
           {item.type === "movie" ? "Movie" : "TV"}
         </Badge>
       </div>
-      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-indigo-400">{item.title}</h3>
+      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-indigo-400">
+        {item.title}
+      </h3>
       {item.year && (
         <p className="text-xs text-muted-foreground">{item.year}</p>
       )}
@@ -111,18 +112,30 @@ export function LibraryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Library</h1>
-        <Link
-          to="/media/search"
-          className="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
-        >
-          Search
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/media/quick-pick">
+            <Button variant="outline" size="sm">
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Quick Pick
+            </Button>
+          </Link>
+          <Link
+            to="/media/search"
+            className="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            Search
+          </Link>
+        </div>
       </div>
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Type toggle */}
-        <div className="flex rounded-lg border bg-muted/30 p-0.5" role="group" aria-label="Filter by type">
+        <div
+          className="flex rounded-lg border bg-muted/30 p-0.5"
+          role="group"
+          aria-label="Filter by type"
+        >
           {TYPE_OPTIONS.map((opt) => (
             <button
               key={opt.value}

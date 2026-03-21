@@ -29,3 +29,16 @@ export interface PreferenceProfile {
   totalMoviesWatched: number;
   totalComparisons: number;
 }
+
+export interface QuickPickMovie {
+  id: number;
+  tmdbId: number;
+  title: string;
+  releaseDate: string | null;
+  posterPath: string | null;
+  backdropPath: string | null;
+  overview: string | null;
+  voteAverage: number | null;
+  genres: string;
+  runtime: number | null;
+}
