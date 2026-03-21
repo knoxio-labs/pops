@@ -5,7 +5,7 @@
  * and allows deleting individual queued/uploaded photos.
  */
 import { useState, useCallback, useRef } from "react";
-import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, ImageIcon, Loader2, Camera } from "lucide-react";
 import { Button } from "@pops/ui";
 import { cn } from "../lib/utils";
 
@@ -51,6 +51,7 @@ export function PhotoUpload({
   const [isDragOver, setIsDragOver] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const validateFiles = useCallback(
     (fileList: File[]): File[] => {
@@ -128,6 +129,14 @@ export function PhotoUpload({
     [handleFiles],
   );
 
+  const handleCameraChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleFiles(e.target.files);
+      if (cameraRef.current) cameraRef.current.value = "";
+    },
+    [handleFiles],
+  );
+
   return (
     <div className={cn("space-y-3", className)}>
       {/* Drop zone */}
@@ -169,6 +178,28 @@ export function PhotoUpload({
         className="hidden"
         aria-hidden="true"
       />
+
+      {/* Camera capture (mobile) */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraChange}
+        className="hidden"
+        aria-hidden="true"
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => !disabled && cameraRef.current?.click()}
+        disabled={disabled}
+        className="w-full"
+        type="button"
+      >
+        <Camera className="h-4 w-4 mr-1.5" />
+        Take Photo
+      </Button>
 
       {/* Validation error */}
       {validationError && (
@@ -217,9 +248,7 @@ export function PhotoUpload({
                     </span>
                   )}
                   {f.status === "pending" && (
-                    <span className="text-xs text-muted-foreground">
-                      Ready
-                    </span>
+                    <span className="text-xs text-muted-foreground">Ready</span>
                   )}
                 </div>
               </div>
