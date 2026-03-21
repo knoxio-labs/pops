@@ -157,7 +157,7 @@ export function LocationContentsPanel({
               <button
                 type="button"
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/50"
-                onClick={() => navigate(`/inventory/${item.id}`)}
+                onClick={() => navigate(`/inventory/items/${item.id}`)}
               >
                 <span className="font-medium truncate flex-1">
                   {item.itemName}
@@ -177,7 +177,7 @@ export function LocationContentsPanel({
         className="w-full"
         onClick={() =>
           navigate(
-            `/inventory/new?locationId=${encodeURIComponent(locationId)}`,
+            `/inventory/items/new?locationId=${encodeURIComponent(locationId)}`,
           )
         }
       >
