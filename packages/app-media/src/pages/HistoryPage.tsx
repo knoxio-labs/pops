@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
-import { Button } from "@pops/ui/components";
+import { Alert, AlertTitle, AlertDescription, Badge, Button, Skeleton } from "@pops/ui";
 import { trpc } from "../lib/trpc";
 
 const PAGE_SIZE = 50;
