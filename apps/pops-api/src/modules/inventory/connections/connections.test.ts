@@ -253,6 +253,123 @@ describe("inventory.connections.listForItem", () => {
   });
 });
 
+describe("inventory.connections.trace", () => {
+  it("returns root node with no children when no connections", async () => {
+    const id = seedInventoryItem(db, { item_name: "Solo Item" });
+
+    const result = await caller.inventory.connections.trace({ itemId: id });
+
+    expect(result.data.id).toBe(id);
+    expect(result.data.itemName).toBe("Solo Item");
+    expect(result.data.children).toEqual([]);
+  });
+
+  it("traces a simple chain A-B-C", async () => {
+    const idA = seedInventoryItem(db, { item_name: "Item A" });
+    const idB = seedInventoryItem(db, { item_name: "Item B" });
+    const idC = seedInventoryItem(db, { item_name: "Item C" });
+
+    const pairAB = [idA, idB].sort() as [string, string];
+    const pairBC = [idB, idC].sort() as [string, string];
+    seedConnection(db, { item_a_id: pairAB[0], item_b_id: pairAB[1] });
+    seedConnection(db, { item_a_id: pairBC[0], item_b_id: pairBC[1] });
+
+    const result = await caller.inventory.connections.trace({ itemId: idA });
+
+    expect(result.data.id).toBe(idA);
+    expect(result.data.children).toHaveLength(1);
+    expect(result.data.children[0].id).toBe(idB);
+    expect(result.data.children[0].children).toHaveLength(1);
+    expect(result.data.children[0].children[0].id).toBe(idC);
+    expect(result.data.children[0].children[0].children).toEqual([]);
+  });
+
+  it("handles circular references without infinite loop", async () => {
+    const idA = seedInventoryItem(db, { item_name: "Item A" });
+    const idB = seedInventoryItem(db, { item_name: "Item B" });
+    const idC = seedInventoryItem(db, { item_name: "Item C" });
+
+    // Create A-B, B-C, A-C (triangle)
+    const pairs = [
+      [idA, idB].sort() as [string, string],
+      [idB, idC].sort() as [string, string],
+      [idA, idC].sort() as [string, string],
+    ];
+    for (const [a, b] of pairs) {
+      seedConnection(db, { item_a_id: a, item_b_id: b });
+    }
+
+    const result = await caller.inventory.connections.trace({ itemId: idA });
+
+    // Should complete without hanging. Total unique nodes = 3
+    const collectIds = (node: { id: string; children: { id: string; children: unknown[] }[] }): string[] => {
+      const ids = [node.id];
+      for (const child of node.children) {
+        ids.push(...collectIds(child as typeof node));
+      }
+      return ids;
+    };
+    const allIds = collectIds(result.data);
+    expect(new Set(allIds).size).toBe(3);
+  });
+
+  it("respects maxDepth limit", async () => {
+    // Create chain A-B-C-D
+    const idA = seedInventoryItem(db, { item_name: "A" });
+    const idB = seedInventoryItem(db, { item_name: "B" });
+    const idC = seedInventoryItem(db, { item_name: "C" });
+    const idD = seedInventoryItem(db, { item_name: "D" });
+
+    const pairs = [
+      [idA, idB].sort() as [string, string],
+      [idB, idC].sort() as [string, string],
+      [idC, idD].sort() as [string, string],
+    ];
+    for (const [a, b] of pairs) {
+      seedConnection(db, { item_a_id: a, item_b_id: b });
+    }
+
+    // maxDepth=1: should only get A and its direct neighbor B (no C or D)
+    const result = await caller.inventory.connections.trace({ itemId: idA, maxDepth: 1 });
+
+    expect(result.data.id).toBe(idA);
+    expect(result.data.children).toHaveLength(1);
+    expect(result.data.children[0].id).toBe(idB);
+    expect(result.data.children[0].children).toEqual([]);
+  });
+
+  it("handles branching connections (hub with multiple neighbors)", async () => {
+    const hub = seedInventoryItem(db, { item_name: "Hub" });
+    const dev1 = seedInventoryItem(db, { item_name: "Device 1" });
+    const dev2 = seedInventoryItem(db, { item_name: "Device 2" });
+    const dev3 = seedInventoryItem(db, { item_name: "Device 3" });
+
+    for (const devId of [dev1, dev2, dev3]) {
+      const pair = [hub, devId].sort() as [string, string];
+      seedConnection(db, { item_a_id: pair[0], item_b_id: pair[1] });
+    }
+
+    const result = await caller.inventory.connections.trace({ itemId: hub });
+
+    expect(result.data.id).toBe(hub);
+    expect(result.data.children).toHaveLength(3);
+    const childNames = result.data.children.map((c) => c.itemName).sort();
+    expect(childNames).toEqual(["Device 1", "Device 2", "Device 3"]);
+  });
+
+  it("throws NOT_FOUND for nonexistent item", async () => {
+    await expect(
+      caller.inventory.connections.trace({ itemId: "nonexistent" })
+    ).rejects.toThrow(TRPCError);
+
+    try {
+      await caller.inventory.connections.trace({ itemId: "nonexistent" });
+    } catch (err) {
+      expect((err as TRPCError).code).toBe("NOT_FOUND");
+    }
+  });
+});
+
 describe("inventory.connections auth", () => {
   it("throws UNAUTHORIZED without auth on connect", async () => {
     const unauthCaller = createCaller(false);
