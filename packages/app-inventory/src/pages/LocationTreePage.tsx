@@ -17,6 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
 } from "@pops/ui";
 import {
   MapPin,
@@ -29,7 +37,9 @@ import {
   ArrowUp,
   ArrowDown,
   MoveRight,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { LocationContentsPanel } from "../components/LocationContentsPanel";
 
@@ -218,6 +228,7 @@ interface LocationNodeProps {
   onRename: (id: string, newName: string) => void;
   onMoveStart: (id: string) => void;
   onReorder: (id: string, direction: "up" | "down") => void;
+  onDelete: (node: LocationTreeNode) => void;
   addingChildOf: string | null;
   onNewChildSave: (name: string) => void;
   onNewChildCancel: () => void;
@@ -234,6 +245,7 @@ function LocationNode({
   onRename,
   onMoveStart,
   onReorder,
+  onDelete,
   addingChildOf,
   onNewChildSave,
   onNewChildCancel,
@@ -358,6 +370,18 @@ function LocationNode({
           >
             <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
+          <button
+            type="button"
+            className="p-0.5 rounded hover:bg-muted"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(node);
+            }}
+            aria-label={`Delete ${node.name}`}
+            title="Delete location"
+          >
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </button>
         </div>
 
         {hasChildren && (
@@ -381,6 +405,7 @@ function LocationNode({
                 onRename={onRename}
                 onMoveStart={onMoveStart}
                 onReorder={onReorder}
+                onDelete={onDelete}
                 addingChildOf={addingChildOf}
                 onNewChildSave={onNewChildSave}
                 onNewChildCancel={onNewChildCancel}
@@ -415,6 +440,7 @@ export function LocationTreePage() {
   const [addingChildOf, setAddingChildOf] = useState<string | null>(null);
   const [addingRoot, setAddingRoot] = useState(false);
   const [movingId, setMovingId] = useState<string | null>(null);
+  const [deletingNode, setDeletingNode] = useState<LocationTreeNode | null>(null);
 
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.inventory.locations.tree.useQuery();
@@ -430,6 +456,21 @@ export function LocationTreePage() {
   const updateMutation = trpc.inventory.locations.update.useMutation({
     onSuccess: () => {
       utils.inventory.locations.tree.invalidate();
+    },
+  });
+
+  const deleteMutation = trpc.inventory.locations.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Location deleted");
+      void utils.inventory.locations.tree.invalidate();
+      if (deletingNode && selectedId === deletingNode.id) {
+        setSelectedId(null);
+      }
+      setDeletingNode(null);
+    },
+    onError: (err) => {
+      toast.error(`Failed to delete: ${err.message}`);
+      setDeletingNode(null);
     },
   });
 
@@ -517,6 +558,19 @@ export function LocationTreePage() {
     [treeNodes, nodeMap, updateMutation]
   );
 
+  const handleDelete = useCallback(
+    (node: LocationTreeNode) => {
+      if (node.children.length === 0) {
+        // Empty location — delete immediately
+        deleteMutation.mutate({ id: node.id });
+      } else {
+        // Has children — show confirmation dialog
+        setDeletingNode(node);
+      }
+    },
+    [deleteMutation],
+  );
+
   const movingNode = movingId ? nodeMap.get(movingId) : null;
 
   if (error) {
@@ -574,6 +628,7 @@ export function LocationTreePage() {
                 onRename={handleRename}
                 onMoveStart={handleMoveStart}
                 onReorder={handleReorder}
+                onDelete={handleDelete}
                 addingChildOf={addingChildOf}
                 onNewChildSave={handleNewChildSave}
                 onNewChildCancel={handleNewChildCancel}
@@ -610,6 +665,40 @@ export function LocationTreePage() {
           </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={!!deletingNode}
+        onOpenChange={(open) => !open && setDeletingNode(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete &ldquo;{deletingNode?.name}&rdquo;?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This location has{" "}
+              {deletingNode ? countDescendants(deletingNode) : 0} sub-location
+              {deletingNode && countDescendants(deletingNode) !== 1 ? "s" : ""}{" "}
+              that will also be deleted. Items at these locations will become
+              unlocated.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletingNode) {
+                  deleteMutation.mutate({ id: deletingNode.id });
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Move To dialog */}
       <Dialog open={!!movingId} onOpenChange={(open) => !open && setMovingId(null)}>
