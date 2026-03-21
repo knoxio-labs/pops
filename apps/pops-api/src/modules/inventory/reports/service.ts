@@ -1,10 +1,68 @@
 /**
  * Inventory reports service — warranty tracking and insurance report queries.
  */
-import { isNotNull, asc } from "drizzle-orm";
+import { isNotNull, asc, sql, desc, and, gte, lte } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { homeInventory, locations, itemPhotos } from "@pops/db-types";
 import type { InventoryRow } from "../items/types.js";
+import type { ValueBreakdownEntry, DashboardSummary, RecentItem } from "./types.js";
+
+/** Warranty "expiring soon" window in days. */
+const WARRANTY_WINDOW_DAYS = 90;
+
+/**
+ * Get dashboard summary: item count, total values, expiring warranties,
+ * and recently added items.
+ */
+export function getDashboard(): DashboardSummary {
+  const db = getDrizzle();
+
+  const [summary] = db
+    .select({
+      itemCount: sql<number>`COUNT(*)`,
+      totalReplacementValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      totalResaleValue: sql<number>`COALESCE(SUM(${homeInventory.resaleValue}), 0)`,
+    })
+    .from(homeInventory)
+    .all();
+
+  const now = new Date();
+  const cutoff = new Date(now.getTime() + WARRANTY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const nowIso = now.toISOString().split("T")[0];
+  const cutoffIso = cutoff.toISOString().split("T")[0];
+
+  const [warrantyResult] = db
+    .select({ cnt: sql<number>`COUNT(*)` })
+    .from(homeInventory)
+    .where(
+      and(
+        isNotNull(homeInventory.warrantyExpires),
+        gte(homeInventory.warrantyExpires, nowIso),
+        lte(homeInventory.warrantyExpires, cutoffIso)
+      )
+    )
+    .all();
+
+  const recentRows = db
+    .select({
+      id: homeInventory.id,
+      itemName: homeInventory.itemName,
+      type: homeInventory.type,
+      lastEditedTime: homeInventory.lastEditedTime,
+    })
+    .from(homeInventory)
+    .orderBy(desc(homeInventory.lastEditedTime))
+    .limit(5)
+    .all();
+
+  return {
+    itemCount: summary?.itemCount ?? 0,
+    totalReplacementValue: Math.round((summary?.totalReplacementValue ?? 0) * 100) / 100,
+    totalResaleValue: Math.round((summary?.totalResaleValue ?? 0) * 100) / 100,
+    warrantiesExpiringSoon: warrantyResult?.cnt ?? 0,
+    recentlyAdded: recentRows as RecentItem[],
+  };
+}
 
 /** List all inventory items that have a warranty expiry date, sorted by expiry. */
 export function listWarrantyItems(): InventoryRow[] {
@@ -60,7 +118,11 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
   }
 
   // Get all items with their location names
-  const allItems = db.select().from(homeInventory).orderBy(asc(homeInventory.itemName)).all();
+  const allItems = db
+    .select()
+    .from(homeInventory)
+    .orderBy(asc(homeInventory.itemName))
+    .all();
 
   // Build location name map
   const locationRows = db.select().from(locations).all();
@@ -70,7 +132,11 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
   }
 
   // Get first photo per item (lowest sortOrder)
-  const photos = db.select().from(itemPhotos).orderBy(asc(itemPhotos.sortOrder)).all();
+  const photos = db
+    .select()
+    .from(itemPhotos)
+    .orderBy(asc(itemPhotos.sortOrder))
+    .all();
   const firstPhotoMap = new Map<string, string>();
   for (const photo of photos) {
     if (!firstPhotoMap.has(photo.itemId)) {
@@ -104,7 +170,9 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
       replacementValue: item.replacementValue,
       photoPath: firstPhotoMap.get(item.id) ?? null,
       locationId: item.locationId,
-      locationName: item.locationId ? (locationNameMap.get(item.locationId) ?? "Unknown") : null,
+      locationName: item.locationId
+        ? locationNameMap.get(item.locationId) ?? "Unknown"
+        : null,
     });
     if (item.replacementValue) {
       totalValue += item.replacementValue;
@@ -116,7 +184,9 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
   for (const [locId, items] of groupMap) {
     groups.push({
       locationId: locId,
-      locationName: locId ? (locationNameMap.get(locId) ?? "Unknown") : "No Location",
+      locationName: locId
+        ? locationNameMap.get(locId) ?? "Unknown"
+        : "No Location",
       items,
     });
   }
@@ -162,4 +232,45 @@ function getLocationSubtreeIds(rootId: string): Set<string> {
   }
 
   return ids;
+}
+
+// ---------------------------------------------------------------------------
+// Value breakdown
+// ---------------------------------------------------------------------------
+
+/**
+ * Get replacement value breakdown grouped by location.
+ */
+export function getValueByLocation(): ValueBreakdownEntry[] {
+  const db = getDrizzle();
+
+  return db
+    .select({
+      name: sql<string>`COALESCE(${locations.name}, 'Unassigned')`,
+      totalValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      itemCount: sql<number>`COUNT(*)`,
+    })
+    .from(homeInventory)
+    .leftJoin(locations, sql`${homeInventory.locationId} = ${locations.id}`)
+    .groupBy(sql`COALESCE(${locations.name}, 'Unassigned')`)
+    .orderBy(desc(sql`totalValue`))
+    .all() as ValueBreakdownEntry[];
+}
+
+/**
+ * Get replacement value breakdown grouped by item type.
+ */
+export function getValueByType(): ValueBreakdownEntry[] {
+  const db = getDrizzle();
+
+  return db
+    .select({
+      name: sql<string>`COALESCE(${homeInventory.type}, 'Uncategorized')`,
+      totalValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      itemCount: sql<number>`COUNT(*)`,
+    })
+    .from(homeInventory)
+    .groupBy(sql`COALESCE(${homeInventory.type}, 'Uncategorized')`)
+    .orderBy(desc(sql`totalValue`))
+    .all() as ValueBreakdownEntry[];
 }

@@ -4,18 +4,30 @@
  */
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { Package, LayoutGrid, LayoutList, Search } from "lucide-react";
+import {
+  Package,
+  LayoutGrid,
+  LayoutList,
+  Search,
+  DollarSign,
+  Shield,
+  Clock,
+} from "lucide-react";
 import {
   Skeleton,
   Select,
   type SelectOption,
   Button,
   TextInput,
+  Card,
+  CardContent,
 } from "@pops/ui";
 import type { Condition } from "@pops/ui";
 import { trpc } from "../lib/trpc";
 import { InventoryTable } from "../components/InventoryTable";
 import { InventoryCard } from "../components/InventoryCard";
+import { ValueBreakdown } from "../components/ValueBreakdown";
+import { formatCurrency } from "../lib/utils";
 
 type ViewMode = "table" | "grid";
 
@@ -56,13 +68,114 @@ const IN_USE_OPTIONS: SelectOption[] = [
   { value: "false", label: "Not In Use" },
 ];
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+function DashboardWidgets() {
+  const { data, isLoading } = trpc.inventory.reports.dashboard.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-4 space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-6 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!data?.data) return null;
+
+  const {
+    itemCount,
+    totalReplacementValue,
+    totalResaleValue,
+    warrantiesExpiringSoon,
+    recentlyAdded,
+  } = data.data;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Package className="h-4 w-4" />
+              <span className="text-xs font-medium">Items</span>
+            </div>
+            <div className="text-2xl font-bold tabular-nums">{itemCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <DollarSign className="h-4 w-4" />
+              <span className="text-xs font-medium">Replacement</span>
+            </div>
+            <div className="text-2xl font-bold tabular-nums">
+              {formatCurrency(totalReplacementValue)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <DollarSign className="h-4 w-4" />
+              <span className="text-xs font-medium">Resale</span>
+            </div>
+            <div className="text-2xl font-bold tabular-nums">
+              {formatCurrency(totalResaleValue)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Shield className="h-4 w-4" />
+              <span className="text-xs font-medium">Warranties</span>
+            </div>
+            <div className="text-2xl font-bold tabular-nums">
+              {warrantiesExpiringSoon}
+              <span className="text-sm font-normal text-muted-foreground ml-1">
+                expiring
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {recentlyAdded.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-3">
+              <Clock className="h-4 w-4" />
+              <span className="text-xs font-medium">Recently Added</span>
+            </div>
+            <ul className="space-y-2">
+              {recentlyAdded.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="font-medium truncate">{item.itemName}</span>
+                  {item.type && (
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {item.type}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }
 
 function ItemsPageSkeleton() {
@@ -98,7 +211,7 @@ export function ItemsPage() {
       inUse: (inUseFilter || undefined) as "true" | "false" | undefined,
       limit: 200,
     }),
-    [search, typeFilter, conditionFilter, inUseFilter],
+    [search, typeFilter, conditionFilter, inUseFilter]
   );
 
   const { data, isLoading } = trpc.inventory.items.list.useQuery(queryInput);
@@ -153,6 +266,13 @@ export function ItemsPage() {
           </button>
         </div>
       </div>
+
+      {!hasActiveFilters && !search && (
+        <>
+          <DashboardWidgets />
+          <ValueBreakdown />
+        </>
+      )}
 
       {/* Search + Filters */}
       <div className="flex flex-wrap items-end gap-3">
