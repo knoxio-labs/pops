@@ -6,8 +6,10 @@
  * inline renaming, move-to-parent modal, and sibling reordering.
  */
 import { useState, useCallback, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Badge,
+  Button,
   Skeleton,
   Collapsible,
   CollapsibleTrigger,
@@ -17,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@pops/ui";
 import {
   MapPin,
@@ -29,6 +32,7 @@ import {
   ArrowUp,
   ArrowDown,
   MoveRight,
+  Trash2,
 } from "lucide-react";
 import { trpc } from "../lib/trpc";
 
@@ -44,7 +48,11 @@ function TreeSkeleton() {
   return (
     <div className="space-y-2 p-4">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${(i % 3) * 20}px` }}>
+        <div
+          key={i}
+          className="flex items-center gap-2"
+          style={{ paddingLeft: `${(i % 3) * 20}px` }}
+        >
           <Skeleton className="h-4 w-4" />
           <Skeleton className="h-4 w-32" />
         </div>
@@ -55,7 +63,7 @@ function TreeSkeleton() {
 
 function buildBreadcrumb(
   nodeId: string,
-  nodeMap: Map<string, LocationTreeNode>
+  nodeMap: Map<string, LocationTreeNode>,
 ): string[] {
   const path: string[] = [];
   let current = nodeMap.get(nodeId);
@@ -68,7 +76,7 @@ function buildBreadcrumb(
 
 function buildNodeMap(
   nodes: LocationTreeNode[],
-  map: Map<string, LocationTreeNode>
+  map: Map<string, LocationTreeNode>,
 ): void {
   for (const node of nodes) {
     map.set(node.id, node);
@@ -88,7 +96,7 @@ function countDescendants(node: LocationTreeNode): number {
 function isDescendant(
   nodeId: string,
   targetId: string,
-  nodeMap: Map<string, LocationTreeNode>
+  nodeMap: Map<string, LocationTreeNode>,
 ): boolean {
   const node = nodeMap.get(nodeId);
   if (!node) return false;
@@ -104,7 +112,7 @@ function isDescendant(
 function getSiblings(
   nodeId: string,
   treeNodes: LocationTreeNode[],
-  nodeMap: Map<string, LocationTreeNode>
+  nodeMap: Map<string, LocationTreeNode>,
 ): LocationTreeNode[] {
   const node = nodeMap.get(nodeId);
   if (!node) return [];
@@ -217,6 +225,7 @@ interface LocationNodeProps {
   onRename: (id: string, newName: string) => void;
   onMoveStart: (id: string) => void;
   onReorder: (id: string, direction: "up" | "down") => void;
+  onDelete: (id: string) => void;
   addingChildOf: string | null;
   onNewChildSave: (name: string) => void;
   onNewChildCancel: () => void;
@@ -233,6 +242,7 @@ function LocationNode({
   onRename,
   onMoveStart,
   onReorder,
+  onDelete,
   addingChildOf,
   onNewChildSave,
   onNewChildCancel,
@@ -273,7 +283,11 @@ function LocationNode({
               e.stopPropagation();
             }}
           >
-            <button type="button" className="p-0.5 rounded hover:bg-muted" aria-label={open ? "Collapse" : "Expand"}>
+            <button
+              type="button"
+              className="p-0.5 rounded hover:bg-muted"
+              aria-label={open ? "Collapse" : "Expand"}
+            >
               {open ? (
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               ) : (
@@ -357,6 +371,18 @@ function LocationNode({
           >
             <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
+          <button
+            type="button"
+            className="p-0.5 rounded hover:bg-muted"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(node.id);
+            }}
+            aria-label={`Delete ${node.name}`}
+            title="Delete location"
+          >
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </button>
         </div>
 
         {hasChildren && (
@@ -380,6 +406,7 @@ function LocationNode({
                 onRename={onRename}
                 onMoveStart={onMoveStart}
                 onReorder={onReorder}
+                onDelete={onDelete}
                 addingChildOf={addingChildOf}
                 onNewChildSave={onNewChildSave}
                 onNewChildCancel={onNewChildCancel}
@@ -464,6 +491,16 @@ export function LocationTreePage() {
   const [addingChildOf, setAddingChildOf] = useState<string | null>(null);
   const [addingRoot, setAddingRoot] = useState(false);
   const [movingId, setMovingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    name: string;
+    stats: {
+      childCount: number;
+      descendantCount: number;
+      itemCount: number;
+      totalItemCount: number;
+    };
+  } | null>(null);
 
   const utils = trpc.useUtils();
   const { data, isLoading, error } = trpc.inventory.locations.tree.useQuery();
@@ -481,6 +518,39 @@ export function LocationTreePage() {
       utils.inventory.locations.tree.invalidate();
     },
   });
+
+  const deleteMutation = trpc.inventory.locations.delete.useMutation({
+    onSuccess: (result) => {
+      if (result.requiresConfirmation && result.stats) {
+        // Need user confirmation — show dialog
+        const node = deleteConfirm
+          ? { id: deleteConfirm.id, name: deleteConfirm.name }
+          : pendingDeleteRef.current;
+        if (node) {
+          setDeleteConfirm({
+            id: node.id,
+            name: node.name,
+            stats: result.stats,
+          });
+        }
+        return;
+      }
+      toast.success("Location deleted");
+      utils.inventory.locations.tree.invalidate();
+      if (selectedId === pendingDeleteRef.current?.id) {
+        setSelectedId(null);
+      }
+      setDeleteConfirm(null);
+      pendingDeleteRef.current = null;
+    },
+    onError: (err) => {
+      toast.error(`Failed to delete: ${err.message}`);
+      setDeleteConfirm(null);
+      pendingDeleteRef.current = null;
+    },
+  });
+
+  const pendingDeleteRef = useRef<{ id: string; name: string } | null>(null);
 
   const nodeMap = new Map<string, LocationTreeNode>();
   const treeNodes = data?.data ?? [];
@@ -501,7 +571,7 @@ export function LocationTreePage() {
     (id: string, newName: string) => {
       updateMutation.mutate({ id, data: { name: newName } });
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   const handleNewChildSave = useCallback(
@@ -511,7 +581,7 @@ export function LocationTreePage() {
         parentId: addingChildOf,
       });
     },
-    [addingChildOf, createMutation]
+    [addingChildOf, createMutation],
   );
 
   const handleNewChildCancel = useCallback(() => {
@@ -522,12 +592,28 @@ export function LocationTreePage() {
     (name: string) => {
       createMutation.mutate({ name, parentId: null });
     },
-    [createMutation]
+    [createMutation],
   );
 
   const handleNewRootCancel = useCallback(() => {
     setAddingRoot(false);
   }, []);
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      const node = nodeMap.get(id);
+      if (!node) return;
+      pendingDeleteRef.current = { id, name: node.name };
+      // Try without force first — server will return requiresConfirmation if non-empty
+      deleteMutation.mutate({ id });
+    },
+    [nodeMap, deleteMutation],
+  );
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteConfirm) return;
+    deleteMutation.mutate({ id: deleteConfirm.id, force: true });
+  }, [deleteConfirm, deleteMutation]);
 
   const handleMoveStart = useCallback((id: string) => {
     setMovingId(id);
@@ -538,10 +624,10 @@ export function LocationTreePage() {
       if (!movingId) return;
       updateMutation.mutate(
         { id: movingId, data: { parentId: newParentId } },
-        { onSuccess: () => setMovingId(null) }
+        { onSuccess: () => setMovingId(null) },
       );
     },
-    [movingId, updateMutation]
+    [movingId, updateMutation],
   );
 
   const handleReorder = useCallback(
@@ -557,10 +643,16 @@ export function LocationTreePage() {
       const swap = siblings[swapIdx];
 
       // Swap sort orders
-      updateMutation.mutate({ id: current.id, data: { sortOrder: swap.sortOrder } });
-      updateMutation.mutate({ id: swap.id, data: { sortOrder: current.sortOrder } });
+      updateMutation.mutate({
+        id: current.id,
+        data: { sortOrder: swap.sortOrder },
+      });
+      updateMutation.mutate({
+        id: swap.id,
+        data: { sortOrder: current.sortOrder },
+      });
     },
-    [treeNodes, nodeMap, updateMutation]
+    [treeNodes, nodeMap, updateMutation],
   );
 
   const movingNode = movingId ? nodeMap.get(movingId) : null;
@@ -608,7 +700,11 @@ export function LocationTreePage() {
         </div>
       ) : (
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-2/5 border rounded-lg py-2" role="tree" aria-label="Location tree">
+          <div
+            className="md:w-2/5 border rounded-lg py-2"
+            role="tree"
+            aria-label="Location tree"
+          >
             {treeNodes.map((node, i) => (
               <LocationNode
                 key={node.id}
@@ -620,6 +716,7 @@ export function LocationTreePage() {
                 onRename={handleRename}
                 onMoveStart={handleMoveStart}
                 onReorder={handleReorder}
+                onDelete={handleDelete}
                 addingChildOf={addingChildOf}
                 onNewChildSave={handleNewChildSave}
                 onNewChildCancel={handleNewChildCancel}
@@ -628,7 +725,10 @@ export function LocationTreePage() {
               />
             ))}
             {addingRoot && (
-              <div className="flex items-center gap-1.5 py-1.5 px-2" style={{ paddingLeft: "8px" }}>
+              <div
+                className="flex items-center gap-1.5 py-1.5 px-2"
+                style={{ paddingLeft: "8px" }}
+              >
                 <span className="w-[22px]" />
                 <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
                 <InlineInput
@@ -653,7 +753,10 @@ export function LocationTreePage() {
       )}
 
       {/* Move To dialog */}
-      <Dialog open={!!movingId} onOpenChange={(open) => !open && setMovingId(null)}>
+      <Dialog
+        open={!!movingId}
+        onOpenChange={(open) => !open && setMovingId(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Move &ldquo;{movingNode?.name}&rdquo;</DialogTitle>
@@ -680,6 +783,57 @@ export function LocationTreePage() {
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete &ldquo;{deleteConfirm?.name}&rdquo;?
+            </DialogTitle>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          {deleteConfirm && (
+            <div className="space-y-2 text-sm">
+              {deleteConfirm.stats.childCount > 0 && (
+                <p>
+                  This location has{" "}
+                  <strong>{deleteConfirm.stats.childCount}</strong> direct{" "}
+                  {deleteConfirm.stats.childCount === 1
+                    ? "sub-location"
+                    : "sub-locations"}
+                  {deleteConfirm.stats.descendantCount >
+                    deleteConfirm.stats.childCount &&
+                    ` (${deleteConfirm.stats.descendantCount} total)`}
+                  . They will all be deleted.
+                </p>
+              )}
+              {deleteConfirm.stats.totalItemCount > 0 && (
+                <p>
+                  <strong>{deleteConfirm.stats.totalItemCount}</strong>{" "}
+                  {deleteConfirm.stats.totalItemCount === 1 ? "item" : "items"}{" "}
+                  will become unlocated.
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
