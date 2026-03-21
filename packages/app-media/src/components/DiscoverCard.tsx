@@ -20,6 +20,10 @@ export interface DiscoverCardProps {
   onAddToLibrary?: (tmdbId: number) => void;
   onAddToWatchlist?: (tmdbId: number) => void;
   onNotInterested?: (tmdbId: number) => void;
+  /** Match percentage (0–100) from preference profile scoring. */
+  matchPercentage?: number;
+  /** Brief explanation of match, e.g. "Action, Sci-Fi". */
+  matchReason?: string;
   className?: string;
 }
 
@@ -35,6 +39,8 @@ export function DiscoverCard({
   onAddToLibrary,
   onAddToWatchlist,
   onNotInterested,
+  matchPercentage,
+  matchReason,
   className,
 }: DiscoverCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -150,13 +156,32 @@ export function DiscoverCard({
         </div>
       </div>
 
-      {/* Title + Year */}
+      {/* Title + Year + Match info */}
       <div className="space-y-0.5 px-0.5">
         <h3 className="text-sm font-medium leading-tight line-clamp-2">
           {title}
         </h3>
-        {year && (
-          <p className="text-xs text-muted-foreground">{year}</p>
+        {year && <p className="text-xs text-muted-foreground">{year}</p>}
+        {matchPercentage != null && matchPercentage > 0 && (
+          <div className="flex items-center gap-1">
+            <span
+              className={cn(
+                "text-xs font-semibold",
+                matchPercentage >= 85
+                  ? "text-green-500"
+                  : matchPercentage >= 70
+                    ? "text-emerald-500"
+                    : "text-muted-foreground",
+              )}
+            >
+              {matchPercentage}% Match
+            </span>
+            {matchReason && (
+              <span className="text-xs text-muted-foreground truncate">
+                · {matchReason}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>
