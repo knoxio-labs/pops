@@ -5,7 +5,7 @@
  * tree with item count badges. Supports adding root/child locations,
  * inline renaming, move-to-parent modal, and sibling reordering.
  */
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   Badge,
   Skeleton,
@@ -31,6 +31,7 @@ import {
   MoveRight,
 } from "lucide-react";
 import { trpc } from "../lib/trpc";
+import { LocationContentsPanel } from "../components/LocationContentsPanel";
 
 interface LocationTreeNode {
   id: string;
@@ -408,56 +409,6 @@ function LocationNode({
   );
 }
 
-function SelectedLocationPanel({
-  nodeId,
-  nodeMap,
-}: {
-  nodeId: string;
-  nodeMap: Map<string, LocationTreeNode>;
-}) {
-  const node = nodeMap.get(nodeId);
-  if (!node) return null;
-
-  const breadcrumb = buildBreadcrumb(nodeId, nodeMap);
-  const childCount = node.children.length;
-  const totalDescendants = countDescendants(node);
-
-  return (
-    <div className="border rounded-lg p-4 space-y-3">
-      <div className="text-xs text-muted-foreground">
-        {breadcrumb.join(" / ")}
-      </div>
-      <h2 className="text-lg font-semibold">{node.name}</h2>
-      <div className="flex gap-4 text-sm text-muted-foreground">
-        {childCount > 0 && (
-          <span>
-            {childCount} direct {childCount === 1 ? "child" : "children"}
-          </span>
-        )}
-        {totalDescendants > childCount && (
-          <span>{totalDescendants} total descendants</span>
-        )}
-        {childCount === 0 && <span>No sub-locations</span>}
-      </div>
-      {childCount > 0 && (
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium">Sub-locations</h3>
-          <ul className="text-sm text-muted-foreground space-y-0.5">
-            {node.children.map((child) => (
-              <li key={child.id} className="flex items-center gap-1.5">
-                <Folder className="h-3.5 w-3.5" />
-                {child.name}
-                {child.children.length > 0 && (
-                  <span className="text-xs">({child.children.length})</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function LocationTreePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -482,11 +433,14 @@ export function LocationTreePage() {
     },
   });
 
-  const nodeMap = new Map<string, LocationTreeNode>();
   const treeNodes = data?.data ?? [];
-  if (data?.data) {
-    buildNodeMap(data.data, nodeMap);
-  }
+  const nodeMap = useMemo(() => {
+    const map = new Map<string, LocationTreeNode>();
+    if (data?.data) {
+      buildNodeMap(data.data, map);
+    }
+    return map;
+  }, [data?.data]);
 
   const handleSelect = useCallback((id: string) => {
     setSelectedId((prev) => (prev === id ? null : id));
@@ -641,8 +595,13 @@ export function LocationTreePage() {
           </div>
 
           <div className="md:w-3/5">
-            {selectedId ? (
-              <SelectedLocationPanel nodeId={selectedId} nodeMap={nodeMap} />
+            {selectedId && nodeMap.get(selectedId) ? (
+              <LocationContentsPanel
+                locationId={selectedId}
+                locationName={nodeMap.get(selectedId)!.name}
+                breadcrumb={buildBreadcrumb(selectedId, nodeMap)}
+                node={nodeMap.get(selectedId)!}
+              />
             ) : (
               <div className="border rounded-lg p-4 text-sm text-muted-foreground text-center">
                 Select a location to see details
