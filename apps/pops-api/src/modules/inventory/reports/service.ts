@@ -181,12 +181,10 @@ export function getInsuranceReport(locationId?: string): InsuranceReport {
 
   const totals = {
     itemCount: rows.length,
-    replacementValue: Math.round(
-      locationGroups.reduce((sum, g) => sum + g.totalReplacementValue, 0) * 100
-    ) / 100,
-    resaleValue: Math.round(
-      locationGroups.reduce((sum, g) => sum + g.totalResaleValue, 0) * 100
-    ) / 100,
+    replacementValue:
+      Math.round(locationGroups.reduce((sum, g) => sum + g.totalReplacementValue, 0) * 100) / 100,
+    resaleValue:
+      Math.round(locationGroups.reduce((sum, g) => sum + g.totalResaleValue, 0) * 100) / 100,
   };
 
   return { locations: locationGroups, totals };
