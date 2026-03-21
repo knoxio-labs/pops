@@ -24,7 +24,6 @@ import {
   Compass,
   FileText,
   Trophy,
-  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -46,6 +45,5 @@ export const iconMap: Record<string, LucideIcon> = {
   Compass,
 
   FileText,
-  Trophy,
   Trophy,
 };
