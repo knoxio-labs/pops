@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
 import {
   Alert,
@@ -87,6 +87,8 @@ export function SeasonDetailPage() {
 
   // Track which episodes are currently being toggled
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
+  // Map from watch history entry ID → episode ID for delete tracking
+  const deleteEntryToEpisode = useRef<Map<number, number>>(new Map());
 
   const utils = trpc.useUtils();
 
@@ -113,10 +115,16 @@ export function SeasonDetailPage() {
     onError: (err) => {
       toast.error(`Failed to remove watch: ${err.message}`);
     },
-    onSettled: () => {
-      // We don't have the episodeId in delete's variables (only the watch history entry id),
-      // so we clear all toggling state on settle
-      setTogglingIds(new Set());
+    onSettled: (_data, _err, variables) => {
+      const episodeId = deleteEntryToEpisode.current.get(variables.id);
+      deleteEntryToEpisode.current.delete(variables.id);
+      if (episodeId != null) {
+        setTogglingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(episodeId);
+          return next;
+        });
+      }
     },
   });
 
@@ -132,6 +140,7 @@ export function SeasonDetailPage() {
           (e) => e.mediaId === episodeId,
         );
         if (entry) {
+          deleteEntryToEpisode.current.set(entry.id, episodeId);
           deleteMutation.mutate({ id: entry.id });
         } else {
           setTogglingIds((prev) => {
