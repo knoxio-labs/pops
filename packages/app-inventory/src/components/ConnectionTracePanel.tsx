@@ -15,7 +15,7 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@pops/ui";
-import { ChevronRight, ChevronDown, GitBranch } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { trpc } from "../lib/trpc";
 
 interface TraceNode {
