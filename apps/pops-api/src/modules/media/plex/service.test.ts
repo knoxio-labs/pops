@@ -67,6 +67,7 @@ import { getTmdbClient } from "../tmdb/index.js";
 import { logWatch } from "../watch-history/service.js";
 
 import { getDrizzle } from "../../../db.js";
+import type { BetterSQLite3Database } from "../../../db.js";
 
 const mockGetEnv = vi.mocked(getEnv);
 const mockGetTmdbClient = vi.mocked(getTmdbClient);
@@ -74,18 +75,20 @@ const mockAddMovie = vi.mocked(libraryService.addMovie);
 const mockLogWatch = vi.mocked(logWatch);
 const mockGetDrizzle = vi.mocked(getDrizzle);
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  _resetSyncState();
-
-  const mockDb = {
+function createMockDrizzle(getReturnValue: unknown = undefined): BetterSQLite3Database {
+  const chain = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
-    get: vi.fn().mockReturnValue(undefined),
+    get: vi.fn().mockReturnValue(getReturnValue),
   };
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-  mockGetDrizzle.mockReturnValue(mockDb as any);
+  return chain as unknown as BetterSQLite3Database;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  _resetSyncState();
+  mockGetDrizzle.mockReturnValue(createMockDrizzle());
 });
 
 afterEach(() => {
@@ -111,14 +114,7 @@ describe("getPlexClient", () => {
       return undefined;
     });
 
-    const mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      get: vi.fn().mockReturnValue({ value: "abc123" }),
-    };
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    mockGetDrizzle.mockReturnValue(mockDb as any);
+    mockGetDrizzle.mockReturnValue(createMockDrizzle({ value: "abc123" }));
 
     const client = getPlexClient();
     expect(client).toBeInstanceOf(PlexClient);
