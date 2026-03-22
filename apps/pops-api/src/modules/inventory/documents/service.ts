@@ -1,95 +1,72 @@
 /**
- * Item documents service — link/unlink Paperless-ngx documents to inventory items.
+ * Item documents service — link/unlink Paperless-ngx documents using Drizzle ORM.
  */
-import { eq, and, count } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { itemDocuments, homeInventory } from "@pops/db-types";
 import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { ItemDocumentRow } from "./types.js";
+import type { ItemDocumentRow, LinkDocumentInput } from "./types.js";
 
+/** Count + rows for a paginated list. */
 export interface DocumentListResult {
   rows: ItemDocumentRow[];
   total: number;
 }
 
-/**
- * Link a Paperless-ngx document to an inventory item.
- * Validates the item exists and the pair is not already linked.
- */
-export function linkDocument(
-  itemId: string,
-  paperlessDocumentId: number,
-  documentType: string,
-  title?: string
-): ItemDocumentRow {
+/** Validate that an inventory item exists. */
+function assertItemExists(itemId: string): void {
   const db = getDrizzle();
-
-  // Validate item exists
   const [item] = db
     .select({ id: homeInventory.id })
     .from(homeInventory)
     .where(eq(homeInventory.id, itemId))
     .all();
-
   if (!item) throw new NotFoundError("Inventory item", itemId);
-
-  // Check for existing link
-  const [existing] = db
-    .select({ id: itemDocuments.id })
-    .from(itemDocuments)
-    .where(
-      and(
-        eq(itemDocuments.itemId, itemId),
-        eq(itemDocuments.paperlessDocumentId, paperlessDocumentId)
-      )
-    )
-    .all();
-
-  if (existing) {
-    throw new ConflictError(
-      `Document '${paperlessDocumentId}' is already linked to item '${itemId}'`
-    );
-  }
-
-  db.insert(itemDocuments)
-    .values({ itemId, paperlessDocumentId, documentType, title: title ?? null })
-    .run();
-
-  // Fetch the created row
-  const [created] = db
-    .select()
-    .from(itemDocuments)
-    .where(
-      and(
-        eq(itemDocuments.itemId, itemId),
-        eq(itemDocuments.paperlessDocumentId, paperlessDocumentId)
-      )
-    )
-    .all();
-
-  return created;
 }
 
-/**
- * Unlink a document from an item by link ID.
- */
-export function unlinkDocument(id: number): void {
+/** Get a single document link by ID. Throws NotFoundError if missing. */
+function getDocument(id: number): ItemDocumentRow {
+  const db = getDrizzle();
+  const [row] = db.select().from(itemDocuments).where(eq(itemDocuments.id, id)).all();
+  if (!row) throw new NotFoundError("Item document", String(id));
+  return row;
+}
+
+/** Link a Paperless-ngx document to an inventory item. */
+export function linkDocument(input: LinkDocumentInput): ItemDocumentRow {
   const db = getDrizzle();
 
-  const [row] = db
-    .select({ id: itemDocuments.id })
-    .from(itemDocuments)
-    .where(eq(itemDocuments.id, id))
-    .all();
+  assertItemExists(input.itemId);
 
-  if (!row) throw new NotFoundError("Item document link", String(id));
+  try {
+    const result = db
+      .insert(itemDocuments)
+      .values({
+        itemId: input.itemId,
+        paperlessDocumentId: input.paperlessDocumentId,
+        documentType: input.documentType,
+        title: input.title ?? null,
+      })
+      .run();
 
+    const id = Number(result.lastInsertRowid);
+    return getDocument(id);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw new ConflictError("This document is already linked to this item");
+    }
+    throw err;
+  }
+}
+
+/** Unlink a document by link ID. */
+export function unlinkDocument(id: number): void {
+  getDocument(id);
+  const db = getDrizzle();
   db.delete(itemDocuments).where(eq(itemDocuments.id, id)).run();
 }
 
-/**
- * List all documents linked to a given item.
- */
+/** List documents linked to an item. */
 export function listDocumentsForItem(
   itemId: string,
   limit: number,
@@ -97,11 +74,19 @@ export function listDocumentsForItem(
 ): DocumentListResult {
   const db = getDrizzle();
 
-  const condition = eq(itemDocuments.itemId, itemId);
+  const rows = db
+    .select()
+    .from(itemDocuments)
+    .where(eq(itemDocuments.itemId, itemId))
+    .limit(limit)
+    .offset(offset)
+    .all();
 
-  const rows = db.select().from(itemDocuments).where(condition).limit(limit).offset(offset).all();
-
-  const [countResult] = db.select({ total: count() }).from(itemDocuments).where(condition).all();
+  const [countResult] = db
+    .select({ total: count() })
+    .from(itemDocuments)
+    .where(eq(itemDocuments.itemId, itemId))
+    .all();
 
   return { rows, total: countResult.total };
 }

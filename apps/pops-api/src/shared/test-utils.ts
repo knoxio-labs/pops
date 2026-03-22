@@ -327,7 +327,7 @@ export function createTestDb(): Database {
       paperless_document_id  INTEGER NOT NULL,
       document_type          TEXT NOT NULL,
       title                  TEXT,
-      created_at             TEXT NOT NULL DEFAULT (datetime('now')),
+      linked_at              TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (item_id) REFERENCES home_inventory(id) ON DELETE CASCADE
     );
     CREATE UNIQUE INDEX IF NOT EXISTS uq_item_documents_pair ON item_documents(item_id, paperless_document_id);

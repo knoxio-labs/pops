@@ -96,7 +96,7 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
               strokeWidth={2}
             />
             <Tooltip
-              content={({ payload }) => {
+              content={({ payload }: any) => {
                 if (!payload?.length) return null;
                 const entry = payload[0].payload as (typeof radarData)[number];
                 return (

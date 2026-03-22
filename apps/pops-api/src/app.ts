@@ -5,6 +5,7 @@ import { rateLimiter } from "./middleware/rate-limit.js";
 import { envContextMiddleware } from "./middleware/env-context.js";
 import healthRouter from "./routes/health.js";
 import upBankRouter from "./routes/webhooks/up-bank.js";
+import paperlessRouter from "./routes/paperless.js";
 import { envRouter } from "./modules/core/envs/router.js";
 import mediaImagesRouter from "./routes/media/images.js";
 import { appRouter } from "./router.js";
@@ -37,6 +38,9 @@ export function createApp(): express.Express {
 
   // Up Bank webhook handler (processes its own raw body + signature verification)
   app.use(upBankRouter);
+
+  // Paperless routes
+  app.use(paperlessRouter);
 
   // Media image serving — static file serving, no DB needed
   app.use(mediaImagesRouter);

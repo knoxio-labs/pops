@@ -30,9 +30,7 @@ const mockLocations: LocationTreeNode[] = [
         id: "4",
         name: "Kitchen",
         parentId: "1",
-        children: [
-          { id: "10", name: "Pantry", parentId: "4", children: [] },
-        ],
+        children: [{ id: "10", name: "Pantry", parentId: "4", children: [] }],
       },
       { id: "5", name: "Bedroom", parentId: "1", children: [] },
     ],

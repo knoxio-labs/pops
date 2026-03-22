@@ -4,12 +4,7 @@
  * location tree, type-to-filter, and optional inline create.
  */
 import { useState, useMemo, useCallback } from "react";
-import {
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@pops/ui";
+import { cn, Popover, PopoverContent, PopoverTrigger } from "@pops/ui";
 import { Button } from "@pops/ui";
 import { ChevronRight, ChevronDown, MapPin, X, Plus } from "lucide-react";
 
@@ -33,7 +28,7 @@ export interface LocationPickerProps {
 /** Build breadcrumb path from root to target node. */
 function buildPath(
   nodes: LocationTreeNode[],
-  targetId: string
+  targetId: string,
 ): LocationTreeNode[] {
   for (const node of nodes) {
     if (node.id === targetId) return [node];
@@ -44,10 +39,7 @@ function buildPath(
 }
 
 /** Flatten tree for search, returning nodes that match filter. */
-function filterTree(
-  nodes: LocationTreeNode[],
-  query: string
-): Set<string> {
+function filterTree(nodes: LocationTreeNode[], query: string): Set<string> {
   const matches = new Set<string>();
   const lower = query.toLowerCase();
 
@@ -170,12 +162,12 @@ export function LocationPicker({
 
   const selectedPath = useMemo(
     () => (value ? buildPath(locations, value) : []),
-    [locations, value]
+    [locations, value],
   );
 
   const visibleIds = useMemo(
     () => (search.trim() ? filterTree(locations, search.trim()) : null),
-    [locations, search]
+    [locations, search],
   );
 
   // Auto-expand matching nodes when searching
@@ -199,7 +191,7 @@ export function LocationPicker({
       setOpen(false);
       setSearch("");
     },
-    [onChange]
+    [onChange],
   );
 
   const handleClear = useCallback(() => {
@@ -227,7 +219,7 @@ export function LocationPicker({
           className={cn(
             "w-full justify-start text-left font-normal h-9",
             !value && "text-muted-foreground",
-            className
+            className,
           )}
         >
           <MapPin className="mr-2 h-4 w-4 shrink-0 opacity-50" />

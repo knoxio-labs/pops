@@ -1,5 +1,5 @@
 /**
- * Item detail page — shows item info and connected items.
+ * Item detail page — shows item info, connected items, and linked documents.
  * Route: /inventory/items/:id
  */
 import { useParams, Link } from "react-router";
@@ -12,27 +12,10 @@ import {
   AlertDescription,
   Skeleton,
 } from "@pops/ui";
-import {
-  ArrowLeft,
-  Pencil,
-  Link2,
-  Unlink,
-  FileText,
-  Trash2,
-  ExternalLink,
-  Download,
-} from "lucide-react";
+import { ArrowLeft, Pencil, Link2, Unlink } from "lucide-react";
 import { trpc } from "../lib/trpc";
 import { ConnectDialog } from "../components/ConnectDialog";
-
-/** Ordered document type groups for display. */
-const DOC_TYPE_GROUPS = [
-  { key: "receipt", label: "Receipts" },
-  { key: "warranty", label: "Warranties" },
-  { key: "manual", label: "Manuals" },
-  { key: "invoice", label: "Invoices" },
-  { key: "other", label: "Other" },
-] as const;
+import { DocumentsSection } from "../components/DocumentsSection";
 
 export function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,22 +32,6 @@ export function ItemDetailPage() {
       { itemId: id! },
       { enabled: !!id },
     );
-
-  const { data: documentsData, isLoading: documentsLoading } =
-    trpc.inventory.documents.listForItem.useQuery(
-      { itemId: id! },
-      { enabled: !!id },
-    );
-
-  const unlinkMutation = trpc.inventory.documents.unlink.useMutation({
-    onSuccess: () => {
-      toast.success("Document unlinked");
-      void utils.inventory.documents.listForItem.invalidate({ itemId: id! });
-    },
-    onError: (err) => {
-      toast.error(`Failed to unlink: ${err.message}`);
-    },
-  });
 
   const disconnectMutation = trpc.inventory.connections.disconnect.useMutation({
     onSuccess: () => {
@@ -229,57 +196,8 @@ export function ItemDetailPage() {
         )}
       </section>
 
-      {/* Linked Documents */}
-      <section className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Linked Documents
-            {documentsData?.data.length ? (
-              <span className="text-sm font-normal text-muted-foreground">
-                ({documentsData.data.length})
-              </span>
-            ) : null}
-          </h2>
-        </div>
-
-        {documentsLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : !documentsData?.data.length ? (
-          <p className="text-muted-foreground text-sm">
-            No linked documents yet.
-          </p>
-        ) : (
-          <div className="space-y-6">
-            {DOC_TYPE_GROUPS.map(({ key, label }) => {
-              const docs = documentsData.data.filter(
-                (d) => d.documentType === key,
-              );
-              if (docs.length === 0) return null;
-              return (
-                <div key={key}>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                    {label}
-                  </h3>
-                  <div className="space-y-2">
-                    {docs.map((doc) => (
-                      <DocumentRow
-                        key={doc.id}
-                        doc={doc}
-                        onUnlink={() => unlinkMutation.mutate({ id: doc.id })}
-                        isUnlinking={unlinkMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      {/* Documents */}
+      <DocumentsSection itemId={id!} />
     </div>
   );
 }
@@ -295,75 +213,6 @@ function DetailField({
     <div>
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="font-medium">{value}</dd>
-    </div>
-  );
-}
-
-function DocumentRow({
-  doc,
-  onUnlink,
-  isUnlinking,
-}: {
-  doc: {
-    id: number;
-    paperlessDocumentId: number;
-    title: string | null;
-    documentType: string;
-    createdAt: string;
-  };
-  onUnlink: () => void;
-  isUnlinking: boolean;
-}) {
-  // Construct Paperless-ngx URLs from env (frontend can't read env, so use relative proxy)
-  const paperlessUrl = `/api/paperless/documents/${doc.paperlessDocumentId}`;
-  const downloadUrl = `/api/paperless/documents/${doc.paperlessDocumentId}/download`;
-  const thumbnailUrl = `/api/paperless/documents/${doc.paperlessDocumentId}/thumb`;
-
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border">
-      <img
-        src={thumbnailUrl}
-        alt=""
-        className="h-12 w-12 rounded object-cover shrink-0 bg-muted"
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">
-          {doc.title ?? `Document #${doc.paperlessDocumentId}`}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Linked {new Date(doc.createdAt).toLocaleDateString()}
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <a
-          href={paperlessUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Open in Paperless-ngx"
-        >
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-        </a>
-        <a href={downloadUrl} download title="Download">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Download className="h-4 w-4" />
-          </Button>
-        </a>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive"
-          onClick={onUnlink}
-          disabled={isUnlinking}
-          title="Unlink document"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
     </div>
   );
 }
