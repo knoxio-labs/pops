@@ -115,6 +115,24 @@ The current migration system uses sequential numbers (`007_`, `008_`, etc.) and 
 - `initializeSchema()` updated to include the INCLUDED_MIGRATIONS array for any new migrations
 - Document this dual approach so it's not confusing
 
+### R7: Dynamic Application Settings
+
+**Pattern:** A core `settings` table for non-secret, user-configurable application state. This prevents "ENV-rot" where dynamic user configuration is misplaced in static `.env` files.
+
+```typescript
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
+```
+
+**Rules:**
+- **Secrets vs. Settings:**
+  - **Secrets** (ENV): Infrastructure-level keys (`CLAUDE_API_KEY`, `TMDB_API_KEY`) that are static per deployment.
+  - **Settings** (DB): User-specific or dynamic data (`PLEX_TOKEN`, `PLEX_URL`, `LAST_SYNC_TIME`) that can change via UI.
+- **Initialization:** Core tables like `settings` are created in `initializeSchema()` and managed as a shared platform resource.
+- **CRUD:** All domain-specific settings are managed through their respective tRPC routers but stored in this shared table.
+
 ## Out of Scope
 
 - Creating schemas for new domains (media, fitness, etc.)

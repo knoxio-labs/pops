@@ -9,7 +9,8 @@
  *   4. Sync watch history from Plex viewCount/lastViewedAt
  */
 import { eq, and } from "drizzle-orm";
-import { episodes, seasons } from "@pops/db-types";
+import { episodes, seasons, settings } from "@pops/db-types";
+import { randomUUID } from "node:crypto";
 import { PlexClient } from "./client.js";
 import { type PlexMediaItem, type PlexEpisode } from "./types.js";
 import { getEnv } from "../../../env.js";
@@ -38,6 +39,8 @@ export interface SyncError {
 
 export interface PlexSyncStatus {
   configured: boolean;
+  hasUrl: boolean;
+  hasToken: boolean;
   connected: boolean;
   lastSyncMovies: SyncResult | null;
   lastSyncTvShows: SyncResult | null;
@@ -55,13 +58,59 @@ let lastTvSync: SyncResult | null = null;
 // ---------------------------------------------------------------------------
 
 /**
- * Create a PlexClient from environment variables.
- * Returns null if PLEX_URL or PLEX_TOKEN are not configured.
+ * Get or generate a persistent Plex Client Identifier for this app instance.
+ */
+export function getPlexClientId(): string {
+  const db = getDrizzle();
+  const record = db.select().from(settings).where(eq(settings.key, "plex_client_identifier")).get();
+  if (!record) {
+    const newId = randomUUID();
+    console.log(`[Plex] Generating new client identifier: ${newId}`);
+    db.insert(settings)
+      .values({ key: "plex_client_identifier", value: newId })
+      .onConflictDoNothing()
+      .run();
+    // Fetch again just in case another request won the race
+    const finalRecord = db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, "plex_client_identifier"))
+      .get();
+    return finalRecord?.value ?? newId;
+  }
+  return record.value;
+}
+
+/**
+ * Get the configured Plex URL from settings or environment.
+ */
+export function getPlexUrl(): string | null {
+  const db = getDrizzle();
+  const record = db.select().from(settings).where(eq(settings.key, "plex_url")).get();
+  if (record?.value) return record.value;
+  return getEnv("PLEX_URL") || null;
+}
+
+/**
+ * Create a PlexClient using the configured URL and the token from the database.
+ * Returns null if the URL or the plex_token setting are not configured.
  */
 export function getPlexClient(): PlexClient | null {
-  const url = getEnv("PLEX_URL");
-  const token = getEnv("PLEX_TOKEN");
-  if (!url || !token) return null;
+  const url = getPlexUrl();
+  if (!url) {
+    console.log("[Plex] PLEX_URL not set in settings or environment");
+    return null;
+  }
+
+  const db = getDrizzle();
+  const tokenRecord = db.select().from(settings).where(eq(settings.key, "plex_token")).get();
+  const token = tokenRecord?.value;
+
+  if (!token) {
+    console.log("[Plex] No plex_token found in settings table");
+    return null;
+  }
+
   return new PlexClient(url, token);
 }
 
@@ -192,8 +241,14 @@ export async function syncTvShows(client: PlexClient, sectionId: string): Promis
 
 /** Get current sync status. */
 export function getSyncStatus(client: PlexClient | null): PlexSyncStatus {
+  const db = getDrizzle();
+  const token = db.select().from(settings).where(eq(settings.key, "plex_token")).get();
+  const url = getPlexUrl();
+
   return {
     configured: client !== null,
+    hasUrl: !!url,
+    hasToken: !!token,
     connected: false, // Caller should test connection separately
     lastSyncMovies: lastMovieSync,
     lastSyncTvShows: lastTvSync,

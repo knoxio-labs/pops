@@ -3,18 +3,21 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+import { settings } from "@pops/db-types";
 import { router, protectedProcedure } from "../../../trpc.js";
 import { PlexApiError } from "./types.js";
-import type { PlexClient } from "./client.js";
+import { PlexClient } from "./client.js";
 import * as plexService from "./service.js";
 import * as scheduler from "./scheduler.js";
+import { getDrizzle } from "../../../db.js";
 
 function requirePlexClient(): PlexClient {
   const client = plexService.getPlexClient();
   if (!client) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "Plex is not configured. Set PLEX_URL and PLEX_TOKEN environment variables.",
+      message: "Plex is not configured. Connect to Plex in settings first.",
     });
   }
   return client;
@@ -102,6 +105,78 @@ export const plexRouter = router({
     return { data: plexService.getSyncStatus(client) };
   }),
 
+  /** Set Plex Server URL and validate connection */
+  setUrl: protectedProcedure
+    .input(z.object({ url: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      let finalUrl = input.url.trim();
+      if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+        finalUrl = `http://${finalUrl}`;
+      }
+
+      // 1. Basic URL format validation
+      try {
+        new URL(finalUrl);
+      } catch {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Invalid URL format. Please provide a valid address (e.g., http://192.168.1.100:32400)",
+        });
+      }
+
+      const db = getDrizzle();
+      const tokenRecord = db.select().from(settings).where(eq(settings.key, "plex_token")).get();
+      const token = tokenRecord?.value;
+
+      // 2. Connectivity test
+      try {
+        if (token) {
+          // Full validation with token
+          console.log(`[Plex] Validating full connection to ${finalUrl}...`);
+          const testClient = new PlexClient(finalUrl, token);
+          await testClient.getLibraries();
+        } else {
+          // Basic reachability test (no token yet)
+          console.log(`[Plex] Validating reachability for ${finalUrl}...`);
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), 5000);
+
+          try {
+            const res = await fetch(`${finalUrl}/identity`, {
+              signal: controller.signal,
+              headers: { Accept: "application/json" },
+            });
+            if (!res.ok && res.status !== 401) {
+              throw new Error(`Server responded with ${res.status}`);
+            }
+          } finally {
+            clearTimeout(id);
+          }
+        }
+      } catch (err) {
+        console.error(`[Plex] Connection validation failed for ${finalUrl}:`, err);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Could not connect to Plex server at ${finalUrl}. Verify the address is correct and the server is reachable.`,
+        });
+      }
+
+      // 3. Save if validated
+      console.log(`[Plex] Updating server URL to: ${finalUrl}`);
+      db.insert(settings)
+        .values({ key: "plex_url", value: finalUrl })
+        .onConflictDoUpdate({ target: settings.key, set: { value: finalUrl } })
+        .run();
+
+      return { message: "Plex URL updated and validated" };
+    }),
+
+  /** Get current Plex URL (from settings or env) */
+  getPlexUrl: protectedProcedure.query(() => {
+    return { data: plexService.getPlexUrl() };
+  }),
+
   /** Start the periodic sync scheduler. */
   startScheduler: protectedProcedure
     .input(
@@ -127,5 +202,62 @@ export const plexRouter = router({
   /** Get scheduler status. */
   getSchedulerStatus: protectedProcedure.query(() => {
     return { data: scheduler.getSchedulerStatus() };
+  }),
+
+  /** Get Plex Auth PIN */
+  getAuthPin: protectedProcedure.mutation(async () => {
+    const clientId = plexService.getPlexClientId();
+    const res = await fetch("https://plex.tv/api/v2/pins?strong=true", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-Plex-Product": "POPS",
+        "X-Plex-Client-Identifier": clientId,
+      },
+    });
+    if (!res.ok) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get Plex PIN" });
+    }
+    const data = (await res.json()) as { id: number; code: string };
+    return { data: { id: data.id, code: data.code, clientId } };
+  }),
+
+  /** Check Plex Auth PIN status */
+  checkAuthPin: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const clientId = plexService.getPlexClientId();
+      const res = await fetch(`https://plex.tv/api/v2/pins/${input.id}`, {
+        headers: {
+          Accept: "application/json",
+          "X-Plex-Client-Identifier": clientId,
+        },
+      });
+      if (!res.ok) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to check Plex PIN" });
+      }
+      const data = (await res.json()) as { authToken?: string | null };
+      console.log(
+        `[Plex] PIN check response for ${input.id}:`,
+        data.authToken ? "Token received" : "No token yet"
+      );
+
+      if (data.authToken) {
+        const db = getDrizzle();
+        console.log(`[Plex] Saving token to database...`);
+        db.insert(settings)
+          .values({ key: "plex_token", value: data.authToken })
+          .onConflictDoUpdate({ target: settings.key, set: { value: data.authToken } })
+          .run();
+        return { data: { connected: true } };
+      }
+      return { data: { connected: false } };
+    }),
+
+  /** Disconnect Plex */
+  disconnect: protectedProcedure.mutation(() => {
+    const db = getDrizzle();
+    db.delete(settings).where(eq(settings.key, "plex_token")).run();
+    return { message: "Disconnected from Plex" };
   }),
 });

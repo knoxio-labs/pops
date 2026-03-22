@@ -44,6 +44,7 @@ vi.mock("../watch-history/service.js", () => ({
 vi.mock("@pops/db-types", () => ({
   episodes: { seasonId: "seasonId", episodeNumber: "episodeNumber", id: "id" },
   seasons: { tvShowId: "tvShowId", seasonNumber: "seasonNumber", id: "id" },
+  settings: { key: "key", value: "value" },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -65,14 +66,29 @@ import * as libraryService from "../library/service.js";
 import { getTmdbClient } from "../tmdb/index.js";
 import { logWatch } from "../watch-history/service.js";
 
+import { getDrizzle } from "../../../db.js";
+import type { BetterSQLite3Database } from "../../../db.js";
+
 const mockGetEnv = vi.mocked(getEnv);
 const mockGetTmdbClient = vi.mocked(getTmdbClient);
 const mockAddMovie = vi.mocked(libraryService.addMovie);
 const mockLogWatch = vi.mocked(logWatch);
+const mockGetDrizzle = vi.mocked(getDrizzle);
+
+function createMockDrizzle(getReturnValue: unknown = undefined): BetterSQLite3Database {
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    get: vi.fn().mockReturnValue(getReturnValue),
+  };
+  return chain as unknown as BetterSQLite3Database;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
   _resetSyncState();
+  mockGetDrizzle.mockReturnValue(createMockDrizzle());
 });
 
 afterEach(() => {
@@ -85,19 +101,21 @@ describe("getPlexClient", () => {
     expect(getPlexClient()).toBeNull();
   });
 
-  it("returns null when PLEX_TOKEN is not set", () => {
+  it("returns null when PLEX_TOKEN is not in db", () => {
     mockGetEnv.mockImplementation((name) =>
       name === "PLEX_URL" ? "http://plex:32400" : undefined
     );
     expect(getPlexClient()).toBeNull();
   });
 
-  it("returns PlexClient when both env vars are set", () => {
+  it("returns PlexClient when both url and token are set", () => {
     mockGetEnv.mockImplementation((name) => {
       if (name === "PLEX_URL") return "http://plex:32400";
-      if (name === "PLEX_TOKEN") return "abc123";
       return undefined;
     });
+
+    mockGetDrizzle.mockReturnValue(createMockDrizzle({ value: "abc123" }));
+
     const client = getPlexClient();
     expect(client).toBeInstanceOf(PlexClient);
   });
