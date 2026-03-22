@@ -23,8 +23,6 @@ import {
   DialogTitle,
   DialogFooter,
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   AlertDialog,
@@ -133,7 +131,7 @@ export function WishlistPage() {
       item: item.item,
       targetAmount: item.targetAmount,
       saved: item.saved,
-      priority: (item.priority as any) || "Soon",
+      priority: (item.priority as "High" | "Medium" | "Low" | "Soon") || "Soon",
       url: item.url || "",
       notes: item.notes || "",
     });
