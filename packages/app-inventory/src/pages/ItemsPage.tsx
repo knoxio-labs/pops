@@ -28,8 +28,6 @@ import { InventoryTable } from "../components/InventoryTable";
 import { InventoryCard } from "../components/InventoryCard";
 import { ValueBreakdown } from "../components/ValueBreakdown";
 import { formatCurrency } from "../lib/utils";
-<<<<<<< HEAD
-
 type ViewMode = "table" | "grid";
 
 const STORAGE_KEY = "inventory-view-mode";
@@ -43,8 +41,6 @@ function getInitialView(): ViewMode {
   }
   return "table";
 }
-=======
->>>>>>> 7220bb4 (fix: extract formatCurrency to utils)
 
 const TYPE_OPTIONS: SelectOption[] = [
   { value: "", label: "All Types" },
@@ -214,7 +210,7 @@ export function ItemsPage() {
       inUse: (inUseFilter || undefined) as "true" | "false" | undefined,
       limit: 200,
     }),
-    [search, typeFilter, conditionFilter, inUseFilter]
+    [search, typeFilter, conditionFilter, inUseFilter],
   );
 
   const { data, isLoading } = trpc.inventory.items.list.useQuery(queryInput);

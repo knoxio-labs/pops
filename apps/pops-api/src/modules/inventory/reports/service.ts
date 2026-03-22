@@ -118,11 +118,7 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
   }
 
   // Get all items with their location names
-  const allItems = db
-    .select()
-    .from(homeInventory)
-    .orderBy(asc(homeInventory.itemName))
-    .all();
+  const allItems = db.select().from(homeInventory).orderBy(asc(homeInventory.itemName)).all();
 
   // Build location name map
   const locationRows = db.select().from(locations).all();
@@ -132,11 +128,7 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
   }
 
   // Get first photo per item (lowest sortOrder)
-  const photos = db
-    .select()
-    .from(itemPhotos)
-    .orderBy(asc(itemPhotos.sortOrder))
-    .all();
+  const photos = db.select().from(itemPhotos).orderBy(asc(itemPhotos.sortOrder)).all();
   const firstPhotoMap = new Map<string, string>();
   for (const photo of photos) {
     if (!firstPhotoMap.has(photo.itemId)) {
@@ -170,9 +162,7 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
       replacementValue: item.replacementValue,
       photoPath: firstPhotoMap.get(item.id) ?? null,
       locationId: item.locationId,
-      locationName: item.locationId
-        ? locationNameMap.get(item.locationId) ?? "Unknown"
-        : null,
+      locationName: item.locationId ? (locationNameMap.get(item.locationId) ?? "Unknown") : null,
     });
     if (item.replacementValue) {
       totalValue += item.replacementValue;
@@ -184,9 +174,7 @@ export function getInsuranceReport(locationId?: string): InsuranceReportResult {
   for (const [locId, items] of groupMap) {
     groups.push({
       locationId: locId,
-      locationName: locId
-        ? locationNameMap.get(locId) ?? "Unknown"
-        : "No Location",
+      locationName: locId ? (locationNameMap.get(locId) ?? "Unknown") : "No Location",
       items,
     });
   }

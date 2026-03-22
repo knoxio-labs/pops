@@ -481,7 +481,7 @@ export function LocationTreePage() {
 
   const deleteMutation = trpc.inventory.locations.delete.useMutation({
     onSuccess: (result) => {
-      if (result.requiresConfirmation && result.stats) {
+      if ("requiresConfirmation" in result && result.requiresConfirmation && result.stats) {
         // Need user confirmation — show dialog
         const node = deleteConfirm
           ? { id: deleteConfirm.id, name: deleteConfirm.name }
