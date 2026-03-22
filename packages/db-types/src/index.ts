@@ -27,6 +27,7 @@ import type { locations } from "./schema/locations.js";
 import type { itemConnections } from "./schema/item-connections.js";
 import type { itemPhotos } from "./schema/item-photos.js";
 import type { itemDocuments } from "./schema/item-documents.js";
+import type { settings } from "./schema/settings.js";
 
 // Re-export Drizzle table objects for use in queries
 export {
@@ -51,6 +52,7 @@ export {
   itemConnections,
   itemPhotos,
   itemDocuments,
+  settings,
 } from "./schema/index.js";
 
 // Select types (what you get back from a SELECT query)
@@ -79,6 +81,7 @@ export type LocationRow = InferSelectModel<typeof locations>;
 export type ItemConnectionRow = InferSelectModel<typeof itemConnections>;
 export type ItemPhotoRow = InferSelectModel<typeof itemPhotos>;
 export type ItemDocumentRow = InferSelectModel<typeof itemDocuments>;
+export type SettingRow = InferSelectModel<typeof settings>;
 
 // Insert types (what you pass to an INSERT statement)
 export type TransactionInsert = InferInsertModel<typeof transactions>;
@@ -106,6 +109,7 @@ export type LocationInsert = InferInsertModel<typeof locations>;
 export type ItemConnectionInsert = InferInsertModel<typeof itemConnections>;
 export type ItemPhotoInsert = InferInsertModel<typeof itemPhotos>;
 export type ItemDocumentInsert = InferInsertModel<typeof itemDocuments>;
+export type SettingInsert = InferInsertModel<typeof settings>;
 
 // Constants
 export const ENTITY_TYPES = [

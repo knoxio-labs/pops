@@ -24,6 +24,8 @@ const INCLUDED_MIGRATIONS = [
   "20260320120000_core_entity_types.sql",
   "20260320130000_core_inventory_fks.sql",
   "20260320140000_inventory_new_columns.sql",
+  "20260321140000_item_documents.sql",
+  "20260322120000_settings.sql",
 ];
 
 /**
@@ -368,6 +370,11 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version TEXT PRIMARY KEY,
       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
     );
   `);
 
