@@ -27,6 +27,7 @@ import {
   Trophy,
   FileText,
   ShieldCheck,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,4 +52,5 @@ export const iconMap: Record<string, LucideIcon> = {
   Trophy,
   FileText,
   ShieldCheck,
+  MapPin,
 };
