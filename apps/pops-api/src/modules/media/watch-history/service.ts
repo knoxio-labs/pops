@@ -106,7 +106,12 @@ export function listRecent(
   const rows: RecentWatchHistoryEntry[] = rawRows.map((row) => {
     if (row.mediaType === "movie") {
       const movie = db
-        .select({ title: movies.title, posterPath: movies.posterPath, tmdbId: movies.tmdbId, posterOverridePath: movies.posterOverridePath })
+        .select({
+          title: movies.title,
+          posterPath: movies.posterPath,
+          tmdbId: movies.tmdbId,
+          posterOverridePath: movies.posterOverridePath,
+        })
         .from(movies)
         .where(eq(movies.id, row.mediaId))
         .get();
@@ -165,7 +170,12 @@ export function listRecent(
 
     const show = season
       ? db
-          .select({ name: tvShows.name, posterPath: tvShows.posterPath, tvdbId: tvShows.tvdbId, posterOverridePath: tvShows.posterOverridePath })
+          .select({
+            name: tvShows.name,
+            posterPath: tvShows.posterPath,
+            tvdbId: tvShows.tvdbId,
+            posterOverridePath: tvShows.posterOverridePath,
+          })
           .from(tvShows)
           .where(eq(tvShows.id, season.tvShowId))
           .get()

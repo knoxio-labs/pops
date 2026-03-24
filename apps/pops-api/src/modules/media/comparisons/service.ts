@@ -338,28 +338,54 @@ export function getRandomPair(dimensionId: number, avoidRecent: number = 10): Ra
 
   // Fetch movie metadata
   const movieARow = db
-    .select({ id: movies.id, title: movies.title, posterPath: movies.posterPath, tmdbId: movies.tmdbId, posterOverridePath: movies.posterOverridePath })
+    .select({
+      id: movies.id,
+      title: movies.title,
+      posterPath: movies.posterPath,
+      tmdbId: movies.tmdbId,
+      posterOverridePath: movies.posterOverridePath,
+    })
     .from(movies)
     .where(eq(movies.id, movieAId))
     .get();
 
   const movieBRow = db
-    .select({ id: movies.id, title: movies.title, posterPath: movies.posterPath, tmdbId: movies.tmdbId, posterOverridePath: movies.posterOverridePath })
+    .select({
+      id: movies.id,
+      title: movies.title,
+      posterPath: movies.posterPath,
+      tmdbId: movies.tmdbId,
+      posterOverridePath: movies.posterOverridePath,
+    })
     .from(movies)
     .where(eq(movies.id, movieBId))
     .get();
 
   if (!movieARow || !movieBRow) return null;
 
-  const resolveMoviePoster = (row: { posterPath: string | null; tmdbId: number; posterOverridePath: string | null }): string | null => {
+  const resolveMoviePoster = (row: {
+    posterPath: string | null;
+    tmdbId: number;
+    posterOverridePath: string | null;
+  }): string | null => {
     if (row.posterOverridePath) return row.posterOverridePath;
     if (row.posterPath) return `/media/images/movie/${row.tmdbId}/poster.jpg`;
     return null;
   };
 
   return {
-    movieA: { id: movieARow.id, title: movieARow.title, posterPath: movieARow.posterPath, posterUrl: resolveMoviePoster(movieARow) },
-    movieB: { id: movieBRow.id, title: movieBRow.title, posterPath: movieBRow.posterPath, posterUrl: resolveMoviePoster(movieBRow) },
+    movieA: {
+      id: movieARow.id,
+      title: movieARow.title,
+      posterPath: movieARow.posterPath,
+      posterUrl: resolveMoviePoster(movieARow),
+    },
+    movieB: {
+      id: movieBRow.id,
+      title: movieBRow.title,
+      posterPath: movieBRow.posterPath,
+      posterUrl: resolveMoviePoster(movieBRow),
+    },
   };
 }
 
