@@ -4,21 +4,7 @@
  * Allows testing various AI response scenarios (good, bad, edge cases).
  */
 import type { AiCacheEntry, AiUsageStats } from "./ai-categorizer.js";
-
-/**
- * Lightweight mock of AiCategorizationError to avoid importing
- * the real ai-categorizer module (which pulls in heavy deps like
- * @anthropic-ai/sdk, database, etc.) and can cause test timeouts.
- */
-class AiCategorizationError extends Error {
-  constructor(
-    message: string,
-    public readonly code: "NO_API_KEY" | "API_ERROR" | "INSUFFICIENT_CREDITS"
-  ) {
-    super(message);
-    this.name = "AiCategorizationError";
-  }
-}
+import { AiCategorizationError } from "./ai-categorizer-error.js";
 
 /**
  * Lookup table for known descriptions.
