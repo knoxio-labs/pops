@@ -126,7 +126,11 @@ export interface PlexSectionIds {
 /** Read saved Plex library section IDs from the settings table. */
 export function getPlexSectionIds(): PlexSectionIds {
   const db = getDrizzle();
-  const movieRecord = db.select().from(settings).where(eq(settings.key, "plex_movie_section_id")).get();
+  const movieRecord = db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, "plex_movie_section_id"))
+    .get();
   const tvRecord = db.select().from(settings).where(eq(settings.key, "plex_tv_section_id")).get();
   return {
     movieSectionId: movieRecord?.value ?? null,
