@@ -262,34 +262,6 @@ export function ItemsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl md:text-3xl font-bold">Inventory</h1>
-        <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-0.5">
-          <button
-            type="button"
-            onClick={() => handleViewChange("table")}
-            aria-label="Table view"
-            aria-pressed={viewMode === "table"}
-            className={`rounded-md p-1.5 transition-all ${
-              viewMode === "table"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <LayoutList className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleViewChange("grid")}
-            aria-label="Grid view"
-            aria-pressed={viewMode === "grid"}
-            className={`rounded-md p-1.5 transition-all ${
-              viewMode === "grid"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
       {!hasActiveFilters && !search && (
@@ -299,7 +271,7 @@ export function ItemsPage() {
         </>
       )}
 
-      {/* Search + Filters */}
+      {/* Search + Filters + View Toggle */}
       <div className="flex flex-wrap items-end gap-3">
         <TextInput
           placeholder="Search items or asset IDs..."
@@ -344,6 +316,34 @@ export function ItemsPage() {
             Clear filters
           </Button>
         )}
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-0.5 ml-auto">
+          <button
+            type="button"
+            onClick={() => handleViewChange("table")}
+            aria-label="Table view"
+            aria-pressed={viewMode === "table"}
+            className={`rounded-md p-1.5 transition-all ${
+              viewMode === "table"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutList className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleViewChange("grid")}
+            aria-label="Grid view"
+            aria-pressed={viewMode === "grid"}
+            className={`rounded-md p-1.5 transition-all ${
+              viewMode === "grid"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Summary line */}
