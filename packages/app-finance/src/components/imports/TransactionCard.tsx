@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Globe, Store, Sparkles, Zap, Edit2 } from "lucide-react";
+import { ChevronRight, Globe, Store, Sparkles, Zap, Pencil } from "lucide-react";
 import { Badge } from "@pops/ui";
 import { Button } from "@pops/ui";
 import {
@@ -121,7 +121,7 @@ export function TransactionCard({
             className="ml-2"
             aria-label={`Edit ${transaction.description}`}
           >
-            <Edit2 className="w-4 h-4" aria-hidden="true" />
+            <Pencil className="w-4 h-4" aria-hidden="true" />
             <span className="sr-only">Edit</span>
           </Button>
         )}
