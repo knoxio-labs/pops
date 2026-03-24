@@ -12,7 +12,6 @@ import { eq } from "drizzle-orm";
 import { settings } from "@pops/db-types";
 import { randomUUID } from "node:crypto";
 import { PlexClient } from "./client.js";
-import { type PlexMediaItem } from "./types.js";
 import { extractExternalIdAsNumber, logMovieWatch, syncEpisodeWatches } from "./sync-helpers.js";
 import { getEnv } from "../../../env.js";
 import { getDrizzle } from "../../../db.js";
