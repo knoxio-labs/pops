@@ -14,7 +14,7 @@ export function TopBar() {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
   return (
-    <header className="bg-card border-b border-border h-14 md:h-16 flex items-center px-3 md:px-4 sticky top-0 z-40">
+    <header className="bg-card border-b border-border h-14 md:h-16 flex items-center px-3 md:px-4 fixed top-0 w-full z-40">
       <button
         onClick={toggleSidebar}
         className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-lg mr-2 md:hidden"
