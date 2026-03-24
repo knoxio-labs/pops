@@ -8,32 +8,28 @@ import { lazy } from "react";
 import type { RouteObject } from "react-router";
 
 const DashboardPage = lazy(() =>
-  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage }))
+  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );
 const TransactionsPage = lazy(() =>
   import("./pages/TransactionsPage").then((m) => ({
     default: m.TransactionsPage,
-  }))
+  })),
 );
 const EntitiesPage = lazy(() =>
-  import("./pages/EntitiesPage").then((m) => ({ default: m.EntitiesPage }))
+  import("./pages/EntitiesPage").then((m) => ({ default: m.EntitiesPage })),
 );
 const BudgetsPage = lazy(() =>
-  import("./pages/BudgetsPage").then((m) => ({ default: m.BudgetsPage }))
+  import("./pages/BudgetsPage").then((m) => ({ default: m.BudgetsPage })),
 );
 const InventoryPage = lazy(() =>
-  import("./pages/InventoryPage").then((m) => ({ default: m.InventoryPage }))
+  import("./pages/InventoryPage").then((m) => ({ default: m.InventoryPage })),
 );
 const WishlistPage = lazy(() =>
-  import("./pages/WishlistPage").then((m) => ({ default: m.WishlistPage }))
+  import("./pages/WishlistPage").then((m) => ({ default: m.WishlistPage })),
 );
 const ImportPage = lazy(() =>
-  import("./pages/ImportPage").then((m) => ({ default: m.ImportPage }))
+  import("./pages/ImportPage").then((m) => ({ default: m.ImportPage })),
 );
-const AiUsagePage = lazy(() =>
-  import("./pages/AiUsagePage").then((m) => ({ default: m.AiUsagePage }))
-);
-
 /** Shared navigation types (mirrored from shell to avoid circular dependency) */
 export interface AppNavItem {
   path: string;
@@ -64,7 +60,6 @@ export const navConfig: AppNavConfig = {
     { path: "/inventory", label: "Inventory", icon: "Package" },
     { path: "/wishlist", label: "Wish List", icon: "Star" },
     { path: "/import", label: "Import", icon: "Download" },
-    { path: "/ai-usage", label: "AI Usage", icon: "Bot" },
   ],
 };
 
@@ -76,5 +71,4 @@ export const routes: RouteObject[] = [
   { path: "inventory", element: <InventoryPage /> },
   { path: "wishlist", element: <WishlistPage /> },
   { path: "import", element: <ImportPage /> },
-  { path: "ai-usage", element: <AiUsagePage /> },
 ];
