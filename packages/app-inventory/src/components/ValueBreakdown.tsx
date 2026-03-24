@@ -2,8 +2,8 @@
  * ValueBreakdown — horizontal bar charts showing replacement value
  * grouped by location and by item type.
  */
-import { Card, CardContent, Skeleton } from "@pops/ui";
-import { MapPin, Tag } from "lucide-react";
+import { Alert, AlertDescription, Button, Card, CardContent, Skeleton } from "@pops/ui";
+import { AlertCircle, MapPin, RefreshCw, Tag } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -108,14 +108,37 @@ function BreakdownSkeleton() {
   );
 }
 
+function BreakdownError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertDescription className="flex items-center justify-between gap-2">
+        <span>{message}</span>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 export function ValueBreakdown() {
   const navigate = useNavigate();
 
-  const { data: locationData, isLoading: locationLoading } =
-    trpc.inventory.reports.valueByLocation.useQuery();
+  const {
+    data: locationData,
+    isLoading: locationLoading,
+    isError: locationError,
+    refetch: refetchLocation,
+  } = trpc.inventory.reports.valueByLocation.useQuery();
 
-  const { data: typeData, isLoading: typeLoading } =
-    trpc.inventory.reports.valueByType.useQuery();
+  const {
+    data: typeData,
+    isLoading: typeLoading,
+    isError: typeError,
+    refetch: refetchType,
+  } = trpc.inventory.reports.valueByType.useQuery();
 
   if (locationLoading || typeLoading) {
     return (
@@ -137,12 +160,19 @@ export function ValueBreakdown() {
             <MapPin className="h-4 w-4" />
             <span className="text-xs font-medium">Value by Location</span>
           </div>
-          <BreakdownChart
-            data={locationEntries}
-            onBarClick={(name) =>
-              navigate(`/inventory?location=${encodeURIComponent(name)}`)
-            }
-          />
+          {locationError ? (
+            <BreakdownError
+              message="Failed to load location breakdown"
+              onRetry={() => refetchLocation()}
+            />
+          ) : (
+            <BreakdownChart
+              data={locationEntries}
+              onBarClick={(name) =>
+                navigate(`/inventory?location=${encodeURIComponent(name)}`)
+              }
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -152,12 +182,19 @@ export function ValueBreakdown() {
             <Tag className="h-4 w-4" />
             <span className="text-xs font-medium">Value by Type</span>
           </div>
-          <BreakdownChart
-            data={typeEntries}
-            onBarClick={(name) =>
-              navigate(`/inventory?type=${encodeURIComponent(name)}`)
-            }
-          />
+          {typeError ? (
+            <BreakdownError
+              message="Failed to load type breakdown"
+              onRetry={() => refetchType()}
+            />
+          ) : (
+            <BreakdownChart
+              data={typeEntries}
+              onBarClick={(name) =>
+                navigate(`/inventory?type=${encodeURIComponent(name)}`)
+              }
+            />
+          )}
         </CardContent>
       </Card>
     </div>
