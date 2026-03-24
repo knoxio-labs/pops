@@ -15,7 +15,7 @@ import {
   Textarea,
 } from "@pops/ui";
 import { Button } from "@pops/ui";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 
@@ -189,15 +189,16 @@ function WatchlistItem({
             </div>
           </div>
 
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
             onClick={() => onRemove(entry.id)}
             disabled={isRemoving}
             aria-label={`Remove ${title} from watchlist`}
-            className="text-xs text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50"
           >
-            Remove
-          </button>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         {editing ? (
