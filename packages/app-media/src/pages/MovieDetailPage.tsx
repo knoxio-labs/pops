@@ -1,5 +1,17 @@
 import { useParams, Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  Badge,
+  Skeleton,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@pops/ui";
 import { trpc } from "../lib/trpc";
 import { formatCurrency, formatRuntime } from "../lib/format";
 import { WatchlistToggle } from "../components/WatchlistToggle";
@@ -115,6 +127,23 @@ export function MovieDetailPage() {
 
   return (
     <div>
+      {/* Breadcrumb */}
+      <div className="p-6 pb-0">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/media">Media</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{movie.title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
       {/* Hero section — negative margins cancel shell padding for edge-to-edge */}
       <div className="-mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8 relative h-64 md:h-96 overflow-hidden bg-muted">
         {backdropSrc && (
@@ -224,13 +253,6 @@ export function MovieDetailPage() {
           </section>
         )}
 
-        {/* Back link */}
-        <Link
-          to="/media"
-          className="inline-block text-sm text-primary underline"
-        >
-          Back to library
-        </Link>
       </div>
     </div>
   );

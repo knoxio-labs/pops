@@ -14,10 +14,15 @@ import {
   Skeleton,
   TypeBadge,
   ConditionBadge,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
   type Condition,
 } from "@pops/ui";
 import {
-  ArrowLeft,
   Pencil,
   Link2,
   Unlink,
@@ -109,13 +114,23 @@ export function ItemDetailPage() {
 
   return (
     <div className="p-6 max-w-3xl">
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/inventory">Inventory</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{item.itemName}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
-        <Link to="/inventory">
-          <Button variant="ghost" size="icon" className="h-9 w-9 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 hover:text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 dark:hover:bg-amber-500/30 rounded-full transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{item.itemName}</h1>
           {(item.brand || item.model) && (

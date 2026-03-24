@@ -6,9 +6,19 @@
  */
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Badge, Button, Skeleton, Input } from "@pops/ui";
 import {
-  ArrowLeft,
+  Badge,
+  Button,
+  Skeleton,
+  Input,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@pops/ui";
+import {
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -223,14 +233,26 @@ export function PlexSettingsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/media">Media</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Plex Settings</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/media" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
         <h1 className="text-2xl font-bold tracking-tight">Plex Settings</h1>
         {status?.configured && <ConnectionBadge connected={connected} />}
-        
+
         <div className="flex-1" />
         {status?.hasToken && (
           <Button
