@@ -348,7 +348,6 @@ export function TvShowDetailPage() {
             </div>
           </section>
         )}
-
       </div>
     </div>
   );

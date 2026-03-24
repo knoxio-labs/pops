@@ -252,7 +252,6 @@ export function MovieDetailPage() {
             </dl>
           </section>
         )}
-
       </div>
     </div>
   );
