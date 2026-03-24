@@ -100,12 +100,21 @@ export function PlexSettingsPage() {
 
   const syncStatus = trpc.media.plex.getSyncStatus.useQuery();
   const currentUrl = trpc.media.plex.getPlexUrl.useQuery();
+  const savedSectionIds = trpc.media.plex.getSectionIds.useQuery();
 
   useEffect(() => {
     if (currentUrl.data?.data) {
       setPlexUrl(currentUrl.data.data);
     }
   }, [currentUrl.data?.data]);
+
+  useEffect(() => {
+    if (savedSectionIds.data?.data) {
+      const { movieSectionId: savedMovie, tvSectionId: savedTv } = savedSectionIds.data.data;
+      if (savedMovie) setMovieSectionId(savedMovie);
+      if (savedTv) setTvSectionId(savedTv);
+    }
+  }, [savedSectionIds.data?.data]);
 
   const connectionTest = trpc.media.plex.testConnection.useQuery(undefined, {
     enabled: syncStatus.data?.data.configured === true,
@@ -121,6 +130,7 @@ export function PlexSettingsPage() {
   const syncTvShows = trpc.media.plex.syncTvShows.useMutation({
     onSuccess: () => syncStatus.refetch(),
   });
+  const saveSectionIds = trpc.media.plex.saveSectionIds.useMutation();
 
   const saveUrl = trpc.media.plex.setUrl.useMutation({
     onSuccess: () => {
@@ -322,7 +332,11 @@ export function PlexSettingsPage() {
                 <>
                   <select
                     value={movieSectionId}
-                    onChange={(e) => setMovieSectionId(e.target.value)}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setMovieSectionId(id);
+                      if (id) saveSectionIds.mutate({ movieSectionId: id });
+                    }}
                     className="w-full h-8 rounded-md border bg-background px-2 text-sm"
                     aria-label="Select movie library"
                   >
@@ -364,7 +378,11 @@ export function PlexSettingsPage() {
                 <>
                   <select
                     value={tvSectionId}
-                    onChange={(e) => setTvSectionId(e.target.value)}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setTvSectionId(id);
+                      if (id) saveSectionIds.mutate({ tvSectionId: id });
+                    }}
                     className="w-full h-8 rounded-md border bg-background px-2 text-sm"
                     aria-label="Select TV library"
                   >
