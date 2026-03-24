@@ -221,6 +221,7 @@ function syncMovieWatch(movieId: number, lastViewedAtUnix: number): void {
       mediaId: movieId,
       watchedAt: new Date(lastViewedAtUnix * 1000).toISOString(),
       completed: 1,
+      source: "plex_sync",
     });
   } catch {
     // Ignore duplicate watch entries
@@ -266,6 +267,7 @@ function syncEpisodeWatches(tvdbId: number, plexEpisodes: PlexEpisode[]): void {
           ? new Date(plexEp.lastViewedAt * 1000).toISOString()
           : new Date().toISOString(),
         completed: 1,
+        source: "plex_sync",
       });
     } catch {
       // Ignore duplicate or failed episode watch entries
