@@ -40,7 +40,10 @@ export const discoveryRouter = router({
           message: `TMDB API error: ${err.message}`,
         });
       }
-      throw err;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }),
 
@@ -65,7 +68,10 @@ export const discoveryRouter = router({
           message: `TMDB API error: ${err.message}`,
         });
       }
-      throw err;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }),
 });

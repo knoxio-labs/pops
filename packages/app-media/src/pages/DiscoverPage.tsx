@@ -3,12 +3,27 @@
  * Three horizontal scroll sections: Recommended for You, Trending, Similar to Top Rated.
  */
 import { useState, useCallback } from "react";
-import { Alert } from "@pops/ui";
-import { Compass, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, Button } from "@pops/ui";
+import { Compass, AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { HorizontalScrollRow } from "../components/HorizontalScrollRow";
 import { DiscoverCard } from "../components/DiscoverCard";
+
+function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertDescription className="flex items-center justify-between gap-4">
+        <span>Failed to load: {message}</span>
+        <Button variant="outline" size="sm" onClick={onRetry} className="shrink-0">
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 export function DiscoverPage() {
   const utils = trpc.useUtils();
@@ -104,9 +119,6 @@ export function DiscoverPage() {
     [addMovieMutation, addWatchlistMutation, utils],
   );
 
-  const hasError =
-    trending.error || recommendations.error || similarToTopRated.error;
-
   return (
     <div className="space-y-8 pb-8">
       {/* Header */}
@@ -120,16 +132,6 @@ export function DiscoverPage() {
         </div>
       </div>
 
-      {/* Error alert */}
-      {hasError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <p>
-            Some sections failed to load. Check that TMDB_API_KEY is configured.
-          </p>
-        </Alert>
-      )}
-
       {/* Recommended for You */}
       <HorizontalScrollRow
         title="Recommended for You"
@@ -140,6 +142,12 @@ export function DiscoverPage() {
         }
         isLoading={recommendations.isLoading}
       >
+        {recommendations.error && (
+          <SectionError
+            message={recommendations.error.message}
+            onRetry={() => void recommendations.refetch()}
+          />
+        )}
         {recommendations.data?.results.length === 0 && (
           <p className="py-8 text-sm text-muted-foreground">
             Add movies to your library to get personalized recommendations.
@@ -169,6 +177,12 @@ export function DiscoverPage() {
         title="Trending This Week"
         isLoading={trending.isLoading}
       >
+        {trending.error && (
+          <SectionError
+            message={trending.error.message}
+            onRetry={() => void trending.refetch()}
+          />
+        )}
         {trending.data?.results.map((item) => (
           <DiscoverCard
             key={item.tmdbId}
@@ -196,6 +210,12 @@ export function DiscoverPage() {
         }
         isLoading={similarToTopRated.isLoading}
       >
+        {similarToTopRated.error && (
+          <SectionError
+            message={similarToTopRated.error.message}
+            onRetry={() => void similarToTopRated.refetch()}
+          />
+        )}
         {similarToTopRated.data?.results.length === 0 && (
           <p className="py-8 text-sm text-muted-foreground">
             Rate more movies to discover similar titles.
