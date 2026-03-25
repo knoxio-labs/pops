@@ -175,17 +175,20 @@ Return ONLY the JSON array, no markdown, no explanation.`;
   const costUsd = (inputTokens / 1_000_000) * 1.0 + (outputTokens / 1_000_000) * 5.0;
 
   try {
-    getDrizzle().insert(aiUsage).values({
-      description: `generateRules (${transactions.length} transactions)`,
-      entityName: null,
-      category: "rule-generation",
-      inputTokens,
-      outputTokens,
-      costUsd,
-      cached: 0,
-      importBatchId: null,
-      createdAt: new Date().toISOString(),
-    }).run();
+    getDrizzle()
+      .insert(aiUsage)
+      .values({
+        description: `generateRules (${transactions.length} transactions)`,
+        entityName: null,
+        category: "rule-generation",
+        inputTokens,
+        outputTokens,
+        costUsd,
+        cached: 0,
+        importBatchId: null,
+        createdAt: new Date().toISOString(),
+      })
+      .run();
   } catch {
     // ai_usage tracking is best-effort — don't fail the request
   }

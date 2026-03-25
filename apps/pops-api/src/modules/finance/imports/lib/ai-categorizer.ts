@@ -140,17 +140,20 @@ export async function categorizeWithAi(
     );
 
     // Track cache hit
-    getDrizzle().insert(aiUsage).values({
-      description: rawRow.trim(),
-      entityName: cached.entityName,
-      category: cached.category,
-      inputTokens: 0,
-      outputTokens: 0,
-      costUsd: 0,
-      cached: 1,
-      importBatchId: importBatchId ?? null,
-      createdAt: new Date().toISOString(),
-    }).run();
+    getDrizzle()
+      .insert(aiUsage)
+      .values({
+        description: rawRow.trim(),
+        entityName: cached.entityName,
+        category: cached.category,
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        cached: 1,
+        importBatchId: importBatchId ?? null,
+        createdAt: new Date().toISOString(),
+      })
+      .run();
 
     return { result: cached };
   }
@@ -210,17 +213,20 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
     const outputTokens = response.usage.output_tokens;
     const costUsd = (inputTokens / 1_000_000) * 1.0 + (outputTokens / 1_000_000) * 5.0;
 
-    getDrizzle().insert(aiUsage).values({
-      description: rawRow.trim(),
-      entityName: parsed.entityName,
-      category: parsed.category,
-      inputTokens,
-      outputTokens,
-      costUsd,
-      cached: 0,
-      importBatchId: importBatchId ?? null,
-      createdAt: new Date().toISOString(),
-    }).run();
+    getDrizzle()
+      .insert(aiUsage)
+      .values({
+        description: rawRow.trim(),
+        entityName: parsed.entityName,
+        category: parsed.category,
+        inputTokens,
+        outputTokens,
+        costUsd,
+        cached: 0,
+        importBatchId: importBatchId ?? null,
+        createdAt: new Date().toISOString(),
+      })
+      .run();
 
     logger.info(
       {
