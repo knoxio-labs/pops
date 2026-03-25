@@ -232,17 +232,18 @@ function getLocationSubtreeIds(rootId: string): Set<string> {
  */
 export function getValueByLocation(): ValueBreakdownEntry[] {
   const db = getDrizzle();
+  const totalValueExpr = sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`;
 
   return db
     .select({
       name: sql<string>`COALESCE(${locations.name}, 'Unassigned')`,
-      totalValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      totalValue: totalValueExpr,
       itemCount: sql<number>`COUNT(*)`,
     })
     .from(homeInventory)
     .leftJoin(locations, sql`${homeInventory.locationId} = ${locations.id}`)
     .groupBy(sql`COALESCE(${locations.name}, 'Unassigned')`)
-    .orderBy(desc(sql`totalValue`))
+    .orderBy(desc(totalValueExpr))
     .all() as ValueBreakdownEntry[];
 }
 
@@ -251,15 +252,16 @@ export function getValueByLocation(): ValueBreakdownEntry[] {
  */
 export function getValueByType(): ValueBreakdownEntry[] {
   const db = getDrizzle();
+  const totalValueExpr = sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`;
 
   return db
     .select({
       name: sql<string>`COALESCE(${homeInventory.type}, 'Uncategorized')`,
-      totalValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      totalValue: totalValueExpr,
       itemCount: sql<number>`COUNT(*)`,
     })
     .from(homeInventory)
     .groupBy(sql`COALESCE(${homeInventory.type}, 'Uncategorized')`)
-    .orderBy(desc(sql`totalValue`))
+    .orderBy(desc(totalValueExpr))
     .all() as ValueBreakdownEntry[];
 }
