@@ -12,44 +12,19 @@ import { eq } from "drizzle-orm";
 import { settings } from "@pops/db-types";
 import { randomUUID } from "node:crypto";
 import { PlexClient } from "./client.js";
-import { extractExternalIdAsNumber, logMovieWatch, syncEpisodeWatches } from "./sync-helpers.js";
 import { getEnv } from "../../../env.js";
 import { getDrizzle } from "../../../db.js";
-import * as libraryService from "../library/service.js";
-import * as tvShowService from "../library/tv-show-service.js";
-import { getTmdbClient } from "../tmdb/index.js";
-import { getTvdbClient } from "../thetvdb/index.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-export interface SyncResult {
-  synced: number;
-  skipped: number;
-  errors: SyncError[];
-}
-
-export interface SyncError {
-  title: string;
-  reason: string;
-}
 
 export interface PlexSyncStatus {
   configured: boolean;
   hasUrl: boolean;
   hasToken: boolean;
   connected: boolean;
-  lastSyncMovies: SyncResult | null;
-  lastSyncTvShows: SyncResult | null;
 }
-
-// ---------------------------------------------------------------------------
-// State (in-memory, per-process)
-// ---------------------------------------------------------------------------
-
-let lastMovieSync: SyncResult | null = null;
-let lastTvSync: SyncResult | null = null;
 
 // ---------------------------------------------------------------------------
 // Client factory
@@ -167,105 +142,6 @@ export async function testConnection(client: PlexClient): Promise<boolean> {
   }
 }
 
-/**
- * Sync movies from a Plex library section.
- *
- * For each movie:
- *   1. Extract TMDB ID from Plex Guid array
- *   2. Add to library via `addMovie()` (idempotent)
- *   3. If Plex viewCount > 0, log watch history (if not already logged)
- */
-export async function syncMovies(client: PlexClient, sectionId: string): Promise<SyncResult> {
-  const tmdbClient = getTmdbClient();
-  if (!tmdbClient) {
-    return {
-      synced: 0,
-      skipped: 0,
-      errors: [{ title: "Configuration", reason: "TMDB_API_KEY not configured" }],
-    };
-  }
-
-  const items = await client.getAllItems(sectionId);
-  const result: SyncResult = { synced: 0, skipped: 0, errors: [] };
-
-  for (const item of items) {
-    try {
-      const tmdbId = extractExternalIdAsNumber(item, "tmdb");
-      if (!tmdbId) {
-        result.skipped++;
-        continue;
-      }
-
-      // Add movie to library (idempotent)
-      const { movie } = await libraryService.addMovie(tmdbId, tmdbClient);
-
-      // Sync watch history if Plex shows it was watched
-      if (item.viewCount > 0 && item.lastViewedAt) {
-        logMovieWatch(movie.id, item.lastViewedAt);
-      }
-
-      result.synced++;
-    } catch (err) {
-      result.errors.push({
-        title: item.title,
-        reason: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  lastMovieSync = result;
-  return result;
-}
-
-/**
- * Sync TV shows from a Plex library section.
- *
- * For each show:
- *   1. Extract TVDB ID from Plex Guid array
- *   2. Add to library via `addTvShow()` (idempotent)
- *   3. Fetch episodes from Plex, log watch history for watched episodes
- */
-export async function syncTvShows(client: PlexClient, sectionId: string): Promise<SyncResult> {
-  const tvdbClient = getTvdbClient();
-  if (!tvdbClient) {
-    return {
-      synced: 0,
-      skipped: 0,
-      errors: [{ title: "Configuration", reason: "THETVDB_API_KEY not configured" }],
-    };
-  }
-
-  const items = await client.getAllItems(sectionId);
-  const result: SyncResult = { synced: 0, skipped: 0, errors: [] };
-
-  for (const item of items) {
-    try {
-      const tvdbId = extractExternalIdAsNumber(item, "tvdb");
-      if (!tvdbId) {
-        result.skipped++;
-        continue;
-      }
-
-      // Add TV show to library (idempotent)
-      await tvShowService.addTvShow(tvdbId, tvdbClient);
-
-      // Sync episode watch history
-      const plexEpisodes = await client.getEpisodes(item.ratingKey);
-      syncEpisodeWatches(tvdbId, plexEpisodes);
-
-      result.synced++;
-    } catch (err) {
-      result.errors.push({
-        title: item.title,
-        reason: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  lastTvSync = result;
-  return result;
-}
-
 /** Get current sync status. */
 export function getSyncStatus(client: PlexClient | null): PlexSyncStatus {
   const db = getDrizzle();
@@ -277,16 +153,5 @@ export function getSyncStatus(client: PlexClient | null): PlexSyncStatus {
     hasUrl: !!url,
     hasToken: !!token,
     connected: false, // Caller should test connection separately
-    lastSyncMovies: lastMovieSync,
-    lastSyncTvShows: lastTvSync,
   };
-}
-
-// Test helpers
-// ---------------------------------------------------------------------------
-
-/** Reset sync state — for testing only. */
-export function _resetSyncState(): void {
-  lastMovieSync = null;
-  lastTvSync = null;
 }

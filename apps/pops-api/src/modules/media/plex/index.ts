@@ -10,13 +10,6 @@ export {
   type PlexEpisode,
   type PlexExternalId,
 } from "./types.js";
-export {
-  getPlexClient,
-  testConnection,
-  syncMovies,
-  syncTvShows,
-  getSyncStatus,
-  type SyncResult,
-  type SyncError,
-  type PlexSyncStatus,
-} from "./service.js";
+export { getPlexClient, testConnection, getSyncStatus, type PlexSyncStatus } from "./service.js";
+export { importMoviesFromPlex, type MovieSyncProgress } from "./sync-movies.js";
+export { importTvShowsFromPlex, type TvSyncProgress } from "./sync-tv.js";
