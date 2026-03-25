@@ -10,7 +10,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getEnv } from "../../../../env.js";
-import { getDb, isNamedEnvContext } from "../../../../db.js";
+import { getDrizzle, isNamedEnvContext } from "../../../../db.js";
+import { aiUsage } from "@pops/db-types";
 import { logger } from "../../../../lib/logger.js";
 
 export interface AiCacheEntry {
@@ -139,17 +140,17 @@ export async function categorizeWithAi(
     );
 
     // Track cache hit
-    const db = getDb();
-    db.prepare(
-      `INSERT INTO ai_usage (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
-       VALUES (?, ?, ?, 0, 0, 0, 1, ?, ?)`
-    ).run(
-      rawRow.trim(),
-      cached.entityName,
-      cached.category,
-      importBatchId ?? null,
-      new Date().toISOString()
-    );
+    getDrizzle().insert(aiUsage).values({
+      description: rawRow.trim(),
+      entityName: cached.entityName,
+      category: cached.category,
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd: 0,
+      cached: 1,
+      importBatchId: importBatchId ?? null,
+      createdAt: new Date().toISOString(),
+    }).run();
 
     return { result: cached };
   }
@@ -158,8 +159,6 @@ export async function categorizeWithAi(
   if (!apiKey) {
     throw new AiCategorizationError("CLAUDE_API_KEY not configured", "NO_API_KEY");
   }
-
-  const db = getDb();
 
   // maxRetries=0: SDK-level retries disabled — we handle retries ourselves via withRateLimitRetry
   const client = new Anthropic({ apiKey, maxRetries: 0 });
@@ -211,19 +210,17 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
     const outputTokens = response.usage.output_tokens;
     const costUsd = (inputTokens / 1_000_000) * 1.0 + (outputTokens / 1_000_000) * 5.0;
 
-    db.prepare(
-      `INSERT INTO ai_usage (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`
-    ).run(
-      rawRow.trim(),
-      parsed.entityName,
-      parsed.category,
+    getDrizzle().insert(aiUsage).values({
+      description: rawRow.trim(),
+      entityName: parsed.entityName,
+      category: parsed.category,
       inputTokens,
       outputTokens,
       costUsd,
-      importBatchId ?? null,
-      new Date().toISOString()
-    );
+      cached: 0,
+      importBatchId: importBatchId ?? null,
+      createdAt: new Date().toISOString(),
+    }).run();
 
     logger.info(
       {

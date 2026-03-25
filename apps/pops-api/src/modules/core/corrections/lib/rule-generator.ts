@@ -4,8 +4,10 @@
  * Uses the same withRateLimitRetry / ai_usage tracking pattern as ai-categorizer.ts.
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { and, isNotNull, ne } from "drizzle-orm";
 import { getEnv } from "../../../../env.js";
-import { getDb } from "../../../../db.js";
+import { getDrizzle } from "../../../../db.js";
+import { aiUsage, transactions as transactionsTable } from "@pops/db-types";
 import { logger } from "../../../../lib/logger.js";
 
 /**
@@ -14,10 +16,11 @@ import { logger } from "../../../../lib/logger.js";
  */
 function loadAvailableTagsFromDb(): string[] {
   try {
-    const db = getDb();
-    const rows = db
-      .prepare("SELECT tags FROM transactions WHERE tags IS NOT NULL AND tags != '[]'")
-      .all() as { tags: string }[];
+    const rows = getDrizzle()
+      .select({ tags: transactionsTable.tags })
+      .from(transactionsTable)
+      .where(and(isNotNull(transactionsTable.tags), ne(transactionsTable.tags, "[]")))
+      .all();
 
     const tagSet = new Set<string>();
     for (const row of rows) {
@@ -172,19 +175,17 @@ Return ONLY the JSON array, no markdown, no explanation.`;
   const costUsd = (inputTokens / 1_000_000) * 1.0 + (outputTokens / 1_000_000) * 5.0;
 
   try {
-    const db = getDb();
-    db.prepare(
-      `INSERT INTO ai_usage (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?)`
-    ).run(
-      `generateRules (${transactions.length} transactions)`,
-      null,
-      "rule-generation",
+    getDrizzle().insert(aiUsage).values({
+      description: `generateRules (${transactions.length} transactions)`,
+      entityName: null,
+      category: "rule-generation",
       inputTokens,
       outputTokens,
       costUsd,
-      new Date().toISOString()
-    );
+      cached: 0,
+      importBatchId: null,
+      createdAt: new Date().toISOString(),
+    }).run();
   } catch {
     // ai_usage tracking is best-effort — don't fail the request
   }

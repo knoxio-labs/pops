@@ -25,9 +25,11 @@ vi.mock("@anthropic-ai/sdk", () => {
 const mockDbRun = vi.fn();
 vi.mock("../../../../db.js", () => {
   return {
-    getDb: vi.fn(() => ({
-      prepare: vi.fn(() => ({
-        run: mockDbRun,
+    getDrizzle: vi.fn(() => ({
+      insert: vi.fn(() => ({
+        values: vi.fn(() => ({
+          run: mockDbRun,
+        })),
       })),
     })),
     // Always return false: tests exercise the real API path, not the named-env skip

@@ -19,8 +19,10 @@ vi.mock("@anthropic-ai/sdk", () => ({
 // Mock the database
 const mockDbRun = vi.fn();
 vi.mock("../../../../db.js", () => ({
-  getDb: vi.fn(() => ({
-    prepare: vi.fn(() => ({ run: mockDbRun })),
+  getDrizzle: vi.fn(() => ({
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({ run: mockDbRun })),
+    })),
   })),
   isNamedEnvContext: vi.fn().mockReturnValue(false),
 }));
