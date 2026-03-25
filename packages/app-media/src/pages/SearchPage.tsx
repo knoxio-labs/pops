@@ -178,7 +178,7 @@ export function SearchPage() {
   const noResults = hasQuery && !isSearching && totalResults === 0 && !hasError;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Search</h1>
         <p className="text-muted-foreground mt-1 text-sm">
