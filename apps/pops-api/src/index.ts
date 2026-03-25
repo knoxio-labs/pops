@@ -1,10 +1,9 @@
 import { config } from "dotenv";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 
-// Load .env from repo root (2 levels up from src/)
-const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(__dirname, "../../..", ".env") });
+// Load .env from CWD (apps/pops-api/ when run via mise/pnpm, or repo root)
+// Also check repo root .env as fallback for monorepo setups
+config(); // loads apps/pops-api/.env if it exists
+config({ path: "../../.env", override: false }); // loads root .env without overriding
 
 import { createApp } from "./app.js";
 import { closeDb } from "./db.js";
