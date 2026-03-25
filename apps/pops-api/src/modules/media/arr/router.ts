@@ -53,6 +53,44 @@ export const arrRouter = router({
     return { data: arrService.getArrConfig() };
   }),
 
+  /** Get current Arr settings (URLs and whether API keys are set). */
+  getSettings: protectedProcedure.query(() => {
+    const s = arrService.getArrSettings();
+    return {
+      data: {
+        radarrUrl: s.radarrUrl ?? "",
+        radarrApiKey: s.radarrApiKey ? "••••••••" : "",
+        sonarrUrl: s.sonarrUrl ?? "",
+        sonarrApiKey: s.sonarrApiKey ? "••••••••" : "",
+        radarrHasKey: !!s.radarrApiKey,
+        sonarrHasKey: !!s.sonarrApiKey,
+      },
+    };
+  }),
+
+  /** Save Arr settings (URLs and API keys). */
+  saveSettings: protectedProcedure
+    .input(
+      z.object({
+        radarrUrl: z.string().optional(),
+        radarrApiKey: z.string().optional(),
+        sonarrUrl: z.string().optional(),
+        sonarrApiKey: z.string().optional(),
+      })
+    )
+    .mutation(({ input }) => {
+      // Don't overwrite API keys with the masked placeholder
+      const config: Parameters<typeof arrService.saveArrSettings>[0] = {};
+      if (input.radarrUrl !== undefined) config.radarrUrl = input.radarrUrl;
+      if (input.radarrApiKey !== undefined && input.radarrApiKey !== "••••••••")
+        config.radarrApiKey = input.radarrApiKey;
+      if (input.sonarrUrl !== undefined) config.sonarrUrl = input.sonarrUrl;
+      if (input.sonarrApiKey !== undefined && input.sonarrApiKey !== "••••••••")
+        config.sonarrApiKey = input.sonarrApiKey;
+      arrService.saveArrSettings(config);
+      return { message: "Arr settings saved" };
+    }),
+
   /** Get Radarr status for a movie by TMDB ID. */
   getMovieStatus: protectedProcedure
     .input(z.object({ tmdbId: z.number().int().positive() }))

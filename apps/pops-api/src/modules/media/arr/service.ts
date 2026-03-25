@@ -1,9 +1,13 @@
 /**
  * Arr service — factory functions and in-memory status cache for Radarr/Sonarr.
  */
+import { eq } from "drizzle-orm";
+import { settings } from "@pops/db-types";
 import { RadarrClient } from "./radarr-client.js";
 import { SonarrClient } from "./sonarr-client.js";
 import type { ArrConfig, ArrStatusResult, DownloadQueueItem } from "./types.js";
+import { getEnv } from "../../../env.js";
+import { getDrizzle } from "../../../db.js";
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -15,27 +19,96 @@ interface CacheEntry {
 const movieStatusCache = new Map<number, CacheEntry>();
 const showStatusCache = new Map<number, CacheEntry>();
 
-/** Create a Radarr client if env vars are configured. */
+// ---------------------------------------------------------------------------
+// Settings helpers (settings table with env var fallback, like Plex)
+// ---------------------------------------------------------------------------
+
+function getSetting(key: string): string | null {
+  const db = getDrizzle();
+  const record = db.select().from(settings).where(eq(settings.key, key)).get();
+  if (record?.value) return record.value;
+  return null;
+}
+
+function getArrSetting(key: string, envName: string): string | null {
+  return getSetting(key) || getEnv(envName) || null;
+}
+
+function saveSetting(key: string, value: string): void {
+  const db = getDrizzle();
+  db.insert(settings)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: settings.key, set: { value } })
+    .run();
+}
+
+function deleteSetting(key: string): void {
+  const db = getDrizzle();
+  db.delete(settings).where(eq(settings.key, key)).run();
+}
+
+/** Get current Arr settings (from settings table or env vars). */
+export function getArrSettings(): {
+  radarrUrl: string | null;
+  radarrApiKey: string | null;
+  sonarrUrl: string | null;
+  sonarrApiKey: string | null;
+} {
+  return {
+    radarrUrl: getArrSetting("radarr_url", "RADARR_URL"),
+    radarrApiKey: getArrSetting("radarr_api_key", "RADARR_API_KEY"),
+    sonarrUrl: getArrSetting("sonarr_url", "SONARR_URL"),
+    sonarrApiKey: getArrSetting("sonarr_api_key", "SONARR_API_KEY"),
+  };
+}
+
+/** Save Arr settings to the settings table. */
+export function saveArrSettings(config: {
+  radarrUrl?: string;
+  radarrApiKey?: string;
+  sonarrUrl?: string;
+  sonarrApiKey?: string;
+}): void {
+  if (config.radarrUrl !== undefined) {
+    if (config.radarrUrl) saveSetting("radarr_url", config.radarrUrl);
+    else deleteSetting("radarr_url");
+  }
+  if (config.radarrApiKey !== undefined) {
+    if (config.radarrApiKey) saveSetting("radarr_api_key", config.radarrApiKey);
+    else deleteSetting("radarr_api_key");
+  }
+  if (config.sonarrUrl !== undefined) {
+    if (config.sonarrUrl) saveSetting("sonarr_url", config.sonarrUrl);
+    else deleteSetting("sonarr_url");
+  }
+  if (config.sonarrApiKey !== undefined) {
+    if (config.sonarrApiKey) saveSetting("sonarr_api_key", config.sonarrApiKey);
+    else deleteSetting("sonarr_api_key");
+  }
+}
+
+/** Create a Radarr client if configured (settings table or env vars). */
 export function getRadarrClient(): RadarrClient | null {
-  const url = process.env["RADARR_URL"];
-  const key = process.env["RADARR_API_KEY"];
+  const url = getArrSetting("radarr_url", "RADARR_URL");
+  const key = getArrSetting("radarr_api_key", "RADARR_API_KEY");
   if (!url || !key) return null;
   return new RadarrClient(url, key);
 }
 
-/** Create a Sonarr client if env vars are configured. */
+/** Create a Sonarr client if configured (settings table or env vars). */
 export function getSonarrClient(): SonarrClient | null {
-  const url = process.env["SONARR_URL"];
-  const key = process.env["SONARR_API_KEY"];
+  const url = getArrSetting("sonarr_url", "SONARR_URL");
+  const key = getArrSetting("sonarr_api_key", "SONARR_API_KEY");
   if (!url || !key) return null;
   return new SonarrClient(url, key);
 }
 
 /** Get configuration state for both services. */
 export function getArrConfig(): ArrConfig {
+  const s = getArrSettings();
   return {
-    radarrConfigured: !!(process.env["RADARR_URL"] && process.env["RADARR_API_KEY"]),
-    sonarrConfigured: !!(process.env["SONARR_URL"] && process.env["SONARR_API_KEY"]),
+    radarrConfigured: !!(s.radarrUrl && s.radarrApiKey),
+    sonarrConfigured: !!(s.sonarrUrl && s.sonarrApiKey),
   };
 }
 

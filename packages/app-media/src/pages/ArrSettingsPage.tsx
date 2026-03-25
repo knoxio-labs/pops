@@ -1,0 +1,295 @@
+/**
+ * ArrSettingsPage — Radarr/Sonarr connection settings and test UI.
+ *
+ * Allows users to configure Radarr and Sonarr URLs and API keys
+ * via the settings table (replacing env-var-only configuration).
+ */
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
+import {
+  Badge,
+  Button,
+  Skeleton,
+  Input,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from "@pops/ui";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Film,
+  Tv,
+  Save,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { toast } from "sonner";
+import { trpc } from "../lib/trpc";
+
+function ConnectionBadge({ connected }: { connected: boolean }) {
+  return connected ? (
+    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+      <CheckCircle2 className="h-3 w-3 mr-1" />
+      Connected
+    </Badge>
+  ) : (
+    <Badge className="bg-red-500/10 text-red-400 border-red-500/20">
+      <XCircle className="h-3 w-3 mr-1" />
+      Disconnected
+    </Badge>
+  );
+}
+
+function ServiceCard({
+  label,
+  icon: Icon,
+  url,
+  apiKey,
+  hasKey,
+  onUrlChange,
+  onApiKeyChange,
+  onSave,
+  onTest,
+  saving,
+  testing,
+  testResult,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  url: string;
+  apiKey: string;
+  hasKey: boolean;
+  onUrlChange: (v: string) => void;
+  onApiKeyChange: (v: string) => void;
+  onSave: () => void;
+  onTest: () => void;
+  saving: boolean;
+  testing: boolean;
+  testResult: { configured: boolean; connected: boolean; version?: string; error?: string } | null;
+}) {
+  const [showKey, setShowKey] = useState(false);
+  const configured = !!(url && (hasKey || (apiKey && apiKey !== "••••••••")));
+
+  return (
+    <div className="rounded-lg border bg-card p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+        <h2 className="text-lg font-semibold">{label}</h2>
+        {testResult && configured && (
+          <ConnectionBadge connected={testResult.connected} />
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-muted-foreground">
+            Server URL
+          </label>
+          <Input
+            placeholder="http://192.168.1.100:7878"
+            value={url}
+            onChange={(e) => onUrlChange(e.target.value)}
+            disabled={saving}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-muted-foreground">
+            API Key
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type={showKey ? "text" : "password"}
+              placeholder="Enter API key"
+              value={apiKey}
+              onChange={(e) => onApiKeyChange(e.target.value)}
+              disabled={saving}
+              className="flex-1"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0"
+              onClick={() => setShowKey(!showKey)}
+              aria-label={showKey ? "Hide API key" : "Show API key"}
+            >
+              {showKey ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          Save
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onTest}
+          disabled={testing || !configured}
+        >
+          {testing ? (
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          Test Connection
+        </Button>
+      </div>
+
+      {testResult?.connected && testResult.version && (
+        <p className="text-xs text-emerald-400">
+          Connected — v{testResult.version}
+        </p>
+      )}
+      {testResult && !testResult.connected && testResult.error && (
+        <p className="text-xs text-red-400">{testResult.error}</p>
+      )}
+    </div>
+  );
+}
+
+export function ArrSettingsPage() {
+  const [radarrUrl, setRadarrUrl] = useState("");
+  const [radarrApiKey, setRadarrApiKey] = useState("");
+  const [sonarrUrl, setSonarrUrl] = useState("");
+  const [sonarrApiKey, setSonarrApiKey] = useState("");
+
+  const settingsQuery = trpc.media.arr.getSettings.useQuery();
+
+  useEffect(() => {
+    if (settingsQuery.data?.data) {
+      const d = settingsQuery.data.data;
+      setRadarrUrl(d.radarrUrl);
+      setRadarrApiKey(d.radarrApiKey);
+      setSonarrUrl(d.sonarrUrl);
+      setSonarrApiKey(d.sonarrApiKey);
+    }
+  }, [settingsQuery.data?.data]);
+
+  const saveSettings = trpc.media.arr.saveSettings.useMutation({
+    onSuccess: () => {
+      toast.success("Settings saved");
+      settingsQuery.refetch();
+    },
+    onError: (err) => toast.error(`Failed to save: ${err.message}`),
+  });
+
+  const testRadarr = trpc.media.arr.testRadarr.useQuery(undefined, {
+    enabled: false,
+  });
+  const testSonarr = trpc.media.arr.testSonarr.useQuery(undefined, {
+    enabled: false,
+  });
+
+  if (settingsQuery.isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto p-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/media">Media</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Arr Settings</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link
+          to="/media"
+          className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+          aria-label="Back to Media"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Radarr & Sonarr Settings
+        </h1>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        Configure your Radarr and Sonarr connections to see download status
+        badges on movie and TV show pages.
+      </p>
+
+      <div className="grid gap-6">
+        <ServiceCard
+          label="Radarr"
+          icon={Film}
+          url={radarrUrl}
+          apiKey={radarrApiKey}
+          hasKey={settingsQuery.data?.data.radarrHasKey ?? false}
+          onUrlChange={setRadarrUrl}
+          onApiKeyChange={setRadarrApiKey}
+          onSave={() =>
+            saveSettings.mutate({
+              radarrUrl,
+              radarrApiKey,
+            })
+          }
+          onTest={() => testRadarr.refetch()}
+          saving={saveSettings.isPending}
+          testing={testRadarr.isFetching}
+          testResult={testRadarr.data?.data ?? null}
+        />
+
+        <ServiceCard
+          label="Sonarr"
+          icon={Tv}
+          url={sonarrUrl}
+          apiKey={sonarrApiKey}
+          hasKey={settingsQuery.data?.data.sonarrHasKey ?? false}
+          onUrlChange={setSonarrUrl}
+          onApiKeyChange={setSonarrApiKey}
+          onSave={() =>
+            saveSettings.mutate({
+              sonarrUrl,
+              sonarrApiKey,
+            })
+          }
+          onTest={() => testSonarr.refetch()}
+          saving={saveSettings.isPending}
+          testing={testSonarr.isFetching}
+          testResult={testSonarr.data?.data ?? null}
+        />
+      </div>
+    </div>
+  );
+}
