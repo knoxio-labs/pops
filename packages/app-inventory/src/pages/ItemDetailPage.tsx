@@ -75,7 +75,7 @@ export function ItemDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6 max-w-3xl">
+      <div className="space-y-6 max-w-3xl">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-6 w-32" />
         <div className="grid grid-cols-2 gap-4">
@@ -91,7 +91,7 @@ export function ItemDetailPage() {
   if (error) {
     const is404 = error.data?.code === "NOT_FOUND";
     return (
-      <div className="p-6">
+      <div>
         <Alert variant="destructive">
           <AlertTitle>{is404 ? "Item not found" : "Error"}</AlertTitle>
           <AlertDescription>
@@ -113,7 +113,7 @@ export function ItemDetailPage() {
   const item = itemData.data;
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="max-w-3xl">
       {/* Breadcrumb */}
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
