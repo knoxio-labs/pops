@@ -133,7 +133,7 @@ export function getQuickPickMovies(count: number): QuickPickMovie[] {
          SELECT DISTINCT media_id FROM watch_history WHERE media_type = 'movie'
        )
        AND m.id NOT IN (
-         SELECT media_id FROM media_watchlist WHERE media_type = 'movie'
+         SELECT media_id FROM watchlist WHERE media_type = 'movie'
        )
        ORDER BY RANDOM()
        LIMIT ?`
