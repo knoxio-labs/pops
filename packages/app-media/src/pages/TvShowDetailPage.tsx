@@ -114,10 +114,8 @@ export function TvShowDetailPage() {
     ? new Date(show.firstAirDate).getFullYear()
     : null;
 
-  const posterSrc = `/media/images/tv/${show.id}/poster.jpg`;
-  const backdropSrc = show.backdropPath
-    ? `/media/images/tv/${show.id}/backdrop.jpg`
-    : null;
+  const posterSrc = show.posterUrl ?? "";
+  const backdropSrc = show.backdropUrl ?? null;
 
   const seasons = seasonsData?.data ?? [];
   const progress = progressData?.data;
