@@ -554,7 +554,6 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
       { id: "loc-cupboard", name: "Storage Cupboard", parent_id: "loc-laundry", sort_order: 0 },
     ];
 
-    const now = new Date().toISOString();
     const insertLocation = db.prepare(`
       INSERT INTO locations (id, name, parent_id, sort_order, last_edited_time)
       VALUES (?, ?, ?, ?, ?)
