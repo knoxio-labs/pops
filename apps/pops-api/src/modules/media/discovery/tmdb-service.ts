@@ -17,7 +17,11 @@ function getLibraryTmdbIds(): Set<number> {
 }
 
 /** Build a poster URL: proxy for library items, TMDB CDN for non-library items. */
-function buildPosterUrl(posterPath: string | null, tmdbId: number, inLibrary: boolean): string | null {
+function buildPosterUrl(
+  posterPath: string | null,
+  tmdbId: number,
+  inLibrary: boolean
+): string | null {
   if (!posterPath) return null;
   if (inLibrary) return `/media/images/movie/${tmdbId}/poster.jpg`;
   return `https://image.tmdb.org/t/p/w342${posterPath}`;

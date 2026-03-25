@@ -142,9 +142,7 @@ export function getQuickPickMovies(count: number): QuickPickMovie[] {
 
   return rows.map((row) => ({
     ...row,
-    posterUrl: row.posterPath
-      ? `/media/images/movie/${row.tmdbId}/poster.jpg`
-      : null,
+    posterUrl: row.posterPath ? `/media/images/movie/${row.tmdbId}/poster.jpg` : null,
   }));
 }
 
