@@ -1093,8 +1093,9 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
+    const movieIds: number[] = [];
     for (const movie of movies) {
-      insertMovie.run(
+      const result = insertMovie.run(
         movie.tmdb_id,
         movie.title,
         movie.overview,
@@ -1108,6 +1109,7 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
         movie.poster_path,
         movie.backdrop_path
       );
+      movieIds.push(Number(result.lastInsertRowid));
     }
 
     // -------------------------------------------------------------------------
@@ -1220,9 +1222,13 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
 
     // Breaking Bad — seasons 1 & 5
     const bbS1 = Number(insertSeason.run(tvShowIds[0], 30272, 1, "Season 1", 7).lastInsertRowid);
-    insertEpisode.run(bbS1, 349232, 1, "Pilot", 58);
-    insertEpisode.run(bbS1, 349233, 2, "Cat's in the Bag...", 48);
-    insertEpisode.run(bbS1, 349234, 3, "...And the Bag's in the River", 48);
+    const bbS1E1 = Number(insertEpisode.run(bbS1, 349232, 1, "Pilot", 58).lastInsertRowid);
+    const bbS1E2 = Number(
+      insertEpisode.run(bbS1, 349233, 2, "Cat's in the Bag...", 48).lastInsertRowid
+    );
+    const bbS1E3 = Number(
+      insertEpisode.run(bbS1, 349234, 3, "...And the Bag's in the River", 48).lastInsertRowid
+    );
 
     const bbS5 = Number(insertSeason.run(tvShowIds[0], 488434, 5, "Season 5", 16).lastInsertRowid);
     insertEpisode.run(bbS5, 4161693, 1, "Live Free or Die", 47);
@@ -1251,6 +1257,167 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
     insertEpisode.run(shoS1, 9784550, 2, "Servants of Two Masters", 55);
     insertEpisode.run(shoS1, 9784558, 10, "A Dream of a Dream", 70);
 
+    // -------------------------------------------------------------------------
+    // Watchlist
+    // -------------------------------------------------------------------------
+    const insertWatchlist = db.prepare(`
+      INSERT INTO watchlist (media_type, media_id, priority, notes, added_at)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    // Queue up some movies and a show to watch
+    insertWatchlist.run(
+      "movie",
+      movieIds[7],
+      1,
+      "Rewatch — it's been years",
+      "2026-02-01T10:00:00Z"
+    ); // Matrix
+    insertWatchlist.run("movie", movieIds[8], 2, "IMAX re-release coming", "2026-02-05T14:00:00Z"); // Interstellar
+    insertWatchlist.run("movie", movieIds[5], 0, null, "2026-02-10T09:00:00Z"); // Fight Club
+    insertWatchlist.run("tv_show", tvShowIds[2], 1, "Finish season 1", "2026-01-20T08:00:00Z"); // Shogun
+    const watchlistCount = 4;
+
+    // -------------------------------------------------------------------------
+    // Watch History
+    // -------------------------------------------------------------------------
+    const insertWatchHistory = db.prepare(`
+      INSERT INTO watch_history (media_type, media_id, watched_at, completed)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    // Mark some movies as watched
+    insertWatchHistory.run("movie", movieIds[0], "2026-01-15T20:00:00Z", 1); // Shawshank
+    insertWatchHistory.run("movie", movieIds[1], "2026-01-18T21:00:00Z", 1); // Godfather
+    insertWatchHistory.run("movie", movieIds[2], "2026-01-22T19:30:00Z", 1); // Dark Knight
+    insertWatchHistory.run("movie", movieIds[3], "2026-01-25T20:00:00Z", 1); // Pulp Fiction
+    insertWatchHistory.run("movie", movieIds[6], "2026-02-01T19:00:00Z", 1); // LOTR
+    // Mark some episodes as watched (Breaking Bad S1)
+    insertWatchHistory.run("episode", bbS1E1, "2026-02-05T20:00:00Z", 1);
+    insertWatchHistory.run("episode", bbS1E2, "2026-02-06T20:00:00Z", 1);
+    insertWatchHistory.run("episode", bbS1E3, "2026-02-07T20:00:00Z", 1);
+    const watchHistoryCount = 8;
+
+    // -------------------------------------------------------------------------
+    // Comparison Dimensions
+    // -------------------------------------------------------------------------
+    const insertDimension = db.prepare(`
+      INSERT INTO comparison_dimensions (name, description, active, sort_order)
+      VALUES (?, ?, 1, ?)
+    `);
+
+    const dimCinema = Number(
+      insertDimension.run(
+        "Cinematography",
+        "Visual quality, camera work, and artistic direction",
+        1
+      ).lastInsertRowid
+    );
+    const dimActing = Number(
+      insertDimension.run("Acting", "Quality of performances", 2).lastInsertRowid
+    );
+    const dimRewatch = Number(
+      insertDimension.run("Rewatchability", "How much you want to watch it again", 3)
+        .lastInsertRowid
+    );
+    const dimFun = Number(
+      insertDimension.run("Fun", "Pure entertainment value", 4).lastInsertRowid
+    );
+    const dimEmotion = Number(
+      insertDimension.run("Emotional Impact", "How deeply it affects you", 5).lastInsertRowid
+    );
+    const dimensionCount = 5;
+
+    // -------------------------------------------------------------------------
+    // Comparisons (pairwise movie matchups)
+    // -------------------------------------------------------------------------
+    const insertComparison = db.prepare(`
+      INSERT INTO comparisons (dimension_id, media_a_type, media_a_id, media_b_type, media_b_id, winner_type, winner_id, compared_at)
+      VALUES (?, 'movie', ?, 'movie', ?, 'movie', ?, ?)
+    `);
+
+    // Cinematography matchups
+    insertComparison.run(dimCinema, movieIds[2], movieIds[3], movieIds[2], "2026-02-10T10:00:00Z"); // Dark Knight > Pulp Fiction
+    insertComparison.run(dimCinema, movieIds[8], movieIds[6], movieIds[8], "2026-02-10T10:01:00Z"); // Interstellar > LOTR
+    insertComparison.run(dimCinema, movieIds[1], movieIds[0], movieIds[1], "2026-02-10T10:02:00Z"); // Godfather > Shawshank
+    // Acting matchups
+    insertComparison.run(dimActing, movieIds[0], movieIds[4], movieIds[0], "2026-02-10T10:03:00Z"); // Shawshank > Forrest Gump
+    insertComparison.run(dimActing, movieIds[1], movieIds[3], movieIds[1], "2026-02-10T10:04:00Z"); // Godfather > Pulp Fiction
+    // Rewatchability matchups
+    insertComparison.run(dimRewatch, movieIds[3], movieIds[2], movieIds[3], "2026-02-10T10:05:00Z"); // Pulp Fiction > Dark Knight
+    insertComparison.run(dimRewatch, movieIds[9], movieIds[4], movieIds[9], "2026-02-10T10:06:00Z"); // Spider-Verse > Forrest Gump
+    // Fun matchups
+    insertComparison.run(dimFun, movieIds[9], movieIds[7], movieIds[9], "2026-02-10T10:07:00Z"); // Spider-Verse > Matrix
+    insertComparison.run(dimFun, movieIds[2], movieIds[6], movieIds[2], "2026-02-10T10:08:00Z"); // Dark Knight > LOTR
+    // Emotional Impact
+    insertComparison.run(dimEmotion, movieIds[0], movieIds[8], movieIds[0], "2026-02-10T10:09:00Z"); // Shawshank > Interstellar
+    const comparisonCount = 10;
+
+    // -------------------------------------------------------------------------
+    // Media Scores (pre-computed from comparisons)
+    // -------------------------------------------------------------------------
+    const insertScore = db.prepare(`
+      INSERT INTO media_scores (media_type, media_id, dimension_id, score, comparison_count, updated_at)
+      VALUES ('movie', ?, ?, ?, ?, '2026-02-10T10:10:00Z')
+    `);
+
+    // Give scored movies reasonable Elo-like ratings based on comparisons
+    insertScore.run(movieIds[0], dimCinema, 1480, 1); // Shawshank
+    insertScore.run(movieIds[1], dimCinema, 1530, 2); // Godfather (won)
+    insertScore.run(movieIds[2], dimCinema, 1520, 1); // Dark Knight (won)
+    insertScore.run(movieIds[8], dimCinema, 1520, 1); // Interstellar (won)
+    insertScore.run(movieIds[0], dimActing, 1520, 1); // Shawshank (won)
+    insertScore.run(movieIds[1], dimActing, 1520, 1); // Godfather (won)
+    insertScore.run(movieIds[3], dimRewatch, 1520, 1); // Pulp Fiction (won)
+    insertScore.run(movieIds[9], dimRewatch, 1520, 1); // Spider-Verse (won)
+    insertScore.run(movieIds[9], dimFun, 1530, 1); // Spider-Verse (won)
+    insertScore.run(movieIds[2], dimFun, 1520, 1); // Dark Knight (won)
+    insertScore.run(movieIds[0], dimEmotion, 1520, 1); // Shawshank (won)
+    const scoreCount = 11;
+
+    // -------------------------------------------------------------------------
+    // AI Usage
+    // -------------------------------------------------------------------------
+    const insertAiUsage = db.prepare(`
+      INSERT INTO ai_usage (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    insertAiUsage.run(
+      "Categorize transaction: WOOLWORTHS 1234",
+      "Woolworths",
+      "Groceries",
+      150,
+      25,
+      0.0003,
+      0,
+      "batch-2026-01-15",
+      "2026-01-15T10:00:00Z"
+    );
+    insertAiUsage.run(
+      "Categorize transaction: SPOTIFY PREMIUM",
+      "Spotify",
+      "Subscriptions",
+      140,
+      20,
+      0.0002,
+      0,
+      "batch-2026-01-15",
+      "2026-01-15T10:00:01Z"
+    );
+    insertAiUsage.run(
+      "Categorize transaction: WOOLWORTHS 5678",
+      "Woolworths",
+      "Groceries",
+      150,
+      25,
+      0.0001,
+      1,
+      "batch-2026-02-01",
+      "2026-02-01T10:00:00Z"
+    );
+    const aiUsageCount = 3;
+
     // Count totals for log
     const seasonCount = 5;
     const episodeCount = 16;
@@ -1259,7 +1426,9 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
       `[seeder] Seeded ${entities.length} entities, ${transactions.length} transactions, ` +
         `${budgets.length} budgets, ${homeInventory.length} inventory items, ${wishList.length} wish list items, ` +
         `${movies.length} movies, ${tvShowsData.length} tv shows, ${seasonCount} seasons, ${episodeCount} episodes, ` +
-        `${locations.length} locations, ${connections.length} connections`
+        `${locations.length} locations, ${connections.length} connections, ` +
+        `${watchlistCount} watchlist, ${watchHistoryCount} watch history, ` +
+        `${dimensionCount} dimensions, ${comparisonCount} comparisons, ${scoreCount} scores, ${aiUsageCount} ai usage`
     );
   });
 
