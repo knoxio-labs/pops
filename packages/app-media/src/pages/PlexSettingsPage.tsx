@@ -45,64 +45,6 @@ function ConnectionBadge({ connected }: { connected: boolean }) {
   );
 }
 
-function SyncResultCard({
-  label,
-  icon: Icon,
-  result,
-}: {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  result: {
-    synced: number;
-    skipped: number;
-    errors: { title: string; reason: string }[];
-  } | null;
-}) {
-  if (!result) {
-    return (
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Icon className="h-4 w-4" />
-          {label}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">No sync data yet</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <Icon className="h-4 w-4" />
-        {label}
-      </div>
-
-      <div className="flex gap-4 text-xs">
-        <span className="text-emerald-400">{result.synced} synced</span>
-        <span className="text-muted-foreground">{result.skipped} skipped</span>
-        {result.errors.length > 0 && (
-          <span className="text-red-400">{result.errors.length} errors</span>
-        )}
-      </div>
-
-      {result.errors.length > 0 && (
-        <details className="text-xs">
-          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-            Show errors
-          </summary>
-          <ul className="mt-2 space-y-1 pl-4">
-            {result.errors.map((err, i) => (
-              <li key={i} className="text-red-400">
-                <span className="font-medium">{err.title}:</span> {err.reason}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </div>
-  );
-}
-
 export function PlexSettingsPage() {
   const [movieSectionId, setMovieSectionId] = useState<string>("");
   const [tvSectionId, setTvSectionId] = useState<string>("");
@@ -121,7 +63,8 @@ export function PlexSettingsPage() {
 
   useEffect(() => {
     if (savedSectionIds.data?.data) {
-      const { movieSectionId: savedMovie, tvSectionId: savedTv } = savedSectionIds.data.data;
+      const { movieSectionId: savedMovie, tvSectionId: savedTv } =
+        savedSectionIds.data.data;
       if (savedMovie) setMovieSectionId(savedMovie);
       if (savedTv) setTvSectionId(savedTv);
     }
@@ -169,7 +112,7 @@ export function PlexSettingsPage() {
       setPinId(id);
       window.open(
         `https://app.plex.tv/auth#?clientID=${clientId}&code=${code}&context[device][product]=POPS`,
-        "_blank"
+        "_blank",
       );
     },
     onError: (err) => {
@@ -274,7 +217,9 @@ export function PlexSettingsPage() {
             <h2 className="text-lg font-semibold">Server Configuration</h2>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Plex Media Server URL</label>
+            <label className="text-sm font-medium text-muted-foreground">
+              Plex Media Server URL
+            </label>
             <div className="flex gap-2">
               <Input
                 placeholder="http://192.168.1.100:32400"
@@ -283,19 +228,31 @@ export function PlexSettingsPage() {
                 className="flex-1"
                 disabled={saveUrl.isPending}
               />
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => saveUrl.mutate({ url: plexUrl })}
-                disabled={saveUrl.isPending || !plexUrl || (plexUrl === currentUrl.data?.data)}
+                disabled={
+                  saveUrl.isPending ||
+                  !plexUrl ||
+                  plexUrl === currentUrl.data?.data
+                }
               >
-                {saveUrl.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saveUrl.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
               </Button>
             </div>
             {saveUrl.error && (
-              <p className="text-xs text-red-400 mt-1">{saveUrl.error.message}</p>
+              <p className="text-xs text-red-400 mt-1">
+                {saveUrl.error.message}
+              </p>
             )}
             {!status?.hasUrl && (
-              <p className="text-xs text-amber-400">Please set your Plex server URL to enable connection.</p>
+              <p className="text-xs text-amber-400">
+                Please set your Plex server URL to enable connection.
+              </p>
             )}
           </div>
         </div>
@@ -306,14 +263,17 @@ export function PlexSettingsPage() {
             <div className="space-y-2">
               <h2 className="text-lg font-semibold">Plex Account</h2>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Link your Plex account to enable library syncing and watch history tracking.
+                Link your Plex account to enable library syncing and watch
+                history tracking.
               </p>
             </div>
-            
+
             <div className="pt-2">
               {pinId ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-amber-400 animate-pulse">Waiting for authentication in new tab...</p>
+                  <p className="text-sm text-amber-400 animate-pulse">
+                    Waiting for authentication in new tab...
+                  </p>
                   <Button variant="outline" onClick={() => setPinId(null)}>
                     Cancel
                   </Button>
@@ -326,14 +286,19 @@ export function PlexSettingsPage() {
                   {getPin.isPending ? "Requesting..." : "Connect to Plex"}
                 </Button>
               )}
-              {getPin.error && <p className="text-xs text-red-400 mt-2">{getPin.error.message}</p>}
+              {getPin.error && (
+                <p className="text-xs text-red-400 mt-2">
+                  {getPin.error.message}
+                </p>
+              )}
             </div>
           </div>
         ) : !status?.configured ? (
           <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
             <div className="text-sm text-amber-200">
-              Authenticated with Plex account, but server URL is missing. Set the URL above to finish setup.
+              Authenticated with Plex account, but server URL is missing. Set
+              the URL above to finish setup.
             </div>
           </div>
         ) : null}
@@ -345,7 +310,10 @@ export function PlexSettingsPage() {
             <div className="space-y-1">
               <p className="font-semibold">Connection Failed</p>
               <p>{connectionError}</p>
-              <p className="text-xs opacity-70">Verify that the server URL is correct and the server is reachable from this application.</p>
+              <p className="text-xs opacity-70">
+                Verify that the server URL is correct and the server is
+                reachable from this application.
+              </p>
             </div>
           </div>
         )}
@@ -383,7 +351,9 @@ export function PlexSettingsPage() {
                   <Button
                     size="sm"
                     disabled={!movieSectionId || syncMovies.isPending}
-                    onClick={() => syncMovies.mutate({ sectionId: movieSectionId })}
+                    onClick={() =>
+                      syncMovies.mutate({ sectionId: movieSectionId })
+                    }
                     className="w-full"
                   >
                     {syncMovies.isPending ? (
@@ -395,7 +365,9 @@ export function PlexSettingsPage() {
                   </Button>
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">No movie libraries found</p>
+                <p className="text-xs text-muted-foreground">
+                  No movie libraries found
+                </p>
               )}
             </div>
 
@@ -429,7 +401,9 @@ export function PlexSettingsPage() {
                   <Button
                     size="sm"
                     disabled={!tvSectionId || syncTvShows.isPending}
-                    onClick={() => syncTvShows.mutate({ sectionId: tvSectionId })}
+                    onClick={() =>
+                      syncTvShows.mutate({ sectionId: tvSectionId })
+                    }
                     className="w-full"
                   >
                     {syncTvShows.isPending ? (
@@ -441,32 +415,15 @@ export function PlexSettingsPage() {
                   </Button>
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">No TV libraries found</p>
+                <p className="text-xs text-muted-foreground">
+                  No TV libraries found
+                </p>
               )}
             </div>
           </div>
         )}
 
-        {/* Last sync results */}
-        {(status?.lastSyncMovies || status?.lastSyncTvShows) && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Last Sync Results
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SyncResultCard
-                label="Movies"
-                icon={Film}
-                result={status?.lastSyncMovies ?? null}
-              />
-              <SyncResultCard
-                label="TV Shows"
-                icon={Tv}
-                result={status?.lastSyncTvShows ?? null}
-              />
-            </div>
-          </div>
-        )}
+        {/* Sync results are shown via toast notifications on sync completion */}
       </div>
     </div>
   );
