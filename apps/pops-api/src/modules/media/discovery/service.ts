@@ -44,10 +44,7 @@ function getGenreAffinities(): GenreAffinity[] {
     .innerJoin(sql`json_each(${movies.genres}) g`, sql`1=1`)
     .innerJoin(
       mediaScores,
-      and(
-        eq(mediaScores.mediaType, "movie"),
-        eq(mediaScores.mediaId, movies.id),
-      ),
+      and(eq(mediaScores.mediaType, "movie"), eq(mediaScores.mediaId, movies.id))
     )
     .groupBy(sql`g.value`)
     .orderBy(desc(sql`ROUND(AVG(${mediaScores.score}), 1)`))
@@ -105,7 +102,7 @@ function getGenreDistribution(): { genres: GenreDistribution[]; totalWatched: nu
     .from(watchHistory)
     .innerJoin(
       movies,
-      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, "movie")),
+      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, "movie"))
     )
     .innerJoin(sql`json_each(${movies.genres}) g`, sql`1=1`)
     .groupBy(sql`g.value`)
@@ -163,12 +160,7 @@ export function getQuickPickMovies(count_: number): QuickPickMovie[] {
       runtime: movies.runtime,
     })
     .from(movies)
-    .where(
-      and(
-        notInArray(movies.id, watchedIds),
-        notInArray(movies.id, watchlistIds),
-      ),
-    )
+    .where(and(notInArray(movies.id, watchedIds), notInArray(movies.id, watchlistIds)))
     .orderBy(sql`RANDOM()`)
     .limit(count_)
     .all();
