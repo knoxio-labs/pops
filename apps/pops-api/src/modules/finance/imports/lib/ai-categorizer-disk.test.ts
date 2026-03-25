@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, existsSync, unlinkSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -67,7 +67,7 @@ describe("AI categorizer disk cache", () => {
     await categorizeWithAi("WOOLWORTHS 1234");
 
     expect(existsSync(cachePath)).toBe(true);
-    const data = JSON.parse(require("node:fs").readFileSync(cachePath, "utf-8"));
+    const data = JSON.parse(readFileSync(cachePath, "utf-8"));
     expect(data).toHaveLength(1);
     expect(data[0].entityName).toBe("Woolworths");
     expect(data[0].category).toBe("Groceries");
