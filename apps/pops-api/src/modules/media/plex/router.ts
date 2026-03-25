@@ -10,6 +10,8 @@ import { PlexApiError } from "./types.js";
 import { PlexClient } from "./client.js";
 import * as plexService from "./service.js";
 import * as scheduler from "./scheduler.js";
+import { importMoviesFromPlex } from "./sync-movies.js";
+import { importTvShowsFromPlex } from "./sync-tv.js";
 import { getDrizzle } from "../../../db.js";
 
 function requirePlexClient(): PlexClient {
@@ -61,7 +63,7 @@ export const plexRouter = router({
     .mutation(async ({ input }) => {
       const client = requirePlexClient();
       try {
-        const result = await plexService.syncMovies(client, input.sectionId);
+        const result = await importMoviesFromPlex(client, input.sectionId);
         return {
           data: result,
           message: `Synced ${result.synced} movies (${result.skipped} skipped, ${result.errors.length} errors)`,
@@ -83,7 +85,7 @@ export const plexRouter = router({
     .mutation(async ({ input }) => {
       const client = requirePlexClient();
       try {
-        const result = await plexService.syncTvShows(client, input.sectionId);
+        const result = await importTvShowsFromPlex(client, input.sectionId);
         return {
           data: result,
           message: `Synced ${result.synced} TV shows (${result.skipped} skipped, ${result.errors.length} errors)`,

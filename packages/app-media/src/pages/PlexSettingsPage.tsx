@@ -46,64 +46,6 @@ function ConnectionBadge({ connected }: { connected: boolean }) {
   );
 }
 
-function SyncResultCard({
-  label,
-  icon: Icon,
-  result,
-}: {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  result: {
-    synced: number;
-    skipped: number;
-    errors: { title: string; reason: string }[];
-  } | null;
-}) {
-  if (!result) {
-    return (
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Icon className="h-4 w-4" />
-          {label}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">No sync data yet</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <Icon className="h-4 w-4" />
-        {label}
-      </div>
-
-      <div className="flex gap-4 text-xs">
-        <span className="text-emerald-400">{result.synced} synced</span>
-        <span className="text-muted-foreground">{result.skipped} skipped</span>
-        {result.errors.length > 0 && (
-          <span className="text-red-400">{result.errors.length} errors</span>
-        )}
-      </div>
-
-      {result.errors.length > 0 && (
-        <details className="text-xs">
-          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-            Show errors
-          </summary>
-          <ul className="mt-2 space-y-1 pl-4">
-            {result.errors.map((err, i) => (
-              <li key={i} className="text-red-400">
-                <span className="font-medium">{err.title}:</span> {err.reason}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </div>
-  );
-}
-
 export function PlexSettingsPage() {
   const [movieSectionId, setMovieSectionId] = useState<string>("");
   const [tvSectionId, setTvSectionId] = useState<string>("");
@@ -492,26 +434,7 @@ export function PlexSettingsPage() {
           </div>
         )}
 
-        {/* Last sync results */}
-        {(status?.lastSyncMovies || status?.lastSyncTvShows) && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Last Sync Results
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SyncResultCard
-                label="Movies"
-                icon={Film}
-                result={status?.lastSyncMovies ?? null}
-              />
-              <SyncResultCard
-                label="TV Shows"
-                icon={Tv}
-                result={status?.lastSyncTvShows ?? null}
-              />
-            </div>
-          </div>
-        )}
+        {/* Sync results are shown via toast notifications on sync completion */}
       </div>
     </div>
   );
