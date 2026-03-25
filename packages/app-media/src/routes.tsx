@@ -58,6 +58,11 @@ const PlexSettingsPage = lazy(() =>
     default: m.PlexSettingsPage,
   })),
 );
+const ArrSettingsPage = lazy(() =>
+  import("./pages/ArrSettingsPage").then((m) => ({
+    default: m.ArrSettingsPage,
+  })),
+);
 const HistoryPage = lazy(() =>
   import("./pages/HistoryPage").then((m) => ({
     default: m.HistoryPage,
@@ -110,4 +115,5 @@ export const routes: RouteObject[] = [
   { path: "compare", element: <CompareArenaPage /> },
   { path: "quick-pick", element: <QuickPickPage /> },
   { path: "plex", element: <PlexSettingsPage /> },
+  { path: "arr", element: <ArrSettingsPage /> },
 ];

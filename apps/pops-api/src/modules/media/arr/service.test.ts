@@ -2,6 +2,29 @@
  * Arr service tests — tests client factory and status caching.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// Mock the database so settings table lookups return nothing by default
+vi.mock("../../../db.js", () => ({
+  getDrizzle: vi.fn(() => ({
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          get: () => undefined,
+        }),
+      }),
+    }),
+    insert: () => ({
+      values: () => ({
+        onConflictDoUpdate: () => ({ run: vi.fn() }),
+        onConflictDoNothing: () => ({ run: vi.fn() }),
+      }),
+    }),
+    delete: () => ({
+      where: () => ({ run: vi.fn() }),
+    }),
+  })),
+}));
+
 import { getRadarrClient, getSonarrClient, getArrConfig, clearStatusCache } from "./service.js";
 
 describe("Arr service", () => {
