@@ -20,14 +20,8 @@ const SearchTvShowsSchema = z.object({
 export const searchRouter = router({
   /** Search movies via TMDB. */
   movies: protectedProcedure.input(SearchMoviesSchema).query(async ({ input }) => {
-    const client = getTmdbClient();
-    if (!client) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "TMDB_API_KEY is not configured",
-      });
-    }
     try {
+      const client = getTmdbClient();
       const response = await client.searchMovies(input.query, input.page);
       return {
         results: response.results,

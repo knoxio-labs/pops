@@ -24,6 +24,11 @@ async function main() {
     process.exit(1);
   }
 
+  if (!tvdbClient) {
+    console.error("❌ THETVDB_API_KEY not set in environment");
+    process.exit(1);
+  }
+
   console.log(`\n🚀 Media Metadata & Image Sync`);
   console.log(`📂 Cache directory: ${imagesDir}`);
 

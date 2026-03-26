@@ -38,7 +38,8 @@ export const inventoryRouter = router({
       limit,
       offset,
       input.locationId,
-      input.assetId
+      input.assetId,
+      input.includeChildren
     );
 
     return {
@@ -46,6 +47,19 @@ export const inventoryRouter = router({
       pagination: paginationMeta(total, limit, offset),
       totals: { totalReplacementValue, totalResaleValue },
     };
+  }),
+
+  /** Search for an item by exact asset ID (case-insensitive). Returns null if not found. */
+  searchByAssetId: protectedProcedure
+    .input(z.object({ assetId: z.string().min(1) }))
+    .query(({ input }) => {
+      const row = service.searchByAssetId(input.assetId);
+      return { data: row ? toInventoryItem(row) : null };
+    }),
+
+  /** Return distinct item types from the database. */
+  distinctTypes: protectedProcedure.query(() => {
+    return { data: service.getDistinctTypes() };
   }),
 
   /** Get a single inventory item by ID. */

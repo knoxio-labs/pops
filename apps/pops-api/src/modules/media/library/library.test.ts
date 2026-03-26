@@ -11,7 +11,7 @@ vi.mock("../tmdb/client.js", () => ({
 }));
 
 // Set the env var before the router module loads
-vi.stubEnv("TMDB_API_KEY", "test-api-key");
+vi.stubEnv("TMDB_API_TOKEN", "test-api-key");
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;

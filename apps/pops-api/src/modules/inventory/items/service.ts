@@ -3,10 +3,11 @@
  * SQLite is the source of truth. All operations are local.
  */
 import crypto from "crypto";
-import { eq, like, count, and, sum } from "drizzle-orm";
+import { eq, like, count, and, sum, inArray, sql, isNotNull } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { homeInventory } from "@pops/db-types";
 import { NotFoundError } from "../../../shared/errors.js";
+import { getDescendantLocationIds } from "../locations/service.js";
 import type { InventoryRow, CreateInventoryItemInput, UpdateInventoryItemInput } from "./types.js";
 
 /** Count + rows + value aggregates for a paginated list. */
@@ -28,7 +29,8 @@ export function listInventoryItems(
   limit: number,
   offset: number,
   locationId?: string,
-  assetId?: string
+  assetId?: string,
+  includeChildren?: boolean
 ): InventoryListResult {
   const db = getDrizzle();
 
@@ -62,7 +64,12 @@ export function listInventoryItems(
     conditions.push(eq(homeInventory.deductible, deductible ? 1 : 0));
   }
   if (locationId) {
-    conditions.push(eq(homeInventory.locationId, locationId));
+    if (includeChildren) {
+      const locationIds = [locationId, ...getDescendantLocationIds(locationId)];
+      conditions.push(inArray(homeInventory.locationId, locationIds));
+    } else {
+      conditions.push(eq(homeInventory.locationId, locationId));
+    }
   }
   if (assetId) {
     conditions.push(eq(homeInventory.assetId, assetId));
@@ -86,6 +93,32 @@ export function listInventoryItems(
     totalReplacementValue: Number(sumResult?.replacementSum) || 0,
     totalResaleValue: Number(sumResult?.resaleSum) || 0,
   };
+}
+
+/**
+ * Search for an inventory item by exact asset ID (case-insensitive).
+ * Returns the item or null if not found.
+ */
+export function searchByAssetId(assetId: string): InventoryRow | null {
+  const db = getDrizzle();
+  const [row] = db
+    .select()
+    .from(homeInventory)
+    .where(sql`LOWER(${homeInventory.assetId}) = LOWER(${assetId})`)
+    .all();
+  return row ?? null;
+}
+
+/** Return distinct item types that exist in the database. */
+export function getDistinctTypes(): string[] {
+  const db = getDrizzle();
+  const rows = db
+    .selectDistinct({ type: homeInventory.type })
+    .from(homeInventory)
+    .where(isNotNull(homeInventory.type))
+    .orderBy(homeInventory.type)
+    .all();
+  return rows.map((r) => r.type).filter((t): t is string => t !== null);
 }
 
 /** Get a single inventory item by id. Throws NotFoundError if missing. */
