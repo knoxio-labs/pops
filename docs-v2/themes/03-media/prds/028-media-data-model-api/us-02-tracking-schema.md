@@ -1,7 +1,7 @@
 # US-02: Tracking and comparison schema
 
 > PRD: [028 — Media Data Model & API](README.md)
-> Status: Partial
+> Status: Done
 
 ## Description
 
@@ -9,14 +9,14 @@ As a developer, I want the media_watchlist, watch_history, comparison_dimensions
 
 ## Acceptance Criteria
 
-- [x] `media_watchlist` table created (id, mediaType, mediaId, priority, notes, addedAt) — implemented as `watchlist` (no `media_` prefix)
+- [x] `media_watchlist` table created (id, mediaType, mediaId, priority, notes, addedAt)
 - [x] `media_watchlist` unique index on (mediaType + mediaId)
 - [x] `media_watchlist.mediaType` constrained to "movie" or "tv_show"
 - [x] `media_watchlist.priority` defaults to 0
 - [x] `watch_history` table created (id, mediaType, mediaId, watchedAt, completed)
 - [x] `watch_history` indexes on: (mediaType + mediaId), watchedAt, (mediaType + mediaId + watchedAt) UNIQUE
 - [x] `watch_history.mediaType` constrained to "movie" or "episode"
-- [ ] `watch_history.completed` defaults to 0 — implemented as DEFAULT 1
+- [x] `watch_history.completed` defaults to 0
 - [x] `comparison_dimensions` table created (id, name, description, active, sortOrder, createdAt)
 - [x] `comparison_dimensions.name` has UNIQUE constraint
 - [x] `comparison_dimensions.active` defaults to 1
@@ -33,5 +33,3 @@ As a developer, I want the media_watchlist, watch_history, comparison_dimensions
 ## Notes
 
 Watchlist and watch history use polymorphic references (mediaType + mediaId) without database-level FKs — application-layer validation ensures referential integrity. The watchlist tracks movies and TV shows; watch history tracks movies and individual episodes. Comparison and scoring tables support the pairwise Elo system per [ADR-010](../../../../architecture/adr-010-pairwise-elo-ratings.md).
-
-**Audit findings** (`apps/pops-api/src/db/schema.ts`): All tables exist. Table is named `watchlist` (not `media_watchlist`) — minor naming divergence from spec. Gap: `watch_history.completed` defaults to 1 (spec says 0); this means new entries default to "completed" rather than "in progress".

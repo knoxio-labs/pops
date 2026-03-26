@@ -1,7 +1,7 @@
 # PRD-028: Media Data Model & API
 
 > Epic: [00 — Data Model & API](../../epics/00-data-model-api.md)
-> Status: Partial
+> Status: Done
 
 ## Overview
 
@@ -262,8 +262,8 @@ Define the media domain schema and build the tRPC routers that all other media f
 
 | # | Story | Summary | Parallelisable |
 |---|-------|---------|----------------|
-| 01 | [us-01-movie-tv-schema](us-01-movie-tv-schema.md) | Tables for movies, tv_shows, seasons, episodes with indexes and FK cascades | Yes | Partial |
-| 02 | [us-02-tracking-schema](us-02-tracking-schema.md) | Tables for media_watchlist, watch_history, comparison_dimensions, comparisons, media_scores | Yes | Partial |
+| 01 | [us-01-movie-tv-schema](us-01-movie-tv-schema.md) | Tables for movies, tv_shows, seasons, episodes with indexes and FK cascades | Yes | Done |
+| 02 | [us-02-tracking-schema](us-02-tracking-schema.md) | Tables for media_watchlist, watch_history, comparison_dimensions, comparisons, media_scores | Yes | Done |
 | 03 | [us-03-movie-tv-api](us-03-movie-tv-api.md) | CRUD procedures for movies and tvShows (including seasons/episodes) | Blocked by us-01 | Done |
 | 04 | [us-04-tracking-comparison-api](us-04-tracking-comparison-api.md) | Procedures for watchlist, watchHistory, and comparisons (Elo scoring, random pair, rankings) | Blocked by us-01, us-02 | Done |
 
