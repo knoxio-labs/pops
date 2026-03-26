@@ -82,9 +82,9 @@ export function listInventoryItems(
 
   return {
     rows,
-    total: countResult.total,
-    totalReplacementValue: Number(sumResult.replacementSum) || 0,
-    totalResaleValue: Number(sumResult.resaleSum) || 0,
+    total: countResult?.total ?? 0,
+    totalReplacementValue: Number(sumResult?.replacementSum) || 0,
+    totalResaleValue: Number(sumResult?.resaleSum) || 0,
   };
 }
 

@@ -27,19 +27,26 @@ export function DownloadQueue() {
         Downloading
       </h2>
       <div className="space-y-1.5">
-        {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
-            <Badge variant="outline" className="text-[10px] uppercase shrink-0">
-              {item.mediaType === "movie" ? "Movie" : "Episode"}
-            </Badge>
+        {items.map(
+          (item: {
+            id: string | number;
+            mediaType: string;
+            title: string;
+            episodeLabel?: string;
+            progress: number;
+          }) => (
+            <div key={item.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
+              <Badge variant="outline" className="text-[10px] uppercase shrink-0">
+                {item.mediaType === "movie" ? "Movie" : "Episode"}
+              </Badge>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
-                {item.title}
-                {item.episodeLabel && (
-                  <span className="text-muted-foreground ml-1.5">{item.episodeLabel}</span>
-                )}
-              </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {item.title}
+                  {item.episodeLabel && (
+                    <span className="text-muted-foreground ml-1.5">{item.episodeLabel}</span>
+                  )}
+                </p>
 
               {/* Progress bar */}
               <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden">
@@ -48,13 +55,13 @@ export function DownloadQueue() {
                   style={{ width: `${item.progress}%` }}
                 />
               </div>
-            </div>
 
-            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-              {item.progress}%
-            </span>
-          </div>
-        ))}
+              <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                {item.progress}%
+              </span>
+            </div>
+          )
+        )}
       </div>
     </section>
   );

@@ -144,7 +144,7 @@ describe("imports.processImport", () => {
     const result = await waitForCompletion<ProcessImportOutput>(sessionId);
     expect(result).toBeDefined();
     expect(result.matched.length).toBe(1);
-    expect(result.matched[0].entity.entityName).toBe("Woolworths");
+    expect(result.matched[0]!.entity.entityName).toBe("Woolworths");
   });
 
   it("returns correct output structure", async () => {

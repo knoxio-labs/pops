@@ -249,7 +249,8 @@ export function listComparisonsForMedia(
     .offset(offset)
     .all();
 
-  const [{ total }] = db.select({ total: count() }).from(comparisons).where(conditions).all();
+  const countRow = db.select({ total: count() }).from(comparisons).where(conditions).all()[0];
+  const total = countRow?.total ?? 0;
 
   return { rows, total };
 }
@@ -321,8 +322,8 @@ export function getRandomPair(dimensionId: number, avoidRecent: number = 10): Ra
     const candidateB = watchedMovieIds[idxB];
 
     if (!recentPairs.has(`${candidateA}-${candidateB}`)) {
-      movieAId = candidateA;
-      movieBId = candidateB;
+      movieAId = candidateA ?? null;
+      movieBId = candidateB ?? null;
       break;
     }
   }
@@ -332,11 +333,13 @@ export function getRandomPair(dimensionId: number, avoidRecent: number = 10): Ra
     const idxA = Math.floor(Math.random() * watchedMovieIds.length);
     let idxB = Math.floor(Math.random() * (watchedMovieIds.length - 1));
     if (idxB >= idxA) idxB++;
-    movieAId = watchedMovieIds[idxA];
-    movieBId = watchedMovieIds[idxB];
+    movieAId = watchedMovieIds[idxA] ?? null;
+    movieBId = watchedMovieIds[idxB] ?? null;
   }
 
   // Fetch movie metadata
+  if (movieAId === null || movieBId === null) return null;
+
   const movieARow = db
     .select({
       id: movies.id,
@@ -453,7 +456,8 @@ export function getRankings(
       .offset(offset)
       .all();
 
-    const [{ total }] = db.select({ total: count() }).from(mediaScores).where(where).all();
+    const scoreCountRow = db.select({ total: count() }).from(mediaScores).where(where).all()[0];
+    const total = scoreCountRow?.total ?? 0;
 
     return {
       rows: rows.map((row, i) => ({

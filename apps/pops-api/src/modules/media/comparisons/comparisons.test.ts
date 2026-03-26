@@ -34,15 +34,15 @@ describe("comparisons.listDimensions", () => {
 
     const result = await caller.media.comparisons.listDimensions();
     expect(result.data).toHaveLength(3);
-    expect(result.data[0].name).toBe("Visuals");
-    expect(result.data[1].name).toBe("Story");
-    expect(result.data[2].name).toBe("Acting");
+    expect(result.data[0]!.name).toBe("Visuals");
+    expect(result.data[1]!.name).toBe("Story");
+    expect(result.data[2]!.name).toBe("Acting");
   });
 
   it("returns correct shape with boolean active", async () => {
     seedDimension(db, { name: "Overall", active: 1 });
     const result = await caller.media.comparisons.listDimensions();
-    expect(result.data[0].active).toBe(true);
+    expect(result.data[0]!.active).toBe(true);
     expect(result.data[0]).toHaveProperty("id");
     expect(result.data[0]).toHaveProperty("name", "Overall");
     expect(result.data[0]).toHaveProperty("createdAt");
@@ -126,14 +126,14 @@ describe("comparisons.record", () => {
       mediaId: 1,
     });
     expect(scores.data).toHaveLength(1);
-    expect(scores.data[0].score).toBeGreaterThan(1500);
-    expect(scores.data[0].comparisonCount).toBe(1);
+    expect(scores.data[0]!.score).toBeGreaterThan(1500);
+    expect(scores.data[0]!.comparisonCount).toBe(1);
 
     const loserScores = await caller.media.comparisons.scores({
       mediaType: "movie",
       mediaId: 2,
     });
-    expect(loserScores.data[0].score).toBeLessThan(1500);
+    expect(loserScores.data[0]!.score).toBeLessThan(1500);
   });
 
   it("throws NOT_FOUND for missing dimension", async () => {
@@ -263,7 +263,7 @@ describe("comparisons.scores", () => {
       dimensionId: dim1,
     });
     expect(storyScores.data).toHaveLength(1);
-    expect(storyScores.data[0].score).toBeGreaterThan(1500);
+    expect(storyScores.data[0]!.score).toBeGreaterThan(1500);
 
     const visualScores = await caller.media.comparisons.scores({
       mediaType: "movie",
@@ -271,7 +271,7 @@ describe("comparisons.scores", () => {
       dimensionId: dim2,
     });
     expect(visualScores.data).toHaveLength(1);
-    expect(visualScores.data[0].score).toBeLessThan(1500);
+    expect(visualScores.data[0]!.score).toBeLessThan(1500);
   });
 });
 
@@ -400,11 +400,11 @@ describe("comparisons.rankings", () => {
 
     const result = await caller.media.comparisons.rankings({ dimensionId: dimId });
     expect(result.data.length).toBe(3);
-    expect(result.data[0].rank).toBe(1);
-    expect(result.data[0].mediaId).toBe(1); // winner should be #1
-    expect(result.data[0].score).toBeGreaterThan(1500);
-    expect(result.data[1].rank).toBe(2);
-    expect(result.data[2].rank).toBe(3);
+    expect(result.data[0]!.rank).toBe(1);
+    expect(result.data[0]!.mediaId).toBe(1); // winner should be #1
+    expect(result.data[0]!.score).toBeGreaterThan(1500);
+    expect(result.data[1]!.rank).toBe(2);
+    expect(result.data[2]!.rank).toBe(3);
   });
 
   it("returns overall rankings averaging across active dimensions", async () => {
@@ -434,8 +434,8 @@ describe("comparisons.rankings", () => {
     const result = await caller.media.comparisons.rankings({});
     expect(result.data.length).toBe(2);
     // Both should have avg score ~1500 since each won one dimension
-    expect(result.data[0].rank).toBe(1);
-    expect(result.data[1].rank).toBe(2);
+    expect(result.data[0]!.rank).toBe(1);
+    expect(result.data[1]!.rank).toBe(2);
   });
 
   it("filters by mediaType", async () => {
@@ -501,8 +501,8 @@ describe("comparisons.rankings", () => {
     expect(page1.data.length).toBe(2);
     expect(page1.pagination.total).toBe(4);
     expect(page1.pagination.hasMore).toBe(true);
-    expect(page1.data[0].rank).toBe(1);
-    expect(page1.data[1].rank).toBe(2);
+    expect(page1.data[0]!.rank).toBe(1);
+    expect(page1.data[1]!.rank).toBe(2);
 
     const page2 = await caller.media.comparisons.rankings({
       dimensionId: dimId,
@@ -510,8 +510,8 @@ describe("comparisons.rankings", () => {
       offset: 2,
     });
     expect(page2.data.length).toBe(2);
-    expect(page2.data[0].rank).toBe(3);
-    expect(page2.data[1].rank).toBe(4);
+    expect(page2.data[0]!.rank).toBe(3);
+    expect(page2.data[1]!.rank).toBe(4);
   });
 
   it("excludes inactive dimensions from overall rankings", async () => {
@@ -541,8 +541,8 @@ describe("comparisons.rankings", () => {
     const result = await caller.media.comparisons.rankings({});
     expect(result.data.length).toBe(2);
     // Movie 1 won in active dim, so should rank higher
-    expect(result.data[0].mediaId).toBe(1);
-    expect(result.data[0].score).toBeGreaterThan(1500);
+    expect(result.data[0]!.mediaId).toBe(1);
+    expect(result.data[0]!.score).toBeGreaterThan(1500);
   });
 });
 

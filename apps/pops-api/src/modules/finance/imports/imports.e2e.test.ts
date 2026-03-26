@@ -132,11 +132,11 @@ describe("E2E: Complete Import Flow", () => {
     const parsed = rows.map((row) => transformAmex(row));
 
     expect(parsed.length).toBe(10); // 10 transactions in CSV
-    expect(parsed[0].date).toBe("2026-02-13");
-    expect(parsed[0].amount).toBe(-125.5); // Inverted
+    expect(parsed[0]!.date).toBe("2026-02-13");
+    expect(parsed[0]!.amount).toBe(-125.5); // Inverted
 
     // Step 3: Seed an existing transaction to simulate 1 duplicate (row 7 is duplicate of row 1)
-    const existingChecksum = parsed[6].checksum; // 7th row (duplicate)
+    const existingChecksum = parsed[6]!.checksum; // 7th row (duplicate)
     seedTransaction(db, { checksum: existingChecksum });
 
     // Step 4: Process import (dedup + entity match)
@@ -201,7 +201,7 @@ describe("E2E: Complete Import Flow", () => {
     // Verify rows were written to SQLite (excluding the 1 seeded duplicate)
     const [transactionCount] = orm().select({ cnt: count() }).from(transactionsTable).all();
     // 1 seeded duplicate + confirmed.length newly imported
-    expect(transactionCount.cnt).toBe(1 + confirmed.length);
+    expect(transactionCount!.cnt).toBe(1 + confirmed.length);
 
     // Verify data integrity of a specific row
     if (woolworthsMatch) {
@@ -267,7 +267,7 @@ describe("E2E: Complete Import Flow", () => {
 
     expect(result.imported).toBe(0);
     expect(result.failed.length).toBe(1);
-    expect(result.failed[0].error).toMatch(/UNIQUE constraint/i);
+    expect(result.failed[0]!.error).toMatch(/UNIQUE constraint/i);
   }, 10000);
 
   it("allows multiple NULL checksums (no UNIQUE violation at DB layer)", () => {
@@ -282,7 +282,7 @@ describe("E2E: Complete Import Flow", () => {
       .where(isNull(transactionsTable.checksum))
       .all();
 
-    expect(result.cnt).toBe(2);
+    expect(result!.cnt).toBe(2);
   });
 
   it("deduplicates correctly across multiple imports", async () => {
@@ -314,8 +314,8 @@ describe("E2E: Complete Import Flow", () => {
     // Execute the first import to write to SQLite
     const confirmed: ConfirmedTransaction = {
       ...transaction,
-      entityId: result1.matched[0].entity.entityId ?? "",
-      entityName: result1.matched[0].entity.entityName ?? "",
+      entityId: result1.matched[0]!.entity.entityId ?? "",
+      entityName: result1.matched[0]!.entity.entityName ?? "",
     };
 
     const { sessionId: execSid } = await caller.finance.imports.executeImport({
@@ -334,7 +334,7 @@ describe("E2E: Complete Import Flow", () => {
 
     expect(result2.matched.length).toBe(0);
     expect(result2.skipped.length).toBe(1);
-    expect(result2.skipped[0].skipReason).toContain("Duplicate");
+    expect(result2.skipped[0]!.skipReason).toContain("Duplicate");
   });
 
   it("handles mixed transaction types in single batch", async () => {
@@ -401,10 +401,11 @@ describe("E2E: Complete Import Flow", () => {
     expect(processed).toBeDefined();
 
     // Convert to confirmed
+    const matchedRow = processed.matched[0]!;
     const confirmed: ConfirmedTransaction = {
-      ...processed.matched[0],
-      entityId: processed.matched[0].entity.entityId ?? "",
-      entityName: processed.matched[0].entity.entityName ?? "",
+      ...matchedRow,
+      entityId: matchedRow.entity.entityId ?? "",
+      entityName: matchedRow.entity.entityName ?? "",
     };
 
     // Execute

@@ -31,7 +31,7 @@ describe("listMovies", () => {
     expect(result.rows).toHaveLength(2);
     expect(result.total).toBe(3);
     // Ordered by release_date DESC
-    expect(result.rows[0].title).toBe("Movie B");
+    expect(result.rows[0]!.title).toBe("Movie B");
   });
 
   it("filters by search term", () => {
@@ -40,7 +40,7 @@ describe("listMovies", () => {
 
     const result = service.listMovies({ search: "Matrix" }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].title).toBe("The Matrix");
+    expect(result.rows[0]!.title).toBe("The Matrix");
   });
 
   it("filters by genre", () => {
@@ -49,7 +49,7 @@ describe("listMovies", () => {
 
     const result = service.listMovies({ genre: "Action" }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].title).toBe("Action Movie");
+    expect(result.rows[0]!.title).toBe("Action Movie");
   });
 });
 

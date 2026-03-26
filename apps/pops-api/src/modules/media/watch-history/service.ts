@@ -57,7 +57,7 @@ export function listWatchHistory(
 
   const [countRow] = db.select({ total: count() }).from(watchHistory).where(where).all();
 
-  return { rows, total: countRow.total };
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Count + enriched rows for a paginated recent history list. */
@@ -201,7 +201,7 @@ export function listRecent(
     };
   });
 
-  return { rows, total: countRow.total };
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Get a single watch history entry by id. Throws NotFoundError if missing. */
@@ -323,7 +323,7 @@ function autoRemoveTvShowIfFullyWatched(
   if (showEpisodeIds.length === 0) return;
 
   // Count distinct watched episodes for this show in a single query
-  const [{ watched }] = tx
+  const watchedRow = tx
     .select({ watched: countDistinct(watchHistory.mediaId) })
     .from(watchHistory)
     .where(
@@ -333,7 +333,8 @@ function autoRemoveTvShowIfFullyWatched(
         inArray(watchHistory.mediaId, showEpisodeIds)
       )
     )
-    .all();
+    .all()[0];
+  const watched = watchedRow?.watched ?? 0;
 
   if (watched >= showEpisodeIds.length) {
     tx.delete(mediaWatchlist)
@@ -579,7 +580,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
           .map((r) => r.id);
 
         if (allShowEpisodeIds.length > 0) {
-          const [{ watched }] = tx
+          const watchedRow2 = tx
             .select({ watched: countDistinct(watchHistory.mediaId) })
             .from(watchHistory)
             .where(
@@ -589,7 +590,8 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
                 inArray(watchHistory.mediaId, allShowEpisodeIds)
               )
             )
-            .all();
+            .all()[0];
+          const watched = watchedRow2?.watched ?? 0;
 
           if (watched >= allShowEpisodeIds.length) {
             tx.delete(mediaWatchlist)

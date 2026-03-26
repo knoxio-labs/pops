@@ -28,13 +28,13 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
       void utils.media.watchHistory.list.invalidate();
       void utils.media.watchlist.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to undo: ${err.message}`);
     },
   });
 
   const logMutation = trpc.media.watchHistory.log.useMutation({
-    onSuccess: (result) => {
+    onSuccess: (result: { data: { id: number } }) => {
       toast.success("Marked as watched", {
         duration: 5000,
         action: {
@@ -47,7 +47,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
       setShowDatePicker(false);
       setCustomDate("");
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to log watch: ${err.message}`);
     },
   });

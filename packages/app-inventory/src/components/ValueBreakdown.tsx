@@ -54,7 +54,9 @@ function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
         <Tooltip
           content={({ payload }) => {
             if (!payload?.length) return null;
-            const entry = payload[0].payload as BreakdownChartProps["data"][number];
+            const first = payload[0];
+            if (!first) return null;
+            const entry = first.payload as BreakdownChartProps["data"][number];
             return (
               <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
                 <p className="font-medium">{entry.name}</p>

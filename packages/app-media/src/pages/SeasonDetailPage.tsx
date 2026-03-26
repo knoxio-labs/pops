@@ -1,13 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import {
-  Alert,
-  AlertTitle,
-  AlertDescription,
-  PageHeader,
-  Button,
-  Skeleton,
-} from "@pops/ui";
+import { Alert, AlertTitle, AlertDescription, PageHeader, Button, Skeleton } from "@pops/ui";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { EpisodeList } from "../components/EpisodeList";
@@ -51,7 +44,9 @@ export function SeasonDetailPage() {
     { enabled: !Number.isNaN(showId) }
   );
 
-  const season = seasonsData?.data?.find((s) => s.seasonNumber === seasonNum);
+  const season = seasonsData?.data?.find(
+    (s: { seasonNumber: number }) => s.seasonNumber === seasonNum
+  );
 
   const { data: episodesData, isLoading: episodesLoading } =
     trpc.media.tvShows.listEpisodes.useQuery(
@@ -60,7 +55,7 @@ export function SeasonDetailPage() {
     );
 
   const episodes = episodesData?.data ?? [];
-  const episodeIds = useMemo(() => episodes.map((ep) => ep.id), [episodes]);
+  const episodeIds = useMemo(() => episodes.map((ep: { id: number }) => ep.id), [episodes]);
 
   // Query watch history for all episodes in this season
   const { data: watchHistoryData } = trpc.media.watchHistory.list.useQuery(
@@ -70,11 +65,11 @@ export function SeasonDetailPage() {
 
   const watchedEpisodeIds = useMemo(() => {
     if (!watchHistoryData?.data) return new Set<number>();
-    const episodeIdSet = new Set(episodeIds);
-    return new Set(
+    const episodeIdSet = new Set<number>(episodeIds);
+    return new Set<number>(
       watchHistoryData.data
-        .filter((entry) => episodeIdSet.has(entry.mediaId))
-        .map((entry) => entry.mediaId)
+        .filter((entry: { mediaId: number }) => episodeIdSet.has(entry.mediaId))
+        .map((entry: { mediaId: number }) => entry.mediaId)
     );
   }, [watchHistoryData, episodeIds]);
 
@@ -89,10 +84,10 @@ export function SeasonDetailPage() {
     onSuccess: () => {
       void utils.media.watchHistory.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to log watch: ${err.message}`);
     },
-    onSettled: (_data, _err, variables) => {
+    onSettled: (_data: unknown, _err: unknown, variables: { mediaId: number }) => {
       setTogglingIds((prev) => {
         const next = new Set(prev);
         next.delete(variables.mediaId);
@@ -105,10 +100,10 @@ export function SeasonDetailPage() {
     onSuccess: () => {
       void utils.media.watchHistory.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to remove watch: ${err.message}`);
     },
-    onSettled: (_data, _err, variables) => {
+    onSettled: (_data: unknown, _err: unknown, variables: { id: number }) => {
       const episodeId = deleteEntryToEpisode.current.get(variables.id);
       deleteEntryToEpisode.current.delete(variables.id);
       if (episodeId != null) {
@@ -129,7 +124,9 @@ export function SeasonDetailPage() {
         logMutation.mutate({ mediaType: "episode", mediaId: episodeId });
       } else {
         // Find the watch history entry to delete
-        const entry = watchHistoryData?.data?.find((e) => e.mediaId === episodeId);
+        const entry = watchHistoryData?.data?.find(
+          (e: { mediaId: number; id: number }) => e.mediaId === episodeId
+        );
         if (entry) {
           deleteEntryToEpisode.current.set(entry.id, episodeId);
           deleteMutation.mutate({ id: entry.id });
@@ -155,13 +152,13 @@ export function SeasonDetailPage() {
   );
 
   const batchLogMutation = trpc.media.watchHistory.batchLog.useMutation({
-    onSuccess: (result) => {
+    onSuccess: (result: { data: { logged: number } }) => {
       utils.media.watchHistory.invalidate();
       toast.success(
         `Marked ${result.data.logged} episode${result.data.logged !== 1 ? "s" : ""} as watched`
       );
     },
-    onError: (err) => toast.error(`Failed to mark season: ${err.message}`),
+    onError: (err: { message: string }) => toast.error(`Failed to mark season: ${err.message}`),
   });
 
   const isSeasonWatched = seasonProgress

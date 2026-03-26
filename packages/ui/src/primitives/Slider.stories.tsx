@@ -171,7 +171,7 @@ export const MultipleBudgets: Story = {
         <div className="pt-4 flex justify-between border-t">
           <span className="font-medium">Total Budget</span>
           <span className="font-bold text-lg">
-            ${food[0] + shopping[0] + entertainment[0] + transport[0]}
+            ${food[0]! + shopping[0]! + entertainment[0]! + transport[0]!}
           </span>
         </div>
       </div>
@@ -211,7 +211,7 @@ export const SavingsGoal: Story = {
   render: () => {
     const [monthlyContribution, setMonthlyContribution] = useState([500]);
     const goal = 10000;
-    const months = Math.ceil(goal / monthlyContribution[0]);
+    const months = Math.ceil(goal / monthlyContribution[0]!);
 
     return (
       <div className="space-y-6 w-96 rounded-lg border p-6">
@@ -242,7 +242,7 @@ export const SavingsGoal: Story = {
           <div className="flex justify-between text-sm">
             <span>Total contributions:</span>
             <span className="font-medium">
-              ${(monthlyContribution[0] * months).toLocaleString()}
+              ${(monthlyContribution[0]! * months).toLocaleString()}
             </span>
           </div>
         </div>
@@ -309,7 +309,7 @@ export const WithLabels: Story = {
               </span>
             ))}
           </div>
-          <p className="text-center text-sm font-medium">Current: {labels[value[0]]}</p>
+          <p className="text-center text-sm font-medium">Current: {labels[value[0]!]}</p>
         </div>
       </div>
     );

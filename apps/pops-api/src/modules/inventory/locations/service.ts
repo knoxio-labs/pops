@@ -224,7 +224,7 @@ export function getDeleteStats(id: string): DeleteLocationStats {
     .from(homeInventory)
     .where(eq(homeInventory.locationId, id))
     .all();
-  const itemCount = directItems.total;
+  const itemCount = directItems?.total ?? 0;
 
   // Count items in all descendant locations
   let totalItemCount = itemCount;
@@ -234,7 +234,7 @@ export function getDeleteStats(id: string): DeleteLocationStats {
       .from(homeInventory)
       .where(eq(homeInventory.locationId, descId))
       .all();
-    totalItemCount += desc.total;
+    totalItemCount += desc?.total ?? 0;
   }
 
   return {

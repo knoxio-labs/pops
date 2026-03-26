@@ -67,6 +67,7 @@ export function linkDocument(
     )
     .all();
 
+  if (!created) throw new NotFoundError("Item document link", `${itemId}-${paperlessDocumentId}`);
   return created;
 }
 
@@ -103,5 +104,5 @@ export function listDocumentsForItem(
 
   const [countResult] = db.select({ total: count() }).from(itemDocuments).where(condition).all();
 
-  return { rows, total: countResult.total };
+  return { rows, total: countResult?.total ?? 0 };
 }

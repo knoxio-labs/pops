@@ -29,10 +29,7 @@ export const DrillDown: Story = {
   args: {
     title: "The Shawshank Redemption",
     backHref: "/media",
-    breadcrumbs: [
-      { label: "Media", href: "/media" },
-      { label: "The Shawshank Redemption" },
-    ],
+    breadcrumbs: [{ label: "Media", href: "/media" }, { label: "The Shawshank Redemption" }],
   },
 };
 
@@ -66,10 +63,11 @@ export const WithActions: Story = {
   args: {
     title: "MacBook Pro 14",
     backHref: "/inventory",
-    breadcrumbs: [
-      { label: "Inventory", href: "/inventory" },
-      { label: "MacBook Pro 14" },
-    ],
-    actions: <Button size="sm" variant="outline">Edit</Button>,
+    breadcrumbs: [{ label: "Inventory", href: "/inventory" }, { label: "MacBook Pro 14" }],
+    actions: (
+      <Button size="sm" variant="outline">
+        Edit
+      </Button>
+    ),
   },
 };

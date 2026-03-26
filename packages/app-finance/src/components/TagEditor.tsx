@@ -130,7 +130,8 @@ export function TagEditor({
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Tab" && filteredSuggestions.length > 0) {
       e.preventDefault();
-      addTag(filteredSuggestions[0]);
+      const first = filteredSuggestions[0];
+      if (first) addTag(first);
       return;
     }
     if ((e.key === "Enter" || e.key === ",") && inputValue.trim()) {
@@ -139,7 +140,8 @@ export function TagEditor({
       return;
     }
     if (e.key === "Backspace" && !inputValue && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
+      const last = tags[tags.length - 1];
+      if (last) removeTag(last);
       return;
     }
     if (e.key === "Escape") {

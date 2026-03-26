@@ -76,8 +76,8 @@ describe("AI categorizer disk cache", () => {
     expect(existsSync(cachePath)).toBe(true);
     const data = JSON.parse(readFileSync(cachePath, "utf-8"));
     expect(data).toHaveLength(1);
-    expect(data[0].entityName).toBe("Woolworths");
-    expect(data[0].category).toBe("Groceries");
+    expect(data[0]!.entityName).toBe("Woolworths");
+    expect(data[0]!.category).toBe("Groceries");
   });
 
   it("loads cache from disk on first access after clearCache", async () => {

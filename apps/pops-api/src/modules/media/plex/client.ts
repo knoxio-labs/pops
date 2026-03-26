@@ -69,10 +69,11 @@ export class PlexClient {
       `/library/metadata/${ratingKey}`
     );
     const items = raw.MediaContainer.Metadata ?? [];
-    if (items.length === 0) {
+    const first = items[0];
+    if (!first) {
       throw new PlexApiError(404, `Item ${ratingKey} not found`);
     }
-    return this.mapMediaItem(items[0]);
+    return this.mapMediaItem(first);
   }
 
   /** Get all episodes for a TV show by its rating key. */

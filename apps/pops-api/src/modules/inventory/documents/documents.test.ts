@@ -203,7 +203,7 @@ describe("inventory.documents.listForItem", () => {
     const result = await caller.inventory.documents.listForItem({ itemId: itemA });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].paperlessDocumentId).toBe(10);
+    expect(result.data[0]!.paperlessDocumentId).toBe(10);
   });
 
   it("paginates results", async () => {

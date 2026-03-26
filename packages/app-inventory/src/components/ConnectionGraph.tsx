@@ -99,6 +99,7 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
     // Search in reverse so top-drawn nodes are found first
     for (let i = nodesRef.current.length - 1; i >= 0; i--) {
       const node = nodesRef.current[i];
+      if (!node) continue;
       const dx = (node.x ?? 0) - worldX;
       const dy = (node.y ?? 0) - worldY;
       if (dx * dx + dy * dy <= NODE_RADIUS * NODE_RADIUS) {

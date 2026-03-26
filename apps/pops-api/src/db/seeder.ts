@@ -1109,6 +1109,7 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
 
     for (const [a, b] of connections) {
       // Enforce A < B ordering
+      if (!a || !b) continue;
       const [lo, hi] = a < b ? [a, b] : [b, a];
       insertConnection.run(lo, hi);
     }

@@ -32,8 +32,8 @@ describe("entities.list", () => {
     expect(result.pagination.total).toBe(2);
 
     // Sorted by name
-    expect(result.data[0].name).toBe("Coles");
-    expect(result.data[1].name).toBe("Woolworths");
+    expect(result.data[0]!.name).toBe("Coles");
+    expect(result.data[1]!.name).toBe("Woolworths");
   });
 
   it("returns camelCase fields", async () => {
@@ -60,14 +60,14 @@ describe("entities.list", () => {
     seedEntity(db, { name: "Woolworths", aliases: "Woolies, WW, Woolworths Group" });
 
     const result = await caller.core.entities.list({});
-    expect(result.data[0].aliases).toEqual(["Woolies", "WW", "Woolworths Group"]);
+    expect(result.data[0]!.aliases).toEqual(["Woolies", "WW", "Woolworths Group"]);
   });
 
   it("returns empty aliases array when null", async () => {
     seedEntity(db, { name: "Woolworths", aliases: null });
 
     const result = await caller.core.entities.list({});
-    expect(result.data[0].aliases).toEqual([]);
+    expect(result.data[0]!.aliases).toEqual([]);
   });
 
   it("filters by search (case-insensitive LIKE)", async () => {
@@ -77,7 +77,7 @@ describe("entities.list", () => {
 
     const result = await caller.core.entities.list({ search: "wool" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].name).toBe("Woolworths");
+    expect(result.data[0]!.name).toBe("Woolworths");
     expect(result.pagination.total).toBe(1);
   });
 
@@ -87,7 +87,7 @@ describe("entities.list", () => {
 
     const result = await caller.core.entities.list({ type: "organisation" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].name).toBe("ATO");
+    expect(result.data[0]!.name).toBe("ATO");
   });
 
   it("paginates with limit and offset", async () => {

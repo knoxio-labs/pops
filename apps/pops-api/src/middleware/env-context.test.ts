@@ -66,14 +66,14 @@ describe("envContextMiddleware", () => {
     // Prod DB is empty — should return 0 transactions
     const res = await listTransactions();
     expect(res.status).toBe(200);
-    const total = res.body[0].result.data.pagination.total;
+    const total = res.body[0]!.result.data.pagination.total;
     expect(total).toBe(0);
   });
 
   it("passes through to prod DB when ?env=prod", async () => {
     const res = await listTransactions("prod");
     expect(res.status).toBe(200);
-    const total = res.body[0].result.data.pagination.total;
+    const total = res.body[0]!.result.data.pagination.total;
     expect(total).toBe(0);
   });
 
@@ -88,13 +88,13 @@ describe("envContextMiddleware", () => {
 
     const envRes = await listTransactions("ctx-test");
     expect(envRes.status).toBe(200);
-    const envTotal = envRes.body[0].result.data.pagination.total;
+    const envTotal = envRes.body[0]!.result.data.pagination.total;
     expect(envTotal).toBeGreaterThan(0);
 
     // Prod DB is empty — no env param should return 0
     const prodRes = await listTransactions();
     expect(prodRes.status).toBe(200);
-    const prodTotal = prodRes.body[0].result.data.pagination.total;
+    const prodTotal = prodRes.body[0]!.result.data.pagination.total;
     expect(prodTotal).toBe(0);
   });
 
@@ -105,8 +105,8 @@ describe("envContextMiddleware", () => {
     const resA = await listTransactions("env-a");
     const resB = await listTransactions("env-b");
 
-    const totalA = resA.body[0].result.data.pagination.total;
-    const totalB = resB.body[0].result.data.pagination.total;
+    const totalA = resA.body[0]!.result.data.pagination.total;
+    const totalB = resB.body[0]!.result.data.pagination.total;
 
     // env-a is seeded, env-b is empty
     expect(totalA).toBeGreaterThan(0);
@@ -119,8 +119,8 @@ describe("envContextMiddleware", () => {
     const res1 = await listTransactions("persistent");
     const res2 = await listTransactions("persistent");
 
-    expect(res1.body[0].result.data.pagination.total).toBe(
-      res2.body[0].result.data.pagination.total
+    expect(res1.body[0]!.result.data.pagination.total).toBe(
+      res2.body[0]!.result.data.pagination.total
     );
   });
 

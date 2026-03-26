@@ -54,22 +54,30 @@ export const duplicatesCSV = `Date,Description,Amount,Account
  * Large CSV: 150 transactions for stress testing
  */
 export const generateLargeCSV = (count: number = 150): string => {
-  const lines = ['Date,Description,Amount,Account'];
+  const lines = ["Date,Description,Amount,Account"];
 
   const merchants = [
-    'WOOLWORTHS', 'COLES', 'NETFLIX.COM', 'SPOTIFY', 'AMAZON',
-    'UBER', 'SHELL', 'BP', 'MCDONALD\'S', 'KFC',
+    "WOOLWORTHS",
+    "COLES",
+    "NETFLIX.COM",
+    "SPOTIFY",
+    "AMAZON",
+    "UBER",
+    "SHELL",
+    "BP",
+    "MCDONALD'S",
+    "KFC",
   ];
 
   for (let i = 0; i < count; i++) {
     const day = 10 + (i % 20);
-    const date = `${day.toString().padStart(2, '0')}/02/2026`;
+    const date = `${day.toString().padStart(2, "0")}/02/2026`;
     const merchant = merchants[i % merchants.length];
     const amount = (Math.random() * 200 + 10).toFixed(2);
     lines.push(`${date},${merchant} ${i + 1},${amount},Amex`);
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 };
 
 /**

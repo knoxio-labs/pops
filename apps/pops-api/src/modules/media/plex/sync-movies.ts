@@ -169,7 +169,7 @@ async function searchTmdbByTitleYear(
 
     // No exact match — take first result if title is close enough
     const first = result.results[0];
-    if (first.title.toLowerCase() === title.toLowerCase()) {
+    if (first && first.title.toLowerCase() === title.toLowerCase()) {
       return first.tmdbId;
     }
 

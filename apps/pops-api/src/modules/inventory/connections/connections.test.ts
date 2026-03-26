@@ -186,8 +186,8 @@ describe("inventory.connections.listForItem", () => {
     const result = await caller.inventory.connections.listForItem({ itemId: idA });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemAId).toBe(idA);
-    expect(result.data[0].itemBId).toBe(idB);
+    expect(result.data[0]!.itemAId).toBe(idA);
+    expect(result.data[0]!.itemBId).toBe(idB);
   });
 
   it("returns connections where item is in B column", async () => {
@@ -197,8 +197,8 @@ describe("inventory.connections.listForItem", () => {
     const result = await caller.inventory.connections.listForItem({ itemId: idB });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemAId).toBe(idA);
-    expect(result.data[0].itemBId).toBe(idB);
+    expect(result.data[0]!.itemAId).toBe(idA);
+    expect(result.data[0]!.itemBId).toBe(idB);
   });
 
   it("returns multiple connections for an item", async () => {
@@ -279,7 +279,7 @@ describe("inventory.connections.graph", () => {
     const result = await caller.inventory.connections.graph({ itemId: id });
 
     expect(result.data.nodes).toHaveLength(1);
-    expect(result.data.nodes[0].id).toBe(id);
+    expect(result.data.nodes[0]!.id).toBe(id);
     expect(result.data.edges).toHaveLength(0);
   });
 

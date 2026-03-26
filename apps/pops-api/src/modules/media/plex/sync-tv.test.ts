@@ -141,7 +141,7 @@ describe("importTvShowsFromPlex", () => {
 
     expect(result.total).toBe(0);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].reason).toContain("THETVDB_API_KEY");
+    expect(result.errors[0]!.reason).toContain("THETVDB_API_KEY");
     expect(client.getAllItems).not.toHaveBeenCalled();
   });
 
@@ -293,8 +293,8 @@ describe("importTvShowsFromPlex", () => {
 
     expect(result.synced).toBe(1);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].title).toBe("Bad Show");
-    expect(result.errors[0].reason).toContain("TVDB timeout");
+    expect(result.errors[0]!.title).toBe("Bad Show");
+    expect(result.errors[0]!.reason).toContain("TVDB timeout");
     expect(result.processed).toBe(2);
   });
 
@@ -318,7 +318,7 @@ describe("importTvShowsFromPlex", () => {
     await importTvShowsFromPlex(client, "2", { onProgress });
 
     expect(onProgress).toHaveBeenCalledTimes(2);
-    const finalProgress = onProgress.mock.calls[1][0];
+    const finalProgress = onProgress.mock.calls[1]![0];
     expect(finalProgress.processed).toBe(2);
     expect(finalProgress.synced).toBe(2);
     expect(finalProgress.total).toBe(2);

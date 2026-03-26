@@ -111,7 +111,7 @@ export function listPhotosForItem(itemId: string, limit: number, offset: number)
     .where(eq(itemPhotos.itemId, itemId))
     .all();
 
-  return { rows, total: countResult.total };
+  return { rows, total: countResult?.total ?? 0 };
 }
 
 /**
@@ -135,7 +135,9 @@ export function reorderPhotos(itemId: string, orderedIds: number[]): ItemPhotoRo
   // Apply all sort order updates in a single transaction
   rawDb.transaction(() => {
     for (let i = 0; i < orderedIds.length; i++) {
-      db.update(itemPhotos).set({ sortOrder: i }).where(eq(itemPhotos.id, orderedIds[i])).run();
+      const photoId = orderedIds[i];
+      if (photoId === undefined) continue;
+      db.update(itemPhotos).set({ sortOrder: i }).where(eq(itemPhotos.id, photoId)).run();
     }
   })();
 

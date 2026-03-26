@@ -44,7 +44,7 @@ export function listWatchlist(
 
   const [countRow] = db.select({ total: count() }).from(mediaWatchlist).where(where).all();
 
-  return { rows, total: countRow.total };
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Get a single watchlist entry by id. Throws NotFoundError if missing. */

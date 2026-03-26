@@ -254,9 +254,9 @@ describe("mapShowDetail", () => {
   it("counts episodes from season's episodes array", () => {
     const detail = mapShowDetail(RAW_SERIES_EXTENDED);
 
-    expect(detail.seasons[0].episodeCount).toBe(2);
-    expect(detail.seasons[1].episodeCount).toBe(7);
-    expect(detail.seasons[2].episodeCount).toBe(13);
+    expect(detail.seasons[0]!.episodeCount).toBe(2);
+    expect(detail.seasons[1]!.episodeCount).toBe(7);
+    expect(detail.seasons[2]!.episodeCount).toBe(13);
   });
 
   it("maps artworks", () => {
@@ -456,7 +456,7 @@ describe("toTvShowInsert", () => {
 describe("toSeasonInsert", () => {
   it("converts season summary to Drizzle insert value", () => {
     const detail = mapShowDetail(RAW_SERIES_EXTENDED);
-    const season = detail.seasons[1]; // Season 1
+    const season = detail.seasons[1]!; // Season 1
     const insert = toSeasonInsert(season, 42);
 
     expect(insert.tvShowId).toBe(42);

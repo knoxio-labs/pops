@@ -32,8 +32,8 @@ describe("inventory.list", () => {
     expect(result.pagination.total).toBe(2);
 
     // Sorted by item_name
-    expect(result.data[0].itemName).toBe("Desk");
-    expect(result.data[1].itemName).toBe("Laptop");
+    expect(result.data[0]!.itemName).toBe("Desk");
+    expect(result.data[1]!.itemName).toBe("Laptop");
   });
 
   it("returns camelCase fields", async () => {
@@ -66,10 +66,10 @@ describe("inventory.list", () => {
     seedInventoryItem(db, { item_name: "Desk", in_use: 0, deductible: 1 });
 
     const result = await caller.inventory.items.list({});
-    expect(result.data[0].inUse).toBe(false);
-    expect(result.data[0].deductible).toBe(true);
-    expect(result.data[1].inUse).toBe(true);
-    expect(result.data[1].deductible).toBe(false);
+    expect(result.data[0]!.inUse).toBe(false);
+    expect(result.data[0]!.deductible).toBe(true);
+    expect(result.data[1]!.inUse).toBe(true);
+    expect(result.data[1]!.deductible).toBe(false);
   });
 
   it("filters by search (case-insensitive LIKE on item_name)", async () => {
@@ -79,7 +79,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ search: "mac" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("MacBook Pro");
+    expect(result.data[0]!.itemName).toBe("MacBook Pro");
     expect(result.pagination.total).toBe(1);
   });
 
@@ -89,7 +89,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ room: "Office" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("Desk");
+    expect(result.data[0]!.itemName).toBe("Desk");
   });
 
   it("filters by type", async () => {
@@ -98,7 +98,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ type: "Electronics" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("MacBook");
+    expect(result.data[0]!.itemName).toBe("MacBook");
   });
 
   it("filters by condition", async () => {
@@ -107,7 +107,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ condition: "Excellent" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("New Phone");
+    expect(result.data[0]!.itemName).toBe("New Phone");
   });
 
   it("filters by inUse=true", async () => {
@@ -116,7 +116,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ inUse: "true" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("Active Laptop");
+    expect(result.data[0]!.itemName).toBe("Active Laptop");
   });
 
   it("filters by inUse=false", async () => {
@@ -125,7 +125,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ inUse: "false" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("Stored Tablet");
+    expect(result.data[0]!.itemName).toBe("Stored Tablet");
   });
 
   it("filters by deductible=true", async () => {
@@ -134,7 +134,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ deductible: "true" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("Business Laptop");
+    expect(result.data[0]!.itemName).toBe("Business Laptop");
   });
 
   it("filters by deductible=false", async () => {
@@ -143,7 +143,7 @@ describe("inventory.list", () => {
 
     const result = await caller.inventory.items.list({ deductible: "false" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("Personal Phone");
+    expect(result.data[0]!.itemName).toBe("Personal Phone");
   });
 
   it("combines multiple filters", async () => {
@@ -167,7 +167,7 @@ describe("inventory.list", () => {
       inUse: "true",
     });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].itemName).toBe("Office Desk");
+    expect(result.data[0]!.itemName).toBe("Office Desk");
   });
 
   it("paginates with limit and offset", async () => {

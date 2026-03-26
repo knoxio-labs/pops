@@ -203,24 +203,32 @@ function RankingsList({ dimensionId }: { dimensionId?: number }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2" role="list" aria-label="Rankings">
-        {entries.map((entry) => {
-          const meta =
-            entry.mediaType === "movie" ? movieMap.get(entry.mediaId) : tvMap.get(entry.mediaId);
+        {entries.map(
+          (entry: {
+            mediaType: string;
+            mediaId: number;
+            rank: number;
+            score: number;
+            comparisonCount: number;
+          }) => {
+            const meta =
+              entry.mediaType === "movie" ? movieMap.get(entry.mediaId) : tvMap.get(entry.mediaId);
 
-          return (
-            <RankingRow
-              key={`${entry.mediaType}-${entry.mediaId}`}
-              rank={entry.rank}
-              mediaType={entry.mediaType}
-              mediaId={entry.mediaId}
-              score={entry.score}
-              comparisonCount={entry.comparisonCount}
-              title={meta?.title ?? "Unknown"}
-              year={meta?.year ?? null}
-              posterUrl={meta?.posterUrl ?? null}
-            />
-          );
-        })}
+            return (
+              <RankingRow
+                key={`${entry.mediaType}-${entry.mediaId}`}
+                rank={entry.rank}
+                mediaType={entry.mediaType}
+                mediaId={entry.mediaId}
+                score={entry.score}
+                comparisonCount={entry.comparisonCount}
+                title={meta?.title ?? "Unknown"}
+                year={meta?.year ?? null}
+                posterUrl={meta?.posterUrl ?? null}
+              />
+            );
+          }
+        )}
       </div>
 
       {pagination && pagination.total > PAGE_SIZE && (
@@ -258,7 +266,7 @@ export function RankingsPage() {
     trpc.media.comparisons.listDimensions.useQuery();
 
   const activeDimensions = useMemo(
-    () => (dimensionsData?.data ?? []).filter((d) => d.active),
+    () => (dimensionsData?.data ?? []).filter((d: { active: boolean }) => d.active),
     [dimensionsData?.data]
   );
 
@@ -277,7 +285,7 @@ export function RankingsPage() {
         <Tabs defaultValue="overall">
           <TabsList>
             <TabsTrigger value="overall">Overall</TabsTrigger>
-            {activeDimensions.map((dim) => (
+            {activeDimensions.map((dim: { id: number; name: string }) => (
               <TabsTrigger key={dim.id} value={String(dim.id)}>
                 {dim.name}
               </TabsTrigger>
@@ -288,7 +296,7 @@ export function RankingsPage() {
             <RankingsList />
           </TabsContent>
 
-          {activeDimensions.map((dim) => (
+          {activeDimensions.map((dim: { id: number; name: string }) => (
             <TabsContent key={dim.id} value={String(dim.id)} className="mt-4">
               <RankingsList dimensionId={dim.id} />
             </TabsContent>

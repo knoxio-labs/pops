@@ -47,12 +47,10 @@ test.describe("Visual Audit", () => {
 
       // Flag console errors (filter React dev warnings)
       const realErrors = consoleErrors.filter(
-        (e) => !e.includes("React Router") && !e.includes("Download the React DevTools"),
+        (e) => !e.includes("React Router") && !e.includes("Download the React DevTools")
       );
       if (realErrors.length > 0) {
-        console.warn(
-          `Console errors on ${route.path}:\n${realErrors.join("\n")}`,
-        );
+        console.warn(`Console errors on ${route.path}:\n${realErrors.join("\n")}`);
       }
     });
   }

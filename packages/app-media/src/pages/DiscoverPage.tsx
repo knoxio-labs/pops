@@ -135,24 +135,38 @@ export function DiscoverPage() {
             Add movies to your library to get personalized recommendations.
           </p>
         )}
-        {recommendations.data?.results.slice(0, 20).map((item) => (
-          <DiscoverCard
-            key={item.tmdbId}
-            tmdbId={item.tmdbId}
-            title={item.title}
-            releaseDate={item.releaseDate}
-            posterPath={item.posterPath}
-            posterUrl={item.posterUrl}
-            voteAverage={item.voteAverage}
-            inLibrary={item.inLibrary}
-            isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
-            isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
-            onAddToLibrary={handleAddToLibrary}
-            onAddToWatchlist={handleAddToWatchlist}
-            matchPercentage={item.matchPercentage}
-            matchReason={item.matchReason}
-          />
-        ))}
+        {recommendations.data?.results
+          .slice(0, 20)
+          .map(
+            (item: {
+              tmdbId: number;
+              title: string;
+              releaseDate: string | null;
+              posterPath: string | null;
+              posterUrl: string | null;
+              voteAverage: number | null;
+              inLibrary: boolean;
+              matchPercentage?: number;
+              matchReason?: string;
+            }) => (
+              <DiscoverCard
+                key={item.tmdbId}
+                tmdbId={item.tmdbId}
+                title={item.title}
+                releaseDate={item.releaseDate ?? ""}
+                posterPath={item.posterPath}
+                posterUrl={item.posterUrl}
+                voteAverage={item.voteAverage ?? 0}
+                inLibrary={item.inLibrary}
+                isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
+                isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
+                onAddToLibrary={handleAddToLibrary}
+                onAddToWatchlist={handleAddToWatchlist}
+                matchPercentage={item.matchPercentage}
+                matchReason={item.matchReason}
+              />
+            )
+          )}
       </HorizontalScrollRow>
 
       {/* Trending */}
@@ -166,22 +180,32 @@ export function DiscoverPage() {
             </Button>
           </Alert>
         )}
-        {trending.data?.results.map((item) => (
-          <DiscoverCard
-            key={item.tmdbId}
-            tmdbId={item.tmdbId}
-            title={item.title}
-            releaseDate={item.releaseDate}
-            posterPath={item.posterPath}
-            posterUrl={item.posterUrl}
-            voteAverage={item.voteAverage}
-            inLibrary={item.inLibrary}
-            isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
-            isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
-            onAddToLibrary={handleAddToLibrary}
-            onAddToWatchlist={handleAddToWatchlist}
-          />
-        ))}
+        {trending.data?.results.map(
+          (item: {
+            tmdbId: number;
+            title: string;
+            releaseDate: string | null;
+            posterPath: string | null;
+            posterUrl: string | null;
+            voteAverage: number | null;
+            inLibrary: boolean;
+          }) => (
+            <DiscoverCard
+              key={item.tmdbId}
+              tmdbId={item.tmdbId}
+              title={item.title}
+              releaseDate={item.releaseDate ?? ""}
+              posterPath={item.posterPath}
+              posterUrl={item.posterUrl}
+              voteAverage={item.voteAverage ?? 0}
+              inLibrary={item.inLibrary}
+              isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
+              isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
+              onAddToLibrary={handleAddToLibrary}
+              onAddToWatchlist={handleAddToWatchlist}
+            />
+          )
+        )}
       </HorizontalScrollRow>
 
       {/* Similar to Your Top Rated */}
@@ -208,24 +232,38 @@ export function DiscoverPage() {
             Rate more movies to discover similar titles.
           </p>
         )}
-        {similarToTopRated.data?.results.slice(0, 20).map((item) => (
-          <DiscoverCard
-            key={item.tmdbId}
-            tmdbId={item.tmdbId}
-            title={item.title}
-            releaseDate={item.releaseDate}
-            posterPath={item.posterPath}
-            posterUrl={item.posterUrl}
-            voteAverage={item.voteAverage}
-            inLibrary={item.inLibrary}
-            isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
-            isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
-            onAddToLibrary={handleAddToLibrary}
-            onAddToWatchlist={handleAddToWatchlist}
-            matchPercentage={item.matchPercentage}
-            matchReason={item.matchReason}
-          />
-        ))}
+        {similarToTopRated.data?.results
+          .slice(0, 20)
+          .map(
+            (item: {
+              tmdbId: number;
+              title: string;
+              releaseDate: string | null;
+              posterPath: string | null;
+              posterUrl: string | null;
+              voteAverage: number | null;
+              inLibrary: boolean;
+              matchPercentage?: number;
+              matchReason?: string;
+            }) => (
+              <DiscoverCard
+                key={item.tmdbId}
+                tmdbId={item.tmdbId}
+                title={item.title}
+                releaseDate={item.releaseDate ?? ""}
+                posterPath={item.posterPath}
+                posterUrl={item.posterUrl}
+                voteAverage={item.voteAverage ?? 0}
+                inLibrary={item.inLibrary}
+                isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
+                isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
+                onAddToLibrary={handleAddToLibrary}
+                onAddToWatchlist={handleAddToWatchlist}
+                matchPercentage={item.matchPercentage}
+                matchReason={item.matchReason}
+              />
+            )
+          )}
       </HorizontalScrollRow>
     </div>
   );

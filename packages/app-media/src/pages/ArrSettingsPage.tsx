@@ -171,7 +171,7 @@ export function ArrSettingsPage() {
       toast.success("Settings saved");
       settingsQuery.refetch();
     },
-    onError: (err) => toast.error(`Failed to save: ${err.message}`),
+    onError: (err: { message: string }) => toast.error(`Failed to save: ${err.message}`),
   });
 
   const testRadarr = trpc.media.arr.testRadarr.useQuery(undefined, {

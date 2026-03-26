@@ -47,7 +47,7 @@ describe("listWatchHistory", () => {
 
     const result = service.listWatchHistory({ mediaType: "movie" }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].mediaType).toBe("movie");
+    expect(result.rows[0]!.mediaType).toBe("movie");
   });
 
   it("filters by mediaId", () => {
@@ -56,7 +56,7 @@ describe("listWatchHistory", () => {
 
     const result = service.listWatchHistory({ mediaId: 550 }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].mediaId).toBe(550);
+    expect(result.rows[0]!.mediaId).toBe(550);
   });
 
   it("filters by both mediaType and mediaId", () => {
@@ -65,7 +65,7 @@ describe("listWatchHistory", () => {
 
     const result = service.listWatchHistory({ mediaType: "movie", mediaId: 550 }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].mediaType).toBe("movie");
+    expect(result.rows[0]!.mediaType).toBe("movie");
   });
 });
 
@@ -82,11 +82,11 @@ describe("listRecent", () => {
 
     const result = service.listRecent({}, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].title).toBe("Fight Club");
-    expect(result.rows[0].posterPath).toBe("/fc.jpg");
-    expect(result.rows[0].seasonNumber).toBeNull();
-    expect(result.rows[0].episodeNumber).toBeNull();
-    expect(result.rows[0].showName).toBeNull();
+    expect(result.rows[0]!.title).toBe("Fight Club");
+    expect(result.rows[0]!.posterPath).toBe("/fc.jpg");
+    expect(result.rows[0]!.seasonNumber).toBeNull();
+    expect(result.rows[0]!.episodeNumber).toBeNull();
+    expect(result.rows[0]!.showName).toBeNull();
   });
 
   it("returns enriched episode entries with show name and season/episode info", () => {
@@ -102,11 +102,11 @@ describe("listRecent", () => {
 
     const result = service.listRecent({}, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].title).toBe("Pilot");
-    expect(result.rows[0].showName).toBe("Breaking Bad");
-    expect(result.rows[0].posterPath).toBe("/bb.jpg");
-    expect(result.rows[0].seasonNumber).toBe(1);
-    expect(result.rows[0].episodeNumber).toBe(1);
+    expect(result.rows[0]!.title).toBe("Pilot");
+    expect(result.rows[0]!.showName).toBe("Breaking Bad");
+    expect(result.rows[0]!.posterPath).toBe("/bb.jpg");
+    expect(result.rows[0]!.seasonNumber).toBe(1);
+    expect(result.rows[0]!.episodeNumber).toBe(1);
   });
 
   it("filters by mediaType", () => {
@@ -116,7 +116,7 @@ describe("listRecent", () => {
 
     const result = service.listRecent({ mediaType: "movie" }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].mediaType).toBe("movie");
+    expect(result.rows[0]!.mediaType).toBe("movie");
   });
 
   it("filters by startDate", () => {
@@ -134,7 +134,7 @@ describe("listRecent", () => {
 
     const result = service.listRecent({ startDate: "2026-03-01T00:00:00.000Z" }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].watchedAt).toBe("2026-03-15T00:00:00.000Z");
+    expect(result.rows[0]!.watchedAt).toBe("2026-03-15T00:00:00.000Z");
   });
 
   it("filters by endDate", () => {
@@ -152,7 +152,7 @@ describe("listRecent", () => {
 
     const result = service.listRecent({ endDate: "2026-02-01T00:00:00.000Z" }, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].watchedAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(result.rows[0]!.watchedAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("filters by date range (startDate + endDate)", () => {
@@ -179,7 +179,7 @@ describe("listRecent", () => {
       0
     );
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].watchedAt).toBe("2026-02-15T00:00:00.000Z");
+    expect(result.rows[0]!.watchedAt).toBe("2026-02-15T00:00:00.000Z");
   });
 
   it("combines mediaType + date range filters", () => {
@@ -201,7 +201,7 @@ describe("listRecent", () => {
       0
     );
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].mediaType).toBe("movie");
+    expect(result.rows[0]!.mediaType).toBe("movie");
   });
 
   it("handles missing media gracefully", () => {
@@ -209,8 +209,8 @@ describe("listRecent", () => {
 
     const result = service.listRecent({}, 50, 0);
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].title).toBeNull();
-    expect(result.rows[0].posterPath).toBeNull();
+    expect(result.rows[0]!.title).toBeNull();
+    expect(result.rows[0]!.posterPath).toBeNull();
   });
 
   it("supports pagination", () => {
@@ -339,8 +339,8 @@ describe("getProgress", () => {
 
     const progress = service.getProgress(showId);
     expect(progress.overall).toEqual({ watched: 1, total: 2, percentage: 50 });
-    expect(progress.seasons[0].watched).toBe(1);
-    expect(progress.seasons[0].percentage).toBe(50);
+    expect(progress.seasons[0]!.watched).toBe(1);
+    expect(progress.seasons[0]!.percentage).toBe(50);
   });
 
   it("returns 100% when all episodes are watched", () => {
@@ -402,7 +402,7 @@ describe("getProgress", () => {
 
     const progress = service.getProgress(showId);
     expect(progress.overall.watched).toBe(1);
-    expect(progress.seasons[0].watched).toBe(1);
+    expect(progress.seasons[0]!.watched).toBe(1);
   });
 
   it("ignores incomplete watches", () => {

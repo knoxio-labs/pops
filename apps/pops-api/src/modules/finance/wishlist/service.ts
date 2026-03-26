@@ -41,7 +41,8 @@ export function listWishListItems(
     .limit(limit)
     .offset(offset)
     .all();
-  const [{ total }] = db.select({ total: count() }).from(wishList).where(where).all();
+  const countRow = db.select({ total: count() }).from(wishList).where(where).all()[0];
+  const total = countRow?.total ?? 0;
 
   return { rows, total };
 }

@@ -32,8 +32,8 @@ describe("wishlist.list", () => {
     expect(result.pagination.total).toBe(2);
 
     // Sorted by item name
-    expect(result.data[0].item).toBe("AirPods Max");
-    expect(result.data[1].item).toBe("MacBook Pro");
+    expect(result.data[0]!.item).toBe("AirPods Max");
+    expect(result.data[1]!.item).toBe("MacBook Pro");
   });
 
   it("returns camelCase fields", async () => {
@@ -61,28 +61,28 @@ describe("wishlist.list", () => {
     seedWishListItem(db, { item: "MacBook Pro", target_amount: 3999, saved: 1500 });
 
     const result = await caller.finance.wishlist.list({});
-    expect(result.data[0].remainingAmount).toBe(2499);
+    expect(result.data[0]!.remainingAmount).toBe(2499);
   });
 
   it("returns null remainingAmount when targetAmount is null", async () => {
     seedWishListItem(db, { item: "MacBook Pro", target_amount: null, saved: 1500 });
 
     const result = await caller.finance.wishlist.list({});
-    expect(result.data[0].remainingAmount).toBeNull();
+    expect(result.data[0]!.remainingAmount).toBeNull();
   });
 
   it("returns null remainingAmount when saved is null", async () => {
     seedWishListItem(db, { item: "MacBook Pro", target_amount: 3999, saved: null });
 
     const result = await caller.finance.wishlist.list({});
-    expect(result.data[0].remainingAmount).toBeNull();
+    expect(result.data[0]!.remainingAmount).toBeNull();
   });
 
   it("returns null remainingAmount when both are null", async () => {
     seedWishListItem(db, { item: "MacBook Pro", target_amount: null, saved: null });
 
     const result = await caller.finance.wishlist.list({});
-    expect(result.data[0].remainingAmount).toBeNull();
+    expect(result.data[0]!.remainingAmount).toBeNull();
   });
 
   it("filters by search (case-insensitive LIKE on item)", async () => {
@@ -92,7 +92,7 @@ describe("wishlist.list", () => {
 
     const result = await caller.finance.wishlist.list({ search: "mac" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].item).toBe("MacBook Pro");
+    expect(result.data[0]!.item).toBe("MacBook Pro");
     expect(result.pagination.total).toBe(1);
   });
 
@@ -102,7 +102,7 @@ describe("wishlist.list", () => {
 
     const result = await caller.finance.wishlist.list({ priority: "Dreaming" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].item).toBe("AirPods Max");
+    expect(result.data[0]!.item).toBe("AirPods Max");
   });
 
   it("combines search and priority filters", async () => {
@@ -112,7 +112,7 @@ describe("wishlist.list", () => {
 
     const result = await caller.finance.wishlist.list({ search: "macbook", priority: "Needing" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].item).toBe("MacBook Pro");
+    expect(result.data[0]!.item).toBe("MacBook Pro");
   });
 
   it("paginates with limit and offset", async () => {

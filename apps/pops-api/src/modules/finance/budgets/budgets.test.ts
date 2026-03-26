@@ -32,8 +32,8 @@ describe("budgets.list", () => {
     expect(result.pagination.total).toBe(2);
 
     // Sorted by category
-    expect(result.data[0].category).toBe("Entertainment");
-    expect(result.data[1].category).toBe("Groceries");
+    expect(result.data[0]!.category).toBe("Entertainment");
+    expect(result.data[1]!.category).toBe("Groceries");
   });
 
   it("returns camelCase fields", async () => {
@@ -64,16 +64,16 @@ describe("budgets.list", () => {
     seedBudget(db, { category: "Groceries", active: 1 });
 
     const result = await caller.finance.budgets.list({});
-    expect(result.data[0].active).toBe(true);
-    expect(typeof result.data[0].active).toBe("boolean");
+    expect(result.data[0]!.active).toBe(true);
+    expect(typeof result.data[0]!.active).toBe("boolean");
   });
 
   it("converts active from INTEGER to boolean (active=0)", async () => {
     seedBudget(db, { category: "Groceries", active: 0 });
 
     const result = await caller.finance.budgets.list({});
-    expect(result.data[0].active).toBe(false);
-    expect(typeof result.data[0].active).toBe("boolean");
+    expect(result.data[0]!.active).toBe(false);
+    expect(typeof result.data[0]!.active).toBe("boolean");
   });
 
   it("filters by search (case-insensitive LIKE on category)", async () => {
@@ -83,7 +83,7 @@ describe("budgets.list", () => {
 
     const result = await caller.finance.budgets.list({ search: "grocer" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].category).toBe("Groceries");
+    expect(result.data[0]!.category).toBe("Groceries");
     expect(result.pagination.total).toBe(1);
   });
 
@@ -128,7 +128,7 @@ describe("budgets.list", () => {
       active: "true",
     });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].category).toBe("Groceries Weekly");
+    expect(result.data[0]!.category).toBe("Groceries Weekly");
   });
 
   it("paginates with limit and offset", async () => {

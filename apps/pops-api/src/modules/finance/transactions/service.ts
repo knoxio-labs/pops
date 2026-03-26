@@ -65,7 +65,7 @@ export function listTransactions(
     .all();
   const [countRow] = db.select({ total: count() }).from(transactions).where(where).all();
 
-  return { rows, total: countRow.total };
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Get a single transaction by id. Throws NotFoundError if missing. */

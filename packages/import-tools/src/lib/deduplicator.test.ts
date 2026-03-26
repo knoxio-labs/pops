@@ -40,13 +40,9 @@ describe('findNewTransactions', () => {
   });
 
   it('filters out transactions that already exist', () => {
-    db.prepare('INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)').run(
-      'existing-1',
-      '2026-01-15',
-      'Existing',
-      -50.0,
-      'ANZ Access'
-    );
+    db.prepare(
+      'INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)'
+    ).run('existing-1', '2026-01-15', 'Existing', -50.0, 'ANZ Access');
 
     const batch = [makeTxn()];
     const result = findNewTransactions(db, batch, 'ANZ Access');
@@ -54,13 +50,9 @@ describe('findNewTransactions', () => {
   });
 
   it('allows duplicates when batch has more than existing count', () => {
-    db.prepare('INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)').run(
-      'existing-1',
-      '2026-01-15',
-      'Existing',
-      -50.0,
-      'ANZ Access'
-    );
+    db.prepare(
+      'INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)'
+    ).run('existing-1', '2026-01-15', 'Existing', -50.0, 'ANZ Access');
 
     // Batch has 2 of same (date, amount), DB has 1 → 1 new
     const batch = [makeTxn(), makeTxn()];
@@ -69,13 +61,9 @@ describe('findNewTransactions', () => {
   });
 
   it('does not count transactions from different accounts', () => {
-    db.prepare('INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)').run(
-      'existing-1',
-      '2026-01-15',
-      'Existing',
-      -50.0,
-      'Up Spending'
-    );
+    db.prepare(
+      'INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)'
+    ).run('existing-1', '2026-01-15', 'Existing', -50.0, 'Up Spending');
 
     // Same date/amount but different account — should not deduplicate
     const batch = [makeTxn({ account: 'ANZ Access' })];
@@ -84,13 +72,9 @@ describe('findNewTransactions', () => {
   });
 
   it('handles multiple groups independently', () => {
-    db.prepare('INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)').run(
-      'existing-1',
-      '2026-01-15',
-      'Groceries',
-      -50.0,
-      'ANZ Access'
-    );
+    db.prepare(
+      'INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)'
+    ).run('existing-1', '2026-01-15', 'Groceries', -50.0, 'ANZ Access');
 
     const batch = [
       makeTxn({ amount: -50.0 }), // exists → filtered
@@ -108,13 +92,9 @@ describe('findNewTransactions', () => {
   });
 
   it('returns the last N items from a group as new transactions', () => {
-    db.prepare('INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)').run(
-      'existing-1',
-      '2026-01-15',
-      'Existing',
-      -50.0,
-      'ANZ Access'
-    );
+    db.prepare(
+      'INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)'
+    ).run('existing-1', '2026-01-15', 'Existing', -50.0, 'ANZ Access');
 
     // 3 in batch, 1 exists → last 2 are new
     const batch = [
@@ -146,13 +126,9 @@ describe('findNewTransactions', () => {
   });
 
   it('handles positive and negative amounts as distinct groups', () => {
-    db.prepare('INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)').run(
-      'existing-1',
-      '2026-01-15',
-      'Transfer Out',
-      -100.0,
-      'ANZ Access'
-    );
+    db.prepare(
+      'INSERT INTO transactions (id, date, description, amount, account) VALUES (?, ?, ?, ?, ?)'
+    ).run('existing-1', '2026-01-15', 'Transfer Out', -100.0, 'ANZ Access');
 
     const batch = [
       makeTxn({ amount: -100.0 }), // exists → filtered

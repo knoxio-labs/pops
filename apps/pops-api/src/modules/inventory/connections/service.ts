@@ -63,6 +63,7 @@ export function connectItems(inputA: string, inputB: string): ItemConnectionRow 
     .where(and(eq(itemConnections.itemAId, itemAId), eq(itemConnections.itemBId, itemBId)))
     .all();
 
+  if (!created) throw new NotFoundError("Item connection", `${itemAId}-${itemBId}`);
   return created;
 }
 
@@ -99,7 +100,7 @@ export function listConnectionsForItem(
 
   const [countResult] = db.select({ total: count() }).from(itemConnections).where(condition).all();
 
-  return { rows, total: countResult.total };
+  return { rows, total: countResult?.total ?? 0 };
 }
 
 /**

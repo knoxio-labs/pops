@@ -130,8 +130,8 @@ describe("getLibraries", () => {
       updatedAt: 1711000000,
       scannedAt: 1711000100,
     });
-    expect(result[1].title).toBe("TV Shows");
-    expect(result[1].type).toBe("show");
+    expect(result[1]!.title).toBe("TV Shows");
+    expect(result[1]!.type).toBe("show");
   });
 
   it("calls correct URL", async () => {
@@ -192,20 +192,20 @@ describe("getAllItems", () => {
 
     expect(result).toHaveLength(1);
     const item = result[0];
-    expect(item.ratingKey).toBe("100");
-    expect(item.title).toBe("Fight Club");
-    expect(item.originalTitle).toBe("Fight Club");
-    expect(item.summary).toBe("An insomniac office worker...");
-    expect(item.tagline).toBe("Mischief. Mayhem. Soap.");
-    expect(item.year).toBe(1999);
-    expect(item.durationMs).toBe(8340000);
-    expect(item.viewCount).toBe(3);
-    expect(item.lastViewedAt).toBe(1711500000);
-    expect(item.rating).toBe(8.0);
-    expect(item.audienceRating).toBe(8.8);
-    expect(item.contentRating).toBe("R");
-    expect(item.genres).toEqual(["Drama", "Thriller"]);
-    expect(item.directors).toEqual(["David Fincher"]);
+    expect(item!.ratingKey).toBe("100");
+    expect(item!.title).toBe("Fight Club");
+    expect(item!.originalTitle).toBe("Fight Club");
+    expect(item!.summary).toBe("An insomniac office worker...");
+    expect(item!.tagline).toBe("Mischief. Mayhem. Soap.");
+    expect(item!.year).toBe(1999);
+    expect(item!.durationMs).toBe(8340000);
+    expect(item!.viewCount).toBe(3);
+    expect(item!.lastViewedAt).toBe(1711500000);
+    expect(item!.rating).toBe(8.0);
+    expect(item!.audienceRating).toBe(8.8);
+    expect(item!.contentRating).toBe("R");
+    expect(item!.genres).toEqual(["Drama", "Thriller"]);
+    expect(item!.directors).toEqual(["David Fincher"]);
   });
 
   it("parses external IDs from Guid array", async () => {
@@ -213,7 +213,7 @@ describe("getAllItems", () => {
 
     const result = await client.getAllItems("1");
 
-    expect(result[0].externalIds).toEqual([
+    expect(result[0]!.externalIds).toEqual([
       { source: "tmdb", id: "550" },
       { source: "imdb", id: "tt0137523" },
     ]);
@@ -241,14 +241,14 @@ describe("getAllItems", () => {
 
     const result = await client.getAllItems("1");
     const item = result[0];
-    expect(item.externalIds).toEqual([]);
-    expect(item.genres).toEqual([]);
-    expect(item.directors).toEqual([]);
-    expect(item.originalTitle).toBeNull();
-    expect(item.summary).toBeNull();
-    expect(item.year).toBeNull();
-    expect(item.viewCount).toBe(0);
-    expect(item.lastViewedAt).toBeNull();
+    expect(item!.externalIds).toEqual([]);
+    expect(item!.genres).toEqual([]);
+    expect(item!.directors).toEqual([]);
+    expect(item!.originalTitle).toBeNull();
+    expect(item!.summary).toBeNull();
+    expect(item!.year).toBeNull();
+    expect(item!.viewCount).toBe(0);
+    expect(item!.lastViewedAt).toBeNull();
   });
 
   it("returns empty array when section has no items", async () => {
@@ -398,10 +398,10 @@ describe("getEpisodes", () => {
       lastViewedAt: 1711500000,
       viewCount: 2,
     });
-    expect(result[1].title).toBe("Cat's in the Bag...");
-    expect(result[1].viewCount).toBe(0);
-    expect(result[1].lastViewedAt).toBeNull();
-    expect(result[1].summary).toBeNull();
+    expect(result[1]!.title).toBe("Cat's in the Bag...");
+    expect(result[1]!.viewCount).toBe(0);
+    expect(result[1]!.lastViewedAt).toBeNull();
+    expect(result[1]!.summary).toBeNull();
   });
 
   it("calls correct URL with allLeaves", async () => {
@@ -449,14 +449,14 @@ describe("getEpisodes - TV show with TVDB guid", () => {
 
     const result = await client.getAllItems("2");
 
-    expect(result[0].externalIds).toEqual([
+    expect(result[0]!.externalIds).toEqual([
       { source: "tvdb", id: "81189" },
       { source: "tmdb", id: "1396" },
       { source: "imdb", id: "tt0903747" },
     ]);
-    expect(result[0].leafCount).toBe(62);
-    expect(result[0].viewedLeafCount).toBe(62);
-    expect(result[0].childCount).toBe(5);
+    expect(result[0]!.leafCount).toBe(62);
+    expect(result[0]!.viewedLeafCount).toBe(62);
+    expect(result[0]!.childCount).toBe(5);
   });
 });
 
@@ -529,7 +529,7 @@ describe("external ID parsing", () => {
     );
 
     const result = await client.getAllItems("1");
-    expect(result[0].externalIds).toEqual([
+    expect(result[0]!.externalIds).toEqual([
       { source: "tmdb", id: "550" },
       { source: "imdb", id: "tt0137523" },
     ]);

@@ -171,7 +171,8 @@ export function ReviewStep() {
     async (transactions: ProcessedTransaction[]) => {
       if (transactions.length === 0) return;
 
-      const entityName = transactions[0].entity?.entityName;
+      const firstTx = transactions[0];
+      const entityName = firstTx?.entity?.entityName;
       if (!entityName) {
         toast.error("No entity name found");
         return;
@@ -238,7 +239,8 @@ export function ReviewStep() {
       // Store transactions for bulk assignment after creation
       setPendingBulkTransactions(transactions);
       // Use first transaction as the "selected" one to get the suggested name
-      setSelectedTransaction(transactions[0]);
+      const first = transactions[0];
+      setSelectedTransaction(first ?? null);
       setShowCreateDialog(true);
     },
     []

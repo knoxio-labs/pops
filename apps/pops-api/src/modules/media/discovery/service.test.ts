@@ -39,8 +39,8 @@ describe("scoreRecommendations", () => {
     const scored = scoreRecommendations(results, makeProfile());
 
     expect(scored).toHaveLength(1);
-    expect(scored[0].matchPercentage).toBe(0);
-    expect(scored[0].matchReason).toBe("");
+    expect(scored[0]!.matchPercentage).toBe(0);
+    expect(scored[0]!.matchReason).toBe("");
   });
 
   it("scores based on genre affinities", () => {
@@ -60,12 +60,12 @@ describe("scoreRecommendations", () => {
     const scored = scoreRecommendations(results, profile);
 
     // Action/Sci-Fi should score higher than Comedy/Romance
-    expect(scored[0].title).toBe("Action Sci-Fi");
-    expect(scored[0].matchPercentage).toBeGreaterThan(scored[1].matchPercentage);
+    expect(scored[0]!.title).toBe("Action Sci-Fi");
+    expect(scored[0]!.matchPercentage).toBeGreaterThan(scored[1]!.matchPercentage);
     // Both should be in the 50-98 range
-    expect(scored[0].matchPercentage).toBeGreaterThanOrEqual(50);
-    expect(scored[0].matchPercentage).toBeLessThanOrEqual(98);
-    expect(scored[1].matchPercentage).toBeGreaterThanOrEqual(50);
+    expect(scored[0]!.matchPercentage).toBeGreaterThanOrEqual(50);
+    expect(scored[0]!.matchPercentage).toBeLessThanOrEqual(98);
+    expect(scored[1]!.matchPercentage).toBeGreaterThanOrEqual(50);
   });
 
   it("includes matching genre names in matchReason", () => {
@@ -80,8 +80,8 @@ describe("scoreRecommendations", () => {
 
     const scored = scoreRecommendations(results, profile);
 
-    expect(scored[0].matchReason).toContain("Action");
-    expect(scored[0].matchReason).toContain("Science Fiction");
+    expect(scored[0]!.matchReason).toContain("Action");
+    expect(scored[0]!.matchReason).toContain("Science Fiction");
   });
 
   it("falls back to genre distribution when no affinities exist", () => {
@@ -96,8 +96,8 @@ describe("scoreRecommendations", () => {
 
     const scored = scoreRecommendations(results, profile);
 
-    expect(scored[0].matchPercentage).toBeGreaterThan(50);
-    expect(scored[0].matchReason).toContain("Action");
+    expect(scored[0]!.matchPercentage).toBeGreaterThan(50);
+    expect(scored[0]!.matchReason).toContain("Action");
   });
 
   it("sorts results by matchPercentage descending", () => {
@@ -114,8 +114,8 @@ describe("scoreRecommendations", () => {
 
     const scored = scoreRecommendations(results, profile);
 
-    expect(scored[0].title).toBe("High Match");
-    expect(scored[1].title).toBe("Low Match");
+    expect(scored[0]!.title).toBe("High Match");
+    expect(scored[1]!.title).toBe("Low Match");
   });
 
   it("handles results with unknown genre IDs gracefully", () => {
@@ -126,7 +126,7 @@ describe("scoreRecommendations", () => {
 
     const scored = scoreRecommendations(results, profile);
 
-    expect(scored[0].matchPercentage).toBe(0);
-    expect(scored[0].matchReason).toBe("");
+    expect(scored[0]!.matchPercentage).toBe(0);
+    expect(scored[0]!.matchReason).toBe("");
   });
 });

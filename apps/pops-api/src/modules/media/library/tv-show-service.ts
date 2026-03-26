@@ -167,5 +167,5 @@ function pickBest(artworks: TvdbArtwork[], type: number): string | null {
     return b.score - a.score;
   });
 
-  return sorted[0].imageUrl;
+  return sorted[0]?.imageUrl ?? null;
 }

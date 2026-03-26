@@ -34,9 +34,9 @@ describe("inventory.locations.list", () => {
 
     const result = await caller.inventory.locations.list();
     expect(result.data).toHaveLength(3);
-    expect(result.data[0].name).toBe("Kitchen");
-    expect(result.data[1].name).toBe("Living Room");
-    expect(result.data[2].name).toBe("Bedroom");
+    expect(result.data[0]!.name).toBe("Kitchen");
+    expect(result.data[1]!.name).toBe("Living Room");
+    expect(result.data[2]!.name).toBe("Bedroom");
   });
 });
 
@@ -65,8 +65,8 @@ describe("inventory.locations.tree", () => {
 
     const result = await caller.inventory.locations.tree();
     expect(result.data).toHaveLength(2);
-    expect(result.data[0].children).toEqual([]);
-    expect(result.data[1].children).toEqual([]);
+    expect(result.data[0]!.children).toEqual([]);
+    expect(result.data[1]!.children).toEqual([]);
   });
 
   it("builds nested tree from parent-child relationships", async () => {
@@ -79,13 +79,13 @@ describe("inventory.locations.tree", () => {
     expect(result.data).toHaveLength(1); // Only Home is root
 
     const home = result.data[0];
-    expect(home.name).toBe("Home");
-    expect(home.children).toHaveLength(2); // Kitchen, Bedroom
+    expect(home!.name).toBe("Home");
+    expect(home!.children).toHaveLength(2); // Kitchen, Bedroom
 
-    const kitchen = home.children.find((c) => c.name === "Kitchen");
+    const kitchen = home!.children.find((c) => c.name === "Kitchen");
     expect(kitchen).toBeDefined();
     expect(kitchen?.children).toHaveLength(1); // Pantry
-    expect(kitchen?.children[0].name).toBe("Pantry");
+    expect(kitchen?.children[0]!.name).toBe("Pantry");
   });
 });
 

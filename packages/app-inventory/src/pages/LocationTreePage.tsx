@@ -602,6 +602,7 @@ export function LocationTreePage() {
 
       const current = siblings[idx];
       const swap = siblings[swapIdx];
+      if (!current || !swap) return;
 
       // Swap sort orders
       updateMutation.mutate({
