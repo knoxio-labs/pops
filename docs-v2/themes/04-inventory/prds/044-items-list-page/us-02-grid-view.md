@@ -9,10 +9,10 @@ As a user, I want a card grid view of my inventory items with photos and a toggl
 
 ## Acceptance Criteria
 
-- [ ] Grid renders responsive columns: 2 (mobile) → 3 (tablet) → 4 (md) → 5 (lg/xl)
+- [x] Grid renders responsive columns: 2 (mobile) → 3 (tablet) → 4 (md) → 5 (lg/xl)
 - [ ] Each card displays: primary photo (or placeholder), item name, asset ID, type badge, location
-- [ ] Cards use a consistent aspect ratio for the photo area
-- [ ] Placeholder renders when an item has no photos (generic inventory icon, not a broken image)
+- [x] Cards use a consistent aspect ratio for the photo area
+- [x] Placeholder renders when an item has no photos (generic inventory icon, not a broken image)
 - [x] Type badge renders on each card (e.g., "Electronics", "Furniture")
 - [x] Clicking a card navigates to `/inventory/items/:id`
 - [x] Card has hover/focus state (subtle scale or shadow transition)
