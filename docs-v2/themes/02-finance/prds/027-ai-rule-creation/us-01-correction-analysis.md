@@ -1,7 +1,7 @@
 # US-01: Send correction to Claude for pattern analysis
 
 > PRD: [027 — AI Rule Creation](README.md)
-> Status: To Review
+> Status: Partial
 
 ## Description
 
@@ -16,9 +16,11 @@ As a developer, I want user corrections sent to Claude so that the AI can sugges
 - [ ] Pattern has minimum length of 3 characters
 - [ ] Confidence is 0-1 range
 - [ ] AI failure is non-fatal — correction still works, just no pattern created
-- [ ] Cost tracked in ai_usage table
+- [x] Cost tracked in ai_usage table
 - [ ] Named environments skip AI calls
 
 ## Notes
 
 The prompt should guide Claude to identify what part of the description is the entity vs location/branch/noise. "IKEA TEMPE NSW" → entity is "IKEA", "TEMPE NSW" is location noise → prefix match on "IKEA".
+
+AI infrastructure is built (`rule-generator.ts` + `generateRules` tRPC endpoint, ai_usage tracking). Missing: per-correction trigger from ReviewStep — only batch mode exists. Individual correction flow to Claude is not yet wired up.

@@ -1,7 +1,7 @@
 # US-02: Auto-apply high-confidence rules during import
 
 > PRD: [027 — AI Rule Creation](README.md)
-> Status: To Review
+> Status: Partial
 
 ## Description
 
@@ -14,8 +14,10 @@ As a user, I want high-confidence AI rules automatically applied to remaining im
 - [ ] Newly matched transactions move from uncertain → matched
 - [ ] Toast notification: "Rule created: [pattern]. Applied to N more transactions"
 - [ ] Tab counts update immediately
-- [ ] Rule is persistent — applies to future imports too
+- [x] Rule is persistent — applies to future imports too
 
 ## Notes
 
 This is the core learning loop. Correct one → AI creates rule → others match immediately. The user should see the uncertain count decrease in real-time as they work through corrections.
+
+Auto-apply exists in `imports/service.ts` but threshold is 0.9 (spec says 0.8). Toast notification and explicit re-evaluation of remaining transactions not implemented. Rules persist in corrections table ✅.
