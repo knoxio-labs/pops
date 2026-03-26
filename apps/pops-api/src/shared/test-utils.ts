@@ -53,7 +53,7 @@ export function createTestDb(): Database {
       date            TEXT NOT NULL,
       type            TEXT NOT NULL DEFAULT '',
       tags            TEXT NOT NULL DEFAULT '[]',
-      entity_id       TEXT,
+      entity_id       TEXT REFERENCES entities(id) ON DELETE SET NULL,
       entity_name     TEXT,
       location        TEXT,
       country         TEXT,
