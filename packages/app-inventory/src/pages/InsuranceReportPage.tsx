@@ -95,7 +95,7 @@ export function InsuranceReportPage(): React.ReactElement {
         </div>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors shadow-sm shadow-amber-500/20 print:hidden"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent text-white text-sm font-bold hover:bg-app-accent/80 transition-colors shadow-sm shadow-app-accent/20 print:hidden"
         >
           <Printer className="h-4 w-4" />
           Print
@@ -103,20 +103,18 @@ export function InsuranceReportPage(): React.ReactElement {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-6 mb-8 p-6 rounded-2xl bg-amber-500/10 border-2 border-amber-500/10 print:bg-transparent print:border print:border-gray-300 print:rounded-none">
+      <div className="grid grid-cols-2 gap-6 mb-8 p-6 rounded-2xl bg-app-accent/10 border-2 border-app-accent/10 print:bg-transparent print:border print:border-gray-300 print:rounded-none">
         <div>
-          <p className="text-xs font-bold text-amber-900/60 dark:text-amber-100/60 uppercase tracking-widest mb-1">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">
             Total Items
           </p>
-          <p className="text-3xl font-black text-amber-900 dark:text-amber-50">
-            {report.totalItems}
-          </p>
+          <p className="text-3xl font-black text-foreground">{report.totalItems}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-bold text-amber-900/60 dark:text-amber-100/60 uppercase tracking-widest mb-1">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">
             Total Replacement Value
           </p>
-          <p className="text-3xl font-black text-amber-600 dark:text-amber-400">
+          <p className="text-3xl font-black text-app-accent dark:text-app-accent">
             {formatCurrency(report.totalValue)}
           </p>
         </div>

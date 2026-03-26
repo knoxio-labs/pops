@@ -262,7 +262,7 @@ export function ItemFormPage() {
         </Alert>
         <Link
           to="/inventory"
-          className="mt-4 inline-block text-sm text-amber-600 hover:text-amber-700 underline font-medium"
+          className="mt-4 inline-block text-sm text-app-accent hover:text-app-accent/80 underline font-medium"
         >
           Back to inventory
         </Link>
@@ -284,10 +284,7 @@ export function ItemFormPage() {
                 { label: editItemName, href: `/inventory/items/${id}` },
                 { label: "Edit" },
               ]
-            : [
-                { label: "Inventory", href: "/inventory" },
-                { label: "New Item" },
-              ]
+            : [{ label: "Inventory", href: "/inventory" }, { label: "New Item" }]
         }
         renderLink={Link}
         className="mb-8"
@@ -295,9 +292,9 @@ export function ItemFormPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Basic Info */}
-        <section className="space-y-4 p-6 rounded-2xl border-2 border-amber-500/10 bg-card/50 shadow-sm shadow-amber-500/5">
-          <h2 className="text-lg font-bold flex items-center gap-2 text-amber-900 dark:text-amber-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        <section className="space-y-4 p-6 rounded-2xl border-2 border-app-accent/10 bg-card/50 shadow-sm shadow-app-accent/5">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
             Basic Information
           </h2>
 
@@ -331,9 +328,9 @@ export function ItemFormPage() {
         </section>
 
         {/* Classification */}
-        <section className="space-y-4 p-6 rounded-2xl border-2 border-amber-500/10 bg-card/50 shadow-sm shadow-amber-500/5">
-          <h2 className="text-lg font-bold flex items-center gap-2 text-amber-900 dark:text-amber-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        <section className="space-y-4 p-6 rounded-2xl border-2 border-app-accent/10 bg-card/50 shadow-sm shadow-app-accent/5">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
             Classification
           </h2>
 
@@ -362,16 +359,16 @@ export function ItemFormPage() {
             <TextInput {...register("room")} placeholder="e.g. Office, Bedroom" />
           </FormField>
 
-          <div className="flex gap-6 p-4 rounded-xl bg-amber-500/5">
+          <div className="flex gap-6 p-4 rounded-xl bg-app-accent/5">
             <CheckboxInput label="In Use" {...register("inUse")} />
             <CheckboxInput label="Tax Deductible" {...register("deductible")} />
           </div>
         </section>
 
         {/* Dates & Values */}
-        <section className="space-y-4 p-6 rounded-2xl border-2 border-amber-500/10 bg-card/50 shadow-sm shadow-amber-500/5">
-          <h2 className="text-lg font-bold flex items-center gap-2 text-amber-900 dark:text-amber-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        <section className="space-y-4 p-6 rounded-2xl border-2 border-app-accent/10 bg-card/50 shadow-sm shadow-app-accent/5">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
             Dates & Values
           </h2>
 
@@ -392,7 +389,7 @@ export function ItemFormPage() {
                 min="0"
                 {...register("replacementValue")}
                 placeholder="0.00"
-                className="font-bold text-amber-600 dark:text-amber-400"
+                className="font-bold text-app-accent"
               />
             </FormField>
             <FormField label="Resale Value ($)">
@@ -408,9 +405,9 @@ export function ItemFormPage() {
         </section>
 
         {/* Notes */}
-        <section className="space-y-4 p-6 rounded-2xl border-2 border-amber-500/10 bg-card/50 shadow-sm shadow-amber-500/5">
-          <h2 className="text-lg font-bold flex items-center gap-2 text-amber-900 dark:text-amber-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        <section className="space-y-4 p-6 rounded-2xl border-2 border-app-accent/10 bg-card/50 shadow-sm shadow-app-accent/5">
+          <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
             Notes
           </h2>
           <Textarea
@@ -423,9 +420,9 @@ export function ItemFormPage() {
 
         {/* Connected Items (create mode only) */}
         {!isEditMode && (
-          <section className="space-y-4 p-6 rounded-2xl border-2 border-amber-500/10 bg-card/50 shadow-sm shadow-amber-500/5">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-amber-900 dark:text-amber-100">
-              <Link2 className="h-5 w-5 text-amber-500" />
+          <section className="space-y-4 p-6 rounded-2xl border-2 border-app-accent/10 bg-card/50 shadow-sm shadow-app-accent/5">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <Link2 className="h-5 w-5 text-app-accent" />
               Connected Items
             </h2>
 
@@ -435,12 +432,12 @@ export function ItemFormPage() {
                   <Badge
                     key={conn.id}
                     variant="secondary"
-                    className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-amber-500/10 text-amber-800 border-amber-500/20"
+                    className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-app-accent/10 text-app-accent border-app-accent/20"
                   >
                     {conn.itemName}
                     <button
                       type="button"
-                      className="rounded-full p-0.5 hover:bg-amber-500/20"
+                      className="rounded-full p-0.5 hover:bg-app-accent/20"
                       onClick={() =>
                         setPendingConnections((prev) => prev.filter((c) => c.id !== conn.id))
                       }
@@ -483,7 +480,7 @@ export function ItemFormPage() {
                         <button
                           key={item.id}
                           type="button"
-                          className="w-full flex items-center justify-between p-2.5 hover:bg-amber-500/5 text-left transition-colors"
+                          className="w-full flex items-center justify-between p-2.5 hover:bg-app-accent/5 text-left transition-colors"
                           onClick={() => {
                             setPendingConnections((prev) => [
                               ...prev,
@@ -499,7 +496,7 @@ export function ItemFormPage() {
                                 "No details"}
                             </div>
                           </div>
-                          <Link2 className="h-4 w-4 text-amber-500/50 shrink-0 ml-2" />
+                          <Link2 className="h-4 w-4 text-app-accent/50 shrink-0 ml-2" />
                         </button>
                       ))
                     );
@@ -515,7 +512,7 @@ export function ItemFormPage() {
           <Button
             type="submit"
             size="lg"
-            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold transition-all shadow-md shadow-amber-500/20"
+            className="flex-1 bg-app-accent hover:bg-app-accent/80 text-white font-bold transition-all shadow-md shadow-app-accent/20"
             loading={isMutating}
             loadingText={isEditMode ? "Saving..." : "Creating..."}
           >
@@ -527,7 +524,7 @@ export function ItemFormPage() {
               type="button"
               variant="outline"
               size="lg"
-              className="px-8 font-bold border-amber-500/20 hover:bg-amber-500/5"
+              className="px-8 font-bold border-app-accent/20 hover:bg-app-accent/5"
             >
               Cancel
             </Button>

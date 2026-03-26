@@ -82,7 +82,7 @@ export function ItemDetailPage() {
         </Alert>
         <Link
           to="/inventory"
-          className="mt-4 inline-block text-sm text-amber-600 hover:text-amber-700 underline font-medium"
+          className="mt-4 inline-block text-sm text-app-accent hover:text-app-accent/80 underline font-medium"
         >
           Back to inventory
         </Link>
@@ -99,7 +99,9 @@ export function ItemDetailPage() {
       <PageHeader
         title={
           <div>
-            <span className="text-2xl md:text-3xl font-extrabold tracking-tight">{item.itemName}</span>
+            <span className="text-2xl md:text-3xl font-extrabold tracking-tight">
+              {item.itemName}
+            </span>
             {(item.brand || item.model) && (
               <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest opacity-80 mt-1">
                 {[item.brand, item.model].filter(Boolean).join(" • ")}
@@ -108,14 +110,15 @@ export function ItemDetailPage() {
           </div>
         }
         backHref="/inventory"
-        breadcrumbs={[
-          { label: "Inventory", href: "/inventory" },
-          { label: item.itemName },
-        ]}
+        breadcrumbs={[{ label: "Inventory", href: "/inventory" }, { label: item.itemName }]}
         actions={
           <Link to={`/inventory/items/${id}/edit`}>
-            <Button variant="outline" size="sm" className="font-bold border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/5 transition-colors">
-              <Pencil className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-bold border-app-accent/20 hover:border-app-accent/50 hover:bg-app-accent/5 transition-colors"
+            >
+              <Pencil className="h-4 w-4 mr-2 text-app-accent" />
               Edit
             </Button>
           </Link>
@@ -125,7 +128,7 @@ export function ItemDetailPage() {
       />
 
       {/* Details Grid */}
-      <div className="bg-card border-2 border-amber-500/10 rounded-2xl overflow-hidden mb-8 shadow-sm shadow-amber-500/5">
+      <div className="bg-card border-2 border-app-accent/10 rounded-2xl overflow-hidden mb-8 shadow-sm shadow-app-accent/5">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 p-6">
           {item.type && <DetailField label="Type" value={<TypeBadge type={item.type} />} />}
           {item.condition && (
@@ -149,7 +152,7 @@ export function ItemDetailPage() {
             label="Status"
             value={
               item.inUse ? (
-                <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/15">
+                <Badge className="bg-app-accent/10 text-app-accent border-app-accent/20 hover:bg-app-accent/15">
                   In Use
                 </Badge>
               ) : (
@@ -170,7 +173,7 @@ export function ItemDetailPage() {
             <DetailField
               label="Replacement"
               value={
-                <span className="text-amber-700 dark:text-amber-300 font-bold">{`$${item.replacementValue.toLocaleString()}`}</span>
+                <span className="text-app-accent font-bold">{`$${item.replacementValue.toLocaleString()}`}</span>
               }
             />
           )}
@@ -248,7 +251,7 @@ export function ItemDetailPage() {
 function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-bold text-amber-900/60 dark:text-amber-100/60 uppercase tracking-widest mb-1">
+      <dt className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">
         {label}
       </dt>
       <dd className="font-semibold text-foreground">{value}</dd>

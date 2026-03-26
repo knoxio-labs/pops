@@ -175,8 +175,8 @@ export function WarrantiesPage() {
     <div className="space-y-6 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-amber-500/10">
-          <ShieldCheck className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+        <div className="p-2 rounded-xl bg-app-accent/10">
+          <ShieldCheck className="h-6 w-6 text-app-accent" />
         </div>
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Warranty Tracking</h1>
       </div>
@@ -195,13 +195,13 @@ export function WarrantiesPage() {
         <div className="space-y-4">
           {/* Expiring Soon — always open */}
           {expiringSoon.length > 0 && (
-            <div className="border-2 border-amber-500/20 rounded-2xl bg-amber-500/5 overflow-hidden shadow-sm shadow-amber-500/5">
-              <div className="flex items-center gap-2 px-5 py-4 font-bold text-amber-900 dark:text-amber-100 bg-amber-500/10">
+            <div className="border-2 border-app-accent/20 rounded-2xl bg-app-accent/5 overflow-hidden shadow-sm shadow-app-accent/5">
+              <div className="flex items-center gap-2 px-5 py-4 font-bold text-foreground bg-app-accent/10">
                 <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-app-accent animate-pulse" />
                   Expiring Soon
                 </span>
-                <Badge className="bg-amber-500/20 text-amber-700 border-amber-500/30 ml-auto">
+                <Badge className="bg-app-accent/20 text-app-accent border-app-accent/30 ml-auto">
                   {expiringSoon.length}
                 </Badge>
               </div>

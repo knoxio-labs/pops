@@ -215,7 +215,7 @@ export function WishlistPage() {
         const amount = row.original.saved;
         if (amount === null) return <div className="text-right text-muted-foreground">—</div>;
         return (
-          <div className="text-right font-mono font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+          <div className="text-right font-mono font-medium tabular-nums text-app-accent">
             $
             {amount.toLocaleString(undefined, {
               minimumFractionDigits: 2,

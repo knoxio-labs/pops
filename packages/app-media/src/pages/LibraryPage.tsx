@@ -51,7 +51,7 @@ function MediaCard({
 
   return (
     <Link to={href} className="group block outline-none">
-      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted transition-all duration-300 group-hover:shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] group-hover:ring-1 group-hover:ring-indigo-500/30 group-focus-visible:ring-2 group-focus-visible:ring-indigo-500">
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted transition-all duration-300 group-hover:shadow-lg group-hover:shadow-app-accent/20 group-hover:ring-1 group-hover:ring-app-accent/30 group-focus-visible:ring-2 group-focus-visible:ring-app-accent">
         {posterSrc ? (
           <img
             src={posterSrc}
@@ -67,7 +67,7 @@ function MediaCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <Badge
           variant="secondary"
-          className="absolute top-2 right-2 text-[10px] uppercase tracking-wider px-1.5 py-0 bg-indigo-500/10 text-indigo-200 border-indigo-500/20 backdrop-blur-md"
+          className="absolute top-2 right-2 text-[10px] uppercase tracking-wider px-1.5 py-0 bg-app-accent/10 text-app-accent border-app-accent/20 backdrop-blur-md"
         >
           {item.type === "movie" ? "Movie" : "TV"}
         </Badge>
@@ -75,13 +75,13 @@ function MediaCard({
         {item.progress != null && item.progress > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
             <div
-              className={`h-full transition-all ${item.progress >= 100 ? "bg-green-500" : "bg-indigo-500"}`}
+              className={`h-full transition-all ${item.progress >= 100 ? "bg-green-500" : "bg-app-accent"}`}
               style={{ width: `${Math.min(item.progress, 100)}%` }}
             />
           </div>
         )}
       </div>
-      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-indigo-400">
+      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-app-accent">
         {item.title}
       </h3>
       {item.year && <p className="text-xs text-muted-foreground">{item.year}</p>}
@@ -139,7 +139,7 @@ export function LibraryPage() {
           </Link>
           <Link
             to="/media/search"
-            className="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-sm font-medium text-app-accent hover:text-app-accent/80 transition-colors"
           >
             Search
           </Link>
@@ -165,7 +165,7 @@ export function LibraryPage() {
               aria-pressed={typeFilter === opt.value}
               className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-md transition-all duration-200 ${
                 typeFilter === opt.value
-                  ? "bg-indigo-600 text-white shadow-sm"
+                  ? "bg-app-accent text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -236,7 +236,7 @@ export function LibraryPage() {
         className="fixed bottom-6 right-6 z-50"
         aria-label="What should I watch tonight?"
       >
-        <Button className="h-14 w-14 rounded-full bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25 p-0">
+        <Button className="h-14 w-14 rounded-full bg-app-accent hover:bg-app-accent/90 shadow-lg shadow-app-accent/25 p-0">
           <Sparkles className="h-6 w-6" />
         </Button>
       </Link>

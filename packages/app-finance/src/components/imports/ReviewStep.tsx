@@ -446,7 +446,7 @@ export function ReviewStep() {
             return (
               <div
                 key={idx}
-                className="p-4 text-sm rounded-lg border text-amber-800 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200 border-amber-200 dark:border-amber-800"
+                className="p-4 text-sm rounded-lg border text-warning bg-warning/10 border-warning/25"
               >
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
