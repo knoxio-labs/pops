@@ -169,7 +169,7 @@ export function ProcessingStep() {
           {progress.errors.slice(0, 3).map((error, idx) => (
             <div
               key={idx}
-              className="p-3 text-sm text-amber-800 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200 rounded-lg border border-amber-200 dark:border-amber-800"
+              className="p-3 text-sm text-warning bg-warning/10 rounded-lg border border-warning/25"
             >
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -198,7 +198,7 @@ export function ProcessingStep() {
                 return (
                   <div
                     key={idx}
-                    className="p-4 text-sm rounded-lg border text-amber-800 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-200 border-amber-200 dark:border-amber-800"
+                    className="p-4 text-sm rounded-lg border text-warning bg-warning/10 border-warning/25"
                   >
                     <div className="flex items-start gap-3">
                       <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />

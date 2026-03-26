@@ -156,7 +156,7 @@ function InlineInput({
       onKeyDown={handleKeyDown}
       onBlur={onCancel}
       placeholder={placeholder}
-      className="text-sm font-medium bg-transparent border-b border-amber-500 outline-none px-0.5 py-0 w-full max-w-[200px]"
+      className="text-sm font-medium bg-transparent border-b border-app-accent outline-none px-0.5 py-0 w-full max-w-[200px]"
     />
   );
 }
@@ -258,9 +258,9 @@ function LocationNode({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div
-        className={`group flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer transition-colors hover:bg-amber-500/10 ${
+        className={`group flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer transition-colors hover:bg-app-accent/10 ${
           isSelected
-            ? "bg-amber-500/20 text-amber-900 dark:text-amber-100 font-bold border-l-2 border-amber-500 rounded-l-none ml-[-2px]"
+            ? "bg-app-accent/20 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]"
             : ""
         }`}
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
@@ -651,7 +651,7 @@ export function LocationTreePage() {
               setAddingRoot(true);
               setAddingChildOf(null);
             }}
-            className="flex items-center gap-1.5 text-sm font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-bold text-app-accent hover:text-app-accent/80 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Root Location

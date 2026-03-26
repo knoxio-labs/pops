@@ -97,7 +97,7 @@ function createColumns(): ColumnDef<InventoryTableItem>[] {
       header: "In Use",
       cell: ({ row }) =>
         row.original.inUse ? (
-          <Check className="h-4 w-4 text-emerald-600" />
+          <Check className="h-4 w-4 text-app-accent" />
         ) : (
           <X className="h-4 w-4 text-muted-foreground/40" />
         ),

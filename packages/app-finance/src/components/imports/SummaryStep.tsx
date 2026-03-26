@@ -20,13 +20,11 @@ export function SummaryStep() {
             {processedTransactions.warnings.map((warning, idx) => (
               <div
                 key={idx}
-                className="p-3 text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-left"
+                className="p-3 text-sm bg-warning/10 border border-warning/25 rounded text-left"
               >
-                <p className="font-medium text-amber-900 dark:text-amber-100">{warning.message}</p>
+                <p className="font-medium text-warning">{warning.message}</p>
                 {warning.details && (
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 font-mono">
-                    {warning.details}
-                  </p>
+                  <p className="text-xs text-warning/80 mt-1 font-mono">{warning.details}</p>
                 )}
               </div>
             ))}

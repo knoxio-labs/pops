@@ -84,7 +84,7 @@ export function QuickPickDialog() {
       <DialogContent className="sm:max-w-md p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-0">
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-indigo-400" />
+            <Sparkles className="h-5 w-5 text-app-accent" />
             What Should I Watch?
           </DialogTitle>
         </DialogHeader>
@@ -104,7 +104,7 @@ export function QuickPickDialog() {
             </div>
           ) : isFinished ? (
             <div className="text-center py-8 space-y-4">
-              <Sparkles className="h-10 w-10 mx-auto text-indigo-400" />
+              <Sparkles className="h-10 w-10 mx-auto text-app-accent" />
               <p className="text-muted-foreground">You&apos;ve seen all the picks!</p>
               <Button onClick={handleRefresh} variant="outline">
                 Get More Picks
@@ -204,7 +204,7 @@ function PickCard({
           Not this one
         </Button>
         <Button
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+          className="flex-1 bg-app-accent hover:bg-app-accent/90"
           onClick={onWatch}
           loading={isAdding}
           loadingText="Adding..."

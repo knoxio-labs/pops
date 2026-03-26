@@ -44,7 +44,7 @@ export function DownloadQueue() {
               {/* Progress bar */}
               <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                  className="h-full rounded-full bg-app-accent transition-all duration-500"
                   style={{ width: `${item.progress}%` }}
                 />
               </div>

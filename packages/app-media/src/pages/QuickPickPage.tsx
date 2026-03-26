@@ -101,7 +101,7 @@ export function QuickPickPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Sparkles className="h-8 w-8 text-indigo-400 animate-pulse" />
+        <Sparkles className="h-8 w-8 text-app-accent animate-pulse" />
         <Skeleton className="h-[400px] w-[280px] rounded-xl" />
         <Skeleton className="h-4 w-40" />
       </div>
@@ -124,7 +124,7 @@ export function QuickPickPage() {
   if (isFinished) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-        <Sparkles className="h-10 w-10 text-indigo-400" />
+        <Sparkles className="h-10 w-10 text-app-accent" />
         <h2 className="text-xl font-semibold">That's all for now!</h2>
         <p className="text-muted-foreground text-sm max-w-xs">
           You've seen all the picks. Refresh for a new set of suggestions.
@@ -150,7 +150,7 @@ export function QuickPickPage() {
       {/* Header */}
       <div className="flex items-center justify-between w-full max-w-sm">
         <h1 className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-indigo-400" />
+          <Sparkles className="h-5 w-5 text-app-accent" />
           Quick Pick
         </h1>
         <span className="text-xs text-muted-foreground">
@@ -248,7 +248,7 @@ export function QuickPickPage() {
           Skip
         </Button>
         <Button
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+          className="flex-1 bg-app-accent hover:bg-app-accent/90"
           onClick={handleAddToWatchlist}
           disabled={addToWatchlist.isPending || addedIds.has(movie.id)}
         >
