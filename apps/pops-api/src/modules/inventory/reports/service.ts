@@ -28,8 +28,8 @@ export function getDashboard(): DashboardSummary {
 
   const now = new Date();
   const cutoff = new Date(now.getTime() + WARRANTY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const nowIso = now.toISOString().split("T")[0];
-  const cutoffIso = cutoff.toISOString().split("T")[0];
+  const nowIso = now.toISOString().split("T")[0] ?? "";
+  const cutoffIso = cutoff.toISOString().split("T")[0] ?? "";
 
   const [warrantyResult] = db
     .select({ cnt: count() })

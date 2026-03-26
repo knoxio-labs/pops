@@ -90,7 +90,9 @@ export function InsuranceReportPage(): React.ReactElement {
           </div>
           <p className="text-sm text-muted-foreground">
             Generated {today}
-            {locationId && report.groups.length === 1 && <> — {report.groups[0].locationName}</>}
+            {locationId && report.groups.length === 1 && report.groups[0] && (
+              <> — {report.groups[0].locationName}</>
+            )}
           </p>
         </div>
         <button

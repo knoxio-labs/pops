@@ -25,7 +25,9 @@ const counts = {
   transactions: db.prepare("SELECT COUNT(*) as count FROM transactions").get() as { count: number },
   entities: db.prepare("SELECT COUNT(*) as count FROM entities").get() as { count: number },
   budgets: db.prepare("SELECT COUNT(*) as count FROM budgets").get() as { count: number },
-  home_inventory: db.prepare("SELECT COUNT(*) as count FROM home_inventory").get() as { count: number },
+  home_inventory: db.prepare("SELECT COUNT(*) as count FROM home_inventory").get() as {
+    count: number;
+  },
   wish_list: db.prepare("SELECT COUNT(*) as count FROM wish_list").get() as { count: number },
 };
 

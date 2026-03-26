@@ -85,7 +85,7 @@ export function listCorrections(
     .offset(offset)
     .all();
 
-  return { rows: rows, total: countResult.count };
+  return { rows: rows, total: countResult?.count ?? 0 };
 }
 
 /**

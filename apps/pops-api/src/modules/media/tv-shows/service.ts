@@ -47,7 +47,8 @@ export function listTvShows(
     .offset(offset)
     .all();
 
-  const [{ total }] = db.select({ total: count() }).from(tvShows).where(where).all();
+  const countRow = db.select({ total: count() }).from(tvShows).where(where).all()[0];
+  const total = countRow?.total ?? 0;
 
   return { rows, total };
 }

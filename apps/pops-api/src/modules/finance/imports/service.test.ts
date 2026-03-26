@@ -66,7 +66,7 @@ describe("processImport", () => {
       const result = await processImport([baseParsedTransaction], "Amex");
 
       expect(result.skipped.length).toBe(1);
-      expect(result.skipped[0].skipReason).toBe("Duplicate transaction (checksum match)");
+      expect(result.skipped[0]!.skipReason).toBe("Duplicate transaction (checksum match)");
       expect(result.matched.length).toBe(0);
       expect(result.uncertain.length).toBe(0);
       expect(result.failed.length).toBe(0);
@@ -79,7 +79,7 @@ describe("processImport", () => {
 
       expect(result.skipped.length).toBe(0);
       expect(result.matched.length).toBe(1);
-      expect(result.matched[0].entity.entityName).toBe("Woolworths");
+      expect(result.matched[0]!.entity.entityName).toBe("Woolworths");
     });
 
     it("handles large batches without issues", async () => {
@@ -125,10 +125,10 @@ describe("processImport", () => {
       const result = await processImport([baseParsedTransaction], "Amex");
 
       expect(result.matched.length).toBe(1);
-      expect(result.matched[0].entity.entityId).toBe("woolworths-id");
-      expect(result.matched[0].entity.entityName).toBe("Woolworths");
-      expect(result.matched[0].entity.matchType).toBe("prefix");
-      expect(result.matched[0].status).toBe("matched");
+      expect(result.matched[0]!.entity.entityId).toBe("woolworths-id");
+      expect(result.matched[0]!.entity.entityName).toBe("Woolworths");
+      expect(result.matched[0]!.entity.matchType).toBe("prefix");
+      expect(result.matched[0]!.status).toBe("matched");
     });
 
     it("matches via alias", async () => {
@@ -147,8 +147,8 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.matched.length).toBe(1);
-      expect(result.matched[0].entity.entityName).toBe("Transport for NSW");
-      expect(result.matched[0].entity.matchType).toBe("alias");
+      expect(result.matched[0]!.entity.entityName).toBe("Transport for NSW");
+      expect(result.matched[0]!.entity.matchType).toBe("alias");
     });
 
     it("routes to uncertain when AI returns null (no entity match)", async () => {
@@ -157,7 +157,7 @@ describe("processImport", () => {
       const result = await processImport([baseParsedTransaction], "Amex");
 
       expect(result.uncertain.length).toBe(1);
-      expect(result.uncertain[0].error).toBe("No entity match found");
+      expect(result.uncertain[0]!.error).toBe("No entity match found");
       expect(result.failed.length).toBe(0);
     });
 
@@ -170,7 +170,7 @@ describe("processImport", () => {
       // With mock AI, pattern matching will catch WOOLWORTHS and return "Grocery Store"
       // This creates an uncertain transaction (new entity suggested)
       expect(result.uncertain.length).toBe(1);
-      expect(result.uncertain[0].entity.entityName).toBe("Grocery Store");
+      expect(result.uncertain[0]!.entity.entityName).toBe("Grocery Store");
     });
   });
 
@@ -196,7 +196,7 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.uncertain.length).toBe(1);
-      expect(result.uncertain[0].entity.entityName).toBe("Unknown Merchant");
+      expect(result.uncertain[0]!.entity.entityName).toBe("Unknown Merchant");
     });
 
     it("matches AI result to existing entity (case-insensitive)", async () => {
@@ -222,8 +222,8 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.matched.length).toBe(1);
-      expect(result.matched[0].entity.entityName).toBe("Woolworths");
-      expect(result.matched[0].entity.matchType).toBe("ai");
+      expect(result.matched[0]!.entity.entityName).toBe("Woolworths");
+      expect(result.matched[0]!.entity.matchType).toBe("ai");
     });
 
     it("adds to uncertain when AI suggests new entity", async () => {
@@ -247,9 +247,9 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.uncertain.length).toBe(1);
-      expect(result.uncertain[0].entity.entityName).toBe("New Merchant");
-      expect(result.uncertain[0].entity.confidence).toBe(0.7);
-      expect(result.uncertain[0].status).toBe("uncertain");
+      expect(result.uncertain[0]!.entity.entityName).toBe("New Merchant");
+      expect(result.uncertain[0]!.entity.confidence).toBe(0.7);
+      expect(result.uncertain[0]!.status).toBe("uncertain");
     });
 
     it("routes to uncertain when AI returns null", async () => {
@@ -264,7 +264,7 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.uncertain.length).toBe(1);
-      expect(result.uncertain[0].error).toBe("No entity match found");
+      expect(result.uncertain[0]!.error).toBe("No entity match found");
       expect(result.failed.length).toBe(0);
     });
   });
@@ -284,7 +284,7 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.uncertain.length).toBe(1);
-      expect(result.uncertain[0].error).toBe("AI categorization unavailable");
+      expect(result.uncertain[0]!.error).toBe("AI categorization unavailable");
       expect(result.failed.length).toBe(0);
     });
 
@@ -330,8 +330,8 @@ describe("processImport", () => {
       const result = await processImport([transaction], "Amex");
 
       expect(result.matched.length).toBe(1);
-      expect(result.matched[0].location).toBeUndefined();
-      expect(result.matched[0].online).toBeUndefined();
+      expect(result.matched[0]!.location).toBeUndefined();
+      expect(result.matched[0]!.online).toBeUndefined();
     });
   });
 });
@@ -343,7 +343,7 @@ describe("suggestedTags", () => {
     const result = await processImport([baseParsedTransaction], "Amex");
 
     expect(result.matched.length).toBe(1);
-    expect(Array.isArray(result.matched[0].suggestedTags)).toBe(true);
+    expect(Array.isArray(result.matched[0]!.suggestedTags)).toBe(true);
   });
 
   it("includes entity default_tags as source='entity'", async () => {
@@ -355,7 +355,7 @@ describe("suggestedTags", () => {
 
     const result = await processImport([baseParsedTransaction], "Amex");
 
-    const tags = result.matched[0].suggestedTags ?? [];
+    const tags = result.matched[0]!.suggestedTags ?? [];
     expect(tags).toContainEqual({ tag: "Groceries", source: "entity" });
   });
 
@@ -484,9 +484,9 @@ describe("executeImport", () => {
       .where(eq(transactionsTable.checksum, "abc123"))
       .all();
     expect(rows).toHaveLength(1);
-    expect(rows[0].description).toBe("WOOLWORTHS 1234");
-    expect(rows[0].amount).toBe(-125.5);
-    expect(rows[0].account).toBe("Amex");
+    expect(rows[0]!.description).toBe("WOOLWORTHS 1234");
+    expect(rows[0]!.amount).toBe(-125.5);
+    expect(rows[0]!.account).toBe("Amex");
   });
 
   it("writes multiple transactions", () => {
@@ -501,7 +501,7 @@ describe("executeImport", () => {
 
     // Verify all rows in SQLite
     const [row] = orm().select({ cnt: count() }).from(transactionsTable).all();
-    expect(row.cnt).toBe(10);
+    expect(row!.cnt).toBe(10);
   });
 
   it("returns pageId in successful results", () => {
@@ -607,7 +607,7 @@ describe("executeImport", () => {
     expect(result.imported).toBe(30);
 
     const [row] = orm().select({ cnt: count() }).from(transactionsTable).all();
-    expect(row.cnt).toBe(30);
+    expect(row!.cnt).toBe(30);
   });
 
   it("sets entity_id to NULL when referenced entity is deleted (ON DELETE SET NULL)", () => {
@@ -673,7 +673,7 @@ describe("createEntity", () => {
     expect(result1.entityId).not.toBe(result2.entityId);
 
     const [result] = orm().select({ cnt: count() }).from(entitiesTable).all();
-    expect(result.cnt).toBe(2);
+    expect(result!.cnt).toBe(2);
   });
 
   it("sets current timestamp for last_edited_time", () => {
@@ -714,7 +714,7 @@ describe("loadEntityLookup", () => {
 
     const result = await processImport([transaction], "Amex");
 
-    expect(result.matched[0].entity.entityId).toBe("woolworths-id");
+    expect(result.matched[0]!.entity.entityId).toBe("woolworths-id");
   });
 
   it("handles entity with empty id gracefully", async () => {
@@ -760,8 +760,8 @@ describe("loadAliases", () => {
 
     const result = await processImport([transaction], "Amex");
 
-    expect(result.matched[0].entity.entityName).toBe("Transport for NSW");
-    expect(result.matched[0].entity.matchType).toBe("alias");
+    expect(result.matched[0]!.entity.entityName).toBe("Transport for NSW");
+    expect(result.matched[0]!.entity.matchType).toBe("alias");
   });
 
   it("trims whitespace from aliases", async () => {
@@ -782,7 +782,7 @@ describe("loadAliases", () => {
 
     const result = await processImport([transaction], "Amex");
 
-    expect(result.matched[0].entity.matchType).toBe("alias");
+    expect(result.matched[0]!.entity.matchType).toBe("alias");
   });
 
   it("handles single alias (no commas)", async () => {
@@ -803,7 +803,7 @@ describe("loadAliases", () => {
 
     const result = await processImport([transaction], "Amex");
 
-    expect(result.matched[0].entity.matchType).toBe("alias");
+    expect(result.matched[0]!.entity.matchType).toBe("alias");
   });
 
   it("handles empty string aliases", async () => {

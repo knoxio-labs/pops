@@ -37,9 +37,9 @@ describe("tvShows.list", () => {
 
     const result = await caller.media.tvShows.list({});
     expect(result.data).toHaveLength(3);
-    expect(result.data[0].name).toBe("Atlanta");
-    expect(result.data[1].name).toBe("Breaking Bad");
-    expect(result.data[2].name).toBe("The Wire");
+    expect(result.data[0]!.name).toBe("Atlanta");
+    expect(result.data[1]!.name).toBe("Breaking Bad");
+    expect(result.data[2]!.name).toBe("The Wire");
   });
 
   it("filters by search", async () => {
@@ -57,7 +57,7 @@ describe("tvShows.list", () => {
 
     const result = await caller.media.tvShows.list({ status: "Ended" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].name).toBe("Breaking Bad");
+    expect(result.data[0]!.name).toBe("Breaking Bad");
   });
 
   it("supports pagination", async () => {
@@ -178,8 +178,8 @@ describe("tvShows.listSeasons", () => {
 
     const result = await caller.media.tvShows.listSeasons({ tvShowId: showId });
     expect(result.data).toHaveLength(2);
-    expect(result.data[0].seasonNumber).toBe(1);
-    expect(result.data[1].seasonNumber).toBe(2);
+    expect(result.data[0]!.seasonNumber).toBe(1);
+    expect(result.data[1]!.seasonNumber).toBe(2);
   });
 
   it("throws NOT_FOUND for missing show", async () => {
@@ -279,9 +279,9 @@ describe("tvShows.listEpisodes", () => {
 
     const result = await caller.media.tvShows.listEpisodes({ seasonId });
     expect(result.data).toHaveLength(3);
-    expect(result.data[0].episodeNumber).toBe(1);
-    expect(result.data[1].episodeNumber).toBe(2);
-    expect(result.data[2].episodeNumber).toBe(3);
+    expect(result.data[0]!.episodeNumber).toBe(1);
+    expect(result.data[1]!.episodeNumber).toBe(2);
+    expect(result.data[2]!.episodeNumber).toBe(3);
   });
 
   it("throws NOT_FOUND for missing season", async () => {

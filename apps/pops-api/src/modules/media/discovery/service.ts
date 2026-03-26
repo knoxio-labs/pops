@@ -88,7 +88,7 @@ function getGenreDistribution(): { genres: GenreDistribution[]; totalWatched: nu
     .where(eq(watchHistory.mediaType, "movie"))
     .all();
 
-  const totalWatched = totalResult.cnt;
+  const totalWatched = totalResult?.cnt ?? 0;
 
   if (totalWatched === 0) {
     return { genres: [], totalWatched: 0 };
@@ -126,7 +126,7 @@ function getTotalComparisons(): number {
 
   const [result] = db.select({ cnt: count() }).from(comparisons).all();
 
-  return result.cnt;
+  return result?.cnt ?? 0;
 }
 
 /**

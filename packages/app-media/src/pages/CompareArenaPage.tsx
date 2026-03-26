@@ -42,7 +42,10 @@ export function CompareArenaPage() {
 
   // Record comparison mutation
   const recordMutation = trpc.media.comparisons.record.useMutation({
-    onSuccess: async (_data, variables) => {
+    onSuccess: async (
+      _data: unknown,
+      variables: { mediaAId: number; mediaBId: number; winnerId: number }
+    ) => {
       // Fetch updated scores for both movies to compute delta
       const winnerId = variables.winnerId;
       const loserId = variables.mediaAId === winnerId ? variables.mediaBId : variables.mediaAId;
@@ -52,12 +55,12 @@ export function CompareArenaPage() {
           utils.media.comparisons.scores.fetch({
             mediaType: "movie",
             mediaId: winnerId,
-            dimensionId,
+            dimensionId: dimensionId ?? undefined,
           }),
           utils.media.comparisons.scores.fetch({
             mediaType: "movie",
             mediaId: loserId,
-            dimensionId,
+            dimensionId: dimensionId ?? undefined,
           }),
         ]);
 
@@ -198,9 +201,9 @@ export function CompareArenaPage() {
               disabled={recordMutation.isPending || scoreDelta !== null}
               scoreDelta={
                 scoreDelta?.winnerId === pairData.data.movieA.id
-                  ? scoreDelta.winnerDelta
+                  ? (scoreDelta?.winnerDelta ?? null)
                   : scoreDelta?.loserId === pairData.data.movieA.id
-                    ? scoreDelta.loserDelta
+                    ? (scoreDelta?.loserDelta ?? null)
                     : null
               }
               isWinner={scoreDelta?.winnerId === pairData.data.movieA.id}
@@ -211,9 +214,9 @@ export function CompareArenaPage() {
               disabled={recordMutation.isPending || scoreDelta !== null}
               scoreDelta={
                 scoreDelta?.winnerId === pairData.data.movieB.id
-                  ? scoreDelta.winnerDelta
+                  ? (scoreDelta?.winnerDelta ?? null)
                   : scoreDelta?.loserId === pairData.data.movieB.id
-                    ? scoreDelta.loserDelta
+                    ? (scoreDelta?.loserDelta ?? null)
                     : null
               }
               isWinner={scoreDelta?.winnerId === pairData.data.movieB.id}

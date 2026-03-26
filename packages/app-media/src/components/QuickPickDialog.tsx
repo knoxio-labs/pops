@@ -35,7 +35,7 @@ export function QuickPickDialog() {
       void utils.media.watchlist.list.invalidate();
       setOpen(false);
     },
-    onError: (err) => {
+    onError: (err: { message: string; data?: { code?: string } | null }) => {
       if (err.data?.code === "CONFLICT") {
         toast.info("Already on watchlist");
         setOpen(false);
@@ -110,7 +110,7 @@ export function QuickPickDialog() {
                 Get More Picks
               </Button>
             </div>
-          ) : (
+          ) : currentMovie ? (
             <PickCard
               movie={currentMovie}
               index={currentIndex}
@@ -119,7 +119,7 @@ export function QuickPickDialog() {
               onWatch={handleWatch}
               isAdding={addToWatchlist.isPending}
             />
-          )}
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

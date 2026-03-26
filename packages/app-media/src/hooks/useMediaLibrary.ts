@@ -32,7 +32,10 @@ export function useMediaLibrary() {
   });
 
   // Fetch batch progress for all TV shows
-  const tvShowIds = useMemo(() => (tvShowsData?.data ?? []).map((s) => s.id), [tvShowsData]);
+  const tvShowIds = useMemo(
+    () => (tvShowsData?.data ?? []).map((s: { id: number }) => s.id),
+    [tvShowsData]
+  );
 
   const { data: progressData } = trpc.media.watchHistory.batchProgress.useQuery(
     { tvShowIds },
@@ -42,33 +45,58 @@ export function useMediaLibrary() {
   const isLoading = moviesLoading || tvShowsLoading;
 
   const allItems = useMemo<MediaItem[]>(() => {
-    const progressMap = new Map((progressData?.data ?? []).map((p) => [p.tvShowId, p.percentage]));
+    const progressMap = new Map(
+      (progressData?.data ?? []).map((p: { tvShowId: number; percentage: number }) => [
+        p.tvShowId,
+        p.percentage,
+      ])
+    );
 
-    const movieItems: MediaItem[] = (moviesData?.data ?? []).map((m) => ({
-      id: m.id,
-      type: "movie" as const,
-      title: m.title,
-      year: m.releaseDate ? new Date(m.releaseDate).getFullYear() : null,
-      posterUrl: m.posterUrl,
-      genres: m.genres,
-      voteAverage: m.voteAverage,
-      createdAt: m.createdAt,
-      releaseDate: m.releaseDate,
-      progress: null,
-    }));
+    const movieItems: MediaItem[] = (moviesData?.data ?? []).map(
+      (m: {
+        id: number;
+        title: string;
+        releaseDate: string | null;
+        posterUrl: string | null;
+        genres: string[];
+        voteAverage: number | null;
+        createdAt: string;
+      }) => ({
+        id: m.id,
+        type: "movie" as const,
+        title: m.title,
+        year: m.releaseDate ? new Date(m.releaseDate).getFullYear() : null,
+        posterUrl: m.posterUrl,
+        genres: m.genres,
+        voteAverage: m.voteAverage,
+        createdAt: m.createdAt,
+        releaseDate: m.releaseDate,
+        progress: null,
+      })
+    );
 
-    const shows: MediaItem[] = (tvShowsData?.data ?? []).map((s) => ({
-      id: s.id,
-      type: "tv" as const,
-      title: s.name,
-      year: s.firstAirDate ? new Date(s.firstAirDate).getFullYear() : null,
-      posterUrl: s.posterUrl,
-      genres: s.genres,
-      voteAverage: s.voteAverage,
-      createdAt: s.createdAt,
-      releaseDate: s.firstAirDate,
-      progress: progressMap.get(s.id) ?? null,
-    }));
+    const shows: MediaItem[] = (tvShowsData?.data ?? []).map(
+      (s: {
+        id: number;
+        name: string;
+        firstAirDate: string | null;
+        posterUrl: string | null;
+        genres: string[];
+        voteAverage: number | null;
+        createdAt: string;
+      }) => ({
+        id: s.id,
+        type: "tv" as const,
+        title: s.name,
+        year: s.firstAirDate ? new Date(s.firstAirDate).getFullYear() : null,
+        posterUrl: s.posterUrl,
+        genres: s.genres,
+        voteAverage: s.voteAverage,
+        createdAt: s.createdAt,
+        releaseDate: s.firstAirDate,
+        progress: progressMap.get(s.id) ?? null,
+      })
+    );
 
     return [...movieItems, ...shows];
   }, [moviesData, tvShowsData, progressData]);

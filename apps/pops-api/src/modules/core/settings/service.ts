@@ -40,7 +40,7 @@ export function listSettings(
     .offset(offset)
     .all();
 
-  return { rows, total: countResult.count };
+  return { rows, total: countResult?.count ?? 0 };
 }
 
 /** Set a setting value (upsert — creates or updates) */

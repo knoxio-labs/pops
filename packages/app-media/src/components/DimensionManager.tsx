@@ -52,10 +52,18 @@ export function DimensionManager() {
     }
   );
 
-  const dimensions: Dimension[] = (dimensionsData?.data ?? []).map((d) => ({
-    ...d,
-    active: Boolean(d.active),
-  }));
+  const dimensions: Dimension[] = (dimensionsData?.data ?? []).map(
+    (d: {
+      id: number;
+      name: string;
+      description: string | null;
+      active: boolean | number;
+      sortOrder: number;
+    }) => ({
+      ...d,
+      active: Boolean(d.active),
+    })
+  );
 
   const createMutation = trpc.media.comparisons.createDimension.useMutation({
     onSuccess: () => {
@@ -64,7 +72,7 @@ export function DimensionManager() {
       setAddDescription("");
       toast.success("Dimension created");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: { message: string }) => toast.error(err.message),
   });
 
   const updateMutation = trpc.media.comparisons.updateDimension.useMutation({
@@ -73,7 +81,7 @@ export function DimensionManager() {
       setEditing(null);
       toast.success("Dimension updated");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: { message: string }) => toast.error(err.message),
   });
 
   const handleAdd = useCallback(() => {
@@ -125,6 +133,7 @@ export function DimensionManager() {
       if (swapIdx < 0 || swapIdx >= sorted.length) return;
 
       const swapTarget = sorted[swapIdx];
+      if (!swapTarget) return;
       // Swap sort orders
       updateMutation.mutate(
         { id: dim.id, data: { sortOrder: swapTarget.sortOrder } },

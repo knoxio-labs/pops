@@ -28,12 +28,12 @@ interface Transaction {
 const generateTransactions = (count: number, offset: number): Transaction[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: `txn-${offset + i + 1}`,
-    date: new Date(2024, 0, offset + i + 1).toISOString().split("T")[0],
+    date: new Date(2024, 0, offset + i + 1).toISOString().split("T")[0]!,
     description: ["Woolworths", "Coles", "Amazon", "Netflix", "Uber", "Spotify", "Apple", "Google"][
       (offset + i) % 8
-    ],
+    ]!,
     amount: Math.random() * 200 - 100,
-    category: ["Food", "Shopping", "Entertainment", "Transport"][(offset + i) % 4],
+    category: ["Food", "Shopping", "Entertainment", "Transport"][(offset + i) % 4]!,
   }));
 };
 

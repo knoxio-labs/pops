@@ -180,10 +180,10 @@ describe("TheTvdbClient.searchSeries", () => {
 
     const results = await client.searchSeries("saul");
 
-    expect(results[1].overview).toBeNull();
-    expect(results[1].firstAirDate).toBeNull();
+    expect(results[1]!.overview).toBeNull();
+    expect(results[1]!.firstAirDate).toBeNull();
     // Falls back to thumbnail when image_url is missing
-    expect(results[1].posterPath).toBe("https://artworks.thetvdb.com/banners/posters/73255.jpg");
+    expect(results[1]!.posterPath).toBe("https://artworks.thetvdb.com/banners/posters/73255.jpg");
   });
 
   it("passes query and type=series in URL", async () => {
@@ -282,12 +282,12 @@ describe("TheTvdbClient.getSeriesExtended", () => {
     const result = await client.getSeriesExtended(81189);
 
     expect(result.seasons).toHaveLength(2);
-    expect(result.seasons[0].tvdbId).toBe(30272);
-    expect(result.seasons[0].seasonNumber).toBe(0);
-    expect(result.seasons[0].episodeCount).toBe(2);
-    expect(result.seasons[1].seasonNumber).toBe(1);
-    expect(result.seasons[1].episodeCount).toBe(7);
-    expect(result.seasons[1].imageUrl).toBe("https://artworks.thetvdb.com/seasons/30273.jpg");
+    expect(result.seasons[0]!.tvdbId).toBe(30272);
+    expect(result.seasons[0]!.seasonNumber).toBe(0);
+    expect(result.seasons[0]!.episodeCount).toBe(2);
+    expect(result.seasons[1]!.seasonNumber).toBe(1);
+    expect(result.seasons[1]!.episodeCount).toBe(7);
+    expect(result.seasons[1]!.imageUrl).toBe("https://artworks.thetvdb.com/seasons/30273.jpg");
   });
 
   it("maps artworks", async () => {
@@ -367,8 +367,8 @@ describe("TheTvdbClient.getSeriesEpisodes", () => {
       runtime: 58,
       imageUrl: "https://artworks.thetvdb.com/episodes/349232.jpg",
     });
-    expect(episodes[1].overview).toBeNull();
-    expect(episodes[1].imageUrl).toBeNull();
+    expect(episodes[1]!.overview).toBeNull();
+    expect(episodes[1]!.imageUrl).toBeNull();
   });
 
   it("calls correct URL with season parameter", async () => {

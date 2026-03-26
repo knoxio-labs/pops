@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 async function checkCache() {
   const imagesDir = "./data/media/images";
-  
+
   const tests = [
     { type: "movie", id: 278, file: "poster.jpg" },
     { type: "movie", id: 238, file: "backdrop.jpg" },

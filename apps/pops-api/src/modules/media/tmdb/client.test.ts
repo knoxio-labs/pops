@@ -159,7 +159,7 @@ describe("searchMovies", () => {
 
     const result = await client.searchMovies("pulp");
 
-    expect(result.results[1].backdropPath).toBeNull();
+    expect(result.results[1]!.backdropPath).toBeNull();
   });
 });
 
@@ -270,14 +270,14 @@ describe("getMovieImages", () => {
 
     expect(result.id).toBe(550);
     expect(result.backdrops).toHaveLength(1);
-    expect(result.backdrops[0].filePath).toBe("/hZkgoQYus5dXo3H8T7Uef6DNknx.jpg");
-    expect(result.backdrops[0].width).toBe(1920);
+    expect(result.backdrops[0]!.filePath).toBe("/hZkgoQYus5dXo3H8T7Uef6DNknx.jpg");
+    expect(result.backdrops[0]!.width).toBe(1920);
     expect(result.posters).toHaveLength(1);
-    expect(result.posters[0].filePath).toBe("/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg");
-    expect(result.posters[0].languageCode).toBe("en");
+    expect(result.posters[0]!.filePath).toBe("/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg");
+    expect(result.posters[0]!.languageCode).toBe("en");
     expect(result.logos).toHaveLength(1);
-    expect(result.logos[0].filePath).toBe("/logo123.png");
-    expect(result.backdrops[0].languageCode).toBeNull();
+    expect(result.logos[0]!.filePath).toBe("/logo123.png");
+    expect(result.backdrops[0]!.languageCode).toBeNull();
   });
 
   it("calls correct images URL", async () => {

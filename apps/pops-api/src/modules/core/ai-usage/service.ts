@@ -39,9 +39,9 @@ export function getStats(): AiUsageStatsOutput {
     .where(gte(aiUsage.createdAt, thirtyDaysAgoIso))
     .all();
 
-  const totalApiCalls = overall.totalApiCalls ?? 0;
-  const totalCacheHits = overall.totalCacheHits ?? 0;
-  const totalCost = overall.totalCost ?? 0;
+  const totalApiCalls = overall?.totalApiCalls ?? 0;
+  const totalCacheHits = overall?.totalCacheHits ?? 0;
+  const totalCost = overall?.totalCost ?? 0;
 
   return {
     totalCost,
@@ -50,14 +50,14 @@ export function getStats(): AiUsageStatsOutput {
     cacheHitRate:
       totalApiCalls + totalCacheHits > 0 ? totalCacheHits / (totalApiCalls + totalCacheHits) : 0,
     avgCostPerCall: totalApiCalls > 0 ? totalCost / totalApiCalls : 0,
-    totalInputTokens: overall.totalInputTokens ?? 0,
-    totalOutputTokens: overall.totalOutputTokens ?? 0,
+    totalInputTokens: overall?.totalInputTokens ?? 0,
+    totalOutputTokens: overall?.totalOutputTokens ?? 0,
     last30Days:
-      last30Days.apiCalls || last30Days.cacheHits
+      last30Days?.apiCalls || last30Days?.cacheHits
         ? {
-            cost: last30Days.cost ?? 0,
-            apiCalls: last30Days.apiCalls ?? 0,
-            cacheHits: last30Days.cacheHits ?? 0,
+            cost: last30Days?.cost ?? 0,
+            apiCalls: last30Days?.apiCalls ?? 0,
+            cacheHits: last30Days?.cacheHits ?? 0,
           }
         : undefined,
   };

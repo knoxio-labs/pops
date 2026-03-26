@@ -237,9 +237,9 @@ describe("inventory.photos.listForItem", () => {
     const result = await caller.inventory.photos.listForItem({ itemId });
 
     expect(result.data).toHaveLength(3);
-    expect(result.data[0].filePath).toBe("a.jpg");
-    expect(result.data[1].filePath).toBe("b.jpg");
-    expect(result.data[2].filePath).toBe("c.jpg");
+    expect(result.data[0]!.filePath).toBe("a.jpg");
+    expect(result.data[1]!.filePath).toBe("b.jpg");
+    expect(result.data[2]!.filePath).toBe("c.jpg");
   });
 
   it("only returns photos for the specified item", async () => {
@@ -251,7 +251,7 @@ describe("inventory.photos.listForItem", () => {
     const result = await caller.inventory.photos.listForItem({ itemId: itemA });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].filePath).toBe("tv.jpg");
+    expect(result.data[0]!.filePath).toBe("tv.jpg");
   });
 
   it("paginates results", async () => {
@@ -295,12 +295,12 @@ describe("inventory.photos.reorder", () => {
     });
 
     expect(result.data).toHaveLength(3);
-    expect(result.data[0].filePath).toBe("c.jpg");
-    expect(result.data[0].sortOrder).toBe(0);
-    expect(result.data[1].filePath).toBe("b.jpg");
-    expect(result.data[1].sortOrder).toBe(1);
-    expect(result.data[2].filePath).toBe("a.jpg");
-    expect(result.data[2].sortOrder).toBe(2);
+    expect(result.data[0]!.filePath).toBe("c.jpg");
+    expect(result.data[0]!.sortOrder).toBe(0);
+    expect(result.data[1]!.filePath).toBe("b.jpg");
+    expect(result.data[1]!.sortOrder).toBe(1);
+    expect(result.data[2]!.filePath).toBe("a.jpg");
+    expect(result.data[2]!.sortOrder).toBe(2);
     expect(result.message).toBe("Photos reordered");
   });
 

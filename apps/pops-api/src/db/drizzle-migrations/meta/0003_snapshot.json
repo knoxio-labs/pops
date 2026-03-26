@@ -82,16 +82,12 @@
       "indexes": {
         "idx_ai_usage_created_at": {
           "name": "idx_ai_usage_created_at",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         },
         "idx_ai_usage_batch": {
           "name": "idx_ai_usage_batch",
-          "columns": [
-            "import_batch_id"
-          ],
+          "columns": ["import_batch_id"],
           "isUnique": false
         }
       },
@@ -164,9 +160,7 @@
       "indexes": {
         "budgets_notion_id_unique": {
           "name": "budgets_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },
@@ -227,9 +221,7 @@
       "indexes": {
         "idx_comparison_dimensions_name": {
           "name": "idx_comparison_dimensions_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": true
         }
       },
@@ -309,25 +301,17 @@
       "indexes": {
         "idx_comparisons_dimension_id": {
           "name": "idx_comparisons_dimension_id",
-          "columns": [
-            "dimension_id"
-          ],
+          "columns": ["dimension_id"],
           "isUnique": false
         },
         "idx_comparisons_media_a": {
           "name": "idx_comparisons_media_a",
-          "columns": [
-            "media_a_type",
-            "media_a_id"
-          ],
+          "columns": ["media_a_type", "media_a_id"],
           "isUnique": false
         },
         "idx_comparisons_media_b": {
           "name": "idx_comparisons_media_b",
-          "columns": [
-            "media_b_type",
-            "media_b_id"
-          ],
+          "columns": ["media_b_type", "media_b_id"],
           "isUnique": false
         }
       },
@@ -336,12 +320,8 @@
           "name": "comparisons_dimension_id_comparison_dimensions_id_fk",
           "tableFrom": "comparisons",
           "tableTo": "comparison_dimensions",
-          "columnsFrom": [
-            "dimension_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dimension_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -446,23 +426,17 @@
       "indexes": {
         "idx_corrections_pattern": {
           "name": "idx_corrections_pattern",
-          "columns": [
-            "description_pattern"
-          ],
+          "columns": ["description_pattern"],
           "isUnique": false
         },
         "idx_corrections_confidence": {
           "name": "idx_corrections_confidence",
-          "columns": [
-            "confidence"
-          ],
+          "columns": ["confidence"],
           "isUnique": false
         },
         "idx_corrections_times_applied": {
           "name": "idx_corrections_times_applied",
-          "columns": [
-            "times_applied"
-          ],
+          "columns": ["times_applied"],
           "isUnique": false
         }
       },
@@ -471,12 +445,8 @@
           "name": "transaction_corrections_entity_id_entities_id_fk",
           "tableFrom": "transaction_corrections",
           "tableTo": "entities",
-          "columnsFrom": [
-            "entity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["entity_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -563,9 +533,7 @@
       "indexes": {
         "entities_notion_id_unique": {
           "name": "entities_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },
@@ -625,9 +593,7 @@
       "indexes": {
         "idx_environments_expires_at": {
           "name": "idx_environments_expires_at",
-          "columns": [
-            "expires_at"
-          ],
+          "columns": ["expires_at"],
           "isUnique": false
         }
       },
@@ -721,24 +687,17 @@
       "indexes": {
         "idx_episodes_tvdb_id": {
           "name": "idx_episodes_tvdb_id",
-          "columns": [
-            "tvdb_id"
-          ],
+          "columns": ["tvdb_id"],
           "isUnique": true
         },
         "idx_episodes_season_number": {
           "name": "idx_episodes_season_number",
-          "columns": [
-            "season_id",
-            "episode_number"
-          ],
+          "columns": ["season_id", "episode_number"],
           "isUnique": true
         },
         "idx_episodes_season_id": {
           "name": "idx_episodes_season_id",
-          "columns": [
-            "season_id"
-          ],
+          "columns": ["season_id"],
           "isUnique": false
         }
       },
@@ -747,12 +706,8 @@
           "name": "episodes_season_id_seasons_id_fk",
           "tableFrom": "episodes",
           "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["season_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -908,9 +863,7 @@
       "indexes": {
         "home_inventory_notion_id_unique": {
           "name": "home_inventory_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },
@@ -919,12 +872,8 @@
           "name": "home_inventory_purchase_transaction_id_transactions_id_fk",
           "tableFrom": "home_inventory",
           "tableTo": "transactions",
-          "columnsFrom": [
-            "purchase_transaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["purchase_transaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -932,12 +881,8 @@
           "name": "home_inventory_purchased_from_id_entities_id_fk",
           "tableFrom": "home_inventory",
           "tableTo": "entities",
-          "columnsFrom": [
-            "purchased_from_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["purchased_from_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1005,18 +950,12 @@
       "indexes": {
         "idx_media_scores_unique": {
           "name": "idx_media_scores_unique",
-          "columns": [
-            "media_type",
-            "media_id",
-            "dimension_id"
-          ],
+          "columns": ["media_type", "media_id", "dimension_id"],
           "isUnique": true
         },
         "idx_media_scores_dimension": {
           "name": "idx_media_scores_dimension",
-          "columns": [
-            "dimension_id"
-          ],
+          "columns": ["dimension_id"],
           "isUnique": false
         }
       },
@@ -1025,12 +964,8 @@
           "name": "media_scores_dimension_id_comparison_dimensions_id_fk",
           "tableFrom": "media_scores",
           "tableTo": "comparison_dimensions",
-          "columnsFrom": [
-            "dimension_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dimension_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1202,23 +1137,17 @@
       "indexes": {
         "idx_movies_tmdb_id": {
           "name": "idx_movies_tmdb_id",
-          "columns": [
-            "tmdb_id"
-          ],
+          "columns": ["tmdb_id"],
           "isUnique": true
         },
         "idx_movies_title": {
           "name": "idx_movies_title",
-          "columns": [
-            "title"
-          ],
+          "columns": ["title"],
           "isUnique": false
         },
         "idx_movies_release_date": {
           "name": "idx_movies_release_date",
-          "columns": [
-            "release_date"
-          ],
+          "columns": ["release_date"],
           "isUnique": false
         }
       },
@@ -1305,24 +1234,17 @@
       "indexes": {
         "idx_seasons_tvdb_id": {
           "name": "idx_seasons_tvdb_id",
-          "columns": [
-            "tvdb_id"
-          ],
+          "columns": ["tvdb_id"],
           "isUnique": true
         },
         "idx_seasons_show_number": {
           "name": "idx_seasons_show_number",
-          "columns": [
-            "tv_show_id",
-            "season_number"
-          ],
+          "columns": ["tv_show_id", "season_number"],
           "isUnique": true
         },
         "idx_seasons_tv_show_id": {
           "name": "idx_seasons_tv_show_id",
-          "columns": [
-            "tv_show_id"
-          ],
+          "columns": ["tv_show_id"],
           "isUnique": false
         }
       },
@@ -1331,12 +1253,8 @@
           "name": "seasons_tv_show_id_tv_shows_id_fk",
           "tableFrom": "seasons",
           "tableTo": "tv_shows",
-          "columnsFrom": [
-            "tv_show_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tv_show_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1472,51 +1390,37 @@
       "indexes": {
         "transactions_notion_id_unique": {
           "name": "transactions_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         },
         "idx_transactions_date": {
           "name": "idx_transactions_date",
-          "columns": [
-            "date"
-          ],
+          "columns": ["date"],
           "isUnique": false
         },
         "idx_transactions_account": {
           "name": "idx_transactions_account",
-          "columns": [
-            "account"
-          ],
+          "columns": ["account"],
           "isUnique": false
         },
         "idx_transactions_entity": {
           "name": "idx_transactions_entity",
-          "columns": [
-            "entity_id"
-          ],
+          "columns": ["entity_id"],
           "isUnique": false
         },
         "idx_transactions_last_edited": {
           "name": "idx_transactions_last_edited",
-          "columns": [
-            "last_edited_time"
-          ],
+          "columns": ["last_edited_time"],
           "isUnique": false
         },
         "idx_transactions_notion_id": {
           "name": "idx_transactions_notion_id",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": false
         },
         "idx_transactions_checksum": {
           "name": "idx_transactions_checksum",
-          "columns": [
-            "checksum"
-          ],
+          "columns": ["checksum"],
           "isUnique": true
         }
       },
@@ -1688,23 +1592,17 @@
       "indexes": {
         "idx_tv_shows_tvdb_id": {
           "name": "idx_tv_shows_tvdb_id",
-          "columns": [
-            "tvdb_id"
-          ],
+          "columns": ["tvdb_id"],
           "isUnique": true
         },
         "idx_tv_shows_name": {
           "name": "idx_tv_shows_name",
-          "columns": [
-            "name"
-          ],
+          "columns": ["name"],
           "isUnique": false
         },
         "idx_tv_shows_first_air_date": {
           "name": "idx_tv_shows_first_air_date",
-          "columns": [
-            "first_air_date"
-          ],
+          "columns": ["first_air_date"],
           "isUnique": false
         }
       },
@@ -1783,9 +1681,7 @@
       "indexes": {
         "wish_list_notion_id_unique": {
           "name": "wish_list_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },

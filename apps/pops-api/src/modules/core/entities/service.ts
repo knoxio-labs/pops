@@ -45,7 +45,7 @@ export function listEntities(
 
   const [countResult] = countQuery.all();
 
-  return { rows: rows, total: countResult.total };
+  return { rows: rows, total: countResult?.total ?? 0 };
 }
 
 /** Get a single entity by id. Throws NotFoundError if missing. */

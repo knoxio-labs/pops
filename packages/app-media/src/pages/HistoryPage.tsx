@@ -261,14 +261,14 @@ export function HistoryPage() {
         <>
           {/* Mobile: compact list */}
           <div className="space-y-2 md:hidden">
-            {entries.map((entry) => (
+            {entries.map((entry: HistoryEntry) => (
               <HistoryItem key={entry.id} entry={entry} />
             ))}
           </div>
 
           {/* Desktop: poster card grid */}
           <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {entries.map((entry) => (
+            {entries.map((entry: HistoryEntry) => (
               <HistoryCard key={entry.id} entry={entry} />
             ))}
           </div>

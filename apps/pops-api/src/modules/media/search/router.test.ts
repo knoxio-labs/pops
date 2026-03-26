@@ -98,9 +98,9 @@ describe("media.search.movies", () => {
     const result = await caller.media.search.movies({ query: "Fight Club" });
 
     expect(result.results).toHaveLength(1);
-    expect(result.results[0].tmdbId).toBe(550);
-    expect(result.results[0].title).toBe("Fight Club");
-    expect(result.results[0].posterPath).toBe("/poster.jpg");
+    expect(result.results[0]!.tmdbId).toBe(550);
+    expect(result.results[0]!.title).toBe("Fight Club");
+    expect(result.results[0]!.posterPath).toBe("/poster.jpg");
     expect(result.page).toBe(1);
     expect(result.totalResults).toBe(1);
     expect(result.totalPages).toBe(1);
@@ -174,9 +174,9 @@ describe("media.search.tvShows", () => {
     const result = await caller.media.search.tvShows({ query: "Breaking Bad" });
 
     expect(result.results).toHaveLength(1);
-    expect(result.results[0].tvdbId).toBe(73255);
-    expect(result.results[0].name).toBe("Breaking Bad");
-    expect(result.results[0].overview).toBe("A chemistry teacher diagnosed with cancer...");
+    expect(result.results[0]!.tvdbId).toBe(73255);
+    expect(result.results[0]!.name).toBe("Breaking Bad");
+    expect(result.results[0]!.overview).toBe("A chemistry teacher diagnosed with cancer...");
   });
 
   it("returns empty results for no matches", async () => {

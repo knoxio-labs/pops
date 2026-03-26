@@ -37,8 +37,8 @@ describe("transactions.list", () => {
     expect(result.pagination.total).toBe(2);
 
     // Sorted by date DESC (newest first)
-    expect(result.data[0].description).toBe("Groceries");
-    expect(result.data[1].description).toBe("Fuel");
+    expect(result.data[0]!.description).toBe("Groceries");
+    expect(result.data[1]!.description).toBe("Fuel");
   });
 
   it("returns camelCase fields", async () => {
@@ -79,14 +79,14 @@ describe("transactions.list", () => {
     });
 
     const result = await caller.finance.transactions.list({});
-    expect(result.data[0].tags).toEqual(["Groceries", "Online"]);
+    expect(result.data[0]!.tags).toEqual(["Groceries", "Online"]);
   });
 
   it("returns empty tags array when tags is empty JSON array", async () => {
     seedTransaction(db, { description: "Test", account: "Up", tags: "[]" });
 
     const result = await caller.finance.transactions.list({});
-    expect(result.data[0].tags).toEqual([]);
+    expect(result.data[0]!.tags).toEqual([]);
   });
 
   it("filters by search (case-insensitive LIKE)", async () => {
@@ -96,7 +96,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ search: "wool" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Woolworths Groceries");
+    expect(result.data[0]!.description).toBe("Woolworths Groceries");
     expect(result.pagination.total).toBe(1);
   });
 
@@ -106,7 +106,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ account: "ANZ Visa" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Test 2");
+    expect(result.data[0]!.description).toBe("Test 2");
   });
 
   it("filters by startDate", async () => {
@@ -115,7 +115,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ startDate: "2025-05-01" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Recent");
+    expect(result.data[0]!.description).toBe("Recent");
   });
 
   it("filters by endDate", async () => {
@@ -124,7 +124,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ endDate: "2025-02-01" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Old");
+    expect(result.data[0]!.description).toBe("Old");
   });
 
   it("filters by date range", async () => {
@@ -137,7 +137,7 @@ describe("transactions.list", () => {
       endDate: "2025-04-01",
     });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Within");
+    expect(result.data[0]!.description).toBe("Within");
   });
 
   it("filters by tag (exact JSON array membership)", async () => {
@@ -154,7 +154,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ tag: "Groceries" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Test 1");
+    expect(result.data[0]!.description).toBe("Test 1");
   });
 
   it("filters by entityId", async () => {
@@ -165,7 +165,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ entityId: "ent-123" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Test 1");
+    expect(result.data[0]!.description).toBe("Test 1");
   });
 
   it("filters by type", async () => {
@@ -174,7 +174,7 @@ describe("transactions.list", () => {
 
     const result = await caller.finance.transactions.list({ type: "Purchase" });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Test 1");
+    expect(result.data[0]!.description).toBe("Test 1");
   });
 
   it("combines multiple filters", async () => {
@@ -207,7 +207,7 @@ describe("transactions.list", () => {
       tag: "Groceries",
     });
     expect(result.data).toHaveLength(1);
-    expect(result.data[0].description).toBe("Match");
+    expect(result.data[0]!.description).toBe("Match");
   });
 
   it("paginates with limit and offset", async () => {

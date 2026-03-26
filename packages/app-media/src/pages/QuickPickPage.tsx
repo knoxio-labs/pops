@@ -26,7 +26,7 @@ export function QuickPickPage() {
       toast.success("Added to watchlist");
       utils.media.watchlist.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       if (err.message.includes("already")) {
         toast.info("Already on your watchlist");
       } else {
@@ -65,12 +65,16 @@ export function QuickPickPage() {
 
   // Touch handlers for swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStart.current) return;
-    const dx = e.touches[0].clientX - touchStart.current.x;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const dx = touch.clientX - touchStart.current.x;
     setSwipeOffset(dx);
   }, []);
 
@@ -143,6 +147,7 @@ export function QuickPickPage() {
   }
 
   const movie = currentPick;
+  if (!movie) return null;
   const year = movie.releaseDate?.slice(0, 4);
 
   return (
@@ -221,7 +226,7 @@ export function QuickPickPage() {
           {/* Genres */}
           {movie.genres.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {movie.genres.slice(0, 4).map((genre) => (
+              {movie.genres.slice(0, 4).map((genre: string) => (
                 <Badge key={genre} variant="secondary" className="text-xs">
                   {genre}
                 </Badge>

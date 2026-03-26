@@ -8,18 +8,18 @@
  *
  * This avoids needing a second API port or changes to vite.config.ts.
  */
-import type { Page } from '@playwright/test';
+import type { Page } from "@playwright/test";
 
-const E2E_ENV = 'e2e';
+const E2E_ENV = "e2e";
 
 /**
  * Route ALL tRPC calls through the real API using the e2e environment.
  * Use this in beforeEach for fully integrated tests (no mocks).
  */
 export async function useRealApi(page: Page): Promise<void> {
-  await page.route('/trpc/**', async (route) => {
+  await page.route("/trpc/**", async (route) => {
     const url = new URL(route.request().url());
-    url.searchParams.set('env', E2E_ENV);
+    url.searchParams.set("env", E2E_ENV);
     const response = await route.fetch({ url: url.toString() });
     await route.fulfill({ response });
   });
@@ -34,7 +34,7 @@ export async function useRealApi(page: Page): Promise<void> {
 export async function useRealEndpoint(page: Page, pattern: string): Promise<void> {
   await page.route(new RegExp(`/trpc/${pattern}`), async (route) => {
     const url = new URL(route.request().url());
-    url.searchParams.set('env', E2E_ENV);
+    url.searchParams.set("env", E2E_ENV);
     const response = await route.fetch({ url: url.toString() });
     await route.fulfill({ response });
   });

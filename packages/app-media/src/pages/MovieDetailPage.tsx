@@ -201,7 +201,7 @@ export function MovieDetailPage() {
           <section>
             <h2 className="text-lg font-semibold mb-2">Genres</h2>
             <div className="flex flex-wrap gap-2">
-              {movie.genres.map((genre) => (
+              {movie.genres.map((genre: string) => (
                 <Link key={genre} to={`/media?genre=${encodeURIComponent(genre)}`}>
                   <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
                     {genre}

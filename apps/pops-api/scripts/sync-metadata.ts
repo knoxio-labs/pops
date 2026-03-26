@@ -15,7 +15,7 @@ async function main() {
   const db = getDb();
   const tmdbClient = getTmdbClient();
   const tvdbClient = getTvdbClient();
-  
+
   const imagesDir = process.env.MEDIA_IMAGES_DIR ?? "./data/media/images";
   const cacheService = new ImageCacheService(imagesDir);
 
@@ -40,9 +40,10 @@ async function main() {
     try {
       // Fetch fresh detail
       const detail = await tmdbClient.getMovie(movie.tmdb_id);
-      
+
       // Update DB
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE movies SET 
           poster_path = ?, 
           backdrop_path = ?,
@@ -51,10 +52,11 @@ async function main() {
           runtime = ?,
           status = ?
         WHERE id = ?
-      `).run(
+      `
+      ).run(
         detail.posterPath,
         detail.backdropPath,
-        JSON.stringify(detail.genres.map(g => g.name)),
+        JSON.stringify(detail.genres.map((g) => g.name)),
         detail.tagline,
         detail.runtime,
         detail.status,
@@ -68,7 +70,7 @@ async function main() {
         detail.backdropPath,
         null
       );
-      
+
       console.log("✅");
     } catch (err) {
       console.log("❌");
@@ -85,12 +87,13 @@ async function main() {
     try {
       // Fetch extended detail
       const detail = await tvdbClient.getSeriesExtended(show.tvdb_id);
-      
+
       // Select artwork
       const { posterUrl, backdropUrl } = selectBestArtwork(detail.artworks);
-      
+
       // Update DB
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE tv_shows SET 
           poster_path = ?, 
           backdrop_path = ?,
@@ -99,23 +102,20 @@ async function main() {
           number_of_seasons = ?,
           number_of_episodes = ?
         WHERE id = ?
-      `).run(
+      `
+      ).run(
         posterUrl,
         backdropUrl,
-        JSON.stringify(detail.genres.map(g => g.name)),
+        JSON.stringify(detail.genres.map((g) => g.name)),
         detail.status,
-        detail.seasons.filter(s => s.seasonNumber > 0).length,
+        detail.seasons.filter((s) => s.seasonNumber > 0).length,
         detail.seasons.reduce((sum, s) => sum + s.episodeCount, 0),
         show.id
       );
 
       // Download images
-      await cacheService.downloadTvShowImages(
-        show.tvdb_id,
-        posterUrl,
-        backdropUrl
-      );
-      
+      await cacheService.downloadTvShowImages(show.tvdb_id, posterUrl, backdropUrl);
+
       console.log("✅");
     } catch (err) {
       console.log("❌");

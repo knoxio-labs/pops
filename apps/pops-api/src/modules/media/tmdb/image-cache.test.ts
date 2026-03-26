@@ -118,7 +118,7 @@ describe("downloadMovieImages", () => {
     // Poster was written, backdrop was not (failed)
     expect(fs.writeFile).toHaveBeenCalledTimes(1);
     expect(consoleSpy).toHaveBeenCalledOnce();
-    expect(consoleSpy.mock.calls[0][0]).toContain("[ImageCache]");
+    expect(consoleSpy.mock.calls[0]![0]).toContain("[ImageCache]");
 
     consoleSpy.mockRestore();
   });

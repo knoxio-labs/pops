@@ -48,7 +48,10 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
   const dimensions = dimensionsResponse?.data ?? [];
 
   // Check if there are enough comparisons (sum of all comparisonCount across dimensions)
-  const totalComparisons = scores.reduce((sum, s) => sum + s.comparisonCount, 0);
+  const totalComparisons = scores.reduce(
+    (sum: number, s: { comparisonCount: number }) => sum + s.comparisonCount,
+    0
+  );
 
   if (totalComparisons < 3) {
     return (
@@ -64,19 +67,21 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
   }
 
   // Build dimension lookup
-  const dimensionMap = new Map(dimensions.map((d) => [d.id, d.name]));
+  const dimensionMap = new Map(dimensions.map((d: { id: number; name: string }) => [d.id, d.name]));
 
   // Merge scores with dimension names, sorted by dimension sortOrder
-  const dimensionOrder = new Map(dimensions.map((d) => [d.id, d.sortOrder]));
+  const dimensionOrder = new Map(
+    dimensions.map((d: { id: number; sortOrder: number }) => [d.id, d.sortOrder])
+  );
   const radarData = scores
-    .map((s) => ({
+    .map((s: { dimensionId: number; score: number; comparisonCount: number }) => ({
       dimension: dimensionMap.get(s.dimensionId) ?? `Dim ${s.dimensionId}`,
       score: normalizeScore(s.score),
       rawScore: Math.round(s.score),
       comparisons: s.comparisonCount,
       sortOrder: dimensionOrder.get(s.dimensionId) ?? 0,
     }))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+    .sort((a: { sortOrder: number }, b: { sortOrder: number }) => a.sortOrder - b.sortOrder);
 
   return (
     <section>
@@ -99,7 +104,8 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
             <Tooltip
               content={({ payload }) => {
                 if (!payload?.length) return null;
-                const entry = payload[0].payload as (typeof radarData)[number];
+                const entry = payload[0]?.payload as (typeof radarData)[number] | undefined;
+                if (!entry) return null;
                 return (
                   <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
                     <p className="font-medium">{entry.dimension}</p>

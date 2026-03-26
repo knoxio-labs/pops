@@ -23,7 +23,9 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
     { staleTime: 30_000 }
   );
 
-  const watchlistEntry = watchlistData?.data?.find((entry) => entry.mediaId === mediaId);
+  const watchlistEntry = watchlistData?.data?.find(
+    (entry: { mediaId: number }) => entry.mediaId === mediaId
+  );
   const isOnWatchlist = !!watchlistEntry;
 
   const addMutation = trpc.media.watchlist.add.useMutation({
@@ -31,7 +33,7 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
       toast.success("Added to watchlist");
       void utils.media.watchlist.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string; data?: { code?: string } | null }) => {
       if (err.data?.code === "CONFLICT") {
         toast.info("Already on watchlist");
         void utils.media.watchlist.list.invalidate();
@@ -46,7 +48,7 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
       toast.success("Removed from watchlist");
       void utils.media.watchlist.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to remove: ${err.message}`);
     },
   });

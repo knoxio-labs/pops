@@ -549,7 +549,8 @@ function GroupTagBar({
           onKeyDown={(e) => {
             if (e.key === "Tab" && filtered.length > 0) {
               e.preventDefault();
-              onAddTag(filtered[0]);
+              const first = filtered[0];
+              if (first) onAddTag(first);
               setShowPicker(false);
               setInputValue("");
               return;

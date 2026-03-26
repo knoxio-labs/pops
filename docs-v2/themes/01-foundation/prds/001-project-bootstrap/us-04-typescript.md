@@ -9,8 +9,8 @@ As a developer, I want TypeScript configured in strict mode across all packages 
 
 ## Acceptance Criteria
 
-- [ ] Shared `tsconfig.base.json` at repo root with strict mode enabled — no shared base; each package has standalone `tsconfig.json`
-- [ ] Each package/app extends the base config via `extends` — no `extends` used; configs are standalone
+- [x] Shared `tsconfig.base.json` at repo root with strict mode enabled
+- [x] Each package/app extends the base config via `extends`
 - [x] `as any` is forbidden — `"@typescript-eslint/no-explicit-any": "error"` in all eslint configs
 - [ ] `ts-ignore` and `ts-expect-error` are forbidden — `@ts-expect-error` used in tests (intentional, for type-checking invalid input)
 - [x] `pnpm typecheck` / `mise typecheck` passes across all packages

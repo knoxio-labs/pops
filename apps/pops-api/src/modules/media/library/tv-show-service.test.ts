@@ -120,8 +120,8 @@ describe("addTvShow", () => {
     expect(result.show.posterPath).toBe("https://artworks.thetvdb.com/poster.jpg");
     expect(result.show.backdropPath).toBe("https://artworks.thetvdb.com/backdrop.jpg");
     expect(result.seasons).toHaveLength(2);
-    expect(result.seasons[0].seasonNumber).toBe(0); // specials
-    expect(result.seasons[1].seasonNumber).toBe(1);
+    expect(result.seasons[0]!.seasonNumber).toBe(0); // specials
+    expect(result.seasons[1]!.seasonNumber).toBe(1);
 
     // Verify API calls
     expect(client.getSeriesExtended).toHaveBeenCalledWith(81189);
@@ -174,7 +174,7 @@ describe("addTvShow", () => {
     expect(result.created).toBe(true);
     expect(result.show.numberOfSeasons).toBe(0); // specials don't count
     expect(result.seasons).toHaveLength(1);
-    expect(result.seasons[0].seasonNumber).toBe(0);
+    expect(result.seasons[0]!.seasonNumber).toBe(0);
     expect(result.show.numberOfEpisodes).toBe(3);
   });
 
@@ -248,7 +248,7 @@ describe("addTvShow", () => {
     const result = await addTvShow(81189, client);
 
     // Verify episodes in DB via the season
-    const seasonId = result.seasons[0].id;
+    const seasonId = result.seasons[0]!.id;
     const dbEpisodes = db
       .prepare("SELECT * FROM episodes WHERE season_id = ? ORDER BY episode_number")
       .all(seasonId) as Array<Record<string, unknown>>;

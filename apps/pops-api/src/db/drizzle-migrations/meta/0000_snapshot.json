@@ -82,16 +82,12 @@
       "indexes": {
         "idx_ai_usage_created_at": {
           "name": "idx_ai_usage_created_at",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         },
         "idx_ai_usage_batch": {
           "name": "idx_ai_usage_batch",
-          "columns": [
-            "import_batch_id"
-          ],
+          "columns": ["import_batch_id"],
           "isUnique": false
         }
       },
@@ -164,9 +160,7 @@
       "indexes": {
         "budgets_notion_id_unique": {
           "name": "budgets_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },
@@ -271,23 +265,17 @@
       "indexes": {
         "idx_corrections_pattern": {
           "name": "idx_corrections_pattern",
-          "columns": [
-            "description_pattern"
-          ],
+          "columns": ["description_pattern"],
           "isUnique": false
         },
         "idx_corrections_confidence": {
           "name": "idx_corrections_confidence",
-          "columns": [
-            "confidence"
-          ],
+          "columns": ["confidence"],
           "isUnique": false
         },
         "idx_corrections_times_applied": {
           "name": "idx_corrections_times_applied",
-          "columns": [
-            "times_applied"
-          ],
+          "columns": ["times_applied"],
           "isUnique": false
         }
       },
@@ -296,12 +284,8 @@
           "name": "transaction_corrections_entity_id_entities_id_fk",
           "tableFrom": "transaction_corrections",
           "tableTo": "entities",
-          "columnsFrom": [
-            "entity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["entity_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -388,9 +372,7 @@
       "indexes": {
         "entities_notion_id_unique": {
           "name": "entities_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },
@@ -450,9 +432,7 @@
       "indexes": {
         "idx_environments_expires_at": {
           "name": "idx_environments_expires_at",
-          "columns": [
-            "expires_at"
-          ],
+          "columns": ["expires_at"],
           "isUnique": false
         }
       },
@@ -608,9 +588,7 @@
       "indexes": {
         "home_inventory_notion_id_unique": {
           "name": "home_inventory_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },
@@ -619,12 +597,8 @@
           "name": "home_inventory_purchase_transaction_id_transactions_id_fk",
           "tableFrom": "home_inventory",
           "tableTo": "transactions",
-          "columnsFrom": [
-            "purchase_transaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["purchase_transaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -632,12 +606,8 @@
           "name": "home_inventory_purchased_from_id_entities_id_fk",
           "tableFrom": "home_inventory",
           "tableTo": "entities",
-          "columnsFrom": [
-            "purchased_from_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["purchased_from_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -773,51 +743,37 @@
       "indexes": {
         "transactions_notion_id_unique": {
           "name": "transactions_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         },
         "idx_transactions_date": {
           "name": "idx_transactions_date",
-          "columns": [
-            "date"
-          ],
+          "columns": ["date"],
           "isUnique": false
         },
         "idx_transactions_account": {
           "name": "idx_transactions_account",
-          "columns": [
-            "account"
-          ],
+          "columns": ["account"],
           "isUnique": false
         },
         "idx_transactions_entity": {
           "name": "idx_transactions_entity",
-          "columns": [
-            "entity_id"
-          ],
+          "columns": ["entity_id"],
           "isUnique": false
         },
         "idx_transactions_last_edited": {
           "name": "idx_transactions_last_edited",
-          "columns": [
-            "last_edited_time"
-          ],
+          "columns": ["last_edited_time"],
           "isUnique": false
         },
         "idx_transactions_notion_id": {
           "name": "idx_transactions_notion_id",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": false
         },
         "idx_transactions_checksum": {
           "name": "idx_transactions_checksum",
-          "columns": [
-            "checksum"
-          ],
+          "columns": ["checksum"],
           "isUnique": true
         }
       },
@@ -896,9 +852,7 @@
       "indexes": {
         "wish_list_notion_id_unique": {
           "name": "wish_list_notion_id_unique",
-          "columns": [
-            "notion_id"
-          ],
+          "columns": ["notion_id"],
           "isUnique": true
         }
       },

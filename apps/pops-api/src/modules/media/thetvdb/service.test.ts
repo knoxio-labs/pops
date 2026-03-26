@@ -157,7 +157,7 @@ describe("refreshTvShow", () => {
     expect(result.seasonsUpdated).toBe(0);
     expect(result.episodesUpdated).toBe(0);
     expect(result.seasons).toHaveLength(1);
-    expect(result.seasons[0].name).toBe("Season 1");
+    expect(result.seasons[0]!.name).toBe("Season 1");
   });
 
   it("updates existing episodes without deleting any", async () => {

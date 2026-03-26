@@ -69,20 +69,13 @@ function SegmentLink({
   if (segment.href) {
     return (
       <BreadcrumbLink asChild>
-        <LinkComponent
-          to={segment.href}
-          className="text-muted-foreground hover:text-foreground"
-        >
+        <LinkComponent to={segment.href} className="text-muted-foreground hover:text-foreground">
           {segment.label}
         </LinkComponent>
       </BreadcrumbLink>
     );
   }
-  return (
-    <BreadcrumbPage className="text-foreground font-medium">
-      {segment.label}
-    </BreadcrumbPage>
-  );
+  return <BreadcrumbPage className="text-foreground font-medium">{segment.label}</BreadcrumbPage>;
 }
 
 function BreadcrumbItems({
@@ -105,9 +98,7 @@ function BreadcrumbItems({
     if (isLast) {
       return (
         <BreadcrumbItem key={`${segment.label}-${index}`}>
-          <BreadcrumbPage className="text-foreground font-medium">
-            {segment.label}
-          </BreadcrumbPage>
+          <BreadcrumbPage className="text-foreground font-medium">{segment.label}</BreadcrumbPage>
         </BreadcrumbItem>
       );
     }
@@ -190,10 +181,7 @@ export function PageHeader({
         {hasBreadcrumbs && (
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItems
-                segments={breadcrumbs}
-                LinkComponent={LinkComponent}
-              />
+              <BreadcrumbItems segments={breadcrumbs} LinkComponent={LinkComponent} />
             </BreadcrumbList>
           </Breadcrumb>
         )}

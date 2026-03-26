@@ -389,7 +389,7 @@ export function WatchlistPage() {
       toast.success("Removed from watchlist");
       void utils.media.watchlist.list.invalidate();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       setRemovingId(null);
       toast.error(`Failed to remove: ${err.message}`);
     },
@@ -402,7 +402,7 @@ export function WatchlistPage() {
       toast.success("Notes saved");
       void utils.media.watchlist.list.invalidate();
     },
-    onError: (error) => {
+    onError: (error: { message: string }) => {
       setUpdateErrorMsg(error.message ?? "Failed to save notes");
       toast.error(`Failed to save notes: ${error.message}`);
     },
@@ -480,6 +480,7 @@ export function WatchlistPage() {
       // Build new priority list by swapping
       const reordered = [...sortedEntries];
       const [moved] = reordered.splice(index, 1);
+      if (!moved) return;
       reordered.splice(newIndex, 0, moved);
 
       // Assign sequential priorities

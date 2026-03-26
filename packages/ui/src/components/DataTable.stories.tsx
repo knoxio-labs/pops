@@ -83,11 +83,11 @@ const sampleUsers: User[] = [
 
 const sampleTransactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
   id: `txn-${i + 1}`,
-  date: new Date(2024, 0, i + 1).toISOString().split("T")[0],
-  description: ["Woolworths", "Coles", "Amazon", "Netflix", "Uber", "Spotify"][i % 6],
+  date: new Date(2024, 0, i + 1).toISOString().split("T")[0]!,
+  description: ["Woolworths", "Coles", "Amazon", "Netflix", "Uber", "Spotify"][i % 6]!,
   amount: Math.random() * 200 - 100,
-  category: ["Food", "Shopping", "Entertainment", "Transport"][i % 4],
-  account: ["Checking", "Savings", "Credit Card"][i % 3],
+  category: ["Food", "Shopping", "Entertainment", "Transport"][i % 4]!,
+  account: ["Checking", "Savings", "Credit Card"][i % 3]!,
 }));
 
 // Basic columns

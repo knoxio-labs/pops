@@ -119,7 +119,7 @@ export function InfiniteScrollTable<TData, TValue>({
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
+        if (entries[0]?.isIntersecting && hasMore && !loading) {
           handleLoadMore();
         }
       },

@@ -10,7 +10,7 @@ function normaliseDate(dateStr: string): string {
     throw new Error(`Invalid date format: ${dateStr}`);
   }
   const [day, month, year] = parts;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  return `${year}-${(month ?? "").padStart(2, "0")}-${(day ?? "").padStart(2, "0")}`;
 }
 
 /**
@@ -35,7 +35,7 @@ function extractLocation(townCity: string): string | undefined {
 
   // Take first line and clean up
   const lines = townCity.split("\n");
-  const town = lines[0].trim();
+  const town = (lines[0] ?? "").trim();
 
   if (!town) return undefined;
 
@@ -96,12 +96,12 @@ export function transformAmex(row: Record<string, string>): ParsedTransaction {
   const checksum = crypto.createHash("sha256").update(rawRow).digest("hex");
 
   return {
-    date: normaliseDate(row["Date"]),
-    description: cleanDescription(row["Description"]),
-    amount: normaliseAmount(row["Amount"]),
+    date: normaliseDate(row["Date"] ?? ""),
+    description: cleanDescription(row["Description"] ?? ""),
+    amount: normaliseAmount(row["Amount"] ?? ""),
     account: "Amex",
-    location: extractLocation(row["Town/City"]),
-    online: detectOnline(row["Description"]),
+    location: extractLocation(row["Town/City"] ?? ""),
+    online: detectOnline(row["Description"] ?? ""),
     rawRow,
     checksum,
   };

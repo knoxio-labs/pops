@@ -239,6 +239,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           document.removeEventListener("mouseup", handleMouseUp);
         };
       }
+      return undefined;
     }, [isDragging]);
 
     return (

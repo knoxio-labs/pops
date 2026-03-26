@@ -55,10 +55,12 @@ function main(): void {
   // Transactions by account
   console.log('\n=== Transactions by Account ===');
   try {
-    const rows = db.prepare(
-      `SELECT account, COUNT(*) as count, MIN(date) as earliest, MAX(date) as latest
+    const rows = db
+      .prepare(
+        `SELECT account, COUNT(*) as count, MIN(date) as earliest, MAX(date) as latest
        FROM transactions GROUP BY account ORDER BY count DESC`
-    ).all() as AccountRow[];
+      )
+      .all() as AccountRow[];
     for (const row of rows) {
       console.log(`  ${row.account}: ${row.count} (${row.earliest} → ${row.latest})`);
     }
@@ -69,10 +71,12 @@ function main(): void {
   // Top categories
   console.log('\n=== Top Categories ===');
   try {
-    const rows = db.prepare(
-      `SELECT category, COUNT(*) as count FROM transactions
+    const rows = db
+      .prepare(
+        `SELECT category, COUNT(*) as count FROM transactions
        WHERE category IS NOT NULL GROUP BY category ORDER BY count DESC LIMIT 10`
-    ).all() as CategoryRow[];
+      )
+      .all() as CategoryRow[];
     for (const row of rows) {
       console.log(`  ${row.category}: ${row.count}`);
     }
@@ -83,9 +87,9 @@ function main(): void {
   // Data quality: transactions without entities
   console.log('\n=== Data Quality ===');
   try {
-    const noEntity = db.prepare(
-      `SELECT COUNT(*) as count FROM transactions WHERE entity_id IS NULL`
-    ).get() as OrphanRow;
+    const noEntity = db
+      .prepare(`SELECT COUNT(*) as count FROM transactions WHERE entity_id IS NULL`)
+      .get() as OrphanRow;
     console.log(`  Transactions without entity: ${noEntity.count}`);
   } catch {
     console.log('  (could not check entity linkage)');
@@ -93,10 +97,12 @@ function main(): void {
 
   // Entities without transactions
   try {
-    const orphanEntities = db.prepare(
-      `SELECT COUNT(*) as count FROM entities e
+    const orphanEntities = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM entities e
        WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.entity_id = e.id)`
-    ).get() as OrphanRow;
+      )
+      .get() as OrphanRow;
     console.log(`  Entities without transactions: ${orphanEntities.count}`);
   } catch {
     console.log('  (could not check orphan entities)');

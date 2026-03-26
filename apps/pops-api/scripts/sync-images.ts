@@ -19,7 +19,9 @@ async function main() {
   console.log(`📂 Cache directory: ${imagesDir}`);
 
   // 1. Sync Movies
-  const movies = db.prepare("SELECT tmdb_id, title, poster_path, backdrop_path FROM movies").all() as any[];
+  const movies = db
+    .prepare("SELECT tmdb_id, title, poster_path, backdrop_path FROM movies")
+    .all() as any[];
   console.log(`\n🎬 Syncing ${movies.length} movies...`);
 
   for (const movie of movies) {
@@ -39,17 +41,15 @@ async function main() {
   }
 
   // 2. Sync TV Shows
-  const shows = db.prepare("SELECT tvdb_id, name, poster_path, backdrop_path FROM tv_shows").all() as any[];
+  const shows = db
+    .prepare("SELECT tvdb_id, name, poster_path, backdrop_path FROM tv_shows")
+    .all() as any[];
   console.log(`\n📺 Syncing ${shows.length} TV shows...`);
 
   for (const show of shows) {
     process.stdout.write(`  → ${show.name}... `);
     try {
-      await cacheService.downloadTvShowImages(
-        show.tvdb_id,
-        show.poster_path,
-        show.backdrop_path
-      );
+      await cacheService.downloadTvShowImages(show.tvdb_id, show.poster_path, show.backdrop_path);
       console.log("✅");
     } catch (err) {
       console.log("❌");

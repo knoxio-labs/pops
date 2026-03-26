@@ -40,7 +40,7 @@ export function listMovies(filters: MovieFilters, limit: number, offset: number)
 
   const [countRow] = db.select({ total: count() }).from(movies).where(where).all();
 
-  return { rows, total: countRow.total };
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Get a single movie by id. Throws NotFoundError if missing. */

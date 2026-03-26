@@ -83,17 +83,18 @@ export function PlexSettingsPage() {
       toast.success("Movie sync complete");
       syncStatus.refetch();
     },
-    onError: (err) => toast.error(`Movie sync failed: ${err.message}`),
+    onError: (err: { message: string }) => toast.error(`Movie sync failed: ${err.message}`),
   });
   const syncTvShows = trpc.media.plex.syncTvShows.useMutation({
     onSuccess: () => {
       toast.success("TV show sync complete");
       syncStatus.refetch();
     },
-    onError: (err) => toast.error(`TV show sync failed: ${err.message}`),
+    onError: (err: { message: string }) => toast.error(`TV show sync failed: ${err.message}`),
   });
   const saveSectionIds = trpc.media.plex.saveSectionIds.useMutation({
-    onError: (err) => toast.error(`Failed to save library selection: ${err.message}`),
+    onError: (err: { message: string }) =>
+      toast.error(`Failed to save library selection: ${err.message}`),
   });
 
   const saveUrl = trpc.media.plex.setUrl.useMutation({
@@ -103,13 +104,13 @@ export function PlexSettingsPage() {
       connectionTest.refetch();
       currentUrl.refetch();
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to save URL: ${err.message}`);
     },
   });
 
   const getPin = trpc.media.plex.getAuthPin.useMutation({
-    onSuccess: (res) => {
+    onSuccess: (res: { data: { id: number; code: string; clientId: string } }) => {
       const { id, code, clientId } = res.data;
       setPinId(id);
       window.open(
@@ -117,13 +118,13 @@ export function PlexSettingsPage() {
         "_blank"
       );
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Failed to start auth: ${err.message}`);
     },
   });
 
   const checkPin = trpc.media.plex.checkAuthPin.useMutation({
-    onSuccess: (res) => {
+    onSuccess: (res: { data: { connected: boolean } }) => {
       if (res.data.connected) {
         toast.success("Plex account connected");
         setPinId(null);
@@ -131,7 +132,7 @@ export function PlexSettingsPage() {
         connectionTest.refetch();
       }
     },
-    onError: (err) => {
+    onError: (err: { message: string }) => {
       toast.error(`Auth check failed: ${err.message}`);
     },
   });
@@ -142,7 +143,7 @@ export function PlexSettingsPage() {
       syncStatus.refetch();
       connectionTest.refetch();
     },
-    onError: (err) => toast.error(`Failed to disconnect: ${err.message}`),
+    onError: (err: { message: string }) => toast.error(`Failed to disconnect: ${err.message}`),
   });
 
   useEffect(() => {
@@ -161,8 +162,8 @@ export function PlexSettingsPage() {
       : undefined;
   const libraryList = libraries.data?.data ?? [];
 
-  const movieLibraries = libraryList.filter((lib) => lib.type === "movie");
-  const tvLibraries = libraryList.filter((lib) => lib.type === "show");
+  const movieLibraries = libraryList.filter((lib: { type: string }) => lib.type === "movie");
+  const tvLibraries = libraryList.filter((lib: { type: string }) => lib.type === "show");
 
   const isLoading = syncStatus.isLoading || currentUrl.isLoading;
 
@@ -334,7 +335,7 @@ export function PlexSettingsPage() {
                     aria-label="Select movie library"
                   >
                     <option value="">Select library...</option>
-                    {movieLibraries.map((lib) => (
+                    {movieLibraries.map((lib: { key: string; title: string; type: string }) => (
                       <option key={lib.key} value={lib.key}>
                         {lib.title}
                       </option>
@@ -380,7 +381,7 @@ export function PlexSettingsPage() {
                     aria-label="Select TV library"
                   >
                     <option value="">Select library...</option>
-                    {tvLibraries.map((lib) => (
+                    {tvLibraries.map((lib: { key: string; title: string; type: string }) => (
                       <option key={lib.key} value={lib.key}>
                         {lib.title}
                       </option>

@@ -50,7 +50,8 @@ export function listBudgets(
     .limit(limit)
     .offset(offset)
     .all();
-  const [{ total }] = db.select({ total: count() }).from(budgets).where(where).all();
+  const countRow = db.select({ total: count() }).from(budgets).where(where).all()[0];
+  const total = countRow?.total ?? 0;
 
   return { rows, total };
 }
