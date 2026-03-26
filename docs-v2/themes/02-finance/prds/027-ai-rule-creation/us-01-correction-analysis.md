@@ -26,3 +26,5 @@ Per-correction trigger from ReviewStep is not wired up. Only batch mode exists (
 ## Notes
 
 The prompt should guide Claude to identify what part of the description is the entity vs location/branch/noise. "IKEA TEMPE NSW" → entity is "IKEA", "TEMPE NSW" is location noise → prefix match on "IKEA".
+
+AI infrastructure is built (`rule-generator.ts` + `generateRules` tRPC endpoint, ai_usage tracking). Missing: per-correction trigger from ReviewStep — only batch mode exists. Individual correction flow to Claude is not yet wired up.

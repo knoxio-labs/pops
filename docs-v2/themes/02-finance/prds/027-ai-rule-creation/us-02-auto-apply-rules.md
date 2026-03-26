@@ -23,3 +23,5 @@ Backend uses confidence >= 0.9 threshold (not 0.8 as specified). No toast notifi
 ## Notes
 
 This is the core learning loop. Correct one → AI creates rule → others match immediately. The user should see the uncertain count decrease in real-time as they work through corrections.
+
+Auto-apply exists in `imports/service.ts` but threshold is 0.9 (spec says 0.8). Toast notification and explicit re-evaluation of remaining transactions not implemented. Rules persist in corrections table ✅.
