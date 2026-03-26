@@ -15,6 +15,7 @@ import {
   Skeleton,
   Button,
   TextInput,
+  Textarea,
   Select,
   CheckboxInput,
   Dialog,
@@ -363,12 +364,10 @@ export function BudgetsPage() {
                   />
                 )}
               />
-              <TextInput
-                label="Notes (Optional)"
-                placeholder="Additional details..."
-                {...form.register("notes")}
-                error={form.formState.errors.notes?.message}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes (Optional)</label>
+                <Textarea placeholder="Additional details..." {...form.register("notes")} />
+              </div>
             </div>
             <DialogFooter>
               <Button
