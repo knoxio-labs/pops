@@ -1,29 +1,15 @@
-import { readFileSync } from "node:fs";
 import type { Request, Response, NextFunction } from "express";
-
-let apiKey: string | null = null;
-
-function getApiKey(): string {
-  if (apiKey) return apiKey;
-
-  const filePath = process.env["FINANCE_API_KEY_FILE"];
-  if (filePath) {
-    apiKey = readFileSync(filePath, "utf-8").trim();
-    return apiKey;
-  }
-
-  const envKey = process.env["FINANCE_API_KEY"];
-  if (envKey) {
-    apiKey = envKey;
-    return apiKey;
-  }
-
-  throw new Error("Missing FINANCE_API_KEY_FILE or FINANCE_API_KEY");
-}
+import { verifyCloudflareJWT } from "./cloudflare-jwt.js";
 
 /**
- * Validate API key from Authorization header.
- * Skips auth for webhook routes (those use signature verification).
+ * Express middleware that validates Cloudflare Access JWT tokens.
+ * Extracts user email from the JWT and attaches it to res.locals.user.
+ *
+ * In development (NODE_ENV !== "production"), bypasses JWT validation
+ * and uses a mock user for local testing.
+ *
+ * Skips auth for webhook routes (use signature verification)
+ * and health checks (public endpoint).
  */
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Webhook routes handle their own auth via signature verification
@@ -38,17 +24,27 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  const header = req.headers["authorization"];
-  if (!header || !header.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Missing or invalid Authorization header" });
+  // In development, skip JWT validation and use mock user
+  if (process.env["NODE_ENV"] !== "production") {
+    res.locals["user"] = { email: "dev@example.com" };
+    next();
     return;
   }
 
-  const token = header.slice(7);
-  if (token !== getApiKey()) {
-    res.status(403).json({ error: "Invalid API key" });
+  const token = req.headers["cf-access-jwt-assertion"];
+
+  if (typeof token !== "string") {
+    res.status(401).json({ error: "Missing Cloudflare Access JWT" });
     return;
   }
 
-  next();
+  verifyCloudflareJWT(token)
+    .then((payload) => {
+      res.locals["user"] = { email: payload.email };
+      next();
+    })
+    .catch((error) => {
+      console.error("[auth] JWT verification failed:", error);
+      res.status(401).json({ error: "Invalid Cloudflare Access JWT" });
+    });
 }

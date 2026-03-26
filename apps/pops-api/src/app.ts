@@ -1,6 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { authMiddleware } from "./middleware/auth.js";
 import { rateLimiter } from "./middleware/rate-limit.js";
 import { envContextMiddleware } from "./middleware/env-context.js";
 import healthRouter from "./routes/health.js";
@@ -40,6 +41,11 @@ export function createApp(): express.Express {
 
   // Media image serving — static file serving, no DB needed
   app.use(mediaImagesRouter);
+
+  // Cloudflare Access JWT auth — validates cf-access-jwt-assertion header.
+  // Placed after health/webhook/media routes (those skip auth or use their own).
+  // In development, bypasses JWT check and attaches mock user.
+  app.use(authMiddleware);
 
   // Env CRUD routes — mounted before env context middleware so these always
   // use the prod DB regardless of any ?env= query param on the request.
