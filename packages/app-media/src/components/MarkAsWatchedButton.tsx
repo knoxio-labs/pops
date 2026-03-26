@@ -22,6 +22,8 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
   const watchCount = historyData?.data?.length ?? 0;
   const lastWatched = historyData?.data?.[0]?.watchedAt;
 
+  const addToWatchlistMutation = trpc.media.watchlist.add.useMutation();
+
   const deleteMutation = trpc.media.watchHistory.delete.useMutation({
     onSuccess: () => {
       toast.success("Watch entry undone");
@@ -33,13 +35,33 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
     },
   });
 
+  const handleUndo = (entryId: number, watchlistRemoved: boolean) => {
+    deleteMutation.mutate(
+      { id: entryId },
+      {
+        onSuccess: () => {
+          if (watchlistRemoved) {
+            addToWatchlistMutation.mutate(
+              { mediaType: "movie", mediaId },
+              {
+                onSuccess: () => {
+                  void utils.media.watchlist.list.invalidate();
+                },
+              }
+            );
+          }
+        },
+      }
+    );
+  };
+
   const logMutation = trpc.media.watchHistory.log.useMutation({
-    onSuccess: (result: { data: { id: number } }) => {
+    onSuccess: (result: { data: { id: number }; watchlistRemoved: boolean }) => {
       toast.success("Marked as watched", {
         duration: 5000,
         action: {
           label: "Undo",
-          onClick: () => deleteMutation.mutate({ id: result.data.id }),
+          onClick: () => handleUndo(result.data.id, result.watchlistRemoved),
         },
       });
       void utils.media.watchHistory.list.invalidate();

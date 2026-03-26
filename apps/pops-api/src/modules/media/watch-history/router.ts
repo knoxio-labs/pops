@@ -75,9 +75,10 @@ export const watchHistoryRouter = router({
 
   /** Log a watch event. */
   log: protectedProcedure.input(LogWatchSchema).mutation(({ input }) => {
-    const row = service.logWatch(input);
+    const { entry, watchlistRemoved } = service.logWatch(input);
     return {
-      data: toWatchHistoryEntry(row),
+      data: toWatchHistoryEntry(entry),
+      watchlistRemoved,
       message: "Watch logged",
     };
   }),

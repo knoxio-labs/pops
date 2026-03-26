@@ -213,8 +213,15 @@ export function getWatchHistoryEntry(id: number): WatchHistoryRow {
   return row;
 }
 
+/** Result of logWatch including whether a watchlist entry was removed. */
+export interface LogWatchResult {
+  entry: WatchHistoryRow;
+  watchlistRemoved: boolean;
+}
+
 /**
- * Log a watch event. Returns the created row.
+ * Log a watch event. Returns the created row and whether a watchlist
+ * entry was auto-removed.
  *
  * Side effects (PRD-011 R6 — auto-remove from watchlist):
  *   - If mediaType is "movie" and completed === 1, removes the movie
@@ -225,7 +232,7 @@ export function getWatchHistoryEntry(id: number): WatchHistoryRow {
  *
  * Insert and auto-remove run inside a single transaction.
  */
-export function logWatch(input: LogWatchInput): WatchHistoryRow {
+export function logWatch(input: LogWatchInput): LogWatchResult {
   const db = getDrizzle();
   const completed = input.completed ?? 1;
   const watchedAt = input.watchedAt ?? new Date().toISOString();
@@ -256,7 +263,7 @@ export function logWatch(input: LogWatchInput): WatchHistoryRow {
         )
         .get();
       if (!existing) throw new Error("Watch history entry not found after conflict");
-      return existing;
+      return { entry: existing, watchlistRemoved: false };
     }
 
     const entry = tx
@@ -267,19 +274,21 @@ export function logWatch(input: LogWatchInput): WatchHistoryRow {
     if (!entry) throw new Error("Watch history entry not found after insert");
 
     // Auto-remove from watchlist (PRD-011 R6) — skip for plex_sync source
+    let watchlistRemoved = false;
     if (completed === 1 && input.source !== "plex_sync") {
       if (input.mediaType === "movie") {
-        tx.delete(mediaWatchlist)
+        const deleteResult = tx.delete(mediaWatchlist)
           .where(
             and(eq(mediaWatchlist.mediaType, "movie"), eq(mediaWatchlist.mediaId, input.mediaId))
           )
           .run();
+        watchlistRemoved = deleteResult.changes > 0;
       } else if (input.mediaType === "episode") {
-        autoRemoveTvShowIfFullyWatched(tx, input.mediaId);
+        watchlistRemoved = autoRemoveTvShowIfFullyWatched(tx, input.mediaId);
       }
     }
 
-    return entry;
+    return { entry, watchlistRemoved };
   });
 }
 
@@ -293,21 +302,21 @@ export function logWatch(input: LogWatchInput): WatchHistoryRow {
 function autoRemoveTvShowIfFullyWatched(
   tx: Parameters<Parameters<ReturnType<typeof getDrizzle>["transaction"]>[0]>[0],
   episodeId: number
-): void {
+): boolean {
   // Look up episode → season → tv show
   const episode = tx
     .select({ seasonId: episodes.seasonId })
     .from(episodes)
     .where(eq(episodes.id, episodeId))
     .get();
-  if (!episode) return;
+  if (!episode) return false;
 
   const season = tx
     .select({ tvShowId: seasons.tvShowId })
     .from(seasons)
     .where(eq(seasons.id, episode.seasonId))
     .get();
-  if (!season) return;
+  if (!season) return false;
 
   const tvShowId = season.tvShowId;
 
@@ -320,7 +329,7 @@ function autoRemoveTvShowIfFullyWatched(
     .all()
     .map((r) => r.id);
 
-  if (showEpisodeIds.length === 0) return;
+  if (showEpisodeIds.length === 0) return false;
 
   // Count distinct watched episodes for this show in a single query
   const watchedRow = tx
@@ -337,10 +346,12 @@ function autoRemoveTvShowIfFullyWatched(
   const watched = watchedRow?.watched ?? 0;
 
   if (watched >= showEpisodeIds.length) {
-    tx.delete(mediaWatchlist)
+    const deleteResult = tx.delete(mediaWatchlist)
       .where(and(eq(mediaWatchlist.mediaType, "tv_show"), eq(mediaWatchlist.mediaId, tvShowId)))
       .run();
+    return deleteResult.changes > 0;
   }
+  return false;
 }
 
 /**

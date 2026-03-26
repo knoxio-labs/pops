@@ -257,7 +257,7 @@ describe("getWatchHistoryEntry", () => {
 
 describe("logWatch", () => {
   it("logs a watch event with defaults", () => {
-    const entry = service.logWatch({
+    const { entry } = service.logWatch({
       mediaType: "movie",
       mediaId: 550,
       completed: 1,
@@ -271,7 +271,7 @@ describe("logWatch", () => {
   });
 
   it("logs a watch event with custom values", () => {
-    const entry = service.logWatch({
+    const { entry } = service.logWatch({
       mediaType: "episode",
       mediaId: 42,
       watchedAt: "2026-03-15T20:00:00.000Z",
@@ -282,6 +282,76 @@ describe("logWatch", () => {
     expect(entry.watchedAt).toBe("2026-03-15T20:00:00.000Z");
     expect(entry.completed).toBe(0);
   });
+
+  it("returns watchlistRemoved=true when movie was on watchlist", () => {
+    seedWatchlistEntry(db, { media_type: "movie", media_id: 550 });
+
+    const { watchlistRemoved } = service.logWatch({
+      mediaType: "movie",
+      mediaId: 550,
+      completed: 1,
+    });
+
+    expect(watchlistRemoved).toBe(true);
+  });
+
+  it("returns watchlistRemoved=false when movie was not on watchlist", () => {
+    const { watchlistRemoved } = service.logWatch({
+      mediaType: "movie",
+      mediaId: 550,
+      completed: 1,
+    });
+
+    expect(watchlistRemoved).toBe(false);
+  });
+
+  it("returns watchlistRemoved=false for incomplete watch", () => {
+    seedWatchlistEntry(db, { media_type: "movie", media_id: 550 });
+
+    const { watchlistRemoved } = service.logWatch({
+      mediaType: "movie",
+      mediaId: 550,
+      completed: 0,
+    });
+
+    expect(watchlistRemoved).toBe(false);
+  });
+
+  it("returns watchlistRemoved=true when final episode completes TV show", () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Test Show" });
+    const sId = seedSeason(db, { tv_show_id: showId, tvdb_id: 3001, season_number: 1 });
+    const ep1 = seedEpisode(db, { season_id: sId, tvdb_id: 5001, episode_number: 1 });
+    const ep2 = seedEpisode(db, { season_id: sId, tvdb_id: 5002, episode_number: 2 });
+
+    seedWatchlistEntry(db, { media_type: "tv_show", media_id: showId });
+
+    service.logWatch({ mediaType: "episode", mediaId: ep1, completed: 1 });
+    const { watchlistRemoved } = service.logWatch({
+      mediaType: "episode",
+      mediaId: ep2,
+      completed: 1,
+    });
+
+    expect(watchlistRemoved).toBe(true);
+  });
+
+  it("returns watchlistRemoved=false for non-final episode", () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Test Show" });
+    const sId = seedSeason(db, { tv_show_id: showId, tvdb_id: 3001, season_number: 1 });
+    const ep1 = seedEpisode(db, { season_id: sId, tvdb_id: 5001, episode_number: 1 });
+    seedEpisode(db, { season_id: sId, tvdb_id: 5002, episode_number: 2 });
+
+    seedWatchlistEntry(db, { media_type: "tv_show", media_id: showId });
+
+    const { watchlistRemoved } = service.logWatch({
+      mediaType: "episode",
+      mediaId: ep1,
+      completed: 1,
+    });
+
+    expect(watchlistRemoved).toBe(false);
+  });
+
 });
 
 describe("deleteWatchHistoryEntry", () => {
