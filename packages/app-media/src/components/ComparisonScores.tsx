@@ -1,7 +1,7 @@
 /**
  * ComparisonScores — radar chart showing Elo scores across comparison dimensions.
  * Queries scores and dimensions, merges them, and renders a recharts RadarChart.
- * Shows "Not enough data" when total comparisons < 3.
+ * Hidden when zero comparisons; shows "Not enough data" when 1–2 comparisons.
  */
 import { Skeleton } from "@pops/ui";
 import {
@@ -15,7 +15,7 @@ import {
 import { trpc } from "../lib/trpc";
 
 /** Normalize an Elo score (typically 1000–2000) to a 0–100 scale. */
-function normalizeScore(elo: number): number {
+export function normalizeScore(elo: number): number {
   const clamped = Math.max(1000, Math.min(2000, elo));
   return Math.round(((clamped - 1000) / 1000) * 100);
 }
@@ -52,6 +52,11 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
     (sum: number, s: { comparisonCount: number }) => sum + s.comparisonCount,
     0
   );
+
+  // Hide entirely when movie has no comparisons at all
+  if (totalComparisons === 0) {
+    return null;
+  }
 
   if (totalComparisons < 3) {
     return (
