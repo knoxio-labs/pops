@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TRPCError } from "@trpc/server";
 import type { Database } from "better-sqlite3";
-import { setupTestContext, seedTransaction, createCaller } from "../../../shared/test-utils.js";
+import { setupTestContext, seedTransaction, seedEntity, createCaller } from "../../../shared/test-utils.js";
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
@@ -37,6 +37,7 @@ describe("transactions.list", () => {
   });
 
   it("returns camelCase fields", async () => {
+    seedEntity(db, { name: "Woolworths", id: "ent-123" });
     seedTransaction(db, {
       description: "Test",
       account: "Up",
@@ -152,6 +153,8 @@ describe("transactions.list", () => {
   });
 
   it("filters by entityId", async () => {
+    seedEntity(db, { name: "Entity 1", id: "ent-123" });
+    seedEntity(db, { name: "Entity 2", id: "ent-456" });
     seedTransaction(db, { description: "Test 1", account: "Up", entity_id: "ent-123" });
     seedTransaction(db, { description: "Test 2", account: "Up", entity_id: "ent-456" });
 
@@ -290,6 +293,7 @@ describe("transactions.create", () => {
   });
 
   it("creates a transaction with all fields", async () => {
+    seedEntity(db, { name: "Woolworths", id: "ent-123" });
     const result = await caller.finance.transactions.create({
       description: "Woolworths Groceries",
       account: "Up Savings",
