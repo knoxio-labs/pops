@@ -1,7 +1,8 @@
 import { useSearchParams, Link } from "react-router";
-import { Badge, Button, Skeleton } from "@pops/ui";
+import { Button, Skeleton } from "@pops/ui";
 import { useEffect } from "react";
 import { Sparkles, Settings } from "lucide-react";
+import { MediaCard } from "../components/MediaCard";
 import { MediaGrid } from "../components/MediaGrid";
 import { DownloadQueue } from "../components/DownloadQueue";
 import { QuickPickDialog } from "../components/QuickPickDialog";
@@ -31,61 +32,6 @@ function LibrarySkeleton() {
         </div>
       ))}
     </MediaGrid>
-  );
-}
-
-function MediaCard({
-  item,
-}: {
-  item: {
-    id: number;
-    type: "movie" | "tv";
-    title: string;
-    year: number | null;
-    posterUrl: string | null;
-    progress: number | null;
-  };
-}) {
-  const href = item.type === "movie" ? `/media/movies/${item.id}` : `/media/tv/${item.id}`;
-  const posterSrc = item.posterUrl ?? "";
-
-  return (
-    <Link to={href} className="group block outline-none">
-      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted transition-all duration-300 group-hover:shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] group-hover:ring-1 group-hover:ring-indigo-500/30 group-focus-visible:ring-2 group-focus-visible:ring-indigo-500">
-        {posterSrc ? (
-          <img
-            src={posterSrc}
-            alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted/50">
-            No Poster
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <Badge
-          variant="secondary"
-          className="absolute top-2 right-2 text-[10px] uppercase tracking-wider px-1.5 py-0 bg-indigo-500/10 text-indigo-200 border-indigo-500/20 backdrop-blur-md"
-        >
-          {item.type === "movie" ? "Movie" : "TV"}
-        </Badge>
-        {/* Progress bar for TV shows */}
-        {item.progress != null && item.progress > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
-            <div
-              className={`h-full transition-all ${item.progress >= 100 ? "bg-green-500" : "bg-indigo-500"}`}
-              style={{ width: `${Math.min(item.progress, 100)}%` }}
-            />
-          </div>
-        )}
-      </div>
-      <h3 className="mt-2 text-sm font-medium line-clamp-2 transition-colors group-hover:text-indigo-400">
-        {item.title}
-      </h3>
-      {item.year && <p className="text-xs text-muted-foreground">{item.year}</p>}
-    </Link>
   );
 }
 
@@ -225,7 +171,16 @@ export function LibraryPage() {
       ) : (
         <MediaGrid>
           {items.map((item) => (
-            <MediaCard key={`${item.type}-${item.id}`} item={item} />
+            <MediaCard
+              key={`${item.type}-${item.id}`}
+              id={item.id}
+              type={item.type}
+              title={item.title}
+              year={item.year}
+              posterUrl={item.posterUrl}
+              progress={item.progress}
+              showTypeBadge={typeFilter === "all"}
+            />
           ))}
         </MediaGrid>
       )}
