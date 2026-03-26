@@ -13,10 +13,14 @@ const tmdbRateLimiter = new TokenBucketRateLimiter(40, 4);
 
 /**
  * Shared TMDB client factory — reuses a single rate limiter across all routers.
- * Returns null if TMDB_API_KEY is not set (checks Docker secrets then env vars).
+ * Throws immediately with a clear error if TMDB_API_TOKEN is not set.
  */
-export function getTmdbClient(): TmdbClient | null {
-  const apiKey = getEnv("TMDB_API_KEY");
-  if (!apiKey) return null;
-  return new TmdbClient(apiKey, tmdbRateLimiter);
+export function getTmdbClient(): TmdbClient {
+  const apiToken = getEnv("TMDB_API_TOKEN");
+  if (!apiToken) {
+    throw new Error(
+      "TMDB_API_TOKEN is not configured. Set it in .env (development) or Docker secrets (production)."
+    );
+  }
+  return new TmdbClient(apiToken, tmdbRateLimiter);
 }

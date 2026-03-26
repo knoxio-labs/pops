@@ -16,14 +16,7 @@ import { refreshTvShow } from "../thetvdb/service.js";
 import * as tvShowService from "./tv-show-service.js";
 
 function requireTmdbClient(): TmdbClient {
-  const client = getTmdbClient();
-  if (!client) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "TMDB_API_KEY is not configured",
-    });
-  }
-  return client;
+  return getTmdbClient();
 }
 
 export const libraryRouter = router({

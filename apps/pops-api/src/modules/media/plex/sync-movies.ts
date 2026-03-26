@@ -54,15 +54,6 @@ export async function importMoviesFromPlex(
   options: MovieSyncOptions = {}
 ): Promise<MovieSyncProgress> {
   const tmdbClient = getTmdbClient();
-  if (!tmdbClient) {
-    return {
-      total: 0,
-      processed: 0,
-      synced: 0,
-      skipped: 0,
-      errors: [{ title: "Configuration", year: null, reason: "TMDB_API_KEY not configured" }],
-    };
-  }
 
   const items = await plexClient.getAllItems(sectionId);
 
