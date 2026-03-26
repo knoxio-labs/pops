@@ -390,15 +390,18 @@ describe("suggestedTags", () => {
   it("includes correction rule tags as source='rule'", async () => {
     seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
     // Seed a correction that matches the description (entity must exist first -- FK constraint)
-    orm().insert(transactionCorrections).values({
-      id: "corr-1",
-      descriptionPattern: "woolworths",
-      matchType: "contains",
-      entityId: "woolworths-id",
-      entityName: "Woolworths",
-      tags: '["Groceries","Weekly Shop"]',
-      confidence: 0.95,
-    }).run();
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-1",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: "woolworths-id",
+        entityName: "Woolworths",
+        tags: '["Groceries","Weekly Shop"]',
+        confidence: 0.95,
+      })
+      .run();
 
     const result = await processImport([baseParsedTransaction], "Amex");
 
@@ -420,15 +423,18 @@ describe("suggestedTags", () => {
       default_tags: '["Groceries"]', // same tag as correction
     });
     // Entity must exist before inserting correction (FK constraint)
-    orm().insert(transactionCorrections).values({
-      id: "corr-2",
-      descriptionPattern: "woolworths",
-      matchType: "contains",
-      entityId: "woolworths-id",
-      entityName: "Woolworths",
-      tags: '["Groceries"]',
-      confidence: 0.95,
-    }).run();
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-2",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: "woolworths-id",
+        entityName: "Woolworths",
+        tags: '["Groceries"]',
+        confidence: 0.95,
+      })
+      .run();
 
     const result = await processImport([baseParsedTransaction], "Amex");
 
@@ -689,11 +695,14 @@ describe("loadEntityLookup", () => {
   });
 
   it("handles entity with empty id gracefully", async () => {
-    orm().insert(entitiesTable).values({
-      id: "",
-      name: "Invalid Entity",
-      lastEditedTime: "2026-01-01T00:00:00Z",
-    }).run();
+    orm()
+      .insert(entitiesTable)
+      .values({
+        id: "",
+        name: "Invalid Entity",
+        lastEditedTime: "2026-01-01T00:00:00Z",
+      })
+      .run();
 
     // Should not crash when entity lookup encounters an empty-string id
     const result = await processImport([], "Amex");
