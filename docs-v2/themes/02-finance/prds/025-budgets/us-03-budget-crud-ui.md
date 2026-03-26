@@ -1,7 +1,7 @@
 # US-03: Budget CRUD UI
 
 > PRD: [025 — Budgets](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,13 +9,13 @@ As a user, I want to create, edit, and delete budgets so that I can manage my sp
 
 ## Acceptance Criteria
 
-- [ ] "Add Budget" button opens create dialog
-- [ ] Form: category (required), period (select: monthly/yearly/none), amount (number, optional), active (toggle), notes (textarea)
-- [ ] Edit: row action opens same form pre-filled
-- [ ] Delete: row action with confirmation dialog
-- [ ] Duplicate category+period shows conflict error
-- [ ] Toast confirmation on create/update/delete
-- [ ] DataTable refreshes after mutations
+- [x] "Add Budget" button opens create dialog
+- [x] Form: category (required), period (select: monthly/yearly/none), amount (number, optional), active (toggle), notes (textarea)
+- [x] Edit: row action opens same form pre-filled
+- [x] Delete: row action with confirmation dialog
+- [x] Duplicate category+period shows conflict error
+- [x] Toast confirmation on create/update/delete
+- [x] DataTable refreshes after mutations
 
 ## Notes
 
