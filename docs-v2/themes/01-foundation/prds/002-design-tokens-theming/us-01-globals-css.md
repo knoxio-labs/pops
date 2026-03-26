@@ -1,7 +1,7 @@
 # US-01: Create globals.css with design tokens
 
 > PRD: [002 — Design Tokens & Theming](README.md)
-> Status: Partial
+> Status: Done
 
 ## Description
 
@@ -16,7 +16,7 @@ As a developer, I want a single `globals.css` file in `@pops/ui/theme` that defi
 - [x] Uses oklch colour space for all colour values
 - [x] Shell entry point imports `@pops/ui/theme`
 - [x] Light mode and dark mode both render correctly
-- [ ] No theme-related CSS exists outside this file — hardcoded `bg-emerald-500/10` gradient in RootLayout.tsx
+- [x] No theme-related CSS exists outside this file
 
 ## Notes
 
