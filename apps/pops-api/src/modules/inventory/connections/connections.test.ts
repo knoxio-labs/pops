@@ -406,6 +406,152 @@ describe("inventory.connections.graph", () => {
   });
 });
 
+describe("inventory.connections.trace", () => {
+  it("returns a tree rooted at the starting item", async () => {
+    const idA = seedInventoryItem(db, { item_name: "Hub" });
+    const idB = seedInventoryItem(db, { item_name: "Device 1" });
+    const idC = seedInventoryItem(db, { item_name: "Device 2" });
+
+    const pairAB = [idA, idB].sort() as [string, string];
+    const pairAC = [idA, idC].sort() as [string, string];
+    seedItemConnection(db, pairAB[0], pairAB[1]);
+    seedItemConnection(db, pairAC[0], pairAC[1]);
+
+    const result = await caller.inventory.connections.trace({ itemId: idA });
+
+    expect(result.data.id).toBe(idA);
+    expect(result.data.itemName).toBe("Hub");
+    expect(result.data.children).toHaveLength(2);
+
+    const childNames = result.data.children.map((c: { itemName: string }) => c.itemName).sort();
+    expect(childNames).toEqual(["Device 1", "Device 2"]);
+  });
+
+  it("traverses a chain recursively (A--B--C--D)", async () => {
+    const idA = seedInventoryItem(db, { item_name: "A" });
+    const idB = seedInventoryItem(db, { item_name: "B" });
+    const idC = seedInventoryItem(db, { item_name: "C" });
+    const idD = seedInventoryItem(db, { item_name: "D" });
+
+    const pairAB = [idA, idB].sort() as [string, string];
+    const pairBC = [idB, idC].sort() as [string, string];
+    const pairCD = [idC, idD].sort() as [string, string];
+    seedItemConnection(db, pairAB[0], pairAB[1]);
+    seedItemConnection(db, pairBC[0], pairBC[1]);
+    seedItemConnection(db, pairCD[0], pairCD[1]);
+
+    const result = await caller.inventory.connections.trace({ itemId: idA });
+
+    // A -> B -> C -> D (linear chain)
+    expect(result.data.id).toBe(idA);
+    expect(result.data.children).toHaveLength(1);
+    const level1 = result.data.children[0]!;
+    expect(level1.id).toBe(idB);
+    expect(level1.children).toHaveLength(1);
+    const level2 = level1.children[0]!;
+    expect(level2.id).toBe(idC);
+    expect(level2.children).toHaveLength(1);
+    const level3 = level2.children[0]!;
+    expect(level3.id).toBe(idD);
+  });
+
+  it("respects maxDepth parameter", async () => {
+    // Chain: A -- B -- C -- D
+    const idA = seedInventoryItem(db, { item_name: "A" });
+    const idB = seedInventoryItem(db, { item_name: "B" });
+    const idC = seedInventoryItem(db, { item_name: "C" });
+    const idD = seedInventoryItem(db, { item_name: "D" });
+
+    const pairAB = [idA, idB].sort() as [string, string];
+    const pairBC = [idB, idC].sort() as [string, string];
+    const pairCD = [idC, idD].sort() as [string, string];
+    seedItemConnection(db, pairAB[0], pairAB[1]);
+    seedItemConnection(db, pairBC[0], pairBC[1]);
+    seedItemConnection(db, pairCD[0], pairCD[1]);
+
+    // maxDepth=1 from A should only reach B, not C or D
+    const result = await caller.inventory.connections.trace({ itemId: idA, maxDepth: 1 });
+
+    expect(result.data.id).toBe(idA);
+    expect(result.data.children).toHaveLength(1);
+    const child = result.data.children[0]!;
+    expect(child.id).toBe(idB);
+    expect(child.children).toHaveLength(0);
+  });
+
+  it("handles circular references without infinite loop", async () => {
+    // Triangle: A -- B, A -- C, B -- C
+    const idA = seedInventoryItem(db, { item_name: "A" });
+    const idB = seedInventoryItem(db, { item_name: "B" });
+    const idC = seedInventoryItem(db, { item_name: "C" });
+
+    const pairAB = [idA, idB].sort() as [string, string];
+    const pairAC = [idA, idC].sort() as [string, string];
+    const pairBC = [idB, idC].sort() as [string, string];
+    seedItemConnection(db, pairAB[0], pairAB[1]);
+    seedItemConnection(db, pairAC[0], pairAC[1]);
+    seedItemConnection(db, pairBC[0], pairBC[1]);
+
+    const result = await caller.inventory.connections.trace({ itemId: idA });
+
+    // Should not loop — visited set prevents revisiting
+    expect(result.data.id).toBe(idA);
+    expect(result.data.children).toHaveLength(2);
+
+    // Each child should have at most 0 further children (C already visited via A)
+    // or 1 if C is reached via B first
+    const totalNodes = countTreeNodes(result.data);
+    expect(totalNodes).toBe(3); // A, B, C — each visited once
+  });
+
+  it("returns single node with no children when item has no connections", async () => {
+    const id = seedInventoryItem(db, { item_name: "Lonely" });
+
+    const result = await caller.inventory.connections.trace({ itemId: id });
+
+    expect(result.data.id).toBe(id);
+    expect(result.data.children).toHaveLength(0);
+  });
+
+  it("throws NOT_FOUND for nonexistent item", async () => {
+    await expect(
+      caller.inventory.connections.trace({ itemId: "nonexistent" })
+    ).rejects.toThrow(TRPCError);
+
+    try {
+      await caller.inventory.connections.trace({ itemId: "nonexistent" });
+    } catch (err) {
+      expect((err as TRPCError).code).toBe("NOT_FOUND");
+    }
+  });
+
+  it("returns node metadata (itemName, assetId, type)", async () => {
+    const id = seedInventoryItem(db, {
+      item_name: "MacBook Pro",
+      asset_id: "ASSET-001",
+      type: "electronics",
+    });
+
+    const result = await caller.inventory.connections.trace({ itemId: id });
+
+    expect(result.data).toMatchObject({
+      id,
+      itemName: "MacBook Pro",
+      assetId: "ASSET-001",
+      type: "electronics",
+    });
+  });
+});
+
+/** Count total nodes in a trace tree. */
+function countTreeNodes(node: { children: { children: unknown[] }[] }): number {
+  let count = 1;
+  for (const child of node.children) {
+    count += countTreeNodes(child as typeof node);
+  }
+  return count;
+}
+
 describe("inventory.connections auth", () => {
   it("throws UNAUTHORIZED without auth on connect", async () => {
     const unauthCaller = createCaller(false);

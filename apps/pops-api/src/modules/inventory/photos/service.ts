@@ -2,7 +2,7 @@
  * Item photos service — attach/remove/reorder/upload photos using Drizzle ORM.
  */
 import { eq, count, asc, desc } from "drizzle-orm";
-import { mkdirSync, readdirSync } from "node:fs";
+import { mkdirSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 import { getDrizzle, getDb } from "../../../db.js";
@@ -63,10 +63,18 @@ export function attachPhoto(input: AttachPhotoInput): ItemPhotoRow {
   return getPhoto(id);
 }
 
-/** Remove a photo by ID. */
+/** Remove a photo by ID. Deletes the DB record and the file from disk. */
 export function removePhoto(id: number): void {
-  getPhoto(id); // Validates existence
+  const photo = getPhoto(id); // Validates existence
   const db = getDrizzle();
+
+  // Delete file from disk if it exists
+  const imagesDir = getImagesDir();
+  const absolutePath = join(imagesDir, photo.filePath);
+  if (existsSync(absolutePath)) {
+    unlinkSync(absolutePath);
+  }
+
   db.delete(itemPhotos).where(eq(itemPhotos.id, id)).run();
 }
 

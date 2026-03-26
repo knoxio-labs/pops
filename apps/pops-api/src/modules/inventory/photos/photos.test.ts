@@ -2,7 +2,7 @@
  * Item photos router tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { Database } from "better-sqlite3";
@@ -176,6 +176,37 @@ describe("inventory.photos.remove", () => {
     } catch (err) {
       expect((err as TRPCError).code).toBe("NOT_FOUND");
     }
+  });
+
+  it("removes the file from disk when deleting an uploaded photo", async () => {
+    const itemId = seedInventoryItem(db, { item_name: "Camera Item" });
+
+    const sharp = (await import("sharp")).default;
+    const tinyPng = await sharp({
+      create: { width: 10, height: 10, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+
+    const uploadResult = await caller.inventory.photos.upload({
+      itemId,
+      data: tinyPng.toString("base64"),
+    });
+
+    // Verify file exists on disk
+    const { join } = await import("node:path");
+    const filePath = join(tempDir, uploadResult.data.filePath);
+    expect(existsSync(filePath)).toBe(true);
+
+    // Remove the photo
+    await caller.inventory.photos.remove({ id: uploadResult.data.id });
+
+    // Verify file is deleted from disk
+    expect(existsSync(filePath)).toBe(false);
+
+    // Verify DB record is also gone
+    const row = db.prepare("SELECT * FROM item_photos WHERE id = ?").get(uploadResult.data.id);
+    expect(row).toBeUndefined();
   });
 });
 
