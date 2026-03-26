@@ -12,11 +12,10 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@pops/api": "workspace:*",
+    "@pops/api-client": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.90.20",
     "@tanstack/react-table": "^8.21.3",
-    "@trpc/client": "11.13.4",
-    "@trpc/react-query": "11.13.4",
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",

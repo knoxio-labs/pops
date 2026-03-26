@@ -4,5 +4,6 @@ packages:
   - 'packages/app-media'
   - 'packages/app-inventory'
   - 'packages/app-ai'
+  - 'packages/api-client'
   - 'packages/db-types'
   - 'packages/ui'
