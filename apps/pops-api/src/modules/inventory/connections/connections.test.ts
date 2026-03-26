@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { Database } from "better-sqlite3";
 import { TRPCError } from "@trpc/server";
+import type { TraceNode } from "./types.js";
 import {
   setupTestContext,
   createCaller,
@@ -461,17 +462,16 @@ describe("inventory.connections.trace", () => {
     expect(result.data.children).toHaveLength(2);
 
     // Count total nodes in tree — should be exactly 3 (no duplicates)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function countNodes(node: any): number {
-      return 1 + (node.children?.reduce((sum: number, child: any) => sum + countNodes(child), 0) ?? 0);
+    function countNodes(node: TraceNode): number {
+      return 1 + node.children.reduce((sum, child) => sum + countNodes(child), 0);
     }
     expect(countNodes(result.data)).toBe(3);
   });
 
   it("throws NOT_FOUND for nonexistent item", async () => {
-    await expect(
-      caller.inventory.connections.trace({ itemId: "nonexistent" })
-    ).rejects.toThrow(TRPCError);
+    await expect(caller.inventory.connections.trace({ itemId: "nonexistent" })).rejects.toThrow(
+      TRPCError
+    );
 
     try {
       await caller.inventory.connections.trace({ itemId: "nonexistent" });
