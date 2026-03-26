@@ -1,13 +1,42 @@
 /**
- * Budgets page - manage budgets
+ * Budgets page - manage budgets with CRUD
  */
+import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { trpc } from "../lib/trpc";
-import { DataTable, SortableHeader } from "@pops/ui";
-import { Badge } from "@pops/ui";
-import { Alert } from "@pops/ui";
-import { Skeleton } from "@pops/ui";
+import {
+  DataTable,
+  SortableHeader,
+  Badge,
+  Alert,
+  Skeleton,
+  Button,
+  TextInput,
+  Select,
+  CheckboxInput,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@pops/ui";
 import type { ColumnFilter } from "@pops/ui";
+import { MoreHorizontal, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Budget {
   id: string;
@@ -19,10 +48,106 @@ interface Budget {
   lastEditedTime: string;
 }
 
+const BudgetFormSchema = z.object({
+  category: z.string().min(1, "Category is required"),
+  period: z.string(),
+  amount: z.string(),
+  active: z.boolean(),
+  notes: z.string(),
+});
+
+type BudgetFormValues = z.infer<typeof BudgetFormSchema>;
+
+const PERIOD_OPTIONS = [
+  { label: "None (One-time)", value: "" },
+  { label: "Monthly", value: "Monthly" },
+  { label: "Yearly", value: "Yearly" },
+];
+
+const DEFAULT_FORM_VALUES: BudgetFormValues = {
+  category: "",
+  period: "",
+  amount: "",
+  active: false,
+  notes: "",
+};
+
 export function BudgetsPage() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const utils = trpc.useUtils();
   const { data, isLoading, error, refetch } = trpc.finance.budgets.list.useQuery({
     limit: 100,
   });
+
+  const createMutation = trpc.finance.budgets.create.useMutation({
+    onSuccess: () => {
+      toast.success("Budget created");
+      utils.finance.budgets.list.invalidate();
+      setIsDialogOpen(false);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updateMutation = trpc.finance.budgets.update.useMutation({
+    onSuccess: () => {
+      toast.success("Budget updated");
+      utils.finance.budgets.list.invalidate();
+      setIsDialogOpen(false);
+      setEditingBudget(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteMutation = trpc.finance.budgets.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Budget deleted");
+      utils.finance.budgets.list.invalidate();
+      setDeletingId(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const form = useForm<BudgetFormValues>({
+    resolver: zodResolver(BudgetFormSchema),
+    defaultValues: DEFAULT_FORM_VALUES,
+  });
+
+  const handleAdd = () => {
+    setEditingBudget(null);
+    form.reset(DEFAULT_FORM_VALUES);
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (budget: Budget) => {
+    setEditingBudget(budget);
+    form.reset({
+      category: budget.category,
+      period: budget.period || "",
+      amount: budget.amount !== null ? String(budget.amount) : "",
+      active: budget.active,
+      notes: budget.notes || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const onSubmit = (values: BudgetFormValues) => {
+    const payload = {
+      category: values.category,
+      period: values.period || null,
+      amount: values.amount ? Number(values.amount) : null,
+      active: values.active,
+      notes: values.notes || null,
+    };
+
+    if (editingBudget) {
+      updateMutation.mutate({ id: editingBudget.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
 
   const columns: ColumnDef<Budget>[] = [
     {
@@ -95,6 +220,32 @@ export function BudgetsPage() {
         return <div className="max-w-md text-sm truncate text-muted-foreground">{notes}</div>;
       },
     },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="text-right">
+          <DropdownMenu
+            trigger={
+              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" aria-label="Actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            }
+            align="end"
+          >
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => setDeletingId(row.original.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenu>
+        </div>
+      ),
+    },
   ];
 
   const tableFilters: ColumnFilter[] = [
@@ -127,23 +278,28 @@ export function BudgetsPage() {
         <Alert variant="destructive">
           <p className="font-semibold">Failed to load budgets</p>
           <p className="text-sm">{error.message}</p>
-          <button onClick={() => refetch()} className="mt-2 text-sm underline">
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
             Try again
-          </button>
+          </Button>
         </Alert>
       </div>
     );
   }
 
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Budgets</h1>
-          <p className="text-muted-foreground">
-            {data && `${data.pagination.total} total budgets`}
+          <p className="text-muted-foreground text-sm">
+            {data ? `${data.pagination.total} total budgets` : "Manage spending targets"}
           </p>
         </div>
+        <Button onClick={handleAdd}>
+          <Plus className="mr-2 h-4 w-4" /> Add Budget
+        </Button>
       </div>
 
       {isLoading ? (
@@ -151,10 +307,10 @@ export function BudgetsPage() {
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
-      ) : data ? (
+      ) : (
         <DataTable
           columns={columns}
-          data={data.data}
+          data={data?.data ?? []}
           searchable
           searchColumn="category"
           searchPlaceholder="Search budgets..."
@@ -163,7 +319,96 @@ export function BudgetsPage() {
           pageSizeOptions={[25, 50, 100]}
           filters={tableFilters}
         />
-      ) : null}
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => !isSubmitting && setIsDialogOpen(open)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <DialogTitle>{editingBudget ? "Edit Budget" : "New Budget"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <TextInput
+                label="Category"
+                placeholder="e.g. Groceries, Entertainment"
+                {...form.register("category")}
+                error={form.formState.errors.category?.message}
+              />
+              <Select
+                label="Period"
+                options={PERIOD_OPTIONS}
+                {...form.register("period")}
+                error={form.formState.errors.period?.message}
+              />
+              <TextInput
+                type="number"
+                label="Amount (Optional)"
+                placeholder="0.00"
+                prefix="$"
+                step="0.01"
+                min="0"
+                {...form.register("amount")}
+                error={form.formState.errors.amount?.message}
+              />
+              <Controller
+                control={form.control}
+                name="active"
+                render={({ field }) => (
+                  <CheckboxInput
+                    label="Active"
+                    description="Enable this budget for tracking"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+              <TextInput
+                label="Notes (Optional)"
+                placeholder="Additional details..."
+                {...form.register("notes")}
+                error={form.formState.errors.notes?.message}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingBudget ? "Update" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this budget. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingId && deleteMutation.mutate({ id: deletingId })}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
