@@ -1,7 +1,7 @@
 # US-01: Entity schema and API
 
 > PRD: [023 — Entities](README.md)
-> Status: Partial — transactions.entity_id has no FK SET NULL constraint
+> Status: Done
 
 ## Description
 
@@ -15,7 +15,7 @@ As a developer, I want the entity table and CRUD API so that merchants/payees ca
 - [x] Aliases: API accepts array, stores as comma-separated, returns as array
 - [x] Default tags: API accepts array, stores as JSON, returns as array
 - [x] Type defaults to "company" if not provided
-- [ ] Deletion: FK SET NULL on all related tables (transactions, inventory)
+- [x] Deletion: FK SET NULL on all related tables (transactions, inventory)
 - [x] Tests cover CRUD, duplicate prevention, alias serialization
 
 ## Notes

@@ -236,6 +236,7 @@ describe("imports.executeImport", () => {
   });
 
   it("executes valid input successfully", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
     const { sessionId } = await caller.finance.imports.executeImport({
       transactions: [
         {
@@ -276,6 +277,7 @@ describe("imports.executeImport", () => {
   });
 
   it("verifies transactions are written to SQLite", async () => {
+    seedEntity(db, { name: "Entity", id: "entity-id" });
     const { sessionId } = await caller.finance.imports.executeImport({
       transactions: [
         {

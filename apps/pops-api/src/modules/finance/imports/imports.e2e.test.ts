@@ -220,6 +220,7 @@ describe("E2E: Complete Import Flow", () => {
   it("imports a unique transaction alongside existing data", async () => {
     // Seed an existing transaction, then verify a new unique one succeeds
     seedTransaction(db, { checksum: "test123" });
+    seedEntity(db, { name: "Entity", id: "entity-id" });
 
     const mockTransaction: ConfirmedTransaction = {
       date: "2026-02-13",
