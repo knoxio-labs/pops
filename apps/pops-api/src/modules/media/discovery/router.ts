@@ -24,14 +24,8 @@ export const discoveryRouter = router({
 
   /** Get trending movies from TMDB. */
   trending: protectedProcedure.input(TrendingQuerySchema).query(async ({ input }) => {
-    const client = getTmdbClient();
-    if (!client) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "TMDB_API_KEY is not configured",
-      });
-    }
     try {
+      const client = getTmdbClient();
       return await tmdbService.getTrending(client, input.timeWindow, input.page);
     } catch (err) {
       if (err instanceof TRPCError) throw err;
@@ -44,14 +38,8 @@ export const discoveryRouter = router({
 
   /** Get recommendations based on top-rated library movies, scored by preference profile. */
   recommendations: protectedProcedure.input(RecommendationsQuerySchema).query(async ({ input }) => {
-    const client = getTmdbClient();
-    if (!client) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "TMDB_API_KEY is not configured",
-      });
-    }
     try {
+      const client = getTmdbClient();
       const raw = await tmdbService.getRecommendations(client, input.sampleSize);
       const profile = service.getPreferenceProfile();
       const scored = service.scoreRecommendations(raw.results, profile);
