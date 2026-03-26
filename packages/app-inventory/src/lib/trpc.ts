@@ -1,10 +1,5 @@
 /**
- * tRPC client re-export for app-inventory
- *
- * Creates typed tRPC hooks for the pops-api backend.
- * The Provider is owned by the shell (apps/pops-shell).
+ * tRPC hooks re-export for app-inventory.
+ * Single instance owned by @pops/api-client — all packages share one React context.
  */
-import { createTRPCReact } from "@trpc/react-query";
-import type { AppRouter } from "@pops/api";
-
-export const trpc = createTRPCReact<AppRouter>();
+export { trpc } from "@pops/api-client";

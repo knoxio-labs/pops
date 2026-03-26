@@ -10,11 +10,9 @@
     "lint:fix": "eslint src --ext .ts,.tsx --fix"
   },
   "dependencies": {
-    "@pops/api": "workspace:*",
+    "@pops/api-client": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.90.20",
-    "@trpc/client": "11.13.4",
-    "@trpc/react-query": "11.13.4",
     "lucide-react": "^0.563.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
