@@ -1,7 +1,7 @@
 # US-03: Build middleware stack
 
 > PRD: [008 — API Server](README.md)
-> Status: Partial — auth uses API key not Cloudflare JWT
+> Status: Done
 
 ## Description
 
@@ -9,7 +9,7 @@ As a developer, I want auth, rate limiting, error handling, and environment cont
 
 ## Acceptance Criteria
 
-- [ ] `middleware/auth.ts` validates Cloudflare Access JWT tokens (skips in development)
+- [x] `middleware/auth.ts` validates Cloudflare Access JWT tokens (skips in development)
 - [x] `middleware/rate-limit.ts` limits requests per endpoint
 - [x] `middleware/error-handler.ts` catches errors and returns consistent JSON responses with appropriate status codes
 - [x] `middleware/env-context.ts` scopes requests to named environments for testing
