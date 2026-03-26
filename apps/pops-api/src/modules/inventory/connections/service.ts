@@ -85,6 +85,25 @@ export function disconnectItems(id: number): void {
 }
 
 /**
+ * Disconnect two items by item IDs. Normalises A<B ordering.
+ * Throws NotFoundError if the connection does not exist.
+ */
+export function disconnectByItems(inputA: string, inputB: string): void {
+  const db = getDrizzle();
+  const [itemAId, itemBId] = inputA < inputB ? [inputA, inputB] : [inputB, inputA];
+
+  const [row] = db
+    .select({ id: itemConnections.id })
+    .from(itemConnections)
+    .where(and(eq(itemConnections.itemAId, itemAId), eq(itemConnections.itemBId, itemBId)))
+    .all();
+
+  if (!row) throw new NotFoundError("Connection between items", `${inputA} and ${inputB}`);
+
+  db.delete(itemConnections).where(eq(itemConnections.id, row.id)).run();
+}
+
+/**
  * List all connections for a given item (checking both A and B columns).
  */
 export function listConnectionsForItem(

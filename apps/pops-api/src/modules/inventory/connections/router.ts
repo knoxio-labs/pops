@@ -53,6 +53,19 @@ export const connectionsRouter = router({
       }
     }),
 
+  /** Disconnect two items by item IDs. Normalises A<B ordering. */
+  disconnectByItems: protectedProcedure.input(ConnectItemsSchema).mutation(({ input }) => {
+    try {
+      service.disconnectByItems(input.itemAId, input.itemBId);
+      return { message: "Items disconnected" };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      throw err;
+    }
+  }),
+
   /** List all connections for an item (appears in either A or B column). */
   listForItem: protectedProcedure.input(ConnectionQuerySchema).query(({ input }) => {
     const limit = input.limit ?? DEFAULT_LIMIT;

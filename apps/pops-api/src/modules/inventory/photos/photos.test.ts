@@ -1,7 +1,10 @@
 /**
  * Item photos router tests.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import type { Database } from "better-sqlite3";
 import { TRPCError } from "@trpc/server";
 import {
@@ -14,13 +17,22 @@ import {
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
 let db: Database;
+let tempDir: string;
 
 beforeEach(() => {
   ({ caller, db } = ctx.setup());
+  tempDir = mkdtempSync(join(tmpdir(), "pops-photos-test-"));
+  vi.stubEnv("INVENTORY_IMAGES_DIR", tempDir);
 });
 
 afterEach(() => {
   ctx.teardown();
+  vi.unstubAllEnvs();
+  try {
+    rmSync(tempDir, { recursive: true, force: true });
+  } catch {
+    // Ignore cleanup errors
+  }
 });
 
 describe("inventory.photos.attach", () => {
@@ -332,6 +344,73 @@ describe("inventory.photos.reorder", () => {
         itemId: itemA,
         orderedIds: [photoId],
       })
+    ).rejects.toThrow(TRPCError);
+  });
+});
+
+describe("inventory.photos.upload", () => {
+  it("uploads and compresses a photo", async () => {
+    const itemId = seedInventoryItem(db, { item_name: "Camera Item" });
+
+    // Create a tiny valid PNG (1x1 pixel) as base64
+    const sharp = (await import("sharp")).default;
+    const tinyPng = await sharp({
+      create: { width: 10, height: 10, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const base64Data = tinyPng.toString("base64");
+
+    const result = await caller.inventory.photos.upload({
+      itemId,
+      data: base64Data,
+      caption: "Test photo",
+    });
+
+    expect(result.message).toBe("Photo uploaded");
+    expect(result.data.itemId).toBe(itemId);
+    expect(result.data.caption).toBe("Test photo");
+    expect(result.data.filePath).toMatch(/^items\/.+\/photo_001\.jpg$/);
+  });
+
+  it("uses sequential filenames", async () => {
+    const itemId = seedInventoryItem(db, { item_name: "Multi Photo Item" });
+
+    const sharp = (await import("sharp")).default;
+    const tinyPng = await sharp({
+      create: { width: 10, height: 10, channels: 3, background: { r: 0, g: 255, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const base64Data = tinyPng.toString("base64");
+
+    const result1 = await caller.inventory.photos.upload({ itemId, data: base64Data });
+    const result2 = await caller.inventory.photos.upload({ itemId, data: base64Data });
+
+    expect(result1.data.filePath).toContain("photo_001.jpg");
+    expect(result2.data.filePath).toContain("photo_002.jpg");
+  });
+
+  it("throws NOT_FOUND when item does not exist", async () => {
+    const sharp = (await import("sharp")).default;
+    const tinyPng = await sharp({
+      create: { width: 10, height: 10, channels: 3, background: { r: 0, g: 0, b: 255 } },
+    })
+      .png()
+      .toBuffer();
+
+    await expect(
+      caller.inventory.photos.upload({
+        itemId: "nonexistent",
+        data: tinyPng.toString("base64"),
+      })
+    ).rejects.toThrow(TRPCError);
+  });
+
+  it("throws UNAUTHORIZED without auth", async () => {
+    const unauthCaller = createCaller(false);
+    await expect(
+      unauthCaller.inventory.photos.upload({ itemId: "a", data: "dGVzdA==" })
     ).rejects.toThrow(TRPCError);
   });
 });

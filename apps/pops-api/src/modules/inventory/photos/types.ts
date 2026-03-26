@@ -49,6 +49,15 @@ export const PhotoQuerySchema = z.object({
 });
 export type PhotoQuery = z.infer<typeof PhotoQuerySchema>;
 
+/** Zod schema for uploading a photo (base64 encoded). */
+export const UploadPhotoSchema = z.object({
+  itemId: z.string().min(1, "Item ID is required"),
+  /** Base64-encoded image data. */
+  data: z.string().min(1, "Image data is required"),
+  caption: z.string().nullable().optional(),
+});
+export type UploadPhotoInput = z.infer<typeof UploadPhotoSchema>;
+
 /** Zod schema for reordering photos. */
 export const ReorderPhotosSchema = z.object({
   itemId: z.string().min(1, "Item ID is required"),

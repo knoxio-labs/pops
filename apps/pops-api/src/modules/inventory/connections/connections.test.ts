@@ -169,6 +169,57 @@ describe("inventory.connections.disconnect", () => {
   });
 });
 
+describe("inventory.connections.disconnectByItems", () => {
+  it("disconnects two items by their IDs", async () => {
+    const [idA, idB] = seedTwoItems();
+    seedItemConnection(db, idA, idB);
+
+    const result = await caller.inventory.connections.disconnectByItems({
+      itemAId: idA,
+      itemBId: idB,
+    });
+
+    expect(result.message).toBe("Items disconnected");
+
+    const row = db
+      .prepare("SELECT * FROM item_connections WHERE item_a_id = ? AND item_b_id = ?")
+      .get(idA, idB);
+    expect(row).toBeUndefined();
+  });
+
+  it("normalises A<B ordering when IDs are reversed", async () => {
+    const [idA, idB] = seedTwoItems("AAA", "ZZZ");
+    seedItemConnection(db, idA, idB);
+
+    // Pass in reverse order — should still find and delete the connection
+    const result = await caller.inventory.connections.disconnectByItems({
+      itemAId: idB,
+      itemBId: idA,
+    });
+
+    expect(result.message).toBe("Items disconnected");
+
+    const row = db
+      .prepare("SELECT * FROM item_connections WHERE item_a_id = ? AND item_b_id = ?")
+      .get(idA, idB);
+    expect(row).toBeUndefined();
+  });
+
+  it("throws NOT_FOUND when connection does not exist", async () => {
+    const [idA, idB] = seedTwoItems();
+
+    await expect(
+      caller.inventory.connections.disconnectByItems({ itemAId: idA, itemBId: idB })
+    ).rejects.toThrow(TRPCError);
+
+    try {
+      await caller.inventory.connections.disconnectByItems({ itemAId: idA, itemBId: idB });
+    } catch (err) {
+      expect((err as TRPCError).code).toBe("NOT_FOUND");
+    }
+  });
+});
+
 describe("inventory.connections.listForItem", () => {
   it("returns empty list when no connections exist", async () => {
     const id = seedInventoryItem(db, { item_name: "Lonely Item" });

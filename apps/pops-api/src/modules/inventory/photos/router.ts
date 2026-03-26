@@ -10,6 +10,7 @@ import {
   UpdatePhotoSchema,
   PhotoQuerySchema,
   ReorderPhotosSchema,
+  UploadPhotoSchema,
   toPhoto,
 } from "./types.js";
 import * as service from "./service.js";
@@ -82,6 +83,26 @@ export const photosRouter = router({
       data: rows.map(toPhoto),
       pagination: paginationMeta(total, limit, offset),
     };
+  }),
+
+  /** Upload and compress a photo for an inventory item. */
+  upload: protectedProcedure.input(UploadPhotoSchema).mutation(async ({ input }) => {
+    try {
+      const { photo, filePath } = await service.uploadPhoto(input);
+      return {
+        data: toPhoto(photo),
+        filePath,
+        message: "Photo uploaded",
+      };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      if (err instanceof ValidationError) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+      }
+      throw err;
+    }
   }),
 
   /** Reorder photos for an item. */

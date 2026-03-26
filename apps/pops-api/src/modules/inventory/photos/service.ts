@@ -1,7 +1,10 @@
 /**
- * Item photos service — attach/remove/reorder photos using Drizzle ORM.
+ * Item photos service — attach/remove/reorder/upload photos using Drizzle ORM.
  */
-import { eq, count, asc } from "drizzle-orm";
+import { eq, count, asc, desc } from "drizzle-orm";
+import { mkdirSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import sharp from "sharp";
 import { getDrizzle, getDb } from "../../../db.js";
 import { itemPhotos, homeInventory } from "@pops/db-types";
 import { NotFoundError, ValidationError } from "../../../shared/errors.js";
@@ -148,4 +151,117 @@ export function reorderPhotos(itemId: string, orderedIds: number[]): ItemPhotoRo
     .where(eq(itemPhotos.itemId, itemId))
     .orderBy(asc(itemPhotos.sortOrder))
     .all();
+}
+
+// ---------------------------------------------------------------------------
+// Photo upload with compression
+// ---------------------------------------------------------------------------
+
+const MAX_DIMENSION = 1920;
+
+/** Get the base directory for inventory images. */
+export function getImagesDir(): string {
+  return process.env.INVENTORY_IMAGES_DIR ?? "./data/inventory/images";
+}
+
+/**
+ * Determine the next sequential filename for a given item directory.
+ * Scans existing photo_NNN.jpg files and returns the next number.
+ */
+export function nextPhotoFilename(itemDir: string): string {
+  let maxNum = 0;
+  try {
+    const files = readdirSync(itemDir);
+    for (const file of files) {
+      const match = file.match(/^photo_(\d+)\.jpg$/);
+      if (match) {
+        const num = parseInt(match[1]!, 10);
+        if (num > maxNum) maxNum = num;
+      }
+    }
+  } catch {
+    // Directory doesn't exist yet — start at 001
+  }
+  return `photo_${String(maxNum + 1).padStart(3, "0")}.jpg`;
+}
+
+/**
+ * Compress an image buffer: resize to fit within 1920x1920 bounding box,
+ * convert HEIC/HEIF to JPEG, strip EXIF metadata.
+ */
+export async function compressImage(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .rotate() // Auto-rotate based on EXIF orientation before stripping
+    .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
+    .removeAlpha()
+    .jpeg({ quality: 85 })
+    .toBuffer();
+}
+
+export interface UploadPhotoInput {
+  itemId: string;
+  /** Base64-encoded image data. */
+  data: string;
+  caption?: string | null;
+}
+
+export interface UploadPhotoResult {
+  photo: ItemPhotoRow;
+  filePath: string;
+}
+
+/**
+ * Upload a photo for an inventory item.
+ * Compresses the image (1920px max, JPEG, strip EXIF), stores to disk,
+ * creates the DB record with a sequential filename.
+ */
+export async function uploadPhoto(input: UploadPhotoInput): Promise<UploadPhotoResult> {
+  const db = getDrizzle();
+
+  assertItemExists(input.itemId);
+
+  const imagesDir = getImagesDir();
+  const itemDir = join(imagesDir, "items", input.itemId);
+
+  // Create directory if it doesn't exist
+  mkdirSync(itemDir, { recursive: true });
+
+  // Compress image
+  const rawBuffer = Buffer.from(input.data, "base64");
+  const compressed = await compressImage(rawBuffer);
+
+  // Determine sequential filename
+  const filename = nextPhotoFilename(itemDir);
+  const absolutePath = join(itemDir, filename);
+
+  // Write compressed image to disk
+  await sharp(compressed).toFile(absolutePath);
+
+  // Store relative path in DB (relative to imagesDir)
+  const relativePath = `items/${input.itemId}/${filename}`;
+
+  // Get the next sort order
+  const [maxSort] = db
+    .select({ max: itemPhotos.sortOrder })
+    .from(itemPhotos)
+    .where(eq(itemPhotos.itemId, input.itemId))
+    .orderBy(desc(itemPhotos.sortOrder))
+    .limit(1)
+    .all();
+  const nextSortOrder = (maxSort?.max ?? -1) + 1;
+
+  const result = db
+    .insert(itemPhotos)
+    .values({
+      itemId: input.itemId,
+      filePath: relativePath,
+      caption: input.caption ?? null,
+      sortOrder: nextSortOrder,
+    })
+    .run();
+
+  const id = Number(result.lastInsertRowid);
+  const photo = getPhoto(id);
+
+  return { photo, filePath: relativePath };
 }
