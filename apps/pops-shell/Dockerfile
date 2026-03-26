@@ -40,7 +40,5 @@ FROM nginx:alpine
 COPY --from=builder /app/apps/pops-shell/dist /usr/share/nginx/html
 COPY apps/pops-shell/nginx.conf /etc/nginx/conf.d/default.conf
 
-RUN apk add --no-cache curl
-
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
