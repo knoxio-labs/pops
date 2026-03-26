@@ -24,10 +24,22 @@ import { ValueByTypeCard } from "../components/ValueBreakdown";
 import { formatCurrency } from "../lib/utils";
 type ViewMode = "table" | "grid";
 
+const VIEW_STORAGE_KEY = "inventory-view-mode";
+
 const VIEW_OPTIONS = [
   { value: "table" as const, label: "Table view", icon: <LayoutList className="h-4 w-4" /> },
   { value: "grid" as const, label: "Grid view", icon: <LayoutGrid className="h-4 w-4" /> },
 ];
+
+function getInitialView(): ViewMode {
+  try {
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (stored === "grid" || stored === "table") return stored;
+  } catch {
+    // SSR or no localStorage
+  }
+  return "table";
+}
 
 const TYPE_OPTIONS: SelectOption[] = [
   { value: "", label: "All Types" },
@@ -204,7 +216,7 @@ function ItemsPageSkeleton() {
 
 export function ItemsPage() {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>(getInitialView);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [conditionFilter, setConditionFilter] = useState("");
@@ -305,7 +317,7 @@ export function ItemsPage() {
             options={VIEW_OPTIONS}
             value={viewMode}
             onChange={handleViewChange}
-            storageKey="inventory-view-mode"
+            storageKey={VIEW_STORAGE_KEY}
             className="ml-auto"
           />
         </div>
