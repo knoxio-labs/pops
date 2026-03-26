@@ -1,7 +1,7 @@
 # PRD-007: App Theme Colour Propagation
 
 > Epic: [02 — Shell & App Switcher](../../epics/02-shell-app-switcher.md)
-> Status: To Review
+> Status: Done
 
 ## Overview
 
@@ -55,8 +55,8 @@ No database changes. The colour is declared in the app's `navConfig` (already pa
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
 | 01 | [us-01-shell-propagation](us-01-shell-propagation.md) | Shell reads active app's colour from navConfig and sets CSS variables on the app container | Done | No (first) |
-| 02 | [us-02-rail-accent](us-02-rail-accent.md) | App rail active indicator uses the active app's accent colour | Partial | Blocked by us-01 |
-| 03 | [us-03-verify-components](us-03-verify-components.md) | Verify all components using app-accent tokens render correctly across all app colours | Partial | Blocked by us-01 |
+| 02 | [us-02-rail-accent](us-02-rail-accent.md) | App rail active indicator uses the active app's accent colour | Done | Blocked by us-01 |
+| 03 | [us-03-verify-components](us-03-verify-components.md) | Verify all components using app-accent tokens render correctly across all app colours | Done | Blocked by us-01 |
 
 ## Verification
 
