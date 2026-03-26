@@ -7,7 +7,7 @@
  * Router-agnostic: pass `renderLink` to use your router's Link component
  * for client-side navigation. Defaults to `<a>`.
  */
-import { type ReactNode, type ComponentType } from "react";
+import { Fragment, type ReactNode, type ComponentType } from "react";
 import { ArrowLeft } from "lucide-react";
 import {
   Breadcrumb,
@@ -59,6 +59,32 @@ function DefaultLink({
  * Collapse middle breadcrumb segments on mobile.
  * Always shows first and last; middle segments get an ellipsis on small screens.
  */
+function SegmentLink({
+  segment,
+  LinkComponent,
+}: {
+  segment: BreadcrumbSegment;
+  LinkComponent: ComponentType<{ to: string; className?: string; children: ReactNode }>;
+}) {
+  if (segment.href) {
+    return (
+      <BreadcrumbLink asChild>
+        <LinkComponent
+          to={segment.href}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          {segment.label}
+        </LinkComponent>
+      </BreadcrumbLink>
+    );
+  }
+  return (
+    <BreadcrumbPage className="text-foreground font-medium">
+      {segment.label}
+    </BreadcrumbPage>
+  );
+}
+
 function BreadcrumbItems({
   segments,
   LinkComponent,
@@ -68,66 +94,14 @@ function BreadcrumbItems({
 }) {
   if (segments.length === 0) return null;
 
+  const hasMiddleSegments = segments.length > 2;
+
   return segments.map((segment, index) => {
     const isLast = index === segments.length - 1;
     const isFirst = index === 0;
     const isMiddle = !isFirst && !isLast;
 
-    // Middle segments: hidden on mobile, replaced by ellipsis
-    if (isMiddle && segments.length > 2) {
-      return (
-        <BreadcrumbItem
-          key={`${segment.label}-${index}`}
-          className="hidden sm:inline-flex"
-        >
-          {segment.href ? (
-            <BreadcrumbLink asChild>
-              <LinkComponent
-                to={segment.href}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {segment.label}
-              </LinkComponent>
-            </BreadcrumbLink>
-          ) : (
-            <BreadcrumbPage className="text-foreground font-medium">
-              {segment.label}
-            </BreadcrumbPage>
-          )}
-          <BreadcrumbSeparator />
-        </BreadcrumbItem>
-      );
-    }
-
-    // Ellipsis marker — shown only on mobile when there are middle segments
-    if (isFirst && segments.length > 2) {
-      return (
-        <BreadcrumbItem key={`${segment.label}-${index}`}>
-          {segment.href ? (
-            <BreadcrumbLink asChild>
-              <LinkComponent
-                to={segment.href}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {segment.label}
-              </LinkComponent>
-            </BreadcrumbLink>
-          ) : (
-            <BreadcrumbPage className="text-foreground font-medium">
-              {segment.label}
-            </BreadcrumbPage>
-          )}
-          <BreadcrumbSeparator />
-          {/* Ellipsis for collapsed middle segments on mobile */}
-          <BreadcrumbItem className="sm:hidden">
-            <BreadcrumbEllipsis />
-            <BreadcrumbSeparator />
-          </BreadcrumbItem>
-        </BreadcrumbItem>
-      );
-    }
-
-    // Last segment — current page, not clickable
+    // Last segment — current page, not clickable, no separator after
     if (isLast) {
       return (
         <BreadcrumbItem key={`${segment.label}-${index}`}>
@@ -138,25 +112,43 @@ function BreadcrumbItems({
       );
     }
 
-    // First segment when no middle segments exist
+    // Middle segments: hidden on mobile, replaced by ellipsis on first segment
+    if (isMiddle && hasMiddleSegments) {
+      return (
+        <Fragment key={`${segment.label}-${index}`}>
+          <BreadcrumbItem className="hidden sm:inline-flex">
+            <SegmentLink segment={segment} LinkComponent={LinkComponent} />
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden sm:flex" />
+        </Fragment>
+      );
+    }
+
+    // First segment with ellipsis for collapsed middle segments on mobile
+    if (isFirst && hasMiddleSegments) {
+      return (
+        <Fragment key={`${segment.label}-${index}`}>
+          <BreadcrumbItem>
+            <SegmentLink segment={segment} LinkComponent={LinkComponent} />
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          {/* Ellipsis for collapsed middle segments on mobile */}
+          <BreadcrumbItem className="sm:hidden">
+            <BreadcrumbEllipsis />
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="sm:hidden" />
+        </Fragment>
+      );
+    }
+
+    // First segment when no middle segments exist (2 segments total)
     return (
-      <BreadcrumbItem key={`${segment.label}-${index}`}>
-        {segment.href ? (
-          <BreadcrumbLink asChild>
-            <LinkComponent
-              to={segment.href}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {segment.label}
-            </LinkComponent>
-          </BreadcrumbLink>
-        ) : (
-          <BreadcrumbPage className="text-foreground font-medium">
-            {segment.label}
-          </BreadcrumbPage>
-        )}
+      <Fragment key={`${segment.label}-${index}`}>
+        <BreadcrumbItem>
+          <SegmentLink segment={segment} LinkComponent={LinkComponent} />
+        </BreadcrumbItem>
         <BreadcrumbSeparator />
-      </BreadcrumbItem>
+      </Fragment>
     );
   });
 }
