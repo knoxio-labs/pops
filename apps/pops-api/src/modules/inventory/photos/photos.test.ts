@@ -1,7 +1,10 @@
 /**
  * Item photos router tests.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Database } from "better-sqlite3";
 import { TRPCError } from "@trpc/server";
 import {
@@ -163,6 +166,39 @@ describe("inventory.photos.remove", () => {
       await caller.inventory.photos.remove({ id: 999 });
     } catch (err) {
       expect((err as TRPCError).code).toBe("NOT_FOUND");
+    }
+  });
+
+  it("deletes the file from disk when INVENTORY_IMAGES_DIR is set", async () => {
+    const tempDir = join(tmpdir(), `pops-photo-test-${Date.now()}`);
+    mkdirSync(tempDir, { recursive: true });
+
+    const filePath = "items/test-item/photo_001.jpg";
+    const fullPath = join(tempDir, filePath);
+    mkdirSync(join(tempDir, "items", "test-item"), { recursive: true });
+    writeFileSync(fullPath, "fake-image-data");
+
+    // Set the env var for this test
+    const originalEnv = process.env.INVENTORY_IMAGES_DIR;
+    process.env.INVENTORY_IMAGES_DIR = tempDir;
+
+    try {
+      const itemId = seedInventoryItem(db, { item_name: "Camera" });
+      const photoId = seedPhoto(db, { item_id: itemId, file_path: filePath });
+
+      expect(existsSync(fullPath)).toBe(true);
+
+      await caller.inventory.photos.remove({ id: photoId });
+
+      // File should be deleted from disk
+      expect(existsSync(fullPath)).toBe(false);
+
+      // DB record should also be gone
+      const row = db.prepare("SELECT * FROM item_photos WHERE id = ?").get(photoId);
+      expect(row).toBeUndefined();
+    } finally {
+      process.env.INVENTORY_IMAGES_DIR = originalEnv;
+      rmSync(tempDir, { recursive: true, force: true });
     }
   });
 });

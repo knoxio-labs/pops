@@ -1,6 +1,8 @@
 /**
  * Item photos service — attach/remove/reorder photos using Drizzle ORM.
  */
+import { existsSync, unlinkSync } from "node:fs";
+import { resolve } from "node:path";
 import { eq, count, asc } from "drizzle-orm";
 import { getDrizzle, getDb } from "../../../db.js";
 import { itemPhotos, homeInventory } from "@pops/db-types";
@@ -60,9 +62,19 @@ export function attachPhoto(input: AttachPhotoInput): ItemPhotoRow {
   return getPhoto(id);
 }
 
-/** Remove a photo by ID. */
+/** Remove a photo by ID. Deletes both the database record and the file from disk. */
 export function removePhoto(id: number): void {
-  getPhoto(id); // Validates existence
+  const photo = getPhoto(id); // Validates existence
+
+  // Delete file from disk (best-effort — missing file is not an error)
+  const baseDir = process.env.INVENTORY_IMAGES_DIR;
+  if (baseDir) {
+    const fullPath = resolve(baseDir, photo.filePath);
+    if (existsSync(fullPath)) {
+      unlinkSync(fullPath);
+    }
+  }
+
   const db = getDrizzle();
   db.delete(itemPhotos).where(eq(itemPhotos.id, id)).run();
 }
