@@ -1,8 +1,8 @@
 /**
  * WarrantiesPage — warranty tracking dashboard for inventory items.
  *
- * Sections: expiring soon (90 days), active, expired warranties.
- * Color-coded urgency for expiring items. PRD-023/US-2.
+ * 5-tier system: <30d (red), 30-60d (yellow), 60-90d (orange),
+ * >90d active (green), expired (grey). PRD-050/US-01.
  */
 import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router";
@@ -98,6 +98,86 @@ function WarrantyRow({ item, daysRemaining, showUrgency, onClick }: WarrantyRowP
   );
 }
 
+interface TierConfig {
+  label: string;
+  borderColor: string;
+  bgColor: string;
+  headerBg: string;
+  dotColor: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+}
+
+const TIER_STYLES: Record<string, TierConfig> = {
+  critical: {
+    label: "Critical — Under 30 Days",
+    borderColor: "border-red-500/20",
+    bgColor: "bg-red-500/5",
+    headerBg: "bg-red-500/10",
+    dotColor: "bg-red-500",
+    badgeBg: "bg-red-500/20",
+    badgeText: "text-red-600 dark:text-red-400",
+    badgeBorder: "border-red-500/30",
+  },
+  warning: {
+    label: "Warning — 30 to 60 Days",
+    borderColor: "border-yellow-500/20",
+    bgColor: "bg-yellow-500/5",
+    headerBg: "bg-yellow-500/10",
+    dotColor: "bg-yellow-500",
+    badgeBg: "bg-yellow-500/20",
+    badgeText: "text-yellow-600 dark:text-yellow-400",
+    badgeBorder: "border-yellow-500/30",
+  },
+  caution: {
+    label: "Caution — 60 to 90 Days",
+    borderColor: "border-orange-500/20",
+    bgColor: "bg-orange-500/5",
+    headerBg: "bg-orange-500/10",
+    dotColor: "bg-orange-500",
+    badgeBg: "bg-orange-500/20",
+    badgeText: "text-orange-600 dark:text-orange-400",
+    badgeBorder: "border-orange-500/30",
+  },
+};
+
+interface ExpiringSectionProps {
+  tier: keyof typeof TIER_STYLES;
+  items: Array<WarrantyItem & { daysRemaining: number }>;
+  onItemClick: (id: string) => void;
+}
+
+function ExpiringSection({ tier, items, onItemClick }: ExpiringSectionProps) {
+  if (items.length === 0) return null;
+  const style = TIER_STYLES[tier]!;
+
+  return (
+    <div className={`border-2 ${style.borderColor} rounded-2xl ${style.bgColor} overflow-hidden shadow-sm`}>
+      <div className={`flex items-center gap-2 px-5 py-4 font-bold text-foreground ${style.headerBg}`}>
+        <span className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${style.dotColor} animate-pulse`} />
+          {style.label}
+        </span>
+        <Badge className={`${style.badgeBg} ${style.badgeText} ${style.badgeBorder} ml-auto`}>
+          {items.length}
+        </Badge>
+      </div>
+      <div className="px-3 pb-3">
+        {items.map((item) => (
+          <WarrantyRow
+            key={item.id}
+            item={item}
+            daysRemaining={item.daysRemaining}
+            showUrgency
+            onClick={() => onItemClick(item.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface CollapsibleSectionProps {
   title: string;
   count: number;
@@ -139,37 +219,39 @@ export function WarrantiesPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = trpc.inventory.reports.warranties.useQuery();
 
-  const { expiringSoon, expired, active } = useMemo(() => {
+  const { critical, warning, caution, active, expired } = useMemo(() => {
+    type Entry = WarrantyItem & { daysRemaining: number };
     const items = data?.data ?? [];
-    const expiringSoon: Array<WarrantyItem & { daysRemaining: number }> = [];
-    const expired: Array<WarrantyItem & { daysRemaining: number }> = [];
-    const active: Array<WarrantyItem & { daysRemaining: number }> = [];
+    const critical: Entry[] = []; // <30d — red
+    const warning: Entry[] = []; // 30-60d — yellow/orange
+    const caution: Entry[] = []; // 60-90d — orange
+    const active: Entry[] = []; // >90d — green
+    const expired: Entry[] = []; // <0d — grey
 
     for (const item of items) {
       if (!item.warrantyExpires) continue;
       const days = daysUntil(item.warrantyExpires);
       const entry = { ...item, daysRemaining: days };
 
-      if (days < 0) {
-        expired.push(entry);
-      } else if (days <= 90) {
-        expiringSoon.push(entry);
-      } else {
-        active.push(entry);
-      }
+      if (days < 0) expired.push(entry);
+      else if (days < 30) critical.push(entry);
+      else if (days < 60) warning.push(entry);
+      else if (days <= 90) caution.push(entry);
+      else active.push(entry);
     }
 
-    // Expiring soon: soonest first
-    expiringSoon.sort((a, b) => a.daysRemaining - b.daysRemaining);
-    // Expired: most recently expired first
-    expired.sort((a, b) => b.daysRemaining - a.daysRemaining);
-    // Active: soonest expiry first
+    // Sort each tier: soonest first (expired: most recently expired first)
+    critical.sort((a, b) => a.daysRemaining - b.daysRemaining);
+    warning.sort((a, b) => a.daysRemaining - b.daysRemaining);
+    caution.sort((a, b) => a.daysRemaining - b.daysRemaining);
     active.sort((a, b) => a.daysRemaining - b.daysRemaining);
+    expired.sort((a, b) => b.daysRemaining - a.daysRemaining);
 
-    return { expiringSoon, expired, active };
+    return { critical, warning, caution, active, expired };
   }, [data]);
 
-  const totalItems = expiringSoon.length + expired.length + active.length;
+  const totalItems = critical.length + warning.length + caution.length + active.length + expired.length;
+  const hasExpiringItems = critical.length + warning.length + caution.length > 0;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -211,33 +293,12 @@ export function WarrantiesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Expiring Soon — always open */}
-          {expiringSoon.length > 0 && (
-            <div className="border-2 border-app-accent/20 rounded-2xl bg-app-accent/5 overflow-hidden shadow-sm shadow-app-accent/5">
-              <div className="flex items-center gap-2 px-5 py-4 font-bold text-foreground bg-app-accent/10">
-                <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-app-accent animate-pulse" />
-                  Expiring Soon
-                </span>
-                <Badge className="bg-app-accent/20 text-app-accent border-app-accent/30 ml-auto">
-                  {expiringSoon.length}
-                </Badge>
-              </div>
-              <div className="px-3 pb-3">
-                {expiringSoon.map((item) => (
-                  <WarrantyRow
-                    key={item.id}
-                    item={item}
-                    daysRemaining={item.daysRemaining}
-                    showUrgency
-                    onClick={() => navigate(`/inventory/items/${item.id}`)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Expiring tiers — always expanded, not collapsible */}
+          <ExpiringSection tier="critical" items={critical} onItemClick={(id) => navigate(`/inventory/items/${id}`)} />
+          <ExpiringSection tier="warning" items={warning} onItemClick={(id) => navigate(`/inventory/items/${id}`)} />
+          <ExpiringSection tier="caution" items={caution} onItemClick={(id) => navigate(`/inventory/items/${id}`)} />
 
-          {/* Active — collapsible */}
+          {/* Active — collapsible, expanded by default */}
           {active.length > 0 && (
             <CollapsibleSection title="Active" count={active.length} defaultOpen>
               {active.map((item) => (
@@ -251,12 +312,12 @@ export function WarrantiesPage() {
             </CollapsibleSection>
           )}
 
-          {/* Expired — collapsible */}
+          {/* Expired — collapsible, collapsed by default */}
           {expired.length > 0 && (
             <CollapsibleSection
               title="Expired"
               count={expired.length}
-              defaultOpen={expiringSoon.length === 0 && active.length === 0}
+              defaultOpen={!hasExpiringItems && active.length === 0}
             >
               {expired.map((item) => (
                 <WarrantyRow
