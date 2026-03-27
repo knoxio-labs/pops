@@ -34,6 +34,8 @@ export function getStats(): AiUsageStatsOutput {
       cost: sql<number>`SUM(CASE WHEN ${aiUsage.cached} = 0 THEN ${aiUsage.costUsd} ELSE 0 END)`,
       apiCalls: sql<number>`SUM(CASE WHEN ${aiUsage.cached} = 0 THEN 1 ELSE 0 END)`,
       cacheHits: sql<number>`SUM(CASE WHEN ${aiUsage.cached} = 1 THEN 1 ELSE 0 END)`,
+      inputTokens: sql<number>`SUM(CASE WHEN ${aiUsage.cached} = 0 THEN ${aiUsage.inputTokens} ELSE 0 END)`,
+      outputTokens: sql<number>`SUM(CASE WHEN ${aiUsage.cached} = 0 THEN ${aiUsage.outputTokens} ELSE 0 END)`,
     })
     .from(aiUsage)
     .where(gte(aiUsage.createdAt, thirtyDaysAgoIso))
@@ -58,6 +60,8 @@ export function getStats(): AiUsageStatsOutput {
             cost: last30Days?.cost ?? 0,
             apiCalls: last30Days?.apiCalls ?? 0,
             cacheHits: last30Days?.cacheHits ?? 0,
+            inputTokens: last30Days?.inputTokens ?? 0,
+            outputTokens: last30Days?.outputTokens ?? 0,
           }
         : undefined,
   };
