@@ -305,3 +305,124 @@ describe("deleteTvShowImages", () => {
     });
   });
 });
+
+describe("downloadSeasonPoster", () => {
+  it("downloads season poster to correct path", async () => {
+    fetchMock.mockResolvedValue(mockImageResponse());
+
+    await service.downloadSeasonPoster(
+      81189,
+      1,
+      "https://artworks.thetvdb.com/banners/seasons/81189-1.jpg"
+    );
+
+    const tvDir = path.join(IMAGES_DIR, "tv", "81189");
+    expect(fs.mkdir).toHaveBeenCalledWith(tvDir, { recursive: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://artworks.thetvdb.com/banners/seasons/81189-1.jpg"
+    );
+    expect(fs.writeFile).toHaveBeenCalledWith(path.join(tvDir, "season_1.jpg"), expect.any(Buffer));
+  });
+
+  it("stores specials poster as season_0.jpg", async () => {
+    fetchMock.mockResolvedValue(mockImageResponse());
+
+    await service.downloadSeasonPoster(
+      81189,
+      0,
+      "https://artworks.thetvdb.com/banners/seasons/81189-0.jpg"
+    );
+
+    const tvDir = path.join(IMAGES_DIR, "tv", "81189");
+    expect(fs.writeFile).toHaveBeenCalledWith(path.join(tvDir, "season_0.jpg"), expect.any(Buffer));
+  });
+
+  it("skips download when posterUrl is null", async () => {
+    await service.downloadSeasonPoster(81189, 1, null);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fs.writeFile).not.toHaveBeenCalled();
+    expect(fs.mkdir).not.toHaveBeenCalled();
+  });
+
+  it("skips download if file already exists", async () => {
+    vi.mocked(fs.stat).mockResolvedValueOnce({} as Awaited<ReturnType<typeof fs.stat>>);
+
+    await service.downloadSeasonPoster(
+      81189,
+      1,
+      "https://artworks.thetvdb.com/banners/seasons/81189-1.jpg"
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fs.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("handles download failure gracefully", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("Network error"));
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(
+      service.downloadSeasonPoster(
+        81189,
+        1,
+        "https://artworks.thetvdb.com/banners/seasons/81189-1.jpg"
+      )
+    ).resolves.toBeUndefined();
+
+    expect(fs.writeFile).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("generatePlaceholder", () => {
+  it("generates SVG placeholder with show name", async () => {
+    const destPath = path.join(IMAGES_DIR, "tv", "81189", "poster.jpg");
+
+    await service.generatePlaceholder("Breaking Bad", destPath);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      destPath,
+      expect.stringContaining("Breaking Bad"),
+      "utf-8"
+    );
+  });
+
+  it("generates valid SVG markup", async () => {
+    const destPath = path.join(IMAGES_DIR, "tv", "81189", "poster.jpg");
+
+    await service.generatePlaceholder("Test Show", destPath);
+
+    const svgContent = vi.mocked(fs.writeFile).mock.calls[0]![1] as string;
+    expect(svgContent).toContain("<svg");
+    expect(svgContent).toContain("<rect");
+    expect(svgContent).toContain("<text");
+    expect(svgContent).toContain("Test Show");
+  });
+
+  it("escapes HTML entities in text", async () => {
+    const destPath = path.join(IMAGES_DIR, "tv", "12345", "poster.jpg");
+
+    await service.generatePlaceholder('Show <"Special">', destPath);
+
+    const svgContent = vi.mocked(fs.writeFile).mock.calls[0]![1] as string;
+    expect(svgContent).toContain("&lt;");
+    expect(svgContent).toContain("&gt;");
+    expect(svgContent).toContain("&quot;");
+    expect(svgContent).not.toContain('<"Special">');
+  });
+
+  it("uses deterministic colour based on text", async () => {
+    const destPath = path.join(IMAGES_DIR, "tv", "81189", "poster.jpg");
+
+    await service.generatePlaceholder("Breaking Bad", destPath);
+    const svg1 = vi.mocked(fs.writeFile).mock.calls[0]![1] as string;
+
+    vi.mocked(fs.writeFile).mockClear();
+
+    await service.generatePlaceholder("Breaking Bad", destPath);
+    const svg2 = vi.mocked(fs.writeFile).mock.calls[0]![1] as string;
+
+    expect(svg1).toBe(svg2);
+  });
+});

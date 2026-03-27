@@ -116,6 +116,53 @@ export class ImageCacheService {
   }
 
   /**
+   * Download a season poster from TheTVDB to local cache.
+   * Stored at: tv/{tvdbId}/season_{num}.jpg (e.g., season_1.jpg, season_0.jpg for specials).
+   */
+  async downloadSeasonPoster(
+    tvdbId: number,
+    seasonNumber: number,
+    posterUrl: string | null
+  ): Promise<void> {
+    if (!posterUrl) return;
+
+    const tvDir = this.tvShowDir(tvdbId);
+    await mkdir(tvDir, { recursive: true });
+
+    const filename = `season_${seasonNumber}.jpg`;
+    await this.downloadImage(posterUrl, join(tvDir, filename));
+  }
+
+  /**
+   * Generate a placeholder image — coloured rectangle with text.
+   * Creates an SVG and writes it to the destination path.
+   */
+  async generatePlaceholder(text: string, destPath: string): Promise<void> {
+    // Generate a deterministic colour from the text
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+    }
+    const hue = Math.abs(hash) % 360;
+
+    const escapedText = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600">
+  <rect width="400" height="600" fill="hsl(${hue}, 40%, 30%)" />
+  <text x="200" y="300" text-anchor="middle" dominant-baseline="middle"
+        font-family="sans-serif" font-size="28" font-weight="bold" fill="white">
+    ${escapedText}
+  </text>
+</svg>`;
+
+    await writeFile(destPath, svg, "utf-8");
+  }
+
+  /**
    * Get the absolute path to a cached image file.
    * Returns null if the file doesn't exist.
    */
