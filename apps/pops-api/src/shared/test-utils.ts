@@ -341,6 +341,21 @@ export function createTestDb(): Database {
     CREATE INDEX IF NOT EXISTS idx_item_documents_item ON item_documents(item_id);
     CREATE INDEX IF NOT EXISTS idx_item_documents_doc ON item_documents(paperless_document_id);
 
+    CREATE TABLE IF NOT EXISTS ai_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      description TEXT NOT NULL,
+      entity_name TEXT,
+      category TEXT,
+      input_tokens INTEGER NOT NULL,
+      output_tokens INTEGER NOT NULL,
+      cost_usd REAL NOT NULL,
+      cached INTEGER NOT NULL DEFAULT 0,
+      import_batch_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_created_at ON ai_usage(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_batch ON ai_usage(import_batch_id);
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
@@ -1067,6 +1082,39 @@ export function seedDimension(
       description: overrides.description ?? null,
       active: overrides.active ?? 1,
       sort_order: overrides.sort_order ?? 0,
+    });
+  return Number(result.lastInsertRowid);
+}
+
+export function seedAiUsage(
+  db: Database,
+  overrides: Partial<{
+    description: string;
+    entity_name: string | null;
+    category: string | null;
+    input_tokens: number;
+    output_tokens: number;
+    cost_usd: number;
+    cached: number;
+    import_batch_id: string | null;
+    created_at: string;
+  }> = {}
+): number {
+  const result = db
+    .prepare(
+      `INSERT INTO ai_usage (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
+     VALUES (@description, @entity_name, @category, @input_tokens, @output_tokens, @cost_usd, @cached, @import_batch_id, @created_at)`
+    )
+    .run({
+      description: overrides.description ?? "Test categorisation",
+      entity_name: overrides.entity_name ?? null,
+      category: overrides.category ?? null,
+      input_tokens: overrides.input_tokens ?? 100,
+      output_tokens: overrides.output_tokens ?? 20,
+      cost_usd: overrides.cost_usd ?? 0.001,
+      cached: overrides.cached ?? 0,
+      import_batch_id: overrides.import_batch_id ?? null,
+      created_at: overrides.created_at ?? new Date().toISOString(),
     });
   return Number(result.lastInsertRowid);
 }
