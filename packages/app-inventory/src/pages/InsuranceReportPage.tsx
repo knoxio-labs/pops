@@ -298,7 +298,7 @@ export function InsuranceReportPage(): React.ReactElement {
                         <Badge variant={warranty.variant} className="print:bg-transparent print:border print:border-gray-400 print:text-black">{warranty.label}</Badge>
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums print:border print:border-gray-300 print:p-1">
-                        {item.replacementValue ? formatCurrency(item.replacementValue) : "—"}
+                        {item.replacementValue != null ? formatCurrency(item.replacementValue) : "—"}
                       </td>
                     </tr>
                   );
