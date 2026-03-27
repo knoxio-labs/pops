@@ -2,9 +2,10 @@
  * DiscoverPage — personalized movie discovery with trending and recommendations.
  * Three horizontal scroll sections: Recommended for You, Trending, Similar to Top Rated.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { Alert, Button } from "@pops/ui";
-import { Compass, AlertCircle, RefreshCw } from "lucide-react";
+import { Compass, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { HorizontalScrollRow } from "../components/HorizontalScrollRow";
@@ -12,12 +13,63 @@ import { DiscoverCard } from "../components/DiscoverCard";
 
 export function DiscoverPage() {
   const utils = trpc.useUtils();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Trending time window from URL (default "week")
+  const timeWindow = (searchParams.get("window") === "day" ? "day" : "week") as "day" | "week";
+
+  // Trending pagination — accumulate results across pages
+  const [trendingPage, setTrendingPage] = useState(1);
+  const [accumulatedResults, setAccumulatedResults] = useState<
+    Array<{
+      tmdbId: number;
+      title: string;
+      releaseDate: string | null;
+      posterPath: string | null;
+      posterUrl: string | null;
+      voteAverage: number | null;
+      inLibrary: boolean;
+    }>
+  >([]);
 
   // Queries
   const trending = trpc.media.discovery.trending.useQuery(
-    { timeWindow: "week", page: 1 },
+    { timeWindow, page: trendingPage },
     { staleTime: 5 * 60 * 1000 }
   );
+
+  // Accumulate trending results when new data arrives
+  useEffect(() => {
+    if (trending.data?.results) {
+      if (trendingPage === 1) {
+        setAccumulatedResults(trending.data.results);
+      } else {
+        setAccumulatedResults((prev) => [...prev, ...trending.data!.results]);
+      }
+    }
+  }, [trending.data, trendingPage]);
+
+  // Reset pagination when time window changes
+  const setTimeWindow = useCallback(
+    (window: "day" | "week") => {
+      setTrendingPage(1);
+      setAccumulatedResults([]);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (window === "week") {
+          next.delete("window");
+        } else {
+          next.set("window", window);
+        }
+        return next;
+      }, { replace: true });
+    },
+    [setSearchParams]
+  );
+
+  const hasMoreTrending = trending.data
+    ? accumulatedResults.length < trending.data.totalResults
+    : false;
 
   const recommendations = trpc.media.discovery.recommendations.useQuery(
     { sampleSize: 3 },
@@ -170,26 +222,45 @@ export function DiscoverPage() {
       </HorizontalScrollRow>
 
       {/* Trending */}
-      <HorizontalScrollRow title="Trending This Week" isLoading={trending.isLoading}>
-        {trending.error && (
-          <Alert variant="destructive" className="flex items-center gap-3">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <p className="flex-1 text-sm">{trending.error.message}</p>
-            <Button variant="outline" size="sm" onClick={() => trending.refetch()}>
-              <RefreshCw className="mr-1 h-3 w-3" /> Retry
-            </Button>
-          </Alert>
-        )}
-        {trending.data?.results.map(
-          (item: {
-            tmdbId: number;
-            title: string;
-            releaseDate: string | null;
-            posterPath: string | null;
-            posterUrl: string | null;
-            voteAverage: number | null;
-            inLibrary: boolean;
-          }) => (
+      <div className="space-y-3">
+        {/* Time window toggle */}
+        <div className="flex items-center gap-2 px-1">
+          <button
+            onClick={() => setTimeWindow("day")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              timeWindow === "day"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setTimeWindow("week")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              timeWindow === "week"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            This Week
+          </button>
+        </div>
+
+        <HorizontalScrollRow
+          title={timeWindow === "day" ? "Trending Today" : "Trending This Week"}
+          isLoading={trending.isLoading && trendingPage === 1}
+        >
+          {trending.error && (
+            <Alert variant="destructive" className="flex items-center gap-3">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <p className="flex-1 text-sm">{trending.error.message}</p>
+              <Button variant="outline" size="sm" onClick={() => trending.refetch()}>
+                <RefreshCw className="mr-1 h-3 w-3" /> Retry
+              </Button>
+            </Alert>
+          )}
+          {accumulatedResults.map((item) => (
             <DiscoverCard
               key={item.tmdbId}
               tmdbId={item.tmdbId}
@@ -204,9 +275,29 @@ export function DiscoverPage() {
               onAddToLibrary={handleAddToLibrary}
               onAddToWatchlist={handleAddToWatchlist}
             />
-          )
+          ))}
+        </HorizontalScrollRow>
+
+        {/* Load More */}
+        {hasMoreTrending && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTrendingPage((p) => p + 1)}
+              disabled={trending.isFetching}
+            >
+              {trending.isFetching ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Loading…
+                </>
+              ) : (
+                "Load More"
+              )}
+            </Button>
+          </div>
         )}
-      </HorizontalScrollRow>
+      </div>
 
       {/* Similar to Your Top Rated */}
       <HorizontalScrollRow
