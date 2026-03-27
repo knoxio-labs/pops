@@ -144,7 +144,13 @@ describe("RadarrClient", () => {
       );
 
       await expect(
-        client.addMovie({ tmdbId: 1, title: "X", year: 2024, qualityProfileId: 1, rootFolderPath: "/m" })
+        client.addMovie({
+          tmdbId: 1,
+          title: "X",
+          year: 2024,
+          qualityProfileId: 1,
+          rootFolderPath: "/m",
+        })
       ).rejects.toThrow(ArrApiError);
     });
   });
