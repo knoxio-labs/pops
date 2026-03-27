@@ -9,10 +9,6 @@ import { createApp } from "./app.js";
 import { closeDb } from "./db.js";
 import { startTtlWatcher } from "./modules/core/envs/ttl-watcher.js";
 import { startupCleanup } from "./modules/core/envs/registry.js";
-import { validateTvdbConfig } from "./modules/media/thetvdb/index.js";
-
-// Validate required API keys at startup (fail fast with clear errors)
-validateTvdbConfig();
 
 const port = Number(process.env["PORT"] ?? 3000);
 const app = createApp();
