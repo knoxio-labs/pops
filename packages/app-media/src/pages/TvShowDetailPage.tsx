@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router";
 import {
   Alert,
@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Skeleton,
+  Switch,
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
@@ -14,6 +15,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from "@pops/ui";
+import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { formatYearRange } from "../lib/format";
 import { ProgressBar } from "../components/ProgressBar";
@@ -64,7 +66,30 @@ export function TvShowDetailPage() {
     { enabled: !Number.isNaN(showId) }
   );
 
+  const { data: sonarrData } = trpc.media.arr.checkSeries.useQuery(
+    { tvdbId: data?.data?.tvdbId ?? 0 },
+    { enabled: !!data?.data?.tvdbId }
+  );
+
+  const sonarrSeries = sonarrData?.data;
+
+  const [optimisticMonitoring, setOptimisticMonitoring] = useState<Map<number, boolean>>(new Map());
+
   const utils = trpc.useUtils();
+
+  const seasonMonitorMutation = trpc.media.arr.updateSeasonMonitoring.useMutation({
+    onError: (err: { message: string }, variables: { seasonNumber: number; monitored: boolean }) => {
+      setOptimisticMonitoring((prev) => {
+        const next = new Map(prev);
+        next.set(variables.seasonNumber, !variables.monitored);
+        return next;
+      });
+      toast.error(`Failed to update monitoring: ${err.message}`);
+    },
+    onSuccess: () => {
+      void utils.media.arr.checkSeries.invalidate();
+    },
+  });
 
   const batchLogMutation = trpc.media.watchHistory.batchLog.useMutation({
     onSuccess: () => {
@@ -308,28 +333,55 @@ export function TvShowDetailPage() {
                       ? "Specials"
                       : (season.name ?? `Season ${season.seasonNumber}`);
 
+                  const isMonitored =
+                    optimisticMonitoring.get(season.seasonNumber) ?? true;
+
                   return (
-                    <Link
+                    <div
                       key={season.id}
-                      to={`/media/tv/${show.id}/season/${season.seasonNumber}`}
                       className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
                     >
-                      <span className="text-sm font-medium flex-1">{label}</span>
-                      {season.episodeCount != null && (
-                        <span className="text-xs text-muted-foreground">
-                          {season.episodeCount} episodes
-                        </span>
+                      <Link
+                        to={`/media/tv/${show.id}/season/${season.seasonNumber}`}
+                        className="flex items-center gap-3 flex-1 min-w-0"
+                      >
+                        <span className="text-sm font-medium flex-1">{label}</span>
+                        {season.episodeCount != null && (
+                          <span className="text-xs text-muted-foreground">
+                            {season.episodeCount} episodes
+                          </span>
+                        )}
+                        {seasonProg && seasonProg.total > 0 && (
+                          <div className="w-24">
+                            <ProgressBar
+                              watched={seasonProg.watched}
+                              total={seasonProg.total}
+                              showLabel={false}
+                            />
+                          </div>
+                        )}
+                      </Link>
+                      {sonarrSeries?.exists && sonarrSeries.sonarrId != null && (
+                        <Switch
+                          size="sm"
+                          checked={isMonitored}
+                          aria-label={`Monitor ${label}`}
+                          disabled={seasonMonitorMutation.isPending}
+                          onCheckedChange={(checked: boolean) => {
+                            setOptimisticMonitoring((prev) => {
+                              const next = new Map(prev);
+                              next.set(season.seasonNumber, checked);
+                              return next;
+                            });
+                            seasonMonitorMutation.mutate({
+                              sonarrId: sonarrSeries.sonarrId!,
+                              seasonNumber: season.seasonNumber,
+                              monitored: checked,
+                            });
+                          }}
+                        />
                       )}
-                      {seasonProg && seasonProg.total > 0 && (
-                        <div className="w-24">
-                          <ProgressBar
-                            watched={seasonProg.watched}
-                            total={seasonProg.total}
-                            showLabel={false}
-                          />
-                        </div>
-                      )}
-                    </Link>
+                    </div>
                   );
                 }
               )}

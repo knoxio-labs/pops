@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, PageHeader, Button, Skeleton } from "@pops/ui";
+import { Alert, AlertTitle, AlertDescription, PageHeader, Button, Switch, Skeleton } from "@pops/ui";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { EpisodeList } from "../components/EpisodeList";
@@ -72,6 +72,25 @@ export function SeasonDetailPage() {
         .map((entry: { mediaId: number }) => entry.mediaId)
     );
   }, [watchHistoryData, episodeIds]);
+
+  // Sonarr monitoring state
+  const tvdbId = showData?.data?.tvdbId;
+
+  const { data: sonarrData } = trpc.media.arr.checkSeries.useQuery(
+    { tvdbId: tvdbId ?? 0 },
+    { enabled: !!tvdbId }
+  );
+
+  const sonarrSeries = sonarrData?.data;
+
+  const [seasonMonitored, setSeasonMonitored] = useState<boolean | null>(null);
+
+  const seasonMonitorMutation = trpc.media.arr.updateSeasonMonitoring.useMutation({
+    onError: (err: { message: string }) => {
+      setSeasonMonitored((prev) => (prev != null ? !prev : null));
+      toast.error(`Failed to update monitoring: ${err.message}`);
+    },
+  });
 
   // Track which episodes are currently being toggled
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
@@ -261,6 +280,28 @@ export function SeasonDetailPage() {
           {seasonProgress && seasonProgress.total > 0 && (
             <div className="mt-3">
               <ProgressBar watched={seasonProgress.watched} total={seasonProgress.total} />
+            </div>
+          )}
+
+          {sonarrSeries?.exists && sonarrSeries.sonarrId != null && (
+            <div className="flex items-center gap-2 mt-3">
+              <Switch
+                size="sm"
+                checked={seasonMonitored ?? true}
+                aria-label={`Monitor ${seasonLabel}`}
+                disabled={seasonMonitorMutation.isPending}
+                onCheckedChange={(checked: boolean) => {
+                  setSeasonMonitored(checked);
+                  seasonMonitorMutation.mutate({
+                    sonarrId: sonarrSeries.sonarrId!,
+                    seasonNumber: seasonNum,
+                    monitored: checked,
+                  });
+                }}
+              />
+              <span className="text-sm text-muted-foreground">
+                {(seasonMonitored ?? true) ? "Monitored" : "Unmonitored"}
+              </span>
             </div>
           )}
 

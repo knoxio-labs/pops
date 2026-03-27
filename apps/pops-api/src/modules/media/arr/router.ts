@@ -306,4 +306,69 @@ export const arrRouter = router({
         throw err;
       }
     }),
+
+  /** Check if a series exists in Sonarr by TVDB ID. */
+  checkSeries: protectedProcedure
+    .input(z.object({ tvdbId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      try {
+        const result = await arrService.checkSeries(input.tvdbId);
+        return { data: result };
+      } catch (err) {
+        if (err instanceof ArrApiError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Sonarr error: ${err.message}`,
+          });
+        }
+        throw err;
+      }
+    }),
+
+  /** Update season monitoring for a series in Sonarr. */
+  updateSeasonMonitoring: protectedProcedure
+    .input(
+      z.object({
+        sonarrId: z.number().int().positive(),
+        seasonNumber: z.number().int().min(0),
+        monitored: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await arrService.updateSeasonMonitoring(input.sonarrId, input.seasonNumber, input.monitored);
+        return { message: `Season ${input.seasonNumber} monitoring set to ${input.monitored}` };
+      } catch (err) {
+        if (err instanceof ArrApiError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Sonarr error: ${err.message}`,
+          });
+        }
+        throw err;
+      }
+    }),
+
+  /** Batch update episode monitoring in Sonarr. */
+  updateEpisodeMonitoring: protectedProcedure
+    .input(
+      z.object({
+        episodeIds: z.array(z.number().int().positive()).min(1),
+        monitored: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await arrService.updateEpisodeMonitoring(input.episodeIds, input.monitored);
+        return { message: `Updated ${input.episodeIds.length} episode(s) monitoring to ${input.monitored}` };
+      } catch (err) {
+        if (err instanceof ArrApiError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Sonarr error: ${err.message}`,
+          });
+        }
+        throw err;
+      }
+    }),
 });
