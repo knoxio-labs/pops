@@ -15,7 +15,7 @@ interface ScoreDelta {
 export function CompareArenaPage() {
   const navigate = useNavigate();
   const [sessionCount, setSessionCount] = useState(0);
-  const [selectedDimensionId, setSelectedDimensionId] = useState<number | null>(null);
+  const [dimensionIndex, setDimensionIndex] = useState(0);
   const [scoreDelta, setScoreDelta] = useState<ScoreDelta | null>(null);
 
   // Fetch dimensions for tab selector
@@ -24,8 +24,10 @@ export function CompareArenaPage() {
 
   const activeDimensions = dimensionsData?.data?.filter((d: { active: boolean }) => d.active) ?? [];
 
-  // Auto-select first dimension when loaded
-  const dimensionId = selectedDimensionId ?? activeDimensions[0]?.id ?? null;
+  // Derive current dimension from rotation index
+  const dimensionId = activeDimensions.length > 0
+    ? (activeDimensions[dimensionIndex % activeDimensions.length]?.id ?? null)
+    : null;
 
   // Fetch random pair
   const {
@@ -82,19 +84,19 @@ export function CompareArenaPage() {
       }
 
       setSessionCount((c) => c + 1);
+      setDimensionIndex((i) => i + 1);
 
-      // Show delta briefly, then load next pair
+      // Show delta briefly, then clear it (next pair loads via dimension rotation query key change)
       setTimeout(() => {
         setScoreDelta(null);
-        refetchPair();
       }, 1500);
     },
   });
 
-  // Clear delta on dimension change
+  // Clear delta on dimension rotation
   useEffect(() => {
     setScoreDelta(null);
-  }, [dimensionId]);
+  }, [dimensionIndex]);
 
   const handlePick = useCallback(
     (winnerId: number) => {
@@ -138,22 +140,18 @@ export function CompareArenaPage() {
       ) : (
         <div className="flex gap-2 flex-wrap" role="tablist">
           {activeDimensions.map((dim: { id: number; name: string }) => (
-            <button
+            <span
               key={dim.id}
               role="tab"
               aria-selected={dim.id === dimensionId}
-              onClick={() => {
-                setSelectedDimensionId(dim.id);
-                refetchPair();
-              }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 dim.id === dimensionId
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {dim.name}
-            </button>
+            </span>
           ))}
         </div>
       )}
@@ -228,7 +226,7 @@ export function CompareArenaPage() {
       {/* Skip + Done buttons */}
       {pairData?.data && !recordMutation.isPending && !scoreDelta && (
         <div className="flex justify-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => refetchPair()}>
+          <Button variant="outline" size="sm" onClick={() => setDimensionIndex((i) => i + 1)}>
             Skip this pair
           </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate("/media")}>
