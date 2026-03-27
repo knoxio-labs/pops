@@ -3,7 +3,7 @@
  * and dimension weights on the Discover page.
  */
 import { Link } from "react-router";
-import { Button, Skeleton } from "@pops/ui";
+import { Skeleton } from "@pops/ui";
 import { Swords, BarChart3, Heart, Weight } from "lucide-react";
 import {
   BarChart,
@@ -64,9 +64,12 @@ function CompareCTA() {
     <div className="rounded-lg border border-dashed border-border p-6 text-center" data-testid="compare-cta">
       <Swords className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">Compare movies to see your preferences</p>
-      <Button asChild variant="outline" size="sm" className="mt-3">
-        <Link to="/media/compare">Start Comparing</Link>
-      </Button>
+      <Link
+        to="/media/compare"
+        className="mt-3 inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
+        Start Comparing
+      </Link>
     </div>
   );
 }
@@ -107,7 +110,7 @@ export function PreferenceProfile({ data, isLoading }: PreferenceProfileProps) {
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis type="category" dataKey="genre" width={80} tick={{ fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value: number) => [`${value} movies`, "Count"]}
+                  formatter={(value) => [`${value} movies`, "Count"]}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Bar dataKey="watchCount" radius={[0, 4, 4, 0]}>
@@ -175,7 +178,7 @@ export function PreferenceProfile({ data, isLoading }: PreferenceProfileProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} />
                 <Tooltip
-                  formatter={(value: number) => [`${value} comparisons`, "Activity"]}
+                  formatter={(value) => [`${value} comparisons`, "Activity"]}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Bar dataKey="comparisonCount" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />

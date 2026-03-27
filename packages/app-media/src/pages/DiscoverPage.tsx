@@ -79,6 +79,10 @@ export function DiscoverPage() {
     { staleTime: 5 * 60 * 1000 }
   );
 
+  const profile = trpc.media.discovery.profile.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
   const similarToTopRated = trpc.media.discovery.recommendations.useQuery(
     { sampleSize: 5 },
     { staleTime: 5 * 60 * 1000 }
