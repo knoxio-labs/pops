@@ -39,7 +39,7 @@ import { trpc } from "../lib/trpc";
 interface SyncResult {
   synced: number;
   skipped: number;
-  errors: { title: string; error: string }[];
+  errors: { title: string; reason: string; year: number | null }[];
 }
 
 function ConnectionBadge({ connected }: { connected: boolean }) {
@@ -86,7 +86,7 @@ function SyncResultDisplay({ result, label }: { result: SyncResult; label: strin
             <div className="mt-2 space-y-1 text-xs text-red-400/80">
               {result.errors.map((err, i) => (
                 <p key={i}>
-                  <span className="font-medium">{err.title}:</span> {err.error}
+                  <span className="font-medium">{err.title}:</span> {err.reason}
                 </p>
               ))}
             </div>

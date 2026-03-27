@@ -263,10 +263,10 @@ describe("PlexSettingsPage", () => {
 
     // Simulate success
     const onSuccess = syncMoviesOpts.onSuccess as (res: {
-      data: { synced: number; skipped: number; errors: { title: string; error: string }[] };
+      data: { synced: number; skipped: number; errors: { title: string; reason: string; year: number | null }[] };
     }) => void;
     onSuccess({
-      data: { synced: 5, skipped: 2, errors: [{ title: "Bad Movie", error: "TMDB not found" }] },
+      data: { synced: 5, skipped: 2, errors: [{ title: "Bad Movie", reason: "TMDB not found", year: 2020 }] },
     });
 
     // Re-render to see results
@@ -286,7 +286,7 @@ describe("PlexSettingsPage", () => {
     expect(mockSyncTvMutate).toHaveBeenCalled();
 
     const onSuccess = syncTvOpts.onSuccess as (res: {
-      data: { synced: number; skipped: number; errors: { title: string; error: string }[] };
+      data: { synced: number; skipped: number; errors: { title: string; reason: string; year: number | null }[] };
     }) => void;
     onSuccess({
       data: { synced: 3, skipped: 1, errors: [] },
@@ -303,13 +303,13 @@ describe("PlexSettingsPage", () => {
 
     fireEvent.click(screen.getByText("Sync Movies"));
     const onSuccess = syncMoviesOpts.onSuccess as (res: {
-      data: { synced: number; skipped: number; errors: { title: string; error: string }[] };
+      data: { synced: number; skipped: number; errors: { title: string; reason: string; year: number | null }[] };
     }) => void;
     onSuccess({
       data: {
         synced: 1,
         skipped: 0,
-        errors: [{ title: "Broken Film", error: "No TMDB match" }],
+        errors: [{ title: "Broken Film", reason: "No TMDB match", year: null }],
       },
     });
 
