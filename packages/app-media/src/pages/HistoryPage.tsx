@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router";
 import { Alert, AlertTitle, AlertDescription, Badge, Button, Skeleton } from "@pops/ui";
 import { Film } from "lucide-react";
 import { trpc } from "../lib/trpc";
+import { formatEpisodeCode } from "../lib/format";
 
 const PAGE_SIZE = 50;
 
@@ -98,10 +99,14 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
   const isEpisode = entry.mediaType === "episode";
 
   const title = entry.title ?? "Unknown";
-  const subtitle =
-    isEpisode && entry.showName
-      ? `${entry.showName} · S${entry.seasonNumber ?? "?"}E${entry.episodeNumber ?? "?"}`
-      : null;
+  const hasEpisodeInfo =
+    isEpisode &&
+    entry.showName != null &&
+    entry.seasonNumber != null &&
+    entry.episodeNumber != null;
+  const episodeCode = hasEpisodeInfo
+    ? formatEpisodeCode(entry.seasonNumber!, entry.episodeNumber!)
+    : null;
 
   return (
     <div className="flex gap-3 p-3 rounded-lg border">
@@ -124,7 +129,20 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
             <Link to={href} className="hover:underline">
               <h3 className="text-sm font-medium truncate">{title}</h3>
             </Link>
-            {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
+            {hasEpisodeInfo && (
+              <p className="text-xs text-muted-foreground truncate">
+                <Link to={`/media/tv/${entry.tvShowId}`} className="hover:underline">
+                  {entry.showName}
+                </Link>
+                {" — "}
+                <Link
+                  to={`/media/tv/${entry.tvShowId}?season=${entry.seasonNumber}`}
+                  className="hover:underline"
+                >
+                  {episodeCode}
+                </Link>
+              </p>
+            )}
           </div>
           <Badge variant="secondary" className="text-xs shrink-0">
             {isEpisode ? "Episode" : "Movie"}
@@ -144,10 +162,14 @@ function HistoryCard({ entry }: { entry: HistoryEntry }) {
   const isEpisode = entry.mediaType === "episode";
 
   const title = entry.title ?? "Unknown";
-  const subtitle =
-    isEpisode && entry.showName
-      ? `${entry.showName} · S${entry.seasonNumber ?? "?"}E${entry.episodeNumber ?? "?"}`
-      : null;
+  const hasEpisodeInfo =
+    isEpisode &&
+    entry.showName != null &&
+    entry.seasonNumber != null &&
+    entry.episodeNumber != null;
+  const episodeCode = hasEpisodeInfo
+    ? formatEpisodeCode(entry.seasonNumber!, entry.episodeNumber!)
+    : null;
 
   return (
     <div className="group flex flex-col gap-2">
@@ -192,7 +214,20 @@ function HistoryCard({ entry }: { entry: HistoryEntry }) {
         <Link to={href} className="hover:underline">
           <h3 className="text-sm font-medium leading-tight line-clamp-2">{title}</h3>
         </Link>
-        {subtitle && <p className="text-xs text-muted-foreground line-clamp-1">{subtitle}</p>}
+        {hasEpisodeInfo ? (
+          <p className="text-xs text-muted-foreground line-clamp-1">
+            <Link to={`/media/tv/${entry.tvShowId}`} className="hover:underline">
+              {entry.showName}
+            </Link>
+            {" — "}
+            <Link
+              to={`/media/tv/${entry.tvShowId}?season=${entry.seasonNumber}`}
+              className="hover:underline"
+            >
+              {episodeCode}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </div>
   );
