@@ -18,8 +18,8 @@ const {
   mockSeasonMonitorMutation,
   mockInvalidate,
   mockCancel,
-  mockGetData,
-  mockSetData,
+  mockSetProgressData,
+  mockSetListData,
 } = vi.hoisted(() => ({
   mockShowQuery: vi.fn(),
   mockSeasonsQuery: vi.fn(),
@@ -32,9 +32,9 @@ const {
   mockDeleteMutation: vi.fn(),
   mockSeasonMonitorMutation: vi.fn(),
   mockInvalidate: vi.fn(),
-  mockCancel: vi.fn().mockResolvedValue(undefined),
-  mockGetData: vi.fn(),
-  mockSetData: vi.fn(),
+  mockCancel: vi.fn(),
+  mockSetProgressData: vi.fn(),
+  mockSetListData: vi.fn(),
 }));
 
 let batchLogOpts: Record<string, unknown> = {};
@@ -80,8 +80,10 @@ vi.mock("../lib/trpc", () => ({
           useMutation: (opts: Record<string, unknown>) => {
             batchLogOpts = opts;
             mockBatchLogMutation.mockImplementation(() => {
+              if (typeof opts.onMutate === "function") (opts.onMutate as () => void)();
               if (typeof opts.onSuccess === "function")
                 (opts.onSuccess as (r: unknown) => void)({ data: { logged: 5 } });
+              if (typeof opts.onSettled === "function") (opts.onSettled as () => void)();
             });
             return { mutate: mockBatchLogMutation, isPending: false };
           },
@@ -108,8 +110,13 @@ vi.mock("../lib/trpc", () => ({
           list: {
             invalidate: mockInvalidate,
             cancel: mockCancel,
-            getData: mockGetData,
-            setData: mockSetData,
+            getData: vi.fn(),
+            setData: mockSetListData,
+          },
+          progress: {
+            cancel: mockCancel,
+            getData: vi.fn(),
+            setData: mockSetProgressData,
           },
           invalidate: mockInvalidate,
         },
@@ -452,6 +459,50 @@ describe("SeasonDetailPage — monitoring", () => {
       });
       renderPage("999");
       expect(screen.getByText("Show not found")).toBeInTheDocument();
+    });
+  });
+
+  describe("batch mark watched — optimistic updates", () => {
+    it("shows Mark Season Watched button when not fully watched", () => {
+      setupQueries();
+      renderPage();
+      expect(screen.getByRole("button", { name: /Mark Season Watched/ })).toBeInTheDocument();
+    });
+
+    it("shows All Watched when season is fully watched", () => {
+      setupQueries({
+        progress: {
+          ...PROGRESS,
+          seasons: [{ seasonId: 11, seasonNumber: 1, watched: 3, total: 3, percentage: 100 }],
+        },
+      });
+      renderPage();
+      expect(screen.queryByRole("button", { name: /Mark Season Watched/ })).not.toBeInTheDocument();
+      expect(screen.getByText("All Watched")).toBeInTheDocument();
+    });
+
+    it("calls batchLog mutation when Mark Season Watched is clicked", () => {
+      setupQueries();
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Mark Season Watched/ }));
+      expect(mockBatchLogMutation).toHaveBeenCalledWith({
+        mediaType: "season",
+        mediaId: 11,
+      });
+    });
+
+    it("triggers optimistic progress cancel on batch mark", () => {
+      setupQueries();
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Mark Season Watched/ }));
+      expect(mockCancel).toHaveBeenCalled();
+    });
+
+    it("invalidates watch history after batch mark settles", () => {
+      setupQueries();
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Mark Season Watched/ }));
+      expect(mockInvalidate).toHaveBeenCalled();
     });
   });
 });
