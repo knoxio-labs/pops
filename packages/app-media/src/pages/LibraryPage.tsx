@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router";
 import { Button, Skeleton, TextInput } from "@pops/ui";
-import { Sparkles, Settings, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, Settings, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { MediaGrid } from "../components/MediaGrid";
 import { MediaCard } from "../components/MediaCard";
 import { DownloadQueue } from "../components/DownloadQueue";
@@ -33,10 +33,10 @@ function useDebouncedValue(value: string, delay: number): string {
   return debounced;
 }
 
-function LibrarySkeleton() {
+function LibrarySkeleton({ count = 24 }: { count?: number }) {
   return (
     <MediaGrid>
-      {Array.from({ length: 12 }).map((_, i) => (
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="aspect-[2/3] w-full rounded-lg" />
           <Skeleton className="h-4 w-3/4" />
@@ -172,7 +172,7 @@ export function LibraryPage() {
     );
   };
 
-  const { items, isLoading, isEmpty, allGenres, pagination } = useMediaLibrary({
+  const { items, isLoading, error, refetch, isEmpty, allGenres, pagination } = useMediaLibrary({
     typeFilter,
     genreFilter,
     sortBy,
@@ -295,7 +295,15 @@ export function LibraryPage() {
 
       {/* Content */}
       {isLoading ? (
-        <LibrarySkeleton />
+        <LibrarySkeleton count={pageSize} />
+      ) : error ? (
+        <div className="text-center py-16">
+          <AlertCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">Something went wrong loading your library.</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetch()}>
+            Retry
+          </Button>
+        </div>
       ) : isEmpty ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">
@@ -307,7 +315,23 @@ export function LibraryPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-muted-foreground">No results match your filters.</p>
+          {debouncedSearch ? (
+            <>
+              <p className="text-muted-foreground">
+                No results for &ldquo;{debouncedSearch}&rdquo;
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setLocalSearch("")}
+              >
+                Clear search
+              </Button>
+            </>
+          ) : (
+            <p className="text-muted-foreground">No results match your filters.</p>
+          )}
         </div>
       ) : (
         <>
