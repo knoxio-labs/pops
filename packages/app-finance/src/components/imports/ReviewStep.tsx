@@ -626,7 +626,7 @@ function MatchedTab({
   editingTransaction: ProcessedTransaction | null;
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
-  entities?: Array<{ id: string; name: string }>;
+  entities?: Array<{ id: string; name: string; type: string }>;
 }) {
   if (transactions.length === 0) {
     return <div className="text-center py-12 text-gray-500">No matched transactions</div>;
@@ -693,7 +693,7 @@ function UncertainTab({
   editingTransaction: ProcessedTransaction | null;
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
-  entities?: Array<{ id: string; name: string }>;
+  entities?: Array<{ id: string; name: string; type: string }>;
 }) {
   if (transactions.length === 0) {
     return <div className="text-center py-12 text-gray-500">No uncertain transactions</div>;
@@ -807,7 +807,7 @@ function FailedTab({
   editingTransaction: ProcessedTransaction | null;
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
-  entities?: Array<{ id: string; name: string }>;
+  entities?: Array<{ id: string; name: string; type: string }>;
 }) {
   if (transactions.length === 0) {
     return <div className="text-center py-12 text-gray-500">No failed transactions</div>;

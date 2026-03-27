@@ -4,6 +4,7 @@ import { Badge } from "@pops/ui";
 import { Button } from "@pops/ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@pops/ui";
 import { LocationField } from "./LocationField";
+import { EntitySelect } from "./EntitySelect";
 import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
 
 interface TransactionCardProps {
@@ -16,7 +17,7 @@ interface TransactionCardProps {
   onCreateEntity?: (transaction: ProcessedTransaction) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
-  entities?: Array<{ id: string; name: string }>;
+  entities?: Array<{ id: string; name: string; type: string }>;
   readonly?: boolean;
   showMatchType?: boolean;
   variant?: "matched" | "uncertain" | "failed";
@@ -189,27 +190,15 @@ export function TransactionCard({
             </Button>
           )}
 
-          <select
-            className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800"
+          <EntitySelect
+            entities={entities ?? []}
             value={transaction.entity?.entityId || ""}
-            onChange={(e) => {
-              const entity = entities?.find((ent) => ent.id === e.target.value);
-              if (entity && onEntitySelect) {
-                onEntitySelect(transaction, entity.id, entity.name);
+            onChange={(entityId, entityName) => {
+              if (onEntitySelect) {
+                onEntitySelect(transaction, entityId, entityName);
               }
             }}
-          >
-            <option value="">Choose existing entity...</option>
-            {entities && entities.length > 0 && (
-              <>
-                {entities.map((entity) => (
-                  <option key={entity.id} value={entity.id}>
-                    {entity.name}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
+          />
         </div>
       )}
 
