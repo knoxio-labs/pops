@@ -5,14 +5,23 @@ import { TvShowDetailPage } from "./TvShowDetailPage";
 
 // --- tRPC mock setup ---
 
-const { mockShowQuery, mockSeasonsQuery, mockProgressQuery, mockBatchLogMutation, mockInvalidate } =
-  vi.hoisted(() => ({
-    mockShowQuery: vi.fn(),
-    mockSeasonsQuery: vi.fn(),
-    mockProgressQuery: vi.fn(),
-    mockBatchLogMutation: vi.fn(),
-    mockInvalidate: vi.fn(),
-  }));
+const {
+  mockShowQuery,
+  mockSeasonsQuery,
+  mockProgressQuery,
+  mockBatchLogMutation,
+  mockCheckSeriesQuery,
+  mockSeasonMonitorMutation,
+  mockInvalidate,
+} = vi.hoisted(() => ({
+  mockShowQuery: vi.fn(),
+  mockSeasonsQuery: vi.fn(),
+  mockProgressQuery: vi.fn(),
+  mockBatchLogMutation: vi.fn(),
+  mockCheckSeriesQuery: vi.fn(),
+  mockSeasonMonitorMutation: vi.fn(),
+  mockInvalidate: vi.fn(),
+}));
 
 vi.mock("../lib/trpc", () => ({
   trpc: {
@@ -39,11 +48,34 @@ vi.mock("../lib/trpc", () => ({
         },
         invalidate: mockInvalidate,
       },
+      arr: {
+        checkSeries: {
+          useQuery: (...args: unknown[]) => mockCheckSeriesQuery(...args),
+          invalidate: mockInvalidate,
+        },
+        updateSeasonMonitoring: {
+          useMutation: (opts: Record<string, unknown>) => {
+            mockSeasonMonitorMutation.mockImplementation((variables: { seasonNumber: number }) => {
+              if (typeof opts.onSuccess === "function") (opts.onSuccess as () => void)();
+              if (typeof opts.onSettled === "function")
+                (opts.onSettled as (d: unknown, e: unknown, v: { seasonNumber: number }) => void)(
+                  undefined,
+                  undefined,
+                  variables
+                );
+            });
+            return { mutate: mockSeasonMonitorMutation, isPending: false };
+          },
+        },
+      },
     },
     useUtils: () => ({
       media: {
         watchHistory: {
           invalidate: mockInvalidate,
+        },
+        arr: {
+          checkSeries: { invalidate: mockInvalidate },
         },
       },
     }),
@@ -52,6 +84,10 @@ vi.mock("../lib/trpc", () => ({
 
 vi.mock("../components/ArrStatusBadge", () => ({
   ArrStatusBadge: () => null,
+}));
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 // --- Test data ---
@@ -130,6 +166,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockSeasonsQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
   mockProgressQuery.mockReturnValue({ data: null, isLoading: false });
+  mockCheckSeriesQuery.mockReturnValue({ data: null, isLoading: false });
 });
 
 describe("TvShowDetailPage — season list", () => {

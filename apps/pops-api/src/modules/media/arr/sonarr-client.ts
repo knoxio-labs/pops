@@ -4,9 +4,11 @@
 import { ArrBaseClient } from "./base-client.js";
 import type {
   SonarrSeries,
+  SonarrSeriesFull,
   SonarrQueueResponse,
   ArrStatusResult,
   SonarrCalendarEpisode,
+  SonarrEpisodeMonitorInput,
 } from "./types.js";
 
 export class SonarrClient extends ArrBaseClient {
@@ -77,5 +79,56 @@ export class SonarrClient extends ArrBaseClient {
     }
 
     return { status: "monitored", label: "Monitored" };
+  }
+
+  /**
+   * Check if a series exists in Sonarr by TVDB ID.
+   * Returns the Sonarr ID, monitored state, and per-season monitoring flags.
+   */
+  async checkSeries(tvdbId: number): Promise<{
+    exists: boolean;
+    sonarrId?: number;
+    monitored?: boolean;
+    seasons?: Array<{ seasonNumber: number; monitored: boolean }>;
+  }> {
+    const allSeries = await this.getSeries();
+    const match = allSeries.find((s) => s.tvdbId === tvdbId);
+    if (!match) return { exists: false };
+
+    // Fetch full series to get per-season monitoring state
+    const full = await this.get<SonarrSeriesFull>(`/series/${match.id}`);
+    const seasons = full.seasons.map((s) => ({
+      seasonNumber: s.seasonNumber,
+      monitored: s.monitored,
+    }));
+
+    return { exists: true, sonarrId: match.id, monitored: match.monitored, seasons };
+  }
+
+  /**
+   * Update season monitoring for a specific season.
+   * Fetches the full series, updates the target season's monitored flag, then PUTs back.
+   */
+  async updateSeasonMonitoring(
+    sonarrId: number,
+    seasonNumber: number,
+    monitored: boolean
+  ): Promise<SonarrSeriesFull> {
+    const series = await this.get<SonarrSeriesFull>(`/series/${sonarrId}`);
+    const season = series.seasons.find((s) => s.seasonNumber === seasonNumber);
+    if (!season) {
+      throw new Error(`Season ${seasonNumber} not found for series ${sonarrId}`);
+    }
+    season.monitored = monitored;
+    return this.put<SonarrSeriesFull>(`/series/${sonarrId}`, series);
+  }
+
+  /**
+   * Batch update episode monitoring.
+   * Sends PUT /api/v3/episode/monitor with episode IDs and monitored flag.
+   */
+  async updateEpisodeMonitoring(episodeIds: number[], monitored: boolean): Promise<void> {
+    const body: SonarrEpisodeMonitorInput = { episodeIds, monitored };
+    await this.put<unknown>("/episode/monitor", body);
   }
 }

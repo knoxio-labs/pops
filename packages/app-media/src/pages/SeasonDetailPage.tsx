@@ -1,6 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, PageHeader, Button, Skeleton } from "@pops/ui";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  PageHeader,
+  Button,
+  Switch,
+  Skeleton,
+} from "@pops/ui";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { EpisodeList } from "../components/EpisodeList";
@@ -72,6 +80,29 @@ export function SeasonDetailPage() {
         .map((entry: { mediaId: number }) => entry.mediaId)
     );
   }, [watchHistoryData, episodeIds]);
+
+  // Sonarr monitoring state
+  const tvdbId = showData?.data?.tvdbId;
+
+  const { data: sonarrData } = trpc.media.arr.checkSeries.useQuery(
+    { tvdbId: tvdbId ?? 0 },
+    { enabled: !!tvdbId }
+  );
+
+  const sonarrSeries = sonarrData?.data;
+
+  const sonarrSeasonData = sonarrSeries?.seasons?.find(
+    (s: { seasonNumber: number }) => s.seasonNumber === seasonNum
+  );
+  const [seasonMonitored, setSeasonMonitored] = useState<boolean | null>(null);
+  const effectiveMonitored = seasonMonitored ?? sonarrSeasonData?.monitored ?? false;
+
+  const seasonMonitorMutation = trpc.media.arr.updateSeasonMonitoring.useMutation({
+    onError: (err: { message: string }) => {
+      setSeasonMonitored((prev) => (prev != null ? !prev : null));
+      toast.error(`Failed to update monitoring: ${err.message}`);
+    },
+  });
 
   // Track which episodes are currently being toggled
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
@@ -263,6 +294,33 @@ export function SeasonDetailPage() {
               <ProgressBar watched={seasonProgress.watched} total={seasonProgress.total} />
             </div>
           )}
+
+          {sonarrSeries?.exists &&
+            sonarrSeries.sonarrId != null &&
+            (() => {
+              const sonarrId = sonarrSeries.sonarrId;
+              return (
+                <div className="flex items-center gap-2 mt-3">
+                  <Switch
+                    size="sm"
+                    checked={effectiveMonitored}
+                    aria-label={`Monitor ${seasonLabel}`}
+                    disabled={seasonMonitorMutation.isPending}
+                    onCheckedChange={(checked: boolean) => {
+                      setSeasonMonitored(checked);
+                      seasonMonitorMutation.mutate({
+                        sonarrId,
+                        seasonNumber: seasonNum,
+                        monitored: checked,
+                      });
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {effectiveMonitored ? "Monitored" : "Unmonitored"}
+                  </span>
+                </div>
+              );
+            })()}
 
           {season?.id && (
             <div className="flex gap-2 mt-3">

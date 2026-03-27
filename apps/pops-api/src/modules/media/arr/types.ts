@@ -111,6 +111,28 @@ export interface SonarrSeries {
   };
 }
 
+export interface SonarrSeason {
+  seasonNumber: number;
+  monitored: boolean;
+  statistics?: {
+    episodeFileCount: number;
+    episodeCount: number;
+    totalEpisodeCount: number;
+    percentOfEpisodes: number;
+  };
+}
+
+/** Full series object returned by Sonarr (includes seasons array for PUT updates). */
+export interface SonarrSeriesFull extends SonarrSeries {
+  seasons: SonarrSeason[];
+}
+
+/** Input for batch episode monitoring updates via PUT /api/v3/episode/monitor. */
+export interface SonarrEpisodeMonitorInput {
+  episodeIds: number[];
+  monitored: boolean;
+}
+
 export interface SonarrQueueRecord {
   id: number;
   seriesId: number;
