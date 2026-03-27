@@ -5,21 +5,26 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { PaperlessClient } from "./client.js";
 import { PaperlessApiError } from "./types.js";
 
-function mockResponse(body: unknown, status = 200, statusText = "OK"): Response {
+function mockResponse(
+  body: unknown,
+  status = 200,
+  statusText = "OK",
+  headers?: Record<string, string>
+): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
     statusText,
     json: () => Promise.resolve(body),
     text: () => Promise.resolve(JSON.stringify(body)),
-    headers: new Headers(),
+    headers: new Headers(headers),
     redirected: false,
     type: "basic",
     url: "",
-    clone: () => mockResponse(body, status, statusText),
+    clone: () => mockResponse(body, status, statusText, headers),
     body: null,
     bodyUsed: false,
-    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    arrayBuffer: () => Promise.resolve(body instanceof ArrayBuffer ? body : new ArrayBuffer(0)),
     blob: () => Promise.resolve(new Blob()),
     formData: () => Promise.resolve(new FormData()),
     bytes: () => Promise.resolve(new Uint8Array()),
@@ -248,6 +253,52 @@ describe("getDocumentDownloadUrl", () => {
   it("builds correct download URL", () => {
     const url = client.getDocumentDownloadUrl(42);
     expect(url).toBe(`${PAPERLESS_BASE_URL}/api/documents/42/download/`);
+  });
+});
+
+describe("getDocumentThumbnail", () => {
+  it("returns image data and content type", async () => {
+    const imageData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer;
+    fetchMock.mockResolvedValueOnce(
+      mockResponse(imageData, 200, "OK", { "content-type": "image/png" })
+    );
+
+    const result = await client.getDocumentThumbnail(42);
+
+    expect(result).not.toBeNull();
+    expect(result!.contentType).toBe("image/png");
+    expect(result!.data).toBeInstanceOf(Buffer);
+    expect(result!.data.length).toBe(4);
+  });
+
+  it("returns null on 404", async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse({}, 404, "Not Found"));
+
+    const result = await client.getDocumentThumbnail(999);
+
+    expect(result).toBeNull();
+  });
+
+  it("throws PaperlessApiError on other errors", async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse({}, 500, "Internal Server Error"));
+
+    await expect(client.getDocumentThumbnail(42)).rejects.toThrow(PaperlessApiError);
+  });
+
+  it("throws PaperlessApiError on network error", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    await expect(client.getDocumentThumbnail(42)).rejects.toThrow(PaperlessApiError);
+  });
+
+  it("defaults content type to image/webp when header missing", async () => {
+    const imageData = new Uint8Array([0xff, 0xd8]).buffer;
+    fetchMock.mockResolvedValueOnce(mockResponse(imageData, 200, "OK"));
+
+    const result = await client.getDocumentThumbnail(42);
+
+    expect(result).not.toBeNull();
+    expect(result!.contentType).toBe("image/webp");
   });
 });
 

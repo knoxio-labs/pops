@@ -212,7 +212,10 @@ export function ItemDetailPage() {
               value={<ConditionBadge condition={item.condition as Condition} />}
             />
           )}
-          <DetailField label="Warranty" value={<WarrantyBadge warrantyExpiry={item.warrantyExpires ?? null} />} />
+          <DetailField
+            label="Warranty"
+            value={<WarrantyBadge warrantyExpiry={item.warrantyExpires ?? null} />}
+          />
           {item.room && <DetailField label="Room" value={item.room} />}
           {item.assetId && (
             <DetailField
@@ -443,10 +446,43 @@ function DocumentsSection({ itemId }: { itemId: string }) {
     );
   }
 
-  return <DocumentsList itemId={itemId} />;
+  return <DocumentsList itemId={itemId} paperlessBaseUrl={status?.baseUrl ?? null} />;
 }
 
-function DocumentsList({ itemId }: { itemId: string }) {
+function DocumentThumbnail({ documentId }: { documentId: number }) {
+  const { data, isLoading, isError } = trpc.inventory.paperless.thumbnail.useQuery(
+    { documentId },
+    { staleTime: 5 * 60 * 1000 }
+  );
+
+  if (isLoading) {
+    return <Skeleton className="h-12 w-12 rounded shrink-0" />;
+  }
+
+  if (isError || !data?.data) {
+    return (
+      <div className="h-12 w-12 rounded bg-muted flex items-center justify-center shrink-0">
+        <FileText className="h-5 w-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`data:${data.data.contentType};base64,${data.data.base64}`}
+      alt="Document thumbnail"
+      className="h-12 w-12 rounded object-cover shrink-0"
+    />
+  );
+}
+
+function DocumentsList({
+  itemId,
+  paperlessBaseUrl,
+}: {
+  itemId: string;
+  paperlessBaseUrl: string | null;
+}) {
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.inventory.documents.listForItem.useQuery({
     itemId,
@@ -512,8 +548,8 @@ function DocumentsList({ itemId }: { itemId: string }) {
                     key={doc.id}
                     className="flex items-center justify-between p-3 rounded-lg border"
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <DocumentThumbnail documentId={doc.paperlessDocumentId} />
                       <div className="min-w-0">
                         <span className="font-medium text-sm truncate block">
                           {doc.title ?? `Document #${doc.paperlessDocumentId}`}
@@ -521,6 +557,17 @@ function DocumentsList({ itemId }: { itemId: string }) {
                         <span className="text-xs text-muted-foreground">
                           Linked {new Date(doc.createdAt).toLocaleDateString()}
                         </span>
+                        {paperlessBaseUrl && (
+                          <a
+                            href={`${paperlessBaseUrl}/documents/${doc.paperlessDocumentId}/details`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5"
+                          >
+                            View in Paperless
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
                       </div>
                     </div>
                     <Button

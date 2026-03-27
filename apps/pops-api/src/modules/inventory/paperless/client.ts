@@ -114,6 +114,41 @@ export class PaperlessClient {
     }));
   }
 
+  /** Fetch document thumbnail as a Buffer. Returns null on 404. */
+  async getDocumentThumbnail(id: number): Promise<{ data: Buffer; contentType: string } | null> {
+    const url = `${this.baseUrl}/api/documents/${id}/thumb/`;
+
+    let response: Response;
+
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${this.token}`,
+        },
+        signal: AbortSignal.timeout(5_000),
+      });
+    } catch (err) {
+      throw new PaperlessApiError(
+        0,
+        `Network error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+
+    if (response.status === 404) return null;
+
+    if (!response.ok) {
+      throw new PaperlessApiError(
+        response.status,
+        `Paperless API error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get("content-type") ?? "image/webp";
+    return { data: Buffer.from(arrayBuffer), contentType };
+  }
+
   // -------------------------------------------------------------------------
   // Mappers
   // -------------------------------------------------------------------------

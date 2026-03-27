@@ -24,3 +24,8 @@ export function getPaperlessClient(): PaperlessClient | null {
   if (!url || !token) return null;
   return new PaperlessClient(url, token);
 }
+
+/** Returns the configured Paperless base URL, or null if not set. */
+export function getPaperlessBaseUrl(): string | null {
+  return getEnv("PAPERLESS_BASE_URL") ?? null;
+}
