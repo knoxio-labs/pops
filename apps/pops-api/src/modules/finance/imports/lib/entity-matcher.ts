@@ -11,15 +11,12 @@
  * Hit rate: ~95-100% with aliases.
  */
 
-/** @deprecated Use Map-based EntityLookupMap instead */
-export interface EntityLookup {
-  [name: string]: string;
-}
+import type { EntityEntry } from "./entity-lookup.js";
 
-/** Map-based entity lookup: name → entity ID */
-export type EntityLookupMap = Map<string, string>;
+/** Map-based entity lookup: lowercase name → { id, name } */
+export type EntityLookupMap = Map<string, EntityEntry>;
 
-/** Map-based alias map: alias → entity name */
+/** Map-based alias map: lowercase alias → entity name (original case) */
 export type AliasMap = Map<string, string>;
 
 export interface EntityMatch {
@@ -30,39 +27,31 @@ export interface EntityMatch {
 
 /**
  * Match a transaction description to an entity.
- *
- * Accepts either Map-based lookups (preferred) or plain objects (legacy).
  */
 export function matchEntity(
   description: string,
-  entityLookup: EntityLookupMap | EntityLookup,
-  aliases: AliasMap | Record<string, string>
+  entityLookup: EntityLookupMap,
+  aliases: AliasMap
 ): EntityMatch | null {
   const normalized = description.toUpperCase().trim();
 
-  // Normalize to iterables
-  const aliasEntries: Iterable<[string, string]> =
-    aliases instanceof Map ? aliases : Object.entries(aliases);
-  const lookupEntries: Iterable<[string, string]> =
-    entityLookup instanceof Map ? entityLookup : Object.entries(entityLookup);
-
   // Stage 1: Manual aliases
-  for (const [key, entityName] of aliasEntries) {
+  for (const [key, entityName] of aliases) {
     if (normalized.includes(key.toUpperCase())) {
-      const entityId = findInEntries(entityName, lookupEntries);
-      if (entityId) {
-        return { entityName, entityId, matchType: "alias" };
+      const entry = findByName(entityName, entityLookup);
+      if (entry) {
+        return { entityName: entry.name, entityId: entry.id, matchType: "alias" };
       }
     }
   }
 
   // Try matching with original names, then with stripped punctuation
-  const result = tryMatch(normalized, lookupEntries);
+  const result = tryMatch(normalized, entityLookup);
   if (result) return result;
 
   // Stage 5: Strip punctuation and retry
   const stripped = normalized.replace(/[''`]/g, "");
-  const strippedResult = tryMatch(stripped, lookupEntries, true);
+  const strippedResult = tryMatch(stripped, entityLookup, true);
   if (strippedResult) return strippedResult;
 
   return null;
@@ -70,27 +59,27 @@ export function matchEntity(
 
 function tryMatch(
   normalized: string,
-  lookupEntries: Iterable<[string, string]>,
+  entityLookup: EntityLookupMap,
   stripPunctuation = false
 ): EntityMatch | null {
-  const entries = Array.from(lookupEntries);
+  const entries = Array.from(entityLookup.entries());
 
   // Stage 2: Exact match (case-insensitive)
-  for (const [name, id] of entries) {
-    const entityName = stripPunctuation ? name.replace(/[''`]/g, "") : name;
-    if (normalized === entityName.toUpperCase()) {
-      return { entityName: name, entityId: id, matchType: "exact" };
+  for (const [key, entry] of entries) {
+    const matchKey = stripPunctuation ? key.replace(/[''`]/g, "") : key;
+    if (normalized === matchKey.toUpperCase()) {
+      return { entityName: entry.name, entityId: entry.id, matchType: "exact" };
     }
   }
 
   // Stage 3: Prefix match (longest entity name wins)
   let bestPrefix: EntityMatch | null = null;
-  for (const [name, id] of entries) {
-    const entityName = stripPunctuation ? name.replace(/[''`]/g, "") : name;
-    const upper = entityName.toUpperCase();
+  for (const [key, entry] of entries) {
+    const matchKey = stripPunctuation ? key.replace(/[''`]/g, "") : key;
+    const upper = matchKey.toUpperCase();
     if (normalized.startsWith(upper)) {
-      if (!bestPrefix || name.length > bestPrefix.entityName.length) {
-        bestPrefix = { entityName: name, entityId: id, matchType: "prefix" };
+      if (!bestPrefix || entry.name.length > bestPrefix.entityName.length) {
+        bestPrefix = { entityName: entry.name, entityId: entry.id, matchType: "prefix" };
       }
     }
   }
@@ -98,13 +87,13 @@ function tryMatch(
 
   // Stage 4: Contains match (min 4 chars, longest entity name wins)
   let bestContains: EntityMatch | null = null;
-  for (const [name, id] of entries) {
-    if (name.length < 4) continue;
-    const entityName = stripPunctuation ? name.replace(/[''`]/g, "") : name;
-    const upper = entityName.toUpperCase();
+  for (const [key, entry] of entries) {
+    if (key.length < 4) continue;
+    const matchKey = stripPunctuation ? key.replace(/[''`]/g, "") : key;
+    const upper = matchKey.toUpperCase();
     if (normalized.includes(upper)) {
-      if (!bestContains || name.length > bestContains.entityName.length) {
-        bestContains = { entityName: name, entityId: id, matchType: "contains" };
+      if (!bestContains || entry.name.length > bestContains.entityName.length) {
+        bestContains = { entityName: entry.name, entityId: entry.id, matchType: "contains" };
       }
     }
   }
@@ -113,13 +102,7 @@ function tryMatch(
   return null;
 }
 
-function findInEntries(
-  entityName: string,
-  lookupEntries: Iterable<[string, string]>
-): string | undefined {
-  const upper = entityName.toUpperCase();
-  for (const [key, value] of lookupEntries) {
-    if (key.toUpperCase() === upper) return value;
-  }
-  return undefined;
+/** Find an entity by name (case-insensitive) in the lookup */
+function findByName(entityName: string, lookup: EntityLookupMap): EntityEntry | undefined {
+  return lookup.get(entityName.toLowerCase());
 }

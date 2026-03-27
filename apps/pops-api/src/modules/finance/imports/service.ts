@@ -313,20 +313,26 @@ export async function processImport(
           "[Import] Entity matched"
         );
         // Good match - add to matched list
-        const entityId = entityLookup.get(match.entityName.toLowerCase());
-        if (!entityId) {
+        const entityEntry = entityLookup.get(match.entityName.toLowerCase());
+        if (!entityEntry) {
           throw new Error(`Entity lookup failed for matched entity: ${match.entityName}`);
         }
 
         matched.push({
           ...transaction,
           entity: {
-            entityId,
-            entityName: match.entityName,
+            entityId: entityEntry.id,
+            entityName: entityEntry.name,
             matchType: match.matchType,
           },
           status: "matched",
-          suggestedTags: buildSuggestedTags(transaction.description, entityId, [], null, knownTags),
+          suggestedTags: buildSuggestedTags(
+            transaction.description,
+            entityEntry.id,
+            [],
+            null,
+            knownTags
+          ),
         });
       } else {
         // No match - try AI categorization
@@ -359,21 +365,21 @@ export async function processImport(
 
         if (aiResult && aiResult.entityName) {
           // AI suggested an entity name - check if it exists in lookup
-          const entityId = entityLookup.get(aiResult.entityName.toLowerCase());
+          const entityEntry = entityLookup.get(aiResult.entityName.toLowerCase());
 
-          if (entityId) {
-            // AI matched to existing entity
+          if (entityEntry) {
+            // AI matched to existing entity — use canonical name from DB
             matched.push({
               ...transaction,
               entity: {
-                entityId,
-                entityName: aiResult.entityName,
+                entityId: entityEntry.id,
+                entityName: entityEntry.name,
                 matchType: "ai",
               },
               status: "matched",
               suggestedTags: buildSuggestedTags(
                 transaction.description,
-                entityId,
+                entityEntry.id,
                 [],
                 aiResult.category,
                 knownTags
@@ -668,22 +674,22 @@ export async function processImportWithProgress(
             "[Import] Entity matched"
           );
 
-          const entityId = entityLookup.get(match.entityName.toLowerCase());
-          if (!entityId) {
+          const entityEntry = entityLookup.get(match.entityName.toLowerCase());
+          if (!entityEntry) {
             throw new Error(`Entity lookup failed for matched entity: ${match.entityName}`);
           }
 
           matched.push({
             ...transaction,
             entity: {
-              entityId,
-              entityName: match.entityName,
+              entityId: entityEntry.id,
+              entityName: entityEntry.name,
               matchType: match.matchType,
             },
             status: "matched",
             suggestedTags: buildSuggestedTags(
               transaction.description,
-              entityId,
+              entityEntry.id,
               [],
               null,
               knownTags
@@ -717,20 +723,20 @@ export async function processImportWithProgress(
           }
 
           if (aiResult && aiResult.entityName) {
-            const entityId = entityLookup.get(aiResult.entityName.toLowerCase());
+            const entityEntry = entityLookup.get(aiResult.entityName.toLowerCase());
 
-            if (entityId) {
+            if (entityEntry) {
               matched.push({
                 ...transaction,
                 entity: {
-                  entityId,
-                  entityName: aiResult.entityName,
+                  entityId: entityEntry.id,
+                  entityName: entityEntry.name,
                   matchType: "ai",
                 },
                 status: "matched",
                 suggestedTags: buildSuggestedTags(
                   transaction.description,
-                  entityId,
+                  entityEntry.id,
                   [],
                   aiResult.category,
                   knownTags

@@ -8,9 +8,9 @@ describe("buildEntityMaps", () => {
       { name: "Coles", id: "coles-id" },
     ]);
 
-    expect(entityLookup.get("woolworths")).toBe("ww-id");
-    expect(entityLookup.get("coles")).toBe("coles-id");
-    expect(entityLookup.get("Woolworths")).toBeUndefined(); // original case not stored
+    expect(entityLookup.get("woolworths")).toEqual({ id: "ww-id", name: "Woolworths" });
+    expect(entityLookup.get("coles")).toEqual({ id: "coles-id", name: "Coles" });
+    expect(entityLookup.get("Woolworths")).toBeUndefined(); // original case not stored as key
     expect(entityLookup.size).toBe(2);
   });
 
@@ -103,7 +103,7 @@ describe("buildEntityMaps", () => {
     ]);
 
     // Both map to lowercase "woolworths", last one wins
-    expect(entityLookup.get("woolworths")).toBe("id-2");
+    expect(entityLookup.get("woolworths")).toEqual({ id: "id-2", name: "Woolworths" });
     expect(entityLookup.size).toBe(1);
   });
 });

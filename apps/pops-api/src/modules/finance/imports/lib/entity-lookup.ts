@@ -2,7 +2,7 @@
  * Entity lookup and alias map loader.
  *
  * Builds two Maps from all entities in the database:
- * - entityLookup: lowercase name → entity ID
+ * - entityLookup: lowercase name → { id, name (original case) }
  * - aliasMap: lowercase alias → entity name (original case)
  *
  * Both maps are loaded once per import batch and shared across
@@ -12,9 +12,15 @@ import { isNotNull } from "drizzle-orm";
 import { getDrizzle } from "../../../../db.js";
 import { entities } from "@pops/db-types";
 
+export interface EntityEntry {
+  id: string;
+  /** Original-case entity name as stored in the database */
+  name: string;
+}
+
 export interface EntityMaps {
-  /** Lowercase entity name → entity ID */
-  entityLookup: Map<string, string>;
+  /** Lowercase entity name → { id, name (original case) } */
+  entityLookup: Map<string, EntityEntry>;
   /** Lowercase alias → entity name (original case) */
   aliasMap: Map<string, string>;
 }
@@ -23,19 +29,20 @@ export interface EntityMaps {
  * Load entity lookup and alias maps from the database.
  *
  * - Entity lookup keys are lowercased for O(1) case-insensitive lookups
+ * - Values preserve the original-case name for display
  * - Aliases are parsed from comma-separated strings per entity
  * - Whitespace-only aliases are filtered out
  */
 export function loadEntityMaps(): EntityMaps {
   const db = getDrizzle();
 
-  const entityLookup = new Map<string, string>();
+  const entityLookup = new Map<string, EntityEntry>();
   const aliasMap = new Map<string, string>();
 
-  // Load all entities for the name → id lookup
+  // Load all entities for the name → { id, name } lookup
   const allRows = db.select({ name: entities.name, id: entities.id }).from(entities).all();
   for (const row of allRows) {
-    entityLookup.set(row.name.toLowerCase(), row.id);
+    entityLookup.set(row.name.toLowerCase(), { id: row.id, name: row.name });
   }
 
   // Load entities with aliases for the alias → name map
@@ -64,11 +71,11 @@ export function loadEntityMaps(): EntityMaps {
 export function buildEntityMaps(
   entitiesData: { name: string; id: string; aliases?: string | null }[]
 ): EntityMaps {
-  const entityLookup = new Map<string, string>();
+  const entityLookup = new Map<string, EntityEntry>();
   const aliasMap = new Map<string, string>();
 
   for (const entity of entitiesData) {
-    entityLookup.set(entity.name.toLowerCase(), entity.id);
+    entityLookup.set(entity.name.toLowerCase(), { id: entity.id, name: entity.name });
 
     if (entity.aliases) {
       const aliasList = entity.aliases.split(",");
