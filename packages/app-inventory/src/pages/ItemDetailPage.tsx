@@ -215,7 +215,10 @@ export function ItemDetailPage() {
               value={<ConditionBadge condition={item.condition as Condition} />}
             />
           )}
-          <DetailField label="Warranty" value={<WarrantyBadge warrantyExpiry={item.warrantyExpires ?? null} />} />
+          <DetailField
+            label="Warranty"
+            value={<WarrantyBadge warrantyExpiry={item.warrantyExpires ?? null} />}
+          />
           {item.room && <DetailField label="Room" value={item.room} />}
           {item.assetId && (
             <DetailField
@@ -639,24 +642,40 @@ function ConnectionRow({
 }) {
   const { data } = trpc.inventory.items.get.useQuery({ id: connectedItemId });
   const item = data?.data;
+  const itemName = item?.itemName ?? connectedItemId;
 
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border">
       <Link to={`/inventory/items/${connectedItemId}`} className="flex-1 hover:underline">
-        <span className="font-medium">{item?.itemName ?? connectedItemId}</span>
+        <span className="font-medium">{itemName}</span>
         {item?.brand && <span className="text-muted-foreground text-sm ml-2">{item.brand}</span>}
       </Link>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive hover:text-destructive"
-        onClick={onDisconnect}
-        disabled={isDisconnecting}
-        title="Disconnect"
-        aria-label="Disconnect"
-      >
-        <Unlink className="h-4 w-4" />
-      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            disabled={isDisconnecting}
+            title="Disconnect"
+            aria-label="Disconnect"
+          >
+            <Unlink className="h-4 w-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the connection to {itemName}. You can reconnect later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDisconnect}>Disconnect</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
