@@ -5,6 +5,7 @@
  * Single click navigates to the app's basePath.
  * Collapsible via toggle (state persisted in uiStore).
  */
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { registeredApps } from "@/app/nav/registry";
 import { iconMap } from "@/app/nav/icon-map";
@@ -17,11 +18,26 @@ interface AppRailProps {
   className?: string;
 }
 
+/** Media query match for tablet range (md but not lg) */
+function useIsTablet(): boolean {
+  const [isTablet, setIsTablet] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+    setIsTablet(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsTablet(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isTablet;
+}
+
 export function AppRail({ className }: AppRailProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const railOpen = useUIStore((state) => state.railOpen);
   const toggleRail = useUIStore((state) => state.toggleRail);
+  const setPageNavOpen = useUIStore((state) => state.setPageNavOpen);
+  const isTablet = useIsTablet();
 
   if (!railOpen) {
     return (
@@ -60,7 +76,12 @@ export function AppRail({ className }: AppRailProps) {
           <Tooltip key={app.id}>
             <TooltipTrigger asChild>
               <button
-                onClick={() => navigate(app.basePath)}
+                onClick={() => {
+                  navigate(app.basePath);
+                  if (isTablet) {
+                    setPageNavOpen(true);
+                  }
+                }}
                 className={cn(
                   "relative w-full flex items-center justify-center py-1 transition-colors group",
                   appColorClass
