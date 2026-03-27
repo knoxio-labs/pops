@@ -4,6 +4,7 @@ import { Button } from "@pops/ui";
 import { Input } from "@pops/ui";
 import { Label } from "@pops/ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@pops/ui";
+import { EntitySelect } from "./EntitySelect";
 import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
 
 interface EditableTransactionCardProps {
@@ -14,7 +15,7 @@ interface EditableTransactionCardProps {
     shouldLearn?: boolean
   ) => void;
   onCancel: () => void;
-  entities?: Array<{ id: string; name: string }>;
+  entities?: Array<{ id: string; name: string; type: string }>;
 }
 
 /**
@@ -195,22 +196,11 @@ export function EditableTransactionCard({
       {transactionType === "purchase" && entities && entities.length > 0 && (
         <div className="space-y-2 mb-4">
           <Label htmlFor="entity">Entity (Merchant/Payee)</Label>
-          <select
-            id="entity"
-            className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800"
+          <EntitySelect
+            entities={entities}
             value={transaction.entity?.entityId || ""}
-            onChange={() => {
-              // Entity selection handled separately - this is just for display
-              // The parent component should handle entity changes
-            }}
-          >
-            <option value="">Select entity...</option>
-            {entities.map((entity) => (
-              <option key={entity.id} value={entity.id}>
-                {entity.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Select entity..."
+          />
         </div>
       )}
 

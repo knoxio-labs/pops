@@ -22,7 +22,7 @@ interface TransactionGroupProps {
     editedFields: Partial<ProcessedTransaction>
   ) => void;
   onCancelEdit?: () => void;
-  entities?: Array<{ id: string; name: string }>;
+  entities?: Array<{ id: string; name: string; type: string }>;
   variant?: "uncertain" | "failed";
 }
 
