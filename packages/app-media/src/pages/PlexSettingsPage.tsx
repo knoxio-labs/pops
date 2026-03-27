@@ -1,8 +1,9 @@
 /**
- * PlexSettingsPage — Plex Media Server connection status and sync controls.
+ * PlexSettingsPage — Plex Media Server connection, sync controls, and scheduler.
  *
- * Shows connection health, available libraries, and sync buttons
- * for importing movies and TV shows from Plex into the local library.
+ * Shows connection health, PIN auth flow, available libraries, sync buttons
+ * with result counts, and a periodic sync scheduler toggle.
+ * PRD-039/US-02 (tb-547).
  */
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
@@ -28,9 +29,20 @@ import {
   AlertTriangle,
   Server,
   Save,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
+
+interface SyncResult {
+  synced: number;
+  skipped: number;
+  errors: { title: string; error: string }[];
+}
 
 function ConnectionBadge({ connected }: { connected: boolean }) {
   return connected ? (
@@ -46,15 +58,160 @@ function ConnectionBadge({ connected }: { connected: boolean }) {
   );
 }
 
+function SyncResultDisplay({ result, label }: { result: SyncResult; label: string }) {
+  const [errorsExpanded, setErrorsExpanded] = useState(false);
+
+  return (
+    <div className="rounded-md border p-3 space-y-2 text-sm">
+      <p className="font-medium">{label} Results</p>
+      <div className="flex gap-4 text-xs">
+        <span className="text-emerald-400">{result.synced} synced</span>
+        <span className="text-muted-foreground">{result.skipped} skipped</span>
+        <span className={result.errors.length > 0 ? "text-red-400" : "text-muted-foreground"}>
+          {result.errors.length} errors
+        </span>
+      </div>
+      {result.errors.length > 0 && (
+        <div>
+          <button
+            className="flex items-center gap-1 text-xs text-red-400 hover:underline"
+            onClick={() => setErrorsExpanded(!errorsExpanded)}
+          >
+            {errorsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {errorsExpanded ? "Hide errors" : "Show errors"}
+          </button>
+          {errorsExpanded && (
+            <ul className="mt-1 space-y-1 text-xs text-red-300">
+              {result.errors.map((err, i) => (
+                <li key={i}>
+                  <span className="font-medium">{err.title}:</span> {err.error}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SchedulerSection() {
+  const schedulerStatus = trpc.media.plex.getSchedulerStatus.useQuery();
+  const [intervalHours, setIntervalHours] = useState(6);
+  const savedSectionIds = trpc.media.plex.getSectionIds.useQuery();
+
+  const startScheduler = trpc.media.plex.startScheduler.useMutation({
+    onSuccess: () => {
+      schedulerStatus.refetch();
+      toast.success("Scheduler started");
+    },
+    onError: (err: { message: string }) => toast.error(`Failed to start scheduler: ${err.message}`),
+  });
+
+  const stopScheduler = trpc.media.plex.stopScheduler.useMutation({
+    onSuccess: () => {
+      schedulerStatus.refetch();
+      toast.success("Scheduler stopped");
+    },
+    onError: (err: { message: string }) => toast.error(`Failed to stop scheduler: ${err.message}`),
+  });
+
+  const status = schedulerStatus.data?.data;
+  const isRunning = status?.isRunning ?? false;
+
+  useEffect(() => {
+    if (status?.intervalMs) {
+      setIntervalHours(Math.round(status.intervalMs / (60 * 60 * 1000)));
+    }
+  }, [status?.intervalMs]);
+
+  const handleToggle = () => {
+    if (isRunning) {
+      stopScheduler.mutate();
+    } else {
+      const sectionIds = savedSectionIds.data?.data;
+      startScheduler.mutate({
+        intervalMs: intervalHours * 60 * 60 * 1000,
+        movieSectionId: sectionIds?.movieSectionId ?? undefined,
+        tvSectionId: sectionIds?.tvSectionId ?? undefined,
+      });
+    }
+  };
+
+  function formatTimeUntil(isoStr: string): string {
+    const diff = new Date(isoStr).getTime() - Date.now();
+    if (diff <= 0) return "now";
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <Clock className="h-5 w-5 text-muted-foreground" />
+        <h2 className="text-lg font-semibold">Automatic Sync</h2>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <button
+            role="switch"
+            aria-checked={isRunning}
+            aria-label="Toggle automatic sync"
+            onClick={handleToggle}
+            disabled={startScheduler.isPending || stopScheduler.isPending}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isRunning ? "bg-emerald-500" : "bg-muted"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                isRunning ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className="text-sm">{isRunning ? "Enabled" : "Disabled"}</span>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-muted-foreground">Sync every</label>
+        <Input
+          type="number"
+          min={1}
+          value={intervalHours}
+          onChange={(e) => setIntervalHours(Math.max(1, parseInt(e.target.value) || 1))}
+          className="w-20"
+          disabled={isRunning}
+          aria-label="Sync interval hours"
+        />
+        <span className="text-sm text-muted-foreground">hours</span>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        {isRunning && status?.nextSyncAt
+          ? `Next sync in ${formatTimeUntil(status.nextSyncAt)}`
+          : "Scheduler off"}
+      </p>
+    </div>
+  );
+}
+
 export function PlexSettingsPage() {
   const [movieSectionId, setMovieSectionId] = useState<string>("");
   const [tvSectionId, setTvSectionId] = useState<string>("");
   const [pinId, setPinId] = useState<number | null>(null);
+  const [pinCode, setPinCode] = useState<string>("");
   const [plexUrl, setPlexUrl] = useState<string>("");
+  const [movieSyncResult, setMovieSyncResult] = useState<SyncResult | null>(null);
+  const [tvSyncResult, setTvSyncResult] = useState<SyncResult | null>(null);
 
   const syncStatus = trpc.media.plex.getSyncStatus.useQuery();
   const currentUrl = trpc.media.plex.getPlexUrl.useQuery();
   const savedSectionIds = trpc.media.plex.getSectionIds.useQuery();
+  const username = trpc.media.plex.getUsername.useQuery();
 
   useEffect(() => {
     if (currentUrl.data?.data) {
@@ -79,15 +236,17 @@ export function PlexSettingsPage() {
   });
 
   const syncMovies = trpc.media.plex.syncMovies.useMutation({
-    onSuccess: () => {
-      toast.success("Movie sync complete");
+    onSuccess: (res: { data: SyncResult }) => {
+      setMovieSyncResult(res.data);
+      toast.success(`Synced ${res.data.synced} movies`);
       syncStatus.refetch();
     },
     onError: (err: { message: string }) => toast.error(`Movie sync failed: ${err.message}`),
   });
   const syncTvShows = trpc.media.plex.syncTvShows.useMutation({
-    onSuccess: () => {
-      toast.success("TV show sync complete");
+    onSuccess: (res: { data: SyncResult }) => {
+      setTvSyncResult(res.data);
+      toast.success(`Synced ${res.data.synced} TV shows`);
       syncStatus.refetch();
     },
     onError: (err: { message: string }) => toast.error(`TV show sync failed: ${err.message}`),
@@ -111,12 +270,9 @@ export function PlexSettingsPage() {
 
   const getPin = trpc.media.plex.getAuthPin.useMutation({
     onSuccess: (res: { data: { id: number; code: string; clientId: string } }) => {
-      const { id, code, clientId } = res.data;
+      const { id, code } = res.data;
       setPinId(id);
-      window.open(
-        `https://app.plex.tv/auth#?clientID=${clientId}&code=${code}&context[device][product]=POPS`,
-        "_blank"
-      );
+      setPinCode(code);
     },
     onError: (err: { message: string }) => {
       toast.error(`Failed to start auth: ${err.message}`);
@@ -128,8 +284,10 @@ export function PlexSettingsPage() {
       if (res.data.connected) {
         toast.success("Plex account connected");
         setPinId(null);
+        setPinCode("");
         syncStatus.refetch();
         connectionTest.refetch();
+        username.refetch();
       }
     },
     onError: (err: { message: string }) => {
@@ -142,6 +300,7 @@ export function PlexSettingsPage() {
       toast.success("Plex account disconnected");
       syncStatus.refetch();
       connectionTest.refetch();
+      username.refetch();
     },
     onError: (err: { message: string }) => toast.error(`Failed to disconnect: ${err.message}`),
   });
@@ -208,14 +367,22 @@ export function PlexSettingsPage() {
 
         <div className="flex-1" />
         {status?.hasToken && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => disconnect.mutate()}
-            disabled={disconnect.isPending}
-          >
-            Disconnect
-          </Button>
+          <div className="flex items-center gap-3">
+            {username.data?.data && (
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <User className="h-3.5 w-3.5" />
+                Connected as <span className="font-medium text-foreground">{username.data.data}</span>
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => disconnect.mutate()}
+              disabled={disconnect.isPending}
+            >
+              Disconnect
+            </Button>
+          </div>
         )}
       </div>
 
@@ -270,12 +437,28 @@ export function PlexSettingsPage() {
             </div>
 
             <div className="pt-2">
-              {pinId ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-amber-400 animate-pulse">
-                    Waiting for authentication in new tab...
-                  </p>
-                  <Button variant="outline" onClick={() => setPinId(null)}>
+              {pinId && pinCode ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-2 text-amber-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Waiting for authentication...</span>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Go to{" "}
+                      <a
+                        href="https://plex.tv/link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
+                        plex.tv/link
+                      </a>{" "}
+                      and enter this code:
+                    </p>
+                    <p className="text-3xl font-mono font-bold tracking-widest">{pinCode}</p>
+                  </div>
+                  <Button variant="outline" onClick={() => { setPinId(null); setPinCode(""); }}>
                     Cancel
                   </Button>
                 </div>
@@ -345,7 +528,10 @@ export function PlexSettingsPage() {
                   <Button
                     size="sm"
                     disabled={!movieSectionId || syncMovies.isPending}
-                    onClick={() => syncMovies.mutate({ sectionId: movieSectionId })}
+                    onClick={() => {
+                      setMovieSyncResult(null);
+                      syncMovies.mutate({ sectionId: movieSectionId });
+                    }}
                     className="w-full"
                   >
                     {syncMovies.isPending ? (
@@ -355,6 +541,10 @@ export function PlexSettingsPage() {
                     )}
                     {syncMovies.isPending ? "Syncing..." : "Sync Movies"}
                   </Button>
+
+                  {movieSyncResult && (
+                    <SyncResultDisplay result={movieSyncResult} label="Movie Sync" />
+                  )}
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground">No movie libraries found</p>
@@ -391,7 +581,10 @@ export function PlexSettingsPage() {
                   <Button
                     size="sm"
                     disabled={!tvSectionId || syncTvShows.isPending}
-                    onClick={() => syncTvShows.mutate({ sectionId: tvSectionId })}
+                    onClick={() => {
+                      setTvSyncResult(null);
+                      syncTvShows.mutate({ sectionId: tvSectionId });
+                    }}
                     className="w-full"
                   >
                     {syncTvShows.isPending ? (
@@ -401,6 +594,10 @@ export function PlexSettingsPage() {
                     )}
                     {syncTvShows.isPending ? "Syncing..." : "Sync TV Shows"}
                   </Button>
+
+                  {tvSyncResult && (
+                    <SyncResultDisplay result={tvSyncResult} label="TV Sync" />
+                  )}
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground">No TV libraries found</p>
@@ -409,7 +606,8 @@ export function PlexSettingsPage() {
           </div>
         )}
 
-        {/* Sync results are shown via toast notifications on sync completion */}
+        {/* Scheduler */}
+        {connected && <SchedulerSection />}
       </div>
     </div>
   );

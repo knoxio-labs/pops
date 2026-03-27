@@ -269,15 +269,47 @@ export const plexRouter = router({
           .values({ key: "plex_token", value: data.authToken })
           .onConflictDoUpdate({ target: settings.key, set: { value: data.authToken } })
           .run();
+
+        // Fetch and store username
+        try {
+          const userRes = await fetch("https://plex.tv/api/v2/user", {
+            headers: {
+              Accept: "application/json",
+              "X-Plex-Token": data.authToken,
+              "X-Plex-Client-Identifier": clientId,
+            },
+          });
+          if (userRes.ok) {
+            const userData = (await userRes.json()) as { username?: string; title?: string };
+            const username = userData.username ?? userData.title ?? null;
+            if (username) {
+              db.insert(settings)
+                .values({ key: "plex_username", value: username })
+                .onConflictDoUpdate({ target: settings.key, set: { value: username } })
+                .run();
+            }
+          }
+        } catch {
+          // Non-critical — username is a nice-to-have
+        }
+
         return { data: { connected: true } };
       }
       return { data: { connected: false } };
     }),
 
+  /** Get Plex username from settings. */
+  getUsername: protectedProcedure.query(() => {
+    const db = getDrizzle();
+    const record = db.select().from(settings).where(eq(settings.key, "plex_username")).get();
+    return { data: record?.value ?? null };
+  }),
+
   /** Disconnect Plex */
   disconnect: protectedProcedure.mutation(() => {
     const db = getDrizzle();
     db.delete(settings).where(eq(settings.key, "plex_token")).run();
+    db.delete(settings).where(eq(settings.key, "plex_username")).run();
     return { message: "Disconnected from Plex" };
   }),
 });
