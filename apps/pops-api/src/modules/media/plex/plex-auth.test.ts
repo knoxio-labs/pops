@@ -1,7 +1,6 @@
 /**
  * Plex auth tests — token encryption, PIN handling, username storage.
  */
-import type { Database } from "better-sqlite3";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { setupTestContext, createCaller } from "../../../shared/test-utils.js";
 import { getDrizzle } from "../../../db.js";
@@ -10,14 +9,13 @@ import { settings } from "@pops/db-types";
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
-let db: Database;
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  ({ caller, db } = ctx.setup());
+  ({ caller } = ctx.setup());
 });
 
 afterEach(() => {
