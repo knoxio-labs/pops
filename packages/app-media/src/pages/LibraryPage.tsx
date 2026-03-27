@@ -185,6 +185,9 @@ export function LibraryPage() {
   const totalPages = pagination.totalPages;
   const clampedPage = Math.min(page, Math.max(1, totalPages));
 
+  // Only treat as truly empty library when no search/filters are active
+  const isLibraryEmpty = isEmpty && !debouncedSearch && typeFilter === "all" && !genreFilter;
+
   const showTypeBadge = typeFilter === "all";
 
   return (
@@ -304,7 +307,7 @@ export function LibraryPage() {
             Retry
           </Button>
         </div>
-      ) : isEmpty ? (
+      ) : isLibraryEmpty ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">
             Your library is empty. Search for movies and shows to get started.

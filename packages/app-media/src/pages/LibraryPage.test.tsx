@@ -196,7 +196,7 @@ describe("LibraryPage", () => {
       mockListQuery.mockReturnValue({
         data: {
           data: [],
-          pagination: { page: 1, pageSize: 24, total: 10, totalPages: 1, hasMore: false },
+          pagination: { page: 1, pageSize: 24, total: 0, totalPages: 0, hasMore: false },
         },
         isLoading: false,
         error: null,
@@ -212,7 +212,7 @@ describe("LibraryPage", () => {
       mockListQuery.mockReturnValue({
         data: {
           data: [],
-          pagination: { page: 1, pageSize: 24, total: 10, totalPages: 1, hasMore: false },
+          pagination: { page: 1, pageSize: 24, total: 0, totalPages: 0, hasMore: false },
         },
         isLoading: false,
         error: null,
@@ -227,7 +227,7 @@ describe("LibraryPage", () => {
       mockListQuery.mockReturnValue({
         data: {
           data: [],
-          pagination: { page: 1, pageSize: 24, total: 10, totalPages: 1, hasMore: false },
+          pagination: { page: 1, pageSize: 24, total: 0, totalPages: 0, hasMore: false },
         },
         isLoading: false,
         error: null,
