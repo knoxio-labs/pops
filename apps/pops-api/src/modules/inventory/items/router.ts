@@ -57,6 +57,13 @@ export const inventoryRouter = router({
       return { data: row ? toInventoryItem(row) : null };
     }),
 
+  /** Count items whose assetId starts with the given prefix (case-insensitive). */
+  countByAssetPrefix: protectedProcedure
+    .input(z.object({ prefix: z.string().min(1) }))
+    .query(({ input }) => {
+      return { data: service.countByAssetPrefix(input.prefix) };
+    }),
+
   /** Return distinct item types from the database. */
   distinctTypes: protectedProcedure.query(() => {
     return { data: service.getDistinctTypes() };
