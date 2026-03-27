@@ -1,9 +1,11 @@
 /**
  * Root layout — top bar + two-level navigation + content area
  *
- * Desktop (≥768px): AppRail (icons) + PageNav (page links) push content
+ * Desktop (≥1024px): AppRail (icons) + PageNav (page links) push content
+ * Tablet (768–1023px): AppRail visible, PageNav as overlay on app icon click
  * Mobile (<768px): Hamburger opens Sidebar overlay with all pages
  */
+import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
 import { TopBar } from "./TopBar";
 import { AppRail } from "./AppRail";
@@ -16,9 +18,16 @@ import { findActiveApp } from "@/app/nav/path-utils";
 
 export function RootLayout() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
+  const pageNavOpen = useUIStore((state) => state.pageNavOpen);
+  const setPageNavOpen = useUIStore((state) => state.setPageNavOpen);
   const location = useLocation();
   const activeApp = findActiveApp(location.pathname, registeredApps);
   const appColorClass = activeApp?.color ? `app-${activeApp.color}` : undefined;
+
+  // Close tablet overlay on navigation
+  useEffect(() => {
+    setPageNavOpen(false);
+  }, [location.pathname, setPageNavOpen]);
 
   return (
     <div className={cn("min-h-screen bg-background relative", appColorClass)}>
@@ -31,11 +40,28 @@ export function RootLayout() {
       <div className="relative z-10 pt-14 md:pt-16">
         <TopBar />
         <div className="flex">
-          {/* Desktop: two-level nav (app rail + page nav) */}
+          {/* Desktop + Tablet: app rail always visible at md+ */}
           <div className="hidden md:flex h-[calc(100vh-4rem)] sticky top-16 shrink-0">
             <AppRail />
-            <PageNav />
+            {/* Desktop only: permanent PageNav (lg+) */}
+            <div className="hidden lg:block">
+              <PageNav />
+            </div>
           </div>
+
+          {/* Tablet overlay: PageNav as overlay (md to lg) */}
+          {pageNavOpen && (
+            <div className="hidden md:block lg:hidden">
+              <div
+                className="fixed inset-0 bg-black/50 z-40"
+                onClick={() => setPageNavOpen(false)}
+                aria-hidden="true"
+              />
+              <aside className="fixed left-16 top-16 bottom-0 z-50 shadow-lg">
+                <PageNav />
+              </aside>
+            </div>
+          )}
 
           {/* Mobile: overlay sidebar */}
           <Sidebar open={sidebarOpen} />
