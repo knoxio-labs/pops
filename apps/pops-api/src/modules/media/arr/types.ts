@@ -129,6 +129,44 @@ export interface SonarrQueueResponse {
   records: SonarrQueueRecord[];
 }
 
+// -- Sonarr calendar types --
+
+/** Episode from Sonarr /calendar endpoint. */
+export interface SonarrCalendarEpisode {
+  id: number;
+  seriesId: number;
+  tvdbId: number;
+  title: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  airDateUtc: string;
+  hasFile: boolean;
+  series: {
+    id: number;
+    title: string;
+    tvdbId: number;
+    images: Array<{
+      coverType: string;
+      remoteUrl?: string;
+      url?: string;
+    }>;
+  };
+}
+
+/** Calendar episode for the frontend. */
+export interface CalendarEpisode {
+  id: number;
+  seriesId: number;
+  seriesTitle: string;
+  tvdbId: number;
+  episodeTitle: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  airDateUtc: string;
+  hasFile: boolean;
+  posterUrl: string | null;
+}
+
 /** System status response shared by Radarr and Sonarr. */
 export interface ArrSystemStatus {
   version: string;

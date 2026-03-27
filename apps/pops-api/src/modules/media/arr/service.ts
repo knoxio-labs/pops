@@ -5,7 +5,13 @@ import { eq } from "drizzle-orm";
 import { settings } from "@pops/db-types";
 import { RadarrClient } from "./radarr-client.js";
 import { SonarrClient } from "./sonarr-client.js";
-import type { ArrConfig, ArrStatusResult, DownloadQueueItem } from "./types.js";
+import type {
+  ArrConfig,
+  ArrStatusResult,
+  CalendarEpisode,
+  DownloadQueueItem,
+  SonarrCalendarEpisode,
+} from "./types.js";
 import { getEnv } from "../../../env.js";
 import { getDrizzle } from "../../../db.js";
 
@@ -231,9 +237,60 @@ export async function getDownloadQueue(): Promise<DownloadQueueItem[]> {
   return items;
 }
 
+// ---------------------------------------------------------------------------
+// Calendar
+// ---------------------------------------------------------------------------
+
+interface CalendarCacheEntry {
+  episodes: CalendarEpisode[];
+  expiresAt: number;
+}
+
+const calendarCache = new Map<string, CalendarCacheEntry>();
+
+function mapCalendarEpisode(ep: SonarrCalendarEpisode): CalendarEpisode {
+  const poster = ep.series.images.find((img) => img.coverType === "poster");
+  return {
+    id: ep.id,
+    seriesId: ep.seriesId,
+    seriesTitle: ep.series.title,
+    tvdbId: ep.series.tvdbId,
+    episodeTitle: ep.title,
+    seasonNumber: ep.seasonNumber,
+    episodeNumber: ep.episodeNumber,
+    airDateUtc: ep.airDateUtc,
+    hasFile: ep.hasFile,
+    posterUrl: poster?.remoteUrl ?? poster?.url ?? null,
+  };
+}
+
+/** Get upcoming episodes from Sonarr calendar with 5-min cache. */
+export async function getSonarrCalendar(start: string, end: string): Promise<CalendarEpisode[]> {
+  const cacheKey = `${start}:${end}`;
+  const cached = calendarCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.episodes;
+  }
+
+  const client = getSonarrClient();
+  if (!client) return [];
+
+  try {
+    const raw = await client.getCalendar(start, end);
+    const episodes = raw.map(mapCalendarEpisode);
+    calendarCache.set(cacheKey, { episodes, expiresAt: Date.now() + CACHE_TTL_MS });
+    return episodes;
+  } catch (err) {
+    console.warn("Sonarr calendar fetch failed:", err instanceof Error ? err.message : err);
+    if (cached) return cached.episodes;
+    return [];
+  }
+}
+
 /** Clear all cached statuses. */
 export function clearStatusCache(): void {
   movieStatusCache.clear();
   showStatusCache.clear();
   queueCache = null;
+  calendarCache.clear();
 }
