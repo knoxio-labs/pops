@@ -109,6 +109,19 @@ export function searchByAssetId(assetId: string): InventoryRow | null {
   return row ?? null;
 }
 
+/**
+ * Count inventory items whose assetId starts with the given prefix (case-insensitive).
+ */
+export function countByAssetPrefix(prefix: string): number {
+  const db = getDrizzle();
+  const [result] = db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(homeInventory)
+    .where(sql`LOWER(${homeInventory.assetId}) LIKE LOWER(${prefix + "%"})`)
+    .all();
+  return result?.count ?? 0;
+}
+
 /** Return distinct item types that exist in the database. */
 export function getDistinctTypes(): string[] {
   const db = getDrizzle();

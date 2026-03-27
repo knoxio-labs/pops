@@ -2,7 +2,7 @@
  * Item create/edit form page.
  * Supports /inventory/items/new (create) and /inventory/items/:id/edit (edit).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ import {
   Badge,
   PageHeader,
 } from "@pops/ui";
-import { Save, Link2, X, Search } from "lucide-react";
+import { Save, Link2, X, Search, Wand2, Loader2 } from "lucide-react";
 import { trpc } from "../lib/trpc";
 
 interface PendingConnection {
@@ -78,6 +78,14 @@ const defaultValues: ItemFormValues = {
   notes: "",
 };
 
+/** Extract a 4-6 character uppercase prefix from an item type for asset ID generation. */
+export function extractPrefix(type: string): string {
+  const firstWord = type.split(/\s+/)[0] ?? "";
+  const upper = firstWord.toUpperCase();
+  // Truncate to 4 chars, unless the word is 5-6 chars — keep up to 6
+  return upper.length <= 6 ? upper : upper.slice(0, 4);
+}
+
 function FormField({
   label,
   error,
@@ -106,8 +114,61 @@ export function ItemFormPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<ItemFormValues>({ defaultValues });
+
+  const typeValue = watch("type");
+
+  // Asset ID uniqueness validation
+  const [assetIdError, setAssetIdError] = useState<string | null>(null);
+  const [assetIdChecking, setAssetIdChecking] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const validateAssetIdUniqueness = useCallback(
+    async (value: string) => {
+      if (!value.trim()) {
+        setAssetIdError(null);
+        return;
+      }
+      setAssetIdChecking(true);
+      try {
+        const result = await utils.inventory.items.searchByAssetId.fetch({
+          assetId: value.trim(),
+        });
+        if (result.data && result.data.id !== id) {
+          setAssetIdError(`Asset ID already in use by ${result.data.itemName}`);
+        } else {
+          setAssetIdError(null);
+        }
+      } catch {
+        setAssetIdError(null);
+      } finally {
+        setAssetIdChecking(false);
+      }
+    },
+    [id, utils]
+  );
+
+  const handleAutoGenerate = useCallback(async () => {
+    if (!typeValue) return;
+    setGenerating(true);
+    try {
+      const prefix = extractPrefix(typeValue);
+      const result = await utils.inventory.items.countByAssetPrefix.fetch({ prefix });
+      const nextNum = result.data + 1;
+      const padded = nextNum >= 100 ? String(nextNum) : String(nextNum).padStart(2, "0");
+      const newAssetId = `${prefix}${padded}`;
+      setValue("assetId", newAssetId, { shouldDirty: true });
+      setAssetIdError(null);
+      void validateAssetIdUniqueness(newAssetId);
+    } catch {
+      toast.error("Failed to generate asset ID");
+    } finally {
+      setGenerating(false);
+    }
+  }, [typeValue, utils, setValue, validateAssetIdUniqueness]);
 
   // Pending connections for create mode
   const [pendingConnections, setPendingConnections] = useState<PendingConnection[]>([]);
@@ -321,8 +382,37 @@ export function ItemFormPage() {
             <FormField label="Item ID / SKU">
               <TextInput {...register("itemId")} />
             </FormField>
-            <FormField label="Asset ID">
-              <TextInput {...register("assetId")} className="font-mono" />
+            <FormField label="Asset ID" error={assetIdError ?? undefined}>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <TextInput
+                    {...register("assetId")}
+                    className="font-mono"
+                    onBlur={(e) => void validateAssetIdUniqueness(e.target.value)}
+                  />
+                  {assetIdChecking && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!typeValue || generating}
+                  onClick={() => void handleAutoGenerate()}
+                  className="shrink-0 whitespace-nowrap"
+                  title={
+                    typeValue ? `Generate ${extractPrefix(typeValue)}XX` : "Select a type first"
+                  }
+                >
+                  {generating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 mr-1" />
+                  )}
+                  Auto-generate
+                </Button>
+              </div>
             </FormField>
           </div>
         </section>
