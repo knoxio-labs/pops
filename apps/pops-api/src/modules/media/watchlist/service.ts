@@ -158,6 +158,9 @@ export function resequencePriorities(drizzleInstance?: ReturnType<typeof getDriz
     .all();
 
   for (let i = 0; i < rows.length; i++) {
-    db.update(mediaWatchlist).set({ priority: i }).where(eq(mediaWatchlist.id, rows[i]!.id)).run();
+    const row = rows[i];
+    if (row) {
+      db.update(mediaWatchlist).set({ priority: i }).where(eq(mediaWatchlist.id, row.id)).run();
+    }
   }
 }
