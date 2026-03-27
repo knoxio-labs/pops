@@ -78,15 +78,6 @@ describe("LocationPicker", () => {
     it("expands children when chevron clicked", () => {
       render(<LocationPicker locations={LOCATIONS} value={null} />);
       fireEvent.click(screen.getByRole("combobox"));
-      // Click the expand chevron on Home (first role=button with chevron)
-      const expandButtons = screen.getAllByRole("button");
-      // The tree node expand buttons are the ones inside the popover
-      // Home has children so it should have an expand button
-      const homeExpander = expandButtons.find(
-        (btn) => btn.closest("[role='button']") && btn.textContent === ""
-      );
-      // Click the Home row itself first to see if children appear
-      // Actually, expand buttons are the chevron spans
       const chevronSpans = document.querySelectorAll("[role='button'][tabindex='-1']");
       expect(chevronSpans.length).toBeGreaterThan(0);
       fireEvent.click(chevronSpans[0]!);
@@ -208,6 +199,34 @@ describe("LocationPicker", () => {
       fireEvent.click(screen.getByRole("combobox"));
       fireEvent.click(screen.getByText("Clear selection"));
       expect(onChange).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe("overlay close without selection", () => {
+    it("does not call onChange when Escape key is pressed", () => {
+      const onChange = vi.fn();
+      render(<LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />);
+      fireEvent.click(screen.getByRole("combobox"));
+      // Popover should be open — search input visible
+      expect(screen.getByPlaceholderText("Search locations…")).toBeInTheDocument();
+      // Press Escape to close
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("does not call onChange when clicking outside the popover", () => {
+      const onChange = vi.fn();
+      render(
+        <div>
+          <span data-testid="outside">Outside</span>
+          <LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />
+        </div>
+      );
+      fireEvent.click(screen.getByRole("combobox"));
+      expect(screen.getByPlaceholderText("Search locations…")).toBeInTheDocument();
+      // Click outside element
+      fireEvent.pointerDown(screen.getByTestId("outside"));
+      expect(onChange).not.toHaveBeenCalled();
     });
   });
 
