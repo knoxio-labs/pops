@@ -88,6 +88,7 @@ export const arrRouter = router({
       if (input.sonarrApiKey !== undefined && input.sonarrApiKey !== "••••••••")
         config.sonarrApiKey = input.sonarrApiKey;
       arrService.saveArrSettings(config);
+      arrService.clearStatusCache();
       return { message: "Arr settings saved" };
     }),
 
