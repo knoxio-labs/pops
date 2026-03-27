@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { HorizontalScrollRow } from "../components/HorizontalScrollRow";
 import { DiscoverCard } from "../components/DiscoverCard";
+import { PreferenceProfile } from "../components/PreferenceProfile";
 
 const COMPARISON_THRESHOLD = 5;
 
@@ -56,15 +57,18 @@ export function DiscoverPage() {
     (window: "day" | "week") => {
       setTrendingPage(1);
       setAccumulatedResults([]);
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        if (window === "week") {
-          next.delete("window");
-        } else {
-          next.set("window", window);
-        }
-        return next;
-      }, { replace: true });
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (window === "week") {
+            next.delete("window");
+          } else {
+            next.set("window", window);
+          }
+          return next;
+        },
+        { replace: true }
+      );
     },
     [setSearchParams]
   );
@@ -78,14 +82,14 @@ export function DiscoverPage() {
     { staleTime: 5 * 60 * 1000 }
   );
 
+  const profile = trpc.media.discovery.profile.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
   const similarToTopRated = trpc.media.discovery.recommendations.useQuery(
     { sampleSize: 5 },
     { staleTime: 5 * 60 * 1000 }
   );
-
-  const profile = trpc.media.discovery.profile.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
-  });
 
   const totalComparisons = profile.data?.data?.totalComparisons ?? 0;
   const hasEnoughComparisons = totalComparisons >= COMPARISON_THRESHOLD;
@@ -178,7 +182,8 @@ export function DiscoverPage() {
           <Swords className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-medium">Compare more movies to unlock recommendations</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            You need at least {COMPARISON_THRESHOLD} comparisons — you have {totalComparisons} so far.
+            You need at least {COMPARISON_THRESHOLD} comparisons — you have {totalComparisons} so
+            far.
           </p>
           <Link
             to="/media/compare"
@@ -381,6 +386,9 @@ export function DiscoverPage() {
             )
           )}
       </HorizontalScrollRow>
+
+      {/* Preference Profile */}
+      <PreferenceProfile data={profile.data?.data} isLoading={profile.isLoading} />
     </div>
   );
 }
