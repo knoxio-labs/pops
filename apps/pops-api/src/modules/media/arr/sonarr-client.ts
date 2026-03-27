@@ -83,13 +83,26 @@ export class SonarrClient extends ArrBaseClient {
 
   /**
    * Check if a series exists in Sonarr by TVDB ID.
-   * Returns the Sonarr ID and monitored state if found.
+   * Returns the Sonarr ID, monitored state, and per-season monitoring flags.
    */
-  async checkSeries(tvdbId: number): Promise<{ exists: boolean; sonarrId?: number; monitored?: boolean }> {
+  async checkSeries(tvdbId: number): Promise<{
+    exists: boolean;
+    sonarrId?: number;
+    monitored?: boolean;
+    seasons?: Array<{ seasonNumber: number; monitored: boolean }>;
+  }> {
     const allSeries = await this.getSeries();
     const match = allSeries.find((s) => s.tvdbId === tvdbId);
     if (!match) return { exists: false };
-    return { exists: true, sonarrId: match.id, monitored: match.monitored };
+
+    // Fetch full series to get per-season monitoring state
+    const full = await this.get<SonarrSeriesFull>(`/series/${match.id}`);
+    const seasons = full.seasons.map((s) => ({
+      seasonNumber: s.seasonNumber,
+      monitored: s.monitored,
+    }));
+
+    return { exists: true, sonarrId: match.id, monitored: match.monitored, seasons };
   }
 
   /**

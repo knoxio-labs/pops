@@ -55,8 +55,14 @@ vi.mock("../lib/trpc", () => ({
         },
         updateSeasonMonitoring: {
           useMutation: (opts: Record<string, unknown>) => {
-            mockSeasonMonitorMutation.mockImplementation(() => {
+            mockSeasonMonitorMutation.mockImplementation((variables: { seasonNumber: number }) => {
               if (typeof opts.onSuccess === "function") (opts.onSuccess as () => void)();
+              if (typeof opts.onSettled === "function")
+                (opts.onSettled as (d: unknown, e: unknown, v: { seasonNumber: number }) => void)(
+                  undefined,
+                  undefined,
+                  variables
+                );
             });
             return { mutate: mockSeasonMonitorMutation, isPending: false };
           },

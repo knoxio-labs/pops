@@ -152,9 +152,30 @@ const SEASONS = [
 ];
 
 const EPISODES = [
-  { id: 101, episodeNumber: 1, name: "Pilot", overview: "Walter starts cooking.", airDate: "2008-01-20", runtime: 58 },
-  { id: 102, episodeNumber: 2, name: "Cat's in the Bag", overview: "Clean up.", airDate: "2008-01-27", runtime: 48 },
-  { id: 103, episodeNumber: 3, name: "...And the Bag's in the River", overview: null, airDate: "2008-02-10", runtime: 48 },
+  {
+    id: 101,
+    episodeNumber: 1,
+    name: "Pilot",
+    overview: "Walter starts cooking.",
+    airDate: "2008-01-20",
+    runtime: 58,
+  },
+  {
+    id: 102,
+    episodeNumber: 2,
+    name: "Cat's in the Bag",
+    overview: "Clean up.",
+    airDate: "2008-01-27",
+    runtime: 48,
+  },
+  {
+    id: 103,
+    episodeNumber: 3,
+    name: "...And the Bag's in the River",
+    overview: null,
+    airDate: "2008-02-10",
+    runtime: 48,
+  },
 ];
 
 const PROGRESS = {
@@ -182,7 +203,12 @@ function setupQueries(
     seasons?: typeof SEASONS;
     episodes?: typeof EPISODES;
     progress?: typeof PROGRESS | null;
-    sonarr?: { exists: boolean; sonarrId?: number; monitored?: boolean } | null;
+    sonarr?: {
+      exists: boolean;
+      sonarrId?: number;
+      monitored?: boolean;
+      seasons?: Array<{ seasonNumber: number; monitored: boolean }>;
+    } | null;
     watchHistory?: Array<{ id: number; mediaId: number }>;
   } = {}
 ) {
@@ -200,7 +226,12 @@ function setupQueries(
     isLoading: false,
   });
   mockWatchHistoryQuery.mockReturnValue({
-    data: { data: overrides.watchHistory ?? [{ id: 1001, mediaId: 101 }, { id: 1002, mediaId: 102 }] },
+    data: {
+      data: overrides.watchHistory ?? [
+        { id: 1001, mediaId: 101 },
+        { id: 1002, mediaId: 102 },
+      ],
+    },
     isLoading: false,
   });
   mockProgressQuery.mockReturnValue({
@@ -208,7 +239,17 @@ function setupQueries(
     isLoading: false,
   });
   mockCheckSeriesQuery.mockReturnValue({
-    data: { data: overrides.sonarr ?? { exists: true, sonarrId: 42, monitored: true } },
+    data: {
+      data: overrides.sonarr ?? {
+        exists: true,
+        sonarrId: 42,
+        monitored: true,
+        seasons: [
+          { seasonNumber: 1, monitored: true },
+          { seasonNumber: 2, monitored: true },
+        ],
+      },
+    },
     isLoading: false,
   });
 }

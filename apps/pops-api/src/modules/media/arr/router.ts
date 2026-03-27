@@ -336,7 +336,11 @@ export const arrRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-        await arrService.updateSeasonMonitoring(input.sonarrId, input.seasonNumber, input.monitored);
+        await arrService.updateSeasonMonitoring(
+          input.sonarrId,
+          input.seasonNumber,
+          input.monitored
+        );
         return { message: `Season ${input.seasonNumber} monitoring set to ${input.monitored}` };
       } catch (err) {
         if (err instanceof ArrApiError) {
@@ -360,7 +364,9 @@ export const arrRouter = router({
     .mutation(async ({ input }) => {
       try {
         await arrService.updateEpisodeMonitoring(input.episodeIds, input.monitored);
-        return { message: `Updated ${input.episodeIds.length} episode(s) monitoring to ${input.monitored}` };
+        return {
+          message: `Updated ${input.episodeIds.length} episode(s) monitoring to ${input.monitored}`,
+        };
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({

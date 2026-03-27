@@ -1,6 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, PageHeader, Button, Switch, Skeleton } from "@pops/ui";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  PageHeader,
+  Button,
+  Switch,
+  Skeleton,
+} from "@pops/ui";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { EpisodeList } from "../components/EpisodeList";
@@ -83,7 +91,11 @@ export function SeasonDetailPage() {
 
   const sonarrSeries = sonarrData?.data;
 
+  const sonarrSeasonData = sonarrSeries?.seasons?.find(
+    (s: { seasonNumber: number }) => s.seasonNumber === seasonNum
+  );
   const [seasonMonitored, setSeasonMonitored] = useState<boolean | null>(null);
+  const effectiveMonitored = seasonMonitored ?? sonarrSeasonData?.monitored ?? false;
 
   const seasonMonitorMutation = trpc.media.arr.updateSeasonMonitoring.useMutation({
     onError: (err: { message: string }) => {
@@ -283,27 +295,32 @@ export function SeasonDetailPage() {
             </div>
           )}
 
-          {sonarrSeries?.exists && sonarrSeries.sonarrId != null && (
-            <div className="flex items-center gap-2 mt-3">
-              <Switch
-                size="sm"
-                checked={seasonMonitored ?? true}
-                aria-label={`Monitor ${seasonLabel}`}
-                disabled={seasonMonitorMutation.isPending}
-                onCheckedChange={(checked: boolean) => {
-                  setSeasonMonitored(checked);
-                  seasonMonitorMutation.mutate({
-                    sonarrId: sonarrSeries.sonarrId!,
-                    seasonNumber: seasonNum,
-                    monitored: checked,
-                  });
-                }}
-              />
-              <span className="text-sm text-muted-foreground">
-                {(seasonMonitored ?? true) ? "Monitored" : "Unmonitored"}
-              </span>
-            </div>
-          )}
+          {sonarrSeries?.exists &&
+            sonarrSeries.sonarrId != null &&
+            (() => {
+              const sonarrId = sonarrSeries.sonarrId;
+              return (
+                <div className="flex items-center gap-2 mt-3">
+                  <Switch
+                    size="sm"
+                    checked={effectiveMonitored}
+                    aria-label={`Monitor ${seasonLabel}`}
+                    disabled={seasonMonitorMutation.isPending}
+                    onCheckedChange={(checked: boolean) => {
+                      setSeasonMonitored(checked);
+                      seasonMonitorMutation.mutate({
+                        sonarrId,
+                        seasonNumber: seasonNum,
+                        monitored: checked,
+                      });
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {effectiveMonitored ? "Monitored" : "Unmonitored"}
+                  </span>
+                </div>
+              );
+            })()}
 
           {season?.id && (
             <div className="flex gap-2 mt-3">

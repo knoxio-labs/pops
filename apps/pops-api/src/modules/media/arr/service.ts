@@ -289,7 +289,12 @@ export async function getSonarrCalendar(start: string, end: string): Promise<Cal
 }
 
 /** Check if a series exists in Sonarr by TVDB ID. */
-export async function checkSeries(tvdbId: number): Promise<{ exists: boolean; sonarrId?: number; monitored?: boolean }> {
+export async function checkSeries(tvdbId: number): Promise<{
+  exists: boolean;
+  sonarrId?: number;
+  monitored?: boolean;
+  seasons?: Array<{ seasonNumber: number; monitored: boolean }>;
+}> {
   const client = getSonarrClient();
   if (!client) return { exists: false };
   return client.checkSeries(tvdbId);
@@ -305,6 +310,7 @@ export async function updateSeasonMonitoring(
   if (!client) throw new Error("Sonarr not configured");
   const result = await client.updateSeasonMonitoring(sonarrId, seasonNumber, monitored);
   showStatusCache.clear();
+  client.clearCache();
   return result;
 }
 
@@ -316,6 +322,8 @@ export async function updateEpisodeMonitoring(
   const client = getSonarrClient();
   if (!client) throw new Error("Sonarr not configured");
   await client.updateEpisodeMonitoring(episodeIds, monitored);
+  showStatusCache.clear();
+  client.clearCache();
 }
 
 /** Clear all cached statuses. */

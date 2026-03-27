@@ -74,11 +74,15 @@ export function TvShowDetailPage() {
   const sonarrSeries = sonarrData?.data;
 
   const [optimisticMonitoring, setOptimisticMonitoring] = useState<Map<number, boolean>>(new Map());
+  const [pendingSeasons, setPendingSeasons] = useState<Set<number>>(new Set());
 
   const utils = trpc.useUtils();
 
   const seasonMonitorMutation = trpc.media.arr.updateSeasonMonitoring.useMutation({
-    onError: (err: { message: string }, variables: { seasonNumber: number; monitored: boolean }) => {
+    onError: (
+      err: { message: string },
+      variables: { seasonNumber: number; monitored: boolean }
+    ) => {
       setOptimisticMonitoring((prev) => {
         const next = new Map(prev);
         next.set(variables.seasonNumber, !variables.monitored);
@@ -88,6 +92,13 @@ export function TvShowDetailPage() {
     },
     onSuccess: () => {
       void utils.media.arr.checkSeries.invalidate();
+    },
+    onSettled: (_data: unknown, _err: unknown, variables: { seasonNumber: number }) => {
+      setPendingSeasons((prev) => {
+        const next = new Set(prev);
+        next.delete(variables.seasonNumber);
+        return next;
+      });
     },
   });
 
@@ -333,8 +344,13 @@ export function TvShowDetailPage() {
                       ? "Specials"
                       : (season.name ?? `Season ${season.seasonNumber}`);
 
+                  const sonarrSeason = sonarrSeries?.seasons?.find(
+                    (s: { seasonNumber: number }) => s.seasonNumber === season.seasonNumber
+                  );
                   const isMonitored =
-                    optimisticMonitoring.get(season.seasonNumber) ?? true;
+                    optimisticMonitoring.get(season.seasonNumber) ??
+                    sonarrSeason?.monitored ??
+                    false;
 
                   return (
                     <div
@@ -361,26 +377,36 @@ export function TvShowDetailPage() {
                           </div>
                         )}
                       </Link>
-                      {sonarrSeries?.exists && sonarrSeries.sonarrId != null && (
-                        <Switch
-                          size="sm"
-                          checked={isMonitored}
-                          aria-label={`Monitor ${label}`}
-                          disabled={seasonMonitorMutation.isPending}
-                          onCheckedChange={(checked: boolean) => {
-                            setOptimisticMonitoring((prev) => {
-                              const next = new Map(prev);
-                              next.set(season.seasonNumber, checked);
-                              return next;
-                            });
-                            seasonMonitorMutation.mutate({
-                              sonarrId: sonarrSeries.sonarrId!,
-                              seasonNumber: season.seasonNumber,
-                              monitored: checked,
-                            });
-                          }}
-                        />
-                      )}
+                      {sonarrSeries?.exists &&
+                        sonarrSeries.sonarrId != null &&
+                        (() => {
+                          const sonarrId = sonarrSeries.sonarrId;
+                          return (
+                            <Switch
+                              size="sm"
+                              checked={isMonitored}
+                              aria-label={`Monitor ${label}`}
+                              disabled={pendingSeasons.has(season.seasonNumber)}
+                              onCheckedChange={(checked: boolean) => {
+                                setOptimisticMonitoring((prev) => {
+                                  const next = new Map(prev);
+                                  next.set(season.seasonNumber, checked);
+                                  return next;
+                                });
+                                setPendingSeasons((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(season.seasonNumber);
+                                  return next;
+                                });
+                                seasonMonitorMutation.mutate({
+                                  sonarrId,
+                                  seasonNumber: season.seasonNumber,
+                                  monitored: checked,
+                                });
+                              }}
+                            />
+                          );
+                        })()}
                     </div>
                   );
                 }
