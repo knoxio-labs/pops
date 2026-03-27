@@ -44,9 +44,16 @@ function makeItem(
   };
 }
 
+/** Return an ISO date string N days from today. */
+function daysFromNow(days: number): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: loaded, empty data
   mockWarrantiesQuery.mockReturnValue({
     data: { data: [] },
     isLoading: false,
@@ -64,7 +71,6 @@ describe("WarrantiesPage", () => {
       refetch: vi.fn(),
     });
     renderPage();
-    // Skeleton renders multiple placeholder elements
     expect(screen.queryByText("No items with warranty dates")).not.toBeInTheDocument();
     expect(screen.queryByText("Browse Items")).not.toBeInTheDocument();
   });
@@ -92,63 +98,208 @@ describe("WarrantiesPage", () => {
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
-  it("expands Expired section when all warranties are expired", () => {
-    const pastDate = "2020-01-01";
-    mockWarrantiesQuery.mockReturnValue({
-      data: {
-        data: [
-          makeItem({ id: "1", itemName: "Old Laptop", warrantyExpires: pastDate }),
-          makeItem({ id: "2", itemName: "Old Phone", warrantyExpires: "2019-06-15" }),
-        ],
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
+  describe("5-tier grouping", () => {
+    it("shows critical tier for items under 30 days", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Laptop", warrantyExpires: daysFromNow(10) }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Critical — Under 30 Days")).toBeInTheDocument();
+      expect(screen.getByText("Laptop")).toBeInTheDocument();
     });
-    renderPage();
-    // Expired section should be expanded (defaultOpen) — items should be visible
-    expect(screen.getByText("Old Laptop")).toBeInTheDocument();
-    expect(screen.getByText("Old Phone")).toBeInTheDocument();
+
+    it("shows warning tier for items 30-60 days", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Tablet", warrantyExpires: daysFromNow(45) }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Warning — 30 to 60 Days")).toBeInTheDocument();
+      expect(screen.getByText("Tablet")).toBeInTheDocument();
+    });
+
+    it("shows caution tier for items 60-90 days", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Monitor", warrantyExpires: daysFromNow(75) }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Caution — 60 to 90 Days")).toBeInTheDocument();
+      expect(screen.getByText("Monitor")).toBeInTheDocument();
+    });
+
+    it("shows active tier for items over 90 days", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Phone", warrantyExpires: daysFromNow(200) }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText("Phone")).toBeInTheDocument();
+    });
+
+    it("shows expired tier for past-date items", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Old Laptop", warrantyExpires: "2020-01-01" }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Expired")).toBeInTheDocument();
+      // Expired section auto-expands when it's the only tier
+      expect(screen.getByText("Old Laptop")).toBeInTheDocument();
+    });
+
+    it("groups items across all 5 tiers simultaneously", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Critical Item", warrantyExpires: daysFromNow(5) }),
+            makeItem({ id: "2", itemName: "Warning Item", warrantyExpires: daysFromNow(40) }),
+            makeItem({ id: "3", itemName: "Caution Item", warrantyExpires: daysFromNow(70) }),
+            makeItem({ id: "4", itemName: "Active Item", warrantyExpires: daysFromNow(180) }),
+            makeItem({ id: "5", itemName: "Expired Item", warrantyExpires: "2020-01-01" }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Critical — Under 30 Days")).toBeInTheDocument();
+      expect(screen.getByText("Warning — 30 to 60 Days")).toBeInTheDocument();
+      expect(screen.getByText("Caution — 60 to 90 Days")).toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText("Expired")).toBeInTheDocument();
+      // Expiring tiers always visible (not collapsible)
+      expect(screen.getByText("Critical Item")).toBeInTheDocument();
+      expect(screen.getByText("Warning Item")).toBeInTheDocument();
+      expect(screen.getByText("Caution Item")).toBeInTheDocument();
+      // Active expanded by default
+      expect(screen.getByText("Active Item")).toBeInTheDocument();
+      // Expired collapsed when other items exist
+      expect(screen.queryByText("Expired Item")).not.toBeInTheDocument();
+    });
   });
 
-  it("collapses Expired section when active items exist", () => {
-    const futureDate = "2030-06-01";
-    const pastDate = "2020-01-01";
-    mockWarrantiesQuery.mockReturnValue({
-      data: {
-        data: [
-          makeItem({ id: "1", itemName: "New Laptop", warrantyExpires: futureDate }),
-          makeItem({ id: "2", itemName: "Old Phone", warrantyExpires: pastDate }),
-        ],
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
+  describe("collapsible behavior", () => {
+    it("expands Expired section when all warranties are expired", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Old Laptop", warrantyExpires: "2020-01-01" }),
+            makeItem({ id: "2", itemName: "Old Phone", warrantyExpires: "2019-06-15" }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Old Laptop")).toBeInTheDocument();
+      expect(screen.getByText("Old Phone")).toBeInTheDocument();
     });
-    renderPage();
-    // Active item should be visible
-    expect(screen.getByText("New Laptop")).toBeInTheDocument();
-    // Expired section is collapsed by default — items should not be visible
-    expect(screen.queryByText("Old Phone")).not.toBeInTheDocument();
+
+    it("collapses Expired section when active items exist", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "New Laptop", warrantyExpires: daysFromNow(200) }),
+            makeItem({ id: "2", itemName: "Old Phone", warrantyExpires: "2020-01-01" }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("New Laptop")).toBeInTheDocument();
+      expect(screen.queryByText("Old Phone")).not.toBeInTheDocument();
+    });
+
+    it("shows Expired items after expanding collapsed section", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "New Laptop", warrantyExpires: daysFromNow(200) }),
+            makeItem({ id: "2", itemName: "Old Phone", warrantyExpires: "2020-01-01" }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      fireEvent.click(screen.getByText("Expired"));
+      expect(screen.getByText("Old Phone")).toBeInTheDocument();
+    });
+
+    it("collapses Expired when expiring items exist (not just active)", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Expiring Item", warrantyExpires: daysFromNow(15) }),
+            makeItem({ id: "2", itemName: "Expired Item", warrantyExpires: "2020-01-01" }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.getByText("Expiring Item")).toBeInTheDocument();
+      expect(screen.queryByText("Expired Item")).not.toBeInTheDocument();
+    });
   });
 
-  it("shows Expired items after expanding collapsed section", () => {
-    const futureDate = "2030-06-01";
-    const pastDate = "2020-01-01";
-    mockWarrantiesQuery.mockReturnValue({
-      data: {
-        data: [
-          makeItem({ id: "1", itemName: "New Laptop", warrantyExpires: futureDate }),
-          makeItem({ id: "2", itemName: "Old Phone", warrantyExpires: pastDate }),
-        ],
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
+  describe("empty tiers are hidden", () => {
+    it("does not render tier headers for empty tiers", () => {
+      mockWarrantiesQuery.mockReturnValue({
+        data: {
+          data: [
+            makeItem({ id: "1", itemName: "Active Only", warrantyExpires: daysFromNow(200) }),
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      renderPage();
+      expect(screen.queryByText("Critical — Under 30 Days")).not.toBeInTheDocument();
+      expect(screen.queryByText("Warning — 30 to 60 Days")).not.toBeInTheDocument();
+      expect(screen.queryByText("Caution — 60 to 90 Days")).not.toBeInTheDocument();
+      expect(screen.queryByText("Expired")).not.toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
     });
-    renderPage();
-    // Click to expand Expired section
-    fireEvent.click(screen.getByText("Expired"));
-    expect(screen.getByText("Old Phone")).toBeInTheDocument();
   });
 });
