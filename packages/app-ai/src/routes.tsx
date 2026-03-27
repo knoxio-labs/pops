@@ -33,7 +33,7 @@ export const navConfig: AppNavConfig = {
   icon: "Bot",
   color: "violet",
   basePath: "/ai",
-  items: [{ path: "", label: "AI Usage", icon: "BarChart3" }],
+  items: [{ path: "", label: "AI Usage", icon: "Brain" }],
 };
 
 export const routes: RouteObject[] = [{ index: true, element: <AiUsagePage /> }];
