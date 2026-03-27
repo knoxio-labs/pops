@@ -68,6 +68,11 @@ const HistoryPage = lazy(() =>
     default: m.HistoryPage,
   }))
 );
+const CalendarPage = lazy(() =>
+  import("./pages/CalendarPage").then((m) => ({
+    default: m.CalendarPage,
+  }))
+);
 
 /** Shared navigation types (mirrored from shell to avoid circular dependency) */
 export interface AppNavItem {
@@ -116,4 +121,5 @@ export const routes: RouteObject[] = [
   { path: "quick-pick", element: <QuickPickPage /> },
   { path: "plex", element: <PlexSettingsPage /> },
   { path: "arr", element: <ArrSettingsPage /> },
+  { path: "arr/calendar", element: <CalendarPage /> },
 ];

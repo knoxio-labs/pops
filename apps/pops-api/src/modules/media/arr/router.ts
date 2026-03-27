@@ -125,6 +125,29 @@ export const arrRouter = router({
     }
   }),
 
+  /** Get upcoming episodes from Sonarr calendar. */
+  getCalendar: protectedProcedure
+    .input(
+      z.object({
+        start: z.string(),
+        end: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const episodes = await arrService.getSonarrCalendar(input.start, input.end);
+        return { data: episodes };
+      } catch (err) {
+        if (err instanceof ArrApiError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Sonarr calendar error: ${err.message}`,
+          });
+        }
+        throw err;
+      }
+    }),
+
   /** Get Sonarr status for a TV show by TVDB ID. */
   getShowStatus: protectedProcedure
     .input(z.object({ tvdbId: z.number().int().positive() }))
