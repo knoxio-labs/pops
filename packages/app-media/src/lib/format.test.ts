@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatRuntime, formatCurrency, formatLanguage } from "./format";
+import { formatRuntime, formatCurrency, formatLanguage, formatEpisodeCode } from "./format";
 
 describe("formatRuntime", () => {
   it("formats hours and minutes", () => {
@@ -57,5 +57,23 @@ describe("formatLanguage", () => {
 
   it("returns uppercased code for unknown languages", () => {
     expect(formatLanguage("xx")).toBe("XX");
+  });
+});
+
+describe("formatEpisodeCode", () => {
+  it("zero-pads single-digit season and episode", () => {
+    expect(formatEpisodeCode(1, 3)).toBe("S01E03");
+  });
+
+  it("zero-pads single-digit season with double-digit episode", () => {
+    expect(formatEpisodeCode(2, 10)).toBe("S02E10");
+  });
+
+  it("handles double-digit season and episode", () => {
+    expect(formatEpisodeCode(12, 24)).toBe("S12E24");
+  });
+
+  it("handles triple-digit episode numbers", () => {
+    expect(formatEpisodeCode(1, 100)).toBe("S01E100");
   });
 });
