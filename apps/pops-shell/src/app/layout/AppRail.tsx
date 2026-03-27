@@ -82,7 +82,7 @@ export function AppRail({ className }: AppRailProps) {
                   className={cn(
                     "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300",
                     isActive
-                      ? "bg-app-accent text-app-accent-foreground shadow-lg shadow-black/20 rounded-xl scale-100"
+                      ? "bg-app-accent text-app-accent-foreground shadow-lg shadow-foreground/20 rounded-xl scale-100"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground hover:rounded-xl scale-95 hover:scale-100"
                   )}
                 >
