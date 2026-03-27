@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 
-const mockReportQuery = vi.fn();
+const mockInsuranceReportQuery = vi.fn();
+const mockLocationsTreeQuery = vi.fn();
 const mockNavigate = vi.fn();
 
 vi.mock("react-router", async () => {
@@ -18,7 +19,12 @@ vi.mock("../lib/trpc", () => ({
     inventory: {
       reports: {
         insuranceReport: {
-          useQuery: (...args: unknown[]) => mockReportQuery(...args),
+          useQuery: (...args: unknown[]) => mockInsuranceReportQuery(...args),
+        },
+      },
+      locations: {
+        tree: {
+          useQuery: (...args: unknown[]) => mockLocationsTreeQuery(...args),
         },
       },
     },
@@ -37,151 +43,318 @@ vi.mock("@pops/ui", () => ({
   ),
 }));
 
+/* ------------------------------------------------------------------ */
+/*  Mock LocationPicker to avoid popover complexity in tests           */
+/* ------------------------------------------------------------------ */
+vi.mock("../components/LocationPicker", () => ({
+  LocationPicker: ({
+    value,
+    onChange,
+    placeholder,
+  }: {
+    value: string | null;
+    onChange: (id: string | null) => void;
+    placeholder: string;
+  }) => (
+    <button
+      data-testid="location-picker"
+      data-value={value ?? ""}
+      onClick={() => onChange("loc-1")}
+    >
+      {value ? `Selected: ${value}` : placeholder}
+    </button>
+  ),
+}));
+
 import { InsuranceReportPage } from "./InsuranceReportPage";
 
-const mockReport = {
-  data: {
-    totalItems: 5,
-    totalValue: 15000,
-    groups: [
-      {
-        locationId: "loc-1",
-        locationName: "Living Room",
-        items: [
-          {
-            id: "item-1",
-            itemName: "MacBook Pro",
-            assetId: "ELEC01",
-            brand: "Apple",
-            condition: "Excellent",
-            warrantyExpires: "2027-06-15",
-            replacementValue: 3500,
-            photoPath: "macbook.jpg",
-            locationId: "loc-1",
-            locationName: "Living Room",
-          },
-          {
-            id: "item-2",
-            itemName: "Monitor",
-            assetId: null,
-            brand: null,
-            condition: null,
-            warrantyExpires: null,
-            replacementValue: null,
-            photoPath: null,
-            locationId: "loc-1",
-            locationName: "Living Room",
-          },
-        ],
-      },
-      {
-        locationId: "loc-2",
-        locationName: "Office",
-        items: [
-          {
-            id: "item-3",
-            itemName: "Desk",
-            assetId: "FURN01",
-            brand: "IKEA",
-            condition: "Good",
-            warrantyExpires: null,
-            replacementValue: 800,
-            photoPath: null,
-            locationId: "loc-2",
-            locationName: "Office",
-          },
-        ],
-      },
-    ],
-  },
+/* ------------------------------------------------------------------ */
+/*  Fixtures                                                          */
+/* ------------------------------------------------------------------ */
+const sampleReport = {
+  totalItems: 3,
+  totalValue: 5000,
+  groups: [
+    {
+      locationId: "loc-1",
+      locationName: "Living Room",
+      items: [
+        {
+          id: "item-1",
+          itemName: "Television",
+          assetId: "TV-001",
+          brand: "Samsung",
+          condition: "good",
+          warrantyExpires: "2027-06-15",
+          replacementValue: 2000,
+          photoPath: "tv.jpg",
+          locationId: "loc-1",
+          locationName: "Living Room",
+        },
+        {
+          id: "item-2",
+          itemName: "Sofa",
+          assetId: null,
+          brand: null,
+          condition: null,
+          warrantyExpires: null,
+          replacementValue: 1500,
+          photoPath: null,
+          locationId: "loc-1",
+          locationName: "Living Room",
+        },
+      ],
+    },
+    {
+      locationId: "loc-2",
+      locationName: "Kitchen",
+      items: [
+        {
+          id: "item-3",
+          itemName: "Toaster",
+          assetId: "KIT-003",
+          brand: "Breville",
+          condition: "fair",
+          warrantyExpires: "2025-01-01",
+          replacementValue: 1500,
+          photoPath: "toaster.jpg",
+          locationId: "loc-2",
+          locationName: "Kitchen",
+        },
+      ],
+    },
+  ],
 };
 
-function renderPage(locationId?: string) {
-  const path = locationId
-    ? `/inventory/report?locationId=${locationId}`
-    : "/inventory/report";
+const locationTree = [
+  { id: "loc-1", name: "Living Room", parentId: null, children: [] },
+  { id: "loc-2", name: "Kitchen", parentId: null, children: [] },
+];
+
+function renderPage(initialEntry = "/inventory/insurance-report") {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/inventory/report" element={<InsuranceReportPage />} />
+        <Route path="/inventory/insurance-report" element={<InsuranceReportPage />} />
       </Routes>
     </MemoryRouter>
   );
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockReportQuery.mockReturnValue({
-    data: mockReport,
-    isLoading: false,
-  });
-});
-
+/* ------------------------------------------------------------------ */
+/*  Tests                                                             */
+/* ------------------------------------------------------------------ */
 describe("InsuranceReportPage", () => {
-  it("renders report title", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLocationsTreeQuery.mockReturnValue({ data: { data: locationTree } });
+  });
+
+  it("shows loading skeleton while data is fetching", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+    renderPage();
+    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+    // The loading state renders Skeleton components
+    expect(screen.queryByText("Insurance Report")).not.toBeInTheDocument();
+  });
+
+  it("shows error state when report fails to load", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText("Failed to load report.")).toBeInTheDocument();
+  });
+
+  it("renders report header with title and date", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     expect(screen.getByText("Insurance Report")).toBeInTheDocument();
+    expect(screen.getByText(/Generated/)).toBeInTheDocument();
   });
 
-  it("renders total items and total value", () => {
+  it("renders summary cards with totals", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
-    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("$5,000")).toBeInTheDocument();
   });
 
-  it("renders Print button", () => {
-    renderPage();
-    expect(screen.getByText("Print")).toBeInTheDocument();
-  });
-
-  it("renders location group headers", () => {
+  it("renders location groups with item counts", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     expect(screen.getByText(/Living Room/)).toBeInTheDocument();
-    expect(screen.getByText(/Office/)).toBeInTheDocument();
+    expect(screen.getByText(/Kitchen/)).toBeInTheDocument();
+    expect(screen.getByText("(2 items)")).toBeInTheDocument();
+    expect(screen.getByText("(1 item)")).toBeInTheDocument();
   });
 
-  it("renders item names", () => {
+  it("renders item details in table rows", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
-    expect(screen.getByText("MacBook Pro")).toBeInTheDocument();
-    expect(screen.getByText("Monitor")).toBeInTheDocument();
-    expect(screen.getByText("Desk")).toBeInTheDocument();
+    expect(screen.getByText("Television")).toBeInTheDocument();
+    expect(screen.getByText("Sofa")).toBeInTheDocument();
+    expect(screen.getByText("Toaster")).toBeInTheDocument();
+    expect(screen.getByText("Samsung")).toBeInTheDocument();
+  });
+
+  it("renders photo with alt text when photoPath exists", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    const img = screen.getByAltText("Photo of Television");
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute("src", "/inventory/photos/tv.jpg");
   });
 
   it("renders photo thumbnails with print max-width class", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
-    const img = document.querySelector('img[src*="macbook.jpg"]');
+    const img = screen.getByAltText("Photo of Television");
     expect(img).toBeInTheDocument();
-    expect(img?.className).toContain("print:max-w-[200px]");
+    expect(img.className).toContain("print:max-w-[200px]");
   });
 
   it("renders photo thumbnails with break-inside-avoid for print", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
-    const img = document.querySelector('img[src*="macbook.jpg"]');
+    const img = screen.getByAltText("Photo of Television");
     expect(img?.className).toContain("print:break-inside-avoid");
   });
 
+  it("renders fallback div with aria-label when no photo", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    const fallbacks = screen.getAllByLabelText("No photo available");
+    expect(fallbacks.length).toBeGreaterThan(0);
+  });
+
+  it("shows expired warranty badge", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText("Expired")).toBeInTheDocument();
+  });
+
+  it("shows None for items without warranty", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText("None")).toBeInTheDocument();
+  });
+
+  it("shows dashes for null values", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    // Sofa has no brand, condition — should show dashes
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThan(0);
+  });
+
+  it("renders location picker with All locations placeholder", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    const picker = screen.getByTestId("location-picker");
+    expect(picker).toHaveTextContent("All locations");
+  });
+
+  it("passes locationId to location picker when in URL", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage("/inventory/insurance-report?locationId=loc-1");
+    const picker = screen.getByTestId("location-picker");
+    expect(picker).toHaveAttribute("data-value", "loc-1");
+  });
+
+  it("renders Export CSV button", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText("Export CSV")).toBeInTheDocument();
+  });
+
+  it("renders Print / PDF button", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText("Print / PDF")).toBeInTheDocument();
+  });
+
   it("applies break-inside-avoid to item rows for print", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     const rows = document.querySelectorAll("tbody tr");
-    expect(rows.length).toBe(3); // 2 items in Living Room + 1 in Office
+    expect(rows.length).toBe(3); // 2 items in Living Room + 1 in Kitchen
     rows.forEach((row) => {
       expect(row.className).toContain("print:break-inside-avoid");
     });
   });
 
   it("applies page-break-before on second location group (not first)", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
-    // Location groups are divs containing h2 headers
     const headers = document.querySelectorAll("h2");
     expect(headers.length).toBe(2);
-    // First group parent should NOT have break-before-page
     const firstGroup = headers[0]!.parentElement!;
     expect(firstGroup.className).not.toContain("print:break-before-page");
-    // Second group parent should have break-before-page
     const secondGroup = headers[1]!.parentElement!;
     expect(secondGroup.className).toContain("print:break-before-page");
   });
 
   it("applies print font sizes to section headers", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     const headers = document.querySelectorAll("h2");
     headers.forEach((h) => {
@@ -190,12 +363,20 @@ describe("InsuranceReportPage", () => {
   });
 
   it("applies print base font size to container", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     const container = document.querySelector("[class*='print:text-\\[11pt\\]']");
     expect(container).toBeInTheDocument();
   });
 
   it("applies print border classes to table for structure", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     const tables = document.querySelectorAll("table");
     tables.forEach((table) => {
@@ -205,6 +386,10 @@ describe("InsuranceReportPage", () => {
   });
 
   it("removes badge backgrounds for print", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
     renderPage();
     const badges = screen.getAllByTestId("badge");
     badges.forEach((badge) => {
@@ -212,21 +397,8 @@ describe("InsuranceReportPage", () => {
     });
   });
 
-  it("shows dashes for null values", () => {
-    renderPage();
-    // Monitor has no brand, condition, value — should show dashes
-    const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThan(0);
-  });
-
-  it("shows loading skeleton", () => {
-    mockReportQuery.mockReturnValue({ data: null, isLoading: true });
-    renderPage();
-    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
-  });
-
-  it("shows empty state when no groups", () => {
-    mockReportQuery.mockReturnValue({
+  it("shows empty state when no items found", () => {
+    mockInsuranceReportQuery.mockReturnValue({
       data: { data: { totalItems: 0, totalValue: 0, groups: [] } },
       isLoading: false,
     });
@@ -234,9 +406,33 @@ describe("InsuranceReportPage", () => {
     expect(screen.getByText("No inventory items found.")).toBeInTheDocument();
   });
 
-  it("shows error state when report fails to load", () => {
-    mockReportQuery.mockReturnValue({ data: null, isLoading: false });
+  it("calls window.print when Print / PDF button is clicked", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {});
     renderPage();
-    expect(screen.getByText("Failed to load report.")).toBeInTheDocument();
+    const printBtn = screen.getByText("Print / PDF");
+    fireEvent.click(printBtn);
+    expect(printSpy).toHaveBeenCalled();
+    printSpy.mockRestore();
+  });
+
+  it("triggers CSV download when Export CSV is clicked", () => {
+    mockInsuranceReportQuery.mockReturnValue({
+      data: { data: sampleReport },
+      isLoading: false,
+    });
+    const createObjectURLSpy = vi.fn(() => "blob:test");
+    const revokeObjectURLSpy = vi.fn();
+    global.URL.createObjectURL = createObjectURLSpy;
+    global.URL.revokeObjectURL = revokeObjectURLSpy;
+
+    renderPage();
+    const csvBtn = screen.getByText("Export CSV");
+    fireEvent.click(csvBtn);
+    expect(createObjectURLSpy).toHaveBeenCalled();
+    expect(revokeObjectURLSpy).toHaveBeenCalled();
   });
 });

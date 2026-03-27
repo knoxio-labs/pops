@@ -5,11 +5,12 @@
  * warranty status, value, and photo thumbnail. Summary totals at bottom.
  * PRD-023/US-4 (tb-133).
  */
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router";
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer, Download } from "lucide-react";
 import { Skeleton, AssetIdBadge, ConditionBadge, Badge, type Condition } from "@pops/ui";
 import { trpc } from "../lib/trpc";
+import { LocationPicker } from "../components/LocationPicker";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -42,14 +43,67 @@ function warrantyStatus(expiryStr: string | null): {
   return { label: formatDate(expiryStr), variant: "secondary" };
 }
 
+interface ReportItem {
+  id: string;
+  itemName: string;
+  assetId: string | null;
+  brand: string | null;
+  condition: string | null;
+  warrantyExpires: string | null;
+  replacementValue: number | null;
+  photoPath: string | null;
+  locationId: string | null;
+  locationName: string | null;
+}
+
+interface ReportGroup {
+  locationId: string | null;
+  locationName: string;
+  items: ReportItem[];
+}
+
+function buildCsvContent(groups: ReportGroup[]): string {
+  const headers = [
+    "Location",
+    "Name",
+    "Asset ID",
+    "Brand",
+    "Condition",
+    "Warranty Expires",
+    "Replacement Value",
+    "Photo",
+  ];
+  const rows: string[][] = [headers];
+
+  for (const group of groups) {
+    for (const item of group.items) {
+      rows.push([
+        group.locationName,
+        item.itemName,
+        item.assetId ?? "",
+        item.brand ?? "",
+        item.condition ?? "",
+        item.warrantyExpires ?? "",
+        item.replacementValue != null ? String(item.replacementValue) : "",
+        item.photoPath ? "Yes" : "No",
+      ]);
+    }
+  }
+
+  return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+
 export function InsuranceReportPage(): React.ReactElement {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const locationId = searchParams.get("locationId") ?? undefined;
 
   const { data, isLoading } = trpc.inventory.reports.insuranceReport.useQuery(
     locationId ? { locationId } : undefined
   );
+
+  const { data: locationsData } = trpc.inventory.locations.tree.useQuery();
+  const locationTree = locationsData?.data ?? [];
 
   const report = data?.data;
 
@@ -60,6 +114,36 @@ export function InsuranceReportPage(): React.ReactElement {
       year: "numeric",
     });
   }, []);
+
+  const handleLocationChange = useCallback(
+    (id: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id) {
+            next.set("locationId", id);
+          } else {
+            next.delete("locationId");
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  const handleExportCsv = useCallback(() => {
+    if (!report) return;
+    const csv = buildCsvContent(report.groups);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `insurance-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [report]);
 
   if (isLoading) {
     return (
@@ -95,13 +179,35 @@ export function InsuranceReportPage(): React.ReactElement {
             )}
           </p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent text-white text-sm font-bold hover:bg-app-accent/80 transition-colors shadow-sm shadow-app-accent/20 print:hidden"
-        >
-          <Printer className="h-4 w-4" />
-          Print
-        </button>
+        <div className="flex items-center gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-bold hover:bg-muted/50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent text-white text-sm font-bold hover:bg-app-accent/80 transition-colors shadow-sm shadow-app-accent/20"
+          >
+            <Printer className="h-4 w-4" />
+            Print / PDF
+          </button>
+        </div>
+      </div>
+
+      {/* Location filter */}
+      <div className="mb-6 max-w-xs print:hidden">
+        <label className="block text-sm font-medium mb-1">Filter by location</label>
+        <LocationPicker
+          value={locationId ?? null}
+          onChange={handleLocationChange}
+          locations={locationTree}
+          placeholder="All locations"
+        />
       </div>
 
       {/* Summary */}
@@ -161,11 +267,15 @@ export function InsuranceReportPage(): React.ReactElement {
                         {item.photoPath ? (
                           <img
                             src={`/inventory/photos/${item.photoPath}`}
-                            alt=""
+                            alt={`Photo of ${item.itemName}`}
                             className="w-8 h-8 rounded object-cover print:w-auto print:h-auto print:max-w-[200px] print:break-inside-avoid"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded bg-muted print:bg-gray-100" />
+                          <div
+                            className="w-8 h-8 rounded bg-muted print:bg-gray-100"
+                            role="img"
+                            aria-label="No photo available"
+                          />
                         )}
                       </td>
                       <td className="py-2 pr-3 font-medium print:border print:border-gray-300 print:p-1 print:text-[12pt]">{item.itemName}</td>
