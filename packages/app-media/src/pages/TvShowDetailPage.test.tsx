@@ -262,10 +262,32 @@ describe("TvShowDetailPage — hero and metadata", () => {
       expect(backdrop).toBeInTheDocument();
     });
 
+    it("does not render backdrop image when backdropUrl is null (fallback gradient)", () => {
+      setupQueries({ backdropUrl: null });
+      const { container } = renderPage();
+      // No backdrop img — only the poster img should exist
+      const images = container.querySelectorAll("img");
+      expect(images).toHaveLength(1);
+      expect(images[0]!.getAttribute("alt")).toBe("Breaking Bad poster");
+      // Hero container still has bg-muted as fallback background
+      const hero = container.querySelector(".bg-muted");
+      expect(hero).toBeInTheDocument();
+      // Gradient overlay is always rendered
+      const gradient = container.querySelector(".bg-gradient-to-t");
+      expect(gradient).toBeInTheDocument();
+    });
+
     it("renders poster image", () => {
       setupQueries();
       renderPage();
       expect(screen.getByAltText("Breaking Bad poster")).toBeInTheDocument();
+    });
+
+    it("renders poster element even when posterUrl is null", () => {
+      setupQueries({ posterUrl: null });
+      const { container } = renderPage();
+      const poster = container.querySelector('img[alt="Breaking Bad poster"]');
+      expect(poster).toBeInTheDocument();
     });
 
     it("renders title in h1", () => {
@@ -273,6 +295,41 @@ describe("TvShowDetailPage — hero and metadata", () => {
       renderPage();
       const heading = screen.getByRole("heading", { level: 1 });
       expect(heading).toHaveTextContent("Breaking Bad");
+    });
+  });
+
+  describe("status badge", () => {
+    it("renders status text for ended show", () => {
+      setupQueries();
+      renderPage();
+      // Status appears in both hero and metadata grid
+      expect(screen.getAllByText("Ended").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders status text for returning series", () => {
+      setupQueries({ status: "Returning Series" });
+      renderPage();
+      expect(screen.getAllByText("Returning Series").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders separator dot between year range and status", () => {
+      setupQueries();
+      renderPage();
+      expect(screen.getByText("·")).toBeInTheDocument();
+    });
+
+    it("does not render separator when no year range", () => {
+      setupQueries({ firstAirDate: null, lastAirDate: null });
+      renderPage();
+      expect(screen.queryByText("·")).not.toBeInTheDocument();
+      // Status still renders in hero and metadata
+      expect(screen.getAllByText("Ended").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("does not render status when status is null", () => {
+      setupQueries({ status: null });
+      renderPage();
+      expect(screen.queryByText("·")).not.toBeInTheDocument();
     });
   });
 
