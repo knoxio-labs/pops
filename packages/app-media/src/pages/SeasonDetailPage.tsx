@@ -111,6 +111,11 @@ export function SeasonDetailPage() {
 
   const utils = trpc.useUtils();
 
+  // Snapshot refs for optimistic rollback (avoids mutation context typing issues)
+  const progressSnapshot =
+    useRef<ReturnType<typeof utils.media.watchHistory.progress.getData>>(undefined);
+  const listSnapshot = useRef<ReturnType<typeof utils.media.watchHistory.list.getData>>(undefined);
+
   const logMutation = trpc.media.watchHistory.log.useMutation({
     onSuccess: () => {
       void utils.media.watchHistory.list.invalidate();
@@ -184,44 +189,73 @@ export function SeasonDetailPage() {
 
   const batchLogMutation = trpc.media.watchHistory.batchLog.useMutation({
     onMutate: async () => {
+      await utils.media.watchHistory.progress.cancel({ tvShowId: showId });
       await utils.media.watchHistory.list.cancel();
-      const previousData = utils.media.watchHistory.list.getData({
+      progressSnapshot.current = utils.media.watchHistory.progress.getData({ tvShowId: showId });
+      listSnapshot.current = utils.media.watchHistory.list.getData({
         mediaType: "episode",
         limit: 500,
       });
-      // Optimistically add all episode IDs as watched
-      if (previousData?.data) {
-        const existingIds = new Set(previousData.data.map((e: { mediaId: number }) => e.mediaId));
-        const newEntries = episodeIds
-          .filter((id: number) => !existingIds.has(id))
-          .map((id: number, i: number) => ({
-            id: -(i + 1),
-            mediaId: id,
-            mediaType: "episode" as const,
-            watchedAt: new Date().toISOString(),
-            completed: 1,
-          }));
-        utils.media.watchHistory.list.setData(
-          { mediaType: "episode", limit: 500 },
-          { ...previousData, data: [...previousData.data, ...newEntries] }
+
+      // Optimistically set season progress to 100%
+      utils.media.watchHistory.progress.setData({ tvShowId: showId }, (old) => {
+        if (!old?.data) return old;
+        const updatedSeasons = old.data.seasons.map((s) =>
+          s.seasonNumber === seasonNum ? { ...s, watched: s.total, percentage: 100 } : s
         );
+        const totalWatched = updatedSeasons.reduce((sum, s) => sum + s.watched, 0);
+        const totalEpisodes = updatedSeasons.reduce((sum, s) => sum + s.total, 0);
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            seasons: updatedSeasons,
+            overall: {
+              watched: totalWatched,
+              total: totalEpisodes,
+              percentage: totalEpisodes > 0 ? Math.round((totalWatched / totalEpisodes) * 100) : 0,
+            },
+          },
+        };
+      });
+
+      // Optimistically add all unwatched episodes to watch history
+      if (episodes.length > 0) {
+        utils.media.watchHistory.list.setData({ mediaType: "episode", limit: 500 }, (old) => {
+          if (!old?.data) return old;
+          const existingIds = new Set(old.data.map((e: { mediaId: number }) => e.mediaId));
+          const newEntries = episodes
+            .filter((ep: { id: number }) => !existingIds.has(ep.id))
+            .map((ep: { id: number }) => ({
+              id: -ep.id,
+              mediaType: "episode" as const,
+              mediaId: ep.id,
+              watchedAt: new Date().toISOString(),
+              completed: 1,
+            }));
+          return { ...old, data: [...old.data, ...newEntries] };
+        });
       }
-      return { previousData };
     },
-    onSuccess: (result) => {
-      utils.media.watchHistory.invalidate();
+    onSuccess: (result: { data: { logged: number } }) => {
       toast.success(
         `Marked ${result.data.logged} episode${result.data.logged !== 1 ? "s" : ""} as watched`
       );
     },
-    onError: (err, _variables, context) => {
-      if (context?.previousData) {
+    onError: (err: { message: string }) => {
+      if (progressSnapshot.current !== undefined) {
+        utils.media.watchHistory.progress.setData({ tvShowId: showId }, progressSnapshot.current);
+      }
+      if (listSnapshot.current !== undefined) {
         utils.media.watchHistory.list.setData(
           { mediaType: "episode", limit: 500 },
-          context.previousData
+          listSnapshot.current
         );
       }
       toast.error(`Failed to mark season: ${err.message}`);
+    },
+    onSettled: () => {
+      void utils.media.watchHistory.invalidate();
     },
   });
 
