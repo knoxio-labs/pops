@@ -1,9 +1,13 @@
 /**
- * Tests for Plex sync scheduler — periodic polling and lifecycle management.
+ * Tests for Plex sync scheduler — periodic polling, lifecycle, and persistence.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // Mock dependencies
+const settingsStore = new Map<string, string>();
+const mockInsertSyncLog = vi.fn();
+const mockSelectSyncLogs = vi.fn().mockReturnValue([]);
+
 vi.mock("./service.js", () => ({
   getPlexClient: vi.fn(),
   getPlexSectionIds: vi.fn().mockReturnValue({ movieSectionId: null, tvSectionId: null }),
@@ -17,10 +21,64 @@ vi.mock("./sync-tv.js", () => ({
   importTvShowsFromPlex: vi.fn(),
 }));
 
+vi.mock("../../../db.js", () => ({
+  getDrizzle: vi.fn(() => ({
+    select: () => ({
+      from: (_table: unknown) => ({
+        where: (key: string) => ({
+          get: () => {
+            const val = settingsStore.get(key);
+            return val !== undefined ? { value: val } : undefined;
+          },
+        }),
+        orderBy: () => ({
+          limit: () => ({
+            all: (): unknown[] => mockSelectSyncLogs() as unknown[],
+          }),
+        }),
+      }),
+    }),
+    insert: () => ({
+      values: (vals: Record<string, unknown>) => {
+        if ("syncedAt" in vals) {
+          mockInsertSyncLog(vals);
+          return { run: vi.fn() };
+        }
+        if ("key" in vals && "value" in vals) {
+          settingsStore.set(vals.key as string, vals.value as string);
+        }
+        return {
+          onConflictDoUpdate: () => ({ run: vi.fn() }),
+          run: vi.fn(),
+        };
+      },
+    }),
+    delete: () => ({
+      where: (key: string) => ({
+        run: () => settingsStore.delete(key),
+      }),
+    }),
+  })),
+}));
+
+// Re-mock drizzle ORM operators to prevent real DB access
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn((_col: unknown, val: unknown) => val),
+  desc: vi.fn(),
+}));
+
+vi.mock("@pops/db-types", () => ({
+  settings: { key: "key", value: "value" },
+  syncLogs: { syncedAt: "synced_at", id: "id" },
+}));
+
 import {
   startScheduler,
   stopScheduler,
   getSchedulerStatus,
+  getPersistedSchedulerState,
+  resumeSchedulerIfEnabled,
+  getSyncLogs,
   _resetScheduler,
   _triggerSync,
 } from "./scheduler.js";
@@ -42,6 +100,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   _resetScheduler();
+  settingsStore.clear();
 });
 
 afterEach(() => {
@@ -76,6 +135,13 @@ describe("startScheduler", () => {
     // Should keep original interval
     expect(status.intervalMs).toBe(5000);
   });
+
+  it("persists scheduler config to settings", () => {
+    startScheduler({ intervalMs: 30000 });
+
+    expect(settingsStore.get("plex_scheduler_enabled")).toBe("true");
+    expect(settingsStore.get("plex_scheduler_interval_ms")).toBe("30000");
+  });
 });
 
 describe("stopScheduler", () => {
@@ -90,6 +156,16 @@ describe("stopScheduler", () => {
   it("is a no-op when not running", () => {
     const status = stopScheduler();
     expect(status.isRunning).toBe(false);
+  });
+
+  it("clears persisted scheduler config", () => {
+    startScheduler({ intervalMs: 5000 });
+    expect(settingsStore.get("plex_scheduler_enabled")).toBe("true");
+
+    stopScheduler();
+
+    expect(settingsStore.has("plex_scheduler_enabled")).toBe(false);
+    expect(settingsStore.has("plex_scheduler_interval_ms")).toBe(false);
   });
 });
 
@@ -151,6 +227,38 @@ describe("sync execution", () => {
     expect(mockImportTvShows).toHaveBeenCalledWith(mockClient, "2");
   });
 
+  it("writes sync log after successful sync", async () => {
+    const mockClient = {} as PlexClient;
+    mockGetPlexClient.mockReturnValue(mockClient);
+    mockGetPlexSectionIds.mockReturnValue({ movieSectionId: "1", tvSectionId: "2" });
+    mockImportMovies.mockResolvedValue({
+      total: 2,
+      processed: 2,
+      synced: 2,
+      skipped: 0,
+      errors: [],
+    });
+    mockImportTvShows.mockResolvedValue({
+      total: 1,
+      processed: 1,
+      synced: 1,
+      skipped: 0,
+      episodesMatched: 3,
+      errors: [],
+    });
+
+    startScheduler({ intervalMs: 5000, movieSectionId: "1", tvSectionId: "2" });
+    await _triggerSync();
+
+    expect(mockInsertSyncLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        moviesSynced: 2,
+        tvShowsSynced: 1,
+        errors: null,
+      })
+    );
+  });
+
   it("records error when Plex is not configured", async () => {
     mockGetPlexClient.mockReturnValue(null);
 
@@ -159,6 +267,22 @@ describe("sync execution", () => {
     const status = getSchedulerStatus();
     expect(status.lastSyncError).toContain("Plex not configured");
     expect(status.lastSyncAt).not.toBeNull();
+  });
+
+  it("writes sync log with error when Plex is not configured", async () => {
+    mockGetPlexClient.mockReturnValue(null);
+
+    await _triggerSync();
+
+    expect(mockInsertSyncLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        moviesSynced: 0,
+        tvShowsSynced: 0,
+      })
+    );
+    // errors field should be a JSON string containing the error
+    const logCall = mockInsertSyncLog.mock.calls[0]![0] as Record<string, unknown>;
+    expect(logCall.errors).toContain("Plex not configured");
   });
 
   it("records error when sync throws", async () => {
@@ -308,6 +432,77 @@ describe("sync execution", () => {
 
     expect(mockImportMovies).not.toHaveBeenCalled();
     expect(mockImportTvShows).not.toHaveBeenCalled();
+  });
+});
+
+describe("persistence", () => {
+  it("getPersistedSchedulerState returns null when not enabled", () => {
+    const state = getPersistedSchedulerState();
+    expect(state).toBeNull();
+  });
+
+  it("getPersistedSchedulerState returns config when enabled", () => {
+    settingsStore.set("plex_scheduler_enabled", "true");
+    settingsStore.set("plex_scheduler_interval_ms", "45000");
+
+    const state = getPersistedSchedulerState();
+    expect(state).toEqual({ enabled: true, intervalMs: 45000 });
+  });
+
+  it("resumeSchedulerIfEnabled starts scheduler with persisted config", () => {
+    settingsStore.set("plex_scheduler_enabled", "true");
+    settingsStore.set("plex_scheduler_interval_ms", "60000");
+
+    const status = resumeSchedulerIfEnabled();
+    expect(status).not.toBeNull();
+    expect(status!.isRunning).toBe(true);
+    expect(status!.intervalMs).toBe(60000);
+  });
+
+  it("resumeSchedulerIfEnabled returns null when not enabled", () => {
+    const status = resumeSchedulerIfEnabled();
+    expect(status).toBeNull();
+  });
+});
+
+describe("getSyncLogs", () => {
+  it("returns mapped sync log entries", () => {
+    mockSelectSyncLogs.mockReturnValue([
+      {
+        id: 1,
+        syncedAt: "2026-03-27T10:00:00.000Z",
+        moviesSynced: 5,
+        tvShowsSynced: 2,
+        errors: '["Movie: Test — No TMDB match"]',
+        durationMs: 1500,
+      },
+      {
+        id: 2,
+        syncedAt: "2026-03-27T09:00:00.000Z",
+        moviesSynced: 3,
+        tvShowsSynced: 1,
+        errors: null,
+        durationMs: 1200,
+      },
+    ]);
+
+    const logs = getSyncLogs();
+    expect(logs).toHaveLength(2);
+    expect(logs[0]).toEqual({
+      id: 1,
+      syncedAt: "2026-03-27T10:00:00.000Z",
+      moviesSynced: 5,
+      tvShowsSynced: 2,
+      errors: ["Movie: Test — No TMDB match"],
+      durationMs: 1500,
+    });
+    expect(logs[1]!.errors).toBeNull();
+  });
+
+  it("returns empty array when no logs exist", () => {
+    mockSelectSyncLogs.mockReturnValue([]);
+    const logs = getSyncLogs();
+    expect(logs).toEqual([]);
   });
 });
 

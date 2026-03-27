@@ -30,6 +30,7 @@ const INCLUDED_MIGRATIONS = [
   "20260325150000_locations_last_edited_time.sql",
   "20260326150000_budgets_unique_category_period.sql",
   "20260326160000_items_locations_schema.sql",
+  "20260327120000_sync_logs.sql",
 ];
 
 /**
@@ -389,6 +390,16 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS sync_logs (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      synced_at     TEXT NOT NULL,
+      movies_synced INTEGER NOT NULL DEFAULT 0,
+      tv_shows_synced INTEGER NOT NULL DEFAULT 0,
+      errors        TEXT,
+      duration_ms   INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_logs_synced_at ON sync_logs(synced_at);
   `);
 
   // Pre-mark all migrations this schema already incorporates so that
