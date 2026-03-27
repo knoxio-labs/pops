@@ -22,9 +22,30 @@ afterEach(() => {
 });
 
 describe("comparisons.listDimensions", () => {
-  it("returns empty list when no dimensions exist", async () => {
+  it("seeds 5 default dimensions when none exist", async () => {
     const result = await caller.media.comparisons.listDimensions();
-    expect(result.data).toEqual([]);
+    expect(result.data).toHaveLength(5);
+    expect(result.data.map((d) => d.name)).toEqual([
+      "Cinematography",
+      "Entertainment",
+      "Emotional Impact",
+      "Rewatchability",
+      "Soundtrack",
+    ]);
+  });
+
+  it("returns defaults sorted by sortOrder", async () => {
+    const result = await caller.media.comparisons.listDimensions();
+    for (let i = 0; i < result.data.length; i++) {
+      expect(result.data[i]!.sortOrder).toBe(i);
+    }
+  });
+
+  it("does not re-seed when dimensions already exist", async () => {
+    seedDimension(db, { name: "Custom Only" });
+    const result = await caller.media.comparisons.listDimensions();
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]!.name).toBe("Custom Only");
   });
 
   it("returns dimensions sorted by sortOrder", async () => {
@@ -87,6 +108,35 @@ describe("comparisons.updateDimension", () => {
         data: { name: "X" },
       })
     ).rejects.toThrow(TRPCError);
+  });
+
+  it("toggles active off and back on", async () => {
+    const dimId = seedDimension(db, { name: "Toggle Me", active: 1 });
+
+    const off = await caller.media.comparisons.updateDimension({
+      id: dimId,
+      data: { active: false },
+    });
+    expect(off.data.active).toBe(false);
+
+    const on = await caller.media.comparisons.updateDimension({
+      id: dimId,
+      data: { active: true },
+    });
+    expect(on.data.active).toBe(true);
+  });
+
+  it("swaps sort order between dimensions", async () => {
+    const dimA = seedDimension(db, { name: "First", sort_order: 0 });
+    const dimB = seedDimension(db, { name: "Second", sort_order: 1 });
+
+    // Swap sort orders
+    await caller.media.comparisons.updateDimension({ id: dimA, data: { sortOrder: 1 } });
+    await caller.media.comparisons.updateDimension({ id: dimB, data: { sortOrder: 0 } });
+
+    const result = await caller.media.comparisons.listDimensions();
+    expect(result.data[0]!.name).toBe("Second");
+    expect(result.data[1]!.name).toBe("First");
   });
 });
 

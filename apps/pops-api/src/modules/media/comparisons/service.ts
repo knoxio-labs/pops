@@ -24,9 +24,48 @@ import type {
 
 // ── Dimensions ──
 
+const DEFAULT_DIMENSIONS = [
+  { name: "Cinematography", description: "Visual quality, framing, and camera work", sortOrder: 0 },
+  { name: "Entertainment", description: "How engaging and enjoyable to watch", sortOrder: 1 },
+  {
+    name: "Emotional Impact",
+    description: "Depth of feeling and emotional resonance",
+    sortOrder: 2,
+  },
+  { name: "Rewatchability", description: "How well it holds up on repeat viewings", sortOrder: 3 },
+  { name: "Soundtrack", description: "Music, score, and sound design quality", sortOrder: 4 },
+];
+
+/** Seed default dimensions if none exist. Returns true if seeded. */
+export function seedDefaultDimensions(): boolean {
+  const db = getDrizzle();
+  const existing = db.select({ id: comparisonDimensions.id }).from(comparisonDimensions).get();
+  if (existing) return false;
+
+  for (const dim of DEFAULT_DIMENSIONS) {
+    db.insert(comparisonDimensions)
+      .values({ name: dim.name, description: dim.description, active: 1, sortOrder: dim.sortOrder })
+      .run();
+  }
+  return true;
+}
+
 export function listDimensions(): ComparisonDimensionRow[] {
   const db = getDrizzle();
-  return db.select().from(comparisonDimensions).orderBy(asc(comparisonDimensions.sortOrder)).all();
+  const rows = db
+    .select()
+    .from(comparisonDimensions)
+    .orderBy(asc(comparisonDimensions.sortOrder))
+    .all();
+  if (rows.length === 0) {
+    seedDefaultDimensions();
+    return db
+      .select()
+      .from(comparisonDimensions)
+      .orderBy(asc(comparisonDimensions.sortOrder))
+      .all();
+  }
+  return rows;
 }
 
 export function getDimension(id: number): ComparisonDimensionRow {
