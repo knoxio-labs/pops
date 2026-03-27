@@ -25,6 +25,7 @@ import {
   Skeleton,
   TypeBadge,
   ConditionBadge,
+  WarrantyBadge,
   PageHeader,
   type Condition,
 } from "@pops/ui";
@@ -211,6 +212,7 @@ export function ItemDetailPage() {
               value={<ConditionBadge condition={item.condition as Condition} />}
             />
           )}
+          <DetailField label="Warranty" value={<WarrantyBadge warrantyExpiry={item.warrantyExpires ?? null} />} />
           {item.room && <DetailField label="Room" value={item.room} />}
           {item.assetId && (
             <DetailField
