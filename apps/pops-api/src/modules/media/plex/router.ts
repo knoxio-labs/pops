@@ -206,6 +206,11 @@ export const plexRouter = router({
     return { data: scheduler.getSchedulerStatus() };
   }),
 
+  /** Get last sync run result (persisted across restarts). */
+  getLastSyncResult: protectedProcedure.query(() => {
+    return { data: scheduler.getPersistedSyncResult() };
+  }),
+
   /** Get saved Plex library section IDs. */
   getSectionIds: protectedProcedure.query(() => {
     return { data: plexService.getPlexSectionIds() };

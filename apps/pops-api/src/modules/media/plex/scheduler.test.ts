@@ -17,12 +17,44 @@ vi.mock("./sync-tv.js", () => ({
   importTvShowsFromPlex: vi.fn(),
 }));
 
+const mockRun = vi.fn();
+const mockGet = vi.fn();
+const mockDbValues = vi.fn().mockReturnValue({
+  onConflictDoUpdate: vi.fn().mockReturnValue({ run: mockRun }),
+  onConflictDoNothing: vi.fn().mockReturnValue({ run: mockRun }),
+});
+const mockInsert = vi.fn().mockReturnValue({ values: mockDbValues });
+const mockDb = {
+  select: vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        get: mockGet,
+      }),
+    }),
+  }),
+  insert: mockInsert,
+};
+
+vi.mock("../../../db.js", () => ({
+  getDrizzle: vi.fn(() => mockDb),
+}));
+
+vi.mock("@pops/db-types", () => ({
+  settings: { key: "key", value: "value" },
+}));
+
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn((a, b) => ({ type: "eq", a, b })),
+}));
+
 import {
   startScheduler,
   stopScheduler,
   getSchedulerStatus,
   _resetScheduler,
   _triggerSync,
+  getPersistedSchedulerState,
+  getPersistedSyncResult,
 } from "./scheduler.js";
 import { getPlexClient, getPlexSectionIds } from "./service.js";
 import { importMoviesFromPlex } from "./sync-movies.js";
@@ -351,5 +383,97 @@ describe("_triggerSync", () => {
 
     expect(mockImportMovies).not.toHaveBeenCalled();
     expect(mockImportTvShows).not.toHaveBeenCalled();
+  });
+});
+
+describe("scheduler persistence", () => {
+  it("persists state when scheduler starts", () => {
+    startScheduler({ intervalMs: 5000, movieSectionId: "1", tvSectionId: "2" });
+    // Verify insert was called for plex_scheduler_enabled
+    expect(mockInsert).toHaveBeenCalled();
+  });
+
+  it("persists disabled state when scheduler stops", () => {
+    startScheduler({ intervalMs: 5000 });
+    mockInsert.mockClear();
+    stopScheduler();
+    expect(mockInsert).toHaveBeenCalled();
+  });
+
+  it("reads persisted state from settings", () => {
+    // Mock DB to return enabled state
+    mockGet.mockReturnValue({ value: "true" });
+    const state = getPersistedSchedulerState();
+    expect(state.enabled).toBe(true);
+  });
+
+  it("returns disabled when no persisted state", () => {
+    mockGet.mockReturnValue(null);
+    const state = getPersistedSchedulerState();
+    expect(state.enabled).toBe(false);
+  });
+
+  it("stores sync results after a sync cycle", async () => {
+    const mockClient = {} as PlexClient;
+    mockGetPlexClient.mockReturnValue(mockClient);
+    mockGetPlexSectionIds.mockReturnValue({ movieSectionId: "1", tvSectionId: "2" });
+    mockImportMovies.mockResolvedValue({
+      total: 5,
+      processed: 5,
+      synced: 3,
+      skipped: 2,
+      errors: [],
+    });
+    mockImportTvShows.mockResolvedValue({
+      total: 2,
+      processed: 2,
+      synced: 1,
+      skipped: 1,
+      episodesMatched: 5,
+      errors: [],
+    });
+
+    startScheduler({ intervalMs: 5000, movieSectionId: "1", tvSectionId: "2" });
+    await _triggerSync();
+
+    // Verify sync result was persisted
+    const status = getSchedulerStatus();
+    expect(status.lastSyncResult).not.toBeNull();
+    expect(status.lastSyncResult!.moviesSynced).toBe(3);
+    expect(status.lastSyncResult!.tvShowsSynced).toBe(1);
+    expect(status.lastSyncResult!.error).toBeNull();
+  });
+
+  it("stores error in sync result when Plex not configured", async () => {
+    mockGetPlexClient.mockReturnValue(null);
+
+    await _triggerSync();
+
+    const status = getSchedulerStatus();
+    expect(status.lastSyncResult).not.toBeNull();
+    expect(status.lastSyncResult!.error).toContain("Plex not configured");
+  });
+
+  it("getPersistedSyncResult reads stored result", () => {
+    const fakeResult = JSON.stringify({
+      moviesSynced: 5,
+      moviesSkipped: 1,
+      movieErrors: 0,
+      tvShowsSynced: 2,
+      tvShowsSkipped: 0,
+      tvErrors: 0,
+      timestamp: "2026-03-27T00:00:00.000Z",
+      error: null,
+    });
+    mockGet.mockReturnValue({ value: fakeResult });
+    const result = getPersistedSyncResult();
+    expect(result).not.toBeNull();
+    expect(result!.moviesSynced).toBe(5);
+  });
+
+  it("getPersistedSyncResult returns null when no stored result", () => {
+    mockGet.mockReturnValue(null);
+    const result = getPersistedSyncResult();
+    expect(result).toBeNull();
   });
 });
