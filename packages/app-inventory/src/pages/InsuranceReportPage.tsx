@@ -136,7 +136,7 @@ export function InsuranceReportPage(): React.ReactElement {
   const handleExportCsv = useCallback(() => {
     if (!report) return;
     const csv = buildCsvContent(report.groups);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -304,7 +304,7 @@ export function InsuranceReportPage(): React.ReactElement {
                   );
                 })}
               </tbody>
-              {group.items.some((i) => i.replacementValue) && (
+              {group.items.some((i) => i.replacementValue != null) && (
                 <tfoot>
                   <tr className="font-semibold">
                     <td colSpan={6} className="py-2 pr-3 text-right">
