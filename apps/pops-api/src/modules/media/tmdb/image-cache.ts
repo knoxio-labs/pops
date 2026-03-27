@@ -232,27 +232,18 @@ export class ImageCacheService {
    * For seasons, includes "Season N" in the label.
    * Stored as poster.jpg (show) or season_{num}.jpg (season).
    */
-  async generateTvPlaceholder(
-    tvdbId: number,
-    title: string,
-    seasonNumber?: number
-  ): Promise<void> {
+  async generateTvPlaceholder(tvdbId: number, title: string, seasonNumber?: number): Promise<void> {
     const tvDir = this.tvShowDir(tvdbId);
     await mkdir(tvDir, { recursive: true });
 
     const filename =
       seasonNumber !== undefined ? seasonFilename(seasonNumber) : IMAGE_FILENAMES.poster;
-    const label =
-      seasonNumber !== undefined ? `${title} — Season ${seasonNumber}` : title;
+    const label = seasonNumber !== undefined ? `${title} — Season ${seasonNumber}` : title;
     await this.writePlaceholderSvg(join(tvDir, filename), label, tvdbId);
   }
 
   /** Write an SVG placeholder to destPath unless the file already exists. */
-  private async writePlaceholderSvg(
-    destPath: string,
-    label: string,
-    seed: number
-  ): Promise<void> {
+  private async writePlaceholderSvg(destPath: string, label: string, seed: number): Promise<void> {
     // Skip if file already exists
     try {
       await stat(destPath);

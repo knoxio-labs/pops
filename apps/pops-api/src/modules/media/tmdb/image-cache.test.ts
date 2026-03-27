@@ -457,9 +457,7 @@ describe("downloadTvShowImages — season posters", () => {
   it("skips null season poster URLs", async () => {
     fetchMock.mockResolvedValue(mockImageResponse());
 
-    await service.downloadTvShowImages(81189, null, null, [
-      { seasonNumber: 1, posterUrl: null },
-    ]);
+    await service.downloadTvShowImages(81189, null, null, [{ seasonNumber: 1, posterUrl: null }]);
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
