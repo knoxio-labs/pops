@@ -93,7 +93,9 @@ router.get("/media/images/:mediaType/:id/:filename", async (req, res): Promise<v
         : "backdrop_path";
 
     const record = db
-      .prepare(`SELECT ${pathColumn} AS path, ${titleColumn} AS title FROM ${table} WHERE ${idColumn} = ?`)
+      .prepare(
+        `SELECT ${pathColumn} AS path, ${titleColumn} AS title FROM ${table} WHERE ${idColumn} = ?`
+      )
       .get(id) as { path: string | null; title: string | null } | undefined;
 
     if (record?.path) {
