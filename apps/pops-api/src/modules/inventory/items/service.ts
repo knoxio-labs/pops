@@ -167,6 +167,7 @@ export function createInventoryItem(input: CreateInventoryItemInput): InventoryR
       deductible: input.deductible ? 1 : 0,
       purchaseDate: input.purchaseDate ?? null,
       warrantyExpires: input.warrantyExpires ?? null,
+      purchasePrice: input.purchasePrice ?? null,
       replacementValue: input.replacementValue ?? null,
       resaleValue: input.resaleValue ?? null,
       purchaseTransactionId: input.purchaseTransactionId ?? null,
@@ -241,6 +242,10 @@ export function updateInventoryItem(id: string, input: UpdateInventoryItemInput)
   }
   if (input.warrantyExpires !== undefined) {
     updates.warrantyExpires = input.warrantyExpires ?? null;
+    hasUpdates = true;
+  }
+  if (input.purchasePrice !== undefined) {
+    updates.purchasePrice = input.purchasePrice ?? null;
     hasUpdates = true;
   }
   if (input.replacementValue !== undefined) {

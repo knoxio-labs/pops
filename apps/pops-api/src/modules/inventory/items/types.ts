@@ -18,6 +18,7 @@ export interface InventoryItem {
   deductible: boolean;
   purchaseDate: string | null;
   warrantyExpires: string | null;
+  purchasePrice: number | null;
   replacementValue: number | null;
   resaleValue: number | null;
   purchaseTransactionId: string | null;
@@ -45,6 +46,7 @@ export function toInventoryItem(row: InventoryRow): InventoryItem {
     deductible: row.deductible === 1,
     purchaseDate: row.purchaseDate,
     warrantyExpires: row.warrantyExpires,
+    purchasePrice: row.purchasePrice,
     replacementValue: row.replacementValue,
     resaleValue: row.resaleValue,
     purchaseTransactionId: row.purchaseTransactionId,
@@ -71,6 +73,7 @@ export const CreateInventoryItemSchema = z.object({
   deductible: z.boolean().optional().default(false),
   purchaseDate: z.string().nullable().optional(),
   warrantyExpires: z.string().nullable().optional(),
+  purchasePrice: z.number().nullable().optional(),
   replacementValue: z.number().nullable().optional(),
   resaleValue: z.number().nullable().optional(),
   purchaseTransactionId: z.string().nullable().optional(),
@@ -96,6 +99,7 @@ export const UpdateInventoryItemSchema = z.object({
   deductible: z.boolean().optional(),
   purchaseDate: z.string().nullable().optional(),
   warrantyExpires: z.string().nullable().optional(),
+  purchasePrice: z.number().nullable().optional(),
   replacementValue: z.number().nullable().optional(),
   resaleValue: z.number().nullable().optional(),
   purchaseTransactionId: z.string().nullable().optional(),

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { extractPrefix } from "./ItemFormPage";
 
@@ -65,19 +66,21 @@ describe("zero-padding format", () => {
 
 // ---------- component tests ----------
 
-const mockItemQuery = vi.fn();
+const mockGetQuery = vi.fn();
 const mockListQuery = vi.fn();
 const mockSearchByAssetIdFetch = vi.fn();
 const mockCountByAssetPrefixFetch = vi.fn();
 const mockCreateMutate = vi.fn();
 const mockUpdateMutate = vi.fn();
-const mockConnectMutate = vi.fn();
+const mockConnectMutateAsync = vi.fn();
+const mockInvalidateList = vi.fn();
+const mockInvalidateGet = vi.fn();
 
 vi.mock("../lib/trpc", () => ({
   trpc: {
     inventory: {
       items: {
-        get: { useQuery: (...args: unknown[]) => mockItemQuery(...args) },
+        get: { useQuery: (...args: unknown[]) => mockGetQuery(...args) },
         list: { useQuery: (...args: unknown[]) => mockListQuery(...args) },
         create: {
           useMutation: (opts: Record<string, unknown>) => ({
@@ -102,15 +105,15 @@ vi.mock("../lib/trpc", () => ({
       },
       connections: {
         connect: {
-          useMutation: () => ({ mutateAsync: mockConnectMutate }),
+          useMutation: () => ({ mutateAsync: mockConnectMutateAsync }),
         },
       },
     },
     useUtils: () => ({
       inventory: {
         items: {
-          list: { invalidate: vi.fn() },
-          get: { invalidate: vi.fn() },
+          list: { invalidate: mockInvalidateList },
+          get: { invalidate: mockInvalidateGet },
           searchByAssetId: { fetch: mockSearchByAssetIdFetch },
           countByAssetPrefix: { fetch: mockCountByAssetPrefixFetch },
         },
@@ -119,9 +122,68 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { ItemFormPage } from "./ItemFormPage";
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
-function renderCreate() {
+import { ItemFormPage } from "./ItemFormPage";
+import { toast } from "sonner";
+
+const MOCK_ITEM = {
+  id: "item-1",
+  itemName: "MacBook Pro",
+  brand: "Apple",
+  model: "M3 Max",
+  itemId: "SKU-123",
+  room: "Office",
+  location: null,
+  type: "Electronics",
+  condition: "good",
+  inUse: true,
+  deductible: false,
+  purchaseDate: "2024-06-15",
+  warrantyExpires: "2027-06-15",
+  purchasePrice: 4299.0,
+  replacementValue: 4299.0,
+  resaleValue: 3000.0,
+  purchaseTransactionId: null,
+  purchasedFromId: null,
+  purchasedFromName: null,
+  assetId: "ASSET-001",
+  notes: "16-inch, 64GB RAM",
+  locationId: null,
+  lastEditedTime: "2024-06-15T00:00:00Z",
+};
+
+function setupCreateMode() {
+  mockGetQuery.mockReturnValue({ data: undefined, isLoading: false, error: null });
+  mockListQuery.mockReturnValue({ data: undefined, isLoading: false });
+}
+
+function setupEditMode(item = MOCK_ITEM) {
+  mockGetQuery.mockReturnValue({
+    data: { data: item },
+    isLoading: false,
+    error: null,
+  });
+  mockListQuery.mockReturnValue({ data: undefined, isLoading: false });
+}
+
+function setupLoading() {
+  mockGetQuery.mockReturnValue({ data: undefined, isLoading: true, error: null });
+  mockListQuery.mockReturnValue({ data: undefined, isLoading: false });
+}
+
+function setup404() {
+  mockGetQuery.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    error: { message: "Not found", data: { code: "NOT_FOUND" } },
+  });
+  mockListQuery.mockReturnValue({ data: undefined, isLoading: false });
+}
+
+function renderCreatePage() {
   return render(
     <MemoryRouter initialEntries={["/inventory/items/new"]}>
       <Routes>
@@ -131,7 +193,7 @@ function renderCreate() {
   );
 }
 
-function renderEdit(id: string) {
+function renderEditPage(id = "item-1") {
   return render(
     <MemoryRouter initialEntries={[`/inventory/items/${id}/edit`]}>
       <Routes>
@@ -143,36 +205,27 @@ function renderEdit(id: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  mockItemQuery.mockReturnValue({
-    data: null,
-    isLoading: false,
-    error: null,
-  });
-
-  mockListQuery.mockReturnValue({
-    data: { data: [] },
-    isLoading: false,
-  });
-
   mockSearchByAssetIdFetch.mockResolvedValue({ data: null });
   mockCountByAssetPrefixFetch.mockResolvedValue({ data: 0 });
 });
 
 describe("ItemFormPage — Asset ID generation", () => {
   it("renders auto-generate button", () => {
-    renderCreate();
+    setupCreateMode();
+    renderCreatePage();
     expect(screen.getByRole("button", { name: /auto-generate/i })).toBeInTheDocument();
   });
 
   it("disables auto-generate when type is empty", () => {
-    renderCreate();
+    setupCreateMode();
+    renderCreatePage();
     const btn = screen.getByRole("button", { name: /auto-generate/i });
     expect(btn).toBeDisabled();
   });
 
   it("enables auto-generate when type is selected", () => {
-    renderCreate();
+    setupCreateMode();
+    renderCreatePage();
     const typeSelect = screen.getByRole("combobox", { name: /type/i });
     fireEvent.change(typeSelect, { target: { value: "Electronics" } });
     const btn = screen.getByRole("button", { name: /auto-generate/i });
@@ -184,7 +237,8 @@ describe("ItemFormPage — Asset ID generation", () => {
       data: { id: "other-item", itemName: "Existing Item" },
     });
 
-    renderCreate();
+    setupCreateMode();
+    renderCreatePage();
     const assetInput = screen.getByRole("textbox", { name: /asset id/i });
     fireEvent.change(assetInput, { target: { value: "ELEC01" } });
     fireEvent.blur(assetInput);
@@ -196,41 +250,16 @@ describe("ItemFormPage — Asset ID generation", () => {
   });
 
   it("skips uniqueness error for own asset ID in edit mode", async () => {
-    mockItemQuery.mockReturnValue({
-      data: {
-        data: {
-          id: "item-1",
-          itemName: "MacBook",
-          brand: null,
-          model: null,
-          itemId: null,
-          type: "Electronics",
-          condition: "Good",
-          room: null,
-          inUse: false,
-          deductible: false,
-          purchaseDate: null,
-          warrantyExpires: null,
-          replacementValue: null,
-          resaleValue: null,
-          assetId: "ELEC01",
-          notes: null,
-          locationId: null,
-          lastEditedTime: "2026-01-01",
-          purchaseTransactionId: null,
-          purchasedFromId: null,
-          purchasedFromName: null,
-        },
-      },
-      isLoading: false,
-      error: null,
+    setupEditMode({
+      ...MOCK_ITEM,
+      assetId: "ELEC01",
     });
 
     mockSearchByAssetIdFetch.mockResolvedValue({
-      data: { id: "item-1", itemName: "MacBook" },
+      data: { id: "item-1", itemName: "MacBook Pro" },
     });
 
-    renderEdit("item-1");
+    renderEditPage("item-1");
 
     const assetInput = screen.getByDisplayValue("ELEC01");
     fireEvent.blur(assetInput);
@@ -242,9 +271,259 @@ describe("ItemFormPage — Asset ID generation", () => {
   });
 
   it("skips uniqueness check when asset ID is empty", () => {
-    renderCreate();
+    setupCreateMode();
+    renderCreatePage();
     const assetInput = screen.getByRole("textbox", { name: /asset id/i });
     fireEvent.blur(assetInput);
     expect(mockSearchByAssetIdFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("ItemFormPage", () => {
+  describe("create mode — empty form", () => {
+    it("renders 'New Item' heading", () => {
+      setupCreateMode();
+      renderCreatePage();
+      expect(screen.getByRole("heading", { name: "New Item" })).toBeInTheDocument();
+    });
+
+    it("has empty name field", () => {
+      setupCreateMode();
+      renderCreatePage();
+      const nameInput = screen.getByPlaceholderText("e.g. MacBook Pro 16-inch");
+      expect(nameInput).toHaveValue("");
+    });
+
+    it("defaults condition to 'good'", () => {
+      setupCreateMode();
+      renderCreatePage();
+      const conditionSelect = document.querySelector<HTMLSelectElement>(
+        "select[name='condition']"
+      )!;
+      expect(conditionSelect).toHaveValue("good");
+    });
+
+    it("shows correct condition options", () => {
+      setupCreateMode();
+      renderCreatePage();
+      const conditionSelect = document.querySelector<HTMLSelectElement>(
+        "select[name='condition']"
+      )!;
+      const options = Array.from(conditionSelect.querySelectorAll("option")).map(
+        (o) => o.textContent
+      );
+      expect(options).toContain("New");
+      expect(options).toContain("Good");
+      expect(options).toContain("Fair");
+      expect(options).toContain("Poor");
+      expect(options).toContain("Broken");
+    });
+
+    it("has purchase price field", () => {
+      setupCreateMode();
+      renderCreatePage();
+      expect(screen.getByText("Purchase Price ($)")).toBeInTheDocument();
+    });
+
+    it("shows Type as required field", () => {
+      setupCreateMode();
+      renderCreatePage();
+      expect(screen.getByText("Type *")).toBeInTheDocument();
+    });
+  });
+
+  describe("edit mode — pre-population", () => {
+    it("renders 'Edit Item' heading", () => {
+      setupEditMode();
+      renderEditPage();
+      expect(screen.getByText("Edit Item")).toBeInTheDocument();
+    });
+
+    it("populates name from item data", () => {
+      setupEditMode();
+      renderEditPage();
+      const nameInput = screen.getByPlaceholderText("e.g. MacBook Pro 16-inch");
+      expect(nameInput).toHaveValue("MacBook Pro");
+    });
+
+    it("populates brand and model", () => {
+      setupEditMode();
+      renderEditPage();
+      expect(screen.getByPlaceholderText("e.g. Apple")).toHaveValue("Apple");
+      expect(screen.getByPlaceholderText("e.g. M3 Max")).toHaveValue("M3 Max");
+    });
+
+    it("populates condition from item data", () => {
+      setupEditMode();
+      renderEditPage();
+      const conditionSelect = document.querySelector<HTMLSelectElement>(
+        "select[name='condition']"
+      )!;
+      expect(conditionSelect).toHaveValue("good");
+    });
+
+    it("populates purchase price", () => {
+      setupEditMode();
+      renderEditPage();
+      const priceInputs = screen.getAllByPlaceholderText("0.00");
+      expect(priceInputs[0]).toHaveValue(4299);
+    });
+  });
+
+  describe("required field validation", () => {
+    it("shows error when submitting without item name", async () => {
+      setupCreateMode();
+      const user = userEvent.setup();
+      renderCreatePage();
+
+      const typeSelect = document.querySelector<HTMLSelectElement>("select[name='type']")!;
+      await user.selectOptions(typeSelect, "Electronics");
+
+      const submitBtn = screen.getByRole("button", { name: /create item/i });
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText("Item name is required")).toBeInTheDocument();
+      });
+      expect(mockCreateMutate).not.toHaveBeenCalled();
+    });
+
+    it("shows error when submitting without type", async () => {
+      setupCreateMode();
+      const user = userEvent.setup();
+      renderCreatePage();
+
+      const nameInput = screen.getByPlaceholderText("e.g. MacBook Pro 16-inch");
+      await user.type(nameInput, "Test Item");
+
+      const submitBtn = screen.getByRole("button", { name: /create item/i });
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText("Type is required")).toBeInTheDocument();
+      });
+      expect(mockCreateMutate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("currency validation", () => {
+    it("purchase price accepts decimal values", async () => {
+      setupCreateMode();
+      const user = userEvent.setup();
+      renderCreatePage();
+
+      const priceInputs = screen.getAllByPlaceholderText("0.00");
+      await user.type(priceInputs[0]!, "199.99");
+      expect(priceInputs[0]).toHaveValue(199.99);
+    });
+
+    it("replacement value has min=0", () => {
+      setupCreateMode();
+      renderCreatePage();
+      const priceInputs = screen.getAllByPlaceholderText("0.00");
+      expect(priceInputs[1]).toHaveAttribute("min", "0");
+    });
+  });
+
+  describe("submit create", () => {
+    it("calls create mutation with form data", async () => {
+      setupCreateMode();
+      const user = userEvent.setup();
+      renderCreatePage();
+
+      await user.type(screen.getByPlaceholderText("e.g. MacBook Pro 16-inch"), "New Laptop");
+      await user.selectOptions(
+        document.querySelector<HTMLSelectElement>("select[name='type']")!,
+        "Electronics"
+      );
+
+      const submitBtn = screen.getByRole("button", { name: /create item/i });
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(mockCreateMutate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            itemName: "New Laptop",
+            type: "Electronics",
+            condition: "good",
+          })
+        );
+      });
+    });
+  });
+
+  describe("submit update", () => {
+    it("calls update mutation with item id and data", async () => {
+      setupEditMode();
+      const user = userEvent.setup();
+      renderEditPage();
+
+      const nameInput = screen.getByPlaceholderText("e.g. MacBook Pro 16-inch");
+      await user.clear(nameInput);
+      await user.type(nameInput, "MacBook Pro Updated");
+
+      const submitBtn = screen.getByRole("button", { name: /save changes/i });
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(mockUpdateMutate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: "item-1",
+            data: expect.objectContaining({
+              itemName: "MacBook Pro Updated",
+            }),
+          })
+        );
+      });
+    });
+  });
+
+  describe("notes preview", () => {
+    it("toggles between edit and preview mode", async () => {
+      setupCreateMode();
+      const user = userEvent.setup();
+      renderCreatePage();
+
+      expect(screen.getByPlaceholderText("Add notes about this item...")).toBeInTheDocument();
+
+      await user.click(screen.getByLabelText("Preview notes"));
+      expect(screen.getByLabelText("Notes preview")).toBeInTheDocument();
+
+      await user.click(screen.getByLabelText("Edit notes"));
+      expect(screen.getByPlaceholderText("Add notes about this item...")).toBeInTheDocument();
+    });
+  });
+
+  describe("error states", () => {
+    it("shows 404 for invalid edit ID", () => {
+      setup404();
+      renderEditPage("invalid-id");
+      expect(screen.getByText("Item not found")).toBeInTheDocument();
+      expect(screen.getByText("This item doesn't exist.")).toBeInTheDocument();
+    });
+
+    it("shows loading skeleton", () => {
+      setupLoading();
+      const { container } = renderEditPage();
+      const skeletons = container.querySelectorAll("[data-slot='skeleton']");
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("unsaved changes warning", () => {
+    it("adds beforeunload handler when form is dirty", async () => {
+      setupCreateMode();
+      const user = userEvent.setup();
+      const addSpy = vi.spyOn(window, "addEventListener");
+      renderCreatePage();
+
+      await user.type(screen.getByPlaceholderText("e.g. MacBook Pro 16-inch"), "Test");
+
+      await waitFor(() => {
+        expect(addSpy).toHaveBeenCalledWith("beforeunload", expect.any(Function));
+      });
+
+      addSpy.mockRestore();
+    });
   });
 });

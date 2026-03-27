@@ -20,7 +20,7 @@ import {
   Badge,
   PageHeader,
 } from "@pops/ui";
-import { Save, Link2, X, Search, Wand2, Loader2 } from "lucide-react";
+import { Save, Link2, X, Search, Wand2, Loader2, Eye, Pencil } from "lucide-react";
 import { trpc } from "../lib/trpc";
 
 interface PendingConnection {
@@ -40,6 +40,7 @@ interface ItemFormValues {
   deductible: boolean;
   purchaseDate: string;
   warrantyExpires: string;
+  purchasePrice: string;
   replacementValue: string;
   resaleValue: string;
   assetId: string;
@@ -58,7 +59,13 @@ const ITEM_TYPES = [
   "Other",
 ];
 
-const CONDITIONS = ["Excellent", "Good", "Fair", "Poor"];
+const CONDITIONS = [
+  { value: "new", label: "New" },
+  { value: "good", label: "Good" },
+  { value: "fair", label: "Fair" },
+  { value: "poor", label: "Poor" },
+  { value: "broken", label: "Broken" },
+];
 
 const defaultValues: ItemFormValues = {
   itemName: "",
@@ -66,12 +73,13 @@ const defaultValues: ItemFormValues = {
   model: "",
   itemId: "",
   type: "",
-  condition: "",
+  condition: "good",
   room: "",
   inUse: false,
   deductible: false,
   purchaseDate: "",
   warrantyExpires: "",
+  purchasePrice: "",
   replacementValue: "",
   resaleValue: "",
   assetId: "",
@@ -84,6 +92,24 @@ export function extractPrefix(type: string): string {
   const upper = firstWord.toUpperCase();
   // Truncate to 4 chars, unless the word is 5-6 chars — keep up to 6
   return upper.length <= 6 ? upper : upper.slice(0, 4);
+}
+
+/** Simple markdown-to-HTML for notes preview (bold, italic, links, lists, line breaks). */
+function renderBasicMarkdown(text: string): string {
+  if (!text) return '<p class="text-muted-foreground">No notes yet.</p>';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    .replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>")
+    .replace(/\n{2,}/g, "</p><p>")
+    .replace(/\n/g, "<br>")
+    .replace(/^/, "<p>")
+    .replace(/$/, "</p>");
 }
 
 function FormField({
@@ -170,6 +196,8 @@ export function ItemFormPage() {
     }
   }, [typeValue, utils, setValue, validateAssetIdUniqueness]);
 
+  const [notesPreview, setNotesPreview] = useState(false);
+
   // Pending connections for create mode
   const [pendingConnections, setPendingConnections] = useState<PendingConnection[]>([]);
   const [connectionSearch, setConnectionSearch] = useState("");
@@ -204,6 +232,7 @@ export function ItemFormPage() {
         deductible: item.deductible,
         purchaseDate: item.purchaseDate ?? "",
         warrantyExpires: item.warrantyExpires ?? "",
+        purchasePrice: item.purchasePrice?.toString() ?? "",
         replacementValue: item.replacementValue?.toString() ?? "",
         resaleValue: item.resaleValue?.toString() ?? "",
         assetId: item.assetId ?? "",
@@ -274,6 +303,10 @@ export function ItemFormPage() {
       toast.error("Item name is required");
       return;
     }
+    if (!values.type) {
+      toast.error("Type is required");
+      return;
+    }
 
     const payload = {
       itemName: values.itemName.trim(),
@@ -287,6 +320,7 @@ export function ItemFormPage() {
       deductible: values.deductible,
       purchaseDate: values.purchaseDate || null,
       warrantyExpires: values.warrantyExpires || null,
+      purchasePrice: values.purchasePrice ? parseFloat(values.purchasePrice) : null,
       replacementValue: values.replacementValue ? parseFloat(values.replacementValue) : null,
       resaleValue: values.resaleValue ? parseFloat(values.resaleValue) : null,
       assetId: values.assetId || null,
@@ -425,9 +459,9 @@ export function ItemFormPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Type">
+            <FormField label="Type *" error={errors.type?.message}>
               <Select
-                {...register("type")}
+                {...register("type", { required: "Type is required" })}
                 options={[
                   { value: "", label: "Select type..." },
                   ...ITEM_TYPES.map((t) => ({ value: t, label: t })),
@@ -439,7 +473,7 @@ export function ItemFormPage() {
                 {...register("condition")}
                 options={[
                   { value: "", label: "Select condition..." },
-                  ...CONDITIONS.map((c) => ({ value: c, label: c })),
+                  ...CONDITIONS.map((c) => ({ value: c.value, label: c.label })),
                 ]}
               />
             </FormField>
@@ -471,7 +505,16 @@ export function ItemFormPage() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField label="Purchase Price ($)">
+              <TextInput
+                type="number"
+                step="0.01"
+                min="0"
+                {...register("purchasePrice")}
+                placeholder="0.00"
+              />
+            </FormField>
             <FormField label="Replacement Value ($)">
               <TextInput
                 type="number"
@@ -496,16 +539,44 @@ export function ItemFormPage() {
 
         {/* Notes */}
         <section className="space-y-4 p-6 rounded-2xl border-2 border-app-accent/10 bg-card/50 shadow-sm shadow-app-accent/5">
-          <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
-            Notes
-          </h2>
-          <Textarea
-            {...register("notes")}
-            rows={4}
-            placeholder="Add notes about this item..."
-            className="w-full bg-transparent"
-          />
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
+              Notes
+            </h2>
+            <button
+              type="button"
+              onClick={() => setNotesPreview((p) => !p)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={notesPreview ? "Edit notes" : "Preview notes"}
+            >
+              {notesPreview ? (
+                <>
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </>
+              ) : (
+                <>
+                  <Eye className="h-3.5 w-3.5" /> Preview
+                </>
+              )}
+            </button>
+          </div>
+          {notesPreview ? (
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none min-h-[6rem] p-3 rounded-md border bg-muted/30"
+              aria-label="Notes preview"
+              dangerouslySetInnerHTML={{
+                __html: renderBasicMarkdown(watch("notes") || ""),
+              }}
+            />
+          ) : (
+            <Textarea
+              {...register("notes")}
+              rows={4}
+              placeholder="Add notes about this item..."
+              className="w-full bg-transparent"
+            />
+          )}
         </section>
 
         {/* Connected Items (create mode only) */}
