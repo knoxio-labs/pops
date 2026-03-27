@@ -16,6 +16,8 @@ export const aiUsageStatsOutputSchema = z.object({
       cost: z.number(),
       apiCalls: z.number(),
       cacheHits: z.number(),
+      inputTokens: z.number(),
+      outputTokens: z.number(),
     })
     .optional(),
 });

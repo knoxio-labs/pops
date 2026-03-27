@@ -40,15 +40,15 @@ export function ModelConfigPage() {
   // Load existing settings
   const modelSetting = trpc.core.settings.get.useQuery(
     { key: SETTING_KEYS.model },
-    { retry: false },
+    { retry: false }
   );
   const budgetSetting = trpc.core.settings.get.useQuery(
     { key: SETTING_KEYS.budget },
-    { retry: false },
+    { retry: false }
   );
   const fallbackSetting = trpc.core.settings.get.useQuery(
     { key: SETTING_KEYS.fallback },
-    { retry: false },
+    { retry: false }
   );
 
   // Load AI usage stats for current month comparison
@@ -69,8 +69,7 @@ export function ModelConfigPage() {
     if (fallbackSetting.data?.data?.value) setFallback(fallbackSetting.data.data.value);
   }, [fallbackSetting.data]);
 
-  const isLoading =
-    modelSetting.isLoading || budgetSetting.isLoading || fallbackSetting.isLoading;
+  const isLoading = modelSetting.isLoading || budgetSetting.isLoading || fallbackSetting.isLoading;
 
   async function handleSave() {
     setSaving(true);
@@ -91,9 +90,9 @@ export function ModelConfigPage() {
     }
   }
 
-  // Calculate token usage (all-time — last30Days doesn't include token breakdown)
+  // Calculate token usage from last 30 days
   const currentMonthTokens =
-    (stats?.totalInputTokens ?? 0) + (stats?.totalOutputTokens ?? 0);
+    (stats?.last30Days?.inputTokens ?? 0) + (stats?.last30Days?.outputTokens ?? 0);
   const budgetNum = budget ? parseInt(budget, 10) : 0;
   const budgetUsedPct = budgetNum > 0 ? Math.min((currentMonthTokens / budgetNum) * 100, 100) : 0;
 
@@ -115,9 +114,7 @@ export function ModelConfigPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-          Model Configuration
-        </h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Model Configuration</h1>
         <p className="text-muted-foreground text-sm">Configure AI model and spending limits</p>
       </div>
 
@@ -132,9 +129,7 @@ export function ModelConfigPage() {
         <StatCard
           title="Monthly Budget"
           value={budgetNum > 0 ? budgetNum.toLocaleString() : "No limit"}
-          description={
-            budgetNum > 0 ? `${budgetUsedPct.toFixed(1)}% used` : "Set a budget below"
-          }
+          description={budgetNum > 0 ? `${budgetUsedPct.toFixed(1)}% used` : "Set a budget below"}
           color={budgetUsedPct > 90 ? "rose" : budgetUsedPct > 70 ? "amber" : "emerald"}
         />
       </div>

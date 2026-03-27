@@ -43,7 +43,7 @@ function renderPage() {
   return render(
     <MemoryRouter>
       <ModelConfigPage />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -160,7 +160,7 @@ describe("ModelConfigPage", () => {
     });
     renderPage();
     expect(screen.getByText("Current Month Tokens")).toBeInTheDocument();
-    expect(screen.getByText("120,000")).toBeInTheDocument(); // totalInputTokens 100000 + totalOutputTokens 20000
+    expect(screen.getByText("60,000")).toBeInTheDocument(); // last30Days inputTokens 50000 + outputTokens 10000
     expect(screen.getByText("Monthly Budget")).toBeInTheDocument();
     expect(screen.getByText("200,000")).toBeInTheDocument();
   });
@@ -172,7 +172,13 @@ describe("ModelConfigPage", () => {
         "ai.budgetExceededFallback": "skip",
       },
       stats: {
-        last30Days: { cost: 0.01, apiCalls: 5, cacheHits: 0 },
+        last30Days: {
+          cost: 0.01,
+          apiCalls: 5,
+          cacheHits: 0,
+          inputTokens: 900,
+          outputTokens: 200,
+        },
         totalApiCalls: 5,
         totalCacheHits: 0,
         totalCost: 0.01,
@@ -193,7 +199,7 @@ describe("ModelConfigPage", () => {
     });
     renderPage();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
-    expect(screen.getByText(/120,000 \/ 200,000 tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/60,000 \/ 200,000 tokens/)).toBeInTheDocument();
   });
 
   it("shows no progress bar when budget is not set", () => {
