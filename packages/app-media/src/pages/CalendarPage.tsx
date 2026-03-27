@@ -14,9 +14,13 @@ function formatEpisodeCode(season: number, episode: number): string {
   return `S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}`;
 }
 
+/** Parse a date-only string (YYYY-MM-DD) without UTC midnight rollover. */
+function parseLocalDate(dateStr: string): Date {
+  return new Date(dateStr + "T12:00:00");
+}
+
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, {
+  return parseLocalDate(dateStr).toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -25,7 +29,7 @@ function formatDate(dateStr: string): string {
 
 function isToday(dateStr: string): boolean {
   const today = new Date();
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   return (
     date.getFullYear() === today.getFullYear() &&
     date.getMonth() === today.getMonth() &&
@@ -36,19 +40,6 @@ function isToday(dateStr: string): boolean {
 function getDateKey(airDateUtc: string): string {
   const date = new Date(airDateUtc);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-interface CalendarEpisode {
-  id: number;
-  seriesId: number;
-  seriesTitle: string;
-  tvdbId: number;
-  episodeTitle: string;
-  seasonNumber: number;
-  episodeNumber: number;
-  airDateUtc: string;
-  hasFile: boolean;
-  posterUrl: string | null;
 }
 
 function CalendarSkeleton() {
@@ -74,9 +65,7 @@ export function CalendarPage() {
 
   const now = new Date();
   const start = now.toISOString().split("T")[0]!;
-  const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0]!;
+  const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
 
   const {
     data: calendarData,
@@ -90,10 +79,10 @@ export function CalendarPage() {
     }
   );
 
-  const episodes: CalendarEpisode[] = calendarData?.data ?? [];
+  const episodes = calendarData?.data ?? [];
 
   const grouped = useMemo(() => {
-    const groups = new Map<string, CalendarEpisode[]>();
+    const groups = new Map<string, (typeof episodes)[number][]>();
     for (const ep of episodes) {
       const key = getDateKey(ep.airDateUtc);
       const existing = groups.get(key);
@@ -197,9 +186,7 @@ export function CalendarPage() {
                       {/* Episode info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium truncate">
-                            {ep.seriesTitle}
-                          </h3>
+                          <h3 className="text-sm font-medium truncate">{ep.seriesTitle}</h3>
                           <Badge variant="outline" className="shrink-0 text-[10px]">
                             {formatEpisodeCode(ep.seasonNumber, ep.episodeNumber)}
                           </Badge>
@@ -217,10 +204,7 @@ export function CalendarPage() {
                               Downloaded
                             </Badge>
                           ) : (
-                            <Badge
-                              variant="secondary"
-                              className="gap-0.5 text-[10px]"
-                            >
+                            <Badge variant="secondary" className="gap-0.5 text-[10px]">
                               <Clock className="h-2.5 w-2.5" />
                               Missing
                             </Badge>

@@ -2,7 +2,12 @@
  * Sonarr API client — extends base *arr client with TV show-specific endpoints.
  */
 import { ArrBaseClient } from "./base-client.js";
-import type { SonarrSeries, SonarrQueueResponse, ArrStatusResult, SonarrCalendarEpisode } from "./types.js";
+import type {
+  SonarrSeries,
+  SonarrQueueResponse,
+  ArrStatusResult,
+  SonarrCalendarEpisode,
+} from "./types.js";
 
 export class SonarrClient extends ArrBaseClient {
   /** Fetch all monitored series from Sonarr. */
@@ -22,7 +27,9 @@ export class SonarrClient extends ArrBaseClient {
 
   /** Fetch upcoming episodes from the Sonarr calendar. */
   async getCalendar(start: string, end: string): Promise<SonarrCalendarEpisode[]> {
-    return this.get<SonarrCalendarEpisode[]>(`/calendar?start=${start}&end=${end}&includeSeries=true`);
+    return this.get<SonarrCalendarEpisode[]>(
+      `/calendar?start=${start}&end=${end}&includeSeries=true`
+    );
   }
 
   /**

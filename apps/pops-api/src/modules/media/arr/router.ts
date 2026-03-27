@@ -129,8 +129,8 @@ export const arrRouter = router({
   getCalendar: protectedProcedure
     .input(
       z.object({
-        start: z.string(),
-        end: z.string(),
+        start: z.string().date(),
+        end: z.string().date(),
       })
     )
     .query(async ({ input }) => {
