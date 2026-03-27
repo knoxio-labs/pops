@@ -191,6 +191,12 @@ export const plexRouter = router({
     return { data: scheduler.getSchedulerStatus() };
   }),
 
+  getSyncLogs: protectedProcedure
+    .input(z.object({ limit: z.number().int().positive().max(100).optional() }).optional())
+    .query(({ input }) => {
+      return { data: scheduler.getSyncLogs(input?.limit ?? 20) };
+    }),
+
   getSectionIds: protectedProcedure.query(() => {
     return { data: plexService.getPlexSectionIds() };
   }),

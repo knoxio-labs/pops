@@ -9,6 +9,7 @@ import { createApp } from "./app.js";
 import { closeDb } from "./db.js";
 import { startTtlWatcher } from "./modules/core/envs/ttl-watcher.js";
 import { startupCleanup } from "./modules/core/envs/registry.js";
+import { resumeSchedulerIfEnabled, stopScheduler } from "./modules/media/plex/scheduler.js";
 
 const port = Number(process.env["PORT"] ?? 3000);
 const app = createApp();
@@ -24,11 +25,18 @@ const server = app.listen(port, () => {
   console.log(`[pops-api] Listening on port ${port}`);
 });
 
+// Auto-resume Plex sync scheduler if it was previously running
+const resumedScheduler = resumeSchedulerIfEnabled();
+if (resumedScheduler) {
+  console.log(`[pops-api] Plex scheduler resumed (interval: ${resumedScheduler.intervalMs}ms)`);
+}
+
 // Periodically purge expired named environments
 const ttlWatcher = startTtlWatcher();
 
 function shutdown(): void {
   console.log("[pops-api] Shutting down...");
+  stopScheduler();
   clearInterval(ttlWatcher);
   server.close(() => {
     closeDb();
