@@ -16,20 +16,19 @@ import {
   Select,
   type SelectOption,
   Card,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
 } from "@pops/ui";
 import { trpc } from "../lib/trpc";
 
-interface Correction {
-  id: string;
-  descriptionPattern: string;
-  matchType: "exact" | "contains" | "regex";
-  entityId: string | null;
-  entityName: string | null;
-  confidence: number;
-  timesApplied: number;
-  lastUsedAt: string | null;
-  createdAt: string;
-}
+type Correction = NonNullable<
+  ReturnType<typeof trpc.core.corrections.list.useQuery>["data"]
+>["data"][number];
 
 const MATCH_TYPE_OPTIONS: SelectOption[] = [
   { value: "", label: "All Match Types" },
@@ -59,7 +58,14 @@ function ConfidenceSlider({
 }) {
   const [value, setValue] = useState(initial);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialRef = useRef(initial);
   const utils = trpc.useUtils();
+
+  // Keep initialRef in sync when the prop changes (e.g. after query invalidation)
+  useEffect(() => {
+    initialRef.current = initial;
+    setValue(initial);
+  }, [initial]);
 
   const adjustMutation = trpc.core.corrections.adjustConfidence.useMutation({
     onSuccess: () => {
@@ -69,7 +75,7 @@ function ConfidenceSlider({
 
   const commit = useCallback(
     (newValue: number) => {
-      const delta = newValue - initial;
+      const delta = newValue - initialRef.current;
       if (Math.abs(delta) < 0.001) return;
       adjustMutation.mutate(
         { id: ruleId, delta },
@@ -82,7 +88,7 @@ function ConfidenceSlider({
         }
       );
     },
-    [ruleId, initial, adjustMutation, onAutoDelete]
+    [ruleId, adjustMutation, onAutoDelete]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,8 +129,13 @@ export function RulesBrowserPage(): React.ReactElement {
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   const parsedMinConfidence = minConfidence ? parseFloat(minConfidence) : undefined;
+  const parsedMatchType =
+    matchType === "exact" || matchType === "contains" || matchType === "regex"
+      ? matchType
+      : undefined;
   const queryInput = {
     minConfidence: parsedMinConfidence,
+    matchType: parsedMatchType,
     limit: PAGE_SIZE,
     offset,
   };
@@ -136,6 +147,7 @@ export function RulesBrowserPage(): React.ReactElement {
     onSuccess: () => {
       void utils.core.corrections.list.invalidate();
       setDeleteId(null);
+      setRemovedIds(new Set());
     },
   });
 
@@ -153,11 +165,6 @@ export function RulesBrowserPage(): React.ReactElement {
   );
   const pagination = data?.pagination;
 
-  // Filter client-side by matchType (API only supports minConfidence filter)
-  const filtered = matchType
-    ? corrections.filter((c) => c.matchType === matchType)
-    : corrections;
-
   const columns: ColumnDef<Correction>[] = [
     {
       accessorKey: "descriptionPattern",
@@ -169,9 +176,7 @@ export function RulesBrowserPage(): React.ReactElement {
     {
       accessorKey: "matchType",
       header: "Match Type",
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.original.matchType}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.matchType}</Badge>,
     },
     {
       accessorKey: "entityName",
@@ -184,6 +189,7 @@ export function RulesBrowserPage(): React.ReactElement {
       header: ({ column }) => <SortableHeader column={column}>Confidence</SortableHeader>,
       cell: ({ row }) => (
         <ConfidenceSlider
+          key={`${row.original.id}-${row.original.confidence}`}
           ruleId={row.original.id}
           initial={row.original.confidence}
           onAutoDelete={handleAutoDelete}
@@ -197,9 +203,7 @@ export function RulesBrowserPage(): React.ReactElement {
           <SortableHeader column={column}>Times Applied</SortableHeader>
         </div>
       ),
-      cell: ({ row }) => (
-        <div className="text-right tabular-nums">{row.original.timesApplied}</div>
-      ),
+      cell: ({ row }) => <div className="text-right tabular-nums">{row.original.timesApplied}</div>,
     },
     {
       accessorKey: "lastUsedAt",
@@ -255,9 +259,7 @@ export function RulesBrowserPage(): React.ReactElement {
         </div>
         <Alert variant="destructive">
           <h3 className="font-semibold">Failed to load rules</h3>
-          <p className="text-sm mt-1">
-            Something went wrong loading categorisation rules.
-          </p>
+          <p className="text-sm mt-1">Something went wrong loading categorisation rules.</p>
           <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
             Retry
           </Button>
@@ -318,7 +320,7 @@ export function RulesBrowserPage(): React.ReactElement {
       </div>
 
       {/* Table */}
-      {filtered.length === 0 ? (
+      {corrections.length === 0 ? (
         <Card className="p-12 text-center">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
           <p className="text-muted-foreground">No categorisation rules found.</p>
@@ -327,7 +329,7 @@ export function RulesBrowserPage(): React.ReactElement {
           </p>
         </Card>
       ) : (
-        <DataTable columns={columns} data={filtered} paginated defaultPageSize={PAGE_SIZE} />
+        <DataTable columns={columns} data={corrections} paginated defaultPageSize={PAGE_SIZE} />
       )}
 
       {/* Server-side pagination */}
@@ -359,29 +361,32 @@ export function RulesBrowserPage(): React.ReactElement {
       )}
 
       {/* Delete confirmation dialog */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
-            <h3 className="font-semibold text-lg mb-2">Delete Rule</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Are you sure you want to delete this categorisation rule? This action cannot be undone.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setDeleteId(null)}>
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete Rule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this categorisation rule? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogClose>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
