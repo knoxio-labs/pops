@@ -187,5 +187,5 @@ US-01 is the foundation (auth required for all Plex API calls). US-02 and US-03 
 - Plex webhooks (requires Plex Pass subscription)
 - Continue watching / in-progress tracking from Plex
 - Plex user rating import
-- Bidirectional watchlist sync with Plex Discover
+- Bidirectional watchlist sync with Plex Discover (see [PRD-059](../059-plex-watchlist-sync/README.md))
 - Multi-user Plex support (single user only)
