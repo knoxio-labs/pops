@@ -8,6 +8,7 @@ import healthRouter from "./routes/health.js";
 import upBankRouter from "./routes/webhooks/up-bank.js";
 import { envRouter } from "./modules/core/envs/router.js";
 import mediaImagesRouter from "./routes/media/images.js";
+import documentThumbnailRouter from "./routes/inventory/documents.js";
 import { appRouter } from "./router.js";
 import { createContext } from "./trpc.js";
 
@@ -41,6 +42,9 @@ export function createApp(): express.Express {
 
   // Media image serving — static file serving, no DB needed
   app.use(mediaImagesRouter);
+
+  // Document thumbnail proxy — proxies Paperless-ngx thumbnails
+  app.use(documentThumbnailRouter);
 
   // Cloudflare Access JWT auth — validates cf-access-jwt-assertion header.
   // Placed after health/webhook/media routes (those skip auth or use their own).

@@ -1,7 +1,7 @@
 # US-03: Document display
 
 > PRD: [049 — Paperless-ngx Integration](README.md)
-> Status: Partial
+> Status: Done
 
 ## Description
 
@@ -13,11 +13,11 @@ As a user, I want to see linked documents on the item detail page grouped by typ
 - [x] Documents fetched via `inventory.documents.listForItem` on page load
 - [x] Documents grouped by tag: "Receipts", "Warranties", "Manuals" — each group as a subsection
 - [x] Empty groups hidden (don't show "Warranties" heading if no warranties linked)
-- [ ] Each document card shows: thumbnail (loaded via proxy), title, tag badge, linked date — **thumbnails not shown on document cards; only title, tag badge, and linked date displayed**
-- [ ] "View in Paperless" link on each card — opens the Paperless web UI for that document in a new tab (`PAPERLESS_BASE_URL/documents/:id/details`) — **not implemented**
+- [x] Each document card shows: thumbnail (loaded via proxy), title, tag badge, linked date
+- [x] "View in Paperless" link on each card — opens the Paperless web UI for that document in a new tab (`PAPERLESS_BASE_URL/documents/:id/details`)
 - [x] "Unlink" action on each card (same as US-02 unlink)
-- [ ] Thumbnail loading: skeleton placeholder while thumbnail fetches — **not applicable since thumbnails not rendered**
-- [ ] Thumbnail error: "Document unavailable" placeholder if Paperless returns 404 for the thumbnail (document deleted externally) — **not applicable since thumbnails not rendered**
+- [x] Thumbnail loading: skeleton placeholder while thumbnail fetches
+- [x] Thumbnail error: "Document unavailable" placeholder if Paperless returns 404 for the thumbnail (document deleted externally)
 - [x] Section hidden entirely when Paperless is unavailable — no error message, no empty state, just absent
 - [x] Section hidden when item has no linked documents and Paperless is available — the "Link Document" button (from US-02) is the entry point
 

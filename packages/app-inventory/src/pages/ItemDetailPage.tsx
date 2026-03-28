@@ -452,10 +452,16 @@ function DocumentsSection({ itemId }: { itemId: string }) {
     );
   }
 
-  return <DocumentsList itemId={itemId} />;
+  return <DocumentsList itemId={itemId} paperlessBaseUrl={status?.baseUrl ?? null} />;
 }
 
-function DocumentsList({ itemId }: { itemId: string }) {
+function DocumentsList({
+  itemId,
+  paperlessBaseUrl,
+}: {
+  itemId: string;
+  paperlessBaseUrl: string | null;
+}) {
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.inventory.documents.listForItem.useQuery({
     itemId,
@@ -521,9 +527,9 @@ function DocumentsList({ itemId }: { itemId: string }) {
                     key={doc.id}
                     className="flex items-center justify-between p-3 rounded-lg border"
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="min-w-0">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <DocumentThumbnail documentId={doc.paperlessDocumentId} />
+                      <div className="min-w-0 flex-1">
                         <span className="font-medium text-sm truncate block">
                           {doc.title ?? `Document #${doc.paperlessDocumentId}`}
                         </span>
@@ -532,17 +538,31 @@ function DocumentsList({ itemId }: { itemId: string }) {
                         </span>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                      onClick={() => unlinkMutation.mutate({ id: doc.id })}
-                      disabled={unlinkMutation.isPending}
-                      title="Unlink document"
-                      aria-label="Unlink document"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {paperlessBaseUrl && (
+                        <a
+                          href={`${paperlessBaseUrl}/documents/${doc.paperlessDocumentId}/details`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+                          title="View in Paperless"
+                          aria-label="View in Paperless"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                        onClick={() => unlinkMutation.mutate({ id: doc.id })}
+                        disabled={unlinkMutation.isPending}
+                        title="Unlink document"
+                        aria-label="Unlink document"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -553,6 +573,35 @@ function DocumentsList({ itemId }: { itemId: string }) {
         <p className="text-muted-foreground text-sm">No documents linked yet.</p>
       )}
     </section>
+  );
+}
+
+function DocumentThumbnail({ documentId }: { documentId: number }) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const src = `/inventory/documents/${documentId}/thumbnail`;
+
+  if (status === "error") {
+    return (
+      <div
+        className="h-12 w-10 rounded bg-muted flex items-center justify-center shrink-0"
+        title="Document unavailable"
+      >
+        <FileText className="h-5 w-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-12 w-10 shrink-0 relative">
+      {status === "loading" && <Skeleton className="absolute inset-0 rounded" />}
+      <img
+        src={src}
+        alt="Document thumbnail"
+        className="h-12 w-10 rounded object-cover"
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+      />
+    </div>
   );
 }
 

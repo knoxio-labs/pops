@@ -10,6 +10,9 @@ const mockLocationPathQuery = vi.fn();
 const mockDeleteMutate = vi.fn();
 const mockDeleteMutation = vi.fn();
 const mockDisconnectMutation = vi.fn();
+const mockPaperlessStatusQuery = vi.fn();
+const mockDocumentsListQuery = vi.fn();
+const mockDocumentsUnlinkMutation = vi.fn();
 const mockUseUtils = vi.fn();
 
 vi.mock("../lib/trpc", () => ({
@@ -30,11 +33,11 @@ vi.mock("../lib/trpc", () => ({
         getPath: { useQuery: (...args: unknown[]) => mockLocationPathQuery(...args) },
       },
       paperless: {
-        status: { useQuery: () => ({ data: null, isLoading: false }) },
+        status: { useQuery: (...args: unknown[]) => mockPaperlessStatusQuery(...args) },
       },
       documents: {
-        listForItem: { useQuery: () => ({ data: { data: [] }, isLoading: false }) },
-        unlink: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+        listForItem: { useQuery: (...args: unknown[]) => mockDocumentsListQuery(...args) },
+        unlink: { useMutation: (...args: unknown[]) => mockDocumentsUnlinkMutation(...args) },
       },
     },
     useUtils: () => mockUseUtils(),
@@ -137,6 +140,21 @@ beforeEach(() => {
   });
 
   mockDisconnectMutation.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+  });
+
+  mockPaperlessStatusQuery.mockReturnValue({
+    data: null,
+    isLoading: false,
+  });
+
+  mockDocumentsListQuery.mockReturnValue({
+    data: { data: [] },
+    isLoading: false,
+  });
+
+  mockDocumentsUnlinkMutation.mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
   });
@@ -431,6 +449,115 @@ describe("ItemDetailPage", () => {
     it("renders Connected Items heading with icon", () => {
       renderAtRoute("/inventory/items/item-1");
       expect(screen.getByText("Connected Items")).toBeInTheDocument();
+    });
+  });
+
+  describe("documents section", () => {
+    it("hides documents section when paperless is not configured", () => {
+      mockPaperlessStatusQuery.mockReturnValue({
+        data: { data: { configured: false, available: false, baseUrl: null } },
+        isLoading: false,
+      });
+
+      renderAtRoute("/inventory/items/item-1");
+      // Documents heading should not appear (section hidden entirely)
+      const headings = screen.queryAllByText("Documents");
+      expect(headings).toHaveLength(0);
+    });
+
+    it("renders document cards with thumbnail images", () => {
+      mockPaperlessStatusQuery.mockReturnValue({
+        data: {
+          data: { configured: true, available: true, baseUrl: "https://paperless.example.com" },
+        },
+        isLoading: false,
+      });
+
+      mockDocumentsListQuery.mockReturnValue({
+        data: {
+          data: [
+            {
+              id: "doc-1",
+              itemId: "item-1",
+              paperlessDocumentId: 42,
+              documentType: "receipt",
+              title: "MacBook Receipt",
+              createdAt: "2026-01-15T00:00:00Z",
+            },
+          ],
+        },
+        isLoading: false,
+      });
+
+      renderAtRoute("/inventory/items/item-1");
+      expect(screen.getByText("MacBook Receipt")).toBeInTheDocument();
+
+      const thumbnail = screen.getByAltText("Document thumbnail");
+      expect(thumbnail).toHaveAttribute("src", "/inventory/documents/42/thumbnail");
+    });
+
+    it("renders View in Paperless link when baseUrl available", () => {
+      mockPaperlessStatusQuery.mockReturnValue({
+        data: {
+          data: { configured: true, available: true, baseUrl: "https://paperless.example.com" },
+        },
+        isLoading: false,
+      });
+
+      mockDocumentsListQuery.mockReturnValue({
+        data: {
+          data: [
+            {
+              id: "doc-1",
+              itemId: "item-1",
+              paperlessDocumentId: 42,
+              documentType: "receipt",
+              title: "Receipt",
+              createdAt: "2026-01-15T00:00:00Z",
+            },
+          ],
+        },
+        isLoading: false,
+      });
+
+      renderAtRoute("/inventory/items/item-1");
+      const link = screen.getByLabelText("View in Paperless");
+      expect(link).toHaveAttribute("href", "https://paperless.example.com/documents/42/details");
+      expect(link).toHaveAttribute("target", "_blank");
+    });
+
+    it("shows skeleton while documents are loading", () => {
+      mockPaperlessStatusQuery.mockReturnValue({
+        data: {
+          data: { configured: true, available: true, baseUrl: "https://paperless.example.com" },
+        },
+        isLoading: false,
+      });
+
+      mockDocumentsListQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+
+      renderAtRoute("/inventory/items/item-1");
+      expect(screen.getByText("Documents")).toBeInTheDocument();
+    });
+
+    it("shows empty state when no documents linked", () => {
+      mockPaperlessStatusQuery.mockReturnValue({
+        data: {
+          data: { configured: true, available: true, baseUrl: "https://paperless.example.com" },
+        },
+        isLoading: false,
+      });
+
+      mockDocumentsListQuery.mockReturnValue({
+        data: { data: [] },
+        isLoading: false,
+      });
+
+      renderAtRoute("/inventory/items/item-1");
+      expect(screen.getByText("No documents linked yet.")).toBeInTheDocument();
     });
   });
 

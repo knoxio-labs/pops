@@ -13,14 +13,14 @@ export const paperlessRouter = router({
     const client = getPaperlessClient();
 
     if (!client) {
-      return { data: { configured: false, available: false } };
+      return { data: { configured: false, available: false, baseUrl: null } };
     }
 
     try {
       await client.getDocumentTypes();
-      return { data: { configured: true, available: true } };
+      return { data: { configured: true, available: true, baseUrl: client.getBaseUrl() } };
     } catch {
-      return { data: { configured: true, available: false } };
+      return { data: { configured: true, available: false, baseUrl: client.getBaseUrl() } };
     }
   }),
 
