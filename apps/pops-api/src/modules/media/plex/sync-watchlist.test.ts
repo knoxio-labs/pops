@@ -398,11 +398,13 @@ describe("syncWatchlistFromPlex", () => {
     mockPlexWatchlistResponse([noIdItem]);
 
     // Mock TMDB search returning a match
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetTmdbClient.mockReturnValue({
       searchMovies: vi.fn().mockResolvedValue({
         results: [{ tmdbId: 27205, title: "Inception", releaseDate: "2010-07-16" }],
       }),
-    } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    } as any);
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetMovieByTmdbId.mockReturnValue({ id: 42 } as ReturnType<typeof getMovieByTmdbId>);
 
     const { getMock, valuesMock } = setupDrizzleMock();
@@ -424,9 +426,11 @@ describe("syncWatchlistFromPlex", () => {
     mockPlexWatchlistResponse([noIdItem]);
 
     // Mock TMDB search returning no results
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetTmdbClient.mockReturnValue({
       searchMovies: vi.fn().mockResolvedValue({ results: [] }),
-    } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    } as any);
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 
     setupDrizzleMock();
 
@@ -449,11 +453,13 @@ describe("syncWatchlistFromPlex", () => {
     mockPlexWatchlistResponse([noIdItem]);
 
     // Mock TVDB search returning a match
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetTvdbClient.mockReturnValue({
       searchSeries: vi
         .fn()
         .mockResolvedValue([{ tvdbId: 81189, name: "Breaking Bad", year: "2008" }]),
-    } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+    } as any);
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetTvShowByTvdbId.mockReturnValue({ id: 7 } as ReturnType<typeof getTvShowByTvdbId>);
 
     const { getMock, valuesMock } = setupDrizzleMock();
