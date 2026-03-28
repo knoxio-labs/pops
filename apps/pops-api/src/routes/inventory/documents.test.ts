@@ -6,9 +6,12 @@ import express from "express";
 import request from "supertest";
 
 // Mock the paperless client module
-const mockGetPaperlessClient = vi.fn();
+interface MockPaperlessClient {
+  fetchThumbnail: ReturnType<typeof vi.fn>;
+}
+const mockGetPaperlessClient = vi.fn<() => MockPaperlessClient | null>();
 vi.mock("../../modules/inventory/paperless/index.js", () => ({
-  getPaperlessClient: () => mockGetPaperlessClient(),
+  getPaperlessClient: (): MockPaperlessClient | null => mockGetPaperlessClient(),
 }));
 
 import documentsRouter from "./documents.js";
