@@ -11,6 +11,8 @@ export interface WatchlistEntry {
   mediaId: number;
   priority: number | null;
   notes: string | null;
+  source: string | null;
+  plexRatingKey: string | null;
   addedAt: string;
 }
 
@@ -22,6 +24,8 @@ export function toWatchlistEntry(row: MediaWatchlistRow): WatchlistEntry {
     mediaId: row.mediaId,
     priority: row.priority,
     notes: row.notes,
+    source: row.source,
+    plexRatingKey: row.plexRatingKey,
     addedAt: row.addedAt,
   };
 }

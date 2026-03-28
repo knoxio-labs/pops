@@ -10,7 +10,8 @@ import { settings, syncLogs } from "@pops/db-types";
 import type { PlexClient } from "./client.js";
 import { importMoviesFromPlex } from "./sync-movies.js";
 import { importTvShowsFromPlex } from "./sync-tv.js";
-import { getPlexClient, getPlexSectionIds } from "./service.js";
+import { syncWatchlistFromPlex } from "./sync-watchlist.js";
+import { getPlexClient, getPlexSectionIds, getPlexToken } from "./service.js";
 import { getDrizzle } from "../../../db.js";
 
 // ---------------------------------------------------------------------------
@@ -260,9 +261,10 @@ async function runSync(): Promise<void> {
 
 async function executeSyncCycle(
   client: PlexClient
-): Promise<{ movieCount: number; tvCount: number; errors: string[] }> {
+): Promise<{ movieCount: number; tvCount: number; watchlistAdded: number; errors: string[] }> {
   let movieCount = 0;
   let tvCount = 0;
+  let watchlistAdded = 0;
   const errors: string[] = [];
 
   if (movieSectionId) {
@@ -287,7 +289,21 @@ async function executeSyncCycle(
     console.warn("[Plex Scheduler] TV section ID not configured — skipping TV sync");
   }
 
-  return { movieCount, tvCount, errors };
+  // Watchlist sync runs after library sync (items may need to be added to library first)
+  const token = getPlexToken();
+  if (token) {
+    try {
+      const watchlistResult = await syncWatchlistFromPlex(token);
+      watchlistAdded = watchlistResult.added;
+      for (const err of watchlistResult.errors) {
+        errors.push(`Watchlist: ${err.title} — ${err.reason}`);
+      }
+    } catch (err) {
+      errors.push(`Watchlist sync failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return { movieCount, tvCount, watchlistAdded, errors };
 }
 
 // ---------------------------------------------------------------------------
