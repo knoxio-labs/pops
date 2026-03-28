@@ -28,6 +28,8 @@ export interface BreadcrumbSegment {
 export interface PageHeaderProps {
   /** Page title displayed as heading */
   title: ReactNode;
+  /** Optional icon rendered before the title */
+  icon?: ReactNode;
   /** Optional description shown below the title */
   description?: ReactNode;
   /** URL of the logical parent page — shows back button when provided */
@@ -148,6 +150,7 @@ function BreadcrumbItems({
 
 export function PageHeader({
   title,
+  icon,
   description,
   backHref,
   breadcrumbs,
@@ -163,7 +166,10 @@ export function PageHeader({
       <header className={cn("space-y-1", className)}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+            <div className="flex items-center gap-3">
+              {icon}
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+            </div>
             {description && (
               <p className="text-muted-foreground text-sm mt-1">{description}</p>
             )}
@@ -196,7 +202,10 @@ export function PageHeader({
       </div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+          <div className="flex items-center gap-3">
+            {icon}
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+          </div>
           {description && (
             <p className="text-muted-foreground text-sm mt-1">{description}</p>
           )}
