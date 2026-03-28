@@ -227,12 +227,14 @@ export function createTestDb(): Database {
     CREATE INDEX IF NOT EXISTS idx_media_scores_dimension ON media_scores(dimension_id);
 
     CREATE TABLE IF NOT EXISTS watchlist (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      media_type TEXT NOT NULL CHECK(media_type IN ('movie', 'tv_show')),
-      media_id   INTEGER NOT NULL,
-      priority   INTEGER DEFAULT 0,
-      notes      TEXT,
-      added_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_type       TEXT NOT NULL CHECK(media_type IN ('movie', 'tv_show')),
+      media_id         INTEGER NOT NULL,
+      priority         INTEGER DEFAULT 0,
+      notes            TEXT,
+      added_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      source           TEXT NOT NULL DEFAULT 'manual',
+      plex_rating_key  TEXT
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_media ON watchlist(media_type, media_id);
 
@@ -823,13 +825,15 @@ export function seedWatchlistEntry(
     media_id: number;
     priority: number | null;
     notes: string | null;
+    source: string;
+    plex_rating_key: string | null;
   }> = {}
 ): number {
   const result = db
     .prepare(
       `
-    INSERT INTO watchlist (media_type, media_id, priority, notes)
-    VALUES (@media_type, @media_id, @priority, @notes)
+    INSERT INTO watchlist (media_type, media_id, priority, notes, source, plex_rating_key)
+    VALUES (@media_type, @media_id, @priority, @notes, @source, @plex_rating_key)
   `
     )
     .run({
@@ -837,6 +841,8 @@ export function seedWatchlistEntry(
       media_id: overrides.media_id ?? 1,
       priority: overrides.priority ?? null,
       notes: overrides.notes ?? null,
+      source: overrides.source ?? "manual",
+      plex_rating_key: overrides.plex_rating_key ?? null,
     });
 
   return Number(result.lastInsertRowid);
