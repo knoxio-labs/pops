@@ -1,7 +1,7 @@
 # PRD-007: App Theme Colour Propagation
 
 > Epic: [02 — Shell & App Switcher](../../epics/02-shell-app-switcher.md)
-> Status: Done
+> Status: Partial
 
 ## Overview
 
@@ -74,3 +74,7 @@ No database changes. The colour is declared in the app's `navConfig` (already pa
 - The CSS variable definitions themselves (PRD-002 US-02)
 - Replacing hardcoded colours in app packages (PRD-002 US-04)
 - Per-page colour overrides within an app
+
+## Dependencies
+
+PRD-007 propagation is only effective when PRD-002 US-02 (define `--app-accent` CSS variable values) and PRD-002 US-04 (replace hardcoded colour classes with `bg-app-accent` tokens) are both complete. Without those, the shell sets variables that no component consumes.

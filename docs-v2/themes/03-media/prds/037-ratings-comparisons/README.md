@@ -114,8 +114,9 @@ Build a pairwise comparison system per [ADR-010](../../../../architecture/adr-01
 | 03 | [us-03-rankings-page](us-03-rankings-page.md) | Rankings page with dimension selector, ranked list (poster, title, score, count), overall average | Partial | Yes (parallel with us-01) |
 | 04 | [us-04-dimension-management](us-04-dimension-management.md) | CRUD for comparison dimensions, active/inactive toggle, sort order | Partial | Yes |
 | 05 | [us-05-quick-pick](us-05-quick-pick.md) | Quick pick page with random unwatched movies, configurable count, "Watch This" action | Partial | Yes |
+| 06 | [us-06-comparison-history](us-06-comparison-history.md) | Comparison history list, delete with Elo recalculation, undo toast, dimension filter | Not started | Yes |
 
-US-01 depends on US-02 (arena needs Elo scoring to record comparisons). US-03, US-04, and US-05 can all be built in parallel.
+US-01 depends on US-02 (arena needs Elo scoring to record comparisons). US-03, US-04, US-05, and US-06 can all be built in parallel.
 
 ## Verification
 

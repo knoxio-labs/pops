@@ -1,7 +1,7 @@
 # US-01: Define nav types and app registry
 
 > PRD: [006 — App Switcher](README.md)
-> Status: Done
+> Status: Partial
 
 ## Description
 
@@ -14,6 +14,7 @@ As a developer, I want typed nav config interfaces and a central app registry so
 - [x] Registry is the single source of truth — sidebar/rail reads from it, no hardcoded nav lists
 - [x] At least one app (finance) registered with Lucide icon references (not emoji)
 - [x] Adding a new app to the registry is a one-line import + array push
+- [ ] Icon name strings in navConfig resolve to actual icon components — missing mappings fail visibly at dev time (TypeScript error or runtime warning), not silently at render time
 
 ## Notes
 
