@@ -23,7 +23,7 @@ export type LibrarySortOption = (typeof librarySortOptions)[number];
 /** Zod schema for the unified library list query. */
 export const LibraryListSchema = z.object({
   type: z.enum(["all", "movie", "tv"]).optional().default("all"),
-  sort: z.enum(librarySortOptions).optional().default("dateAdded"),
+  sort: z.enum(librarySortOptions).optional().default("title"),
   search: z.string().optional(),
   genre: z.string().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
