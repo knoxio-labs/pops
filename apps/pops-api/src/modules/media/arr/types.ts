@@ -34,7 +34,7 @@ export interface ArrConfig {
 export class ArrApiError extends Error {
   public readonly status: number;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status = 0) {
     super(message);
     this.name = "ArrApiError";
     this.status = status;
