@@ -450,6 +450,32 @@ export const arrRouter = router({
       }
     }),
 
+  /** Get episodes for a series from Sonarr, optionally filtered by season. */
+  getSeriesEpisodes: protectedProcedure
+    .input(
+      z.object({
+        sonarrId: z.number().int().positive(),
+        seasonNumber: z.number().int().min(0).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const episodes = await arrService.getSeriesEpisodes(input.sonarrId, input.seasonNumber);
+        return { data: episodes };
+      } catch (err) {
+        if (err instanceof ArrApiError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Sonarr error: ${err.message}`,
+          });
+        }
+        if (err instanceof Error && err.message === "Sonarr not configured") {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+        }
+        throw err;
+      }
+    }),
+
   /** Batch update episode monitoring in Sonarr. */
   updateEpisodeMonitoring: protectedProcedure
     .input(

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, HardDrive } from "lucide-react";
+import { Switch } from "@pops/ui";
 import { formatRuntime } from "../lib/utils";
 
 interface Episode {
@@ -19,6 +20,14 @@ export interface EpisodeListProps {
   onToggleWatched?: (episodeId: number, watched: boolean) => void;
   /** Episode IDs currently being toggled (pending mutation). */
   togglingIds?: Set<number>;
+  /** Map from episode number to Sonarr monitoring state. */
+  monitoredMap?: Map<number, boolean>;
+  /** Map from episode number to whether the episode has a file on disk. */
+  hasFileMap?: Map<number, boolean>;
+  /** Called when user toggles an episode's monitoring state. */
+  onToggleMonitored?: (episodeNumber: number, monitored: boolean) => void;
+  /** Episode numbers currently being toggled for monitoring. */
+  monitoringPendingIds?: Set<number>;
 }
 
 function isUpcoming(airDate: string | null): boolean {
@@ -35,6 +44,10 @@ function EpisodeRow({
   isWatched,
   isToggling,
   onToggleWatched,
+  isMonitored,
+  hasFile,
+  onToggleMonitored,
+  isMonitoringPending,
 }: {
   ep: Episode;
   isExpanded: boolean;
@@ -42,6 +55,10 @@ function EpisodeRow({
   isWatched: boolean;
   isToggling: boolean;
   onToggleWatched?: (episodeId: number, watched: boolean) => void;
+  isMonitored?: boolean;
+  hasFile?: boolean;
+  onToggleMonitored?: (episodeNumber: number, monitored: boolean) => void;
+  isMonitoringPending?: boolean;
 }) {
   const hasOverview = ep.overview && ep.overview.length > 0;
   const upcoming = isUpcoming(ep.airDate);
@@ -109,6 +126,28 @@ function EpisodeRow({
             {ep.runtime && <span>{formatRuntime(ep.runtime)}</span>}
           </div>
         </div>
+
+        {hasFile && (
+          <span
+            className="shrink-0 text-green-500"
+            title="Downloaded"
+            aria-label={`Episode ${ep.episodeNumber} downloaded`}
+          >
+            <HardDrive className="h-4 w-4" />
+          </span>
+        )}
+
+        {onToggleMonitored && isMonitored !== undefined && (
+          <Switch
+            size="sm"
+            checked={isMonitored}
+            aria-label={`Monitor episode ${ep.episodeNumber}`}
+            disabled={isMonitoringPending}
+            onCheckedChange={(checked: boolean) => {
+              onToggleMonitored(ep.episodeNumber, checked);
+            }}
+          />
+        )}
       </div>
 
       {isExpanded && hasOverview && (
@@ -123,6 +162,10 @@ export function EpisodeList({
   watchedEpisodeIds,
   onToggleWatched,
   togglingIds,
+  monitoredMap,
+  hasFileMap,
+  onToggleMonitored,
+  monitoringPendingIds,
 }: EpisodeListProps) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const watched = watchedEpisodeIds ?? new Set<number>();
@@ -155,6 +198,10 @@ export function EpisodeList({
           isWatched={watched.has(ep.id)}
           isToggling={toggling.has(ep.id)}
           onToggleWatched={onToggleWatched}
+          isMonitored={monitoredMap?.get(ep.episodeNumber)}
+          hasFile={hasFileMap?.get(ep.episodeNumber)}
+          onToggleMonitored={onToggleMonitored}
+          isMonitoringPending={monitoringPendingIds?.has(ep.episodeNumber)}
         />
       ))}
     </div>
