@@ -136,6 +136,9 @@ export interface RankedMediaEntry {
   rank: number;
   mediaType: string;
   mediaId: number;
+  title: string;
+  year: number | null;
+  posterUrl: string | null;
   score: number;
   comparisonCount: number;
 }

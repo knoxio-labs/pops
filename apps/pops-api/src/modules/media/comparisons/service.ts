@@ -550,6 +550,27 @@ export interface RankingsResult {
  *
  * Supports optional mediaType filter and pagination.
  */
+/** Resolve the best poster URL from a rankings row. */
+function resolvePosterUrl(row: {
+  mediaType: string;
+  moviePosterPath: string | null;
+  movieTmdbId: number | null;
+  moviePosterOverride: string | null;
+  tvPosterPath: string | null;
+  tvTvdbId: number | null;
+  tvPosterOverride: string | null;
+}): string | null {
+  if (row.mediaType === "movie") {
+    if (row.moviePosterOverride) return row.moviePosterOverride;
+    if (row.moviePosterPath && row.movieTmdbId)
+      return `/media/images/movie/${row.movieTmdbId}/poster.jpg`;
+    return null;
+  }
+  if (row.tvPosterOverride) return row.tvPosterOverride;
+  if (row.tvPosterPath && row.tvTvdbId) return `/media/images/tv/${row.tvTvdbId}/poster.jpg`;
+  return null;
+}
+
 export function getRankings(
   dimensionId: number | undefined,
   mediaType: string | undefined,
@@ -577,7 +598,18 @@ export function getRankings(
           ms.media_type as mediaType,
           ms.media_id as mediaId,
           ms.score as score,
-          ms.comparison_count as comparisonCount
+          ms.comparison_count as comparisonCount,
+          COALESCE(m.title, tv.name, 'Unknown') as title,
+          CASE
+            WHEN ms.media_type = 'movie' THEN CAST(SUBSTR(m.release_date, 1, 4) AS INTEGER)
+            ELSE CAST(SUBSTR(tv.first_air_date, 1, 4) AS INTEGER)
+          END as year,
+          m.poster_path as moviePosterPath,
+          m.tmdb_id as movieTmdbId,
+          m.poster_override_path as moviePosterOverride,
+          tv.poster_path as tvPosterPath,
+          tv.tvdb_id as tvTvdbId,
+          tv.poster_override_path as tvPosterOverride
         FROM media_scores ms
         LEFT JOIN movies m ON ms.media_type = 'movie' AND ms.media_id = m.id
         LEFT JOIN tv_shows tv ON ms.media_type = 'tv_show' AND ms.media_id = tv.id
@@ -593,6 +625,14 @@ export function getRankings(
       mediaId: number;
       score: number;
       comparisonCount: number;
+      title: string;
+      year: number | null;
+      moviePosterPath: string | null;
+      movieTmdbId: number | null;
+      moviePosterOverride: string | null;
+      tvPosterPath: string | null;
+      tvTvdbId: number | null;
+      tvPosterOverride: string | null;
     }>;
 
     return {
@@ -600,6 +640,9 @@ export function getRankings(
         rank: offset + i + 1,
         mediaType: row.mediaType,
         mediaId: row.mediaId,
+        title: row.title,
+        year: row.year,
+        posterUrl: resolvePosterUrl(row),
         score: Math.round(row.score * 10) / 10,
         comparisonCount: row.comparisonCount,
       })),
@@ -643,7 +686,18 @@ export function getRankings(
         ms.media_type as mediaType,
         ms.media_id as mediaId,
         AVG(ms.score) as score,
-        SUM(ms.comparison_count) as comparisonCount
+        SUM(ms.comparison_count) as comparisonCount,
+        COALESCE(m.title, tv.name, 'Unknown') as title,
+        CASE
+          WHEN ms.media_type = 'movie' THEN CAST(SUBSTR(m.release_date, 1, 4) AS INTEGER)
+          ELSE CAST(SUBSTR(tv.first_air_date, 1, 4) AS INTEGER)
+        END as year,
+        m.poster_path as moviePosterPath,
+        m.tmdb_id as movieTmdbId,
+        m.poster_override_path as moviePosterOverride,
+        tv.poster_path as tvPosterPath,
+        tv.tvdb_id as tvTvdbId,
+        tv.poster_override_path as tvPosterOverride
       FROM media_scores ms
       LEFT JOIN movies m ON ms.media_type = 'movie' AND ms.media_id = m.id
       LEFT JOIN tv_shows tv ON ms.media_type = 'tv_show' AND ms.media_id = tv.id
@@ -660,6 +714,14 @@ export function getRankings(
     mediaId: number;
     score: number;
     comparisonCount: number;
+    title: string;
+    year: number | null;
+    moviePosterPath: string | null;
+    movieTmdbId: number | null;
+    moviePosterOverride: string | null;
+    tvPosterPath: string | null;
+    tvTvdbId: number | null;
+    tvPosterOverride: string | null;
   }>;
 
   return {
@@ -667,6 +729,9 @@ export function getRankings(
       rank: offset + i + 1,
       mediaType: row.mediaType,
       mediaId: row.mediaId,
+      title: row.title,
+      year: row.year,
+      posterUrl: resolvePosterUrl(row),
       score: Math.round(row.score * 10) / 10,
       comparisonCount: row.comparisonCount,
     })),

@@ -5,8 +5,6 @@ import { MemoryRouter } from "react-router";
 
 const mockRankingsQuery = vi.fn();
 const mockDimensionsQuery = vi.fn();
-const mockMoviesQuery = vi.fn();
-const mockTvShowsQuery = vi.fn();
 
 vi.mock("../lib/trpc", () => ({
   trpc: {
@@ -14,12 +12,6 @@ vi.mock("../lib/trpc", () => ({
       comparisons: {
         rankings: { useQuery: (...args: unknown[]) => mockRankingsQuery(...args) },
         listDimensions: { useQuery: () => mockDimensionsQuery() },
-      },
-      movies: {
-        list: { useQuery: (...args: unknown[]) => mockMoviesQuery(...args) },
-      },
-      tvShows: {
-        list: { useQuery: (...args: unknown[]) => mockTvShowsQuery(...args) },
       },
     },
   },
@@ -35,13 +27,27 @@ function renderPage(initialRoute = "/media/rankings") {
   );
 }
 
-const movieA = { id: 1, title: "Alpha Movie", releaseDate: "2020-01-01", posterUrl: "/a.jpg" };
-const movieB = { id: 2, title: "Beta Movie", releaseDate: "2021-06-15", posterUrl: "/b.jpg" };
-const tvShow = { id: 10, name: "Gamma Show", firstAirDate: "2019-03-10", posterUrl: "/g.jpg" };
-
 const rankedEntries = [
-  { rank: 1, mediaType: "movie", mediaId: 1, score: 1532, comparisonCount: 5 },
-  { rank: 2, mediaType: "movie", mediaId: 2, score: 1468, comparisonCount: 5 },
+  {
+    rank: 1,
+    mediaType: "movie",
+    mediaId: 1,
+    title: "Alpha Movie",
+    year: 2020,
+    posterUrl: "/a.jpg",
+    score: 1532,
+    comparisonCount: 5,
+  },
+  {
+    rank: 2,
+    mediaType: "movie",
+    mediaId: 2,
+    title: "Beta Movie",
+    year: 2021,
+    posterUrl: "/b.jpg",
+    score: 1468,
+    comparisonCount: 5,
+  },
 ];
 
 const dimensions = [
@@ -67,12 +73,6 @@ function setupDefaults() {
   mockDimensionsQuery.mockReturnValue({
     data: { data: dimensions },
     isLoading: false,
-  });
-  mockMoviesQuery.mockReturnValue({
-    data: { data: [movieA, movieB] },
-  });
-  mockTvShowsQuery.mockReturnValue({
-    data: { data: [tvShow] },
   });
   mockRankingsQuery.mockReturnValue({
     data: {
@@ -164,6 +164,9 @@ describe("RankingsPage", () => {
       rank: i + 1,
       mediaType: "movie",
       mediaId: i + 1,
+      title: `Movie ${i + 1}`,
+      year: 2020,
+      posterUrl: null,
       score: 1600 - i * 4,
       comparisonCount: 3,
     }));
@@ -175,16 +178,6 @@ describe("RankingsPage", () => {
       },
       isLoading: false,
       error: null,
-    });
-    mockMoviesQuery.mockReturnValue({
-      data: {
-        data: manyEntries.map((e) => ({
-          id: e.mediaId,
-          title: `Movie ${e.mediaId}`,
-          releaseDate: "2020-01-01",
-          posterUrl: null,
-        })),
-      },
     });
 
     renderPage();
@@ -214,9 +207,36 @@ describe("RankingsPage", () => {
 
   it("displays medal colors for top 3 ranks", () => {
     const top3 = [
-      { rank: 1, mediaType: "movie", mediaId: 1, score: 1600, comparisonCount: 10 },
-      { rank: 2, mediaType: "movie", mediaId: 2, score: 1550, comparisonCount: 10 },
-      { rank: 3, mediaType: "movie", mediaId: 3, score: 1500, comparisonCount: 10 },
+      {
+        rank: 1,
+        mediaType: "movie",
+        mediaId: 1,
+        title: "Gold",
+        year: null,
+        posterUrl: null,
+        score: 1600,
+        comparisonCount: 10,
+      },
+      {
+        rank: 2,
+        mediaType: "movie",
+        mediaId: 2,
+        title: "Silver",
+        year: null,
+        posterUrl: null,
+        score: 1550,
+        comparisonCount: 10,
+      },
+      {
+        rank: 3,
+        mediaType: "movie",
+        mediaId: 3,
+        title: "Bronze",
+        year: null,
+        posterUrl: null,
+        score: 1500,
+        comparisonCount: 10,
+      },
     ];
 
     mockRankingsQuery.mockReturnValue({
@@ -227,15 +247,6 @@ describe("RankingsPage", () => {
       isLoading: false,
       error: null,
     });
-    mockMoviesQuery.mockReturnValue({
-      data: {
-        data: [
-          { id: 1, title: "Gold", releaseDate: null, posterUrl: null },
-          { id: 2, title: "Silver", releaseDate: null, posterUrl: null },
-          { id: 3, title: "Bronze", releaseDate: null, posterUrl: null },
-        ],
-      },
-    });
 
     renderPage();
     expect(screen.getByText("#1")).toBeInTheDocument();
@@ -244,8 +255,25 @@ describe("RankingsPage", () => {
   });
 
   it("shows 'Unknown' for media without metadata", () => {
-    mockMoviesQuery.mockReturnValue({ data: { data: [] } });
-    mockTvShowsQuery.mockReturnValue({ data: { data: [] } });
+    mockRankingsQuery.mockReturnValue({
+      data: {
+        data: [
+          {
+            rank: 1,
+            mediaType: "movie",
+            mediaId: 999,
+            title: "Unknown",
+            year: null,
+            posterUrl: null,
+            score: 1500,
+            comparisonCount: 1,
+          },
+        ],
+        pagination: { total: 1, limit: 25, offset: 0, hasMore: false },
+      },
+      isLoading: false,
+      error: null,
+    });
 
     renderPage();
     const unknowns = screen.getAllByText("Unknown");
