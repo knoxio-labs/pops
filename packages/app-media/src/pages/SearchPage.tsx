@@ -101,12 +101,18 @@ export function SearchPage() {
     { enabled: shouldSearchTv, staleTime: 30_000 }
   );
 
-  // Build lookup sets
+  // Build lookup sets and ID maps for navigation
   const movieTmdbIds = new Set(
     (libraryMovies.data?.data ?? []).map((m: { tmdbId: number }) => m.tmdbId)
   );
   const tvTvdbIds = new Set(
     (libraryTvShows.data?.data ?? []).map((s: { tvdbId: number }) => s.tvdbId)
+  );
+  const movieTmdbToLocalId = new Map(
+    (libraryMovies.data?.data ?? []).map((m: { id: number; tmdbId: number }) => [m.tmdbId, m.id])
+  );
+  const tvTvdbToLocalId = new Map(
+    (libraryTvShows.data?.data ?? []).map((s: { id: number; tvdbId: number }) => [s.tvdbId, s.id])
   );
 
   // Mutations
@@ -263,6 +269,7 @@ export function SearchPage() {
               {movieResults.map((movie: MovieSearchResult) => {
                 const key = makeKey("movie", movie.tmdbId);
                 const inLibrary = movieTmdbIds.has(movie.tmdbId) || addedIds.has(key);
+                const localId = movieTmdbToLocalId.get(movie.tmdbId);
                 return (
                   <SearchResultCard
                     key={movie.tmdbId}
@@ -276,6 +283,7 @@ export function SearchPage() {
                     inLibrary={inLibrary}
                     isAdding={addingIds.has(key)}
                     onAdd={() => handleAddMovie(movie.tmdbId)}
+                    href={localId != null ? `/media/movies/${localId}` : undefined}
                   />
                 );
               })}
@@ -324,6 +332,7 @@ export function SearchPage() {
               {tvResults.map((show: TvSearchResult) => {
                 const key = makeKey("tv", show.tvdbId);
                 const inLibrary = tvTvdbIds.has(show.tvdbId) || addedIds.has(key);
+                const localId = tvTvdbToLocalId.get(show.tvdbId);
                 return (
                   <SearchResultCard
                     key={show.tvdbId}
@@ -336,6 +345,7 @@ export function SearchPage() {
                     inLibrary={inLibrary}
                     isAdding={addingIds.has(key)}
                     onAdd={() => handleAddTvShow(show.tvdbId)}
+                    href={localId != null ? `/media/tv/${localId}` : undefined}
                   />
                 );
               })}

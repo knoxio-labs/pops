@@ -2,6 +2,7 @@
  * SearchResultCard stories — search result card variants for movies and TV shows.
  */
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MemoryRouter } from "react-router";
 import { SearchResultCard } from "./SearchResultCard";
 
 const meta: Meta<typeof SearchResultCard> = {
@@ -13,9 +14,11 @@ const meta: Meta<typeof SearchResultCard> = {
   },
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: "400px" }}>
-        <Story />
-      </div>
+      <MemoryRouter>
+        <div style={{ maxWidth: "400px" }}>
+          <Story />
+        </div>
+      </MemoryRouter>
     ),
   ],
 };
@@ -78,6 +81,18 @@ export const InLibrary: Story = {
     posterUrl: "https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg",
     voteAverage: 8.4,
     inLibrary: true,
+  },
+};
+
+export const InLibraryClickable: Story = {
+  args: {
+    type: "movie",
+    title: "Fight Club",
+    year: "1999",
+    posterUrl: "https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg",
+    voteAverage: 8.4,
+    inLibrary: true,
+    href: "/media/movies/1",
   },
 };
 

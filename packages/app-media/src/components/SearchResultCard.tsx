@@ -4,6 +4,7 @@
  * and an "Add to Library" / "In Library" action.
  */
 import { useState } from "react";
+import { Link } from "react-router";
 import { cn, Badge, Button, Skeleton } from "@pops/ui";
 import { Film, Tv, Loader2, Check, Plus } from "lucide-react";
 import { RequestMovieButton } from "./RequestMovieButton";
@@ -27,6 +28,8 @@ export interface SearchResultCardProps {
   addDisabledReason?: string;
   isAdding?: boolean;
   onAdd?: () => void;
+  /** When set, the card becomes a clickable link to the detail page. */
+  href?: string;
   className?: string;
 }
 
@@ -59,6 +62,7 @@ export function SearchResultCard({
   addDisabledReason,
   isAdding,
   onAdd,
+  href,
   className,
 }: SearchResultCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -67,8 +71,8 @@ export function SearchResultCard({
   const showPlaceholder = !posterUrl || imageError;
   const Icon = type === "movie" ? Film : Tv;
 
-  return (
-    <div className={cn("flex gap-4 rounded-lg border bg-card p-3 text-card-foreground", className)}>
+  const cardContent = (
+    <>
       {/* Poster */}
       <div className="relative w-20 shrink-0 overflow-hidden rounded-md bg-muted aspect-[2/3]">
         {!showPlaceholder && (
@@ -155,6 +159,22 @@ export function SearchResultCard({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
+
+  const baseClasses = cn(
+    "flex gap-4 rounded-lg border bg-card p-3 text-card-foreground",
+    href && "transition-colors hover:bg-accent/50",
+    className
+  );
+
+  if (href) {
+    return (
+      <Link to={href} className={baseClasses} aria-label={`${title} (${type === "movie" ? "Movie" : "TV"})`}>
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return <div className={baseClasses}>{cardContent}</div>;
 }
