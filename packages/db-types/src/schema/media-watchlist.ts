@@ -9,8 +9,6 @@ export const mediaWatchlist = sqliteTable(
     mediaId: integer("media_id").notNull(),
     priority: integer("priority").default(0),
     notes: text("notes"),
-    source: text("source", { enum: ["manual", "plex", "both"] }).default("manual"),
-    plexRatingKey: text("plex_rating_key"),
     addedAt: text("added_at")
       .notNull()
       .default(sql`(datetime('now'))`),
