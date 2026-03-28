@@ -20,7 +20,9 @@ As a user, I want a settings page to configure Radarr and Sonarr connections so 
 - [x] On failed test, displays error message
 - [x] "Save" button calls saveSettings — masked placeholder (`••••••••`) preserved, not overwritten
 - [x] Save provides success feedback
-- [ ] Form validates that URLs start with `http://` or `https://` before allowing save — no URL validation implemented (only placeholder text)
+- [ ] Saving one service preserves unsaved changes in the other — each service section has independent form state
+- [ ] URLs without a protocol prefix are auto-normalized to `https://` on save — not rejected with a validation error
+- [ ] Failed connection test on http suggests trying https
 - [x] Page loads current settings via `getSettings()` on mount
 - [x] Tests verify: load on mount, save payload, key preservation, test connection success/failure
 

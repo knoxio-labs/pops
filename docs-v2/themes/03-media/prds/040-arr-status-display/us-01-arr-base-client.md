@@ -15,7 +15,7 @@ As a developer, I want a shared HTTP client factory for Radarr and Sonarr with i
 - [ ] Cache is keyed by full URL (base URL + path) so Radarr and Sonarr caches do not collide — service caches keyed by tmdbId/tvdbId, not full URL
 - [ ] `clearCache()` method flushes all cached entries for a client instance — `clearStatusCache()` exists in service but not on client; not called on settings save
 - [x] Client handles connection errors gracefully — returns stale cache on connection failure; never throws unhandled exceptions
-- [ ] Connection timeout set to 5 seconds — no timeout configured on `fetch()`
+- [ ] Connection timeout configurable per service (default 10s) — current implementation has no timeout on `fetch()`
 - [x] `radarr_url`, `radarr_api_key`, `sonarr_url`, `sonarr_api_key` entries stored in the `settings` table
 - [x] tRPC procedures: `media.arr.getConfig()` returns configured/connected status
 - [x] tRPC procedure: `media.arr.getSettings()` returns URLs and whether API keys are set, never actual key values

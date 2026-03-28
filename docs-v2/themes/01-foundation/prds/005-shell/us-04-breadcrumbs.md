@@ -1,7 +1,7 @@
 # US-04: Build page-level navigation (back button + breadcrumbs)
 
 > PRD: [005 — Shell](README.md)
-> Status: Done
+> Status: Partial
 
 ## Description
 
@@ -19,6 +19,7 @@ As a developer, I want a standard page header pattern with back button and bread
 - [x] On mobile, middle breadcrumb segments collapse to `…` — first and last always visible
 - [x] Top-level pages (sidebar-accessible) show neither back button nor breadcrumbs
 - [x] Back navigation is never placed at the bottom of the page
+- [ ] All drill-down pages across all apps use the shared PageHeader pattern — no inline h1 styling
 
 ## Notes
 

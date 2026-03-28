@@ -1,7 +1,7 @@
 # US-01: Create globals.css with design tokens
 
 > PRD: [002 — Design Tokens & Theming](README.md)
-> Status: Done
+> Status: Partial
 
 ## Description
 
@@ -17,6 +17,7 @@ As a developer, I want a single `globals.css` file in `@pops/ui/theme` that defi
 - [x] Shell entry point imports `@pops/ui/theme`
 - [x] Light mode and dark mode both render correctly
 - [x] No theme-related CSS exists outside this file
+- [ ] All custom Tailwind utility classes used across the codebase (e.g., `text-2xs`) are defined in the `@theme` block — no undefined utility classes
 
 ## Notes
 
