@@ -104,16 +104,16 @@ export function RadarChart({
       {/* Data polygon */}
       <polygon
         points={dataPoints}
-        fill="hsl(var(--primary))"
+        fill="var(--primary)"
         fillOpacity={0.2}
-        stroke="hsl(var(--primary))"
+        stroke="var(--primary)"
         strokeWidth={2}
       />
 
       {/* Data points */}
       {dimensions.map((d, idx) => {
         const [x, y] = polarToXY(idx, normalize(d.score));
-        return <circle key={`point-${idx}`} cx={x} cy={y} r={3} fill="hsl(var(--primary))" />;
+        return <circle key={`point-${idx}`} cx={x} cy={y} r={3} fill="var(--primary)" />;
       })}
 
       {/* Labels */}
