@@ -1,7 +1,7 @@
 import BetterSqlite3 from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { readdirSync, readFileSync, unlinkSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { initializeSchema } from "./db/schema.js";

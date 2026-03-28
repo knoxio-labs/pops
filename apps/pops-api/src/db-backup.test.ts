@@ -58,7 +58,7 @@ function hasData(database: BetterSqlite3.Database): boolean {
 function createPreMigrationBackup(
   database: BetterSqlite3.Database,
   dbPath: string,
-  pendingCount: number
+  _pendingCount: number
 ): string | null {
   if (!hasData(database)) {
     return null;
