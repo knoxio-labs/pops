@@ -66,8 +66,9 @@ describe("settings.get", () => {
     seedSetting(db, { key: "theme", value: "dark" });
 
     const result = await caller.core.settings.get({ key: "theme" });
-    expect(result.data.key).toBe("theme");
-    expect(result.data.value).toBe("dark");
+    expect(result.data).not.toBeNull();
+    expect(result.data!.key).toBe("theme");
+    expect(result.data!.value).toBe("dark");
   });
 
   it("returns null for missing key", async () => {
