@@ -895,7 +895,7 @@ describe("comparisons.delete (Elo recalculation)", () => {
 
     // Record a fresh single comparison to get the expected scores
     // First, build the chain: A beats B, B beats C, A beats C
-    const comp1 = await caller.media.comparisons.record({
+    await caller.media.comparisons.record({
       dimensionId: dimId,
       mediaAType: "movie",
       mediaAId: 1,
@@ -913,7 +913,7 @@ describe("comparisons.delete (Elo recalculation)", () => {
       winnerType: "movie",
       winnerId: 2,
     });
-    const comp3 = await caller.media.comparisons.record({
+    await caller.media.comparisons.record({
       dimensionId: dimId,
       mediaAType: "movie",
       mediaAId: 1,
