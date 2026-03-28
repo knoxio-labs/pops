@@ -5,6 +5,9 @@
 import BetterSqlite3 from "better-sqlite3";
 import { existsSync } from "node:fs";
 import { seedDatabase } from "../src/db/seeder.js";
+import { assertNotProduction } from "./lib/guard.js";
+
+assertNotProduction();
 
 const DB_PATH = process.env.SQLITE_PATH ?? "./data/pops.db";
 
