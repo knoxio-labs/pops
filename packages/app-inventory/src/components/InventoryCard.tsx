@@ -181,7 +181,7 @@ export function InventoryCard({
         <div>
           <h3 className="text-sm font-semibold leading-tight line-clamp-1">{itemName}</h3>
           {(brand || model) && (
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5 opacity-80 line-clamp-1">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground mt-0.5 opacity-80 line-clamp-1">
               {brand}
               {brand && model && <span className="mx-1 opacity-50">&bull;</span>}
               {model}

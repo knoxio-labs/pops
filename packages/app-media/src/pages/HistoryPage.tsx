@@ -235,7 +235,7 @@ function HistoryCard({
         </Badge>
 
         {/* Watch date badge */}
-        <span className="absolute top-2 right-2 z-10 bg-black/60 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
+        <span className="absolute top-2 right-2 z-10 bg-black/60 text-white text-2xs font-medium px-1.5 py-0.5 rounded">
           {formatShortDate(entry.watchedAt)}
         </span>
 

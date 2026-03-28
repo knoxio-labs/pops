@@ -185,7 +185,7 @@ function PickCard({
           {genres.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {genres.slice(0, 3).map((g) => (
-                <Badge key={g} variant="secondary" className="text-[10px]">
+                <Badge key={g} variant="secondary" className="text-2xs">
                   {g}
                 </Badge>
               ))}
