@@ -28,6 +28,7 @@ const INCLUDED_MIGRATIONS = [
   "20260322120000_settings.sql",
   "20260324140000_watch_history_unique_index.sql",
   "20260325150000_locations_last_edited_time.sql",
+  "20260326120000_transactions_entity_fk.sql",
   "20260326150000_budgets_unique_category_period.sql",
   "20260326160000_items_locations_schema.sql",
   "20260327120000_sync_logs.sql",
