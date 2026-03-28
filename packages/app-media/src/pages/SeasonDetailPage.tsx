@@ -104,6 +104,136 @@ export function SeasonDetailPage() {
     },
   });
 
+  // Sonarr episode data — monitoring + hasFile per episode
+  const sonarrId = sonarrSeries?.sonarrId;
+  const { data: sonarrEpisodesData } = trpc.media.arr.getSeriesEpisodes.useQuery(
+    { sonarrId: sonarrId ?? 0, seasonNumber: seasonNum },
+    { enabled: !!sonarrId }
+  );
+
+  const sonarrEpisodes = sonarrEpisodesData?.data ?? [];
+
+  // Build maps from episode number → monitoring/hasFile state
+  const [optimisticEpMonitoring, setOptimisticEpMonitoring] = useState<Map<number, boolean>>(
+    new Map()
+  );
+  const [pendingEpMonitoring, setPendingEpMonitoring] = useState<Set<number>>(new Set());
+
+  const monitoredMap = useMemo(() => {
+    const m = new Map<number, boolean>();
+    for (const ep of sonarrEpisodes) {
+      m.set(ep.episodeNumber, optimisticEpMonitoring.get(ep.episodeNumber) ?? ep.monitored);
+    }
+    return m;
+  }, [sonarrEpisodes, optimisticEpMonitoring]);
+
+  const hasFileMap = useMemo(() => {
+    const m = new Map<number, boolean>();
+    for (const ep of sonarrEpisodes) {
+      m.set(ep.episodeNumber, ep.hasFile);
+    }
+    return m;
+  }, [sonarrEpisodes]);
+
+  // Map episode number → sonarr episode ID for mutations
+  const epNumToSonarrId = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const ep of sonarrEpisodes) {
+      m.set(ep.episodeNumber, ep.id);
+    }
+    return m;
+  }, [sonarrEpisodes]);
+
+  const episodeMonitorMutation = trpc.media.arr.updateEpisodeMonitoring.useMutation({
+    onSuccess: () => {
+      void utils.media.arr.getSeriesEpisodes.invalidate();
+    },
+    onError: (
+      err: { message: string },
+      variables: { episodeIds: number[]; monitored: boolean }
+    ) => {
+      // Rollback optimistic state for affected episodes
+      setOptimisticEpMonitoring((prev) => {
+        const next = new Map(prev);
+        const affectedIds = new Set(variables.episodeIds);
+        for (const ep of sonarrEpisodes) {
+          if (affectedIds.has(ep.id)) {
+            next.set(ep.episodeNumber, !variables.monitored);
+          }
+        }
+        return next;
+      });
+      toast.error(`Failed to update monitoring: ${err.message}`);
+    },
+    onSettled: (
+      _data: unknown,
+      _err: unknown,
+      variables: { episodeIds: number[] }
+    ) => {
+      setPendingEpMonitoring((prev) => {
+        const next = new Set(prev);
+        const affectedIds = new Set(variables.episodeIds);
+        for (const ep of sonarrEpisodes) {
+          if (affectedIds.has(ep.id)) {
+            next.delete(ep.episodeNumber);
+          }
+        }
+        return next;
+      });
+    },
+  });
+
+  const handleToggleEpMonitored = useCallback(
+    (episodeNumber: number, monitored: boolean) => {
+      const sonarrEpId = epNumToSonarrId.get(episodeNumber);
+      if (sonarrEpId == null) return;
+
+      setOptimisticEpMonitoring((prev) => {
+        const next = new Map(prev);
+        next.set(episodeNumber, monitored);
+        return next;
+      });
+      setPendingEpMonitoring((prev) => new Set(prev).add(episodeNumber));
+
+      episodeMonitorMutation.mutate({
+        episodeIds: [sonarrEpId],
+        monitored,
+      });
+    },
+    [episodeMonitorMutation, epNumToSonarrId]
+  );
+
+  // Batch monitor/unmonitor all episodes in season
+  const allEpisodesMonitored = sonarrEpisodes.length > 0 &&
+    sonarrEpisodes.every((ep) => monitoredMap.get(ep.episodeNumber) ?? ep.monitored);
+
+  const handleBatchMonitorToggle = useCallback(() => {
+    const newMonitored = !allEpisodesMonitored;
+    const ids = sonarrEpisodes.map((ep) => ep.id);
+    if (ids.length === 0) return;
+
+    // Optimistically update all
+    setOptimisticEpMonitoring((prev) => {
+      const next = new Map(prev);
+      for (const ep of sonarrEpisodes) {
+        next.set(ep.episodeNumber, newMonitored);
+      }
+      return next;
+    });
+    setPendingEpMonitoring((prev) => {
+      const next = new Set(prev);
+      for (const ep of sonarrEpisodes) {
+        next.add(ep.episodeNumber);
+      }
+      return next;
+    });
+
+    episodeMonitorMutation.mutate({
+      episodeIds: ids,
+      monitored: newMonitored,
+    });
+  }, [allEpisodesMonitored, sonarrEpisodes, episodeMonitorMutation]);
+
   // Track which episodes are currently being toggled
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
   // Map from watch history entry ID → episode ID for delete tracking
@@ -389,6 +519,19 @@ export function SeasonDetailPage() {
               );
             })()}
 
+          {sonarrSeries?.exists && sonarrEpisodes.length > 0 && (
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBatchMonitorToggle}
+                disabled={episodeMonitorMutation.isPending}
+              >
+                {allEpisodesMonitored ? "Unmonitor All" : "Monitor All"}
+              </Button>
+            </div>
+          )}
+
           {season?.id && (
             <div className="flex gap-2 mt-3">
               {!isSeasonWatched ? (
@@ -437,6 +580,10 @@ export function SeasonDetailPage() {
             watchedEpisodeIds={watchedEpisodeIds}
             onToggleWatched={handleToggleWatched}
             togglingIds={togglingIds}
+            monitoredMap={sonarrSeries?.exists ? monitoredMap : undefined}
+            hasFileMap={sonarrSeries?.exists ? hasFileMap : undefined}
+            onToggleMonitored={sonarrSeries?.exists ? handleToggleEpMonitored : undefined}
+            monitoringPendingIds={pendingEpMonitoring}
           />
         )}
       </section>

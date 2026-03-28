@@ -12,10 +12,12 @@ const {
   mockWatchHistoryQuery,
   mockProgressQuery,
   mockCheckSeriesQuery,
+  mockSonarrEpisodesQuery,
   mockBatchLogMutation,
   mockLogMutation,
   mockDeleteMutation,
   mockSeasonMonitorMutation,
+  mockEpisodeMonitorMutation,
   mockInvalidate,
   mockCancel,
   mockSetProgressData,
@@ -27,10 +29,12 @@ const {
   mockWatchHistoryQuery: vi.fn(),
   mockProgressQuery: vi.fn(),
   mockCheckSeriesQuery: vi.fn(),
+  mockSonarrEpisodesQuery: vi.fn(),
   mockBatchLogMutation: vi.fn(),
   mockLogMutation: vi.fn(),
   mockDeleteMutation: vi.fn(),
   mockSeasonMonitorMutation: vi.fn(),
+  mockEpisodeMonitorMutation: vi.fn(),
   mockInvalidate: vi.fn(),
   mockCancel: vi.fn(),
   mockSetProgressData: vi.fn(),
@@ -94,12 +98,32 @@ vi.mock("../lib/trpc", () => ({
         checkSeries: {
           useQuery: (...args: unknown[]) => mockCheckSeriesQuery(...args),
         },
+        getSeriesEpisodes: {
+          useQuery: (...args: unknown[]) => mockSonarrEpisodesQuery(...args),
+          invalidate: mockInvalidate,
+        },
         updateSeasonMonitoring: {
           useMutation: (opts: Record<string, unknown>) => {
             mockSeasonMonitorMutation.mockImplementation(() => {
               if (typeof opts.onSuccess === "function") (opts.onSuccess as () => void)();
             });
             return { mutate: mockSeasonMonitorMutation, isPending: false };
+          },
+        },
+        updateEpisodeMonitoring: {
+          useMutation: (opts: Record<string, unknown>) => {
+            mockEpisodeMonitorMutation.mockImplementation(
+              (variables: { episodeIds: number[]; monitored: boolean }) => {
+                if (typeof opts.onSuccess === "function") (opts.onSuccess as () => void)();
+                if (typeof opts.onSettled === "function")
+                  (opts.onSettled as (d: unknown, e: unknown, v: typeof variables) => void)(
+                    undefined,
+                    undefined,
+                    variables
+                  );
+              }
+            );
+            return { mutate: mockEpisodeMonitorMutation, isPending: false };
           },
         },
       },
@@ -122,6 +146,7 @@ vi.mock("../lib/trpc", () => ({
         },
         arr: {
           checkSeries: { invalidate: mockInvalidate },
+          getSeriesEpisodes: { invalidate: mockInvalidate },
         },
       },
     }),
@@ -226,6 +251,13 @@ function renderPage(showId = "1", seasonNum = "1") {
   );
 }
 
+const SONARR_EPISODES = [
+  { id: 5001, seriesId: 42, seasonNumber: 1, episodeNumber: 1, title: "Pilot", monitored: true, hasFile: true },
+  { id: 5002, seriesId: 42, seasonNumber: 1, episodeNumber: 2, title: "Cat's in the Bag", monitored: true, hasFile: true },
+  { id: 5003, seriesId: 42, seasonNumber: 1, episodeNumber: 3, title: "...And the Bag's in the River", monitored: false, hasFile: false },
+  { id: 5004, seriesId: 42, seasonNumber: 1, episodeNumber: 4, title: "Future Episode", monitored: true, hasFile: false },
+];
+
 function setupQueries(
   overrides: {
     show?: Record<string, unknown>;
@@ -238,6 +270,7 @@ function setupQueries(
       monitored?: boolean;
       seasons?: Array<{ seasonNumber: number; monitored: boolean }>;
     } | null;
+    sonarrEpisodes?: typeof SONARR_EPISODES | null;
     watchHistory?: Array<{ id: number; mediaId: number }>;
   } = {}
 ) {
@@ -281,6 +314,12 @@ function setupQueries(
     },
     isLoading: false,
   });
+  mockSonarrEpisodesQuery.mockReturnValue({
+    data: {
+      data: overrides.sonarrEpisodes ?? SONARR_EPISODES,
+    },
+    isLoading: false,
+  });
 }
 
 // --- Tests ---
@@ -294,6 +333,7 @@ beforeEach(() => {
   mockWatchHistoryQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
   mockProgressQuery.mockReturnValue({ data: null, isLoading: false });
   mockCheckSeriesQuery.mockReturnValue({ data: null, isLoading: false });
+  mockSonarrEpisodesQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
 });
 
 describe("SeasonDetailPage — monitoring", () => {
@@ -474,6 +514,108 @@ describe("SeasonDetailPage — monitoring", () => {
       renderPage();
       fireEvent.click(screen.getByRole("button", { name: /Mark Season Watched/ }));
       expect(mockInvalidate).toHaveBeenCalled();
+    });
+  });
+
+  describe("episode monitoring toggles", () => {
+    it("shows monitoring toggle for each episode when series exists in Sonarr", () => {
+      setupQueries();
+      renderPage();
+      expect(screen.getByRole("switch", { name: "Monitor episode 1" })).toBeInTheDocument();
+      expect(screen.getByRole("switch", { name: "Monitor episode 2" })).toBeInTheDocument();
+      expect(screen.getByRole("switch", { name: "Monitor episode 3" })).toBeInTheDocument();
+    });
+
+    it("reflects monitoring state from Sonarr data", () => {
+      setupQueries();
+      renderPage();
+      const ep1Toggle = screen.getByRole("switch", { name: "Monitor episode 1" });
+      const ep3Toggle = screen.getByRole("switch", { name: "Monitor episode 3" });
+      expect(ep1Toggle).toBeChecked();
+      expect(ep3Toggle).not.toBeChecked();
+    });
+
+    it("hides monitoring toggles when series is not in Sonarr", () => {
+      setupQueries({ sonarr: { exists: false }, sonarrEpisodes: null });
+      mockSonarrEpisodesQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
+      renderPage();
+      expect(screen.queryByRole("switch", { name: /Monitor episode/ })).not.toBeInTheDocument();
+    });
+
+    it("calls updateEpisodeMonitoring when episode toggle is clicked", () => {
+      setupQueries();
+      renderPage();
+      const ep1Toggle = screen.getByRole("switch", { name: "Monitor episode 1" });
+      fireEvent.click(ep1Toggle);
+      expect(mockEpisodeMonitorMutation).toHaveBeenCalledWith({
+        episodeIds: [5001],
+        monitored: false,
+      });
+    });
+
+    it("optimistically updates toggle state on click", () => {
+      setupQueries();
+      renderPage();
+      const ep1Toggle = screen.getByRole("switch", { name: "Monitor episode 1" });
+      fireEvent.click(ep1Toggle);
+      // After clicking, ep1 should show unchecked optimistically
+      expect(ep1Toggle).not.toBeChecked();
+    });
+  });
+
+  describe("downloaded indicator", () => {
+    it("shows download icon for episodes with files", () => {
+      setupQueries();
+      renderPage();
+      expect(screen.getByLabelText("Episode 1 downloaded")).toBeInTheDocument();
+      expect(screen.getByLabelText("Episode 2 downloaded")).toBeInTheDocument();
+    });
+
+    it("does not show download icon for episodes without files", () => {
+      setupQueries();
+      renderPage();
+      expect(screen.queryByLabelText("Episode 3 downloaded")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Episode 4 downloaded")).not.toBeInTheDocument();
+    });
+
+    it("hides download icons when series is not in Sonarr", () => {
+      setupQueries({ sonarr: { exists: false }, sonarrEpisodes: null });
+      mockSonarrEpisodesQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
+      renderPage();
+      expect(screen.queryByLabelText(/downloaded/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("batch monitor toggle", () => {
+    it("shows Monitor All button when not all episodes are monitored", () => {
+      setupQueries();
+      renderPage();
+      expect(screen.getByRole("button", { name: "Monitor All" })).toBeInTheDocument();
+    });
+
+    it("shows Unmonitor All button when all episodes are monitored", () => {
+      const allMonitored = SONARR_EPISODES.map((ep) => ({ ...ep, monitored: true }));
+      setupQueries({ sonarrEpisodes: allMonitored });
+      renderPage();
+      expect(screen.getByRole("button", { name: "Unmonitor All" })).toBeInTheDocument();
+    });
+
+    it("calls updateEpisodeMonitoring with all episode IDs when batch button clicked", () => {
+      setupQueries();
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Monitor All" }));
+      expect(mockEpisodeMonitorMutation).toHaveBeenCalledWith({
+        episodeIds: [5001, 5002, 5003, 5004],
+        monitored: true,
+      });
+    });
+
+    it("hides batch toggle when series is not in Sonarr", () => {
+      setupQueries({ sonarr: { exists: false }, sonarrEpisodes: null });
+      mockSonarrEpisodesQuery.mockReturnValue({ data: { data: [] }, isLoading: false });
+      renderPage();
+      expect(screen.queryByRole("button", { name: /Monitor All/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Unmonitor All/ })).not.toBeInTheDocument();
     });
   });
 });

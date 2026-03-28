@@ -13,6 +13,7 @@ import type {
   SonarrAddSeriesInput,
   SonarrCalendarEpisode,
   SonarrCommandResponse,
+  SonarrEpisode,
   SonarrLanguageProfile,
   SonarrQualityProfile,
   SonarrRootFolder,
@@ -329,6 +330,16 @@ export async function updateEpisodeMonitoring(
   await client.updateEpisodeMonitoring(episodeIds, monitored);
   showStatusCache.clear();
   client.clearCache();
+}
+
+/** Get episodes for a series from Sonarr, optionally filtered by season. */
+export async function getSeriesEpisodes(
+  sonarrId: number,
+  seasonNumber?: number
+): Promise<SonarrEpisode[]> {
+  const client = getSonarrClient();
+  if (!client) throw new Error("Sonarr not configured");
+  return client.getEpisodes(sonarrId, seasonNumber);
 }
 
 // ---------------------------------------------------------------------------

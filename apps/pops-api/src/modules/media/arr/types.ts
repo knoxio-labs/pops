@@ -127,6 +127,17 @@ export interface SonarrSeriesFull extends SonarrSeries {
   seasons: SonarrSeason[];
 }
 
+/** Individual episode from Sonarr /episode endpoint. */
+export interface SonarrEpisode {
+  id: number;
+  seriesId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  title: string;
+  monitored: boolean;
+  hasFile: boolean;
+}
+
 /** Input for batch episode monitoring updates via PUT /api/v3/episode/monitor. */
 export interface SonarrEpisodeMonitorInput {
   episodeIds: number[];

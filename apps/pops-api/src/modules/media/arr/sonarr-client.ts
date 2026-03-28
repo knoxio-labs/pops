@@ -8,6 +8,7 @@ import type {
   SonarrQueueResponse,
   ArrStatusResult,
   SonarrCalendarEpisode,
+  SonarrEpisode,
   SonarrEpisodeMonitorInput,
   SonarrQualityProfile,
   SonarrRootFolder,
@@ -135,6 +136,15 @@ export class SonarrClient extends ArrBaseClient {
   async updateEpisodeMonitoring(episodeIds: number[], monitored: boolean): Promise<void> {
     const body: SonarrEpisodeMonitorInput = { episodeIds, monitored };
     await this.put<unknown>("/episode/monitor", body);
+  }
+
+  /** Fetch episodes for a series, optionally filtered by season. */
+  async getEpisodes(seriesId: number, seasonNumber?: number): Promise<SonarrEpisode[]> {
+    let path = `/episode?seriesId=${seriesId}`;
+    if (seasonNumber !== undefined) {
+      path += `&seasonNumber=${seasonNumber}`;
+    }
+    return this.get<SonarrEpisode[]>(path);
   }
 
   /** Fetch quality profiles from Sonarr. */
