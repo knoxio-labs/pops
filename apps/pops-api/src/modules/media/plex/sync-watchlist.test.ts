@@ -357,9 +357,7 @@ describe("syncWatchlistFromPlex", () => {
 
     expect(result.added).toBe(0);
     expect(result.skipped).toBe(1);
-    expect(result.skipReasons).toEqual([
-      { title: "Inception", reason: "Already on watchlist" },
-    ]);
+    expect(result.skipReasons).toEqual([{ title: "Inception", reason: "Already on watchlist" }]);
   });
 
   it("escalates source from manual to both when item found in Plex", async () => {

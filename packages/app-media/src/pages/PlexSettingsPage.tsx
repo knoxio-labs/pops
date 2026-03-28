@@ -73,11 +73,7 @@ function SyncResultDisplay({ result, label }: { result: SyncResult; label: strin
             onClick={() => setShowSkipped(!showSkipped)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {showSkipped ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
+            {showSkipped ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showSkipped ? "Hide" : "Show"} skip reasons
           </button>
           {showSkipped && (
@@ -139,11 +135,7 @@ function WatchlistSyncResultDisplay({ result }: { result: WatchlistSyncResult })
             onClick={() => setShowSkipped(!showSkipped)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {showSkipped ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
+            {showSkipped ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showSkipped ? "Hide" : "Show"} skip reasons
           </button>
           {showSkipped && (
@@ -665,9 +657,7 @@ export function PlexSettingsPage() {
               )}
               {syncWatchlist.isPending ? "Syncing..." : "Sync Watchlist"}
             </Button>
-            {watchlistSyncResult && (
-              <WatchlistSyncResultDisplay result={watchlistSyncResult} />
-            )}
+            {watchlistSyncResult && <WatchlistSyncResultDisplay result={watchlistSyncResult} />}
           </div>
         )}
 
