@@ -17,6 +17,15 @@ interface CacheEntry {
 const CACHE_TTL_MS = 30_000;
 const CONNECTION_TIMEOUT_MS = 10_000;
 
+/** Convert a network-level fetch error into a descriptive ArrApiError. */
+function toArrApiError(err: unknown, url: string): ArrApiError {
+  if (err instanceof DOMException && err.name === "TimeoutError") {
+    return new ArrApiError(`Connection timed out after ${CONNECTION_TIMEOUT_MS / 1000}s — ${url}`);
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return new ArrApiError(`Connection failed: ${message} — ${url}`);
+}
+
 export class ArrBaseClient {
   protected readonly baseUrl: string;
   private readonly apiKey: string;
@@ -38,14 +47,19 @@ export class ArrBaseClient {
       return cached.data as T;
     }
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "X-Api-Key": this.apiKey,
-        Accept: "application/json",
-      },
-      signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-Api-Key": this.apiKey,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw toArrApiError(err, url);
+    }
 
     if (!response.ok) {
       throw new ArrApiError(`${response.status} ${response.statusText} — ${url}`, response.status);
@@ -68,15 +82,21 @@ export class ArrBaseClient {
   protected async post<T>(path: string, body: unknown): Promise<T> {
     const url = `${this.baseUrl}/api/v3${path}`;
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "X-Api-Key": this.apiKey,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "X-Api-Key": this.apiKey,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw toArrApiError(err, url);
+    }
 
     if (!response.ok) {
       throw new ArrApiError(`${response.status} ${response.statusText} — ${url}`, response.status);
@@ -89,15 +109,21 @@ export class ArrBaseClient {
   protected async put<T>(path: string, body: unknown): Promise<T> {
     const url = `${this.baseUrl}/api/v3${path}`;
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "X-Api-Key": this.apiKey,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "X-Api-Key": this.apiKey,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw toArrApiError(err, url);
+    }
 
     if (!response.ok) {
       throw new ArrApiError(`${response.status} ${response.statusText} — ${url}`, response.status);
