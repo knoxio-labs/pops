@@ -1,7 +1,7 @@
 # US-04: Eliminate hardcoded app colours
 
 > PRD: [002 — Design Tokens & Theming](README.md)
-> Status: Done
+> Status: Not started
 
 ## Description
 
@@ -9,13 +9,13 @@ As a developer, I want all hardcoded app colour classes (e.g., `bg-indigo-600`, 
 
 ## Acceptance Criteria
 
-- [x] All hardcoded colour classes in `packages/app-media/` replaced with `app-accent` variants (e.g., `bg-indigo-600` → `bg-app-accent`, `text-indigo-400` → `text-app-accent`)
-- [x] All hardcoded colour classes in `packages/app-finance/` replaced similarly
-- [x] All hardcoded colour classes in `packages/app-inventory/` replaced similarly
-- [x] All hardcoded colour classes in `packages/app-ai/` replaced similarly (already clean — no hardcoded accent colours)
-- [x] Opacity variants work (`bg-app-accent/10` replaces `bg-indigo-500/10`)
-- [x] `grep` for hardcoded app colour classes (emerald-[456]00, indigo-[456]00, amber-[456]00, rose-[456]00) returns zero hits in app packages
-- [x] Each app visually looks the same as before (same colours, just sourced from the variable)
+- [ ] All hardcoded colour classes in `packages/app-media/` replaced with `app-accent` variants (e.g., `bg-indigo-600` → `bg-app-accent`, `text-indigo-400` → `text-app-accent`)
+- [ ] All hardcoded colour classes in `packages/app-finance/` replaced similarly
+- [ ] All hardcoded colour classes in `packages/app-inventory/` replaced similarly
+- [ ] All hardcoded colour classes in `packages/app-ai/` replaced similarly
+- [ ] Opacity variants work (`bg-app-accent/10` replaces `bg-indigo-500/10`)
+- [ ] `grep` for hardcoded app colour classes (emerald-[456]00, indigo-[456]00, amber-[456]00, rose-[456]00) returns zero hits in app packages
+- [ ] Each app visually looks the same as before (same colours, just sourced from the variable)
 
 ## Notes
 

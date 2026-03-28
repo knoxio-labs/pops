@@ -18,7 +18,9 @@ No database work — this is CSS/Tailwind configuration.
 | Category | Examples | Defined in |
 |----------|---------|------------|
 | Colours | `--background`, `--foreground`, `--primary`, `--muted`, `--destructive` | `globals.css` CSS variables |
+| Status colours | `--color-success`, `--color-warning`, `--color-info` + foreground variants | `globals.css` CSS variables |
 | App colour | `--app-accent`, `--app-accent-foreground` | Set by shell per active app, consumed by components |
+| JS design tokens | `GRAPH_COLORS` (canvas rendering), exported from `@pops/ui/theme` | TypeScript constant objects |
 | Spacing | Tailwind default scale (0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, ...) | Tailwind v4 defaults |
 | Typography | Font family, size scale, weight scale, line heights | `@theme` block in `globals.css` |
 | Breakpoints | sm (640px), md (768px), lg (1024px), xl (1280px), 2xl (1536px) | `@theme` block |
@@ -72,7 +74,10 @@ Apps do NOT define their own theme tokens — they consume from `@pops/ui`.
 ## Business Rules
 
 - All colours must reference CSS variables via Tailwind classes — no hardcoded hex/rgb/oklch values in component code
+- No inline `style={{}}` with hardcoded colour values — use Tailwind classes. Exception: dynamic runtime values (progress bar widths)
 - No arbitrary Tailwind values (`w-[960px]`, `text-[#ff0000]`) except Radix UI CSS variable bindings (`w-[var(--radix-*)]`)
+- Status colours (error, success, warning, info) use semantic tokens, not hardcoded Tailwind colour classes (`text-destructive` not `text-red-500`)
+- JS/TS code that needs colour values (canvas rendering, charts) imports from a design token constant object, not hardcoded hex strings
 - Apps consume tokens, never define or override them
 - Light and dark mode must both work — every colour token needs both variants
 - The app colour variable must cascade to all nested components without manual propagation
@@ -110,6 +115,8 @@ These patterns must be eliminated and replaced with token-based classes:
 | 02 | [us-02-app-colour-variable](us-02-app-colour-variable.md) | Define the app colour CSS variable system (--app-accent, --app-accent-foreground) with per-colour definitions | Not started | Blocked by us-01 |
 | 03 | [us-03-eliminate-arbitrary-values](us-03-eliminate-arbitrary-values.md) | Replace all arbitrary Tailwind values with token-based classes across all components | Partial | Blocked by us-01 |
 | 04 | [us-04-eliminate-hardcoded-colours](us-04-eliminate-hardcoded-colours.md) | Replace all hardcoded app colour classes (bg-indigo-600, text-emerald-400, etc.) with app-accent token references | Not started | Blocked by us-02 |
+| 05 | [us-05-semantic-status-tokens](us-05-semantic-status-tokens.md) | Define semantic status colour tokens (success, warning, info) and replace hardcoded red/green/yellow/blue | Not started | Blocked by us-01 |
+| 06 | [us-06-eliminate-inline-styles](us-06-eliminate-inline-styles.md) | Replace inline style={{}} hardcoded values and JS/TS colour constants with tokens | Not started | Yes |
 
 ## Verification
 
