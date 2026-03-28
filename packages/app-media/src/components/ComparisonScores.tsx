@@ -94,15 +94,15 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
       <div className="rounded-lg border bg-card p-4">
         <ResponsiveContainer width="100%" height={280}>
           <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
-            <PolarGrid stroke="hsl(var(--border))" />
+            <PolarGrid stroke="var(--border)" />
             <PolarAngleAxis
               dataKey="dimension"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
             />
             <Radar
               dataKey="score"
-              stroke="hsl(var(--primary))"
-              fill="hsl(var(--primary))"
+              stroke="var(--primary)"
+              fill="var(--primary)"
               fillOpacity={0.2}
               strokeWidth={2}
             />

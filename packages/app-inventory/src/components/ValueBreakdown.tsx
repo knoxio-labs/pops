@@ -10,11 +10,11 @@ import { trpc } from "../lib/trpc";
 import { formatCurrency } from "../lib/utils";
 
 const BAR_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--primary) / 0.8)",
-  "hsl(var(--primary) / 0.6)",
-  "hsl(var(--primary) / 0.45)",
-  "hsl(var(--primary) / 0.3)",
+  "var(--primary)",
+  "color-mix(in oklch, var(--primary) 80%, transparent)",
+  "color-mix(in oklch, var(--primary) 60%, transparent)",
+  "color-mix(in oklch, var(--primary) 45%, transparent)",
+  "color-mix(in oklch, var(--primary) 30%, transparent)",
 ];
 
 export interface BreakdownEntry {
@@ -46,7 +46,7 @@ export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
         <XAxis
           type="number"
           tickFormatter={(v: number) => formatCurrency(v)}
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
         />
@@ -54,7 +54,7 @@ export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
           type="category"
           dataKey="name"
           width={100}
-          tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+          tick={{ fill: "var(--foreground)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
