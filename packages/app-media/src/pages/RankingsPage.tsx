@@ -111,12 +111,6 @@ function RankingRow({
   );
 }
 
-interface MediaMeta {
-  title: string;
-  year: number | null;
-  posterUrl: string | null;
-}
-
 function RankingsList({ dimensionId }: { dimensionId?: number }) {
   const [offset, setOffset] = useState(0);
 
@@ -125,55 +119,6 @@ function RankingsList({ dimensionId }: { dimensionId?: number }) {
     limit: PAGE_SIZE,
     offset,
   });
-
-  const { data: moviesData } = trpc.media.movies.list.useQuery({ limit: 500 });
-  const { data: tvShowsData } = trpc.media.tvShows.list.useQuery({
-    limit: 500,
-  });
-
-  const movieMap = useMemo(
-    () =>
-      new Map<number, MediaMeta>(
-        (moviesData?.data ?? []).map(
-          (m: {
-            id: number;
-            title: string;
-            releaseDate: string | null;
-            posterUrl: string | null;
-          }) => [
-            m.id,
-            {
-              title: m.title,
-              year: m.releaseDate ? new Date(m.releaseDate).getFullYear() : null,
-              posterUrl: m.posterUrl,
-            },
-          ]
-        )
-      ),
-    [moviesData?.data]
-  );
-
-  const tvMap = useMemo(
-    () =>
-      new Map<number, MediaMeta>(
-        (tvShowsData?.data ?? []).map(
-          (s: {
-            id: number;
-            name: string;
-            firstAirDate: string | null;
-            posterUrl: string | null;
-          }) => [
-            s.id,
-            {
-              title: s.name,
-              year: s.firstAirDate ? new Date(s.firstAirDate).getFullYear() : null,
-              posterUrl: s.posterUrl,
-            },
-          ]
-        )
-      ),
-    [tvShowsData?.data]
-  );
 
   if (error) {
     return (
@@ -208,26 +153,24 @@ function RankingsList({ dimensionId }: { dimensionId?: number }) {
             mediaType: string;
             mediaId: number;
             rank: number;
+            title: string;
+            year: number | null;
+            posterUrl: string | null;
             score: number;
             comparisonCount: number;
-          }) => {
-            const meta =
-              entry.mediaType === "movie" ? movieMap.get(entry.mediaId) : tvMap.get(entry.mediaId);
-
-            return (
-              <RankingRow
-                key={`${entry.mediaType}-${entry.mediaId}`}
-                rank={entry.rank}
-                mediaType={entry.mediaType}
-                mediaId={entry.mediaId}
-                score={entry.score}
-                comparisonCount={entry.comparisonCount}
-                title={meta?.title ?? "Unknown"}
-                year={meta?.year ?? null}
-                posterUrl={meta?.posterUrl ?? null}
-              />
-            );
-          }
+          }) => (
+            <RankingRow
+              key={`${entry.mediaType}-${entry.mediaId}`}
+              rank={entry.rank}
+              mediaType={entry.mediaType}
+              mediaId={entry.mediaId}
+              score={entry.score}
+              comparisonCount={entry.comparisonCount}
+              title={entry.title}
+              year={entry.year}
+              posterUrl={entry.posterUrl}
+            />
+          )
         )}
       </div>
 
