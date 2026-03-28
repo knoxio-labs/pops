@@ -166,7 +166,6 @@ export function ArrSettingsPage() {
   const saveSettings = trpc.media.arr.saveSettings.useMutation({
     onSuccess: () => {
       toast.success("Settings saved");
-      settingsQuery.refetch();
     },
     onError: (err: { message: string }) => toast.error(`Failed to save: ${err.message}`),
   });
