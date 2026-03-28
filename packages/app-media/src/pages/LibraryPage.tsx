@@ -15,8 +15,8 @@ const TYPE_OPTIONS: { value: MediaType; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "dateAdded", label: "Date Added" },
   { value: "title", label: "Title (A-Z)" },
+  { value: "dateAdded", label: "Date Added" },
   { value: "releaseDate", label: "Release Date" },
   { value: "rating", label: "Rating" },
 ];
@@ -126,7 +126,7 @@ export function LibraryPage() {
   const rawType = searchParams.get("type");
   const rawSort = searchParams.get("sort");
   const typeFilter: MediaType = isValidMediaType(rawType) ? rawType : "all";
-  const sortBy: SortOption = isValidSort(rawSort) ? rawSort : "dateAdded";
+  const sortBy: SortOption = isValidSort(rawSort) ? rawSort : "title";
   const genreFilter = searchParams.get("genre") || null;
   const searchQuery = searchParams.get("q") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);

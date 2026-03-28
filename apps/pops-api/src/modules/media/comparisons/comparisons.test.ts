@@ -713,6 +713,376 @@ describe("comparisons.rankings", () => {
   });
 });
 
+describe("comparisons.delete", () => {
+  it("deletes a comparison and removes it from listAll", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    const recorded = await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+
+    const before = await caller.media.comparisons.listAll({});
+    expect(before.pagination.total).toBe(1);
+
+    const result = await caller.media.comparisons.delete({
+      id: recorded.data.id,
+    });
+    expect(result.message).toBe("Comparison deleted and scores recalculated");
+
+    const after = await caller.media.comparisons.listAll({});
+    expect(after.pagination.total).toBe(0);
+  });
+
+  it("throws NOT_FOUND for non-existent comparison", async () => {
+    await expect(caller.media.comparisons.delete({ id: 999 })).rejects.toThrow(TRPCError);
+
+    try {
+      await caller.media.comparisons.delete({ id: 999 });
+    } catch (err) {
+      expect(err).toBeInstanceOf(TRPCError);
+      expect((err as TRPCError).code).toBe("NOT_FOUND");
+    }
+  });
+
+  it("rejects unauthenticated calls", async () => {
+    const anonCaller = createCaller(false);
+    await expect(anonCaller.media.comparisons.delete({ id: 1 })).rejects.toThrow(TRPCError);
+  });
+});
+
+describe("comparisons.delete (Elo recalculation)", () => {
+  it("resets scores to 1500 when deleting the only comparison", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    const recorded = await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+
+    // Verify scores changed from default
+    const beforeWinner = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+    });
+    expect(beforeWinner.data[0]!.score).toBeGreaterThan(1500);
+
+    await caller.media.comparisons.delete({ id: recorded.data.id });
+
+    // Both scores should be reset to 1500 with comparisonCount=0
+    const winnerScores = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+    });
+    expect(winnerScores.data[0]!.score).toBe(1500);
+    expect(winnerScores.data[0]!.comparisonCount).toBe(0);
+
+    const loserScores = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+    });
+    expect(loserScores.data[0]!.score).toBe(1500);
+    expect(loserScores.data[0]!.comparisonCount).toBe(0);
+  });
+
+  it("recalculates scores correctly when deleting one of multiple comparisons", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    // Record two comparisons: movie 1 beats 2, movie 1 beats 3
+    await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    const second = await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 3,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+
+    // Delete second comparison (1 vs 3)
+    await caller.media.comparisons.delete({ id: second.data.id });
+
+    // Movie 1 should still be above 1500 (won vs movie 2)
+    const scores1 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+    });
+    expect(scores1.data[0]!.score).toBeGreaterThan(1500);
+    expect(scores1.data[0]!.comparisonCount).toBe(1);
+
+    // Movie 2 should be below 1500 (lost to movie 1)
+    const scores2 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+    });
+    expect(scores2.data[0]!.score).toBeLessThan(1500);
+    expect(scores2.data[0]!.comparisonCount).toBe(1);
+
+    // Movie 3 should be back to 1500 (no remaining comparisons)
+    const scores3 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 3,
+    });
+    expect(scores3.data[0]!.score).toBe(1500);
+    expect(scores3.data[0]!.comparisonCount).toBe(0);
+  });
+
+  it("does not affect scores in other dimensions", async () => {
+    const dim1 = seedDimension(db, { name: "Story" });
+    const dim2 = seedDimension(db, { name: "Visuals" });
+
+    // Record in both dimensions
+    const comp1 = await caller.media.comparisons.record({
+      dimensionId: dim1,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dim2,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 2,
+    });
+
+    // Capture dim2 scores before delete
+    const dim2Before = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+      dimensionId: dim2,
+    });
+
+    // Delete the dim1 comparison
+    await caller.media.comparisons.delete({ id: comp1.data.id });
+
+    // dim2 scores should be unchanged
+    const dim2After = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+      dimensionId: dim2,
+    });
+    expect(dim2After.data[0]!.score).toBe(dim2Before.data[0]!.score);
+    expect(dim2After.data[0]!.comparisonCount).toBe(dim2Before.data[0]!.comparisonCount);
+  });
+
+  it("replays correctly when deleting middle comparison from a chain", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    // Record a fresh single comparison to get the expected scores
+    // First, build the chain: A beats B, B beats C, A beats C
+    await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    const comp2 = await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 2,
+      mediaBType: "movie",
+      mediaBId: 3,
+      winnerType: "movie",
+      winnerId: 2,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 3,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+
+    // Delete middle comparison (B beats C)
+    await caller.media.comparisons.delete({ id: comp2.data.id });
+
+    // Should have 2 remaining comparisons
+    const remaining = await caller.media.comparisons.listAll({ dimensionId: dimId });
+    expect(remaining.pagination.total).toBe(2);
+
+    // Movie 1 should be top ranked (won both remaining comparisons)
+    const scores1 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+    });
+    expect(scores1.data[0]!.score).toBeGreaterThan(1500);
+    expect(scores1.data[0]!.comparisonCount).toBe(2);
+
+    // Movie 2 should have 1 comparison (lost to movie 1)
+    const scores2 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+    });
+    expect(scores2.data[0]!.comparisonCount).toBe(1);
+    expect(scores2.data[0]!.score).toBeLessThan(1500);
+
+    // Movie 3 should have 1 comparison (lost to movie 1)
+    const scores3 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 3,
+    });
+    expect(scores3.data[0]!.comparisonCount).toBe(1);
+    expect(scores3.data[0]!.score).toBeLessThan(1500);
+  });
+
+  it("produces same scores as fresh recording after delete and replay", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    // Record two comparisons, then delete the first
+    const comp1 = await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 2,
+      mediaBType: "movie",
+      mediaBId: 3,
+      winnerType: "movie",
+      winnerId: 2,
+    });
+
+    // Delete first comparison — only comp2 (movie 2 beats 3) remains
+    await caller.media.comparisons.delete({ id: comp1.data.id });
+
+    const afterDelete2 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+    });
+    const afterDelete3 = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 3,
+    });
+
+    // The replayed scores for a single "2 beats 3" comparison should match
+    // what you'd get from a fresh comparison at default 1500 ratings.
+    // K=32, expected=0.5 for equal ratings → winner gets 1500+16=1516, loser gets 1500-16=1484
+    expect(afterDelete2.data[0]!.score).toBe(1516);
+    expect(afterDelete3.data[0]!.score).toBe(1484);
+    expect(afterDelete2.data[0]!.comparisonCount).toBe(1);
+    expect(afterDelete3.data[0]!.comparisonCount).toBe(1);
+  });
+});
+
+describe("comparisons.listAll", () => {
+  it("returns all comparisons across dimensions", async () => {
+    const dim1 = seedDimension(db, { name: "Story" });
+    const dim2 = seedDimension(db, { name: "Visuals" });
+
+    await caller.media.comparisons.record({
+      dimensionId: dim1,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dim2,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 2,
+    });
+
+    const result = await caller.media.comparisons.listAll({});
+    expect(result.pagination.total).toBe(2);
+    expect(result.data).toHaveLength(2);
+  });
+
+  it("filters by dimensionId", async () => {
+    const dim1 = seedDimension(db, { name: "Story" });
+    const dim2 = seedDimension(db, { name: "Visuals" });
+
+    await caller.media.comparisons.record({
+      dimensionId: dim1,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dim2,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 2,
+    });
+
+    const result = await caller.media.comparisons.listAll({ dimensionId: dim1 });
+    expect(result.pagination.total).toBe(1);
+    expect(result.data[0]!.dimensionId).toBe(dim1);
+  });
+
+  it("supports pagination", async () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+
+    for (let i = 2; i <= 4; i++) {
+      await caller.media.comparisons.record({
+        dimensionId: dimId,
+        mediaAType: "movie",
+        mediaAId: 1,
+        mediaBType: "movie",
+        mediaBId: i,
+        winnerType: "movie",
+        winnerId: 1,
+      });
+    }
+
+    const page1 = await caller.media.comparisons.listAll({ limit: 2, offset: 0 });
+    expect(page1.data).toHaveLength(2);
+    expect(page1.pagination.total).toBe(3);
+    expect(page1.pagination.hasMore).toBe(true);
+
+    const page2 = await caller.media.comparisons.listAll({ limit: 2, offset: 2 });
+    expect(page2.data).toHaveLength(1);
+    expect(page2.pagination.hasMore).toBe(false);
+  });
+});
+
 describe("comparisons auth", () => {
   it("rejects unauthenticated calls", async () => {
     const anonCaller = createCaller(false);

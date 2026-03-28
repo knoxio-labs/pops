@@ -137,7 +137,7 @@ function sortClause(sort: LibrarySortOption): string {
     case "rating":
       return "vote_average DESC";
     default:
-      return "created_at DESC";
+      return "title COLLATE NOCASE ASC";
   }
 }
 
