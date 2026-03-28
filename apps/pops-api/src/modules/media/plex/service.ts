@@ -127,6 +127,20 @@ export function getPlexClient(): PlexClient | null {
   }
 }
 
+/** Get the decrypted Plex token (for cloud API calls that don't use PlexClient). */
+export function getPlexToken(): string | null {
+  const db = getDrizzle();
+  const tokenRecord = db.select().from(settings).where(eq(settings.key, "plex_token")).get();
+  const encryptedToken = tokenRecord?.value;
+  if (!encryptedToken) return null;
+
+  try {
+    return decryptToken(encryptedToken);
+  } catch {
+    return encryptedToken; // Legacy unencrypted fallback
+  }
+}
+
 export function getPlexUsername(): string | null {
   const db = getDrizzle();
   const record = db.select().from(settings).where(eq(settings.key, "plex_username")).get();

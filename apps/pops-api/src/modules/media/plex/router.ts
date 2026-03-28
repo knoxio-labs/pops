@@ -12,6 +12,7 @@ import * as plexService from "./service.js";
 import * as scheduler from "./scheduler.js";
 import { importMoviesFromPlex } from "./sync-movies.js";
 import { importTvShowsFromPlex } from "./sync-tv.js";
+import { syncWatchlistFromPlex } from "./sync-watchlist.js";
 import { getDrizzle } from "../../../db.js";
 
 function requirePlexClient(): PlexClient {
@@ -96,6 +97,32 @@ export const plexRouter = router({
         throw err;
       }
     }),
+
+  syncWatchlist: protectedProcedure.mutation(async () => {
+    requirePlexClient(); // Verify Plex is configured
+    const token = plexService.getPlexToken();
+    if (!token) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Plex token not available",
+      });
+    }
+    try {
+      const result = await syncWatchlistFromPlex(token);
+      return {
+        data: result,
+        message: `Watchlist sync: ${result.added} added, ${result.removed} removed, ${result.skipped} skipped`,
+      };
+    } catch (err) {
+      if (err instanceof PlexApiError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Plex API error: ${err.message}`,
+        });
+      }
+      throw err;
+    }
+  }),
 
   getSyncStatus: protectedProcedure.query(() => {
     const client = plexService.getPlexClient();
