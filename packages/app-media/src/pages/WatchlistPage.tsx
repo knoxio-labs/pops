@@ -132,8 +132,6 @@ function WatchlistItem({
 
   const href =
     entry.mediaType === "movie" ? `/media/movies/${entry.mediaId}` : `/media/tv/${entry.mediaId}`;
-  const posterSrc = posterUrl ?? "";
-
   // Sync draft when server data changes
   useEffect(() => {
     if (!editing) {
@@ -206,12 +204,16 @@ function WatchlistItem({
       )}
 
       <Link to={href} className="shrink-0">
-        <img
-          src={posterSrc}
-          alt={`${title} poster`}
-          className="w-16 aspect-[2/3] rounded object-cover bg-muted"
-          loading="lazy"
-        />
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt={`${title} poster`}
+            className="w-16 aspect-[2/3] rounded object-cover bg-muted"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-16 aspect-[2/3] rounded bg-muted" />
+        )}
       </Link>
 
       <div className="flex-1 min-w-0">
