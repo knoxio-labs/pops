@@ -62,8 +62,6 @@ function RankingRow({
   posterUrl,
 }: RankingRowProps) {
   const href = mediaType === "movie" ? `/media/movies/${mediaId}` : `/media/tv/${mediaId}`;
-  const posterSrc = posterUrl ?? "";
-
   return (
     <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
       <span className="w-8 text-right text-sm font-bold text-muted-foreground tabular-nums">
@@ -81,12 +79,16 @@ function RankingRow({
       </span>
 
       <Link to={href} className="shrink-0">
-        <img
-          src={posterSrc}
-          alt={`${title} poster`}
-          className="w-10 aspect-[2/3] rounded object-cover bg-muted"
-          loading="lazy"
-        />
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt={`${title} poster`}
+            className="w-10 aspect-[2/3] rounded object-cover bg-muted"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-10 aspect-[2/3] rounded bg-muted" />
+        )}
       </Link>
 
       <div className="flex-1 min-w-0">

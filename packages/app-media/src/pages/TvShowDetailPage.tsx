@@ -198,7 +198,7 @@ export function TvShowDetailPage() {
 
   const yearRange = formatYearRange(show.firstAirDate, show.lastAirDate, show.status);
 
-  const posterSrc = show.posterUrl ?? "";
+  const posterSrc = show.posterUrl ?? undefined;
   const backdropSrc = show.backdropUrl ?? null;
 
   const progress = progressData?.data;
@@ -251,11 +251,15 @@ export function TvShowDetailPage() {
         </div>
 
         <div className="relative h-full flex flex-col md:flex-row items-end p-6 gap-4 md:gap-6">
-          <img
-            src={posterSrc}
-            alt={`${show.name} poster`}
-            className="w-28 md:w-44 aspect-[2/3] rounded-lg object-cover shadow-lg shrink-0"
-          />
+          {posterSrc ? (
+            <img
+              src={posterSrc}
+              alt={`${show.name} poster`}
+              className="w-28 md:w-44 aspect-[2/3] rounded-lg object-cover shadow-lg shrink-0"
+            />
+          ) : (
+            <div className="w-28 md:w-44 aspect-[2/3] rounded-lg bg-muted shadow-lg shrink-0" />
+          )}
 
           <div className="flex-1 pb-1">
             <h1 className="text-2xl md:text-4xl font-bold text-foreground">{show.name}</h1>
