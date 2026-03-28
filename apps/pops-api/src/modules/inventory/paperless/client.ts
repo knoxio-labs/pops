@@ -73,6 +73,29 @@ export class PaperlessClient {
     return `${this.baseUrl}/api/documents/${id}/download/`;
   }
 
+  /** Fetch the raw thumbnail image for a document. Returns the response for piping. */
+  async fetchThumbnail(id: number): Promise<Response> {
+    const url = this.getDocumentThumbnailUrl(id);
+    try {
+      return await fetch(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (err) {
+      throw new PaperlessApiError(
+        0,
+        `Network error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  /** Get the public base URL for constructing "View in Paperless" links. */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   /** List all correspondents. */
   async getCorrespondents(): Promise<PaperlessCorrespondent[]> {
     const raw = await this.get<RawPaperlessPaginatedResponse<RawPaperlessCorrespondent>>(

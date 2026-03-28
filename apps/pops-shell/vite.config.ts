@@ -32,6 +32,10 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
       },
+      "/inventory/documents": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
 });
