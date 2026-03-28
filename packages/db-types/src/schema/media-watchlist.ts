@@ -12,6 +12,8 @@ export const mediaWatchlist = sqliteTable(
     addedAt: text("added_at")
       .notNull()
       .default(sql`(datetime('now'))`),
+    source: text("source").notNull().default("manual"),
+    plexRatingKey: text("plex_rating_key"),
   },
   (table) => [uniqueIndex("idx_watchlist_media").on(table.mediaType, table.mediaId)]
 );

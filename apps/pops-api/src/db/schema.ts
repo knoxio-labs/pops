@@ -32,6 +32,7 @@ const INCLUDED_MIGRATIONS = [
   "20260326160000_items_locations_schema.sql",
   "20260327120000_sync_logs.sql",
   "20260328120000_inventory_asset_id_unique_index.sql",
+  "20260328130000_watchlist_source_plex_key.sql",
 ];
 
 /**
@@ -362,12 +363,14 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
     CREATE INDEX IF NOT EXISTS idx_media_scores_dimension ON media_scores(dimension_id);
 
     CREATE TABLE IF NOT EXISTS watchlist (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      media_type TEXT NOT NULL CHECK(media_type IN ('movie', 'tv_show')),
-      media_id   INTEGER NOT NULL,
-      priority   INTEGER DEFAULT 0,
-      notes      TEXT,
-      added_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_type       TEXT NOT NULL CHECK(media_type IN ('movie', 'tv_show')),
+      media_id         INTEGER NOT NULL,
+      priority         INTEGER DEFAULT 0,
+      notes            TEXT,
+      added_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      source           TEXT NOT NULL DEFAULT 'manual',
+      plex_rating_key  TEXT
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_media ON watchlist(media_type, media_id);
 
