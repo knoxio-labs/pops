@@ -204,7 +204,7 @@ export function TagEditor({
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="text-[10px] uppercase tracking-wider font-bold py-0 px-1.5"
+                  className="text-2xs uppercase tracking-wider font-bold py-0 px-1.5"
                   style={style}
                   title={tooltipText}
                 >
@@ -215,7 +215,7 @@ export function TagEditor({
             })
           )}
           {tags.length > 3 && (
-            <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal opacity-70">
+            <Badge variant="secondary" className="text-2xs py-0 px-1.5 font-normal opacity-70">
               +{tags.length - 3}
             </Badge>
           )}

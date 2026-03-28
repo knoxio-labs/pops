@@ -155,7 +155,7 @@ export function CalendarPage() {
                 >
                   {formatDate(dateKey)}
                   {today && (
-                    <Badge variant="default" className="text-[10px]">
+                    <Badge variant="default" className="text-2xs">
                       Today
                     </Badge>
                   )}
@@ -187,7 +187,7 @@ export function CalendarPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium truncate">{ep.seriesTitle}</h3>
-                          <Badge variant="outline" className="shrink-0 text-[10px]">
+                          <Badge variant="outline" className="shrink-0 text-2xs">
                             {formatEpisodeCode(ep.seasonNumber, ep.episodeNumber)}
                           </Badge>
                         </div>
@@ -198,13 +198,13 @@ export function CalendarPage() {
                           {ep.hasFile ? (
                             <Badge
                               variant="secondary"
-                              className="gap-0.5 text-[10px] bg-green-600 text-white"
+                              className="gap-0.5 text-2xs bg-green-600 text-white"
                             >
                               <CheckCircle className="h-2.5 w-2.5" />
                               Downloaded
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="gap-0.5 text-[10px]">
+                            <Badge variant="secondary" className="gap-0.5 text-2xs">
                               <Clock className="h-2.5 w-2.5" />
                               Missing
                             </Badge>

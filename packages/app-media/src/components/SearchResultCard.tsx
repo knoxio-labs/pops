@@ -119,7 +119,7 @@ export function SearchResultCard({
         {genres && genres.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {genres.slice(0, 3).map((genre) => (
-              <Badge key={genre} variant="outline" className="text-[10px] px-1.5 py-0">
+              <Badge key={genre} variant="outline" className="text-2xs px-1.5 py-0">
                 {genre}
               </Badge>
             ))}

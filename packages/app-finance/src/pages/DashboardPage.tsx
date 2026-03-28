@@ -128,7 +128,7 @@ export function DashboardPage() {
                       {transaction.tags.includes("Online") && (
                         <Badge
                           variant="secondary"
-                          className="hidden sm:inline-flex text-[10px] uppercase tracking-wider px-1.5 py-0"
+                          className="hidden sm:inline-flex text-2xs uppercase tracking-wider px-1.5 py-0"
                         >
                           Online
                         </Badge>
@@ -140,7 +140,7 @@ export function DashboardPage() {
                       </p>
                       {transaction.entityName && (
                         <>
-                          <span className="text-muted-foreground/50 text-[10px]">•</span>
+                          <span className="text-muted-foreground/50 text-2xs">•</span>
                           <p className="text-xs text-muted-foreground truncate">
                             {transaction.entityName}
                           </p>
@@ -151,7 +151,7 @@ export function DashboardPage() {
                   <div className="flex items-center gap-4 shrink-0">
                     <Badge
                       variant="outline"
-                      className="hidden sm:inline-flex text-[10px] uppercase tracking-wider px-1.5 py-0 text-muted-foreground font-normal"
+                      className="hidden sm:inline-flex text-2xs uppercase tracking-wider px-1.5 py-0 text-muted-foreground font-normal"
                     >
                       {transaction.account}
                     </Badge>
@@ -191,12 +191,12 @@ export function DashboardPage() {
               <Card key={budget.id} className="p-5 flex flex-col justify-between h-full">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-muted-foreground uppercase text-[10px] tracking-widest">
+                    <h3 className="font-medium text-muted-foreground uppercase text-2xs tracking-widest">
                       {budget.category}
                     </h3>
                     <Badge
                       variant={budget.active ? "default" : "secondary"}
-                      className="text-[10px] h-5"
+                      className="text-2xs h-5"
                     >
                       {budget.active ? "Active" : "Inactive"}
                     </Badge>

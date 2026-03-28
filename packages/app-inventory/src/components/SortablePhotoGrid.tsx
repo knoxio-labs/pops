@@ -110,7 +110,7 @@ export function SortablePhotoGrid({
             <GripVertical className="h-3.5 w-3.5" />
           </div>
           {index === 0 && (
-            <span className="absolute bottom-1 left-1 text-[10px] font-bold bg-app-accent text-white px-1.5 py-0.5 rounded">
+            <span className="absolute bottom-1 left-1 text-2xs font-bold bg-app-accent text-white px-1.5 py-0.5 rounded">
               Primary
             </span>
           )}
