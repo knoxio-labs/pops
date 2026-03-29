@@ -19,6 +19,8 @@ services:
       - up_webhook_secret
       - finance_api_key
       - claude_api_key
+      - tmdb_api_key
+      - thetvdb_api_key
     environment:
       NODE_ENV: production
       SQLITE_PATH: /data/sqlite/pops.db
@@ -160,6 +162,10 @@ secrets:
     file: {{ secrets_dir }}/telegram_bot_token
   finance_api_key:
     file: {{ secrets_dir }}/finance_api_key
+  tmdb_api_key:
+    file: {{ secrets_dir }}/tmdb_api_key
+  thetvdb_api_key:
+    file: {{ secrets_dir }}/thetvdb_api_key
   paperless_secret_key:
     file: {{ secrets_dir }}/paperless_secret_key
   paperless_admin_password:
