@@ -87,6 +87,7 @@ interface WatchHistorySyncResult {
   summary: {
     moviesLogged: number;
     episodesLogged: number;
+    episodesAlreadyLogged: number;
     showsProcessed: number;
     showsWithGaps: number;
   };
@@ -233,12 +234,19 @@ function WatchHistorySyncResultDisplay({ result }: { result: WatchHistorySyncRes
       {/* Summary */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-medium">Watch History Results:</span>
-        {result.movies && (
+        {result.movies && result.movies.logged > 0 && (
           <span className="text-emerald-400">{result.movies.logged} movies logged</span>
         )}
-        <span className="text-emerald-400">
-          {result.summary.episodesLogged} episodes logged
-        </span>
+        {result.summary.episodesLogged > 0 && (
+          <span className="text-emerald-400">
+            {result.summary.episodesLogged} episodes logged
+          </span>
+        )}
+        {result.summary.episodesAlreadyLogged > 0 && (
+          <span className="text-muted-foreground">
+            {result.summary.episodesAlreadyLogged} episodes already tracked
+          </span>
+        )}
         <span className="text-muted-foreground">
           {result.summary.showsProcessed} shows processed
         </span>
@@ -292,7 +300,7 @@ function WatchHistorySyncResultDisplay({ result }: { result: WatchHistorySyncRes
                       )}
                       <span className="font-medium flex-1">{show.title}</span>
                       <span className="text-muted-foreground">
-                        {d.matched}/{d.plexWatched} matched
+                        {d.matched + d.alreadyLogged}/{d.plexWatched} tracked
                       </span>
                       {show.plexViewedLeafCount !== null && (
                         <span className="text-muted-foreground">
