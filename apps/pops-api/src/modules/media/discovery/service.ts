@@ -191,6 +191,63 @@ export function getPreferenceProfile(): PreferenceProfile {
   };
 }
 
+/** Reverse map: genre name → TMDB genre ID. */
+const GENRE_NAME_TO_ID = Object.fromEntries(
+  Object.entries(TMDB_GENRE_MAP).map(([id, name]) => [name, Number(id)])
+);
+
+/**
+ * Get unwatched library movies mapped to DiscoverResult[] for scoring.
+ * Local-only — no external API calls.
+ */
+export function getUnwatchedLibraryMovies(): DiscoverResult[] {
+  const db = getDrizzle();
+
+  const watchedIds = db
+    .selectDistinct({ mediaId: watchHistory.mediaId })
+    .from(watchHistory)
+    .where(eq(watchHistory.mediaType, "movie"));
+
+  const rows = db
+    .select({
+      id: movies.id,
+      tmdbId: movies.tmdbId,
+      title: movies.title,
+      releaseDate: movies.releaseDate,
+      posterPath: movies.posterPath,
+      backdropPath: movies.backdropPath,
+      overview: movies.overview,
+      voteAverage: movies.voteAverage,
+      voteCount: movies.voteCount,
+      genres: movies.genres,
+    })
+    .from(movies)
+    .where(notInArray(movies.id, watchedIds))
+    .all();
+
+  return rows.map((row) => {
+    const genreNames: string[] = row.genres ? JSON.parse(row.genres) : [];
+    const genreIds = genreNames
+      .map((name) => GENRE_NAME_TO_ID[name])
+      .filter((id): id is number => id != null);
+
+    return {
+      tmdbId: row.tmdbId,
+      title: row.title,
+      overview: row.overview ?? "",
+      releaseDate: row.releaseDate ?? "",
+      posterPath: row.posterPath,
+      posterUrl: row.posterPath ? `/media/images/movie/${row.tmdbId}/poster.jpg` : null,
+      backdropPath: row.backdropPath,
+      voteAverage: row.voteAverage ?? 0,
+      voteCount: row.voteCount ?? 0,
+      genreIds,
+      popularity: 0,
+      inLibrary: true,
+    };
+  });
+}
+
 /**
  * Score recommendation results against the user's preference profile.
  *
