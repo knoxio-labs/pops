@@ -48,7 +48,7 @@ export const CONTEXT_COLLECTIONS: ContextCollection[] = [
     emoji: "🌙",
     genreIds: [53, 9648], // Thriller + Mystery
     keywords: [],
-    trigger: (hour) => hour >= 22 || hour < 2,
+    trigger: (hour) => hour >= 22 || hour <= 2,
   },
   {
     id: "halloween",
@@ -106,9 +106,11 @@ export function getActiveCollections(
   }
 
   // Fill remaining slots with fallback
-  const fallback = CONTEXT_COLLECTIONS.find((c) => c.id === FALLBACK_ID)!;
-  while (matched.length < MAX_ACTIVE) {
-    matched.push(fallback);
+  const fallback = CONTEXT_COLLECTIONS.find((c) => c.id === FALLBACK_ID);
+  if (fallback) {
+    while (matched.length < MAX_ACTIVE) {
+      matched.push(fallback);
+    }
   }
 
   return matched;

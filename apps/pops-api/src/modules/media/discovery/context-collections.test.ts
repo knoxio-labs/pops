@@ -78,6 +78,14 @@ describe("trigger — late-night", () => {
     expect(col.trigger(1, 6, 3)).toBe(true);
   });
 
+  it("matches 2am (boundary)", () => {
+    expect(col.trigger(2, 6, 3)).toBe(true);
+  });
+
+  it("rejects 3am", () => {
+    expect(col.trigger(3, 6, 3)).toBe(false);
+  });
+
   it("rejects 2pm", () => {
     expect(col.trigger(14, 6, 3)).toBe(false);
   });
