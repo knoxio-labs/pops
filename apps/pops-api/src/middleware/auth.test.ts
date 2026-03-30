@@ -30,9 +30,11 @@ function createMockRes(): Response {
 
 describe("authMiddleware", () => {
   const originalEnv = process.env["NODE_ENV"];
+  const originalTeamName = process.env["CLOUDFLARE_ACCESS_TEAM_NAME"];
 
   afterEach(() => {
     process.env["NODE_ENV"] = originalEnv;
+    process.env["CLOUDFLARE_ACCESS_TEAM_NAME"] = originalTeamName;
     vi.restoreAllMocks();
   });
 
@@ -80,9 +82,28 @@ describe("authMiddleware", () => {
     });
   });
 
-  describe("production mode", () => {
+  describe("production mode (no team name — tunnel trust)", () => {
     beforeEach(() => {
       process.env["NODE_ENV"] = "production";
+      delete process.env["CLOUDFLARE_ACCESS_TEAM_NAME"];
+    });
+
+    it("passes auth with tunnel-authenticated user when team name not set", () => {
+      const req = createMockReq({ headers: {} });
+      const res = createMockRes();
+      const next = vi.fn();
+
+      authMiddleware(req, res, next);
+
+      expect(next).toHaveBeenCalledOnce();
+      expect(res.locals["user"]).toEqual({ email: "tunnel-authenticated@pops.local" });
+    });
+  });
+
+  describe("production mode (with team name — JWT verification)", () => {
+    beforeEach(() => {
+      process.env["NODE_ENV"] = "production";
+      process.env["CLOUDFLARE_ACCESS_TEAM_NAME"] = "test-team";
     });
 
     it("returns 401 when JWT header is missing", () => {

@@ -31,6 +31,14 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
+  // If Cloudflare Access team name is not configured, trust the tunnel
+  // (Cloudflare Access at the tunnel level already authenticates users)
+  if (!process.env["CLOUDFLARE_ACCESS_TEAM_NAME"]) {
+    res.locals["user"] = { email: "tunnel-authenticated@pops.local" };
+    next();
+    return;
+  }
+
   const token = req.headers["cf-access-jwt-assertion"];
 
   if (typeof token !== "string") {
