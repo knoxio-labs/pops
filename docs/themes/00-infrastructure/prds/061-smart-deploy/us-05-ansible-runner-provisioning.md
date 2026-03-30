@@ -1,7 +1,7 @@
 # US-05: Ansible provisioning for GitHub Actions runner
 
 > PRD: [061 — Smart Deploy Pipeline](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 

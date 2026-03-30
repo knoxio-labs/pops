@@ -1,7 +1,7 @@
 # US-02: Selective Docker build and restart
 
 > PRD: [061 — Smart Deploy Pipeline](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 

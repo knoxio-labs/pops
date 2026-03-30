@@ -1,7 +1,7 @@
 # US-03: Skip deploy for docs/CI-only changes
 
 > PRD: [061 — Smart Deploy Pipeline](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 

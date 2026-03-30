@@ -104,11 +104,11 @@ None — this is a CI/CD pipeline change, not an application feature.
 
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
-| 01 | [us-01-path-detection](us-01-path-detection.md) | Detect changed paths in merge commit, categorise as frontend/backend/infra/skip | Not started | Yes |
-| 02 | [us-02-selective-build](us-02-selective-build.md) | Build and restart only the changed service(s) via Docker commands | Not started | Blocked by us-01 |
-| 03 | [us-03-skip-deploy](us-03-skip-deploy.md) | Skip deploy entirely for docs/CI-only changes | Not started | Blocked by us-01 |
-| 04 | [us-04-health-check](us-04-health-check.md) | Verify restarted services are healthy, fallback to full deploy on failure | Not started | Blocked by us-02 |
-| 05 | [us-05-ansible-runner-provisioning](us-05-ansible-runner-provisioning.md) | Add GitHub Actions runner setup to the Ansible provisioning playbook | Not started | Yes |
+| 01 | [us-01-path-detection](us-01-path-detection.md) | Detect changed paths in merge commit, categorise as frontend/backend/infra/skip | Done | Yes |
+| 02 | [us-02-selective-build](us-02-selective-build.md) | Build and restart only the changed service(s) via Docker commands | Done | Blocked by us-01 |
+| 03 | [us-03-skip-deploy](us-03-skip-deploy.md) | Skip deploy entirely for docs/CI-only changes | Done | Blocked by us-01 |
+| 04 | [us-04-health-check](us-04-health-check.md) | Verify restarted services are healthy, fallback to full deploy on failure | Done | Blocked by us-02 |
+| 05 | [us-05-ansible-runner-provisioning](us-05-ansible-runner-provisioning.md) | Add GitHub Actions runner setup to the Ansible provisioning playbook | Done | Yes |
 
 US-01 and US-05 can start in parallel. US-02 and US-03 depend on US-01. US-04 depends on US-02.
 

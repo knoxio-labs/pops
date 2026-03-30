@@ -1,7 +1,7 @@
 # US-01: Path detection in deploy workflow
 
 > PRD: [061 — Smart Deploy Pipeline](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 

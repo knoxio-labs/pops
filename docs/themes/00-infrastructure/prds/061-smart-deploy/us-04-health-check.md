@@ -1,7 +1,7 @@
 # US-04: Post-deploy health check with fallback
 
 > PRD: [061 — Smart Deploy Pipeline](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
