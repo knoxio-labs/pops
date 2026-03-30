@@ -12,6 +12,7 @@ export interface Dimension {
   description: string | null;
   active: boolean;
   sortOrder: number;
+  weight: number;
   createdAt: string;
 }
 
@@ -22,6 +23,7 @@ export function toDimension(row: ComparisonDimensionRow): Dimension {
     description: row.description,
     active: row.active === 1,
     sortOrder: row.sortOrder,
+    weight: row.weight ?? 1.0,
     createdAt: row.createdAt,
   };
 }
@@ -102,6 +104,7 @@ export const CreateDimensionSchema = z.object({
   description: z.string().nullable().optional(),
   active: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
+  weight: z.number().min(0.1).max(10).optional().default(1.0),
 });
 export type CreateDimensionInput = z.infer<typeof CreateDimensionSchema>;
 
@@ -110,6 +113,7 @@ export const UpdateDimensionSchema = z.object({
   description: z.string().nullable().optional(),
   active: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  weight: z.number().min(0.1).max(10).optional(),
 });
 export type UpdateDimensionInput = z.infer<typeof UpdateDimensionSchema>;
 
