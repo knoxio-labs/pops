@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { Database } from "better-sqlite3";
 import { setupTestContext, createCaller } from "../../../shared/test-utils.js";
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
-let db: Database;
 
 beforeEach(() => {
-  ({ caller, db } = ctx.setup());
+  ({ caller } = ctx.setup());
 });
 
 afterEach(() => {
