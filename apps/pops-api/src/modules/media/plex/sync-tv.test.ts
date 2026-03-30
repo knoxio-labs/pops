@@ -219,6 +219,11 @@ describe("importTvShowsFromPlex", () => {
       id: 1,
     } as unknown as import("@pops/db-types").TvShowRow);
     makeMockDb({ id: 10 }, { id: 100 });
+    mockLogWatch.mockReturnValue({
+      entry: { id: 1 },
+      created: true,
+      watchlistRemoved: false,
+    } as unknown as ReturnType<typeof logWatch>);
 
     const ep = makePlexEpisode({ viewCount: 1, lastViewedAt: 1711400000 });
     const show = makePlexShow();
