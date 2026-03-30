@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const comparisonDimensions = sqliteTable(
@@ -9,6 +9,7 @@ export const comparisonDimensions = sqliteTable(
     description: text("description"),
     active: integer("active").notNull().default(1),
     sortOrder: integer("sort_order").notNull().default(0),
+    weight: real("weight").notNull().default(1.0),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(datetime('now'))`),

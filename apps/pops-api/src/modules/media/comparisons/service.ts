@@ -94,6 +94,7 @@ export function createDimension(input: CreateDimensionInput): ComparisonDimensio
       description: input.description ?? null,
       active: input.active ? 1 : 0,
       sortOrder: input.sortOrder ?? 0,
+      weight: input.weight ?? 1.0,
     })
     .run();
 
@@ -109,6 +110,7 @@ export function updateDimension(id: number, input: UpdateDimensionInput): Compar
   if (input.description !== undefined) updates.description = input.description ?? null;
   if (input.active !== undefined) updates.active = input.active ? 1 : 0;
   if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;
+  if (input.weight !== undefined) updates.weight = input.weight;
 
   if (Object.keys(updates).length > 0) {
     db.update(comparisonDimensions).set(updates).where(eq(comparisonDimensions.id, id)).run();
@@ -674,7 +676,8 @@ export function getRankings(
       `SELECT COUNT(*) as total FROM (
         SELECT ms.media_type, ms.media_id
         FROM media_scores ms
-        WHERE ms.dimension_id IN (${dimensionPlaceholders}) ${mediaTypeClause}
+        JOIN comparison_dimensions cd ON ms.dimension_id = cd.id
+        WHERE cd.active = 1 AND ms.dimension_id IN (${dimensionPlaceholders}) ${mediaTypeClause}
         GROUP BY ms.media_type, ms.media_id
       )`
     )
@@ -685,7 +688,7 @@ export function getRankings(
       `SELECT
         ms.media_type as mediaType,
         ms.media_id as mediaId,
-        AVG(ms.score) as score,
+        SUM(ms.score * cd.weight) / SUM(cd.weight) as score,
         SUM(ms.comparison_count) as comparisonCount,
         COALESCE(m.title, tv.name, 'Unknown') as title,
         CASE
@@ -699,13 +702,14 @@ export function getRankings(
         tv.tvdb_id as tvTvdbId,
         tv.poster_override_path as tvPosterOverride
       FROM media_scores ms
+      JOIN comparison_dimensions cd ON ms.dimension_id = cd.id
       LEFT JOIN movies m ON ms.media_type = 'movie' AND ms.media_id = m.id
       LEFT JOIN tv_shows tv ON ms.media_type = 'tv_show' AND ms.media_id = tv.id
-      WHERE ms.dimension_id IN (${dimensionPlaceholders}) ${mediaTypeClause}
+      WHERE cd.active = 1 AND ms.dimension_id IN (${dimensionPlaceholders}) ${mediaTypeClause}
       GROUP BY ms.media_type, ms.media_id
       ORDER BY
         CASE WHEN SUM(ms.comparison_count) = 0 THEN 1 ELSE 0 END,
-        AVG(ms.score) DESC,
+        SUM(ms.score * cd.weight) / SUM(cd.weight) DESC,
         COALESCE(m.title, tv.name) ASC
       LIMIT ? OFFSET ?`
     )

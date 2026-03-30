@@ -4,7 +4,7 @@
  * Accessed from CompareArenaPage via a gear icon. Lets users add,
  * edit, deactivate, and reorder comparison dimensions.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Badge,
   Button,
@@ -15,6 +15,7 @@ import {
   DialogTrigger,
   Input,
   Separator,
+  Slider,
   Switch,
   Textarea,
 } from "@pops/ui";
@@ -28,6 +29,7 @@ interface Dimension {
   description: string | null;
   active: boolean;
   sortOrder: number;
+  weight: number;
 }
 
 /** Inline edit state for a single dimension. */
@@ -59,9 +61,11 @@ export function DimensionManager() {
       description: string | null;
       active: boolean | number;
       sortOrder: number;
+      weight: number;
     }) => ({
       ...d,
       active: Boolean(d.active),
+      weight: d.weight ?? 1.0,
     })
   );
 
@@ -124,6 +128,25 @@ export function DimensionManager() {
       },
     });
   }, [editing, updateMutation]);
+
+  const weightTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  const handleWeightChange = useCallback(
+    (dim: Dimension, newWeight: number) => {
+      const existing = weightTimers.current.get(dim.id);
+      if (existing) clearTimeout(existing);
+
+      const timer = setTimeout(() => {
+        weightTimers.current.delete(dim.id);
+        updateMutation.mutate({
+          id: dim.id,
+          data: { weight: newWeight },
+        });
+      }, 300);
+      weightTimers.current.set(dim.id, timer);
+    },
+    [updateMutation]
+  );
 
   const handleReorder = useCallback(
     (dim: Dimension, direction: "up" | "down") => {
@@ -271,7 +294,7 @@ export function DimensionManager() {
                       </div>
                     </div>
                   ) : (
-                    <div>
+                    <div className="space-y-1">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-medium truncate">{dim.name}</span>
                         {!dim.active && (
@@ -283,6 +306,24 @@ export function DimensionManager() {
                       {dim.description && (
                         <p className="text-xs text-muted-foreground truncate">{dim.description}</p>
                       )}
+                      {/* Weight slider */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          Weight: {dim.weight.toFixed(1)}
+                        </span>
+                        <Slider
+                          min={0.1}
+                          max={3}
+                          step={0.1}
+                          value={[dim.weight]}
+                          onValueChange={([v]) => {
+                            if (v !== undefined) handleWeightChange(dim, v);
+                          }}
+                          disabled={updateMutation.isPending}
+                          className="w-24"
+                          aria-label={`Weight for ${dim.name}`}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

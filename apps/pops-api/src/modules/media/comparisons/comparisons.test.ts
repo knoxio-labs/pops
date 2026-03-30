@@ -1083,6 +1083,103 @@ describe("comparisons.listAll", () => {
   });
 });
 
+describe("dimension weights", () => {
+  it("listDimensions returns weight field defaulting to 1.0", async () => {
+    seedDimension(db, { name: "Story" });
+    const result = await caller.media.comparisons.listDimensions();
+    expect(result.data[0]!.weight).toBe(1.0);
+  });
+
+  it("createDimension with custom weight", async () => {
+    const result = await caller.media.comparisons.createDimension({
+      name: "Cinematography",
+      weight: 2.5,
+    });
+    expect(result.data.weight).toBe(2.5);
+  });
+
+  it("updateDimension updates weight", async () => {
+    const dimId = seedDimension(db, { name: "Story" });
+    const result = await caller.media.comparisons.updateDimension({
+      id: dimId,
+      data: { weight: 3.0 },
+    });
+    expect(result.data.weight).toBe(3.0);
+  });
+
+  it("weighted overall ranking uses weighted average", async () => {
+    // dim1 has weight 3.0, dim2 has weight 1.0
+    const dim1 = seedDimension(db, { name: "Story", active: 1, weight: 3.0 });
+    const dim2 = seedDimension(db, { name: "Visuals", active: 1, weight: 1.0 });
+
+    // Movie 1 wins on Story (weight=3), Movie 2 wins on Visuals (weight=1)
+    await caller.media.comparisons.record({
+      dimensionId: dim1,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dim2,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 2,
+    });
+
+    // Overall: Movie 1 should rank higher because Story (weight=3) outweighs Visuals (weight=1)
+    const result = await caller.media.comparisons.rankings({});
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]!.mediaId).toBe(1);
+    expect(result.data[0]!.score).toBeGreaterThan(1500);
+    expect(result.data[1]!.mediaId).toBe(2);
+    expect(result.data[1]!.score).toBeLessThan(1500);
+  });
+
+  it("equal weights produce same result as simple average", async () => {
+    const dim1 = seedDimension(db, { name: "Story", active: 1, weight: 1.0 });
+    const dim2 = seedDimension(db, { name: "Visuals", active: 1, weight: 1.0 });
+
+    // Movie 1 wins both dimensions
+    await caller.media.comparisons.record({
+      dimensionId: dim1,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+    await caller.media.comparisons.record({
+      dimensionId: dim2,
+      mediaAType: "movie",
+      mediaAId: 1,
+      mediaBType: "movie",
+      mediaBId: 2,
+      winnerType: "movie",
+      winnerId: 1,
+    });
+
+    // Get per-dimension scores
+    const dim1Rankings = await caller.media.comparisons.rankings({ dimensionId: dim1 });
+    const dim2Rankings = await caller.media.comparisons.rankings({ dimensionId: dim2 });
+
+    const movie1Dim1Score = dim1Rankings.data.find((r) => r.mediaId === 1)!.score;
+    const movie1Dim2Score = dim2Rankings.data.find((r) => r.mediaId === 1)!.score;
+    const expectedAvg = Math.round(((movie1Dim1Score + movie1Dim2Score) / 2) * 10) / 10;
+
+    // Overall should equal simple average when weights are equal
+    const overall = await caller.media.comparisons.rankings({});
+    const movie1Overall = overall.data.find((r) => r.mediaId === 1)!.score;
+    expect(movie1Overall).toBe(expectedAvg);
+  });
+});
+
 describe("comparisons auth", () => {
   it("rejects unauthenticated calls", async () => {
     const anonCaller = createCaller(false);

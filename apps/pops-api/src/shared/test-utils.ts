@@ -195,6 +195,7 @@ export function createTestDb(): Database {
       description TEXT,
       active      INTEGER NOT NULL DEFAULT 1,
       sort_order  INTEGER NOT NULL DEFAULT 0,
+      weight      REAL NOT NULL DEFAULT 1.0,
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_comparison_dimensions_name ON comparison_dimensions(name);
@@ -1076,18 +1077,20 @@ export function seedDimension(
     description: string | null;
     active: number;
     sort_order: number;
+    weight: number;
   }> = {}
 ): number {
   const result = db
     .prepare(
-      `INSERT INTO comparison_dimensions (name, description, active, sort_order)
-     VALUES (@name, @description, @active, @sort_order)`
+      `INSERT INTO comparison_dimensions (name, description, active, sort_order, weight)
+     VALUES (@name, @description, @active, @sort_order, @weight)`
     )
     .run({
       name: overrides.name ?? "Test Dimension",
       description: overrides.description ?? null,
       active: overrides.active ?? 1,
       sort_order: overrides.sort_order ?? 0,
+      weight: overrides.weight ?? 1.0,
     });
   return Number(result.lastInsertRowid);
 }
