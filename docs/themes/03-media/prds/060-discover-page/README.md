@@ -161,7 +161,7 @@ Displayed at the bottom of the page. Shows:
 |---|-------|---------|--------|----------------|
 | 04 | [us-04-trending-tmdb](us-04-trending-tmdb.md) | TMDB trending endpoint + frontend row with day/week toggle, dedup pagination, Load More | Not started | Yes |
 | 05 | [us-05-recommendations-endpoint](us-05-recommendations-endpoint.md) | tRPC endpoint: top 10-100 ELO movies → TMDB recs, merge, deduplicate, score, exclude dismissed/library | Not started | Blocked by us-03 |
-| 06 | [us-06-recommendations-ui](us-06-recommendations-ui.md) | Frontend row: cold start CTA, attribution labels, match % badge, subtitle with source movies | Not started | Blocked by us-05 |
+| 06 | [us-06-recommendations-ui](us-06-recommendations-ui.md) | Frontend row: cold start CTA, attribution labels, match % badge, subtitle with source movies | Done | Blocked by us-05 |
 | 07 | [us-07-genre-spotlight-endpoint](us-07-genre-spotlight-endpoint.md) | tRPC endpoint: select 2-3 genres with variety, fetch TMDB discover per genre, score results | Not started | Blocked by us-03 |
 | 08 | [us-08-genre-spotlight-ui](us-08-genre-spotlight-ui.md) | Frontend: genre sub-rows ("Best in Action", "Best in Sci-Fi"), Load More per genre | Not started | Blocked by us-07 |
 | 09 | [us-09-watchlist-recs](us-09-watchlist-recs.md) | tRPC endpoint + frontend row: watchlist items → TMDB similar, attribution, exclude owned/dismissed | Not started | Blocked by us-03 |
