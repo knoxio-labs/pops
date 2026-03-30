@@ -54,7 +54,7 @@ describe("selectTopGenres", () => {
         { genre: "Drama", avgScore: 7.0, movieCount: 12, totalComparisons: 18 },
         { genre: "Horror", avgScore: 6.5, movieCount: 5, totalComparisons: 10 },
       ],
-      [],
+      []
     );
 
     expect(result).toHaveLength(3);
@@ -69,7 +69,7 @@ describe("selectTopGenres", () => {
         { genre: "Comedy", avgScore: 7.5, movieCount: 12, totalComparisons: 18 },
         { genre: "Drama", avgScore: 7.0, movieCount: 5, totalComparisons: 10 },
       ],
-      [],
+      []
     );
 
     expect(result).toContain("Action");
@@ -85,7 +85,7 @@ describe("selectTopGenres", () => {
         { genre: "Mystery", avgScore: 8.5, movieCount: 8, totalComparisons: 15 },
         { genre: "Comedy", avgScore: 7.5, movieCount: 12, totalComparisons: 18 },
       ],
-      [],
+      []
     );
 
     expect(result).toContain("Thriller");
@@ -100,7 +100,7 @@ describe("selectTopGenres", () => {
         { genre: "Drama", watchCount: 20, percentage: 40 },
         { genre: "Comedy", watchCount: 15, percentage: 30 },
         { genre: "Horror", watchCount: 10, percentage: 20 },
-      ],
+      ]
     );
 
     expect(result).toEqual(["Drama", "Comedy", "Horror"]);
@@ -117,7 +117,7 @@ describe("selectTopGenres", () => {
         { genre: "MadeUpGenre", avgScore: 9.0, movieCount: 10, totalComparisons: 20 },
         { genre: "Comedy", avgScore: 7.5, movieCount: 8, totalComparisons: 15 },
       ],
-      [],
+      []
     );
 
     expect(result).not.toContain("MadeUpGenre");
@@ -157,9 +157,7 @@ describe("getGenreSpotlight", () => {
     } as unknown as TmdbClient;
 
     const profile = makeProfile({
-      genreAffinities: [
-        { genre: "Comedy", avgScore: 7.5, movieCount: 8, totalComparisons: 15 },
-      ],
+      genreAffinities: [{ genre: "Comedy", avgScore: 7.5, movieCount: 8, totalComparisons: 15 }],
     });
 
     const libraryIds = new Set([100, 200]);
@@ -181,9 +179,7 @@ describe("getGenreSpotlight", () => {
   it("calls TMDB discover with correct genre ID and params", async () => {
     const client = makeMockClient();
     const profile = makeProfile({
-      genreAffinities: [
-        { genre: "Horror", avgScore: 8.0, movieCount: 5, totalComparisons: 10 },
-      ],
+      genreAffinities: [{ genre: "Horror", avgScore: 8.0, movieCount: 5, totalComparisons: 10 }],
     });
 
     await getGenreSpotlight(client, profile, new Set());

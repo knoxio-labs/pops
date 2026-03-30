@@ -32,16 +32,14 @@ const RELATED_GENRE_PAIRS: [string, string][] = [
 
 /** Check if two genre names are related (should not both be in spotlight). */
 function areRelated(a: string, b: string): boolean {
-  return RELATED_GENRE_PAIRS.some(
-    ([x, y]) => (a === x && b === y) || (a === y && b === x),
-  );
+  return RELATED_GENRE_PAIRS.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
 }
 
 /** Build a poster URL: proxy for library items, TMDB CDN for non-library items. */
 function buildPosterUrl(
   posterPath: string | null,
   tmdbId: number,
-  inLibrary: boolean,
+  inLibrary: boolean
 ): string | null {
   if (!posterPath) return null;
   if (inLibrary) return `/media/images/movie/${tmdbId}/poster.jpg`;
@@ -64,7 +62,7 @@ export interface GenreSpotlightResponse {
  */
 export function selectTopGenres(
   affinities: GenreAffinity[],
-  distribution: GenreDistribution[],
+  distribution: GenreDistribution[]
 ): string[] {
   const TARGET = 3;
 
@@ -98,12 +96,9 @@ export function selectTopGenres(
 export async function getGenreSpotlight(
   client: TmdbClient,
   profile: PreferenceProfile,
-  libraryIds: Set<number>,
+  libraryIds: Set<number>
 ): Promise<GenreSpotlightResponse> {
-  const genres = selectTopGenres(
-    profile.genreAffinities,
-    profile.genreDistribution,
-  );
+  const genres = selectTopGenres(profile.genreAffinities, profile.genreDistribution);
 
   if (genres.length === 0) {
     return { genres: [] };
@@ -149,7 +144,7 @@ export async function getGenreSpotlight(
         genreName,
         results: scored,
       };
-    }),
+    })
   );
 
   return { genres: entries };
