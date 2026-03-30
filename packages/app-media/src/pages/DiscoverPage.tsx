@@ -718,10 +718,7 @@ export function DiscoverPage() {
       )}
       {contextPicks.data?.collections?.map((collection) => (
         <div key={collection.id} className="space-y-3">
-          <HorizontalScrollRow
-            title={`${collection.emoji} ${collection.title}`}
-            isLoading={false}
-          >
+          <HorizontalScrollRow title={`${collection.emoji} ${collection.title}`} isLoading={false}>
             {contextPicks.error && (
               <Alert variant="destructive" className="flex items-center gap-3">
                 <AlertCircle className="h-4 w-4 shrink-0" />
