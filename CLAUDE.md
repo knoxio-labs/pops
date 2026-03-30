@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-POPS (Personal Operations System) is a self-hosted financial tracking and automation platform. SQLite is the **primary data store**. Self-hosted services on an N95 mini PC provide analytics, dashboards, and AI-powered automation. Cloudflare Tunnel exposes services with zero port forwarding.
+POPS (Personal Operations System) is a self-hosted personal operations platform covering finance, media, inventory, and AI. SQLite is the **primary data store**. Self-hosted services on an N95 mini PC provide analytics, dashboards, and AI-powered automation. Cloudflare Tunnel exposes services with zero port forwarding.
+
+**Domains:** Finance (transactions, budgets, entities) | Media (movies, TV, watchlist, watch history, Plex/TMDB/TVDB integration) | Inventory (items, locations, warranties, insurance) | AI (usage tracking, model config, rules)
 
 Phase 0 (data import) is complete. Phase 1 (Foundation) targets March 2026.
 
@@ -152,27 +154,36 @@ ansible-vault encrypt inventory/group_vars/pops_servers/vault.yml
 
 ```
 apps/
-├── pops-api/          # Backend: tRPC API
-├── pops-shell/          # Frontend: React shell + app packages
-└── moltbot/             # Bot: Telegram assistant
+├── pops-api/              # Backend: tRPC API (Express + Drizzle ORM)
+├── pops-shell/            # Frontend: React shell + app packages (Vite + nginx)
+└── moltbot/               # Bot: Telegram assistant
 
 packages/
-├── app-finance/         # App: Finance domain pages and components
-├── db-types/            # Shared: Database types (in workspace)
-├── ui/                  # Shared: @pops/ui component library
-└── import-tools/        # Shared: Import utilities (standalone, not in workspace)
+├── app-finance/           # App: Finance domain (transactions, budgets, entities, imports)
+├── app-media/             # App: Media domain (library, watchlist, watch history, Plex, compare arena)
+├── app-inventory/         # App: Inventory domain (items, locations, warranties, insurance)
+├── app-ai/                # App: AI domain (usage tracking, model config, rules browser)
+├── db-types/              # Shared: Drizzle schema + TypeScript types
+├── ui/                    # Shared: @pops/ui component library (shadcn-based)
+├── auth/                  # Shared: Authentication utilities
+├── navigation/            # Shared: App navigation config
+├── widgets/               # Shared: Dashboard widgets
+├── types/                 # Shared: Cross-package type definitions
+├── test-utils/            # Shared: Test helpers
+├── api-client/            # Shared: tRPC client setup
+└── import-tools/          # Standalone: Bank import scripts (not in pnpm workspace)
 
 infra/
-├── ansible/             # Infrastructure as code
-└── docker-compose.yml   # Compose configs
+├── ansible/               # Infrastructure as code (Ansible playbooks + roles)
+└── docker-compose.yml     # Compose configs
 ```
 
-- `apps/pops-api/` — Express REST API over SQLite (bridges frontend/backend networks)
+- `apps/pops-api/` — Express + tRPC API over SQLite via Drizzle ORM
 - `apps/pops-shell/` — React app shell with lazy-loaded app packages, served via nginx
 - `apps/moltbot/` — Config + custom finance skill for Moltbot (no Dockerfile, uses upstream image)
-- `packages/import-tools/` — Import scripts (on-demand, run via `--profile tools` or locally)
-- `packages/db-types/` — Shared TypeScript types for database schema
-- `infra/docker-compose.yml` — Local dev compose; Ansible templates the production version
+- `packages/app-*` — Domain-specific frontend packages (pages, components, hooks)
+- `packages/db-types/` — Drizzle schema definitions and inferred TypeScript types
+- `packages/import-tools/` — Bank import scripts (standalone, not in pnpm workspace)
 - `infra/ansible/` — Ansible playbooks + roles for provisioning the N95 mini PC
 
 ### Docker Networks
@@ -194,22 +205,22 @@ Interfaces: iPhone (PWA) | Telegram (Moltbot) | Web (Metabase)
     Cloudflare Tunnel + Cloudflare Access (Zero Trust)
     │
 N95 Mini PC (Docker Compose):
-    pops-api ── Node.js REST over SQLite
+    pops-api ── Node.js tRPC API over SQLite (Drizzle ORM)
     metabase ───── Dashboards & analytics
     moltbot ────── AI assistant (Telegram + finance plugin)
     paperless-ngx  Receipt archive + OCR
-    pops-shell ─── React PWA
+    pops-shell ─── React PWA (Vite + nginx reverse proxy)
     │
 Data Layer:
-    SQLite (source of truth)
-    Claude Haiku API (categorization, NL queries)
+    SQLite (source of truth for all domains)
+    Claude API (categorization, NL queries)
     │
-Bank Feeds:
-    Up API (webhooks) | ANZ CSV | Amex CSV | ING CSV
-    Import scripts → rule-based matching → AI fallback → cache
+External APIs:
+    Finance: Up API (webhooks) | ANZ/Amex/ING CSV imports
+    Media:   Plex (local server + Discover cloud) | TMDB | TheTVDB | Radarr | Sonarr
 ```
 
-### Data Flow
+### Data Flow — Finance
 
 1. Bank data arrives (Up webhook or CSV download)
 2. Import script parses, normalizes, cleans
@@ -217,13 +228,53 @@ Bank Feeds:
 4. Deduplication: date + amount count-based against existing records
 5. Write to SQLite database
 
+### Data Flow — Media
+
+POPS is the source of truth. External services are synced inward; deleting from Plex/Radarr/Sonarr does not affect POPS data.
+
+**Library sync (Plex local server → POPS):**
+1. Scheduler runs hourly (or manual trigger from Plex Settings page)
+2. Fetches all movies/TV shows from Plex library sections (paginated)
+3. Matches to TMDB/TVDB IDs, adds to POPS library (idempotent)
+4. Logs watch history for items with `viewCount > 0`
+
+**Cloud watch sync (Plex Discover cloud → POPS):**
+1. Manual trigger from Plex Settings (one-time backfill, ~700 items)
+2. For each POPS library item, searches Plex Discover by title
+3. Checks `userState` on cloud for watch status (catches streaming watches)
+4. Logs watch events for items marked as played
+
+**Auto-check on add:**
+When a movie is added to the POPS library, automatically checks Plex Discover cloud for watch status and logs it (fire-and-forget).
+
+**Watchlist sync (bidirectional):**
+- Plex → POPS: items on Plex watchlist are added to POPS watchlist
+- POPS → Plex: manually added watchlist items are pushed to Plex Discover
+
+### Media Module Structure (apps/pops-api/src/modules/media/)
+
+- `plex/` — Plex client, sync (movies, TV, watchlist, watch history, Discover cloud), scheduler
+- `tmdb/` — TMDB API client + image cache
+- `thetvdb/` — TheTVDB API client for TV show metadata
+- `arr/` — Radarr/Sonarr integration (request movies/shows for download)
+- `movies/` — Movie CRUD service
+- `tv-shows/` — TV show/season/episode CRUD service
+- `library/` — High-level add/refresh/list orchestration
+- `watch-history/` — Watch event logging, progress tracking, batch operations
+- `watchlist/` — Watchlist CRUD + Plex push
+- `comparisons/` — ELO-based compare arena for ranking media
+- `discovery/` — Calendar, upcoming releases
+- `search/` — Cross-domain search
+
 ## Tech Stack
 
 - **Runtime:** Node.js
-- **Database:** SQLite (source of truth)
-- **Frontend:** React PWA
+- **Database:** SQLite via Drizzle ORM (source of truth)
+- **API:** tRPC (type-safe RPC between frontend and backend)
+- **Frontend:** React PWA (Vite, React Router, shadcn/ui)
 - **Dashboards:** Metabase (self-hosted, Docker)
-- **AI:** Claude Haiku API (~$1-5/month)
+- **AI:** Claude API (categorization, NL queries)
+- **Media APIs:** Plex (local + Discover cloud), TMDB, TheTVDB, Radarr, Sonarr
 - **Infra:** Docker Compose, Cloudflare Tunnel, Cloudflare Access
 - **OCR:** Paperless-ngx
 - **Chat:** Moltbot (Telegram)
