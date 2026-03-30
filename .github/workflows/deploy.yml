@@ -14,8 +14,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       infra: ${{ steps.filter.outputs.infra }}
-      skip: ${{ steps.filter.outputs.skip }}
-      any_changed: ${{ steps.filter.outputs.any_changed }}
+      deploy_needed: ${{ steps.filter.outputs.deploy_needed }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
@@ -37,10 +36,10 @@ jobs:
               - 'infra/**'
               - 'apps/pops-shell/nginx.conf'
               - 'docker-compose*'
-            skip:
-              - 'docs/**'
-              - '.github/**'
-              - '*.md'
+            deploy_needed:
+              - '!docs/**'
+              - '!.github/**'
+              - '!*.md'
 
   # Run all quality checks before deploying
   quality-checks:
@@ -49,7 +48,7 @@ jobs:
     needs: changes
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (needs.changes.outputs.skip == 'false' && needs.changes.outputs.any_changed == 'true')
+      needs.changes.outputs.deploy_needed == 'true'
     steps:
       - uses: actions/checkout@v6
 
@@ -94,7 +93,7 @@ jobs:
     needs: [changes, quality-checks]
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (needs.changes.outputs.skip == 'false' && needs.changes.outputs.any_changed == 'true')
+      needs.changes.outputs.deploy_needed == 'true'
     environment:
       name: production
       url: https://pops.jmiranda.dev
@@ -123,7 +122,7 @@ jobs:
             echo "⚡ Selective deployment (Backend only)"
           else
             echo "type=full" >> $GITHUB_OUTPUT
-            echo "🚀 Fallback: Full Ansible deployment"
+            echo "🚀 Fallback: Full Ansible deployment (Unknown changes)"
           fi
 
       - name: Run Ansible deployment
@@ -140,8 +139,8 @@ jobs:
         if: steps.mode.outputs.type == 'selective'
         id: selective
         run: |
-          # The self-hosted runner is in /opt/pops/repo (cloned by Ansible)
-          # We need to run docker commands where docker-compose.yml is (/opt/pops)
+          # The self-hosted runner is on the N95
+          # Docker context is repo root
           cd /opt/pops
 
           if [ "${{ steps.mode.outputs.target }}" == "frontend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
@@ -165,8 +164,6 @@ jobs:
         id: health
         continue-on-error: true
         run: |
-          cd /opt/pops
-          
           # Check pops-api if it was touched
           if [ "${{ steps.mode.outputs.type }}" == "full" ] || [ "${{ steps.mode.outputs.target }}" == "backend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
             echo "🏥 Checking pops-api health..."
@@ -179,7 +176,6 @@ jobs:
           # Check pops-shell if it was touched
           if [ "${{ steps.mode.outputs.type }}" == "full" ] || [ "${{ steps.mode.outputs.target }}" == "frontend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
             echo "🏥 Checking pops-shell health..."
-            # pops-shell is an nginx container serving static files, check if it responds on port 80 (internal)
             if ! docker exec pops-shell wget -qO- http://localhost > /dev/null 2>&1; then
               echo "❌ pops-shell health check failed"
               exit 1
