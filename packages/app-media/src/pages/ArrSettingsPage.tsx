@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   Button,
+  Label,
   Skeleton,
   Input,
   Breadcrumb,
@@ -66,7 +67,7 @@ function ServiceCard({
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">Server URL</label>
+          <Label className="text-muted-foreground">Server URL</Label>
           <Input
             placeholder="https://192.168.1.100:7878"
             value={url}
@@ -77,7 +78,7 @@ function ServiceCard({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-muted-foreground">API Key</label>
+          <Label className="text-muted-foreground">API Key</Label>
           <Input
             type="password"
             placeholder="Enter API key"

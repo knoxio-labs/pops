@@ -238,24 +238,26 @@ export function DimensionManager() {
               >
                 {/* Reorder buttons */}
                 <div className="flex flex-col">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleReorder(dim, "up")}
                     disabled={idx === 0 || updateMutation.isPending}
-                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    className="p-0.5 h-auto w-auto text-muted-foreground hover:text-foreground"
                     aria-label={`Move ${dim.name} up`}
                   >
                     <ChevronUp className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleReorder(dim, "down")}
                     disabled={idx === sorted.length - 1 || updateMutation.isPending}
-                    className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    className="p-0.5 h-auto w-auto text-muted-foreground hover:text-foreground"
                     aria-label={`Move ${dim.name} down`}
                   >
                     <ChevronDown className="h-3 w-3" />
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Name & description (editable) */}
@@ -339,14 +341,15 @@ export function DimensionManager() {
 
                 {/* Edit button */}
                 {editing?.id !== dim.id && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleStartEdit(dim)}
-                    className="p-1 text-muted-foreground hover:text-foreground"
+                    className="p-1 h-auto w-auto text-muted-foreground hover:text-foreground"
                     aria-label={`Edit ${dim.name}`}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 )}
 
                 {/* Active toggle */}

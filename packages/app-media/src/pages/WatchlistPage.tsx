@@ -258,24 +258,26 @@ function WatchlistItem({
               className="text-xs min-h-0 resize-none"
             />
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant="link"
+                size="sm"
                 onClick={handleSave}
                 disabled={isUpdating}
                 aria-label="Save note"
-                className="text-xs text-primary hover:underline disabled:opacity-50"
+                className="text-xs h-auto p-0 text-primary"
               >
                 {isUpdating ? "Saving..." : "Save"}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="link"
+                size="sm"
                 onClick={handleCancel}
                 disabled={isUpdating}
                 aria-label="Cancel editing"
-                className="text-xs text-muted-foreground hover:underline"
+                className="text-xs h-auto p-0 text-muted-foreground"
               >
                 Cancel
-              </button>
+              </Button>
               <span className="text-xs text-muted-foreground ml-auto">
                 {draft.length}/500 · Ctrl+Enter to save
               </span>
@@ -283,23 +285,23 @@ function WatchlistItem({
             {updateError && <p className="text-xs text-destructive">{updateError}</p>}
           </div>
         ) : entry.notes ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => setEditing(true)}
             aria-label={`Edit notes for ${title}`}
-            className="mt-1.5 text-xs text-muted-foreground line-clamp-2 text-left hover:text-foreground transition-colors cursor-pointer"
+            className="mt-1.5 text-xs text-muted-foreground line-clamp-2 text-left hover:text-foreground h-auto p-0 justify-start"
           >
             {entry.notes}
-          </button>
+          </Button>
         ) : (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => setEditing(true)}
             aria-label={`Add notes for ${title}`}
-            className="mt-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer"
+            className="mt-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground h-auto p-0"
           >
             Add note...
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -358,16 +360,17 @@ function WatchlistCard({
 
         {/* Grab handle (desktop hover) */}
         {dragListeners && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label={`Drag to reorder ${title}`}
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white rounded-md p-1 cursor-grab active:cursor-grabbing"
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white rounded-md p-1 h-auto w-auto cursor-grab active:cursor-grabbing hover:bg-black/80"
             onClick={(e) => e.stopPropagation()}
             {...dragListeners}
             {...dragAttributes}
           >
             <GripVertical className="h-4 w-4" />
-          </button>
+          </Button>
         )}
 
         {/* Type badge */}
@@ -379,18 +382,19 @@ function WatchlistCard({
         </Badge>
 
         {/* Remove button (hover) */}
-        <button
-          type="button"
+        <Button
+          variant="destructive"
+          size="icon"
           onClick={(e) => {
             e.stopPropagation();
             onRemove(entry.id);
           }}
           disabled={isRemoving}
           aria-label={`Remove ${title} from watchlist`}
-          className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground rounded-md p-1.5 hover:bg-destructive/90 disabled:opacity-50"
+          className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity h-auto w-auto p-1.5"
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </Button>
 
         {!posterSrc || imageError ? (
           <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
@@ -672,20 +676,17 @@ export function WatchlistPage() {
       {/* Filter tabs */}
       <div className="flex gap-2" role="tablist" aria-label="Filter watchlist">
         {FILTER_OPTIONS.map((opt) => (
-          <button
+          <Button
             key={opt.value}
-            type="button"
+            variant={filter === opt.value ? "default" : "secondary"}
+            size="sm"
             role="tab"
             aria-selected={filter === opt.value}
             onClick={() => setFilter(opt.value)}
-            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-              filter === opt.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
+            shape="pill"
           >
             {opt.label}
-          </button>
+          </Button>
         ))}
       </div>
 

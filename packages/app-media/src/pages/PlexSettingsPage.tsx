@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   Button,
+  Label,
   Skeleton,
   Input,
   Select,
@@ -108,13 +109,15 @@ function SyncResultDisplay({ result, label }: { result: SyncResult; label: strin
       </div>
       {skipReasons.length > 0 && (
         <div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowSkipped(!showSkipped)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
           >
             {showSkipped ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showSkipped ? "Hide" : "Show"} skip reasons
-          </button>
+          </Button>
           {showSkipped && (
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
               {skipReasons.map((skip, i) => (
@@ -128,14 +131,15 @@ function SyncResultDisplay({ result, label }: { result: SyncResult; label: strin
       )}
       {result.errors.length > 0 && (
         <div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowErrors(!showErrors)}
-            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+            className="flex items-center gap-1 text-xs h-auto p-0 text-red-400 hover:text-red-300"
           >
             {showErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showErrors ? "Hide" : "Show"} error details
-          </button>
+          </Button>
           {showErrors && (
             <div className="mt-2 space-y-1 text-xs text-red-400/80">
               {result.errors.map((err, i) => (
@@ -169,14 +173,15 @@ function WatchlistSyncResultDisplay({ result }: { result: WatchlistSyncResult })
       </div>
       {skipReasons.length > 0 && (
         <div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowSkipped(!showSkipped)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
           >
             {showSkipped ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showSkipped ? "Hide" : "Show"} skip reasons
-          </button>
+          </Button>
           {showSkipped && (
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
               {skipReasons.map((skip, i) => (
@@ -190,14 +195,15 @@ function WatchlistSyncResultDisplay({ result }: { result: WatchlistSyncResult })
       )}
       {result.errors.length > 0 && (
         <div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowErrors(!showErrors)}
-            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+            className="flex items-center gap-1 text-xs h-auto p-0 text-red-400 hover:text-red-300"
           >
             {showErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showErrors ? "Hide" : "Show"} error details
-          </button>
+          </Button>
           {showErrors && (
             <div className="mt-2 space-y-1 text-xs text-red-400/80">
               {result.errors.map((err, i) => (
@@ -575,9 +581,9 @@ export function PlexSettingsPage() {
             <h2 className="text-lg font-semibold">Server Configuration</h2>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
+            <Label className="text-muted-foreground">
               Plex Media Server URL
-            </label>
+            </Label>
             <div className="flex gap-2">
               <Input
                 placeholder="http://192.168.1.100:32400"
@@ -885,9 +891,9 @@ export function PlexSettingsPage() {
 
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <label htmlFor="scheduler-hours" className="text-sm text-muted-foreground">
+                <Label htmlFor="scheduler-hours" className="text-muted-foreground font-normal">
                   Sync every
-                </label>
+                </Label>
                 <Input
                   id="scheduler-hours"
                   type="number"

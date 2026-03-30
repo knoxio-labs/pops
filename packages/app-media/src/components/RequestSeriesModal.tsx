@@ -5,7 +5,7 @@
  * season monitoring checkboxes with smart defaults, then submits to Sonarr.
  */
 import { useState, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@pops/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Select, Label } from "@pops/ui";
 import { Button } from "@pops/ui";
 import { RefreshCw, CheckCircle2 } from "lucide-react";
 import { trpc } from "../lib/trpc";
@@ -188,64 +188,43 @@ export function RequestSeriesModal({
           ) : (
             <>
               {/* Quality Profile */}
-              <div className="space-y-1.5">
-                <label htmlFor="quality-profile" className="text-sm font-medium">
-                  Quality Profile
-                </label>
-                <select
-                  id="quality-profile"
-                  value={qualityProfileId ?? ""}
-                  onChange={(e) => setQualityProfileId(Number(e.target.value))}
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-                  disabled={addSeries.isPending || success}
-                >
-                  {profileList.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Quality Profile"
+                id="quality-profile"
+                value={String(qualityProfileId ?? "")}
+                onChange={(e) => setQualityProfileId(Number(e.target.value))}
+                disabled={addSeries.isPending || success}
+                options={profileList.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                }))}
+              />
 
               {/* Root Folder */}
-              <div className="space-y-1.5">
-                <label htmlFor="root-folder" className="text-sm font-medium">
-                  Root Folder
-                </label>
-                <select
-                  id="root-folder"
-                  value={rootFolderPath}
-                  onChange={(e) => setRootFolderPath(e.target.value)}
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-                  disabled={addSeries.isPending || success}
-                >
-                  {folderList.map((f) => (
-                    <option key={f.id} value={f.path}>
-                      {f.path} ({formatBytes(f.freeSpace)} free)
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Root Folder"
+                id="root-folder"
+                value={rootFolderPath}
+                onChange={(e) => setRootFolderPath(e.target.value)}
+                disabled={addSeries.isPending || success}
+                options={folderList.map((f) => ({
+                  value: f.path,
+                  label: `${f.path} (${formatBytes(f.freeSpace)} free)`,
+                }))}
+              />
 
               {/* Language Profile */}
-              <div className="space-y-1.5">
-                <label htmlFor="language-profile" className="text-sm font-medium">
-                  Language Profile
-                </label>
-                <select
-                  id="language-profile"
-                  value={languageProfileId ?? ""}
-                  onChange={(e) => setLanguageProfileId(Number(e.target.value))}
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-                  disabled={addSeries.isPending || success}
-                >
-                  {languageList.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Language Profile"
+                id="language-profile"
+                value={String(languageProfileId ?? "")}
+                onChange={(e) => setLanguageProfileId(Number(e.target.value))}
+                disabled={addSeries.isPending || success}
+                options={languageList.map((l) => ({
+                  value: String(l.id),
+                  label: l.name,
+                }))}
+              />
 
               {/* Season Monitoring */}
               {seasons.length > 0 && (
@@ -254,9 +233,10 @@ export function RequestSeriesModal({
                     <span className="text-sm font-medium">Season Monitoring</span>
                     {showBulkControls && (
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
                           disabled={allChecked || addSeries.isPending || success}
                           onClick={() => {
                             const all: Record<number, boolean> = {};
@@ -265,10 +245,11 @@ export function RequestSeriesModal({
                           }}
                         >
                           Select All
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
                           disabled={noneChecked || addSeries.isPending || success}
                           onClick={() => {
                             const none: Record<number, boolean> = {};
@@ -277,15 +258,15 @@ export function RequestSeriesModal({
                           }}
                         >
                           Deselect All
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>
                   <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-2">
                     {seasons.map((s) => (
-                      <label
+                      <Label
                         key={s.seasonNumber}
-                        className="flex items-center gap-2 text-sm cursor-pointer"
+                        className="flex items-center gap-2 text-sm cursor-pointer font-normal"
                       >
                         <input
                           type="checkbox"
@@ -304,7 +285,7 @@ export function RequestSeriesModal({
                             — {s.firstAirDate.slice(0, 4)}
                           </span>
                         )}
-                      </label>
+                      </Label>
                     ))}
                   </div>
                 </div>

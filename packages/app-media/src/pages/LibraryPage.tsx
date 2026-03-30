@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router";
-import { Button, Skeleton, TextInput } from "@pops/ui";
+import { Button, Select, Skeleton, TextInput } from "@pops/ui";
 import { Sparkles, Settings, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { MediaGrid } from "../components/MediaGrid";
 import { MediaCard } from "../components/MediaCard";
@@ -76,18 +76,16 @@ function PaginationControls({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <select
-          value={pageSize}
+        <Select
+          value={String(pageSize)}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
           aria-label="Items per page"
-          className="h-8 rounded-md border bg-background px-2 text-sm"
-        >
-          {PAGE_SIZE_OPTIONS.map((size) => (
-            <option key={size} value={size}>
-              {size} per page
-            </option>
-          ))}
-        </select>
+          size="sm"
+          options={PAGE_SIZE_OPTIONS.map((size) => ({
+            value: String(size),
+            label: `${size} per page`,
+          }))}
+        />
         <Button
           variant="outline"
           size="sm"
@@ -236,52 +234,48 @@ export function LibraryPage() {
           aria-label="Filter by type"
         >
           {TYPE_OPTIONS.map((opt) => (
-            <button
+            <Button
               key={opt.value}
-              type="button"
+              variant={typeFilter === opt.value ? "default" : "ghost"}
+              size="sm"
               onClick={() => setParam("type", opt.value === "all" ? "" : opt.value)}
               aria-pressed={typeFilter === opt.value}
-              className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-md transition-all duration-200 ${
+              className={`text-xs font-semibold uppercase tracking-wider ${
                 typeFilter === opt.value
-                  ? "bg-app-accent text-white shadow-sm"
+                  ? "bg-app-accent text-white shadow-sm hover:bg-app-accent/90"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {opt.label}
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* Genre dropdown */}
         {allGenres.length > 0 && (
-          <select
+          <Select
             value={genreFilter ?? ""}
             onChange={(e) => setParam("genre", e.target.value)}
             aria-label="Filter by genre"
-            className="h-8 rounded-md border bg-background px-2 text-sm"
-          >
-            <option value="">All Genres</option>
-            {allGenres.map((genre) => (
-              <option key={genre} value={genre}>
-                {genre}
-              </option>
-            ))}
-          </select>
+            size="sm"
+            options={[
+              { value: "", label: "All Genres" },
+              ...allGenres.map((genre) => ({ value: genre, label: genre })),
+            ]}
+          />
         )}
 
         {/* Sort dropdown */}
-        <select
+        <Select
           value={sortBy}
           onChange={(e) => setParam("sort", e.target.value)}
           aria-label="Sort by"
-          className="h-8 rounded-md border bg-background px-2 text-sm"
-        >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          size="sm"
+          options={SORT_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: opt.label,
+          }))}
+        />
 
         {/* Search input */}
         <TextInput
