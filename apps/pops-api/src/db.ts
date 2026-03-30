@@ -135,7 +135,9 @@ function createPreMigrationBackup(
 /** Check if this is a completely fresh database (no tables at all). */
 function isFreshDatabase(database: BetterSqlite3.Database): boolean {
   const row = database
-    .prepare("SELECT COUNT(*) AS cnt FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    .prepare(
+      "SELECT COUNT(*) AS cnt FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+    )
     .get() as { cnt: number };
   return row.cnt === 0;
 }
