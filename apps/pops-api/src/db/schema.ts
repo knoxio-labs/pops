@@ -37,6 +37,7 @@ const INCLUDED_MIGRATIONS = [
   "20260327120000_sync_logs.sql",
   "20260328120000_inventory_asset_id_unique_index.sql",
   "20260328130000_watchlist_source_plex_key.sql",
+  "20260330120000_sync_job_results.sql",
 ];
 
 /**
@@ -423,6 +424,21 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
       duration_ms   INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_sync_logs_synced_at ON sync_logs(synced_at);
+
+    CREATE TABLE IF NOT EXISTS sync_job_results (
+      id            TEXT PRIMARY KEY,
+      job_type      TEXT NOT NULL,
+      status        TEXT NOT NULL,
+      started_at    TEXT NOT NULL,
+      completed_at  TEXT,
+      duration_ms   INTEGER,
+      progress      TEXT,
+      result        TEXT,
+      error         TEXT,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_job_results_type_completed
+      ON sync_job_results(job_type, completed_at);
   `);
 
   // Pre-mark all migrations this schema already incorporates so that
