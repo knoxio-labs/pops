@@ -170,15 +170,16 @@ function HistoryItem({
             )}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label="Delete watch event"
               disabled={isDeleting}
               onClick={() => onDelete(entry.id)}
-              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50"
+              className="p-1 h-auto w-auto hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            </Button>
             <Badge variant="secondary" className="text-xs">
               {isEpisode ? "Episode" : "Movie"}
             </Badge>
@@ -240,18 +241,19 @@ function HistoryCard({
         </span>
 
         {/* Delete button — visible on hover */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="Delete watch event"
           disabled={isDeleting}
           onClick={(e) => {
             e.stopPropagation();
             onDelete(entry.id);
           }}
-          className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1.5 rounded-md bg-black/60 hover:bg-destructive text-white disabled:opacity-50"
+          className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1.5 h-auto w-auto rounded-md bg-black/60 hover:bg-destructive text-white"
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        </Button>
 
         {!posterSrc || imageError ? (
           <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
@@ -344,21 +346,18 @@ export function HistoryPage() {
       {/* Type filter tabs */}
       <div className="flex gap-2">
         {FILTER_OPTIONS.map((opt) => (
-          <button
+          <Button
             key={opt.value}
-            type="button"
+            variant={filter === opt.value ? "default" : "secondary"}
+            size="sm"
             onClick={() => {
               setFilter(opt.value);
               setOffset(0);
             }}
-            className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-              filter === opt.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
+            shape="pill"
           >
             {opt.label}
-          </button>
+          </Button>
         ))}
       </div>
 

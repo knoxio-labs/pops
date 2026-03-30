@@ -5,7 +5,7 @@
  * then submits to Radarr's addMovie endpoint.
  */
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@pops/ui";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Select } from "@pops/ui";
 import { Button } from "@pops/ui";
 import { RefreshCw, CheckCircle2 } from "lucide-react";
 import { trpc } from "../lib/trpc";
@@ -117,44 +117,30 @@ export function RequestMovieModal({ open, onClose, tmdbId, title, year }: Reques
           ) : (
             <>
               {/* Quality Profile */}
-              <div className="space-y-1.5">
-                <label htmlFor="quality-profile" className="text-sm font-medium">
-                  Quality Profile
-                </label>
-                <select
-                  id="quality-profile"
-                  value={qualityProfileId ?? ""}
-                  onChange={(e) => setQualityProfileId(Number(e.target.value))}
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-                  disabled={addMovie.isPending || success}
-                >
-                  {profileList.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Quality Profile"
+                id="quality-profile"
+                value={String(qualityProfileId ?? "")}
+                onChange={(e) => setQualityProfileId(Number(e.target.value))}
+                disabled={addMovie.isPending || success}
+                options={profileList.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                }))}
+              />
 
               {/* Root Folder */}
-              <div className="space-y-1.5">
-                <label htmlFor="root-folder" className="text-sm font-medium">
-                  Root Folder
-                </label>
-                <select
-                  id="root-folder"
-                  value={rootFolderPath}
-                  onChange={(e) => setRootFolderPath(e.target.value)}
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
-                  disabled={addMovie.isPending || success}
-                >
-                  {folderList.map((f) => (
-                    <option key={f.id} value={f.path}>
-                      {f.path} ({formatBytes(f.freeSpace)} free)
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Root Folder"
+                id="root-folder"
+                value={rootFolderPath}
+                onChange={(e) => setRootFolderPath(e.target.value)}
+                disabled={addMovie.isPending || success}
+                options={folderList.map((f) => ({
+                  value: f.path,
+                  label: `${f.path} (${formatBytes(f.freeSpace)} free)`,
+                }))}
+              />
             </>
           )}
 
