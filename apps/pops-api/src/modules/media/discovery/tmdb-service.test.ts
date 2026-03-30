@@ -21,6 +21,7 @@ function makeTmdbResult(overrides: Partial<TmdbSearchResult> = {}): TmdbSearchRe
   return {
     tmdbId: 100,
     title: "Test Movie",
+    originalTitle: "Test Movie",
     overview: "A test",
     releaseDate: "2025-01-01",
     posterPath: "/poster.jpg",
@@ -28,6 +29,7 @@ function makeTmdbResult(overrides: Partial<TmdbSearchResult> = {}): TmdbSearchRe
     voteAverage: 7.5,
     voteCount: 1000,
     genreIds: [28],
+    originalLanguage: "en",
     popularity: 50,
     ...overrides,
   };
