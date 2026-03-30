@@ -86,7 +86,7 @@ Build a pairwise comparison system per [ADR-010](../../../../architecture/adr-01
 - Arena rotates through all active dimensions — one dimension per comparison
 - Recently compared pairs are avoided (default: last 10 pairs)
 - Both Elo scores (winner and loser) update in a single database transaction
-- "Overall" ranking is the average score across all active dimensions for each movie
+- "Overall" ranking is the weighted average across all active dimensions: `SUM(score × weight) / SUM(weight)`. Default weight 1.0 (equal weighting = simple average)
 - Movies with zero comparisons start at 1500.0 and sort alphabetically in rankings
 - Dimensions can be added, edited, or deactivated — deactivated dimensions are excluded from overall calculations
 - Deactivated dimensions retain their comparison history and scores (not deleted)
@@ -104,6 +104,8 @@ Build a pairwise comparison system per [ADR-010](../../../../architecture/adr-01
 | Rankings with no comparisons | All movies at 1500.0, sorted alphabetically by title |
 | Movie deleted from library | Comparisons and scores for that movie remain (orphaned but harmless) |
 | Same pair for multiple dimensions | Allowed — each dimension is independent |
+| All dimension weights equal | Weighted average = simple average (backward compatible) |
+| Weight changed | Rankings update instantly (query-time, no recalculation) |
 
 ## User Stories
 
@@ -115,8 +117,9 @@ Build a pairwise comparison system per [ADR-010](../../../../architecture/adr-01
 | 04 | [us-04-dimension-management](us-04-dimension-management.md) | CRUD for comparison dimensions, active/inactive toggle, sort order | Partial | Yes |
 | 05 | [us-05-quick-pick](us-05-quick-pick.md) | Quick pick page with random unwatched movies, configurable count, "Watch This" action | Partial | Yes |
 | 06 | [us-06-comparison-history](us-06-comparison-history.md) | Comparison history list, delete with Elo recalculation, undo toast, dimension filter | Not started | Yes |
+| 07 | [us-07-dimension-weights](us-07-dimension-weights.md) | Per-dimension weight for overall ranking, weight slider in dimension management UI | Not started | Yes |
 
-US-01 depends on US-02 (arena needs Elo scoring to record comparisons). US-03, US-04, US-05, and US-06 can all be built in parallel.
+US-01 depends on US-02 (arena needs Elo scoring to record comparisons). US-03 through US-07 can all be built in parallel.
 
 ## Verification
 
