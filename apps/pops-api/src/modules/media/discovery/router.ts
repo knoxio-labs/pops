@@ -53,6 +53,17 @@ export const discoveryRouter = router({
     }
   }),
 
+  /** Get unwatched library movies scored by preference profile. */
+  fromYourServer: protectedProcedure.query(() => {
+    const unwatched = service.getUnwatchedLibraryMovies();
+    if (unwatched.length === 0) {
+      return { results: [] };
+    }
+    const profile = service.getPreferenceProfile();
+    const scored = service.scoreDiscoverResults(unwatched, profile);
+    return { results: scored.slice(0, 20) };
+  }),
+
   /** Get recommendations based on top-rated library movies, scored by preference profile. */
   recommendations: protectedProcedure.input(RecommendationsQuerySchema).query(async ({ input }) => {
     try {

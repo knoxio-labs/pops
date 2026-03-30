@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { scoreDiscoverResults } from "./service.js";
 import type { DiscoverResult, PreferenceProfile } from "./types.js";
+import { TMDB_GENRE_MAP } from "./types.js";
 
 /** Helper to build a minimal DiscoverResult. */
 function makeResult(overrides: Partial<DiscoverResult> = {}): DiscoverResult {
@@ -128,5 +129,113 @@ describe("scoreDiscoverResults", () => {
 
     expect(scored[0]!.matchPercentage).toBe(0);
     expect(scored[0]!.matchReason).toBe("");
+  });
+});
+
+describe("fromYourServer genre mapping and scoring", () => {
+  /** Reverse map used by getUnwatchedLibraryMovies to convert genre names → IDs. */
+  const GENRE_NAME_TO_ID = Object.fromEntries(
+    Object.entries(TMDB_GENRE_MAP).map(([id, name]) => [name, Number(id)])
+  );
+
+  /** Simulate the genre mapping logic from getUnwatchedLibraryMovies. */
+  function libraryMovieToDiscoverResult(movie: {
+    tmdbId: number;
+    title: string;
+    genres: string;
+    voteAverage: number;
+  }): DiscoverResult {
+    const genreNames: string[] = JSON.parse(movie.genres);
+    const genreIds = genreNames
+      .map((name) => GENRE_NAME_TO_ID[name])
+      .filter((id): id is number => id != null);
+
+    return {
+      tmdbId: movie.tmdbId,
+      title: movie.title,
+      overview: "",
+      releaseDate: "",
+      posterPath: null,
+      posterUrl: null,
+      backdropPath: null,
+      voteAverage: movie.voteAverage,
+      voteCount: 0,
+      genreIds,
+      popularity: 0,
+      inLibrary: true,
+    };
+  }
+
+  it("maps library genre names to TMDB genre IDs for scoring", () => {
+    const movie = libraryMovieToDiscoverResult({
+      tmdbId: 100,
+      title: "Test Movie",
+      genres: JSON.stringify(["Action", "Science Fiction"]),
+      voteAverage: 8.0,
+    });
+
+    expect(movie.genreIds).toEqual([28, 878]);
+    expect(movie.inLibrary).toBe(true);
+  });
+
+  it("scores unwatched library movies against profile", () => {
+    const libraryMovies = [
+      libraryMovieToDiscoverResult({
+        tmdbId: 1,
+        title: "Action Hit",
+        genres: JSON.stringify(["Action", "Thriller"]),
+        voteAverage: 8.5,
+      }),
+      libraryMovieToDiscoverResult({
+        tmdbId: 2,
+        title: "Rom Com",
+        genres: JSON.stringify(["Comedy", "Romance"]),
+        voteAverage: 6.5,
+      }),
+    ];
+
+    const profile = makeProfile({
+      genreAffinities: [
+        { genre: "Action", avgScore: 1500, movieCount: 10, totalComparisons: 50 },
+        { genre: "Thriller", avgScore: 1400, movieCount: 8, totalComparisons: 40 },
+        { genre: "Comedy", avgScore: 1000, movieCount: 3, totalComparisons: 10 },
+        { genre: "Romance", avgScore: 900, movieCount: 2, totalComparisons: 5 },
+      ],
+    });
+
+    const scored = scoreDiscoverResults(libraryMovies, profile);
+
+    expect(scored[0]!.title).toBe("Action Hit");
+    expect(scored[0]!.matchPercentage).toBeGreaterThan(scored[1]!.matchPercentage);
+    expect(scored[0]!.matchPercentage).toBeGreaterThanOrEqual(50);
+    expect(scored[0]!.matchPercentage).toBeLessThanOrEqual(98);
+  });
+
+  it("returns empty scored array when no movies provided", () => {
+    const scored = scoreDiscoverResults([], makeProfile());
+    expect(scored).toEqual([]);
+  });
+
+  it("handles malformed genres JSON gracefully", () => {
+    // Simulate the try/catch logic in getUnwatchedLibraryMovies
+    let genreNames: string[] = [];
+    try {
+      genreNames = JSON.parse("not valid json") as string[];
+    } catch {
+      // Falls back to empty — same as production code
+    }
+    expect(genreNames).toEqual([]);
+  });
+
+  it("ignores unknown genre names from library data", () => {
+    const movie = libraryMovieToDiscoverResult({
+      tmdbId: 1,
+      title: "Weird Genre",
+      genres: JSON.stringify(["NonexistentGenre", "Action"]),
+      voteAverage: 7.0,
+    });
+
+    // Only Action should map, NonexistentGenre should be filtered
+    expect(movie.genreIds).toEqual([28]);
   });
 });

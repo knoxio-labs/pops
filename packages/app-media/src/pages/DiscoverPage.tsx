@@ -103,6 +103,10 @@ export function DiscoverPage() {
     { staleTime: 5 * 60 * 1000 }
   );
 
+  const fromYourServer = trpc.media.discovery.fromYourServer.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
   const totalComparisons = profile.data?.data?.totalComparisons ?? 0;
   const hasEnoughComparisons = totalComparisons >= COMPARISON_THRESHOLD;
 
@@ -524,6 +528,48 @@ export function DiscoverPage() {
             )
           )}
       </HorizontalScrollRow>
+
+      {/* Ready to Watch on Your Server — hidden when no results */}
+      {(fromYourServer.isLoading || (fromYourServer.data?.results.length ?? 0) > 0) && (
+        <HorizontalScrollRow
+          title="Ready to Watch on Your Server"
+          subtitle="Unwatched movies on your server, ranked for you"
+          isLoading={fromYourServer.isLoading}
+        >
+          {fromYourServer.data?.results.map(
+            (item: {
+              tmdbId: number;
+              title: string;
+              releaseDate: string | null;
+              posterPath: string | null;
+              posterUrl: string | null;
+              voteAverage: number | null;
+              inLibrary: boolean;
+              matchPercentage?: number;
+              matchReason?: string;
+            }) => (
+              <DiscoverCard
+                key={item.tmdbId}
+                tmdbId={item.tmdbId}
+                title={item.title}
+                releaseDate={item.releaseDate ?? ""}
+                posterPath={item.posterPath}
+                posterUrl={item.posterUrl}
+                voteAverage={item.voteAverage ?? 0}
+                inLibrary={item.inLibrary}
+                isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
+                isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
+                onAddToLibrary={handleAddToLibrary}
+                onAddToWatchlist={handleAddToWatchlist}
+                onMarkWatched={handleMarkWatched}
+                isMarkingWatched={markingWatched.has(item.tmdbId)}
+                matchPercentage={item.matchPercentage}
+                matchReason={item.matchReason}
+              />
+            )
+          )}
+        </HorizontalScrollRow>
+      )}
 
       {/* Preference Profile */}
       <PreferenceProfile data={profile.data?.data} isLoading={profile.isLoading} />
