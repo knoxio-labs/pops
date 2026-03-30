@@ -722,9 +722,7 @@ describe("getEpisodes pagination", () => {
   });
 
   it("handles empty first page without infinite loop", async () => {
-    fetchMock.mockResolvedValueOnce(
-      mockResponse({ MediaContainer: { size: 0, totalSize: 0 } })
-    );
+    fetchMock.mockResolvedValueOnce(mockResponse({ MediaContainer: { size: 0, totalSize: 0 } }));
 
     const result = await client.getEpisodes("400");
 
