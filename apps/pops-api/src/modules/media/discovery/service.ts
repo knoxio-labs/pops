@@ -289,14 +289,14 @@ export function getRewatchSuggestions(): RewatchSuggestion[] {
     .where(sql`${watchHistory.watchedAt} <= ${sixMonthsAgo}`)
     .groupBy(movies.id)
     .all() as {
-      id: number;
-      tmdbId: number;
-      title: string;
-      releaseDate: string | null;
-      posterPath: string | null;
-      voteAverage: number | null;
-      eloScore: number | null;
-    }[];
+    id: number;
+    tmdbId: number;
+    title: string;
+    releaseDate: string | null;
+    posterPath: string | null;
+    voteAverage: number | null;
+    eloScore: number | null;
+  }[];
 
   if (rows.length === 0) return [];
 
@@ -304,9 +304,7 @@ export function getRewatchSuggestions(): RewatchSuggestion[] {
   const hasElo = rows.some((r) => r.eloScore != null);
   const scored = rows.map((row) => ({
     ...row,
-    score: hasElo
-      ? (row.eloScore ?? 0)
-      : (row.voteAverage ?? 0),
+    score: hasElo ? (row.eloScore ?? 0) : (row.voteAverage ?? 0),
   }));
 
   // Filter to above-median score

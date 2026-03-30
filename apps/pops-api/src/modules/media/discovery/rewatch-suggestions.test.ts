@@ -3,11 +3,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { Database } from "better-sqlite3";
-import {
-  setupTestContext,
-  seedMovie,
-  seedWatchHistoryEntry,
-} from "../../../shared/test-utils.js";
+import { setupTestContext, seedMovie, seedWatchHistoryEntry } from "../../../shared/test-utils.js";
 import { getRewatchSuggestions } from "./service.js";
 
 const ctx = setupTestContext();
@@ -23,9 +19,7 @@ afterEach(() => {
 
 /** Seed a comparison dimension and return its id. */
 function seedDimension(db: Database, name: string): number {
-  const result = db
-    .prepare("INSERT INTO comparison_dimensions (name) VALUES (?)")
-    .run(name);
+  const result = db.prepare("INSERT INTO comparison_dimensions (name) VALUES (?)").run(name);
   return Number(result.lastInsertRowid);
 }
 
