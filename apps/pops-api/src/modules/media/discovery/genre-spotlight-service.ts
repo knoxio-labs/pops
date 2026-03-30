@@ -70,7 +70,7 @@ export function selectTopGenres(
   const ranked: string[] =
     affinities.length > 0
       ? affinities.map((a) => a.genre)
-      : distribution.sort((a, b) => b.percentage - a.percentage).map((g) => g.genre);
+      : [...distribution].sort((a, b) => b.percentage - a.percentage).map((g) => g.genre);
 
   const selected: string[] = [];
 
@@ -108,7 +108,8 @@ export async function getGenreSpotlight(
 
   const entries = await Promise.all(
     genres.map(async (genreName) => {
-      const genreId = GENRE_NAME_TO_ID[genreName]!;
+      const genreId = GENRE_NAME_TO_ID[genreName] ?? 0;
+      if (genreId === 0) return null;
       const response = await client.discoverMovies({
         genreIds: [genreId],
         sortBy: "vote_average.desc",
@@ -147,5 +148,7 @@ export async function getGenreSpotlight(
     })
   );
 
-  return { genres: entries };
+  return {
+    genres: entries.filter((e): e is GenreSpotlightEntry => e != null),
+  };
 }
