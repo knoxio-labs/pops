@@ -180,7 +180,7 @@ function DailyCostChart({ data }: { data: AiUsageRecord[] }) {
               );
             }}
           />
-          <Bar dataKey="cost" fill="hsl(38, 92%, 50%)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="cost" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </Card>
