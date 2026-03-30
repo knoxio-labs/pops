@@ -36,6 +36,19 @@ export const discoveryRouter = router({
     }
   }),
 
+  /** Get rewatch suggestions — movies watched 6+ months ago with high scores. */
+  rewatchSuggestions: protectedProcedure.query(() => {
+    try {
+      return { data: service.getRewatchSuggestions() };
+    } catch (err) {
+      if (err instanceof TRPCError) throw err;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err instanceof Error ? err.message : "Unknown error fetching rewatch suggestions",
+      });
+    }
+  }),
+
   /** Get recommendations based on top-rated library movies, scored by preference profile. */
   recommendations: protectedProcedure.input(RecommendationsQuerySchema).query(async ({ input }) => {
     try {
