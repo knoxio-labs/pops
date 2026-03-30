@@ -263,7 +263,7 @@ describe("syncWatchHistoryFromPlex", () => {
       expect(result.shows).toHaveLength(0);
     });
 
-    it("detects shows with gaps (plexViewedLeafCount > matched)", async () => {
+    it("detects shows with gaps (plexViewedLeafCount > tracked)", async () => {
       mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
       // Season found but episode not found → gap
       setupDrizzleMock({ id: 10 }, undefined);
@@ -274,6 +274,26 @@ describe("syncWatchHistoryFromPlex", () => {
       const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
 
       expect(result.summary.showsWithGaps).toBe(1);
+    });
+
+    it("does not flag gap when episodes are already logged", async () => {
+      mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
+      setupDrizzleMock({ id: 10 }, { id: 100 });
+      // logWatch returns created: false → alreadyLogged
+      mockLogWatch.mockReturnValue({
+        entry: { id: 1 },
+        created: false,
+        watchlistRemoved: false,
+      } as unknown as ReturnType<typeof logWatch>);
+
+      const ep = makePlexEpisode({ viewCount: 1 });
+      const show = makePlexShow({ viewedLeafCount: 1 });
+      const client = makePlexClient([], [show], { "10": [ep] });
+      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+
+      // 0 matched + 1 alreadyLogged >= 1 viewedLeafCount → no gap
+      expect(result.summary.showsWithGaps).toBe(0);
+      expect(result.summary.episodesAlreadyLogged).toBe(1);
     });
 
     it("includes plexViewedLeafCount in show diagnostics", async () => {

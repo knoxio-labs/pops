@@ -49,8 +49,10 @@ export interface WatchHistorySyncResult {
   summary: {
     moviesLogged: number;
     episodesLogged: number;
+    /** Episodes already in watch_history from a previous sync. */
+    episodesAlreadyLogged: number;
     showsProcessed: number;
-    /** Shows where Plex viewedLeafCount > matched — indicates missing watches. */
+    /** Shows where total tracked episodes < Plex viewedLeafCount — indicates genuine gaps. */
     showsWithGaps: number;
   };
 }
@@ -106,11 +108,16 @@ export async function syncWatchHistoryFromPlex(
     }
   }
 
-  // Build summary
+  // Build summary — count both new matches and previously logged as "tracked"
   const episodesLogged = showResults.reduce((sum, s) => sum + s.diagnostics.matched, 0);
+  const episodesAlreadyLogged = showResults.reduce(
+    (sum, s) => sum + s.diagnostics.alreadyLogged,
+    0
+  );
   const showsWithGaps = showResults.filter((s) => {
     if (s.plexViewedLeafCount === null) return false;
-    return s.diagnostics.matched < s.plexViewedLeafCount;
+    const totalTracked = s.diagnostics.matched + s.diagnostics.alreadyLogged;
+    return totalTracked < s.plexViewedLeafCount;
   }).length;
 
   return {
@@ -119,6 +126,7 @@ export async function syncWatchHistoryFromPlex(
     summary: {
       moviesLogged: movieResult?.logged ?? 0,
       episodesLogged,
+      episodesAlreadyLogged,
       showsProcessed: showResults.length,
       showsWithGaps,
     },
@@ -143,8 +151,7 @@ function syncMovieWatches(plexItems: PlexMediaItem[]): MovieWatchSyncResult {
   };
 
   for (const item of plexItems) {
-    const { viewCount, lastViewedAt } = item;
-    if (viewCount === 0 || !lastViewedAt) continue;
+    if (item.viewCount === 0) continue;
     result.watched++;
 
     const tmdbId = extractExternalIdAsNumber(item, "tmdb");
@@ -160,7 +167,7 @@ function syncMovieWatches(plexItems: PlexMediaItem[]): MovieWatchSyncResult {
     }
 
     const created = getDb().transaction(() => {
-      return logMovieWatch(movie.id, lastViewedAt);
+      return logMovieWatch(movie.id, item.lastViewedAt);
     })();
 
     if (created) {
