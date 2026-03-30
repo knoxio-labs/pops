@@ -2,7 +2,7 @@
  * DiscoverPage — personalized movie discovery with trending and recommendations.
  * Three horizontal scroll sections: Recommended for You, Trending, Similar to Top Rated.
  */
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Alert, Button } from "@pops/ui";
 import { Compass, AlertCircle, RefreshCw, Loader2, Swords } from "lucide-react";
@@ -97,6 +97,54 @@ export function DiscoverPage() {
   const genreSpotlight = trpc.media.discovery.genreSpotlight.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
+
+  // Context picks — each collection accumulates results across pages
+  const [contextPages, setContextPages] = useState<Record<string, number>>({});
+  const [accumulatedContext, setAccumulatedContext] = useState<
+    Record<
+      string,
+      Array<{
+        tmdbId: number;
+        title: string;
+        releaseDate: string | null;
+        posterPath: string | null;
+        posterUrl: string | null;
+        voteAverage: number | null;
+        inLibrary: boolean;
+      }>
+    >
+  >({});
+
+  const contextPicks = trpc.media.discovery.contextPicks.useQuery(
+    { pages: Object.keys(contextPages).length > 0 ? contextPages : undefined },
+    { staleTime: 5 * 60 * 1000 }
+  );
+
+  // Accumulate context picks results when new data arrives
+  // Uses a ref for contextPages to avoid stale closure issues with rapid clicks
+  const contextPagesRef = useRef(contextPages);
+  contextPagesRef.current = contextPages;
+
+  useEffect(() => {
+    if (contextPicks.data?.collections) {
+      setAccumulatedContext((prev) => {
+        const next = { ...prev };
+        const pages = contextPagesRef.current;
+        for (const col of contextPicks.data!.collections) {
+          const page = pages[col.id] ?? 1;
+          if (page === 1) {
+            next[col.id] = col.results;
+          } else {
+            const existing = prev[col.id] ?? [];
+            const existingIds = new Set(existing.map((r) => r.tmdbId));
+            const newItems = col.results.filter((r) => !existingIds.has(r.tmdbId));
+            next[col.id] = [...existing, ...newItems];
+          }
+        }
+        return next;
+      });
+    }
+  }, [contextPicks.data]);
 
   const similarToTopRated = trpc.media.discovery.recommendations.useQuery(
     { sampleSize: 5 },
@@ -661,6 +709,81 @@ export function DiscoverPage() {
             )}
         </HorizontalScrollRow>
       )}
+
+      {/* Context-Aware Picks — show skeleton while loading, then render collections */}
+      {contextPicks.isLoading && (
+        <HorizontalScrollRow title="Context Picks" isLoading={true}>
+          {null}
+        </HorizontalScrollRow>
+      )}
+      {contextPicks.data?.collections?.map((collection) => (
+        <div key={collection.id} className="space-y-3">
+          <HorizontalScrollRow title={`${collection.emoji} ${collection.title}`} isLoading={false}>
+            {contextPicks.error && (
+              <Alert variant="destructive" className="flex items-center gap-3">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="flex-1 text-sm">{contextPicks.error.message}</p>
+                <Button variant="outline" size="sm" onClick={() => contextPicks.refetch()}>
+                  <RefreshCw className="mr-1 h-3 w-3" /> Retry
+                </Button>
+              </Alert>
+            )}
+            {(accumulatedContext[collection.id] ?? collection.results)
+              .filter((item) => !isDismissed(item.tmdbId))
+              .map(
+                (item: {
+                  tmdbId: number;
+                  title: string;
+                  releaseDate: string | null;
+                  posterPath: string | null;
+                  posterUrl: string | null;
+                  voteAverage: number | null;
+                  inLibrary: boolean;
+                }) => (
+                  <DiscoverCard
+                    key={item.tmdbId}
+                    tmdbId={item.tmdbId}
+                    title={item.title}
+                    releaseDate={item.releaseDate ?? ""}
+                    posterPath={item.posterPath}
+                    posterUrl={item.posterUrl}
+                    voteAverage={item.voteAverage ?? 0}
+                    inLibrary={item.inLibrary}
+                    isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
+                    isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
+                    onAddToLibrary={handleAddToLibrary}
+                    onAddToWatchlist={handleAddToWatchlist}
+                    onMarkWatched={handleMarkWatched}
+                    isMarkingWatched={markingWatched.has(item.tmdbId)}
+                    onNotInterested={handleNotInterested}
+                    isDismissing={dismissing.has(item.tmdbId)}
+                  />
+                )
+              )}
+          </HorizontalScrollRow>
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setContextPages((prev) => ({
+                  ...prev,
+                  [collection.id]: (prev[collection.id] ?? 1) + 1,
+                }))
+              }
+              disabled={contextPicks.isFetching}
+            >
+              {contextPicks.isFetching ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Loading…
+                </>
+              ) : (
+                "Load More"
+              )}
+            </Button>
+          </div>
+        </div>
+      ))}
 
       {/* Preference Profile */}
       <PreferenceProfile data={profile.data?.data} isLoading={profile.isLoading} />

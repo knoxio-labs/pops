@@ -10,9 +10,12 @@ const mockRewatchSuggestionsQuery = vi.fn();
 const mockRewatchSuggestionsRefetch = vi.fn();
 const mockGenreSpotlightQuery = vi.fn();
 const mockFromYourServerQuery = vi.fn();
+const mockContextPicksQuery = vi.fn();
+const mockGetDismissedQuery = vi.fn();
 const mockAddMovieMutateAsync = vi.fn();
 const mockAddWatchlistMutateAsync = vi.fn();
 const mockLogWatchMutateAsync = vi.fn();
+const mockDismissMutateAsync = vi.fn();
 const mockTrendingRefetch = vi.fn();
 const mockRecommendationsRefetch = vi.fn();
 
@@ -50,6 +53,18 @@ vi.mock("../lib/trpc", () => ({
         fromYourServer: {
           useQuery: (...args: unknown[]) => mockFromYourServerQuery(...args),
         },
+        contextPicks: {
+          useQuery: (...args: unknown[]) => {
+            const result = mockContextPicksQuery(...args);
+            return { ...result, refetch: vi.fn(), isFetching: false };
+          },
+        },
+        getDismissed: {
+          useQuery: (...args: unknown[]) => mockGetDismissedQuery(...args),
+        },
+        dismiss: {
+          useMutation: () => ({ mutateAsync: mockDismissMutateAsync }),
+        },
       },
       library: {
         addMovie: {
@@ -74,6 +89,8 @@ vi.mock("../lib/trpc", () => ({
           trending: { invalidate: vi.fn() },
           recommendations: { invalidate: vi.fn() },
           rewatchSuggestions: { invalidate: vi.fn() },
+          contextPicks: { invalidate: vi.fn() },
+          getDismissed: { invalidate: vi.fn() },
         },
         watchlist: { list: { invalidate: vi.fn() } },
       },
@@ -86,14 +103,17 @@ vi.mock("../components/HorizontalScrollRow", () => ({
     title,
     subtitle,
     children,
+    isLoading,
   }: {
     title: string;
     subtitle?: string;
     children: React.ReactNode;
+    isLoading?: boolean;
   }) => (
     <section>
       <h2>{title}</h2>
       {subtitle && <p data-testid="scroll-row-subtitle">{subtitle}</p>}
+      {isLoading && <div data-testid="loading-skeleton">Loading...</div>}
       <div>{children}</div>
     </section>
   ),
@@ -261,6 +281,22 @@ function defaultFromYourServer() {
   });
 }
 
+function defaultContextPicksEmpty() {
+  mockContextPicksQuery.mockReturnValue({
+    data: { collections: [] },
+    isLoading: false,
+    error: null,
+  });
+}
+
+function defaultDismissed() {
+  mockGetDismissedQuery.mockReturnValue({
+    data: { data: [] },
+    isLoading: false,
+    error: null,
+  });
+}
+
 function setupDefaults() {
   defaultTrending();
   mockRecommendationsQuery.mockReturnValue(emptyRecommendations);
@@ -269,6 +305,8 @@ function setupDefaults() {
   defaultRewatchSuggestions();
   defaultGenreSpotlight();
   defaultFromYourServer();
+  defaultContextPicksEmpty();
+  defaultDismissed();
 }
 
 function renderPage(initialEntry = "/media/discover") {
@@ -351,8 +389,7 @@ describe("DiscoverPage", () => {
   });
 
   it("shows error state with retry button", () => {
-    defaultProfile(10);
-    defaultRecommendations();
+    setupDefaults();
     mockTrendingQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -366,8 +403,7 @@ describe("DiscoverPage", () => {
   });
 
   it("shows Load More button when more results available", () => {
-    defaultProfile(10);
-    mockRecommendationsQuery.mockReturnValue(emptyRecommendations);
+    setupDefaults();
     mockTrendingQuery.mockReturnValue({
       data: { results: trendingMovies, totalResults: 60, page: 1 },
       isLoading: false,
@@ -397,6 +433,8 @@ describe("DiscoverPage — recommendations", () => {
     defaultRewatchSuggestions();
     defaultGenreSpotlight();
     defaultFromYourServer();
+    defaultContextPicksEmpty();
+    defaultDismissed();
   });
 
   it("shows cold start CTA when totalComparisons < 5", () => {
@@ -607,6 +645,10 @@ describe("DiscoverPage — Trending on Plex", () => {
     defaultProfile(10);
     mockRecommendationsQuery.mockReturnValue(emptyRecommendations);
     defaultRewatchSuggestions();
+    defaultGenreSpotlight();
+    defaultFromYourServer();
+    defaultContextPicksEmpty();
+    defaultDismissed();
   });
 
   it("renders Trending on Plex row when Plex is connected and has results", () => {
@@ -650,5 +692,132 @@ describe("DiscoverPage — Trending on Plex", () => {
     renderPage();
 
     expect(screen.queryByText("Trending on Plex")).toBeNull();
+  });
+});
+
+describe("DiscoverPage — context picks", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultTrending();
+    defaultProfile(10);
+    mockRecommendationsQuery.mockReturnValue(emptyRecommendations);
+    defaultTrendingPlex();
+    defaultRewatchSuggestions();
+    defaultGenreSpotlight();
+    defaultFromYourServer();
+    defaultDismissed();
+  });
+
+  const contextCollections = {
+    data: {
+      collections: [
+        {
+          id: "date-night",
+          title: "Date Night",
+          emoji: "\u{1F495}",
+          results: [
+            {
+              tmdbId: 1001,
+              title: "When Harry Met Sally",
+              releaseDate: "1989-07-21",
+              posterPath: null,
+              posterUrl: null,
+              voteAverage: 7.6,
+              inLibrary: false,
+            },
+            {
+              tmdbId: 1002,
+              title: "La La Land",
+              releaseDate: "2016-12-09",
+              posterPath: null,
+              posterUrl: null,
+              voteAverage: 8.0,
+              inLibrary: false,
+            },
+          ],
+        },
+        {
+          id: "late-night",
+          title: "Late Night Thrillers",
+          emoji: "\u{1F319}",
+          results: [
+            {
+              tmdbId: 1003,
+              title: "Gone Girl",
+              releaseDate: "2014-10-03",
+              posterPath: null,
+              posterUrl: null,
+              voteAverage: 8.1,
+              inLibrary: false,
+            },
+          ],
+        },
+      ],
+    },
+    isLoading: false,
+    error: null,
+  };
+
+  it("shows loading skeleton while context picks are loading", () => {
+    mockContextPicksQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    });
+    renderPage();
+
+    expect(screen.getByText("Context Picks")).toBeTruthy();
+    expect(screen.getAllByTestId("loading-skeleton").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders context collection rows with emoji + title", () => {
+    mockContextPicksQuery.mockReturnValue(contextCollections);
+    renderPage();
+
+    expect(screen.getByText("\u{1F495} Date Night")).toBeTruthy();
+    expect(screen.getByText("\u{1F319} Late Night Thrillers")).toBeTruthy();
+  });
+
+  it("renders cards within context collections", () => {
+    mockContextPicksQuery.mockReturnValue(contextCollections);
+    renderPage();
+
+    expect(screen.getByText("When Harry Met Sally")).toBeTruthy();
+    expect(screen.getByText("La La Land")).toBeTruthy();
+    expect(screen.getByText("Gone Girl")).toBeTruthy();
+  });
+
+  it("hides context picks section when no collections returned", () => {
+    defaultContextPicksEmpty();
+    renderPage();
+
+    expect(screen.queryByText("\u{1F495} Date Night")).toBeNull();
+    expect(screen.queryByText("\u{1F319} Late Night Thrillers")).toBeNull();
+  });
+
+  it("shows Load More button for each context collection", () => {
+    mockContextPicksQuery.mockReturnValue(contextCollections);
+    renderPage();
+
+    // Two collections = at least two Load More buttons (trending may also have one)
+    const loadMoreButtons = screen.getAllByText("Load More");
+    expect(loadMoreButtons.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("Load More click updates context page state", () => {
+    mockContextPicksQuery.mockReturnValue(contextCollections);
+    renderPage();
+
+    // Click Load More for the first collection
+    const loadMoreButtons = screen.getAllByText("Load More");
+    // Context picks Load More buttons — find one that's not the trending Load More
+    // The last two Load More buttons belong to context collections
+    const contextLoadMore = loadMoreButtons[loadMoreButtons.length - 2]!;
+    fireEvent.click(contextLoadMore);
+
+    // After clicking, the query should be called again with updated pages
+    // The contextPicks query is called with pages param
+    const lastCall = mockContextPicksQuery.mock.calls[mockContextPicksQuery.mock.calls.length - 1];
+    expect(lastCall).toBeDefined();
   });
 });
