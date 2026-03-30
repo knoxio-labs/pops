@@ -611,8 +611,24 @@ describe("DiscoverPage — Trending on Plex", () => {
 
   it("renders Trending on Plex row when Plex is connected and has results", () => {
     const plexMovies = [
-      { tmdbId: 900, title: "Plex Movie A", releaseDate: "2025-01-01", posterPath: null, posterUrl: "/thumb/a", voteAverage: 7.0, inLibrary: false },
-      { tmdbId: 901, title: "Plex Movie B", releaseDate: "2025-02-01", posterPath: null, posterUrl: "/thumb/b", voteAverage: 8.0, inLibrary: true },
+      {
+        tmdbId: 900,
+        title: "Plex Movie A",
+        releaseDate: "2025-01-01",
+        posterPath: null,
+        posterUrl: "/thumb/a",
+        voteAverage: 7.0,
+        inLibrary: false,
+      },
+      {
+        tmdbId: 901,
+        title: "Plex Movie B",
+        releaseDate: "2025-02-01",
+        posterPath: null,
+        posterUrl: "/thumb/b",
+        voteAverage: 8.0,
+        inLibrary: true,
+      },
     ];
     defaultTrendingPlex(plexMovies);
     renderPage();

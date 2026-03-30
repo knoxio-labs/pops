@@ -81,20 +81,18 @@ describe("getTrendingFromPlex", () => {
 
   it("returns DiscoverResult[] when Plex is connected", async () => {
     const mockClient = {
-      getTrending: vi
-        .fn()
-        .mockResolvedValue([
-          makePlexItem({
-            ratingKey: "1",
-            title: "Movie A",
-            externalIds: [{ source: "tmdb", id: "100" }],
-          }),
-          makePlexItem({
-            ratingKey: "2",
-            title: "Movie B",
-            externalIds: [{ source: "tmdb", id: "200" }],
-          }),
-        ]),
+      getTrending: vi.fn().mockResolvedValue([
+        makePlexItem({
+          ratingKey: "1",
+          title: "Movie A",
+          externalIds: [{ source: "tmdb", id: "100" }],
+        }),
+        makePlexItem({
+          ratingKey: "2",
+          title: "Movie B",
+          externalIds: [{ source: "tmdb", id: "200" }],
+        }),
+      ]),
     };
     mockGetPlexClient.mockReturnValue(
       mockClient as unknown as ReturnType<typeof getPlexClient> & object
@@ -152,20 +150,18 @@ describe("getTrendingFromPlex", () => {
 
   it("deduplicates by TMDB ID", async () => {
     const mockClient = {
-      getTrending: vi
-        .fn()
-        .mockResolvedValue([
-          makePlexItem({
-            ratingKey: "1",
-            title: "Movie A",
-            externalIds: [{ source: "tmdb", id: "100" }],
-          }),
-          makePlexItem({
-            ratingKey: "2",
-            title: "Movie A Duplicate",
-            externalIds: [{ source: "tmdb", id: "100" }],
-          }),
-        ]),
+      getTrending: vi.fn().mockResolvedValue([
+        makePlexItem({
+          ratingKey: "1",
+          title: "Movie A",
+          externalIds: [{ source: "tmdb", id: "100" }],
+        }),
+        makePlexItem({
+          ratingKey: "2",
+          title: "Movie A Duplicate",
+          externalIds: [{ source: "tmdb", id: "100" }],
+        }),
+      ]),
     };
     mockGetPlexClient.mockReturnValue(
       mockClient as unknown as ReturnType<typeof getPlexClient> & object

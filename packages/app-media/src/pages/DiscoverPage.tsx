@@ -495,7 +495,6 @@ export function DiscoverPage() {
               isMarkingWatched={markingWatched.has(item.tmdbId)}
             />
           ))}
-
         </HorizontalScrollRow>
       )}
 
