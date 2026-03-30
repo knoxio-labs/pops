@@ -228,6 +228,8 @@ export function getWatchHistoryEntry(id: number): WatchHistoryRow {
 /** Result of logWatch including whether a watchlist entry was removed. */
 export interface LogWatchResult {
   entry: WatchHistoryRow;
+  /** True if a new row was inserted, false if it already existed (duplicate). */
+  created: boolean;
   watchlistRemoved: boolean;
 }
 
@@ -275,7 +277,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
         )
         .get();
       if (!existing) throw new Error("Watch history entry not found after conflict");
-      return { entry: existing, watchlistRemoved: false };
+      return { entry: existing, created: false, watchlistRemoved: false };
     }
 
     const entry = tx
@@ -304,7 +306,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
       }
     }
 
-    return { entry, watchlistRemoved };
+    return { entry, created: true, watchlistRemoved };
   });
 }
 

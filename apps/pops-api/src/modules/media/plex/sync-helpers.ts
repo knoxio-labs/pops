@@ -72,8 +72,7 @@ export function logMovieWatch(movieId: number, lastViewedAtUnix: number): boolea
       completed: 1,
       source: "plex_sync",
     });
-    // If the watchedAt matches exactly, it was a duplicate (onConflictDoNothing path)
-    return result.entry.id > 0;
+    return result.created;
   } catch {
     return false;
   }
@@ -157,13 +156,13 @@ export function syncEpisodeWatches(
         source: "plex_sync",
       });
 
-      // changes === 0 means onConflictDoNothing fired (duplicate)
-      if (result.entry.id > 0) {
+      if (result.created) {
         diagnostics.matched++;
+      } else {
+        diagnostics.alreadyLogged++;
       }
     } catch {
-      // Duplicate — logWatch returns existing row on conflict, but
-      // a truly unexpected error lands here
+      // Truly unexpected error (not a duplicate)
       diagnostics.alreadyLogged++;
     }
   }

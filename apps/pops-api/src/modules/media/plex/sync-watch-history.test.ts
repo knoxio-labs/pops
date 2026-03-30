@@ -182,6 +182,7 @@ describe("syncWatchHistoryFromPlex", () => {
       mockGetMovieByTmdbId.mockReturnValue({ id: 42 } as ReturnType<typeof getMovieByTmdbId>);
       mockLogWatch.mockReturnValue({
         entry: { id: 1 },
+        created: true,
         watchlistRemoved: false,
       } as unknown as ReturnType<typeof logWatch>);
 
@@ -226,6 +227,7 @@ describe("syncWatchHistoryFromPlex", () => {
       setupDrizzleMock({ id: 10 }, { id: 100 });
       mockLogWatch.mockReturnValue({
         entry: { id: 1 },
+        created: true,
         watchlistRemoved: false,
       } as unknown as ReturnType<typeof logWatch>);
 
@@ -279,6 +281,7 @@ describe("syncWatchHistoryFromPlex", () => {
       setupDrizzleMock({ id: 10 }, { id: 100 });
       mockLogWatch.mockReturnValue({
         entry: { id: 1 },
+        created: true,
         watchlistRemoved: false,
       } as unknown as ReturnType<typeof logWatch>);
 
@@ -297,6 +300,7 @@ describe("syncWatchHistoryFromPlex", () => {
       mockGetMovieByTmdbId.mockReturnValue({ id: 42 } as ReturnType<typeof getMovieByTmdbId>);
       mockLogWatch.mockReturnValue({
         entry: { id: 1 },
+        created: true,
         watchlistRemoved: false,
       } as unknown as ReturnType<typeof logWatch>);
 

@@ -149,9 +149,11 @@ describe("extractExternalIdAsNumber", () => {
 
 describe("logMovieWatch", () => {
   it("calls logWatch with correct parameters and returns true", () => {
-    mockLogWatch.mockReturnValue({ entry: { id: 1 }, watchlistRemoved: false } as ReturnType<
-      typeof logWatch
-    >);
+    mockLogWatch.mockReturnValue({
+      entry: { id: 1 },
+      created: true,
+      watchlistRemoved: false,
+    } as ReturnType<typeof logWatch>);
 
     const result = logMovieWatch(42, 1711500000);
 
@@ -192,9 +194,11 @@ describe("syncEpisodeWatches", () => {
       typeof getTvShowByTvdbId
     >);
     makeMockDb({ id: 10 }, { id: 100 });
-    mockLogWatch.mockReturnValue({ entry: { id: 1 }, watchlistRemoved: false } as ReturnType<
-      typeof logWatch
-    >);
+    mockLogWatch.mockReturnValue({
+      entry: { id: 1 },
+      created: true,
+      watchlistRemoved: false,
+    } as ReturnType<typeof logWatch>);
 
     const ep = makeEpisode({ viewCount: 1, lastViewedAt: 1711400000 });
     const result = syncEpisodeWatches(81189, [ep]);
@@ -260,9 +264,11 @@ describe("syncEpisodeWatches", () => {
       typeof getTvShowByTvdbId
     >);
     makeMockDb({ id: 10 }, { id: 100 });
-    mockLogWatch.mockReturnValue({ entry: { id: 1 }, watchlistRemoved: false } as ReturnType<
-      typeof logWatch
-    >);
+    mockLogWatch.mockReturnValue({
+      entry: { id: 1 },
+      created: true,
+      watchlistRemoved: false,
+    } as ReturnType<typeof logWatch>);
 
     const now = new Date("2026-03-24T12:00:00Z");
     vi.setSystemTime(now);
