@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Path detection to determine what to build/deploy
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -41,46 +40,66 @@ jobs:
               - '!.github/**'
               - '!*.md'
 
-  # Run all quality checks before deploying
-  quality-checks:
-    name: Quality Checks
+  # Quality checks run in parallel for faster feedback
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     needs: changes
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
-
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
 
-      - name: Build shared packages
-        run: cd packages/db-types && pnpm build
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
-      - name: Type check all services
-        run: |
-          cd apps/pops-api && pnpm typecheck
-          cd ../pops-shell && pnpm typecheck
-
-      - name: Lint all services
-        run: |
-          cd apps/pops-api && pnpm lint
-          cd ../pops-shell && pnpm lint
-
-      - name: Test pops-api
-        run: cd apps/pops-api && pnpm test
-
-      - name: Build all services
-        run: |
-          cd apps/pops-api && pnpm build
-          cd ../pops-shell && pnpm build
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
   # Deploy to N95 server
   # Note: This job expects a self-hosted runner on the N95 server
@@ -88,7 +107,7 @@ jobs:
   deploy:
     name: Deploy to N95
     runs-on: self-hosted
-    needs: [changes, quality-checks]
+    needs: [changes, lint, typecheck, test, build]
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     environment:
       name: production
@@ -153,32 +172,37 @@ jobs:
             docker compose up -d pops-api
           fi
 
-      - name: Wait for services to stabilize
-        run: sleep 10
-
       - name: Verify health
         id: health
         continue-on-error: true
         run: |
-          # Check pops-api if it was touched
+          check_health() {
+            local container=$1 url=$2
+            for i in $(seq 1 6); do
+              if docker exec "$container" wget -qO- "$url" > /dev/null 2>&1; then
+                echo "✅ $container healthy"
+                return 0
+              fi
+              echo "⏳ $container not ready (attempt $i/6)..."
+              sleep 10
+            done
+            echo "❌ $container health check failed after 60s"
+            return 1
+          }
+
           if [ "${{ steps.mode.outputs.type }}" == "full" ] || [ "${{ steps.mode.outputs.target }}" == "backend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
-            echo "🏥 Checking pops-api health..."
-            if ! docker exec pops-api wget -qO- http://localhost:3000/health > /dev/null 2>&1; then
-              echo "❌ pops-api health check failed"
-              exit 1
-            fi
+            check_health pops-api http://localhost:3000/health
           fi
 
-          # Check pops-shell if it was touched
           if [ "${{ steps.mode.outputs.type }}" == "full" ] || [ "${{ steps.mode.outputs.target }}" == "frontend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
-            echo "🏥 Checking pops-shell health..."
-            if ! docker exec pops-shell wget -qO- http://localhost > /dev/null 2>&1; then
-              echo "❌ pops-shell health check failed"
-              exit 1
-            fi
+            check_health pops-shell http://localhost
           fi
-          
-          echo "✅ Health checks passed"
+
+      - name: Fail on full deploy health check failure
+        if: steps.health.outcome == 'failure' && steps.mode.outputs.type == 'full'
+        run: |
+          echo "❌ Health check failed on full deploy — no fallback available"
+          exit 1
 
       - name: Fallback to full deploy on selective failure
         if: steps.mode.outputs.type == 'selective' && steps.health.outcome == 'failure'
@@ -194,7 +218,6 @@ jobs:
       - name: Final health check after fallback
         if: steps.mode.outputs.type == 'selective' && steps.health.outcome == 'failure'
         run: |
-          # Wait a bit longer for full restart
           sleep 20
           cd /opt/pops
           docker exec pops-api wget -qO- http://localhost:3000/health > /dev/null 2>&1

@@ -1,14 +1,17 @@
-name: Finance API CI
+name: FE Quality
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - "apps/pops-api/**"
+      - "apps/pops-shell/**"
+      - "packages/app-*/**"
       - "packages/db-types/**"
-      - ".github/workflows/pops-api-ci.yml"
+      - "packages/ui/**"
+      - "packages/widgets/**"
+      - "packages/navigation/**"
+      - ".github/workflows/fe-quality.yml"
+  pull_request:
 
 jobs:
   changes:
@@ -16,40 +19,41 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     outputs:
-      relevant: ${{ steps.filter.outputs.api }}
+      relevant: ${{ steps.filter.outputs.shell }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
-            api:
-              - 'apps/pops-api/**'
+            shell:
+              - 'apps/pops-shell/**'
+              - 'packages/app-*/**'
               - 'packages/db-types/**'
-              - '.github/workflows/pops-api-ci.yml'
+              - 'packages/ui/**'
+              - 'packages/widgets/**'
+              - 'packages/navigation/**'
+              - '.github/workflows/fe-quality.yml'
 
-  quality-checks:
-    name: quality
+  quality:
+    name: Quality Checks
     runs-on: ubuntu-latest
     needs: [changes]
     if: always()
-
     steps:
       - name: Skip — no relevant changes
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
-        run: echo "No API changes detected — skipping quality checks"
+        run: echo "No shell/UI changes detected — skipping quality checks"
 
-      - name: Checkout repository
+      - uses: actions/checkout@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        uses: actions/checkout@v6
 
       - name: Install pnpm
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         uses: pnpm/action-setup@v5
 
-      - name: Setup Node.js
+      - uses: actions/setup-node@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: pnpm
@@ -64,32 +68,12 @@ jobs:
 
       - name: Type check
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-api && pnpm typecheck
+        run: cd apps/pops-shell && pnpm typecheck
 
       - name: Lint
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-api && pnpm lint
-
-      - name: Format check
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-api && pnpm format
-
-      - name: Run unit tests
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-api && pnpm test
-
-      - name: Run integration tests
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-api && pnpm test:integration
+        run: cd apps/pops-shell && pnpm lint
 
       - name: Build
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-api && pnpm build
-
-      - name: Upload build artifacts
-        if: success() && (github.event_name == 'push' || needs.changes.outputs.relevant == 'true')
-        uses: actions/upload-artifact@v7
-        with:
-          name: pops-api-build
-          path: apps/pops-api/dist
-          retention-days: 7
+        run: cd apps/pops-shell && pnpm build
