@@ -38,7 +38,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { ConnectionBadge } from "../components/ConnectionBadge";
-import { useSyncJob, useLastSyncResults } from "../hooks/useSyncJob";
+import { useSyncJob } from "../hooks/useSyncJob";
 
 interface SyncResult {
   synced: number;
@@ -380,8 +380,6 @@ export function PlexSettingsPage() {
   const watchlistSync = useSyncJob("syncWatchlist");
   const watchHistorySync = useSyncJob("syncWatchHistory");
   const discoverSync = useSyncJob("syncDiscoverWatches");
-  const lastResults = useLastSyncResults();
-
   const syncStatus = trpc.media.plex.getSyncStatus.useQuery();
   const currentUrl = trpc.media.plex.getPlexUrl.useQuery();
   const savedSectionIds = trpc.media.plex.getSectionIds.useQuery();

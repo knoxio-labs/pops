@@ -152,15 +152,17 @@ describe("MovieDetailPage", () => {
       expect(poster).toHaveAttribute("src", "/media/images/movie/278/poster.jpg");
     });
 
-    it("still renders poster img element when posterUrl is null (with empty string fallback)", () => {
+    it("renders a placeholder div when posterUrl is null (no img element)", () => {
       mockMovieQuery.mockReturnValue({
         data: { data: { ...baseMovie, posterUrl: null } },
         isLoading: false,
         error: null,
       });
-      renderAtRoute("/media/movies/1");
-      const poster = screen.getByAltText("The Shawshank Redemption poster");
-      expect(poster).toBeInTheDocument();
+      const { container } = renderAtRoute("/media/movies/1");
+      // Component renders a <div> placeholder instead of <img> when posterUrl is null
+      expect(screen.queryByAltText("The Shawshank Redemption poster")).not.toBeInTheDocument();
+      const placeholder = container.querySelector("div.rounded-lg.bg-muted.shadow-lg");
+      expect(placeholder).toBeInTheDocument();
     });
   });
 

@@ -381,7 +381,8 @@ describe("WarrantiesPage", () => {
     });
     renderPage();
     expect(screen.getByText("Urgent Item")).toBeInTheDocument();
-    expect(screen.getByText("Expiring Soon")).toBeInTheDocument();
+    // Item is in the Critical tier (< 30 days) with a days-remaining badge
+    expect(screen.getByText("Critical — Under 30 Days")).toBeInTheDocument();
     expect(screen.getByText("10 days")).toBeInTheDocument();
   });
 

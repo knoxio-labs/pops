@@ -111,7 +111,7 @@ export function CompareArenaPage() {
 
   // Watchlist: check which movies are on it, add mutation
   const movieAId = pairData?.data?.movieA?.id;
-  const movieBId = pairData?.data?.movieB?.id;
+  const _movieBId = pairData?.data?.movieB?.id;
 
   const { data: watchlistData } = trpc.media.watchlist.list.useQuery(
     { mediaType: "movie" },

@@ -341,11 +341,13 @@ describe("TvShowDetailPage — hero and metadata", () => {
       expect(screen.getByAltText("Breaking Bad poster")).toBeInTheDocument();
     });
 
-    it("renders poster element even when posterUrl is null", () => {
+    it("renders a placeholder div when posterUrl is null (no img element)", () => {
       setupQueries({ posterUrl: null });
       const { container } = renderPage();
-      const poster = container.querySelector('img[alt="Breaking Bad poster"]');
-      expect(poster).toBeInTheDocument();
+      // Component renders a <div> placeholder instead of <img> when posterUrl is null
+      expect(container.querySelector('img[alt="Breaking Bad poster"]')).not.toBeInTheDocument();
+      const placeholder = container.querySelector("div.rounded-lg.bg-muted.shadow-lg");
+      expect(placeholder).toBeInTheDocument();
     });
 
     it("renders title in h1", () => {

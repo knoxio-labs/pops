@@ -52,37 +52,9 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("@pops/ui", () => ({
-  Badge: ({ children, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
-    <span data-testid="badge" className={className}>{children}</span>
-  ),
-  Button: ({ children, onClick, variant, disabled }: { children: React.ReactNode; onClick?: () => void; variant?: string; disabled?: boolean }) => (
-    <button onClick={onClick} data-variant={variant} disabled={disabled}>{children}</button>
-  ),
-  Skeleton: ({ className }: { className?: string }) => (
-    <div className={`animate-pulse ${className ?? ""}`} />
-  ),
-  Collapsible: ({ children, open, onOpenChange }: { children: React.ReactNode; open: boolean; onOpenChange: (v: boolean) => void }) => (
-    <div data-open={open} data-testid="collapsible">{children}</div>
-  ),
-  CollapsibleTrigger: ({ children, asChild, onClick }: { children: React.ReactNode; asChild?: boolean; onClick?: (e: React.MouseEvent) => void }) => (
-    <div onClick={onClick}>{children}</div>
-  ),
-  CollapsibleContent: ({ children, forceMount }: { children: React.ReactNode; forceMount?: boolean }) => (
-    <div>{children}</div>
-  ),
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean; onOpenChange?: (v: boolean) => void }) => (
-    open ? <div data-testid="dialog">{children}</div> : null
-  ),
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
 
 vi.mock("../components/LocationContentsPanel", () => ({
-  LocationContentsPanel: ({ locationId, locationName }: { locationId: string; locationName: string }) => (
+  LocationContentsPanel: ({ locationName }: { locationName: string }) => (
     <div data-testid="contents-panel">{locationName}</div>
   ),
 }));
