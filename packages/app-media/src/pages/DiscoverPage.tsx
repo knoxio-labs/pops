@@ -220,6 +220,10 @@ export function DiscoverPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const watchlistRecs = trpc.media.discovery.watchlistRecommendations.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
   const trendingPlex = trpc.media.discovery.trendingPlex.useQuery(
     { limit: 20 },
     { staleTime: 5 * 60 * 1000 }
@@ -297,6 +301,7 @@ export function DiscoverPage() {
         void utils.media.discovery.trending.invalidate();
         void utils.media.discovery.recommendations.invalidate();
         void utils.media.discovery.genreSpotlight.invalidate();
+        void utils.media.discovery.watchlistRecommendations.invalidate();
       } catch {
         toast.error("Failed to add to watchlist");
       } finally {
@@ -769,6 +774,70 @@ export function DiscoverPage() {
             )
           )}
       </HorizontalScrollRow>
+
+      {/* From Your Watchlist — hidden when empty */}
+      {(watchlistRecs.isLoading || (watchlistRecs.data?.results?.length ?? 0) > 0) && (
+        <HorizontalScrollRow
+          title="From Your Watchlist"
+          subtitle={
+            watchlistRecs.data?.sourceMovies?.length
+              ? `Similar to ${watchlistRecs.data.sourceMovies.slice(0, 3).join(", ")}`
+              : undefined
+          }
+          isLoading={watchlistRecs.isLoading}
+        >
+          {watchlistRecs.error && (
+            <Alert variant="destructive" className="flex items-center gap-3">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <p className="flex-1 text-sm">{watchlistRecs.error.message}</p>
+              <Button variant="outline" size="sm" onClick={() => watchlistRecs.refetch()}>
+                <RefreshCw className="mr-1 h-3 w-3" /> Retry
+              </Button>
+            </Alert>
+          )}
+          {!watchlistRecs.error && watchlistRecs.data?.results?.length === 0 && (
+            <p className="py-8 text-sm text-muted-foreground">
+              Add movies to your watchlist to get recommendations here.
+            </p>
+          )}
+          {watchlistRecs.data?.results
+            ?.filter((item) => !isDismissed(item.tmdbId))
+            .map(
+              (item: {
+                tmdbId: number;
+                title: string;
+                releaseDate: string | null;
+                posterPath: string | null;
+                posterUrl: string | null;
+                voteAverage: number | null;
+                inLibrary: boolean;
+                matchPercentage?: number;
+                matchReason?: string;
+              }) => (
+                <DiscoverCard
+                  key={item.tmdbId}
+                  tmdbId={item.tmdbId}
+                  title={item.title}
+                  releaseDate={item.releaseDate ?? ""}
+                  posterPath={item.posterPath}
+                  posterUrl={item.posterUrl}
+                  voteAverage={item.voteAverage ?? 0}
+                  inLibrary={item.inLibrary}
+                  isAddingToLibrary={addingToLibrary.has(item.tmdbId)}
+                  isAddingToWatchlist={addingToWatchlist.has(item.tmdbId)}
+                  onAddToLibrary={handleAddToLibrary}
+                  onAddToWatchlist={handleAddToWatchlist}
+                  onMarkWatched={handleMarkWatched}
+                  isMarkingWatched={markingWatched.has(item.tmdbId)}
+                  onNotInterested={handleNotInterested}
+                  isDismissing={dismissing.has(item.tmdbId)}
+                  matchPercentage={item.matchPercentage}
+                  matchReason={item.matchReason}
+                />
+              )
+            )}
+        </HorizontalScrollRow>
+      )}
 
       {/* Ready to Watch on Your Server — hidden when no results */}
       {(fromYourServer.isLoading || (fromYourServer.data?.results.length ?? 0) > 0) && (

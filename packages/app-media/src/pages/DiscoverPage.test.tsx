@@ -11,6 +11,8 @@ const mockRewatchSuggestionsRefetch = vi.fn();
 const mockGenreSpotlightQuery = vi.fn();
 const mockFromYourServerQuery = vi.fn();
 const mockContextPicksQuery = vi.fn();
+const mockWatchlistRecommendationsQuery = vi.fn();
+const mockWatchlistRecommendationsRefetch = vi.fn();
 const mockGetDismissedQuery = vi.fn();
 const mockAddMovieMutateAsync = vi.fn();
 const mockAddWatchlistMutateAsync = vi.fn();
@@ -59,6 +61,12 @@ vi.mock("../lib/trpc", () => ({
             return { ...result, refetch: vi.fn(), isFetching: false };
           },
         },
+        watchlistRecommendations: {
+          useQuery: (...args: unknown[]) => {
+            const result = mockWatchlistRecommendationsQuery(...args);
+            return { ...result, refetch: mockWatchlistRecommendationsRefetch };
+          },
+        },
         getDismissed: {
           useQuery: (...args: unknown[]) => mockGetDismissedQuery(...args),
         },
@@ -92,6 +100,7 @@ vi.mock("../lib/trpc", () => ({
           genreSpotlight: { invalidate: vi.fn() },
           genreSpotlightPage: { fetch: vi.fn().mockResolvedValue({ results: [] }) },
           contextPicks: { invalidate: vi.fn() },
+          watchlistRecommendations: { invalidate: vi.fn() },
           getDismissed: { invalidate: vi.fn() },
         },
         watchlist: { list: { invalidate: vi.fn() } },
@@ -291,6 +300,14 @@ function defaultContextPicksEmpty() {
   });
 }
 
+function defaultWatchlistRecommendations() {
+  mockWatchlistRecommendationsQuery.mockReturnValue({
+    data: { results: [], sourceMovies: [] },
+    isLoading: false,
+    error: null,
+  });
+}
+
 function defaultDismissed() {
   mockGetDismissedQuery.mockReturnValue({
     data: { data: [] },
@@ -308,6 +325,7 @@ function setupDefaults() {
   defaultGenreSpotlight();
   defaultFromYourServer();
   defaultContextPicksEmpty();
+  defaultWatchlistRecommendations();
   defaultDismissed();
 }
 
@@ -503,6 +521,7 @@ describe("DiscoverPage — recommendations", () => {
     defaultGenreSpotlight();
     defaultFromYourServer();
     defaultContextPicksEmpty();
+    defaultWatchlistRecommendations();
     defaultDismissed();
   });
 
@@ -717,6 +736,7 @@ describe("DiscoverPage — Trending on Plex", () => {
     defaultGenreSpotlight();
     defaultFromYourServer();
     defaultContextPicksEmpty();
+    defaultWatchlistRecommendations();
     defaultDismissed();
   });
 
@@ -774,6 +794,7 @@ describe("DiscoverPage — context picks", () => {
     defaultRewatchSuggestions();
     defaultGenreSpotlight();
     defaultFromYourServer();
+    defaultWatchlistRecommendations();
     defaultDismissed();
   });
 
