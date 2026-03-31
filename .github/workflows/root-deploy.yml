@@ -176,26 +176,30 @@ jobs:
         id: health
         continue-on-error: true
         run: |
-          check_health() {
-            local container=$1 url=$2
-            for i in $(seq 1 6); do
-              if docker exec "$container" wget -qO- "$url" > /dev/null 2>&1; then
+          wait_healthy() {
+            local container=$1
+            for i in $(seq 1 12); do
+              status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "no-healthcheck")
+              if [ "$status" = "healthy" ]; then
                 echo "✅ $container healthy"
                 return 0
               fi
-              echo "⏳ $container not ready (attempt $i/6)..."
+              echo "⏳ $container status: $status (attempt $i/12)..."
               sleep 10
             done
-            echo "❌ $container health check failed after 60s"
+            echo "❌ $container not healthy after 120s (status: $status)"
+            docker logs --tail=20 "$container" 2>&1 || true
             return 1
           }
 
+          cd /opt/pops
+
           if [ "${{ steps.mode.outputs.type }}" == "full" ] || [ "${{ steps.mode.outputs.target }}" == "backend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
-            check_health pops-api http://localhost:3000/health
+            wait_healthy pops-api
           fi
 
           if [ "${{ steps.mode.outputs.type }}" == "full" ] || [ "${{ steps.mode.outputs.target }}" == "frontend" ] || [ "${{ steps.mode.outputs.target }}" == "both" ]; then
-            check_health pops-shell http://localhost
+            wait_healthy pops-shell
           fi
 
       - name: Fail on full deploy health check failure
@@ -220,8 +224,8 @@ jobs:
         run: |
           sleep 20
           cd /opt/pops
-          docker exec pops-api wget -qO- http://localhost:3000/health > /dev/null 2>&1
-          docker exec pops-shell wget -qO- http://localhost > /dev/null 2>&1
+          docker exec pops-api wget -qO- http://127.0.0.1:3000/health > /dev/null 2>&1
+          docker exec pops-shell wget -qO- http://127.0.0.1 > /dev/null 2>&1
 
       - name: Show deployment summary
         if: always()
