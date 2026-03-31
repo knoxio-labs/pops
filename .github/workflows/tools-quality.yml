@@ -1,16 +1,16 @@
-name: Tools CI
+name: Tools Quality
 
 on:
   pull_request:
     paths:
       - 'packages/import-tools/**'
-      - '.github/workflows/tools-ci.yml'
+      - '.github/workflows/tools-quality.yml'
   push:
     branches:
       - main
     paths:
       - 'packages/import-tools/**'
-      - '.github/workflows/tools-ci.yml'
+      - '.github/workflows/tools-quality.yml'
 
 defaults:
   run:

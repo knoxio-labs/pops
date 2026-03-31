@@ -1,5 +1,5 @@
 ---
-name: Ansible CI
+name: Infra Quality
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
       - 'infra/ansible/**'
       - '.ansible-lint'
       - '.yamllint'
-      - '.github/workflows/ansible-ci.yml'
+      - '.github/workflows/infra-quality.yml'
   pull_request:
     paths:
       - 'infra/ansible/**'
       - '.ansible-lint'
       - '.yamllint'
-      - '.github/workflows/ansible-ci.yml'
+      - '.github/workflows/infra-quality.yml'
 
 jobs:
   lint-yaml:
