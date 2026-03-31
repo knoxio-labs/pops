@@ -220,19 +220,23 @@ jobs:
             local container=$1
             for i in $(seq 1 12); do
               # Try docker healthcheck first, fall back to wget
-              status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "no-healthcheck")
-              if [ "$status" = "healthy" ]; then
-                echo "$container healthy (docker healthcheck)"
-                return 0
-              fi
-              # If no docker healthcheck, try direct HTTP
-              if [ "$status" = "no-healthcheck" ]; then
-                if docker exec "$container" wget -qO- http://127.0.0.1 > /dev/null 2>&1 || \
-                   docker exec "$container" wget -qO- http://127.0.0.1:3000/health > /dev/null 2>&1; then
-                  echo "$container healthy (direct HTTP)"
+              status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>&1 | tail -1 | tr -d '[:space:]')
+              case "$status" in
+                healthy)
+                  echo "$container healthy"
                   return 0
-                fi
-              fi
+                  ;;
+                starting|unhealthy)
+                  ;; # wait and retry
+                *)
+                  # No healthcheck configured — try direct HTTP
+                  if docker exec "$container" wget -qO- http://127.0.0.1 > /dev/null 2>&1 || \
+                     docker exec "$container" wget -qO- http://127.0.0.1:3000/health > /dev/null 2>&1; then
+                    echo "$container healthy (HTTP)"
+                    return 0
+                  fi
+                  ;;
+              esac
               echo "$container status: $status (attempt $i/12)..."
               sleep 10
             done
