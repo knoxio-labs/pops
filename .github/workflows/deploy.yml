@@ -131,7 +131,7 @@ jobs:
             --connection=local \
             -v
 
-      - name: Selective deploy: Build + Restart
+      - name: "Selective deploy: Build + Restart"
         if: steps.mode.outputs.type == 'selective'
         id: selective
         run: |
