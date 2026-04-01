@@ -107,7 +107,8 @@ router.get("/media/images/:mediaType/:id/:filename", async (req, res): Promise<v
     const table = mediaType === "movie" ? "movies" : "tv_shows";
     const idColumn = mediaType === "movie" ? "tmdb_id" : "tvdb_id";
     const titleColumn = mediaType === "movie" ? "title" : "name";
-    const pathColumn = imageType === "poster" ? "poster_path" : imageType === "logo" ? "logo_path" : "backdrop_path";
+    const pathColumn =
+      imageType === "poster" ? "poster_path" : imageType === "logo" ? "logo_path" : "backdrop_path";
 
     const record = db
       .prepare(

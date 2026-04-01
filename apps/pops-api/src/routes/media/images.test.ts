@@ -12,7 +12,9 @@ vi.mock("node:fs/promises");
 import * as fs from "node:fs/promises";
 
 // Mock database
-const mockGet = vi.fn<() => { path: string | null; title: string | null } | undefined>(() => undefined);
+const mockGet = vi.fn<() => { path: string | null; title: string | null } | undefined>(
+  () => undefined
+);
 vi.mock("../../db.js", () => ({
   getDb: vi.fn(() => ({
     prepare: vi.fn(() => ({
@@ -238,7 +240,10 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
 
     it("downloads TV poster from TheTVDB on cache miss", async () => {
       const app = createTestApp();
-      mockGet.mockReturnValue({ path: "https://artworks.thetvdb.com/poster.jpg", title: "Test Show" });
+      mockGet.mockReturnValue({
+        path: "https://artworks.thetvdb.com/poster.jpg",
+        title: "Test Show",
+      });
 
       await request(app).get("/media/images/tv/81189/poster.jpg");
 
@@ -253,7 +258,10 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
 
     it("downloads TV logo from TheTVDB on cache miss", async () => {
       const app = createTestApp();
-      mockGet.mockReturnValue({ path: "https://artworks.thetvdb.com/logo.png", title: "Test Show" });
+      mockGet.mockReturnValue({
+        path: "https://artworks.thetvdb.com/logo.png",
+        title: "Test Show",
+      });
 
       await request(app).get("/media/images/tv/81189/logo.png");
 
@@ -281,7 +289,10 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
 
     it("generates placeholder for TV when download fails", async () => {
       const app = createTestApp();
-      mockGet.mockReturnValue({ path: "https://artworks.thetvdb.com/poster.jpg", title: "Test Show" });
+      mockGet.mockReturnValue({
+        path: "https://artworks.thetvdb.com/poster.jpg",
+        title: "Test Show",
+      });
       mockDownloadTvShowImages.mockRejectedValue(new Error("Download failed"));
 
       const res = await request(app).get("/media/images/tv/81189/poster.jpg");
