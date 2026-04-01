@@ -123,19 +123,23 @@ describe("downloadMovieImages", () => {
     consoleSpy.mockRestore();
   });
 
-  it("handles network failures gracefully", async () => {
-    fetchMock.mockRejectedValueOnce(new Error("Network error"));
-
+  it("handles network failures gracefully with retries", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new Error("Network error"));
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await expect(
-      service.downloadMovieImages(550, "/poster.jpg", null, null)
-    ).resolves.toBeUndefined();
+    const promise = service.downloadMovieImages(550, "/poster.jpg", null, null);
+    await vi.advanceTimersByTimeAsync(500); // retry 1
+    await vi.advanceTimersByTimeAsync(1000); // retry 2
+    await promise;
 
     expect(fs.writeFile).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledOnce();
+    // 2 retry warnings + 1 final failure
+    expect(consoleSpy).toHaveBeenCalledTimes(3);
+    expect(consoleSpy.mock.calls[2]![0]).toContain("after 3 attempts");
 
     consoleSpy.mockRestore();
+    vi.useRealTimers();
   });
 });
 
@@ -235,17 +239,20 @@ describe("downloadTvShowImages", () => {
     expect(fs.writeFile).not.toHaveBeenCalled();
   });
 
-  it("handles network failures gracefully", async () => {
-    fetchMock.mockRejectedValueOnce(new Error("Network error"));
+  it("handles network failures gracefully with retries", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new Error("Network error"));
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await expect(
-      service.downloadTvShowImages(81189, "https://artworks.thetvdb.com/p.jpg", null)
-    ).resolves.toBeUndefined();
+    const promise = service.downloadTvShowImages(81189, "https://artworks.thetvdb.com/p.jpg", null);
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
 
     expect(fs.writeFile).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledOnce();
+    expect(consoleSpy).toHaveBeenCalledTimes(3);
     consoleSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("handles HTTP error status gracefully", async () => {
@@ -328,16 +335,21 @@ describe("rate limiter integration", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("skips fetch if acquire rejects", async () => {
+  it("skips fetch if acquire rejects (retries exhaust)", async () => {
+    vi.useFakeTimers();
     const mockAcquire = vi.fn().mockRejectedValue(new Error("Rate limit destroyed"));
     const rateLimitedService = new ImageCacheService(IMAGES_DIR, { acquire: mockAcquire });
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await rateLimitedService.downloadMovieImages(550, "/poster.jpg", null, null);
+    const promise = rateLimitedService.downloadMovieImages(550, "/poster.jpg", null, null);
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(fs.writeFile).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
+    vi.useRealTimers();
   });
 });
 
@@ -509,5 +521,108 @@ describe("getSeasonImagePath", () => {
     const result = await service.getSeasonImagePath(81189, 1);
 
     expect(result).toBeNull();
+  });
+});
+
+describe("retry behavior", () => {
+  it("succeeds on second attempt after transient failure", async () => {
+    vi.useFakeTimers();
+    fetchMock
+      .mockRejectedValueOnce(new Error("ECONNRESET"))
+      .mockResolvedValueOnce(mockImageResponse());
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const promise = service.downloadMovieImages(550, "/poster.jpg", null, null);
+    await vi.advanceTimersByTimeAsync(500);
+    await promise;
+
+    expect(fs.writeFile).toHaveBeenCalledTimes(1);
+    // Only 1 retry warning, no final failure
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    expect(consoleSpy.mock.calls[0]![0]).toContain("Attempt 1 failed");
+
+    consoleSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("succeeds on third attempt after two transient failures", async () => {
+    vi.useFakeTimers();
+    fetchMock
+      .mockRejectedValueOnce(new Error("ECONNRESET"))
+      .mockRejectedValueOnce(new Error("ETIMEDOUT"))
+      .mockResolvedValueOnce(mockImageResponse());
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const promise = service.downloadMovieImages(550, "/poster.jpg", null, null);
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
+
+    expect(fs.writeFile).toHaveBeenCalledTimes(1);
+    expect(consoleSpy).toHaveBeenCalledTimes(2);
+
+    consoleSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("does not retry on 4xx client errors", async () => {
+    fetchMock.mockResolvedValueOnce(mockImageResponse(new ArrayBuffer(0), 403));
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await service.downloadMovieImages(550, "/poster.jpg", null, null);
+
+    // Single warn, no retries
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    expect(consoleSpy.mock.calls[0]![0]).toContain("403");
+    expect(consoleSpy.mock.calls[0]![0]).toContain("skipping");
+
+    consoleSpy.mockRestore();
+  });
+
+  it("retries on 5xx server errors", async () => {
+    vi.useFakeTimers();
+    fetchMock
+      .mockResolvedValueOnce(mockImageResponse(new ArrayBuffer(0), 502))
+      .mockResolvedValueOnce(mockImageResponse());
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const promise = service.downloadMovieImages(550, "/poster.jpg", null, null);
+    await vi.advanceTimersByTimeAsync(500);
+    await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fs.writeFile).toHaveBeenCalledTimes(1);
+
+    consoleSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("uses linear backoff for retry delays", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new Error("Network error"));
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const promise = service.downloadMovieImages(550, "/poster.jpg", null, null);
+
+    // After 499ms, only first attempt should have run
+    await vi.advanceTimersByTimeAsync(499);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // At 500ms, second attempt fires
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // After another 999ms, still only 2 attempts
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // At 1000ms more, third attempt fires
+    await vi.advanceTimersByTimeAsync(1);
+    await promise;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    consoleSpy.mockRestore();
+    vi.useRealTimers();
   });
 });

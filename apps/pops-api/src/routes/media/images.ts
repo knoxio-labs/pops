@@ -5,7 +5,9 @@
  *
  * Serves locally cached images with immutable cache headers.
  * Checks for override file first when requesting posters.
- * Returns 404 on cache miss (on-demand download is a follow-up).
+ * On cache miss, downloads the image on-demand from the original source
+ * (TMDB for movies, TheTVDB for TV shows), caches it, and serves it.
+ * Falls back to an SVG placeholder when all else fails.
  */
 import { type Router as ExpressRouter, Router } from "express";
 import { stat } from "node:fs/promises";
@@ -32,6 +34,16 @@ const CACHE_CONTROL = "public, max-age=31536000, immutable";
 function getImagesDir(): string {
   const dir = process.env.MEDIA_IMAGES_DIR ?? "./data/media/images";
   return resolve(dir); // Return absolute path
+}
+
+/**
+ * Resolve the image type from the filename.
+ * Returns "poster", "backdrop", or "logo" for use in DB column lookups.
+ */
+function resolveImageType(filename: string): "poster" | "backdrop" | "logo" {
+  if (filename.startsWith("poster") || filename.startsWith("season_")) return "poster";
+  if (filename.startsWith("logo")) return "logo";
+  return "backdrop";
 }
 
 const router: ExpressRouter = Router();
@@ -75,22 +87,19 @@ router.get("/media/images/:mediaType/:id/:filename", async (req, res): Promise<v
     if (served) return;
   }
 
-  // Serve the requested file
+  // Serve the requested file from local cache
   const filePath = join(mediaDir, filename);
   const served = await tryServeFile(filePath, res);
   if (served) return;
 
-  // Cache miss — try to redirect to original source
+  // Cache miss — try to download on-demand from original source
   try {
     const db = getDb();
     const table = mediaType === "movie" ? "movies" : "tv_shows";
     const idColumn = mediaType === "movie" ? "tmdb_id" : "tvdb_id";
     const titleColumn = mediaType === "movie" ? "title" : "name";
-    const pathColumn = filename.startsWith("poster")
-      ? "poster_path"
-      : filename.startsWith("logo")
-        ? "logo_path"
-        : "backdrop_path";
+    const imageType = resolveImageType(filename);
+    const pathColumn = imageType === "poster" ? "poster_path" : imageType === "logo" ? "logo_path" : "backdrop_path";
 
     const record = db
       .prepare(
@@ -99,17 +108,16 @@ router.get("/media/images/:mediaType/:id/:filename", async (req, res): Promise<v
       .get(id) as { path: string | null; title: string | null } | undefined;
 
     if (record?.path) {
-      const originalPath = record.path;
-
-      if (originalPath.startsWith("http")) {
-        res.redirect(originalPath);
-        return;
-      } else if (originalPath.startsWith("/")) {
-        // Assume TMDB
-        const size = filename.startsWith("poster") ? "w780" : "w1280";
-        res.redirect(`https://image.tmdb.org/t/p/${size}${originalPath}`);
-        return;
-      }
+      // Download the image to local cache, then serve it
+      const downloaded = await downloadAndServe(
+        mediaType,
+        Number(id),
+        record.path,
+        imageType,
+        filePath,
+        res
+      );
+      if (downloaded) return;
     }
 
     // Generate placeholder as final fallback for poster requests
@@ -130,6 +138,42 @@ router.get("/media/images/:mediaType/:id/:filename", async (req, res): Promise<v
   // Final 404 if no fallback available
   res.status(404).json({ error: "Image not found" });
 });
+
+/**
+ * Download an image from its original source (TMDB or TheTVDB) to the local cache,
+ * then serve it. Returns true if the image was served, false on failure.
+ */
+async function downloadAndServe(
+  mediaType: string,
+  id: number,
+  originalPath: string,
+  imageType: "poster" | "backdrop" | "logo",
+  filePath: string,
+  res: import("express").Response
+): Promise<boolean> {
+  const imageCache = getImageCache();
+
+  try {
+    if (mediaType === "movie") {
+      // TMDB paths start with "/" — download via TMDB CDN with appropriate size prefix
+      const posterPath = imageType === "poster" ? originalPath : null;
+      const backdropPath = imageType === "backdrop" ? originalPath : null;
+      const logoPath = imageType === "logo" ? originalPath : null;
+      await imageCache.downloadMovieImages(id, posterPath, backdropPath, logoPath);
+    } else if (mediaType === "tv") {
+      // TheTVDB paths are full URLs
+      const posterUrl = imageType === "poster" ? originalPath : null;
+      const backdropUrl = imageType === "backdrop" ? originalPath : null;
+      await imageCache.downloadTvShowImages(id, posterUrl, backdropUrl);
+    }
+
+    // Serve the freshly downloaded file
+    return await tryServeFile(filePath, res);
+  } catch (err) {
+    console.warn(`[Images] On-demand download failed for ${mediaType}/${id}:`, err);
+    return false;
+  }
+}
 
 /**
  * Try to serve a file with cache headers.
@@ -157,8 +201,19 @@ async function tryServeFile(filePath: string, res: import("express").Response): 
       return true;
     }
 
-    res.sendFile(resolve(filePath)); // Ensure absolute path
-    return true;
+    return new Promise<boolean>((resolvePromise) => {
+      res.sendFile(resolve(filePath), (err) => {
+        if (err) {
+          // sendFile failed — if headers haven't been flushed yet, send 500
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Failed to send file" });
+          }
+          resolvePromise(true); // Response was handled (even if errored)
+        } else {
+          resolvePromise(true);
+        }
+      });
+    });
   } catch {
     return false;
   }
