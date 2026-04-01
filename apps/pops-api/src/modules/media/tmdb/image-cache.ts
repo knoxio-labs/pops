@@ -116,7 +116,8 @@ export class ImageCacheService {
     tvdbId: number,
     posterUrl: string | null,
     backdropUrl: string | null,
-    seasonPosters?: Array<{ seasonNumber: number; posterUrl: string | null }>
+    seasonPosters?: Array<{ seasonNumber: number; posterUrl: string | null }>,
+    logoUrl?: string | null
   ): Promise<void> {
     const tvDir = this.tvShowDir(tvdbId);
     await mkdir(tvDir, { recursive: true });
@@ -129,6 +130,10 @@ export class ImageCacheService {
 
     if (backdropUrl) {
       downloads.push(this.downloadImage(backdropUrl, join(tvDir, IMAGE_FILENAMES.backdrop)));
+    }
+
+    if (logoUrl) {
+      downloads.push(this.downloadImage(logoUrl, join(tvDir, IMAGE_FILENAMES.logo)));
     }
 
     if (seasonPosters) {
@@ -292,23 +297,44 @@ export class ImageCacheService {
       // File doesn't exist — proceed with download
     }
 
-    try {
-      if (this.rateLimiter) {
-        await this.rateLimiter.acquire();
-      }
+    const MAX_RETRIES = 2;
+    const RETRY_DELAY_MS = 500;
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText}`);
-      }
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (this.rateLimiter) {
+          await this.rateLimiter.acquire();
+        }
 
-      const buffer = Buffer.from(await response.arrayBuffer());
-      await writeFile(destPath, buffer);
-    } catch (err) {
-      // Log but don't throw — missing images are not fatal
-      console.warn(
-        `[ImageCache] Failed to download ${url}: ${err instanceof Error ? err.message : String(err)}`
-      );
+        const response = await fetch(url);
+
+        // Don't retry client errors (404, 403, etc.) — those are permanent
+        if (response.status >= 400 && response.status < 500) {
+          console.warn(`[ImageCache] ${response.status} for ${url} — skipping`);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const buffer = Buffer.from(await response.arrayBuffer());
+        await writeFile(destPath, buffer);
+        return;
+      } catch (err) {
+        const isLastAttempt = attempt === MAX_RETRIES;
+        if (isLastAttempt) {
+          console.warn(
+            `[ImageCache] Failed to download ${url} after ${MAX_RETRIES + 1} attempts: ${err instanceof Error ? err.message : String(err)}`
+          );
+          return;
+        }
+        const delay = RETRY_DELAY_MS * (attempt + 1);
+        console.warn(
+          `[ImageCache] Attempt ${attempt + 1} failed for ${url}, retrying in ${delay}ms: ${err instanceof Error ? err.message : String(err)}`
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      }
     }
   }
 }
