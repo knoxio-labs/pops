@@ -116,7 +116,8 @@ export class ImageCacheService {
     tvdbId: number,
     posterUrl: string | null,
     backdropUrl: string | null,
-    seasonPosters?: Array<{ seasonNumber: number; posterUrl: string | null }>
+    seasonPosters?: Array<{ seasonNumber: number; posterUrl: string | null }>,
+    logoUrl?: string | null
   ): Promise<void> {
     const tvDir = this.tvShowDir(tvdbId);
     await mkdir(tvDir, { recursive: true });
@@ -129,6 +130,10 @@ export class ImageCacheService {
 
     if (backdropUrl) {
       downloads.push(this.downloadImage(backdropUrl, join(tvDir, IMAGE_FILENAMES.backdrop)));
+    }
+
+    if (logoUrl) {
+      downloads.push(this.downloadImage(logoUrl, join(tvDir, IMAGE_FILENAMES.logo)));
     }
 
     if (seasonPosters) {

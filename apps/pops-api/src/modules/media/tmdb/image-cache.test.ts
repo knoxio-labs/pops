@@ -473,6 +473,24 @@ describe("downloadTvShowImages — season posters", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("downloads logo alongside other TV images", async () => {
+    fetchMock.mockResolvedValue(mockImageResponse());
+
+    await service.downloadTvShowImages(
+      81189,
+      "https://artworks.thetvdb.com/banners/posters/81189.jpg",
+      null,
+      undefined,
+      "https://artworks.thetvdb.com/banners/logos/81189.png"
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const paths = vi.mocked(fs.writeFile).mock.calls.map((c) => c[0]);
+    expect(paths).toContainEqual(path.join(IMAGES_DIR, "tv", "81189", "poster.jpg"));
+    expect(paths).toContainEqual(path.join(IMAGES_DIR, "tv", "81189", "logo.png"));
+  });
 });
 
 describe("generateTvPlaceholder", () => {

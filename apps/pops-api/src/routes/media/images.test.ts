@@ -245,7 +245,24 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
       expect(mockDownloadTvShowImages).toHaveBeenCalledWith(
         81189,
         "https://artworks.thetvdb.com/poster.jpg",
+        null,
+        undefined,
         null
+      );
+    });
+
+    it("downloads TV logo from TheTVDB on cache miss", async () => {
+      const app = createTestApp();
+      mockGet.mockReturnValue({ path: "https://artworks.thetvdb.com/logo.png", title: "Test Show" });
+
+      await request(app).get("/media/images/tv/81189/logo.png");
+
+      expect(mockDownloadTvShowImages).toHaveBeenCalledWith(
+        81189,
+        null,
+        null,
+        undefined,
+        "https://artworks.thetvdb.com/logo.png"
       );
     });
 
@@ -304,6 +321,17 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
 
       expect(mockDownloadMovieImages).not.toHaveBeenCalled();
       expect(mockGeneratePlaceholder).not.toHaveBeenCalled();
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 404 immediately for override.jpg without downloading", async () => {
+      const app = createTestApp();
+
+      const res = await request(app).get("/media/images/movie/550/override.jpg");
+
+      // override.jpg is a user upload — never downloaded on-demand
+      expect(mockDownloadMovieImages).not.toHaveBeenCalled();
+      expect(mockDownloadTvShowImages).not.toHaveBeenCalled();
       expect(res.status).toBe(404);
     });
   });
