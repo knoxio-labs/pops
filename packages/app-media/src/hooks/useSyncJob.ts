@@ -69,23 +69,32 @@ const JOB_TYPE_LABELS: Record<SyncJobType, string> = {
 
 export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
   const [jobId, setJobId] = useState<string | null>(null);
+  const [restoredJob, setRestoredJob] = useState<SyncJob | null>(null);
   const restoredRef = useRef(false);
   const label = JOB_TYPE_LABELS[jobType];
 
-  // On mount, check for any active job of this type to restore
+  // On mount, check for any active job of this type to restore.
+  // While this is loading, isRunning reflects the restore state so the
+  // UI stays disabled and doesn't let the user start a duplicate job.
   const activeJobs = trpc.media.plex.getActiveSyncJobs.useQuery(undefined, {
     enabled: !jobId && !restoredRef.current,
     refetchOnWindowFocus: false,
   });
+  const isRestoring = !restoredRef.current && !jobId && activeJobs.isLoading;
 
   useEffect(() => {
     if (restoredRef.current || jobId) return;
     if (!activeJobs.data?.data) return;
     restoredRef.current = true;
 
-    const match = activeJobs.data.data.find((j) => j.jobType === jobType && j.status === "running");
+    const match = activeJobs.data.data.find(
+      (j) => j.jobType === jobType && j.status === "running"
+    ) as SyncJob | undefined;
     if (match) {
       setJobId(match.id);
+      // Immediately surface progress from the restore response
+      // so the UI shows "15/700" before the first status poll arrives
+      setRestoredJob(match);
     }
   }, [activeJobs.data?.data, jobId, jobType]);
 
@@ -100,6 +109,13 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
       },
     }
   );
+
+  // Clear restored snapshot once real polling data arrives
+  useEffect(() => {
+    if (statusQuery.data?.data && restoredJob) {
+      setRestoredJob(null);
+    }
+  }, [statusQuery.data?.data, restoredJob]);
 
   const startMutation = trpc.media.plex.startSyncJob.useMutation({
     onSuccess: (res) => {
@@ -130,8 +146,9 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     [jobType, startMutation]
   );
 
-  const job = statusQuery.data?.data as SyncJob | undefined;
-  const isRunning = job?.status === "running";
+  // Use polled data when available, otherwise the restored snapshot
+  const job = (statusQuery.data?.data as SyncJob | undefined) ?? restoredJob;
+  const isRunning = isRestoring || job?.status === "running";
 
   return {
     start,
@@ -142,7 +159,7 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     error: job?.status === "failed" ? job.error : null,
     durationMs: job?.durationMs ?? null,
     completedAt: job?.completedAt ?? null,
-    status: !job ? "idle" : job.status,
+    status: isRestoring ? "running" : !job ? "idle" : job.status,
   };
 }
 
