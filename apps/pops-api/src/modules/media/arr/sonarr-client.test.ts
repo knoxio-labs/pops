@@ -422,7 +422,12 @@ describe("SonarrClient", () => {
     it("returns monitored when no episode files exist", async () => {
       const monitoredSeries = {
         ...baseSeries,
-        statistics: { episodeFileCount: 0, episodeCount: 62, totalEpisodeCount: 62, percentOfEpisodes: 0 },
+        statistics: {
+          episodeFileCount: 0,
+          episodeCount: 62,
+          totalEpisodeCount: 62,
+          percentOfEpisodes: 0,
+        },
       };
       mockFetch.mockResolvedValueOnce(jsonResponse([monitoredSeries]));
       mockFetch.mockResolvedValueOnce(jsonResponse({ totalRecords: 0, records: [] }));
@@ -470,7 +475,14 @@ describe("SonarrClient", () => {
         jsonResponse({
           totalRecords: 1,
           records: [
-            { id: 1, seriesId: 10, title: "Breaking Bad", status: "downloading", sizeleft: 500, size: 1000 },
+            {
+              id: 1,
+              seriesId: 10,
+              title: "Breaking Bad",
+              status: "downloading",
+              sizeleft: 500,
+              size: 1000,
+            },
           ],
         })
       );
