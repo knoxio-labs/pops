@@ -31,6 +31,47 @@ vi.mock("../../modules/media/tmdb/index.js", () => ({
   })),
 }));
 
+/** Create a mock FileHandle that reads the given bytes. */
+function createMockFileHandle(
+  content: Buffer
+): Awaited<ReturnType<(typeof import("node:fs/promises"))["open"]>> {
+  /* FileHandle has ~20 methods; only read() and close() are called by the route. */
+  const handle = {
+    fd: 0,
+    appendFile: vi.fn(),
+    chmod: vi.fn(),
+    chown: vi.fn(),
+    close: vi.fn(),
+    createReadStream: vi.fn(),
+    createWriteStream: vi.fn(),
+    datasync: vi.fn(),
+    read: vi.fn(),
+    readFile: vi.fn(),
+    readLines: vi.fn(),
+    readableWebStream: vi.fn(),
+    readv: vi.fn(),
+    stat: vi.fn(),
+    sync: vi.fn(),
+    truncate: vi.fn(),
+    utimes: vi.fn(),
+    write: vi.fn(),
+    writeFile: vi.fn(),
+    writev: vi.fn(),
+    [Symbol.asyncDispose]: vi.fn(),
+  } as Awaited<ReturnType<(typeof import("node:fs/promises"))["open"]>>;
+
+  // Set up read implementation after cast to avoid overload signature mismatch
+  handle.read = vi
+    .fn()
+    .mockImplementation(async (buf: Buffer, _offset: number, length: number, position: number) => {
+      const bytesToRead = Math.min(length, content.length - position);
+      content.copy(buf, 0, position, position + bytesToRead);
+      return { bytesRead: bytesToRead, buffer: buf };
+    }) as typeof handle.read;
+
+  return handle;
+}
+
 const TEST_IMAGES_DIR = "/test/media/images";
 
 function createTestApp() {
@@ -43,8 +84,9 @@ beforeEach(() => {
   vi.stubEnv("MEDIA_IMAGES_DIR", TEST_IMAGES_DIR);
   // Default: files don't exist
   vi.mocked(fs.stat).mockRejectedValue(new Error("ENOENT"));
-  // Default: readFile fails (file doesn't exist) → isCorruptedPlaceholder returns false
-  vi.mocked(fs.readFile).mockRejectedValue(new Error("ENOENT"));
+  // Default: open fails (file doesn't exist) → removeCorruptedPlaceholder returns false
+  vi.mocked(fs.open).mockRejectedValue(new Error("ENOENT"));
+  vi.mocked(fs.unlink).mockResolvedValue(undefined);
   mockGet.mockReturnValue(undefined);
   mockDownloadMovieImages.mockResolvedValue(undefined);
   mockDownloadTvShowImages.mockResolvedValue(undefined);
@@ -352,23 +394,27 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
   });
 
   describe("corrupted SVG placeholder detection", () => {
-    it("skips corrupted SVG placeholder and redirects to CDN", async () => {
+    it("deletes corrupted SVG placeholder and redirects to CDN", async () => {
       const app = createTestApp();
-      vi.mocked(fs.readFile).mockResolvedValue(Buffer.from("<svg xmlns=..."));
+      vi.mocked(fs.open).mockResolvedValue(createMockFileHandle(Buffer.from("<svg xmlns=...")));
       mockGet.mockReturnValue({ path: "/abc123.jpg" });
 
       const res = await request(app).get("/media/images/movie/550/poster.jpg");
 
+      // Should delete the corrupted file
+      expect(fs.unlink).toHaveBeenCalled();
       // Should NOT serve the corrupted file — should redirect to CDN
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe("https://image.tmdb.org/t/p/w780/abc123.jpg");
     });
 
-    it("serves real JPEG file normally", async () => {
+    it("serves real JPEG file normally without deleting", async () => {
       const app = createTestApp();
       const posterPath = join(TEST_IMAGES_DIR, "movies", "550", "poster.jpg");
 
-      vi.mocked(fs.readFile).mockResolvedValue(Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+      vi.mocked(fs.open).mockResolvedValue(
+        createMockFileHandle(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))
+      );
       vi.mocked(fs.stat).mockImplementation(async (path) => {
         if (path === posterPath) {
           return { mtimeMs: 1700000000000, size: 12345 } as Awaited<ReturnType<typeof fs.stat>>;
@@ -378,6 +424,8 @@ describe("GET /media/images/:mediaType/:id/:filename", () => {
 
       await request(app).get("/media/images/movie/550/poster.jpg");
 
+      // Should NOT delete a valid file
+      expect(fs.unlink).not.toHaveBeenCalled();
       // stat should be called for the poster file (tryServeFile path)
       expect(fs.stat).toHaveBeenCalledWith(posterPath);
     });

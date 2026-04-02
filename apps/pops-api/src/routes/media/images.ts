@@ -11,7 +11,7 @@
  * Falls back to 404 only when there is genuinely no image source.
  */
 import { type Router as ExpressRouter, Router } from "express";
-import { readFile, stat } from "node:fs/promises";
+import { open, stat, unlink } from "node:fs/promises";
 import { join, resolve, extname } from "node:path";
 import { createHash } from "node:crypto";
 import { MEDIA_DIR_NAMES } from "../../modules/media/tmdb/image-cache.js";
@@ -77,16 +77,30 @@ function buildCdnFallbackUrl(
 }
 
 /**
- * Check if a cached file is a corrupted SVG placeholder (SVG content saved as .jpg).
- * Reads the file and checks if it starts with "<svg".
+ * Detect and remove corrupted SVG placeholders (SVG content saved as .jpg).
+ * Reads only 4 bytes to check. If corrupted, deletes the file so downstream
+ * downloads aren't blocked by the skip-if-exists check in ImageCacheService.
+ * Returns true if a corrupted file was found and removed.
  */
-async function isCorruptedPlaceholder(filePath: string): Promise<boolean> {
+async function removeCorruptedPlaceholder(filePath: string): Promise<boolean> {
+  let fh: Awaited<ReturnType<typeof open>> | undefined;
   try {
-    const buf = await readFile(filePath);
-    if (buf.length < 4) return false;
-    return buf.toString("ascii", 0, 4) === "<svg";
+    fh = await open(filePath, "r");
+    const buf = Buffer.alloc(4);
+    const { bytesRead } = await fh.read(buf, 0, 4, 0);
+    if (bytesRead < 4) return false;
+
+    if (buf.toString("ascii", 0, 4) === "<svg") {
+      await fh.close();
+      fh = undefined;
+      await unlink(filePath).catch(() => {});
+      return true;
+    }
+    return false;
   } catch {
     return false;
+  } finally {
+    await fh?.close();
   }
 }
 
@@ -131,9 +145,10 @@ router.get("/media/images/:mediaType/:id/:filename", async (req, res): Promise<v
     if (served) return;
   }
 
-  // Serve the requested file from local cache (skip corrupted SVG placeholders)
+  // Remove corrupted SVG placeholders so they don't block downloads or get served
   const filePath = join(mediaDir, filename);
-  if (!(await isCorruptedPlaceholder(filePath))) {
+  const wasCorrupted = await removeCorruptedPlaceholder(filePath);
+  if (!wasCorrupted) {
     const served = await tryServeFile(filePath, res);
     if (served) return;
   }
