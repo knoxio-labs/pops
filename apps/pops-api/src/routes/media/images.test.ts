@@ -31,7 +31,6 @@ vi.mock("../../modules/media/tmdb/index.js", () => ({
   })),
 }));
 
-
 const TEST_IMAGES_DIR = "/test/media/images";
 
 function createTestApp() {
