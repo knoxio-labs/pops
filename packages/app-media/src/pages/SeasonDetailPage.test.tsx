@@ -138,11 +138,15 @@ vi.mock("../lib/trpc", () => ({
             setData: mockSetListData,
           },
           progress: {
+            invalidate: mockInvalidate,
             cancel: mockCancel,
             getData: vi.fn(),
             setData: mockSetProgressData,
           },
           invalidate: mockInvalidate,
+        },
+        tvShows: {
+          listSeasons: { invalidate: mockInvalidate },
         },
         arr: {
           checkSeries: { invalidate: mockInvalidate },
