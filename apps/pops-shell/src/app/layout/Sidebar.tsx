@@ -10,6 +10,7 @@ import { iconMap } from "@/app/nav/icon-map";
 import { isPageActive } from "@/app/nav/path-utils";
 import { useUIStore } from "@/store/uiStore";
 import { X } from "lucide-react";
+import { Button } from "@pops/ui";
 import { BuildVersion } from "./BuildVersion";
 
 interface SidebarProps {
@@ -43,13 +44,15 @@ export function Sidebar({ open }: SidebarProps) {
             <span className="text-lg font-bold">POPS</span>
             <BuildVersion />
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setSidebarOpen(false)}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-lg"
+            className="min-w-[44px] min-h-[44px]"
             aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <nav className="p-4 space-y-1">

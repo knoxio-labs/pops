@@ -12,7 +12,7 @@ import { iconMap } from "@/app/nav/icon-map";
 import { matchesAtBoundary } from "@/app/nav/path-utils";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
-import { Tooltip, TooltipContent, TooltipTrigger, cn } from "@pops/ui";
+import { Button, Tooltip, TooltipContent, TooltipTrigger, cn } from "@pops/ui";
 
 interface AppRailProps {
   className?: string;
@@ -48,13 +48,15 @@ export function AppRail({ className }: AppRailProps) {
           className
         )}
       >
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleRail}
-          className="min-w-9 min-h-9 flex items-center justify-center hover:bg-muted rounded-lg"
+          className="min-w-9 min-h-9 h-9 w-9"
           aria-label="Expand app rail"
         >
           <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-        </button>
+        </Button>
       </div>
     );
   }
@@ -75,7 +77,8 @@ export function AppRail({ className }: AppRailProps) {
         return (
           <Tooltip key={app.id}>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => {
                   navigate(app.basePath);
                   if (isTablet) {
@@ -83,7 +86,7 @@ export function AppRail({ className }: AppRailProps) {
                   }
                 }}
                 className={cn(
-                  "relative w-full flex items-center justify-center py-1 transition-colors group",
+                  "relative w-full h-auto flex items-center justify-center py-1 transition-colors group rounded-none",
                   appColorClass
                 )}
                 aria-label={app.label}
@@ -113,7 +116,7 @@ export function AppRail({ className }: AppRailProps) {
                     <span className="text-lg font-semibold">{app.label[0]}</span>
                   )}
                 </span>
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="right">{app.label}</TooltipContent>
           </Tooltip>
@@ -124,13 +127,15 @@ export function AppRail({ className }: AppRailProps) {
       <div className="mt-auto flex justify-center">
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleRail}
-              className="min-w-9 min-h-9 flex items-center justify-center hover:bg-muted rounded-lg"
+              className="min-w-9 min-h-9 h-9 w-9"
               aria-label="Collapse app rail"
             >
               <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="right">Collapse</TooltipContent>
         </Tooltip>
