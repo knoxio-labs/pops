@@ -249,7 +249,7 @@ export function RankingsPage() {
         <RankingsSkeleton />
       ) : showTabs ? (
         <Tabs value={dimensionParam} onValueChange={handleTabChange}>
-          <TabsList>
+          <TabsList className="h-auto flex-wrap justify-center">
             <TabsTrigger value="overall">Overall</TabsTrigger>
             {activeDimensions.map((dim: { id: number; name: string }) => (
               <TabsTrigger key={dim.id} value={String(dim.id)}>
