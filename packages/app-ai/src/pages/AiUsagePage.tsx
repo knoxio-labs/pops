@@ -77,7 +77,10 @@ function CacheManagement() {
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
-            <Label htmlFor="stale-days" className="text-muted-foreground whitespace-nowrap font-normal">
+            <Label
+              htmlFor="stale-days"
+              className="text-muted-foreground whitespace-nowrap font-normal"
+            >
               Older than
             </Label>
             <Input

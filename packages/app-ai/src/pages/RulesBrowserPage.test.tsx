@@ -197,6 +197,35 @@ vi.mock("@pops/ui", async () => {
       }
       return React.createElement("button", { onClick: () => dialogCloseRef?.() }, children);
     },
+    Slider: ({
+      value,
+      onValueChange,
+      min = 0,
+      max = 1,
+      step = 0.01,
+      className,
+      ...rest
+    }: {
+      value?: number[];
+      onValueChange?: (values: number[]) => void;
+      min?: number;
+      max?: number;
+      step?: number;
+      className?: string;
+      "aria-label"?: string;
+    }) =>
+      React.createElement("input", {
+        type: "range",
+        min,
+        max,
+        step,
+        value: value?.[0] ?? min,
+        className,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+          onValueChange?.([parseFloat(e.target.value)]);
+        },
+        ...rest,
+      }),
   };
 });
 
