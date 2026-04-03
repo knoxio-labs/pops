@@ -24,6 +24,7 @@ import {
   DialogFooter,
   DialogClose,
   PageHeader,
+  Slider,
 } from "@pops/ui";
 import { trpc } from "../lib/trpc";
 
@@ -105,8 +106,8 @@ function ConfidenceSlider({
     [ruleId, adjustMutation, onAutoDelete]
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = parseFloat(e.target.value);
+  const handleChange = (values: number[]) => {
+    const next = values[0] ?? value;
     setValue(next);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => commit(next), 400);
@@ -120,14 +121,13 @@ function ConfidenceSlider({
 
   return (
     <div className="flex items-center gap-2 min-w-[140px]">
-      <input
-        type="range"
+      <Slider
         min={0}
         max={1}
         step={0.01}
-        value={value}
-        onChange={handleChange}
-        className="w-20 accent-primary"
+        value={[value]}
+        onValueChange={handleChange}
+        className="w-20"
         aria-label={`Confidence for rule ${ruleId}`}
       />
       <span className="text-xs tabular-nums w-10 text-right">{(value * 100).toFixed(0)}%</span>

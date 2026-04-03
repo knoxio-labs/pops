@@ -7,6 +7,7 @@
 import { useThemeStore } from "@/store/themeStore";
 import { useUIStore } from "@/store/uiStore";
 import { Menu, Sun, Moon } from "lucide-react";
+import { Button } from "@pops/ui";
 import { BuildVersion } from "./BuildVersion";
 
 export function TopBar() {
@@ -16,13 +17,15 @@ export function TopBar() {
 
   return (
     <header className="bg-card border-b border-border h-14 md:h-16 flex items-center px-3 md:px-4 fixed top-0 w-full z-40">
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={toggleSidebar}
-        className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-lg mr-2 md:hidden"
+        className="min-w-[44px] min-h-[44px] mr-2 md:hidden"
         aria-label="Toggle sidebar"
       >
         <Menu className="h-5 w-5" />
-      </button>
+      </Button>
 
       <div className="flex items-baseline gap-1.5">
         <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-[oklch(0.7_0.2_150)] via-[oklch(0.6_0.2_260)] to-[oklch(0.6_0.2_320)] tracking-tighter">
@@ -32,9 +35,11 @@ export function TopBar() {
       </div>
 
       <div className="ml-auto flex items-center gap-1 md:gap-4">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleTheme}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-lg transition-colors group"
+          className="min-w-[44px] min-h-[44px] transition-colors group"
           aria-label="Toggle theme"
         >
           {theme === "dark" ? (
@@ -42,7 +47,7 @@ export function TopBar() {
           ) : (
             <Moon className="h-5 w-5 text-indigo-600 group-hover:text-indigo-500 transition-colors" />
           )}
-        </button>
+        </Button>
 
         <div className="hidden md:block text-sm text-muted-foreground">user@example.com</div>
       </div>

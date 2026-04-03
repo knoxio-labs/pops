@@ -6,7 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { DataTable, SortableHeader, StatCard, DateInput } from "@pops/ui";
-import { Badge, Button } from "@pops/ui";
+import { Badge, Button, Input, Label } from "@pops/ui";
 import { Alert, PageHeader } from "@pops/ui";
 import { Skeleton } from "@pops/ui";
 import { Card } from "@pops/ui";
@@ -77,17 +77,20 @@ function CacheManagement() {
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
-            <label htmlFor="stale-days" className="text-sm text-muted-foreground whitespace-nowrap">
+            <Label
+              htmlFor="stale-days"
+              className="text-muted-foreground whitespace-nowrap font-normal"
+            >
               Older than
-            </label>
-            <input
+            </Label>
+            <Input
               id="stale-days"
               type="number"
               min={1}
               max={365}
               value={staleDays}
               onChange={(e) => setStaleDays(Number(e.target.value) || 30)}
-              className="w-16 rounded-md border border-input bg-background px-2 py-1 text-sm text-center"
+              className="w-16 h-8 px-2 py-1 text-sm text-center"
             />
             <span className="text-sm text-muted-foreground">days</span>
           </div>
