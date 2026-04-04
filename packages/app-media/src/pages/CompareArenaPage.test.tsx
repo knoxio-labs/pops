@@ -442,11 +442,11 @@ describe("CompareArenaPage", () => {
   it("renders Not Watched buttons for both movies on cards and in action bar", () => {
     setupArena();
     renderPage();
-    // Both card buttons and action bar buttons have the same aria-label
-    const matrixButtons = screen.getAllByLabelText("Not watched The Matrix");
-    const inceptionButtons = screen.getAllByLabelText("Not watched Inception");
-    expect(matrixButtons.length).toBe(2); // card + action bar
-    expect(inceptionButtons.length).toBe(2); // card + action bar
+    // Card buttons have aria-label, action bar buttons have data-testid + text
+    expect(screen.getByLabelText("Not watched The Matrix")).toBeTruthy();
+    expect(screen.getByLabelText("Not watched Inception")).toBeTruthy();
+    expect(screen.getByText("Not Watched: The Matrix")).toBeTruthy();
+    expect(screen.getByText("Not Watched: Inception")).toBeTruthy();
   });
 
   it("renders Not Watched action bar buttons with movie titles", () => {
