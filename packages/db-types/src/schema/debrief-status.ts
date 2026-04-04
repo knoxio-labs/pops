@@ -24,7 +24,7 @@ export const debriefStatus = sqliteTable(
     uniqueMediaDimension: uniqueIndex("debrief_status_media_dimension_idx").on(
       table.mediaType,
       table.mediaId,
-      table.dimensionId,
+      table.dimensionId
     ),
-  }),
+  })
 );
