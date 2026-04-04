@@ -8,7 +8,13 @@ vi.mock("../../../db.js", () => ({
 }));
 
 vi.mock("@pops/db-types", () => ({
-  movies: { tmdbId: "tmdb_id" },
+  movies: { tmdbId: "tmdb_id", id: "id" },
+  mediaWatchlist: { mediaId: "media_id", mediaType: "media_type", addedAt: "added_at" },
+}));
+
+vi.mock("./flags.js", () => ({
+  getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
 import { getDrizzle } from "../../../db.js";

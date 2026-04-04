@@ -250,6 +250,8 @@ export function getUnwatchedLibraryMovies(): DiscoverResult[] {
       genreIds,
       popularity: 0,
       inLibrary: true,
+      isWatched: false,
+      onWatchlist: false,
     };
   });
 }

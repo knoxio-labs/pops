@@ -14,13 +14,21 @@ vi.mock("@pops/db-types", () => ({
   movies: { tmdbId: "tmdb_id" },
 }));
 
+vi.mock("./flags.js", () => ({
+  getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
+}));
+
 // Now import mocked modules
 import { getPlexClient } from "../plex/service.js";
 import { getDrizzle } from "../../../db.js";
+import { getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 import { getTrendingFromPlex } from "./plex-service.js";
 
 const mockGetPlexClient = vi.mocked(getPlexClient);
 const mockGetDrizzle = vi.mocked(getDrizzle);
+const mockGetWatchedTmdbIds = vi.mocked(getWatchedTmdbIds);
+const mockGetWatchlistTmdbIds = vi.mocked(getWatchlistTmdbIds);
 
 /** Build a minimal PlexMediaItem for testing. */
 function makePlexItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
@@ -214,5 +222,75 @@ describe("getTrendingFromPlex", () => {
 
     const result = await getTrendingFromPlex(3);
     expect(result).toHaveLength(3);
+  });
+});
+
+describe("getTrendingFromPlex — isWatched + onWatchlist flags", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("sets isWatched=false and onWatchlist=false by default", async () => {
+    const mockClient = {
+      getTrending: vi
+        .fn()
+        .mockResolvedValue([makePlexItem({ externalIds: [{ source: "tmdb", id: "100" }] })]),
+    };
+    mockGetPlexClient.mockReturnValue(
+      mockClient as unknown as ReturnType<typeof getPlexClient> & object
+    );
+    mockGetDrizzle.mockReturnValue(createMockDb());
+    mockGetWatchedTmdbIds.mockReturnValue(new Set());
+    mockGetWatchlistTmdbIds.mockReturnValue(new Set());
+
+    const result = await getTrendingFromPlex();
+    expect(result![0]!.isWatched).toBe(false);
+    expect(result![0]!.onWatchlist).toBe(false);
+  });
+
+  it("sets isWatched=true when tmdbId is in watch history", async () => {
+    const mockClient = {
+      getTrending: vi
+        .fn()
+        .mockResolvedValue([
+          makePlexItem({ title: "Watched", externalIds: [{ source: "tmdb", id: "100" }] }),
+          makePlexItem({ title: "Unwatched", externalIds: [{ source: "tmdb", id: "200" }] }),
+        ]),
+    };
+    mockGetPlexClient.mockReturnValue(
+      mockClient as unknown as ReturnType<typeof getPlexClient> & object
+    );
+    mockGetDrizzle.mockReturnValue(createMockDb());
+    mockGetWatchedTmdbIds.mockReturnValue(new Set([100]));
+    mockGetWatchlistTmdbIds.mockReturnValue(new Set());
+
+    const result = await getTrendingFromPlex();
+    const watched = result!.find((r) => r.tmdbId === 100);
+    const unwatched = result!.find((r) => r.tmdbId === 200);
+    expect(watched!.isWatched).toBe(true);
+    expect(unwatched!.isWatched).toBe(false);
+  });
+
+  it("sets onWatchlist=true when tmdbId is on watchlist", async () => {
+    const mockClient = {
+      getTrending: vi
+        .fn()
+        .mockResolvedValue([
+          makePlexItem({ title: "On WL", externalIds: [{ source: "tmdb", id: "300" }] }),
+          makePlexItem({ title: "Not on WL", externalIds: [{ source: "tmdb", id: "400" }] }),
+        ]),
+    };
+    mockGetPlexClient.mockReturnValue(
+      mockClient as unknown as ReturnType<typeof getPlexClient> & object
+    );
+    mockGetDrizzle.mockReturnValue(createMockDb());
+    mockGetWatchedTmdbIds.mockReturnValue(new Set());
+    mockGetWatchlistTmdbIds.mockReturnValue(new Set([300]));
+
+    const result = await getTrendingFromPlex();
+    const onWl = result!.find((r) => r.tmdbId === 300);
+    const notOnWl = result!.find((r) => r.tmdbId === 400);
+    expect(onWl!.onWatchlist).toBe(true);
+    expect(notOnWl!.onWatchlist).toBe(false);
   });
 });

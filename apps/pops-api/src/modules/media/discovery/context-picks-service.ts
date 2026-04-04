@@ -72,6 +72,8 @@ async function fetchCollectionResults(
         genreIds: r.genreIds,
         popularity: r.popularity,
         inLibrary,
+        isWatched: false,
+        onWatchlist: false,
       };
     });
 }

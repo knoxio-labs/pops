@@ -9,6 +9,7 @@ import type { TmdbClient } from "../tmdb/client.js";
 import type { TmdbSearchResult } from "../tmdb/types.js";
 import type { DiscoverResult, ScoredDiscoverResult } from "./types.js";
 import { getPreferenceProfile, scoreDiscoverResults } from "./service.js";
+import { getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 
 /** Get all TMDB IDs currently in the library for quick lookup. */
 function getLibraryTmdbIds(): Set<number> {
@@ -40,8 +41,13 @@ function buildPosterUrl(
   return `https://image.tmdb.org/t/p/w342${posterPath}`;
 }
 
-/** Map TMDB search results to discover results with library status. */
-function toDiscoverResults(results: TmdbSearchResult[], libraryIds: Set<number>): DiscoverResult[] {
+/** Map TMDB search results to discover results with library/watched/watchlist status. */
+function toDiscoverResults(
+  results: TmdbSearchResult[],
+  libraryIds: Set<number>,
+  watchedIds: Set<number>,
+  watchlistIds: Set<number>
+): DiscoverResult[] {
   return results.map((r) => {
     const inLibrary = libraryIds.has(r.tmdbId);
     return {
@@ -57,6 +63,8 @@ function toDiscoverResults(results: TmdbSearchResult[], libraryIds: Set<number>)
       genreIds: r.genreIds,
       popularity: r.popularity,
       inLibrary,
+      isWatched: watchedIds.has(r.tmdbId),
+      onWatchlist: watchlistIds.has(r.tmdbId),
     };
   });
 }
@@ -67,13 +75,15 @@ export async function getTrending(
   timeWindow: "day" | "week",
   page: number
 ): Promise<{ results: DiscoverResult[]; totalResults: number; page: number }> {
-  const [response, libraryIds] = await Promise.all([
+  const [response, libraryIds, watchedIds, watchlistIds] = await Promise.all([
     client.getTrendingMovies(timeWindow, page),
     Promise.resolve(getLibraryTmdbIds()),
+    Promise.resolve(getWatchedTmdbIds()),
+    Promise.resolve(getWatchlistTmdbIds()),
   ]);
 
   const dismissedIds = getDismissedTmdbIds();
-  const results = toDiscoverResults(response.results, libraryIds).filter(
+  const results = toDiscoverResults(response.results, libraryIds, watchedIds, watchlistIds).filter(
     (r) => !dismissedIds.has(r.tmdbId)
   );
 
@@ -134,6 +144,8 @@ export async function getRecommendations(
         genreIds: result.genreIds,
         popularity: result.popularity,
         inLibrary: false,
+        isWatched: false,
+        onWatchlist: false,
       });
     }
   }
@@ -145,18 +157,6 @@ export async function getRecommendations(
     results: merged,
     sourceMovies: topMovies.map((m) => m.title),
   };
-}
-
-/** Get TMDB IDs of movies on the watchlist for exclusion. */
-function getWatchlistTmdbIds(): Set<number> {
-  const db = getDrizzle();
-  const rows = db
-    .select({ tmdbId: movies.tmdbId })
-    .from(mediaWatchlist)
-    .innerJoin(movies, eq(movies.id, mediaWatchlist.mediaId))
-    .where(eq(mediaWatchlist.mediaType, "movie"))
-    .all();
-  return new Set(rows.map((r) => r.tmdbId));
 }
 
 /**
@@ -219,6 +219,8 @@ export async function getWatchlistRecommendations(
         genreIds: result.genreIds,
         popularity: result.popularity,
         inLibrary: false,
+        isWatched: false,
+        onWatchlist: false,
       });
     }
   }
