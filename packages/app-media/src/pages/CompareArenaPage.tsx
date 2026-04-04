@@ -149,7 +149,10 @@ export function CompareArenaPage() {
 
   // Mark stale mutation
   const markStaleMutation = trpc.media.comparisons.markStale.useMutation({
-    onSuccess: (data: { data: { staleness: number } }, variables: { mediaType: string; mediaId: number }) => {
+    onSuccess: (
+      data: { data: { staleness: number } },
+      variables: { mediaType: string; mediaId: number }
+    ) => {
       const movie =
         variables.mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
       const staleness = data.data.staleness;
@@ -405,7 +408,9 @@ export function CompareArenaPage() {
                   Stale: {pairData.data.movieA.title}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Mark as stale — reduces score weight for future comparisons</TooltipContent>
+              <TooltipContent>
+                Mark as stale — reduces score weight for future comparisons
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -420,7 +425,9 @@ export function CompareArenaPage() {
                   Stale: {pairData.data.movieB.title}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Mark as stale — reduces score weight for future comparisons</TooltipContent>
+              <TooltipContent>
+                Mark as stale — reduces score weight for future comparisons
+              </TooltipContent>
             </Tooltip>
           </div>
           <div className="flex justify-center gap-3">
