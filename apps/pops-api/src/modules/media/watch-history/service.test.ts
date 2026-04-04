@@ -882,9 +882,7 @@ describe("batchLogWatch", () => {
 describe("logWatch blacklist check", () => {
   it("skips insert when a blacklisted entry exists at the same timestamp", () => {
     seedMovie(db, { tmdb_id: 999 });
-    const movieId = db
-      .prepare("SELECT id FROM movies WHERE tmdb_id = 999")
-      .get() as { id: number };
+    const movieId = db.prepare("SELECT id FROM movies WHERE tmdb_id = 999").get() as { id: number };
 
     // Seed a blacklisted watch event
     seedWatchHistoryEntry(db, {
@@ -905,18 +903,16 @@ describe("logWatch blacklist check", () => {
     expect(result.entry.blacklisted).toBe(1);
 
     // Only the one blacklisted row should exist
-    const rows = db
-      .prepare("SELECT * FROM watch_history WHERE media_id = ?")
-      .all(movieId.id) as { blacklisted: number }[];
+    const rows = db.prepare("SELECT * FROM watch_history WHERE media_id = ?").all(movieId.id) as {
+      blacklisted: number;
+    }[];
     expect(rows).toHaveLength(1);
     expect(rows[0]!.blacklisted).toBe(1);
   });
 
   it("allows insert at a different timestamp for the same blacklisted movie", () => {
     seedMovie(db, { tmdb_id: 888 });
-    const movieId = db
-      .prepare("SELECT id FROM movies WHERE tmdb_id = 888")
-      .get() as { id: number };
+    const movieId = db.prepare("SELECT id FROM movies WHERE tmdb_id = 888").get() as { id: number };
 
     // Seed a blacklisted watch event
     seedWatchHistoryEntry(db, {
@@ -937,17 +933,13 @@ describe("logWatch blacklist check", () => {
     expect(result.entry.blacklisted).toBe(0);
 
     // Both rows should exist
-    const rows = db
-      .prepare("SELECT * FROM watch_history WHERE media_id = ?")
-      .all(movieId.id);
+    const rows = db.prepare("SELECT * FROM watch_history WHERE media_id = ?").all(movieId.id);
     expect(rows).toHaveLength(2);
   });
 
   it("does not skip when a non-blacklisted entry exists at the same timestamp", () => {
     seedMovie(db, { tmdb_id: 777 });
-    const movieId = db
-      .prepare("SELECT id FROM movies WHERE tmdb_id = 777")
-      .get() as { id: number };
+    const movieId = db.prepare("SELECT id FROM movies WHERE tmdb_id = 777").get() as { id: number };
 
     // Seed a normal (non-blacklisted) watch event
     seedWatchHistoryEntry(db, {
