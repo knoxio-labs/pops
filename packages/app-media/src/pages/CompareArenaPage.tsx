@@ -16,10 +16,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@pops/ui";
-import { ImageOff, Bookmark, ChevronUp, Minus, ChevronDown, Clock, X } from "lucide-react";
+import { ImageOff, Bookmark, ChevronUp, Minus, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { DimensionManager } from "../components/DimensionManager";
+import { ArenaActionBar } from "../components/ArenaActionBar";
 
 interface ScoreDelta {
   winnerId: number;
@@ -483,106 +484,21 @@ export function CompareArenaPage() {
         </>
       ) : null}
 
-      {/* Action bar: Stale buttons + Skip + N/A + Done */}
+      {/* Action bar */}
       {pairData?.data && !recordMutation.isPending && !scoreDelta && (
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex justify-center gap-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleMarkStale(pairData.data.movieA.id)}
-                  disabled={markStaleMutation.isPending}
-                  aria-label={`Mark ${pairData.data.movieA.title} as stale`}
-                >
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  Stale: {pairData.data.movieA.title}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Mark as stale — reduces score weight for future comparisons
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleMarkStale(pairData.data.movieB.id)}
-                  disabled={markStaleMutation.isPending}
-                  aria-label={`Mark ${pairData.data.movieB.title} as stale`}
-                >
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  Stale: {pairData.data.movieB.title}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Mark as stale — reduces score weight for future comparisons
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <div className="flex justify-center gap-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBlacklist(pairData.data.movieA)}
-                  disabled={blacklistMutation.isPending}
-                  className="text-red-500 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
-                  aria-label={`Not watched ${pairData.data.movieA.title}`}
-                >
-                  <X className="h-3.5 w-3.5 mr-1.5" />
-                  Not Watched: {pairData.data.movieA.title}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Mark as not watched — removes all comparisons for this movie
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBlacklist(pairData.data.movieB)}
-                  disabled={blacklistMutation.isPending}
-                  className="text-red-500 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
-                  aria-label={`Not watched ${pairData.data.movieB.title}`}
-                >
-                  <X className="h-3.5 w-3.5 mr-1.5" />
-                  Not Watched: {pairData.data.movieB.title}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Mark as not watched — removes all comparisons for this movie
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <div className="flex justify-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSkip}
-              disabled={skipMutation.isPending}
-            >
-              {skipMutation.isPending ? "Skipping…" : "Skip this pair"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNA}
-              disabled={naIsPending}
-              className="text-muted-foreground"
-            >
-              {naIsPending ? "Excluding…" : "N/A"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/media")}>
-              Done
-            </Button>
-          </div>
-        </div>
+        <ArenaActionBar
+          movieA={pairData.data.movieA}
+          movieB={pairData.data.movieB}
+          onSkip={handleSkip}
+          onStale={handleMarkStale}
+          onNA={handleNA}
+          onBlacklist={handleBlacklist}
+          onDone={() => navigate("/media")}
+          skipPending={skipMutation.isPending}
+          stalePending={markStaleMutation.isPending}
+          naPending={naIsPending}
+          blacklistPending={blacklistMutation.isPending}
+        />
       )}
 
       {/* Blacklist confirmation dialog */}
