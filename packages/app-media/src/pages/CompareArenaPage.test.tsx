@@ -172,8 +172,8 @@ describe("CompareArenaPage", () => {
     setupArena();
     renderPage();
 
-    expect(screen.getByText("The Matrix")).toBeTruthy();
-    expect(screen.getByText("Inception")).toBeTruthy();
+    expect(screen.getAllByText("The Matrix").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Inception").length).toBeGreaterThan(0);
   });
 
   it("displays current dimension name in prompt", () => {
@@ -197,7 +197,8 @@ describe("CompareArenaPage", () => {
     setupArena();
     renderPage();
 
-    fireEvent.click(screen.getByText("The Matrix"));
+    // Click the movie card heading (not action bar buttons)
+    fireEvent.click(screen.getAllByText("The Matrix")[0]!);
 
     expect(mockRecordMutate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -293,8 +294,8 @@ describe("CompareArenaPage", () => {
     setupArena();
     renderPage();
 
-    // First click should work
-    fireEvent.click(screen.getByText("The Matrix"));
+    // First click should work — click the card heading
+    fireEvent.click(screen.getAllByText("The Matrix")[0]!);
     expect(mockRecordMutate).toHaveBeenCalledTimes(1);
   });
 
@@ -306,8 +307,8 @@ describe("CompareArenaPage", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
 
-    // Pick a winner — triggers onSuccess which advances dimensionIndex
-    fireEvent.click(screen.getByText("The Matrix"));
+    // Pick a winner — click the card heading
+    fireEvent.click(screen.getAllByText("The Matrix")[0]!);
 
     // The onSuccess callback advances the dimension
     // We can verify the mutation was called with the first dimension
@@ -441,11 +442,11 @@ describe("CompareArenaPage", () => {
   it("renders Not Watched buttons for both movies on cards and in action bar", () => {
     setupArena();
     renderPage();
-    // Both card buttons and action bar buttons have the same aria-label
-    const matrixButtons = screen.getAllByLabelText("Not watched The Matrix");
-    const inceptionButtons = screen.getAllByLabelText("Not watched Inception");
-    expect(matrixButtons.length).toBe(2); // card + action bar
-    expect(inceptionButtons.length).toBe(2); // card + action bar
+    // Card buttons have aria-label, action bar buttons have data-testid + text
+    expect(screen.getByLabelText("Not watched The Matrix")).toBeTruthy();
+    expect(screen.getByLabelText("Not watched Inception")).toBeTruthy();
+    expect(screen.getByText("Not Watched: The Matrix")).toBeTruthy();
+    expect(screen.getByText("Not Watched: Inception")).toBeTruthy();
   });
 
   it("renders Not Watched action bar buttons with movie titles", () => {
