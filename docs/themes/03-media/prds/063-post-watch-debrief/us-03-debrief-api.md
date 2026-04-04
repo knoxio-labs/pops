@@ -1,7 +1,7 @@
 # US-03: Debrief tRPC endpoints
 
 > PRD: [063 — Post-Watch Debrief](README.md)
-> Status: Partial
+> Status: Done
 
 ## Description
 
@@ -14,4 +14,4 @@ As a developer, I want tRPC endpoints for the debrief flow: get pending debrief,
 - [x] `media.comparisons.dismissDebriefDimension({ mediaType, mediaId, dimensionId })` sets dismissed=1
 - [x] `media.comparisons.getPendingDebriefs()` returns list of movies with incomplete debriefs (for notifications)
 - [x] All protected procedures
-- [ ] Tests: get returns correct status, record updates row + ELO, dismiss sets flag, pending list correct
+- [x] Tests: get returns correct status, record updates row + ELO, dismiss sets flag, pending list correct

@@ -1237,6 +1237,34 @@ export function seedDebriefSession(
 }
 
 /**
+ * Seed a debrief_status row. Returns the id.
+ */
+export function seedDebriefStatus(
+  db: Database,
+  overrides: {
+    media_type: string;
+    media_id: number;
+    dimension_id: number;
+    debriefed?: number;
+    dismissed?: number;
+  }
+): number {
+  const result = db
+    .prepare(
+      `INSERT INTO debrief_status (media_type, media_id, dimension_id, debriefed, dismissed)
+     VALUES (@media_type, @media_id, @dimension_id, @debriefed, @dismissed)`
+    )
+    .run({
+      media_type: overrides.media_type,
+      media_id: overrides.media_id,
+      dimension_id: overrides.dimension_id,
+      debriefed: overrides.debriefed ?? 0,
+      dismissed: overrides.dismissed ?? 0,
+    });
+  return Number(result.lastInsertRowid);
+}
+
+/**
  * Seed a debrief result. Returns the id.
  */
 export function seedDebriefResult(
