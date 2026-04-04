@@ -9,10 +9,12 @@ import { entitiesRouter } from "./entities/router.js";
 import { aiUsageRouter } from "./ai-usage/router.js";
 import { correctionsRouter } from "./corrections/router.js";
 import { settingsRouter } from "./settings/router.js";
+import { searchRouter } from "./search/router.js";
 
 export const coreRouter = router({
   entities: entitiesRouter,
   aiUsage: aiUsageRouter,
   corrections: correctionsRouter,
   settings: settingsRouter,
+  search: searchRouter,
 });
