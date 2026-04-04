@@ -308,11 +308,26 @@ export function CompareArenaPage() {
 
             {/* Draw tier buttons — centered between cards */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col gap-1.5">
-              {([
-                { tier: "high" as const, icon: ChevronUp, label: "Equally great", color: "hover:border-green-500 hover:text-green-500" },
-                { tier: "mid" as const, icon: Minus, label: "Equally average", color: "hover:border-muted-foreground" },
-                { tier: "low" as const, icon: ChevronDown, label: "Equally poor", color: "hover:border-red-500 hover:text-red-500" },
-              ]).map(({ tier, icon: Icon, label, color }) => (
+              {[
+                {
+                  tier: "high" as const,
+                  icon: ChevronUp,
+                  label: "Equally great",
+                  color: "hover:border-green-500 hover:text-green-500",
+                },
+                {
+                  tier: "mid" as const,
+                  icon: Minus,
+                  label: "Equally average",
+                  color: "hover:border-muted-foreground",
+                },
+                {
+                  tier: "low" as const,
+                  icon: ChevronDown,
+                  label: "Equally poor",
+                  color: "hover:border-red-500 hover:text-red-500",
+                },
+              ].map(({ tier, icon: Icon, label, color }) => (
                 <Tooltip key={tier}>
                   <TooltipTrigger asChild>
                     <Button

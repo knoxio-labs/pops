@@ -249,10 +249,7 @@ export function RankingsPage() {
         <RankingsSkeleton />
       ) : showTabs ? (
         <Tabs value={dimensionParam} onValueChange={handleTabChange}>
-          <TabsList
-            variant="line"
-            className="h-auto w-full flex-wrap justify-center gap-2 p-0"
-          >
+          <TabsList variant="line" className="h-auto w-full flex-wrap justify-center gap-2 p-0">
             <TabsTrigger
               value="overall"
               className="rounded-full border border-border bg-muted/50 px-4 py-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
