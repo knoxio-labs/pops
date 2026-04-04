@@ -88,6 +88,11 @@ const DebriefPage = lazy(() =>
     default: m.DebriefPage,
   }))
 );
+const DebriefResultsPage = lazy(() =>
+  import("./pages/DebriefResultsPage").then((m) => ({
+    default: m.DebriefResultsPage,
+  }))
+);
 
 /** Shared navigation types (mirrored from shell to avoid circular dependency) */
 export interface AppNavItem {
@@ -140,4 +145,5 @@ export const routes: RouteObject[] = [
   { path: "arr/calendar", element: <CalendarPage /> },
   { path: "tier-list", element: <TierListPage /> },
   { path: "debrief/:sessionId", element: <DebriefPage /> },
+  { path: "debrief/:sessionId/results", element: <DebriefResultsPage /> },
 ];
