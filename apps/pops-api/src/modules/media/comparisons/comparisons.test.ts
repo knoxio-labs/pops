@@ -14,6 +14,7 @@ import {
   includeInDimension,
   getDebriefOpponent,
   getPendingDebriefs,
+  getTierListMovies,
 } from "./service.js";
 
 const ctx = setupTestContext();
@@ -2075,5 +2076,151 @@ describe("getPendingDebriefs", () => {
     const result = await caller.media.comparisons.getPendingDebriefs();
     expect(result.data).toHaveLength(1);
     expect(result.data[0]!.title).toBe("Debrief Via API");
+  });
+});
+
+describe("getTierListMovies", () => {
+  function seedScore(
+    mediaType: string,
+    mediaId: number,
+    dimensionId: number,
+    score: number,
+    comparisonCount = 5,
+    excluded = 0
+  ) {
+    db.prepare(
+      `INSERT INTO media_scores (media_type, media_id, dimension_id, score, comparison_count, excluded)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(mediaType, mediaId, dimensionId, score, comparisonCount, excluded);
+  }
+
+  function seedStaleness(mediaType: string, mediaId: number, staleness: number) {
+    db.prepare(
+      `INSERT INTO comparison_staleness (media_type, media_id, staleness, updated_at)
+       VALUES (?, ?, ?, datetime('now'))`
+    ).run(mediaType, mediaId, staleness);
+  }
+
+  function seedMovieWithWatch(tmdbId: number, title: string): number {
+    const movieId = seedMovie(db, { tmdb_id: tmdbId, title });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: movieId, completed: 1 });
+    return movieId;
+  }
+
+  it("returns up to 8 movies", () => {
+    const dimId = seedDimension(db, { name: "Full" });
+    for (let i = 0; i < 12; i++) {
+      const movieId = seedMovieWithWatch(100 + i, `Movie ${i}`);
+      seedScore("movie", movieId, dimId, 1200 + i * 100, 3 + i);
+    }
+
+    const result = getTierListMovies(dimId);
+    expect(result.length).toBeLessThanOrEqual(8);
+    expect(result.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("excludes dimension-excluded movies", () => {
+    const dimId = seedDimension(db, { name: "Exclusion" });
+    const m1 = seedMovieWithWatch(200, "Included");
+    const m2 = seedMovieWithWatch(201, "Excluded");
+    const m3 = seedMovieWithWatch(202, "Also Included");
+    seedScore("movie", m1, dimId, 1600, 5);
+    seedScore("movie", m2, dimId, 1800, 5, 1); // excluded
+    seedScore("movie", m3, dimId, 1400, 5);
+
+    const result = getTierListMovies(dimId);
+    const titles = result.map((m) => m.title);
+    expect(titles).toContain("Included");
+    expect(titles).toContain("Also Included");
+    expect(titles).not.toContain("Excluded");
+  });
+
+  it("excludes blacklisted movies", () => {
+    const dimId = seedDimension(db, { name: "Blacklist" });
+    const m1 = seedMovieWithWatch(300, "Good Movie");
+    const m2 = seedMovie(db, { tmdb_id: 301, title: "Blacklisted Movie" });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2, completed: 1, blacklisted: 1 });
+    const m3 = seedMovieWithWatch(302, "Another Good");
+    seedScore("movie", m1, dimId, 1600, 5);
+    seedScore("movie", m2, dimId, 1800, 5);
+    seedScore("movie", m3, dimId, 1400, 5);
+
+    const result = getTierListMovies(dimId);
+    const titles = result.map((m) => m.title);
+    expect(titles).toContain("Good Movie");
+    expect(titles).not.toContain("Blacklisted Movie");
+  });
+
+  it("excludes movies with staleness < 0.3", () => {
+    const dimId = seedDimension(db, { name: "Staleness" });
+    const m1 = seedMovieWithWatch(400, "Fresh Movie");
+    const m2 = seedMovieWithWatch(401, "Stale Movie");
+    const m3 = seedMovieWithWatch(402, "OK Movie");
+    seedScore("movie", m1, dimId, 1600, 5);
+    seedScore("movie", m2, dimId, 1800, 5);
+    seedScore("movie", m3, dimId, 1400, 5);
+    seedStaleness("movie", m2, 0.25); // below threshold
+
+    const result = getTierListMovies(dimId);
+    const titles = result.map((m) => m.title);
+    expect(titles).toContain("Fresh Movie");
+    expect(titles).not.toContain("Stale Movie");
+  });
+
+  it("returns mixed score ranges (not all top or bottom)", () => {
+    const dimId = seedDimension(db, { name: "Mixed" });
+    // Seed 10 movies with spread scores, all low comparison counts
+    for (let i = 0; i < 10; i++) {
+      const movieId = seedMovieWithWatch(500 + i, `Range ${i}`);
+      seedScore("movie", movieId, dimId, 1000 + i * 200, 2);
+    }
+
+    const result = getTierListMovies(dimId);
+    expect(result.length).toBe(8);
+
+    // Check that we have a mix — not all from the top or bottom half
+    const scores = result.map((m) => m.score);
+    const maxScore = Math.max(...scores);
+    const minScore = Math.min(...scores);
+    expect(maxScore - minScore).toBeGreaterThan(400);
+  });
+
+  it("returns fewer than 8 when not enough eligible", () => {
+    const dimId = seedDimension(db, { name: "Small" });
+    for (let i = 0; i < 3; i++) {
+      const movieId = seedMovieWithWatch(600 + i, `Small ${i}`);
+      seedScore("movie", movieId, dimId, 1400 + i * 100, 5);
+    }
+
+    const result = getTierListMovies(dimId);
+    expect(result).toHaveLength(3);
+  });
+
+  it("returns empty array when fewer than 2 eligible", () => {
+    const dimId = seedDimension(db, { name: "Tiny" });
+    const movieId = seedMovieWithWatch(700, "Lonely");
+    seedScore("movie", movieId, dimId, 1500, 5);
+
+    const result = getTierListMovies(dimId);
+    expect(result).toEqual([]);
+  });
+
+  it("includes posterUrl and title in response", () => {
+    const dimId = seedDimension(db, { name: "Data" });
+    const m1 = seedMovieWithWatch(800, "Data Movie 1");
+    const m2 = seedMovieWithWatch(801, "Data Movie 2");
+    seedScore("movie", m1, dimId, 1600, 5);
+    seedScore("movie", m2, dimId, 1400, 5);
+
+    const result = getTierListMovies(dimId);
+    expect(result.length).toBe(2);
+    for (const movie of result) {
+      expect(movie).toHaveProperty("title");
+      expect(movie).toHaveProperty("posterUrl");
+      expect(movie).toHaveProperty("mediaType");
+      expect(movie).toHaveProperty("mediaId");
+      expect(movie).toHaveProperty("score");
+      expect(movie).toHaveProperty("comparisonCount");
+    }
   });
 });

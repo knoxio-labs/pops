@@ -28,6 +28,7 @@ import {
   type BlacklistMovieResult,
   type DebriefOpponent,
   type PendingDebrief,
+  type TierListPlacementMovie,
 } from "./types.js";
 import { getStaleness } from "./staleness.js";
 
@@ -1671,4 +1672,111 @@ function normalizePairOrder(
   const keyB = `${bType}:${bId}`;
   if (keyA <= keyB) return [aType, aId, bType, bId];
   return [bType, bId, aType, aId];
+}
+
+const TIER_LIST_MAX = 8;
+const TIER_LIST_MIN = 2;
+const TIER_LIST_BUFFER_MULTIPLIER = 3;
+const STALENESS_THRESHOLD = 0.3;
+
+/**
+ * Select up to 8 movies for a tier list placement round.
+ *
+ * Strategy: prefer low comparison count (high uncertainty) with a mix of score
+ * ranges (not all top or bottom). Excludes blacklisted, dimension-excluded,
+ * and stale (< 0.3) movies. Returns fewer than 8 if not enough (min 2).
+ */
+export function getTierListMovies(dimensionId: number): TierListPlacementMovie[] {
+  const rawDb = getDb();
+
+  // Verify dimension exists
+  getDimension(dimensionId);
+
+  const rows = rawDb
+    .prepare(
+      `SELECT
+        ms.media_type as mediaType,
+        ms.media_id as mediaId,
+        ms.score as score,
+        ms.comparison_count as comparisonCount,
+        COALESCE(m.title, tv.name, 'Unknown') as title,
+        m.poster_path as moviePosterPath,
+        m.tmdb_id as movieTmdbId,
+        m.poster_override_path as moviePosterOverride,
+        tv.poster_path as tvPosterPath,
+        tv.tvdb_id as tvTvdbId,
+        tv.poster_override_path as tvPosterOverride
+      FROM media_scores ms
+      LEFT JOIN movies m ON ms.media_type = 'movie' AND ms.media_id = m.id
+      LEFT JOIN tv_shows tv ON ms.media_type = 'tv_show' AND ms.media_id = tv.id
+      INNER JOIN watch_history wh
+        ON wh.media_type = ms.media_type AND wh.media_id = ms.media_id
+        AND wh.completed = 1 AND wh.blacklisted = 0
+      LEFT JOIN comparison_staleness cs
+        ON cs.media_type = ms.media_type AND cs.media_id = ms.media_id
+      WHERE ms.dimension_id = ? AND ms.excluded = 0
+        AND COALESCE(cs.staleness, 1.0) >= ?
+      GROUP BY ms.media_type, ms.media_id
+      ORDER BY ms.comparison_count ASC, ms.score DESC`
+    )
+    .all(dimensionId, STALENESS_THRESHOLD) as Array<{
+    mediaType: string;
+    mediaId: number;
+    score: number;
+    comparisonCount: number;
+    title: string;
+    moviePosterPath: string | null;
+    movieTmdbId: number | null;
+    moviePosterOverride: string | null;
+    tvPosterPath: string | null;
+    tvTvdbId: number | null;
+    tvPosterOverride: string | null;
+  }>;
+
+  if (rows.length < TIER_LIST_MIN) return [];
+
+  // Take a buffer of candidates (3x target) sorted by comparison count ASC
+  const candidates = rows.slice(0, TIER_LIST_MAX * TIER_LIST_BUFFER_MULTIPLIER);
+
+  // Stratified sampling: partition by score into 4 quartiles, pick 2 from each
+  const sorted = [...candidates].sort((a, b) => b.score - a.score);
+  const quartileSize = Math.ceil(sorted.length / 4);
+  const quartiles: Array<typeof sorted> = [];
+  for (let i = 0; i < 4; i++) {
+    quartiles.push(sorted.slice(i * quartileSize, (i + 1) * quartileSize));
+  }
+
+  const selected: typeof rows = [];
+  const perQuartile = Math.ceil(TIER_LIST_MAX / 4);
+
+  for (const quartile of quartiles) {
+    // Within each quartile, prefer lowest comparison count
+    const byUncertainty = [...quartile].sort((a, b) => a.comparisonCount - b.comparisonCount);
+    for (const item of byUncertainty) {
+      if (selected.length >= TIER_LIST_MAX) break;
+      if (!selected.some((s) => s.mediaId === item.mediaId && s.mediaType === item.mediaType)) {
+        selected.push(item);
+        if (selected.filter((s) => quartile.includes(s)).length >= perQuartile) break;
+      }
+    }
+  }
+
+  // If still under target, fill from remaining candidates
+  if (selected.length < TIER_LIST_MAX) {
+    for (const item of candidates) {
+      if (selected.length >= TIER_LIST_MAX) break;
+      if (!selected.some((s) => s.mediaId === item.mediaId && s.mediaType === item.mediaType)) {
+        selected.push(item);
+      }
+    }
+  }
+
+  return selected.map((row) => ({
+    mediaType: row.mediaType,
+    mediaId: row.mediaId,
+    title: row.title,
+    posterUrl: resolvePosterUrl(row),
+    score: Math.round(row.score * 10) / 10,
+    comparisonCount: row.comparisonCount,
+  }));
 }

@@ -259,3 +259,19 @@ export interface PendingDebrief {
   createdAt: string;
   pendingDimensionCount: number;
 }
+
+/** Zod schema for getTierListMovies query. */
+export const TierListMoviesQuerySchema = z.object({
+  dimensionId: z.number().int().positive(),
+});
+export type TierListMoviesQuery = z.infer<typeof TierListMoviesQuerySchema>;
+
+/** API response shape for a tier list placement movie. */
+export interface TierListPlacementMovie {
+  mediaType: string;
+  mediaId: number;
+  title: string;
+  posterUrl: string | null;
+  score: number;
+  comparisonCount: number;
+}

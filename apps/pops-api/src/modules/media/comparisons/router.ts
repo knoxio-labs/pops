@@ -21,6 +21,7 @@ import {
   StalenessSchema,
   RecordSkipSchema,
   GetDebriefOpponentSchema,
+  TierListMoviesQuerySchema,
   toDimension,
   toComparison,
   toMediaScore,
@@ -250,6 +251,19 @@ export const comparisonsRouter = router({
         input.mediaBId
       );
       return { data: { skipUntil }, message: "Skip recorded" };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      throw err;
+    }
+  }),
+
+  /** Select up to 8 movies for a tier list placement round. */
+  getTierListMovies: protectedProcedure.input(TierListMoviesQuerySchema).query(({ input }) => {
+    try {
+      const movies = service.getTierListMovies(input.dimensionId);
+      return { data: movies };
     } catch (err) {
       if (err instanceof NotFoundError) {
         throw new TRPCError({ code: "NOT_FOUND", message: err.message });
