@@ -7,6 +7,7 @@ import {
   seedMovie,
   seedWatchHistoryEntry,
   seedDebriefSession,
+  seedDebriefStatus,
   createCaller,
 } from "../../../shared/test-utils.js";
 
@@ -134,5 +135,24 @@ describe("comparisons.dismissDebriefDimension", () => {
     };
 
     expect(compsAfter.cnt).toBe(compsBefore.cnt);
+  });
+
+  it("sets dismissed=1 on the debrief_status row", async () => {
+    const { movieId, dim1, sessionId } = setupDebrief();
+    seedDebriefStatus(db, { media_type: "movie", media_id: movieId, dimension_id: dim1 });
+
+    await caller.media.comparisons.dismissDebriefDimension({
+      sessionId,
+      dimensionId: dim1,
+    });
+
+    const row = db
+      .prepare(
+        "SELECT dismissed FROM debrief_status WHERE media_type = 'movie' AND media_id = ? AND dimension_id = ?"
+      )
+      .get(movieId, dim1) as { dismissed: number } | undefined;
+
+    expect(row).toBeTruthy();
+    expect(row!.dismissed).toBe(1);
   });
 });

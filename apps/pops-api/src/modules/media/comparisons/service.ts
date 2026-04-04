@@ -9,6 +9,7 @@ import {
   comparisonSkipCooloffs,
   debriefResults,
   debriefSessions,
+  debriefStatus,
   mediaScores,
   mediaWatchlist,
   watchHistory,
@@ -1824,6 +1825,25 @@ export function dismissDebriefDimension(sessionId: number, dimensionId: number):
   // Insert debrief_result with null comparison_id (dismissed)
   db.insert(debriefResults).values({ sessionId, dimensionId, comparisonId: null }).run();
 
+  // Mark debrief_status row as dismissed
+  const watchEntry = db
+    .select()
+    .from(watchHistory)
+    .where(eq(watchHistory.id, session.watchHistoryId))
+    .get();
+  if (watchEntry) {
+    db.update(debriefStatus)
+      .set({ dismissed: 1 })
+      .where(
+        and(
+          eq(debriefStatus.mediaType, watchEntry.mediaType),
+          eq(debriefStatus.mediaId, watchEntry.mediaId),
+          eq(debriefStatus.dimensionId, dimensionId)
+        )
+      )
+      .run();
+  }
+
   // Check if all active dimensions now have results → auto-complete
   const activeDims = db
     .select({ id: comparisonDimensions.id })
@@ -2079,6 +2099,19 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
         dimensionId: input.dimensionId,
         comparisonId,
       })
+      .run();
+
+    // Mark debrief_status row as debriefed
+    drizzleDb
+      .update(debriefStatus)
+      .set({ debriefed: 1 })
+      .where(
+        and(
+          eq(debriefStatus.mediaType, watchEntry.mediaType),
+          eq(debriefStatus.mediaId, watchEntry.mediaId),
+          eq(debriefStatus.dimensionId, input.dimensionId)
+        )
+      )
       .run();
 
     // Activate session if still pending

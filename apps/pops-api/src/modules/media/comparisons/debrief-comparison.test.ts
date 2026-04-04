@@ -5,6 +5,7 @@ import {
   seedDimension,
   seedMovie,
   seedWatchHistoryEntry,
+  seedDebriefStatus,
   createCaller,
 } from "../../../shared/test-utils.js";
 
@@ -206,5 +207,31 @@ describe("comparisons.recordDebriefComparison", () => {
     expect(scores[0]!.media_id).toBe(movieA); // winner should have higher score
     expect(scores[0]!.score).toBeGreaterThan(1500);
     expect(scores[1]!.score).toBeLessThan(1500);
+  });
+
+  it("sets debriefed=1 on the debrief_status row", async () => {
+    const dimId = seedDimension(db, { name: "Story" });
+    const movieA = seedMovie(db, { tmdb_id: 800, title: "Movie A" });
+    const movieB = seedMovie(db, { tmdb_id: 801, title: "Movie B" });
+    const whId = seedWatchHistoryEntry(db, { media_type: "movie", media_id: movieA });
+    const sessionId = seedDebriefSession(db, whId);
+    seedDebriefStatus(db, { media_type: "movie", media_id: movieA, dimension_id: dimId });
+
+    await caller.media.comparisons.recordDebriefComparison({
+      sessionId,
+      dimensionId: dimId,
+      opponentType: "movie",
+      opponentId: movieB,
+      winnerId: movieA,
+    });
+
+    const row = db
+      .prepare(
+        "SELECT debriefed FROM debrief_status WHERE media_type = 'movie' AND media_id = ? AND dimension_id = ?"
+      )
+      .get(movieA, dimId) as { debriefed: number } | undefined;
+
+    expect(row).toBeTruthy();
+    expect(row!.debriefed).toBe(1);
   });
 });
