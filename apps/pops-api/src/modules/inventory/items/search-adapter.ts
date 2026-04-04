@@ -1,4 +1,4 @@
-import { eq, like, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { homeInventory } from "@pops/db-types";
 import { registerSearchAdapter } from "../../core/search/index.js";
