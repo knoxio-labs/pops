@@ -17,3 +17,6 @@ export { useAppContext, useSetPageContext, useCurrentApp, useCurrentEntity } fro
 export type { SetPageContextOptions } from "./hooks";
 export type { AppContext, AppContextEntity, AppName } from "./types";
 export { DEFAULT_APP_CONTEXT } from "./types";
+
+export { useRecentSearches } from "./recent-searches";
+export { RecentSearches } from "./RecentSearches";
