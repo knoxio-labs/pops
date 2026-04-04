@@ -12,6 +12,7 @@ import {
   ComparisonQuerySchema,
   ComparisonHistoryQuerySchema,
   DeleteComparisonSchema,
+  BlacklistMovieSchema,
   ScoreQuerySchema,
   RandomPairQuerySchema,
   RankingsQuerySchema,
@@ -114,6 +115,12 @@ export const comparisonsRouter = router({
       }
       throw err;
     }
+  }),
+
+  /** Blacklist a movie: mark watch events + purge comparisons + recalculate Elo. */
+  blacklistMovie: protectedProcedure.input(BlacklistMovieSchema).mutation(({ input }) => {
+    const result = service.blacklistMovie(input.mediaType, input.mediaId);
+    return { data: result, message: "Movie blacklisted and comparisons purged" };
   }),
 
   /** Get a random pair of watched movies for comparison. */
