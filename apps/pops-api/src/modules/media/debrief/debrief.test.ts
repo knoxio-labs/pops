@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { Database } from "better-sqlite3";
-import {
-  setupTestContext,
-  seedMovie,
-  seedWatchHistoryEntry,
-} from "../../../shared/test-utils.js";
+import { setupTestContext, seedMovie, seedWatchHistoryEntry } from "../../../shared/test-utils.js";
 import { createDebriefSession } from "./service.js";
 import * as watchHistoryService from "../watch-history/service.js";
 

@@ -16,11 +16,7 @@ export function createDebriefSession(watchHistoryId: number): number {
   const db = getDrizzle();
 
   // Look up the watch history entry to find media info
-  const entry = db
-    .select()
-    .from(watchHistory)
-    .where(eq(watchHistory.id, watchHistoryId))
-    .get();
+  const entry = db.select().from(watchHistory).where(eq(watchHistory.id, watchHistoryId)).get();
   if (!entry) {
     throw new Error(`Watch history entry ${watchHistoryId} not found`);
   }
@@ -31,10 +27,7 @@ export function createDebriefSession(watchHistoryId: number): number {
     .select({ id: watchHistory.id })
     .from(watchHistory)
     .where(
-      and(
-        eq(watchHistory.mediaType, entry.mediaType),
-        eq(watchHistory.mediaId, entry.mediaId)
-      )
+      and(eq(watchHistory.mediaType, entry.mediaType), eq(watchHistory.mediaId, entry.mediaId))
     )
     .all()
     .map((r) => r.id);
@@ -51,10 +44,7 @@ export function createDebriefSession(watchHistoryId: number): number {
   }
 
   // Create new pending session
-  const result = db
-    .insert(debriefSessions)
-    .values({ watchHistoryId, status: "pending" })
-    .run();
+  const result = db.insert(debriefSessions).values({ watchHistoryId, status: "pending" }).run();
 
   return Number(result.lastInsertRowid);
 }
