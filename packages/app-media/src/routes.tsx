@@ -83,6 +83,11 @@ const TierListPage = lazy(() =>
     default: m.TierListPage,
   }))
 );
+const DebriefPage = lazy(() =>
+  import("./pages/DebriefPage").then((m) => ({
+    default: m.DebriefPage,
+  }))
+);
 const DebriefResultsPage = lazy(() =>
   import("./pages/DebriefResultsPage").then((m) => ({
     default: m.DebriefResultsPage,
@@ -139,5 +144,6 @@ export const routes: RouteObject[] = [
   { path: "arr", element: <ArrSettingsPage /> },
   { path: "arr/calendar", element: <CalendarPage /> },
   { path: "tier-list", element: <TierListPage /> },
+  { path: "debrief/:sessionId", element: <DebriefPage /> },
   { path: "debrief/:sessionId/results", element: <DebriefResultsPage /> },
 ];
