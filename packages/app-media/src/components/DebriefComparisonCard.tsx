@@ -37,11 +37,8 @@ export function DebriefComparisonCard({
 }: DebriefComparisonCardProps) {
   const [winnerId, setWinnerId] = useState<number | null>(null);
 
-  // recordDebriefComparison is added by tb-161 (PR #1313) — cast until merged
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const comparisons = trpc.media.comparisons as any;
-  const mutation = comparisons.recordDebriefComparison.useMutation({
-    onSuccess: (data: { data: { comparisonId: number | null; sessionComplete: boolean } }) => {
+  const mutation = trpc.media.comparisons.recordDebriefComparison.useMutation({
+    onSuccess: (data) => {
       onResult(data.data);
     },
   });

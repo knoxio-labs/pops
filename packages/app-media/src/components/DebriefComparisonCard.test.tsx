@@ -20,10 +20,7 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import {
-  DebriefComparisonCard,
-  DebriefComparisonCardSkeleton,
-} from "./DebriefComparisonCard";
+import { DebriefComparisonCard, DebriefComparisonCardSkeleton } from "./DebriefComparisonCard";
 
 const movieA = {
   id: 1,
