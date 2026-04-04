@@ -108,7 +108,7 @@ describe("getTierOverrides", () => {
 
     const overrides = getTierOverrides(dim1);
     expect(overrides).toHaveLength(1);
-    expect(overrides[0].mediaId).toBe(1);
+    expect(overrides[0]?.mediaId).toBe(1);
   });
 });
 
