@@ -91,7 +91,8 @@ describe("DebriefResultsSummary", () => {
 
     expect(screen.getByTestId("debrief-results-summary")).toBeInTheDocument();
     expect(screen.getByText("The Matrix")).toBeInTheDocument();
-    expect(screen.getByText("Cinematography")).toBeInTheDocument();
+    // Dimension names appear twice (results + scores sections)
+    expect(screen.getAllByText("Cinematography")).toHaveLength(2);
     expect(screen.getByText("Compared")).toBeInTheDocument();
     expect(screen.getByText("Skipped")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
