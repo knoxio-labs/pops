@@ -878,3 +878,125 @@ describe("batchLogWatch", () => {
     expect(result.skipped).toBe(0);
   });
 });
+
+describe("logWatch blacklist check", () => {
+  it("skips insert when a blacklisted entry exists at the same timestamp", () => {
+    seedMovie(db, { tmdb_id: 999 });
+    const movieId = db.prepare("SELECT id FROM movies WHERE tmdb_id = 999").get() as { id: number };
+
+    // Seed a blacklisted watch event
+    seedWatchHistoryEntry(db, {
+      media_type: "movie",
+      media_id: movieId.id,
+      watched_at: "2026-01-15T20:00:00.000Z",
+      blacklisted: 1,
+    });
+
+    // Attempt to log watch at the same timestamp — should be skipped
+    const result = service.logWatch({
+      mediaType: "movie",
+      mediaId: movieId.id,
+      watchedAt: "2026-01-15T20:00:00.000Z",
+    });
+
+    expect(result.created).toBe(false);
+    expect(result.entry.blacklisted).toBe(1);
+
+    // Only the one blacklisted row should exist
+    const rows = db.prepare("SELECT * FROM watch_history WHERE media_id = ?").all(movieId.id) as {
+      blacklisted: number;
+    }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.blacklisted).toBe(1);
+  });
+
+  it("allows insert at a different timestamp for the same blacklisted movie", () => {
+    seedMovie(db, { tmdb_id: 888 });
+    const movieId = db.prepare("SELECT id FROM movies WHERE tmdb_id = 888").get() as { id: number };
+
+    // Seed a blacklisted watch event
+    seedWatchHistoryEntry(db, {
+      media_type: "movie",
+      media_id: movieId.id,
+      watched_at: "2026-01-15T20:00:00.000Z",
+      blacklisted: 1,
+    });
+
+    // Log watch at a DIFFERENT timestamp — should succeed
+    const result = service.logWatch({
+      mediaType: "movie",
+      mediaId: movieId.id,
+      watchedAt: "2026-03-01T20:00:00.000Z",
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.entry.blacklisted).toBe(0);
+
+    // Both rows should exist
+    const rows = db.prepare("SELECT * FROM watch_history WHERE media_id = ?").all(movieId.id);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("does not skip when a non-blacklisted entry exists at the same timestamp", () => {
+    seedMovie(db, { tmdb_id: 777 });
+    const movieId = db.prepare("SELECT id FROM movies WHERE tmdb_id = 777").get() as { id: number };
+
+    // Seed a normal (non-blacklisted) watch event
+    seedWatchHistoryEntry(db, {
+      media_type: "movie",
+      media_id: movieId.id,
+      watched_at: "2026-01-15T20:00:00.000Z",
+      blacklisted: 0,
+    });
+
+    // Log watch at the same timestamp — should return existing (onConflictDoNothing)
+    const result = service.logWatch({
+      mediaType: "movie",
+      mediaId: movieId.id,
+      watchedAt: "2026-01-15T20:00:00.000Z",
+    });
+
+    expect(result.created).toBe(false);
+    expect(result.entry.blacklisted).toBe(0);
+  });
+});
+
+describe("batchLogWatch blacklist check", () => {
+  it("skips blacklisted episodes at the same timestamp", () => {
+    const showId = seedTvShow(db, { tvdb_id: 6000 });
+    const sId = seedSeason(db, { tv_show_id: showId, season_number: 1, tvdb_id: 6001 });
+    const ep1 = seedEpisode(db, {
+      season_id: sId,
+      tvdb_id: 6002,
+      episode_number: 1,
+      air_date: "2020-01-01",
+    });
+    seedEpisode(db, {
+      season_id: sId,
+      tvdb_id: 6003,
+      episode_number: 2,
+      air_date: "2020-01-08",
+    });
+
+    const watchedAt = "2026-02-01T20:00:00.000Z";
+
+    // Blacklist ep1 at this timestamp
+    seedWatchHistoryEntry(db, {
+      media_type: "episode",
+      media_id: ep1,
+      watched_at: watchedAt,
+      blacklisted: 1,
+    });
+
+    // Batch log the season — ep1 should be skipped, ep2 logged
+    const result = service.batchLogWatch({
+      mediaType: "season",
+      mediaId: sId,
+      completed: 1,
+      watchedAt,
+    });
+
+    expect(result.logged).toBe(1);
+    expect(result.skipped).toBe(1);
+  });
+});
