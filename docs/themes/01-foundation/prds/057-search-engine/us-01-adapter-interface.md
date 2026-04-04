@@ -9,7 +9,7 @@ As a developer, I want a SearchAdapter interface with typed results and a compon
 
 ## Acceptance Criteria
 
-- [x] `SearchAdapter<T>` interface: `domain`, `icon`, `color`, `search(query, context, options)`, `ResultComponent`
+- [x] `SearchAdapter<T>` interface: `domain`, `icon`, `color`, `search(query, context, options)` — `ResultComponent` is frontend-side (see notes)
 - [x] `SearchHit<T>` interface: `uri`, `score`, `matchField`, `matchType`, `data: T`
 - [x] `Query` interface: `text`, optional `filters` (for v2 structured syntax)
 - [x] `SearchContext` interface: `app`, `page`, optional `entity` and `filters` — sourced from PRD-058
