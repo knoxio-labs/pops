@@ -256,6 +256,46 @@ describe("CompareArenaPage", () => {
     expect(mockRecordMutate).toHaveBeenCalledWith(expect.objectContaining({ dimensionId: 1 }));
   });
 
+  it("watchlist button calls watchlist.add without comparison side effects", () => {
+    setupArena();
+    renderPage();
+
+    // Click the watchlist bookmark button for movie A (The Matrix)
+    const bookmarkButtons = screen.getAllByRole("button", { name: /add .* to watchlist/i });
+    expect(bookmarkButtons.length).toBeGreaterThan(0);
+    fireEvent.click(bookmarkButtons[0]!);
+
+    // Should call watchlist add mutation
+    expect(mockWatchlistAddMutate).toHaveBeenCalledWith({
+      mediaType: "movie",
+      mediaId: 10,
+    });
+
+    // Should NOT call comparison record mutation
+    expect(mockRecordMutate).not.toHaveBeenCalled();
+
+    // Should NOT trigger pair refresh
+    expect(mockRefetchPair).not.toHaveBeenCalled();
+
+    // Should NOT invalidate random pair cache
+    expect(mockInvalidateRandomPair).not.toHaveBeenCalled();
+
+    // Trigger onSuccess to verify it only invalidates watchlist + shows toast
+    const onSuccess = mockWatchlistAddMutate._opts?.onSuccess as (
+      data: unknown,
+      variables: { mediaType: string; mediaId: number }
+    ) => void;
+    onSuccess(undefined, { mediaType: "movie", mediaId: 10 });
+
+    // Should invalidate watchlist cache
+    expect(mockInvalidateWatchlistList).toHaveBeenCalled();
+
+    // Should still NOT refetch pair or record comparison
+    expect(mockRefetchPair).not.toHaveBeenCalled();
+    expect(mockInvalidateRandomPair).not.toHaveBeenCalled();
+    expect(mockRecordMutate).not.toHaveBeenCalled();
+  });
+
   it("renders loading skeletons when pair is loading", () => {
     mockDimensionsQuery.mockReturnValue({
       data: { data: [dim1] },

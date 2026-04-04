@@ -142,8 +142,6 @@ export function CompareArenaPage() {
       const movie =
         variables.mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
       toast.success(`${movie?.title ?? "Movie"} added to watchlist`);
-      // Refetch pair since this movie should now be excluded
-      refetchPair();
     },
   });
 
