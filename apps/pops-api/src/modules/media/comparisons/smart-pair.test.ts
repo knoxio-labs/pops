@@ -138,7 +138,7 @@ describe("getSmartPair", () => {
     seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
 
     // Put m1-m2 on cooloff (far future)
-    seedCooloff(dimId, m1, m2, Date.now() + 999999999);
+    seedCooloff(dimId, m1, m2, 999999);
 
     // Run many times — the pair (m1, m2) should never be selected
     for (let i = 0; i < 30; i++) {
@@ -300,7 +300,7 @@ describe("getSmartPair", () => {
     seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
 
     // Put the only possible pair on cooloff
-    seedCooloff(dimId, m1, m2, Date.now() + 999999999);
+    seedCooloff(dimId, m1, m2, 999999);
 
     // Should still return a pair (fallback)
     const result = getSmartPair(dimId);

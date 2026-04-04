@@ -749,8 +749,8 @@ export function getSmartPair(dimensionId?: number): RandomPair | null {
       .map((r: any) => r.media_id as number)
   );
 
-  // Get pairs on cooloff for this dimension
-  const now = Date.now();
+  // Get pairs on cooloff for this dimension (skip_until is a global comparison count)
+  const globalCount = getGlobalComparisonCount();
   const cooloffPairs = new Set<string>();
   const cooloffRows = rawDb
     .prepare(
@@ -758,7 +758,7 @@ export function getSmartPair(dimensionId?: number): RandomPair | null {
        WHERE dimension_id = ? AND media_a_type = 'movie' AND media_b_type = 'movie'
          AND skip_until > ?`
     )
-    .all(selectedDimId, now) as Array<{ media_a_id: number; media_b_id: number }>;
+    .all(selectedDimId, globalCount) as Array<{ media_a_id: number; media_b_id: number }>;
 
   for (const r of cooloffRows) {
     cooloffPairs.add(`${r.media_a_id}-${r.media_b_id}`);
