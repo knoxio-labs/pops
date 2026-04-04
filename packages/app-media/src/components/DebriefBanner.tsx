@@ -22,9 +22,7 @@ export function DebriefBanner() {
   return (
     <Alert data-testid="debrief-banner">
       <ClipboardList />
-      <AlertTitle>
-        {count === 1 ? "1 movie to debrief" : `${count} movies to debrief`}
-      </AlertTitle>
+      <AlertTitle>{count === 1 ? "1 movie to debrief" : `${count} movies to debrief`}</AlertTitle>
       <AlertDescription>
         <span>
           Rate your recently watched {count === 1 ? "movie" : "movies"} across dimensions.{" "}
