@@ -567,13 +567,23 @@ describe("auto-remove from watchlist (PRD-011 R6)", () => {
   it("allows re-watch after removal — movie can be re-added and re-watched", () => {
     // Add movie, watch it (auto-removed), re-add, re-watch
     seedWatchlistEntry(db, { media_type: "movie", media_id: 550 });
-    service.logWatch({ mediaType: "movie", mediaId: 550, completed: 1 });
+    service.logWatch({
+      mediaType: "movie",
+      mediaId: 550,
+      completed: 1,
+      watchedAt: "2026-01-01T12:00:00Z",
+    });
 
     // Re-add to watchlist
     const wl2 = seedWatchlistEntry(db, { media_type: "movie", media_id: 550 });
 
-    // Re-watch → should auto-remove again
-    service.logWatch({ mediaType: "movie", mediaId: 550, completed: 1 });
+    // Re-watch → should auto-remove again (distinct watchedAt to avoid unique constraint)
+    service.logWatch({
+      mediaType: "movie",
+      mediaId: 550,
+      completed: 1,
+      watchedAt: "2026-01-02T12:00:00Z",
+    });
     expect(() => watchlistService.getWatchlistEntry(wl2)).toThrow("WatchlistEntry");
   });
 

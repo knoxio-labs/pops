@@ -1591,3 +1591,38 @@ describe("blacklistMovie", () => {
     expect(second.blacklistedCount).toBe(0); // already blacklisted
   });
 });
+
+describe("comparisons.blacklistMovie (tRPC)", () => {
+  it("calls service and returns counts via mutation", async () => {
+    const dimId = seedDimension(db, { name: "Story" });
+
+    await caller.media.comparisons.record({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: 10,
+      mediaBType: "movie",
+      mediaBId: 20,
+      winnerType: "movie",
+      winnerId: 10,
+    });
+
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: 10 });
+
+    const result = await caller.media.comparisons.blacklistMovie({
+      mediaType: "movie",
+      mediaId: 10,
+    });
+
+    expect(result.data.blacklistedCount).toBe(1);
+    expect(result.data.comparisonsDeleted).toBe(1);
+    expect(result.data.dimensionsRecalculated).toBe(1);
+    expect(result.message).toBe("Movie blacklisted and comparisons purged");
+  });
+
+  it("rejects unauthenticated calls", async () => {
+    const anonCaller = createCaller(false);
+    await expect(
+      anonCaller.media.comparisons.blacklistMovie({ mediaType: "movie", mediaId: 1 })
+    ).rejects.toThrow(TRPCError);
+  });
+});
