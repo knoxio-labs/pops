@@ -5,7 +5,7 @@
 
 ## Description
 
-Replace the single "Equal" draw button with three always-visible buttons between the two movie cards: **High**, **Mid**, **Low**. Each tier communicates absolute quality alongside the relative equality — two movies can be equally excellent, equally mediocre, or equally poor.
+As a user, I want three draw tier buttons (High, Mid, Low) between the movie cards so I can express that two movies are equally great, equally average, or equally poor at a dimension.
 
 The draw tier feeds directly into the ELO outcome value:
 
@@ -18,12 +18,11 @@ The draw tier feeds directly into the ELO outcome value:
 ## Acceptance criteria
 
 - [ ] `comparisons` table has a `draw_tier` column: TEXT, nullable, values `'high'` | `'mid'` | `'low'` | null
-- [ ] Drizzle migration generated and applied for the new column
 - [ ] `record` tRPC procedure accepts optional `drawTier` input (validated as enum)
 - [ ] ELO update uses outcome 0.7 (high), 0.5 (mid), 0.3 (low) when `winnerId = 0` and `drawTier` is set
-- [ ] Legacy draws (no tier) continue to use 0.5
+- [ ] Draws without a tier (null) use 0.5 for backward compatibility
 - [ ] Delete + replay recalculation respects stored `draw_tier` values
-- [ ] Compare arena shows three stacked buttons between the two cards: High, Mid, Low (replacing the single Equal button)
+- [ ] Compare arena shows three stacked buttons between the two cards: High, Mid, Low
 - [ ] Each button has a distinct visual treatment (e.g. up-arrow / equals / down-arrow icons, or colour coding)
 - [ ] Score delta animation works for all three tiers
-- [ ] Tests cover: high draw both gain, mid draw neutral, low draw both lose, legacy null draw = 0.5
+- [ ] Tests cover: high draw both gain, mid draw neutral, low draw both lose, null draw = 0.5
