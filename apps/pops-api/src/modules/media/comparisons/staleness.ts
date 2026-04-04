@@ -18,9 +18,7 @@ export function markStale(mediaType: string, mediaId: number): number {
   const db = getDb();
 
   const existing = db
-    .prepare(
-      `SELECT staleness FROM comparison_staleness WHERE media_type = ? AND media_id = ?`
-    )
+    .prepare(`SELECT staleness FROM comparison_staleness WHERE media_type = ? AND media_id = ?`)
     .get(mediaType, mediaId) as { staleness: number } | undefined;
 
   if (!existing) {
@@ -48,9 +46,7 @@ export function getStaleness(mediaType: string, mediaId: number): number {
   const db = getDb();
 
   const row = db
-    .prepare(
-      `SELECT staleness FROM comparison_staleness WHERE media_type = ? AND media_id = ?`
-    )
+    .prepare(`SELECT staleness FROM comparison_staleness WHERE media_type = ? AND media_id = ?`)
     .get(mediaType, mediaId) as { staleness: number } | undefined;
 
   return row?.staleness ?? 1.0;
@@ -62,7 +58,8 @@ export function getStaleness(mediaType: string, mediaId: number): number {
 export function resetStaleness(mediaType: string, mediaId: number): void {
   const db = getDb();
 
-  db.prepare(
-    `DELETE FROM comparison_staleness WHERE media_type = ? AND media_id = ?`
-  ).run(mediaType, mediaId);
+  db.prepare(`DELETE FROM comparison_staleness WHERE media_type = ? AND media_id = ?`).run(
+    mediaType,
+    mediaId
+  );
 }
