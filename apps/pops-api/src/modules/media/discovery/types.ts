@@ -72,6 +72,10 @@ export interface DiscoverResult {
   popularity: number;
   /** Whether this movie is already in the user's library. */
   inLibrary: boolean;
+  /** Whether the user has watched this movie (has a watch_history entry). */
+  isWatched: boolean;
+  /** Whether this movie is on the user's watchlist. */
+  onWatchlist: boolean;
 }
 
 /** A discover result enriched with preference-based match scoring. */

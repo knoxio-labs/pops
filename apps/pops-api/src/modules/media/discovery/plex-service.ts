@@ -7,6 +7,7 @@ import { movies } from "@pops/db-types";
 import { getPlexClient } from "../plex/service.js";
 import type { DiscoverResult } from "./types.js";
 import type { PlexMediaItem } from "../plex/types.js";
+import { getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 
 /** Get all TMDB IDs currently in the library for quick lookup. */
 function getLibraryTmdbIds(): Set<number> {
@@ -34,7 +35,12 @@ function extractTmdbId(item: PlexMediaItem): number | null {
 }
 
 /** Map a Plex media item to a DiscoverResult. */
-function toDiscoverResult(item: PlexMediaItem, libraryIds: Set<number>): DiscoverResult | null {
+function toDiscoverResult(
+  item: PlexMediaItem,
+  libraryIds: Set<number>,
+  watchedIds: Set<number>,
+  watchlistIds: Set<number>
+): DiscoverResult | null {
   const tmdbId = extractTmdbId(item);
   if (!tmdbId) return null;
 
@@ -52,6 +58,8 @@ function toDiscoverResult(item: PlexMediaItem, libraryIds: Set<number>): Discove
     genreIds: [],
     popularity: 0,
     inLibrary,
+    isWatched: watchedIds.has(tmdbId),
+    onWatchlist: watchlistIds.has(tmdbId),
   };
 }
 
@@ -75,9 +83,11 @@ export async function getTrendingFromPlex(limit: number = 20): Promise<DiscoverR
   const client = getPlexClient();
   if (!client) return null;
 
-  const [plexItems, libraryIds, dismissedIds] = await Promise.all([
+  const [plexItems, libraryIds, watchedIds, watchlistIds, dismissedIds] = await Promise.all([
     client.getTrending(limit + 10), // fetch extra to account for filtering
     Promise.resolve(getLibraryTmdbIds()),
+    Promise.resolve(getWatchedTmdbIds()),
+    Promise.resolve(getWatchlistTmdbIds()),
     Promise.resolve(getDismissedTmdbIds()),
   ]);
 
@@ -85,7 +95,7 @@ export async function getTrendingFromPlex(limit: number = 20): Promise<DiscoverR
   const seenTmdbIds = new Set<number>();
 
   for (const item of plexItems) {
-    const result = toDiscoverResult(item, libraryIds);
+    const result = toDiscoverResult(item, libraryIds, watchedIds, watchlistIds);
     if (!result) continue;
     if (dismissedIds.has(result.tmdbId)) continue;
     if (seenTmdbIds.has(result.tmdbId)) continue;
