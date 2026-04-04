@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 const mockListQuery = vi.fn();
 const mockGenresQuery = vi.fn();
 const mockRefetch = vi.fn();
+const mockGetPendingDebriefs = vi.fn();
 
 vi.mock("../lib/trpc", () => ({
   trpc: {
@@ -13,6 +14,9 @@ vi.mock("../lib/trpc", () => ({
       library: {
         list: { useQuery: (...args: unknown[]) => mockListQuery(...args) },
         genres: { useQuery: () => mockGenresQuery() },
+      },
+      comparisons: {
+        getPendingDebriefs: { useQuery: () => mockGetPendingDebriefs() },
       },
     },
   },
@@ -96,6 +100,7 @@ describe("LibraryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGenresQuery.mockReturnValue({ data: { data: ["Drama", "Sci-Fi"] } });
+    mockGetPendingDebriefs.mockReturnValue({ data: null });
   });
 
   describe("Loading state", () => {
