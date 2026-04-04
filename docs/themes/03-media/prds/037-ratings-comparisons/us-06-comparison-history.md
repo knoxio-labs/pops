@@ -10,7 +10,7 @@ As a user, I want to see my past comparisons and undo mistakes so that a misclic
 ## Acceptance Criteria
 
 - [x] Comparison history page or section accessible from the compare arena or rankings page
-- [x] History shows: both items compared (poster + title), winner, dimension, date
+- [ ] History shows: both items compared (poster + title), winner, dimension, date
 - [x] History ordered by date DESC (most recent first)
 - [x] Pagination or infinite scroll for long history
 - [x] Delete button per comparison with confirmation dialog
