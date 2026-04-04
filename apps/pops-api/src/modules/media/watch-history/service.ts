@@ -22,6 +22,7 @@ import { watchHistory, mediaWatchlist, episodes, seasons, movies, tvShows } from
 import { NotFoundError } from "../../../shared/errors.js";
 import { resequencePriorities } from "../watchlist/service.js";
 import { resetStaleness } from "../comparisons/staleness.js";
+import { createDebriefSession } from "../debrief/service.js";
 import type {
   WatchHistoryRow,
   LogWatchInput,
@@ -327,6 +328,9 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
           }
         }
       }
+
+      // Auto-queue debrief session for completed watches (PRD-063)
+      createDebriefSession(entry.id);
     }
 
     // Auto-remove from watchlist (PRD-011 R6) — skip for plex_sync source
