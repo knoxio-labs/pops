@@ -252,6 +252,23 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
   const watchedAt = input.watchedAt ?? new Date().toISOString();
 
   return db.transaction((tx) => {
+    // Skip if a blacklisted entry exists for this exact (media_type, media_id, watched_at)
+    const blacklisted = tx
+      .select()
+      .from(watchHistory)
+      .where(
+        and(
+          eq(watchHistory.mediaType, input.mediaType),
+          eq(watchHistory.mediaId, input.mediaId),
+          eq(watchHistory.watchedAt, watchedAt),
+          eq(watchHistory.blacklisted, 1)
+        )
+      )
+      .get();
+    if (blacklisted) {
+      return { entry: blacklisted, created: false, watchlistRemoved: false };
+    }
+
     const result = tx
       .insert(watchHistory)
       .values({
@@ -569,9 +586,26 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
           )
         : new Set<number>();
 
-    const toLog = episodeIds.filter((id) => !alreadyWatched.has(id));
+    // Find blacklisted episodes at this exact timestamp to skip
+    const blacklistedIds = new Set(
+      tx
+        .select({ mediaId: watchHistory.mediaId })
+        .from(watchHistory)
+        .where(
+          and(
+            eq(watchHistory.mediaType, "episode"),
+            eq(watchHistory.blacklisted, 1),
+            eq(watchHistory.watchedAt, watchedAt),
+            inArray(watchHistory.mediaId, episodeIds)
+          )
+        )
+        .all()
+        .map((r) => r.mediaId)
+    );
 
-    // Insert watch history entries for episodes not yet watched
+    const toLog = episodeIds.filter((id) => !alreadyWatched.has(id) && !blacklistedIds.has(id));
+
+    // Insert watch history entries for episodes not yet watched and not blacklisted
     for (const episodeId of toLog) {
       tx.insert(watchHistory)
         .values({
@@ -640,7 +674,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
       }
     }
 
-    return { logged: toLog.length, skipped: alreadyWatched.size };
+    return { logged: toLog.length, skipped: episodeIds.length - toLog.length };
   });
 }
 
