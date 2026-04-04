@@ -153,7 +153,7 @@ describe("DebriefPage", () => {
     const header = screen.getByTestId("debrief-header");
     expect(header).toBeInTheDocument();
     expect(header.querySelector("h1")).toHaveTextContent("Inception");
-    expect(screen.getByAltText("Inception poster")).toBeInTheDocument();
+    expect(header.querySelector("img")).toHaveAttribute("alt", "Inception poster");
   });
 
   it("renders dimension progress badges", () => {
