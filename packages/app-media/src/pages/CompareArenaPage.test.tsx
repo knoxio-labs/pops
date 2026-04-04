@@ -172,8 +172,8 @@ describe("CompareArenaPage", () => {
     setupArena();
     renderPage();
 
-    expect(screen.getByText("The Matrix")).toBeTruthy();
-    expect(screen.getByText("Inception")).toBeTruthy();
+    expect(screen.getAllByText("The Matrix").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Inception").length).toBeGreaterThan(0);
   });
 
   it("displays current dimension name in prompt", () => {
@@ -197,7 +197,8 @@ describe("CompareArenaPage", () => {
     setupArena();
     renderPage();
 
-    fireEvent.click(screen.getByText("The Matrix"));
+    // Click the movie card heading (not action bar buttons)
+    fireEvent.click(screen.getAllByText("The Matrix")[0]!);
 
     expect(mockRecordMutate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -293,8 +294,8 @@ describe("CompareArenaPage", () => {
     setupArena();
     renderPage();
 
-    // First click should work
-    fireEvent.click(screen.getByText("The Matrix"));
+    // First click should work — click the card heading
+    fireEvent.click(screen.getAllByText("The Matrix")[0]!);
     expect(mockRecordMutate).toHaveBeenCalledTimes(1);
   });
 
@@ -306,8 +307,8 @@ describe("CompareArenaPage", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
 
-    // Pick a winner — triggers onSuccess which advances dimensionIndex
-    fireEvent.click(screen.getByText("The Matrix"));
+    // Pick a winner — click the card heading
+    fireEvent.click(screen.getAllByText("The Matrix")[0]!);
 
     // The onSuccess callback advances the dimension
     // We can verify the mutation was called with the first dimension
