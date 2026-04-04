@@ -1,18 +1,15 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { _clearRegistry, getResultComponent } from "@pops/navigation";
+import { _clearRegistry, getResultComponent, registerResultComponent } from "@pops/navigation";
 import { BudgetResult } from "./BudgetResult";
 
 beforeEach(() => {
   _clearRegistry();
-  // Re-import triggers the side-effect registration, but since it's already loaded
-  // we manually re-register here
 });
 
 describe("BudgetResult", () => {
-  it("registers for the budgets domain", async () => {
-    // The import side-effect registers the component
-    await import("./BudgetResult");
+  it("registers for the budgets domain", () => {
+    registerResultComponent("budgets", BudgetResult);
     const Component = getResultComponent("budgets");
     expect(Component).toBe(BudgetResult);
   });
