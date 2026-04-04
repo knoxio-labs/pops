@@ -4,7 +4,17 @@
  */
 import { useState } from "react";
 import { cn, Badge, Button, Skeleton } from "@pops/ui";
-import { Film, Plus, Bookmark, Check, Loader2, X, Eye } from "lucide-react";
+import {
+  Film,
+  Plus,
+  Bookmark,
+  BookmarkCheck,
+  Check,
+  Eye,
+  Loader2,
+  RotateCw,
+  X,
+} from "lucide-react";
 import { RequestMovieButton } from "./RequestMovieButton";
 
 export interface DiscoverCardProps {
@@ -15,12 +25,16 @@ export interface DiscoverCardProps {
   posterUrl: string | null;
   voteAverage: number;
   inLibrary: boolean;
+  isWatched?: boolean;
+  onWatchlist?: boolean;
   isAddingToLibrary?: boolean;
   isAddingToWatchlist?: boolean;
   isMarkingWatched?: boolean;
+  isMarkingRewatched?: boolean;
   onAddToLibrary?: (tmdbId: number) => void;
   onAddToWatchlist?: (tmdbId: number) => void;
   onMarkWatched?: (tmdbId: number) => void;
+  onMarkRewatched?: (tmdbId: number) => void;
   onNotInterested?: (tmdbId: number) => void;
   /** Whether a dismiss mutation is in progress for this card. */
   isDismissing?: boolean;
@@ -38,12 +52,16 @@ export function DiscoverCard({
   posterUrl: posterUrlProp,
   voteAverage,
   inLibrary,
+  isWatched,
+  onWatchlist,
   isAddingToLibrary,
   isAddingToWatchlist,
   onAddToLibrary,
   onAddToWatchlist,
   onMarkWatched,
   isMarkingWatched,
+  isMarkingRewatched,
+  onMarkRewatched,
   onNotInterested,
   isDismissing,
   matchPercentage,
@@ -68,12 +86,19 @@ export function DiscoverCard({
           </Badge>
         )}
 
-        {/* In Library badge */}
-        {inLibrary && (
+        {/* Status badge — Watched replaces Owned */}
+        {isWatched ? (
           <Badge variant="secondary" className="absolute top-2 right-2 z-10 gap-0.5 text-xs">
-            <Check className="h-3 w-3" />
-            Owned
+            <Eye className="h-3 w-3" />
+            Watched
           </Badge>
+        ) : (
+          inLibrary && (
+            <Badge variant="secondary" className="absolute top-2 right-2 z-10 gap-0.5 text-xs">
+              <Check className="h-3 w-3" />
+              Owned
+            </Badge>
+          )
         )}
 
         {/* Poster image */}
@@ -127,30 +152,50 @@ export function DiscoverCard({
             className="h-7 w-7 text-white hover:bg-white/20"
             onClick={() => onAddToWatchlist?.(tmdbId)}
             disabled={isAddingToWatchlist}
-            title="Add to Watchlist"
-            aria-label="Add to Watchlist"
+            title={onWatchlist ? "On Watchlist" : "Add to Watchlist"}
+            aria-label={onWatchlist ? "On Watchlist" : "Add to Watchlist"}
           >
             {isAddingToWatchlist ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : onWatchlist ? (
+              <BookmarkCheck className="h-3.5 w-3.5" />
             ) : (
               <Bookmark className="h-3.5 w-3.5" />
             )}
           </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-white hover:bg-white/20"
-            onClick={() => onMarkWatched?.(tmdbId)}
-            disabled={isMarkingWatched}
-            title="Mark as Watched"
-            aria-label="Mark as Watched"
-          >
-            {isMarkingWatched ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Eye className="h-3.5 w-3.5" />
-            )}
-          </Button>
+          {isWatched ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-white hover:bg-white/20"
+              onClick={() => onMarkRewatched?.(tmdbId)}
+              disabled={isMarkingRewatched}
+              title="Mark as Rewatched"
+              aria-label="Mark as Rewatched"
+            >
+              {isMarkingRewatched ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCw className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-white hover:bg-white/20"
+              onClick={() => onMarkWatched?.(tmdbId)}
+              disabled={isMarkingWatched}
+              title="Mark as Watched"
+              aria-label="Mark as Watched"
+            >
+              {isMarkingWatched ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Eye className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
           <RequestMovieButton tmdbId={tmdbId} title={title} variant="compact" />
           <Button
             size="icon"
