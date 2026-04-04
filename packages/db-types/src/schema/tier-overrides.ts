@@ -17,10 +17,6 @@ export const tierOverrides = sqliteTable(
       .default(sql`(datetime('now'))`),
   },
   (table) => [
-    uniqueIndex("idx_tier_overrides_unique").on(
-      table.mediaType,
-      table.mediaId,
-      table.dimensionId
-    ),
+    uniqueIndex("idx_tier_overrides_unique").on(table.mediaType, table.mediaId, table.dimensionId),
   ]
 );
