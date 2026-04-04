@@ -1,6 +1,6 @@
 import { useContext, useEffect } from "react";
 import { AppContextCtx } from "./context.js";
-import type { AppContext, AppContextEntity } from "./types.js";
+import type { AppContext, AppContextEntity, AppName } from "./types.js";
 
 /**
  * Returns the current AppContext.
@@ -42,4 +42,15 @@ export function useSetPageContext(options: SetPageContextOptions): void {
     };
     // Re-run when any option value changes
   }, [options.page, options.pageType, options.entity, options.filters, setPageContext]);
+}
+
+/** Returns the active app identifier, or null at root / unmatched paths. */
+export function useCurrentApp(): AppName | null {
+  return useAppContext().app;
+}
+
+/** Returns the entity being viewed on a drill-down page, or null otherwise. */
+export function useCurrentEntity(): AppContextEntity | null {
+  const { pageType, entity } = useAppContext();
+  return pageType === "drill-down" && entity ? entity : null;
 }
