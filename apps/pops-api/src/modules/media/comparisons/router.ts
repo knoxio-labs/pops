@@ -18,6 +18,7 @@ import {
   RankingsQuerySchema,
   DimensionExclusionSchema,
   StalenessSchema,
+  RecordSkipSchema,
   toDimension,
   toComparison,
   toMediaScore,
@@ -195,5 +196,24 @@ export const comparisonsRouter = router({
   getStaleness: protectedProcedure.input(StalenessSchema).query(({ input }) => {
     const staleness = stalenessService.getStaleness(input.mediaType, input.mediaId);
     return { data: { staleness } };
+  }),
+
+  /** Record a skip (puts pair on cooloff for 10 global comparisons). */
+  recordSkip: protectedProcedure.input(RecordSkipSchema).mutation(({ input }) => {
+    try {
+      const skipUntil = service.recordSkip(
+        input.dimensionId,
+        input.mediaAType,
+        input.mediaAId,
+        input.mediaBType,
+        input.mediaBId
+      );
+      return { data: { skipUntil }, message: "Skip recorded" };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      throw err;
+    }
   }),
 });
