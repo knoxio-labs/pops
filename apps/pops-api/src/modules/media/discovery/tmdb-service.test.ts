@@ -15,12 +15,15 @@ vi.mock("@pops/db-types", () => ({
 vi.mock("./flags.js", () => ({
   getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
   getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
 import { getDrizzle } from "../../../db.js";
+import { getDismissedTmdbIds } from "./flags.js";
 import { getRecommendations } from "./tmdb-service.js";
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
+const mockGetDismissedTmdbIds = vi.mocked(getDismissedTmdbIds);
 
 /** Build a minimal TmdbSearchResult. */
 function makeTmdbResult(overrides: Partial<TmdbSearchResult> = {}): TmdbSearchResult {
@@ -89,6 +92,7 @@ function createMockDb(libraryTmdbIds: number[] = [], dismissedTmdbIds: number[] 
 describe("getRecommendations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetDismissedTmdbIds.mockReturnValue(new Set());
   });
 
   it("returns empty when no top movies exist", async () => {
@@ -127,8 +131,9 @@ describe("getRecommendations", () => {
   });
 
   it("excludes dismissed movies", async () => {
-    const mockDb = createMockDb([], [300]); // tmdbId 300 is dismissed
+    const mockDb = createMockDb();
     mockGetDrizzle.mockReturnValue(mockDb);
+    mockGetDismissedTmdbIds.mockReturnValue(new Set([300]));
 
     const client = makeTmdbClient([
       [

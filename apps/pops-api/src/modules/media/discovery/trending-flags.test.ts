@@ -5,10 +5,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { TmdbClient } from "../tmdb/client.js";
 import type { TmdbSearchResult } from "../tmdb/types.js";
 
-// Mock flags module so we can control watched/watchlist sets independently
+// Mock flags module so we can control watched/watchlist/dismissed sets independently
 vi.mock("./flags.js", () => ({
   getWatchedTmdbIds: vi.fn(),
   getWatchlistTmdbIds: vi.fn(),
+  getDismissedTmdbIds: vi.fn(),
 }));
 
 vi.mock("../../../db.js", () => ({
@@ -25,12 +26,13 @@ vi.mock("./service.js", () => ({
 }));
 
 import { getDrizzle } from "../../../db.js";
-import { getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
+import { getWatchedTmdbIds, getWatchlistTmdbIds, getDismissedTmdbIds } from "./flags.js";
 import { getTrending } from "./tmdb-service.js";
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
 const mockGetWatchedTmdbIds = vi.mocked(getWatchedTmdbIds);
 const mockGetWatchlistTmdbIds = vi.mocked(getWatchlistTmdbIds);
+const mockGetDismissedTmdbIds = vi.mocked(getDismissedTmdbIds);
 
 function makeTmdbResult(overrides: Partial<TmdbSearchResult> = {}): TmdbSearchResult {
   return {
@@ -74,6 +76,7 @@ function createMockDb(libraryTmdbIds: number[] = []) {
 describe("getTrending — isWatched + onWatchlist flags", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetDismissedTmdbIds.mockReturnValue(new Set());
   });
 
   it("sets isWatched=false and onWatchlist=false for a plain result", async () => {
