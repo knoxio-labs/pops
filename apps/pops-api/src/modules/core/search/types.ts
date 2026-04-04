@@ -34,6 +34,6 @@ export interface SearchAdapter<T = unknown> {
   search(
     query: Query,
     context: SearchContext,
-    options?: { limit?: number },
+    options?: { limit?: number }
   ): SearchHit<T>[] | Promise<SearchHit<T>[]>;
 }
