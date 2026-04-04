@@ -353,7 +353,7 @@ export function TierListPage() {
   }, [reset]);
 
   const handleDone = useCallback(() => {
-    navigate("/media/compare");
+    navigate("/media/rankings");
   }, [navigate]);
 
   return (
