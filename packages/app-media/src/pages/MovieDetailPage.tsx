@@ -108,13 +108,16 @@ export function MovieDetailPage() {
   const logoSrc = movie.logoUrl ?? undefined;
 
   const watchEntries = watchHistoryData?.data ?? [];
-  const mostRecentWatch = watchEntries.length > 0
-    ? watchEntries.reduce((latest, entry) =>
-        new Date(entry.watchedAt) > new Date(latest.watchedAt) ? entry : latest
-      )
-    : null;
+  const mostRecentWatch =
+    watchEntries.length > 0
+      ? watchEntries.reduce((latest, entry) =>
+          new Date(entry.watchedAt) > new Date(latest.watchedAt) ? entry : latest
+        )
+      : null;
   const daysSinceWatch = mostRecentWatch
-    ? Math.floor((Date.now() - new Date(mostRecentWatch.watchedAt).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (Date.now() - new Date(mostRecentWatch.watchedAt).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
   const staleness = stalenessData?.data?.staleness ?? 1.0;
 
