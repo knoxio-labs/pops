@@ -168,10 +168,6 @@ function UnrankedPool({
     });
   }, []);
 
-  const handleReturnToPool = useCallback((_e: React.DragEvent, movie: TierListMovie) => {
-    // When dragged back to pool, remove tier assignment
-  }, []);
-
   const handlePoolDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     try {
