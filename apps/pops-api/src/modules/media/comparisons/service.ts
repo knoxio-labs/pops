@@ -341,33 +341,8 @@ export function deleteComparison(id: number): void {
     // Delete the comparison
     drizzleDb.delete(comparisons).where(eq(comparisons.id, id)).run();
 
-    // Reset all scores for this dimension
-    drizzleDb
-      .update(mediaScores)
-      .set({ score: 1500.0, comparisonCount: 0, updatedAt: new Date().toISOString() })
-      .where(eq(mediaScores.dimensionId, dimensionId))
-      .run();
-
-    // Replay all remaining comparisons in chronological order
-    const remaining = drizzleDb
-      .select()
-      .from(comparisons)
-      .where(eq(comparisons.dimensionId, dimensionId))
-      .orderBy(asc(comparisons.comparedAt))
-      .all();
-
-    for (const comp of remaining) {
-      updateEloScores({
-        dimensionId: comp.dimensionId,
-        mediaAType: comp.mediaAType as "movie" | "tv_show",
-        mediaAId: comp.mediaAId,
-        mediaBType: comp.mediaBType as "movie" | "tv_show",
-        mediaBId: comp.mediaBId,
-        winnerType: comp.winnerType as "movie" | "tv_show",
-        winnerId: comp.winnerId,
-        drawTier: comp.drawTier as "high" | "mid" | "low" | null,
-      });
-    }
+    // Recalculate ELO for the affected dimension
+    recalcDimensionElo(dimensionId);
   })();
 }
 
@@ -868,6 +843,141 @@ export function getRankings(
     })),
     total: countResult.total,
   };
+}
+
+// ── Dimension Exclusion ──
+
+/**
+ * Recalculate ELO scores for a dimension by resetting all scores and replaying
+ * all comparisons in chronological order.
+ */
+function recalcDimensionElo(dimensionId: number): void {
+  const drizzleDb = getDrizzle();
+
+  // Reset all scores for this dimension
+  drizzleDb
+    .update(mediaScores)
+    .set({ score: 1500.0, comparisonCount: 0, updatedAt: new Date().toISOString() })
+    .where(eq(mediaScores.dimensionId, dimensionId))
+    .run();
+
+  // Replay all remaining comparisons in chronological order
+  const remaining = drizzleDb
+    .select()
+    .from(comparisons)
+    .where(eq(comparisons.dimensionId, dimensionId))
+    .orderBy(asc(comparisons.comparedAt))
+    .all();
+
+  for (const comp of remaining) {
+    updateEloScores({
+      dimensionId: comp.dimensionId,
+      mediaAType: comp.mediaAType as "movie" | "tv_show",
+      mediaAId: comp.mediaAId,
+      mediaBType: comp.mediaBType as "movie" | "tv_show",
+      mediaBId: comp.mediaBId,
+      winnerType: comp.winnerType as "movie" | "tv_show",
+      winnerId: comp.winnerId,
+      drawTier: comp.drawTier as "high" | "mid" | "low" | null,
+    });
+  }
+}
+
+/**
+ * Exclude a media item from a dimension: sets excluded=1 on the media_scores row
+ * (creates with score 1500 + excluded=1 if missing), deletes all comparisons
+ * involving that item for this dimension, and recalculates ELO.
+ */
+export function excludeFromDimension(
+  mediaType: string,
+  mediaId: number,
+  dimensionId: number
+): void {
+  getDimension(dimensionId); // verify exists
+  const drizzleDb = getDrizzle();
+  const rawDb = getDb();
+
+  rawDb.transaction(() => {
+    // Upsert media_scores row with excluded=1
+    const existing = drizzleDb
+      .select()
+      .from(mediaScores)
+      .where(
+        and(
+          eq(mediaScores.mediaType, mediaType),
+          eq(mediaScores.mediaId, mediaId),
+          eq(mediaScores.dimensionId, dimensionId)
+        )
+      )
+      .get();
+
+    if (existing) {
+      drizzleDb
+        .update(mediaScores)
+        .set({ excluded: 1, updatedAt: new Date().toISOString() })
+        .where(eq(mediaScores.id, existing.id))
+        .run();
+    } else {
+      drizzleDb
+        .insert(mediaScores)
+        .values({
+          mediaType,
+          mediaId,
+          dimensionId,
+          score: 1500.0,
+          comparisonCount: 0,
+          excluded: 1,
+        })
+        .run();
+    }
+
+    // Delete all comparisons involving this media item for this dimension
+    drizzleDb
+      .delete(comparisons)
+      .where(
+        and(
+          eq(comparisons.dimensionId, dimensionId),
+          or(
+            and(eq(comparisons.mediaAType, mediaType), eq(comparisons.mediaAId, mediaId)),
+            and(eq(comparisons.mediaBType, mediaType), eq(comparisons.mediaBId, mediaId))
+          )
+        )
+      )
+      .run();
+
+    // Recalculate ELO for this dimension
+    recalcDimensionElo(dimensionId);
+  })();
+}
+
+/**
+ * Re-include a media item in a dimension: sets excluded=0.
+ */
+export function includeInDimension(mediaType: string, mediaId: number, dimensionId: number): void {
+  getDimension(dimensionId); // verify exists
+  const drizzleDb = getDrizzle();
+
+  const existing = drizzleDb
+    .select()
+    .from(mediaScores)
+    .where(
+      and(
+        eq(mediaScores.mediaType, mediaType),
+        eq(mediaScores.mediaId, mediaId),
+        eq(mediaScores.dimensionId, dimensionId)
+      )
+    )
+    .get();
+
+  if (!existing) {
+    throw new NotFoundError("MediaScore", `${mediaType}:${mediaId}:${dimensionId}`);
+  }
+
+  drizzleDb
+    .update(mediaScores)
+    .set({ excluded: 0, updatedAt: new Date().toISOString() })
+    .where(eq(mediaScores.id, existing.id))
+    .run();
 }
 
 // ── Skip Cooloff ──

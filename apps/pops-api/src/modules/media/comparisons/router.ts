@@ -16,6 +16,7 @@ import {
   ScoreQuerySchema,
   RandomPairQuerySchema,
   RankingsQuerySchema,
+  DimensionExclusionSchema,
   StalenessSchema,
   toDimension,
   toComparison,
@@ -156,6 +157,32 @@ export const comparisonsRouter = router({
       data: rows,
       pagination: paginationMeta(total, limit, offset),
     };
+  }),
+
+  /** Exclude a media item from a dimension (removes comparisons, recalculates Elo). */
+  excludeFromDimension: protectedProcedure.input(DimensionExclusionSchema).mutation(({ input }) => {
+    try {
+      service.excludeFromDimension(input.mediaType, input.mediaId, input.dimensionId);
+      return { message: "Media excluded from dimension" };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      throw err;
+    }
+  }),
+
+  /** Re-include a media item in a dimension. */
+  includeInDimension: protectedProcedure.input(DimensionExclusionSchema).mutation(({ input }) => {
+    try {
+      service.includeInDimension(input.mediaType, input.mediaId, input.dimensionId);
+      return { message: "Media included in dimension" };
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+      }
+      throw err;
+    }
   }),
 
   /** Mark a media item as stale (compounds ×0.5 each call, floor 0.01). */

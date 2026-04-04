@@ -8,7 +8,7 @@ import {
   seedWatchHistoryEntry,
   createCaller,
 } from "../../../shared/test-utils.js";
-import { blacklistMovie } from "./service.js";
+import { blacklistMovie, excludeFromDimension, includeInDimension } from "./service.js";
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
@@ -1624,5 +1624,123 @@ describe("comparisons.blacklistMovie (tRPC)", () => {
     await expect(
       anonCaller.media.comparisons.blacklistMovie({ mediaType: "movie", mediaId: 1 })
     ).rejects.toThrow(TRPCError);
+  });
+});
+
+describe("dimension exclusion", () => {
+  it("excludeFromDimension sets excluded=1 on media_scores", () => {
+    const dimId = seedDimension(db, { name: "Dim" });
+    const movieId = seedMovie(db, { tmdb_id: 550, title: "Movie A" });
+    db.prepare(
+      "INSERT INTO media_scores (media_type, media_id, dimension_id, score, comparison_count, excluded) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run("movie", movieId, dimId, 1600, 5, 0);
+
+    excludeFromDimension("movie", movieId, dimId);
+
+    const row = db
+      .prepare(
+        "SELECT excluded FROM media_scores WHERE media_type = ? AND media_id = ? AND dimension_id = ?"
+      )
+      .get("movie", movieId, dimId) as { excluded: number };
+    expect(row.excluded).toBe(1);
+  });
+
+  it("excludeFromDimension creates score row with excluded=1 if missing", () => {
+    const dimId = seedDimension(db, { name: "Dim" });
+    const movieId = seedMovie(db, { tmdb_id: 550, title: "Movie A" });
+
+    excludeFromDimension("movie", movieId, dimId);
+
+    const row = db
+      .prepare(
+        "SELECT excluded, score FROM media_scores WHERE media_type = ? AND media_id = ? AND dimension_id = ?"
+      )
+      .get("movie", movieId, dimId) as { excluded: number; score: number };
+    expect(row.excluded).toBe(1);
+    expect(row.score).toBe(1500);
+  });
+
+  it("excludeFromDimension purges comparisons for that dimension only", () => {
+    const dim1 = seedDimension(db, { name: "Dim1" });
+    const dim2 = seedDimension(db, { name: "Dim2" });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: "Movie A" });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: "Movie B" });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1, completed: 1 });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2, completed: 1 });
+
+    db.prepare(
+      "INSERT INTO comparisons (dimension_id, media_a_type, media_a_id, media_b_type, media_b_id, winner_type, winner_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(dim1, "movie", m1, "movie", m2, "movie", m1);
+    db.prepare(
+      "INSERT INTO comparisons (dimension_id, media_a_type, media_a_id, media_b_type, media_b_id, winner_type, winner_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(dim2, "movie", m1, "movie", m2, "movie", m1);
+
+    excludeFromDimension("movie", m1, dim1);
+
+    const dim1Count = db
+      .prepare("SELECT COUNT(*) as c FROM comparisons WHERE dimension_id = ?")
+      .get(dim1) as { c: number };
+    const dim2Count = db
+      .prepare("SELECT COUNT(*) as c FROM comparisons WHERE dimension_id = ?")
+      .get(dim2) as { c: number };
+    expect(dim1Count.c).toBe(0);
+    expect(dim2Count.c).toBe(1); // dim2 untouched
+  });
+
+  it("excludeFromDimension recalculates ELO for affected dimension", () => {
+    const dimId = seedDimension(db, { name: "Dim" });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: "Movie A" });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: "Movie B" });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: "Movie C" });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1, completed: 1 });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2, completed: 1 });
+    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3, completed: 1 });
+
+    for (const id of [m1, m2, m3]) {
+      db.prepare(
+        "INSERT INTO media_scores (media_type, media_id, dimension_id, score, comparison_count, excluded) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run("movie", id, dimId, 1500, 0, 0);
+    }
+
+    db.prepare(
+      "INSERT INTO comparisons (dimension_id, media_a_type, media_a_id, media_b_type, media_b_id, winner_type, winner_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(dimId, "movie", m2, "movie", m3, "movie", m2);
+    db.prepare(
+      "INSERT INTO comparisons (dimension_id, media_a_type, media_a_id, media_b_type, media_b_id, winner_type, winner_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(dimId, "movie", m1, "movie", m2, "movie", m1);
+
+    excludeFromDimension("movie", m1, dimId);
+
+    const scores = db
+      .prepare(
+        "SELECT media_id, score FROM media_scores WHERE dimension_id = ? AND excluded = 0 ORDER BY score DESC"
+      )
+      .all(dimId) as Array<{ media_id: number; score: number }>;
+
+    expect(scores.length).toBe(2);
+    expect(scores[0]!.media_id).toBe(m2);
+    expect(scores[0]!.score).toBeGreaterThan(scores[1]!.score);
+  });
+
+  it("includeInDimension sets excluded=0", () => {
+    const dimId = seedDimension(db, { name: "Dim" });
+    const movieId = seedMovie(db, { tmdb_id: 550, title: "Movie A" });
+    db.prepare(
+      "INSERT INTO media_scores (media_type, media_id, dimension_id, score, comparison_count, excluded) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run("movie", movieId, dimId, 1500, 0, 1);
+
+    includeInDimension("movie", movieId, dimId);
+
+    const row = db
+      .prepare(
+        "SELECT excluded FROM media_scores WHERE media_type = ? AND media_id = ? AND dimension_id = ?"
+      )
+      .get("movie", movieId, dimId) as { excluded: number };
+    expect(row.excluded).toBe(0);
+  });
+
+  it("includeInDimension throws NOT_FOUND when no score row exists", () => {
+    const dimId = seedDimension(db, { name: "Dim" });
+    expect(() => includeInDimension("movie", 999, dimId)).toThrow();
   });
 });

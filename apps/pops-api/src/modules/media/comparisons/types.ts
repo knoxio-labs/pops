@@ -206,6 +206,13 @@ export interface BlacklistMovieResult {
   dimensionsRecalculated: number;
 }
 
+export const DimensionExclusionSchema = z.object({
+  mediaType: z.enum(MEDIA_TYPES),
+  mediaId: z.number().int().positive(),
+  dimensionId: z.number().int().positive(),
+});
+export type DimensionExclusionInput = z.infer<typeof DimensionExclusionSchema>;
+
 export const StalenessSchema = z.object({
   mediaType: z.enum(MEDIA_TYPES),
   mediaId: z.number().int().positive(),
