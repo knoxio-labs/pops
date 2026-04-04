@@ -1195,8 +1195,16 @@ describe("tiered draws", () => {
       drawTier: "high",
     });
 
-    const scoresA = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 1, dimensionId: dimId });
-    const scoresB = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 2, dimensionId: dimId });
+    const scoresA = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+      dimensionId: dimId,
+    });
+    const scoresB = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+      dimensionId: dimId,
+    });
     // Both should be above 1500 (outcome 0.7 > expected 0.5)
     expect(scoresA.data[0]!.score).toBeGreaterThan(1500);
     expect(scoresB.data[0]!.score).toBeGreaterThan(1500);
@@ -1216,8 +1224,16 @@ describe("tiered draws", () => {
       drawTier: "mid",
     });
 
-    const scoresA = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 1, dimensionId: dimId });
-    const scoresB = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 2, dimensionId: dimId });
+    const scoresA = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+      dimensionId: dimId,
+    });
+    const scoresB = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+      dimensionId: dimId,
+    });
     expect(scoresA.data[0]!.score).toBe(1500);
     expect(scoresB.data[0]!.score).toBe(1500);
   });
@@ -1236,8 +1252,16 @@ describe("tiered draws", () => {
       drawTier: "low",
     });
 
-    const scoresA = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 1, dimensionId: dimId });
-    const scoresB = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 2, dimensionId: dimId });
+    const scoresA = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+      dimensionId: dimId,
+    });
+    const scoresB = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 2,
+      dimensionId: dimId,
+    });
     expect(scoresA.data[0]!.score).toBeLessThan(1500);
     expect(scoresB.data[0]!.score).toBeLessThan(1500);
   });
@@ -1255,7 +1279,11 @@ describe("tiered draws", () => {
       winnerId: 0,
     });
 
-    const scoresA = await caller.media.comparisons.scores({ mediaType: "movie", mediaId: 1, dimensionId: dimId });
+    const scoresA = await caller.media.comparisons.scores({
+      mediaType: "movie",
+      mediaId: 1,
+      dimensionId: dimId,
+    });
     expect(scoresA.data[0]!.score).toBe(1500);
   });
 });
