@@ -251,6 +251,7 @@ export function createTestDb(): Database {
     );
     CREATE INDEX IF NOT EXISTS idx_watch_history_media ON watch_history(media_type, media_id);
     CREATE INDEX IF NOT EXISTS idx_watch_history_watched_at ON watch_history(watched_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_watch_history_unique ON watch_history(media_type, media_id, watched_at);
 
     CREATE TABLE IF NOT EXISTS tv_shows (
       id                   INTEGER PRIMARY KEY AUTOINCREMENT,

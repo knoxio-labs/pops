@@ -979,7 +979,7 @@ describe("batchLogWatch blacklist check", () => {
       episode_number: 1,
       air_date: "2020-01-01",
     });
-    const ep2 = seedEpisode(db, {
+    seedEpisode(db, {
       season_id: sId,
       tvdb_id: 6003,
       episode_number: 2,
