@@ -14,7 +14,7 @@ As a user, I want a search bar in the TopBar so that I can search the entire pla
 - [x] Placeholder text: "Search POPS..."
 - [x] Debounced input (300ms) before triggering search
 - [x] Clear button when text is present
-- [ ] Mobile: collapses to search icon, expands on tap
+- [x] Mobile: collapses to search icon, expands on tap
 - [ ] Focus trap when results panel is open
 
 ## Notes
