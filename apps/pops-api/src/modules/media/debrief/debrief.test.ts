@@ -3,7 +3,6 @@ import type { Database } from "better-sqlite3";
 import {
   setupTestContext,
   seedMovie,
-  seedDimension,
   seedWatchHistoryEntry,
 } from "../../../shared/test-utils.js";
 import { createDebriefSession } from "./service.js";
