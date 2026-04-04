@@ -1,7 +1,7 @@
 # US-06: Submission summary
 
 > PRD: [064 — Batch Tier List](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,9 +9,9 @@ As a user, I want to see a summary after submitting a tier list showing how many
 
 ## Acceptance Criteria
 
-- [ ] After submit, show summary overlay or replace the tier list view
-- [ ] Shows: total comparisons recorded (e.g. "28 comparisons from 8 movies")
-- [ ] Per-movie score change: title + old score → new score + delta (colored green/red)
-- [ ] "Do another" button to start a new tier list session (same or different dimension)
-- [ ] "Done" button navigates to rankings page
-- [ ] Tests: summary shows correct count, score changes displayed, navigation works
+- [x] After submit, show summary overlay or replace the tier list view
+- [x] Shows: total comparisons recorded (e.g. "28 comparisons from 8 movies")
+- [x] Per-movie score change: title + old score → new score + delta (colored green/red)
+- [x] "Do another" button to start a new tier list session (same or different dimension)
+- [x] "Done" button navigates to rankings page
+- [x] Tests: summary shows correct count, score changes displayed, navigation works

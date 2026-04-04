@@ -2,12 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
 const mockDimensionsQuery = vi.fn();
 const mockTierListQuery = vi.fn();
 const mockRefetch = vi.fn();
+const mockMutate = vi.fn();
 
 vi.mock("../lib/trpc", () => ({
   trpc: {
+    useUtils: () => ({
+      media: {
+        comparisons: {
+          getTierListMovies: { invalidate: vi.fn() },
+        },
+      },
+    }),
     media: {
       comparisons: {
         listDimensions: {
@@ -18,6 +28,13 @@ vi.mock("../lib/trpc", () => ({
             const result = mockTierListQuery(...args);
             return { ...result, refetch: mockRefetch, isFetching: false };
           },
+        },
+        submitTierList: {
+          useMutation: () => ({
+            mutate: mockMutate,
+            isPending: false,
+            error: null,
+          }),
         },
       },
     },

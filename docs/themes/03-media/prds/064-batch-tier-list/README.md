@@ -107,7 +107,7 @@ No new tables. Tier list submissions generate standard `comparisons` rows via th
 | 03 | [us-03-movie-selection](us-03-movie-selection.md) | Select 8 movies to maximise information gain for the chosen dimension | Not started | Yes |
 | 04 | [us-04-tier-list-api](us-04-tier-list-api.md) | tRPC endpoints: getTierListMovies, submitTierList | Not started | Blocked by us-01, us-02, us-03 |
 | 05 | [us-05-drag-drop-ui](us-05-drag-drop-ui.md) | Drag-and-drop tier list page with S/A/B/C/D rows, movie cards, unranked pool | Not started | Blocked by us-04 |
-| 06 | [us-06-submission-summary](us-06-submission-summary.md) | Post-submit summary showing implied comparison count and ELO changes | Not started | Blocked by us-05 |
+| 06 | [us-06-submission-summary](us-06-submission-summary.md) | Post-submit summary showing implied comparison count and ELO changes | Done | Blocked by us-05 |
 
 US-01, US-02, US-03 can parallelise. US-05 and US-06 can parallelise once US-04 is done.
 
