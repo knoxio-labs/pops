@@ -190,6 +190,20 @@ export function removeByMedia(mediaType: "movie" | "tv_show", mediaId: number): 
   return result.changes > 0;
 }
 
+/** Check if a specific item is on the watchlist. Returns entry ID if present. */
+export function getWatchlistStatus(
+  mediaType: "movie" | "tv_show",
+  mediaId: number
+): { isOnWatchlist: boolean; entryId: number | null } {
+  const db = getDrizzle();
+  const row = db
+    .select({ id: mediaWatchlist.id })
+    .from(mediaWatchlist)
+    .where(and(eq(mediaWatchlist.mediaType, mediaType), eq(mediaWatchlist.mediaId, mediaId)))
+    .get();
+  return { isOnWatchlist: !!row, entryId: row?.id ?? null };
+}
+
 /**
  * Re-sequence all watchlist priorities to eliminate gaps (0, 1, 2, ...).
  * Accepts an optional drizzle-compatible instance to run inside an existing transaction.

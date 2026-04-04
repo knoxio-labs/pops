@@ -21,6 +21,18 @@ const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 
 export const watchlistRouter = router({
+  /** Check if a specific item is on the watchlist. */
+  status: protectedProcedure
+    .input(
+      z.object({
+        mediaType: z.enum(["movie", "tv_show"]),
+        mediaId: z.number().int().positive(),
+      })
+    )
+    .query(({ input }) => {
+      return service.getWatchlistStatus(input.mediaType, input.mediaId);
+    }),
+
   /** List watchlist entries with optional filters and pagination. */
   list: protectedProcedure.input(WatchlistQuerySchema).query(({ input }) => {
     const limit = input.limit ?? DEFAULT_LIMIT;
