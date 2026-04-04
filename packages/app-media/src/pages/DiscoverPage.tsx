@@ -32,6 +32,8 @@ export function DiscoverPage() {
       posterUrl: string | null;
       voteAverage: number | null;
       inLibrary: boolean;
+      isWatched?: boolean;
+      onWatchlist?: boolean;
     }>
   >([]);
 
@@ -117,6 +119,8 @@ export function DiscoverPage() {
         posterUrl: string | null;
         voteAverage: number;
         inLibrary: boolean;
+        isWatched?: boolean;
+        onWatchlist?: boolean;
         matchPercentage: number;
         matchReason: string;
       }>
@@ -176,6 +180,8 @@ export function DiscoverPage() {
         posterUrl: string | null;
         voteAverage: number | null;
         inLibrary: boolean;
+        isWatched?: boolean;
+        onWatchlist?: boolean;
       }>
     >
   >({});
@@ -247,6 +253,7 @@ export function DiscoverPage() {
   const [addingToLibrary, setAddingToLibrary] = useState<Set<number>>(new Set());
   const [addingToWatchlist, setAddingToWatchlist] = useState<Set<number>>(new Set());
   const [markingWatched, setMarkingWatched] = useState<Set<number>>(new Set());
+  const [markingRewatched, setMarkingRewatched] = useState<Set<number>>(new Set());
   const [dismissing, setDismissing] = useState<Set<number>>(new Set());
 
   // Mutations
@@ -333,6 +340,30 @@ export function DiscoverPage() {
         toast.error("Failed to mark as watched");
       } finally {
         setMarkingWatched((prev) => {
+          const next = new Set(prev);
+          next.delete(tmdbId);
+          return next;
+        });
+      }
+    },
+    [addMovieMutation, logWatchMutation, utils]
+  );
+
+  const handleMarkRewatched = useCallback(
+    async (tmdbId: number) => {
+      setMarkingRewatched((prev) => new Set(prev).add(tmdbId));
+      try {
+        const libResult = await addMovieMutation.mutateAsync({ tmdbId });
+        await logWatchMutation.mutateAsync({
+          mediaType: "movie",
+          mediaId: libResult.data.id,
+        });
+        toast.success(`Logged rewatch of "${libResult.data.title}"`);
+        void utils.media.discovery.rewatchSuggestions.invalidate();
+      } catch {
+        toast.error("Failed to log rewatch");
+      } finally {
+        setMarkingRewatched((prev) => {
           const next = new Set(prev);
           next.delete(tmdbId);
           return next;
@@ -432,6 +463,8 @@ export function DiscoverPage() {
                 posterUrl: string | null;
                 voteAverage: number | null;
                 inLibrary: boolean;
+                isWatched?: boolean;
+                onWatchlist?: boolean;
                 matchPercentage?: number;
                 matchReason?: string;
               }) => (
@@ -450,6 +483,10 @@ export function DiscoverPage() {
                   onAddToWatchlist={handleAddToWatchlist}
                   onMarkWatched={handleMarkWatched}
                   isMarkingWatched={markingWatched.has(item.tmdbId)}
+                  isWatched={item.isWatched}
+                  onWatchlist={item.onWatchlist}
+                  onMarkRewatched={handleMarkRewatched}
+                  isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                   onNotInterested={handleNotInterested}
                   isDismissing={dismissing.has(item.tmdbId)}
                   matchPercentage={item.matchPercentage}
@@ -517,6 +554,10 @@ export function DiscoverPage() {
                 onAddToWatchlist={handleAddToWatchlist}
                 onMarkWatched={handleMarkWatched}
                 isMarkingWatched={markingWatched.has(item.tmdbId)}
+                isWatched={item.isWatched}
+                onWatchlist={item.onWatchlist}
+                onMarkRewatched={handleMarkRewatched}
+                isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                 onNotInterested={handleNotInterested}
                 isDismissing={dismissing.has(item.tmdbId)}
               />
@@ -572,6 +613,8 @@ export function DiscoverPage() {
             posterUrl: string | null;
             voteAverage: number;
             inLibrary: boolean;
+            isWatched?: boolean;
+            onWatchlist?: boolean;
             matchPercentage: number;
             matchReason: string;
           }>;
@@ -607,6 +650,10 @@ export function DiscoverPage() {
                     onAddToWatchlist={handleAddToWatchlist}
                     onMarkWatched={handleMarkWatched}
                     isMarkingWatched={markingWatched.has(item.tmdbId)}
+                    isWatched={item.isWatched}
+                    onWatchlist={item.onWatchlist}
+                    onMarkRewatched={handleMarkRewatched}
+                    isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                     onNotInterested={handleNotInterested}
                     isDismissing={dismissing.has(item.tmdbId)}
                     matchPercentage={item.matchPercentage}
@@ -664,6 +711,8 @@ export function DiscoverPage() {
                 posterUrl: string | null;
                 voteAverage: number | null;
                 inLibrary: boolean;
+                isWatched?: boolean;
+                onWatchlist?: boolean;
               }) => (
                 <DiscoverCard
                   key={item.tmdbId}
@@ -680,6 +729,10 @@ export function DiscoverPage() {
                   onAddToWatchlist={handleAddToWatchlist}
                   onMarkWatched={handleMarkWatched}
                   isMarkingWatched={markingWatched.has(item.tmdbId)}
+                  isWatched={item.isWatched}
+                  onWatchlist={item.onWatchlist}
+                  onMarkRewatched={handleMarkRewatched}
+                  isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                   onNotInterested={handleNotInterested}
                   isDismissing={dismissing.has(item.tmdbId)}
                 />
@@ -707,6 +760,10 @@ export function DiscoverPage() {
               onAddToWatchlist={handleAddToWatchlist}
               onMarkWatched={handleMarkWatched}
               isMarkingWatched={markingWatched.has(item.tmdbId)}
+              isWatched={item.isWatched}
+              onWatchlist={item.onWatchlist}
+              onMarkRewatched={handleMarkRewatched}
+              isMarkingRewatched={markingRewatched.has(item.tmdbId)}
             />
           ))}
         </HorizontalScrollRow>
@@ -748,6 +805,8 @@ export function DiscoverPage() {
                 posterUrl: string | null;
                 voteAverage: number | null;
                 inLibrary: boolean;
+                isWatched?: boolean;
+                onWatchlist?: boolean;
                 matchPercentage?: number;
                 matchReason?: string;
               }) => (
@@ -766,6 +825,10 @@ export function DiscoverPage() {
                   onAddToWatchlist={handleAddToWatchlist}
                   onMarkWatched={handleMarkWatched}
                   isMarkingWatched={markingWatched.has(item.tmdbId)}
+                  isWatched={item.isWatched}
+                  onWatchlist={item.onWatchlist}
+                  onMarkRewatched={handleMarkRewatched}
+                  isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                   onNotInterested={handleNotInterested}
                   isDismissing={dismissing.has(item.tmdbId)}
                   matchPercentage={item.matchPercentage}
@@ -812,6 +875,8 @@ export function DiscoverPage() {
               posterUrl: string | null;
               voteAverage: number | null;
               inLibrary: boolean;
+              isWatched?: boolean;
+              onWatchlist?: boolean;
               matchPercentage?: number;
               matchReason?: string;
             }) => (
@@ -830,6 +895,10 @@ export function DiscoverPage() {
                 onAddToWatchlist={handleAddToWatchlist}
                 onMarkWatched={handleMarkWatched}
                 isMarkingWatched={markingWatched.has(item.tmdbId)}
+                isWatched={item.isWatched}
+                onWatchlist={item.onWatchlist}
+                onMarkRewatched={handleMarkRewatched}
+                isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                 onNotInterested={handleNotInterested}
                 isDismissing={dismissing.has(item.tmdbId)}
                 matchPercentage={item.matchPercentage}
@@ -857,6 +926,8 @@ export function DiscoverPage() {
                 posterUrl: string | null;
                 voteAverage: number | null;
                 inLibrary: boolean;
+                isWatched?: boolean;
+                onWatchlist?: boolean;
                 matchPercentage?: number;
                 matchReason?: string;
               }) => (
@@ -875,6 +946,10 @@ export function DiscoverPage() {
                   onAddToWatchlist={handleAddToWatchlist}
                   onMarkWatched={handleMarkWatched}
                   isMarkingWatched={markingWatched.has(item.tmdbId)}
+                  isWatched={item.isWatched}
+                  onWatchlist={item.onWatchlist}
+                  onMarkRewatched={handleMarkRewatched}
+                  isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                   onNotInterested={handleNotInterested}
                   isDismissing={dismissing.has(item.tmdbId)}
                   matchPercentage={item.matchPercentage}
@@ -914,6 +989,8 @@ export function DiscoverPage() {
                   posterUrl: string | null;
                   voteAverage: number | null;
                   inLibrary: boolean;
+                  isWatched?: boolean;
+                  onWatchlist?: boolean;
                 }) => (
                   <DiscoverCard
                     key={item.tmdbId}
@@ -930,6 +1007,10 @@ export function DiscoverPage() {
                     onAddToWatchlist={handleAddToWatchlist}
                     onMarkWatched={handleMarkWatched}
                     isMarkingWatched={markingWatched.has(item.tmdbId)}
+                    isWatched={item.isWatched}
+                    onWatchlist={item.onWatchlist}
+                    onMarkRewatched={handleMarkRewatched}
+                    isMarkingRewatched={markingRewatched.has(item.tmdbId)}
                     onNotInterested={handleNotInterested}
                     isDismissing={dismissing.has(item.tmdbId)}
                   />
