@@ -239,7 +239,7 @@ export const discoveryRouter = router({
       const { shelfId, limit, offset } = input;
 
       // Parse definition ID: the part before the first colon (or the full ID).
-      const defId = shelfId.includes(":") ? shelfId.split(":")[0]! : shelfId;
+      const defId = shelfId.includes(":") ? (shelfId.split(":")[0] ?? shelfId) : shelfId;
       const definitions = getRegisteredShelves();
       const definition = definitions.find((d) => d.id === defId);
 
