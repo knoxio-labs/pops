@@ -1,7 +1,7 @@
 # US-03: Delete watch event
 
 > PRD: [035 — Watch History](README.md)
-> Status: Partial
+> Status: Done
 
 ## Description
 
@@ -9,14 +9,14 @@ As a user, I want to delete a watch event from my history so that I can correct 
 
 ## Acceptance Criteria
 
-- [ ] Each history entry has a delete action — icon button visible on hover (desktop) or via swipe gesture (mobile)
-- [ ] Clicking delete shows a confirmation dialog: "Remove this watch event? This cannot be undone."
-- [ ] Confirming calls `media.watchHistory.delete` with the watch event ID
-- [ ] On success, the entry is removed from the list without a full page reload (optimistic or refetch)
-- [ ] On error, a toast displays "Failed to delete watch event" and the entry remains
-- [ ] Delete action is disabled while the request is in flight (prevent double-clicks)
-- [ ] Deleting the only entry on a page triggers pagination adjustment (go to previous page or show empty state)
-- [ ] Tests cover: delete button visibility on hover, confirmation dialog flow, successful removal, error handling, pagination edge case
+- [x] Each history entry has a delete action — icon button visible on hover (desktop) or via swipe gesture (mobile)
+- [x] Clicking delete shows a confirmation dialog: "Remove this watch event? This cannot be undone."
+- [x] Confirming calls `media.watchHistory.delete` with the watch event ID
+- [x] On success, the entry is removed from the list without a full page reload (optimistic or refetch)
+- [x] On error, a toast displays "Failed to delete watch event" and the entry remains
+- [x] Delete action is disabled while the request is in flight (prevent double-clicks)
+- [x] Deleting the only entry on a page triggers pagination adjustment (go to previous page or show empty state)
+- [x] Tests cover: delete button visibility on hover, confirmation dialog flow, successful removal, error handling, pagination edge case
 
 ## Notes
 
