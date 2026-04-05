@@ -34,7 +34,6 @@ const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
 let db: Database;
 
-
 /**
  * Helper to poll for import progress until completion
  */
@@ -361,7 +360,11 @@ describe("imports.createEntity", () => {
       name: "SQLite Test Entity",
     });
 
-    const row = getDrizzle().select().from(entitiesTable).where(eq(entitiesTable.id, result.entityId)).get();
+    const row = getDrizzle()
+      .select()
+      .from(entitiesTable)
+      .where(eq(entitiesTable.id, result.entityId))
+      .get();
     expect(row).toBeDefined();
     expect(row!.name).toBe("SQLite Test Entity");
   });

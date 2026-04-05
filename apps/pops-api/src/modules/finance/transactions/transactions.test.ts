@@ -436,7 +436,11 @@ describe("transactions.update", () => {
 
     await caller.finance.transactions.update({ id, data: { amount: 100.0 } });
 
-    const row = getDrizzle().select({ lastEditedTime: transactionsTable.lastEditedTime }).from(transactionsTable).where(eq(transactionsTable.id, id)).get();
+    const row = getDrizzle()
+      .select({ lastEditedTime: transactionsTable.lastEditedTime })
+      .from(transactionsTable)
+      .where(eq(transactionsTable.id, id))
+      .get();
     expect(row!.lastEditedTime).not.toBe("2020-01-01T00:00:00.000Z");
   });
 
@@ -479,7 +483,11 @@ describe("transactions.delete", () => {
     expect(result.message).toBe("Transaction deleted");
 
     // Verify gone from DB
-    const row = getDrizzle().select().from(transactionsTable).where(eq(transactionsTable.id, id)).get();
+    const row = getDrizzle()
+      .select()
+      .from(transactionsTable)
+      .where(eq(transactionsTable.id, id))
+      .get();
     expect(row).toBeUndefined();
   });
 

@@ -271,7 +271,11 @@ describe("budgets.create", () => {
   it("persists to the database", async () => {
     await caller.finance.budgets.create({ category: "New Budget" });
 
-    const row = getDrizzle().select().from(budgetsTable).where(eq(budgetsTable.category, "New Budget")).get();
+    const row = getDrizzle()
+      .select()
+      .from(budgetsTable)
+      .where(eq(budgetsTable.category, "New Budget"))
+      .get();
     expect(row).toBeDefined();
   });
 
@@ -285,7 +289,11 @@ describe("budgets.create", () => {
     });
 
     // Verify all fields persisted in SQLite
-    const row = getDrizzle().select().from(budgetsTable).where(eq(budgetsTable.id, result.data.id)).get();
+    const row = getDrizzle()
+      .select()
+      .from(budgetsTable)
+      .where(eq(budgetsTable.id, result.data.id))
+      .get();
     expect(row).toBeDefined();
     expect(row!.category).toBe("Groceries");
     expect(row!.period).toBe("2025-06");
@@ -355,7 +363,11 @@ describe("budgets.update", () => {
 
     await caller.finance.budgets.update({ id, data: { amount: 500 } });
 
-    const row = getDrizzle().select({ lastEditedTime: budgetsTable.lastEditedTime }).from(budgetsTable).where(eq(budgetsTable.id, id)).get();
+    const row = getDrizzle()
+      .select({ lastEditedTime: budgetsTable.lastEditedTime })
+      .from(budgetsTable)
+      .where(eq(budgetsTable.id, id))
+      .get();
     expect(row!.lastEditedTime).not.toBe("2020-01-01T00:00:00.000Z");
   });
 
@@ -382,7 +394,11 @@ describe("budgets.update", () => {
     await caller.finance.budgets.update({ id, data: { amount: 600 } });
 
     // Verify SQLite was updated
-    const row = getDrizzle().select({ amount: budgetsTable.amount }).from(budgetsTable).where(eq(budgetsTable.id, id)).get();
+    const row = getDrizzle()
+      .select({ amount: budgetsTable.amount })
+      .from(budgetsTable)
+      .where(eq(budgetsTable.id, id))
+      .get();
     expect(row!.amount).toBe(600);
   });
 });

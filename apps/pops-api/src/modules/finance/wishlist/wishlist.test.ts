@@ -254,7 +254,11 @@ describe("wishlist.create", () => {
   it("persists to the database", async () => {
     await caller.finance.wishlist.create({ item: "New Item" });
 
-    const row = getDrizzle().select().from(wishListTable).where(eq(wishListTable.item, "New Item")).get();
+    const row = getDrizzle()
+      .select()
+      .from(wishListTable)
+      .where(eq(wishListTable.item, "New Item"))
+      .get();
     expect(row).toBeDefined();
   });
 
@@ -317,7 +321,11 @@ describe("wishlist.update", () => {
 
     await caller.finance.wishlist.update({ id, data: { priority: "Needing" } });
 
-    const row = getDrizzle().select({ lastEditedTime: wishListTable.lastEditedTime }).from(wishListTable).where(eq(wishListTable.id, id)).get();
+    const row = getDrizzle()
+      .select({ lastEditedTime: wishListTable.lastEditedTime })
+      .from(wishListTable)
+      .where(eq(wishListTable.id, id))
+      .get();
     expect(row!.lastEditedTime).not.toBe("2020-01-01T00:00:00.000Z");
   });
 
