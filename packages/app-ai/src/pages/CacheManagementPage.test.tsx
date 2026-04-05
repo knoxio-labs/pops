@@ -27,6 +27,7 @@ vi.mock("../lib/trpc", () => ({
       core: {
         aiUsage: {
           cacheStats: { invalidate: mockInvalidate },
+          getStats: { invalidate: mockInvalidate },
         },
       },
     }),
