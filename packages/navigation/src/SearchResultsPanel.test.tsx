@@ -232,8 +232,8 @@ describe("SearchResultsPanel", () => {
     ];
     render(<SearchResultsPanel sections={sections} query="test" onClose={vi.fn()} />);
     const buttons = screen.getAllByRole("button");
-    expect(buttons[0]).toHaveAttribute("data-result-index", "0");
-    expect(buttons[1]).toHaveAttribute("data-result-index", "1");
+    expect(buttons[0]!).toHaveAttribute("data-result-index", "0");
+    expect(buttons[1]!).toHaveAttribute("data-result-index", "1");
   });
 
   it("assigns sequential data-result-index across multiple sections", () => {
@@ -252,8 +252,8 @@ describe("SearchResultsPanel", () => {
     ];
     render(<SearchResultsPanel sections={sections} query="test" onClose={vi.fn()} />);
     const buttons = screen.getAllByRole("button");
-    expect(buttons[0]).toHaveAttribute("data-result-index", "0");
-    expect(buttons[1]).toHaveAttribute("data-result-index", "1");
+    expect(buttons[0]!).toHaveAttribute("data-result-index", "0");
+    expect(buttons[1]!).toHaveAttribute("data-result-index", "1");
   });
 
   it("highlights the selected result by selectedIndex", () => {
