@@ -1,7 +1,7 @@
 # US-02: Search results display
 
 > PRD: [032 — Search Page](README.md)
-> Status: Partial — tests outstanding
+> Status: Done
 
 ## Description
 
@@ -18,7 +18,7 @@ As a user, I want to see search results from both TMDB and TheTVDB displayed cle
 - [x] Results that already exist in the local library display an "In Library" badge instead of an "Add" button
 - [x] "In Library" detection calls `media.library.list` (or checks a local cache of existing tmdbIds/tvdbIds) to compare against result IDs
 - [x] Result list is scrollable; results are capped at a reasonable limit (e.g., 20 per section) matching API response size
-- [ ] Tests cover: both sections render independently, poster fallback, "In Library" badge appears for existing items, per-section loading/empty/error states, overview truncation
+- [x] Tests cover: both sections render independently, poster fallback, "In Library" badge appears for existing items, per-section loading/empty/error states, overview truncation
 
 ## Notes
 

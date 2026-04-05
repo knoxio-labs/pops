@@ -81,7 +81,7 @@ Build a search page that queries TMDB for movies and TheTVDB for TV shows. Displ
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
 | 01 | [us-01-search-input](us-01-search-input.md) | Debounced search input querying TMDB and TheTVDB in parallel | Partial | No (first) |
-| 02 | [us-02-search-results](us-02-search-results.md) | Result cards with poster/title/year/overview, "In Library" badge, tab/section layout | Partial | Blocked by us-01 |
+| 02 | [us-02-search-results](us-02-search-results.md) | Result cards with poster/title/year/overview, "In Library" badge, tab/section layout | Done | Blocked by us-01 |
 | 03 | [us-03-add-to-library-flow](us-03-add-to-library-flow.md) | Add button with spinner, addMovie/addTvShow call, success toast, badge update | Partial | Blocked by us-02 |
 
 US-02 depends on US-01 (needs search state). US-03 depends on US-02 (needs result cards to attach the button to).
