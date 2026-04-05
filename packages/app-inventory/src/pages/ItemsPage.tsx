@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useSetPageContext } from "@pops/navigation";
 import {
   Package,
   LayoutGrid,
@@ -236,6 +237,16 @@ export function ItemsPage() {
   const conditionFilter = searchParams.get("condition") ?? "";
   const inUseFilter = searchParams.get("inUse") ?? "";
   const locationFilter = searchParams.get("locationId") ?? "";
+
+  const itemsFilters = useMemo(() => {
+    const f: Record<string, string> = {};
+    if (search) f.search = search;
+    if (typeFilter) f.type = typeFilter;
+    if (conditionFilter) f.condition = conditionFilter;
+    if (locationFilter) f.locationId = locationFilter;
+    return f;
+  }, [search, typeFilter, conditionFilter, locationFilter]);
+  useSetPageContext({ page: "items", pageType: "top-level", filters: itemsFilters });
 
   const setParam = useCallback(
     (key: string, value: string) => {

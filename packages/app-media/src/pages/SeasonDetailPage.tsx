@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
+import { useSetPageContext } from "@pops/navigation";
 import {
   Alert,
   AlertTitle,
@@ -80,6 +81,16 @@ export function SeasonDetailPage() {
         .map((entry: { mediaId: number }) => entry.mediaId)
     );
   }, [watchHistoryData, episodeIds]);
+
+  const seasonEntity = useMemo(
+    () => ({
+      uri: `pops:media/tv/${showId}/season/${seasonNum}`,
+      type: "season",
+      title: showData?.data?.name ? `${showData.data.name} Season ${seasonNum}` : "",
+    }),
+    [showId, seasonNum, showData?.data?.name]
+  );
+  useSetPageContext({ page: "season-detail", pageType: "drill-down", entity: seasonEntity });
 
   // Sonarr monitoring state
   const tvdbId = showData?.data?.tvdbId;

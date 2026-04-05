@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
+import { useSetPageContext } from "@pops/navigation";
 import {
   Alert,
   AlertTitle,
@@ -72,6 +73,12 @@ export function TvShowDetailPage() {
   );
 
   const sonarrSeries = sonarrData?.data;
+
+  const tvShowEntity = useMemo(
+    () => ({ uri: `pops:media/tv/${showId}`, type: "tvshow", title: data?.data?.name ?? "" }),
+    [showId, data?.data?.name]
+  );
+  useSetPageContext({ page: "tvshow-detail", pageType: "drill-down", entity: tvShowEntity });
 
   const [optimisticMonitoring, setOptimisticMonitoring] = useState<Map<number, boolean>>(new Map());
   const [pendingSeasons, setPendingSeasons] = useState<Set<number>>(new Set());

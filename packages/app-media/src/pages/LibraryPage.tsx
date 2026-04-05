@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router";
+import { useSetPageContext } from "@pops/navigation";
 import { Button, Select, Skeleton, TextInput } from "@pops/ui";
 import { Sparkles, Settings, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { MediaGrid } from "../components/MediaGrid";
@@ -134,6 +135,16 @@ export function LibraryPage() {
   // Local search input state (synced to URL on debounce)
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const debouncedSearch = useDebouncedValue(localSearch, 300);
+
+  const libraryFilters = useMemo(() => {
+    const f: Record<string, string> = {};
+    if (typeFilter !== "all") f.type = typeFilter;
+    if (sortBy !== "title") f.sort = sortBy;
+    if (debouncedSearch) f.search = debouncedSearch;
+    if (genreFilter) f.genre = genreFilter;
+    return f;
+  }, [typeFilter, sortBy, debouncedSearch, genreFilter]);
+  useSetPageContext({ page: "library", pageType: "top-level", filters: libraryFilters });
 
   // Sync debounced search to URL
   useEffect(() => {
