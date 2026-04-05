@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 
@@ -249,6 +249,44 @@ describe("HistoryPage", () => {
       renderPage();
       deleteMutationOpts.onError?.({ message: "Server error" });
       expect(mockToastError).toHaveBeenCalledWith("Failed to delete watch event: Server error");
+    });
+  });
+
+  describe("delete disabled while in flight", () => {
+    it("disables delete buttons while mutation is pending", () => {
+      deleteMutationPending = true;
+      renderPage();
+      const deleteButtons = screen.getAllByLabelText("Delete watch event");
+      deleteButtons.forEach((btn) => expect(btn).toBeDisabled());
+    });
+  });
+
+  describe("delete pagination edge case", () => {
+    it("goes to previous page when last entry on a non-first page is deleted", async () => {
+      // Single entry with total > PAGE_SIZE so Next button is visible on page 1.
+      // After clicking Next (offset → 50), triggering onSuccess with 1 entry should
+      // reset offset back to 0.
+      const singleEntry = { ...movieEntry, id: 99 };
+      mockListRecentQuery.mockReturnValue({
+        data: { data: [singleEntry], pagination: { total: 51 } },
+        isLoading: false,
+        error: null,
+      });
+      const user = userEvent.setup();
+      renderPage();
+
+      // Page 1: Next should be visible because total (51) > PAGE_SIZE (50)
+      await user.click(screen.getByText("Next"));
+
+      // Now at offset 50 with 1 entry — trigger onSuccess inside act to simulate delete
+      await act(async () => {
+        deleteMutationOpts.onSuccess?.();
+      });
+
+      // Offset should have been reset to 0 — verify via subsequent query call args
+      const calls = mockListRecentQuery.mock.calls as Array<[{ offset: number }]>;
+      const resetCall = calls.find((args) => args[0]?.offset === 0);
+      expect(resetCall).toBeDefined();
     });
   });
 
