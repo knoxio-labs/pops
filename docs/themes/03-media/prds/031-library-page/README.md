@@ -1,7 +1,7 @@
 # PRD-031: Library Page
 
 > Epic: [02 — App Package & Core UI](../../epics/02-app-package-ui.md)
-> Status: Partial
+> Status: Done
 
 ## Overview
 
@@ -68,8 +68,8 @@ Build the media library — a responsive grid of all owned movies and TV shows. 
 
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
-| 01 | [us-01-media-card](us-01-media-card.md) | MediaCard component with poster fallback chain, title, year, type badge, click navigation | Partial | No (first) |
-| 02 | [us-02-library-grid](us-02-library-grid.md) | Library page with responsive grid, type filter tabs, sort select, search input, pagination | Partial | Blocked by us-01 |
+| 01 | [us-01-media-card](us-01-media-card.md) | MediaCard component with poster fallback chain, title, year, type badge, click navigation | Done | No (first) |
+| 02 | [us-02-library-grid](us-02-library-grid.md) | Library page with responsive grid, type filter tabs, sort select, search input, pagination | Done | Blocked by us-01 |
 | 03 | [us-03-empty-loading-states](us-03-empty-loading-states.md) | Empty state with CTA, loading skeleton grid, error state with retry | Done | Yes (parallel with us-02) |
 
 US-02 depends on US-01 (needs MediaCard). US-03 can be built in parallel with US-02 (independent state components).
