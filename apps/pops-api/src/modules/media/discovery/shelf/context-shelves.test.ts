@@ -90,7 +90,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGetTmdbClient.mockReturnValue({
     discoverMovies: vi.fn().mockResolvedValue(makeTmdbResponse()),
-  } as ReturnType<typeof getTmdbClient>);
+  } as unknown as ReturnType<typeof getTmdbClient>);
   mockToDiscoverResults.mockReturnValue([makeResult(1), makeResult(2)]);
   mockGetLibraryTmdbIds.mockReturnValue(new Set());
   mockGetDismissedTmdbIds.mockReturnValue(new Set());
@@ -324,7 +324,7 @@ describe("contextShelves query()", () => {
     const discoverMoviesMock = vi.fn().mockResolvedValue(makeTmdbResponse(5));
     mockGetTmdbClient.mockReturnValue({
       discoverMovies: discoverMoviesMock,
-    } as ReturnType<typeof getTmdbClient>);
+    } as unknown as ReturnType<typeof getTmdbClient>);
 
     vi.setSystemTime(new Date("2024-10-15T12:00:00")); // October → halloween
     const halloweenShelf = contextShelves.find((s) => s.id === "halloween")!;
@@ -360,7 +360,7 @@ describe("contextShelves query()", () => {
     const discoverMoviesMock = vi.fn().mockResolvedValue(makeTmdbResponse(20));
     mockGetTmdbClient.mockReturnValue({
       discoverMovies: discoverMoviesMock,
-    } as ReturnType<typeof getTmdbClient>);
+    } as unknown as ReturnType<typeof getTmdbClient>);
     mockToDiscoverResults.mockReturnValue(Array.from({ length: 20 }, (_, i) => makeResult(i + 1)));
 
     const shelf = contextShelves.find((s) => s.id === "rainy-day")!;
