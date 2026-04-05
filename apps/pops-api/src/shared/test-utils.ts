@@ -447,6 +447,14 @@ export function createTestDb(): Database {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_tier_overrides_unique
       ON tier_overrides(media_type, media_id, dimension_id);
+
+    CREATE TABLE IF NOT EXISTS shelf_impressions (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      shelf_id TEXT NOT NULL,
+      shown_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_shelf_impressions_shelf_id
+      ON shelf_impressions(shelf_id);
   `);
 
   return db;
