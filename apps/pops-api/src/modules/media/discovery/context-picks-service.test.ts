@@ -12,6 +12,8 @@ vi.mock("./context-collections.js", async (importOriginal) => {
 });
 
 vi.mock("./flags.js", () => ({
+  getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
   getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
@@ -28,7 +30,7 @@ vi.mock("../../../db.js", () => ({
 
 import { getContextPicks } from "./context-picks-service.js";
 import { getActiveCollections } from "./context-collections.js";
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 
 /** Build a mock TMDB search response. */
 function makeTmdbResponse(tmdbIds: number[]): TmdbSearchResponse {
@@ -255,5 +257,33 @@ describe("getContextPicks", () => {
       "https://image.tmdb.org/t/p/w342/poster999.jpg"
     );
     expect(result.collections[0]!.results[0]!.inLibrary).toBe(false);
+  });
+
+  it("sets isWatched and onWatchlist flags from flag helpers", async () => {
+    vi.mocked(getDismissedTmdbIds).mockReturnValue(new Set());
+    vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([300]));
+    vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([400]));
+
+    const mockedGetActive = vi.mocked(getActiveCollections);
+    mockedGetActive.mockReturnValue([
+      {
+        id: "test",
+        title: "Test",
+        emoji: "🧪",
+        genreIds: [18],
+        keywordIds: [],
+        trigger: () => true,
+      },
+    ]);
+
+    const client = makeMockClient([makeTmdbResponse([300, 400, 500])]);
+
+    const result = await getContextPicks(client);
+    const results = result.collections[0]!.results;
+
+    expect(results.find((r) => r.tmdbId === 300)?.isWatched).toBe(true);
+    expect(results.find((r) => r.tmdbId === 400)?.onWatchlist).toBe(true);
+    expect(results.find((r) => r.tmdbId === 500)?.isWatched).toBe(false);
+    expect(results.find((r) => r.tmdbId === 500)?.onWatchlist).toBe(false);
   });
 });

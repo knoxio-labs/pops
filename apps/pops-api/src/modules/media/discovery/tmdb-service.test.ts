@@ -19,11 +19,13 @@ vi.mock("./flags.js", () => ({
 }));
 
 import { getDrizzle } from "../../../db.js";
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 import { getRecommendations } from "./tmdb-service.js";
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
 const mockGetDismissedTmdbIds = vi.mocked(getDismissedTmdbIds);
+const mockGetWatchedTmdbIds = vi.mocked(getWatchedTmdbIds);
+const mockGetWatchlistTmdbIds = vi.mocked(getWatchlistTmdbIds);
 
 /** Build a minimal TmdbSearchResult. */
 function makeTmdbResult(overrides: Partial<TmdbSearchResult> = {}): TmdbSearchResult {
@@ -93,6 +95,8 @@ describe("getRecommendations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetDismissedTmdbIds.mockReturnValue(new Set());
+    mockGetWatchedTmdbIds.mockReturnValue(new Set());
+    mockGetWatchlistTmdbIds.mockReturnValue(new Set());
   });
 
   it("returns empty when no top movies exist", async () => {
@@ -198,5 +202,31 @@ describe("getRecommendations", () => {
     const client = makeTmdbClient([[makeTmdbResult({ tmdbId: 100 })]]);
     const result = await getRecommendations(client, 1);
     expect(result.results.every((r) => !r.inLibrary)).toBe(true);
+  });
+
+  it("sets isWatched=true for watched tmdbIds", async () => {
+    const mockDb = createMockDb();
+    mockGetDrizzle.mockReturnValue(mockDb);
+    mockGetWatchedTmdbIds.mockReturnValue(new Set([100]));
+
+    const client = makeTmdbClient([
+      [makeTmdbResult({ tmdbId: 100 }), makeTmdbResult({ tmdbId: 101 })],
+    ]);
+    const result = await getRecommendations(client, 1);
+    expect(result.results.find((r) => r.tmdbId === 100)?.isWatched).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 101)?.isWatched).toBe(false);
+  });
+
+  it("sets onWatchlist=true for watchlisted tmdbIds", async () => {
+    const mockDb = createMockDb();
+    mockGetDrizzle.mockReturnValue(mockDb);
+    mockGetWatchlistTmdbIds.mockReturnValue(new Set([100]));
+
+    const client = makeTmdbClient([
+      [makeTmdbResult({ tmdbId: 100 }), makeTmdbResult({ tmdbId: 101 })],
+    ]);
+    const result = await getRecommendations(client, 1);
+    expect(result.results.find((r) => r.tmdbId === 100)?.onWatchlist).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 101)?.onWatchlist).toBe(false);
   });
 });

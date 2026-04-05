@@ -103,6 +103,8 @@ export async function getRecommendations(
   }
 
   const libraryIds = getLibraryTmdbIds();
+  const watchedIds = getWatchedTmdbIds();
+  const watchlistIds = getWatchlistTmdbIds();
   const dismissedIds = getDismissedTmdbIds();
 
   // Fetch recommendations for each top movie in parallel
@@ -132,8 +134,8 @@ export async function getRecommendations(
         genreIds: result.genreIds,
         popularity: result.popularity,
         inLibrary: false,
-        isWatched: false,
-        onWatchlist: false,
+        isWatched: watchedIds.has(result.tmdbId),
+        onWatchlist: watchlistIds.has(result.tmdbId),
       });
     }
   }
@@ -172,6 +174,7 @@ export async function getWatchlistRecommendations(
   }
 
   const libraryIds = getLibraryTmdbIds();
+  const watchedIds = getWatchedTmdbIds();
   const watchlistIds = getWatchlistTmdbIds();
   const dismissedIds = getDismissedTmdbIds();
 
@@ -207,8 +210,8 @@ export async function getWatchlistRecommendations(
         genreIds: result.genreIds,
         popularity: result.popularity,
         inLibrary: false,
-        isWatched: false,
-        onWatchlist: false,
+        isWatched: watchedIds.has(result.tmdbId),
+        onWatchlist: watchlistIds.has(result.tmdbId),
       });
     }
   }

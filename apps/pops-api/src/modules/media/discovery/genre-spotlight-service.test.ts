@@ -4,10 +4,12 @@ import type { TmdbSearchResponse } from "../tmdb/types.js";
 import type { PreferenceProfile } from "./types.js";
 
 vi.mock("./flags.js", () => ({
+  getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
   getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 import {
   selectTopGenres,
   getGenreSpotlight,
@@ -221,6 +223,27 @@ describe("getGenreSpotlight", () => {
       page: 1,
     });
   });
+
+  it("sets isWatched and onWatchlist flags on spotlight results", async () => {
+    vi.mocked(getDismissedTmdbIds).mockReturnValue(new Set());
+    vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([100]));
+    vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([200]));
+
+    const client = {
+      discoverMovies: vi.fn(async () => makeTmdbResponse([100, 200, 300])),
+    } as unknown as TmdbClient;
+    const profile = makeProfile({
+      genreAffinities: [{ genre: "Comedy", avgScore: 7.5, movieCount: 8, totalComparisons: 15 }],
+    });
+
+    const result = await getGenreSpotlight(client, profile, new Set());
+    const results = result.genres[0]!.results;
+
+    expect(results.find((r) => r.tmdbId === 100)?.isWatched).toBe(true);
+    expect(results.find((r) => r.tmdbId === 200)?.onWatchlist).toBe(true);
+    expect(results.find((r) => r.tmdbId === 300)?.isWatched).toBe(false);
+    expect(results.find((r) => r.tmdbId === 300)?.onWatchlist).toBe(false);
+  });
 });
 
 describe("getGenreSpotlightPage — dismissed filtering", () => {
@@ -257,5 +280,23 @@ describe("getGenreSpotlightPage — dismissed filtering", () => {
     expect(tmdbIds).not.toContain(10);
     expect(tmdbIds).toContain(20);
     expect(tmdbIds).toContain(30);
+  });
+
+  it("sets isWatched and onWatchlist flags on page results", async () => {
+    vi.mocked(getDismissedTmdbIds).mockReturnValue(new Set());
+    vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([10]));
+    vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([20]));
+
+    const client = {
+      discoverMovies: vi.fn(async () => makeTmdbResponse([10, 20, 30])),
+    } as unknown as TmdbClient;
+    const profile = makeProfile();
+
+    const result = await getGenreSpotlightPage(client, profile, new Set(), 35, 1);
+
+    expect(result.results.find((r) => r.tmdbId === 10)?.isWatched).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 20)?.onWatchlist).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 30)?.isWatched).toBe(false);
+    expect(result.results.find((r) => r.tmdbId === 30)?.onWatchlist).toBe(false);
   });
 });
