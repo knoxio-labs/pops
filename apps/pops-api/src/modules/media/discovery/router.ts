@@ -13,6 +13,7 @@ import * as genreSpotlightService from "./genre-spotlight-service.js";
 import * as plexService from "./plex-service.js";
 import { getDrizzle } from "../../../db.js";
 import { movies } from "@pops/db-types";
+import { getRegisteredShelves } from "./shelf/registry.js";
 
 export const discoveryRouter = router({
   /** Dismiss a movie by tmdbId. Idempotent. */
@@ -212,6 +213,66 @@ export const discoveryRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message:
             err instanceof Error ? err.message : "Unknown error fetching genre spotlight page",
+        });
+      }
+    }),
+
+  /**
+   * Get a page of items for a specific shelf instance.
+   *
+   * The shelfId uniquely identifies an instance: static shelves use their
+   * definition id (e.g. "trending-tmdb"), template shelves append a colon and
+   * seed key (e.g. "because-you-watched:42").
+   *
+   * Returns { items, hasMore, totalCount }. totalCount is null because shelf
+   * queries do not expose a separate count method.
+   */
+  getShelfPage: protectedProcedure
+    .input(
+      z.object({
+        shelfId: z.string().min(1),
+        limit: z.number().int().positive().max(50).default(20),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      const { shelfId, limit, offset } = input;
+
+      // Parse definition ID: the part before the first colon (or the full ID).
+      const defId = shelfId.includes(":") ? shelfId.split(":")[0]! : shelfId;
+      const definitions = getRegisteredShelves();
+      const definition = definitions.find((d) => d.id === defId);
+
+      if (!definition) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Unknown shelf: ${defId}`,
+        });
+      }
+
+      const profile = service.getPreferenceProfile();
+      const instances = definition.generate(profile);
+      const instance = instances.find((i) => i.shelfId === shelfId);
+
+      if (!instance) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Shelf instance not found: ${shelfId}`,
+        });
+      }
+
+      try {
+        const items = await instance.query({ limit, offset });
+        return {
+          items,
+          hasMore: items.length === limit,
+          totalCount: null,
+        };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err instanceof Error ? err.message : `Error fetching shelf: ${shelfId}`,
         });
       }
     }),
