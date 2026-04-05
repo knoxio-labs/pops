@@ -5,9 +5,11 @@ import type { PreferenceProfile } from "./types.js";
 
 vi.mock("./flags.js", () => ({
   getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 import {
   selectTopGenres,
   getGenreSpotlight,
@@ -257,5 +259,21 @@ describe("getGenreSpotlightPage — dismissed filtering", () => {
     expect(tmdbIds).not.toContain(10);
     expect(tmdbIds).toContain(20);
     expect(tmdbIds).toContain(30);
+  });
+
+  it("sets isWatched and onWatchlist flags on page results", async () => {
+    vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([20]));
+    vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([30]));
+
+    const client = {
+      discoverMovies: vi.fn(async () => makeTmdbResponse([20, 30, 40])),
+    } as unknown as TmdbClient;
+
+    const result = await getGenreSpotlightPage(client, makeProfile(), new Set(), 35, 2);
+
+    expect(result.results.find((r) => r.tmdbId === 20)!.isWatched).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 30)!.onWatchlist).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 40)!.isWatched).toBe(false);
+    expect(result.results.find((r) => r.tmdbId === 40)!.onWatchlist).toBe(false);
   });
 });

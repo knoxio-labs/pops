@@ -19,7 +19,7 @@ vi.mock("./flags.js", () => ({
 }));
 
 import { getDrizzle } from "../../../db.js";
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 import { getRecommendations } from "./tmdb-service.js";
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
@@ -198,5 +198,33 @@ describe("getRecommendations", () => {
     const client = makeTmdbClient([[makeTmdbResult({ tmdbId: 100 })]]);
     const result = await getRecommendations(client, 1);
     expect(result.results.every((r) => !r.inLibrary)).toBe(true);
+  });
+
+  it("sets isWatched=true when tmdbId is in watch history", async () => {
+    vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([100]));
+    const mockDb = createMockDb();
+    mockGetDrizzle.mockReturnValue(mockDb);
+
+    const client = makeTmdbClient([
+      [makeTmdbResult({ tmdbId: 100 }), makeTmdbResult({ tmdbId: 400 })],
+    ]);
+    const result = await getRecommendations(client, 1);
+
+    expect(result.results.find((r) => r.tmdbId === 100)!.isWatched).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 400)!.isWatched).toBe(false);
+  });
+
+  it("sets onWatchlist=true when tmdbId is on watchlist", async () => {
+    vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([400]));
+    const mockDb = createMockDb();
+    mockGetDrizzle.mockReturnValue(mockDb);
+
+    const client = makeTmdbClient([
+      [makeTmdbResult({ tmdbId: 100 }), makeTmdbResult({ tmdbId: 400 })],
+    ]);
+    const result = await getRecommendations(client, 1);
+
+    expect(result.results.find((r) => r.tmdbId === 400)!.onWatchlist).toBe(true);
+    expect(result.results.find((r) => r.tmdbId === 100)!.onWatchlist).toBe(false);
   });
 });

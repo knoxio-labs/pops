@@ -12,7 +12,7 @@ import type {
 } from "./types.js";
 import { TMDB_GENRE_MAP } from "./types.js";
 import { scoreDiscoverResults } from "./service.js";
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 
 /** Genre name → TMDB genre ID reverse map. */
 const GENRE_NAME_TO_ID: Record<string, number> = {};
@@ -115,6 +115,8 @@ export async function getGenreSpotlight(
   }
 
   const dismissedIds = getDismissedTmdbIds();
+  const watchedIds = getWatchedTmdbIds();
+  const watchlistIds = getWatchlistTmdbIds();
 
   const entries = await Promise.all(
     genres.map(async (genreName) => {
@@ -145,8 +147,8 @@ export async function getGenreSpotlight(
             genreIds: r.genreIds,
             popularity: r.popularity,
             inLibrary,
-            isWatched: false,
-            onWatchlist: false,
+            isWatched: watchedIds.has(r.tmdbId),
+            onWatchlist: watchlistIds.has(r.tmdbId),
           };
         });
 
@@ -178,6 +180,8 @@ export async function getGenreSpotlightPage(
 ): Promise<GenreSpotlightPageResponse> {
   const genreName = TMDB_GENRE_MAP[genreId] ?? "Unknown";
   const dismissedIds = getDismissedTmdbIds();
+  const watchedIds = getWatchedTmdbIds();
+  const watchlistIds = getWatchlistTmdbIds();
 
   const response = await client.discoverMovies({
     genreIds: [genreId],
@@ -203,8 +207,8 @@ export async function getGenreSpotlightPage(
         genreIds: r.genreIds,
         popularity: r.popularity,
         inLibrary,
-        isWatched: false,
-        onWatchlist: false,
+        isWatched: watchedIds.has(r.tmdbId),
+        onWatchlist: watchlistIds.has(r.tmdbId),
       };
     });
 
