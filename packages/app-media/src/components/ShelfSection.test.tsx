@@ -32,6 +32,13 @@ vi.stubGlobal(
   })
 );
 
+// Mock DiscoverCard to avoid pulling in RequestMovieButton (which requires trpc.media.arr)
+vi.mock("./DiscoverCard", () => ({
+  DiscoverCard: ({ title, tmdbId }: { title: string; tmdbId: number }) => (
+    <div data-testid={`card-${tmdbId}`}>{title}</div>
+  ),
+}));
+
 import { ShelfSection } from "./ShelfSection";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
