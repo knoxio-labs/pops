@@ -53,6 +53,7 @@ Live status of every theme and epic. Updated as work completes.
 | DB schema patterns & migrations | Done | 28 tables, timestamp migrations, entity types |
 | Responsive foundation | Done | Tailwind v4 breakpoints, mobile-first, touch targets |
 | Drizzle ORM migration | Done | All modules use Drizzle ORM; raw SQL eliminated |
+| Search (TopBar, results panel, cross-domain) | In progress | PRD-056 (UI) in progress, PRD-057 (engine) Done, PRD-058 (context) not started |
 
 ### Phase 2 — Core Apps
 
