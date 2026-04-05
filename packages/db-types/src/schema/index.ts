@@ -29,3 +29,4 @@ export { debriefSessions } from "./debrief-sessions.js";
 export { debriefResults } from "./debrief-results.js";
 export { tierOverrides } from "./tier-overrides.js";
 export { debriefStatus } from "./debrief-status.js";
+export { shelfImpressions } from "./shelf-impressions.js";
