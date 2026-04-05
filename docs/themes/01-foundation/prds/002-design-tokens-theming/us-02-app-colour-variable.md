@@ -1,7 +1,7 @@
 # US-02: Define app colour variable system
 
 > PRD: [002 — Design Tokens & Theming](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,12 +9,12 @@ As a developer, I want CSS variable definitions for app-specific accent colours 
 
 ## Acceptance Criteria
 
-- [ ] `--app-accent` and `--app-accent-foreground` CSS variables defined in globals.css
-- [ ] Per-colour class definitions for each supported colour (emerald, indigo, amber, rose, sky, violet)
-- [ ] Default falls back to `--primary` when no app colour is set
-- [ ] Dark mode variants work for all app colours
-- [ ] Tailwind utility classes `bg-app-accent`, `text-app-accent`, `border-app-accent` etc. are usable
-- [ ] Opacity modifiers work (`bg-app-accent/10`, `text-app-accent/80`)
+- [x] `--app-accent` and `--app-accent-foreground` CSS variables defined in globals.css
+- [x] Per-colour class definitions for each supported colour (emerald, indigo, amber, rose, sky, violet)
+- [x] Default falls back to `--primary` when no app colour is set
+- [x] Dark mode variants work for all app colours
+- [x] Tailwind utility classes `bg-app-accent`, `text-app-accent`, `border-app-accent` etc. are usable
+- [x] Opacity modifiers work (`bg-app-accent/10`, `text-app-accent/80`)
 
 ## Notes
 
