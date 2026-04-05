@@ -95,7 +95,13 @@ export function CalendarPage() {
     // Sort groups by date, and episodes within each group by air time ascending
     return Array.from(groups.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, eps]) => [key, [...eps].sort((a, b) => a.airDateUtc.localeCompare(b.airDateUtc))] as [string, typeof eps]);
+      .map(
+        ([key, eps]) =>
+          [key, [...eps].sort((a, b) => a.airDateUtc.localeCompare(b.airDateUtc))] as [
+            string,
+            typeof eps,
+          ]
+      );
   }, [episodes]);
 
   // Sonarr not configured
