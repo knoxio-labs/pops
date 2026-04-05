@@ -1064,99 +1064,103 @@ describe("DiscoverPage — genre spotlight", () => {
 
     expect(screen.getByText("Genre API error")).toBeTruthy();
   });
+});
 
-  describe("assembleSession Refresh button", () => {
-    it("renders the Refresh button", () => {
-      setupDefaults();
-      renderPage();
-      expect(screen.getByRole("button", { name: /refresh/i })).toBeTruthy();
-    });
+describe("DiscoverPage — assembleSession Refresh button", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaults();
+  });
+  it("renders the Refresh button", () => {
+    setupDefaults();
+    renderPage();
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeTruthy();
+  });
 
-    it("Refresh button calls assembleSession refetch on click", () => {
-      setupDefaults();
-      renderPage();
-      fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
-      expect(mockAssembleSessionRefetch).toHaveBeenCalledTimes(1);
-    });
+  it("Refresh button calls assembleSession refetch on click", () => {
+    setupDefaults();
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    expect(mockAssembleSessionRefetch).toHaveBeenCalledTimes(1);
+  });
 
-    it("Refresh button is disabled while isFetching", () => {
-      setupDefaults();
-      mockAssembleSessionQuery.mockReturnValue({
-        data: { shelves: [] },
-        isLoading: false,
-        isFetching: true,
-        error: null,
-      });
-      renderPage();
-      const btn = screen.getByRole("button", { name: /refresh shelf selection/i });
-      expect(btn).toBeTruthy();
-      // disabled attribute present
-      expect((btn as HTMLButtonElement).disabled).toBe(true);
+  it("Refresh button is disabled while isFetching", () => {
+    setupDefaults();
+    mockAssembleSessionQuery.mockReturnValue({
+      data: { shelves: [] },
+      isLoading: false,
+      isFetching: true,
+      error: null,
     });
+    renderPage();
+    const btn = screen.getByRole("button", { name: /refresh shelf selection/i });
+    expect(btn).toBeTruthy();
+    // disabled attribute present
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
 
-    it("renders assembled shelves from assembleSession data", () => {
-      setupDefaults();
-      defaultAssembleSession([
-        {
-          shelfId: "hidden-gems",
-          title: "Hidden Gems",
-          subtitle: undefined,
-          emoji: undefined,
-          items: [
-            {
-              tmdbId: 999,
-              title: "Assembled Movie",
-              releaseDate: "2024-01-01",
-              posterPath: null,
-              posterUrl: null,
-              voteAverage: 8.0,
-              inLibrary: false,
-              isWatched: false,
-              onWatchlist: false,
-            },
-          ],
-          hasMore: false,
-        },
-      ]);
-      renderPage();
-      expect(screen.getByText("Hidden Gems")).toBeTruthy();
-      expect(screen.getByText("Assembled Movie")).toBeTruthy();
-    });
+  it("renders assembled shelves from assembleSession data", () => {
+    setupDefaults();
+    defaultAssembleSession([
+      {
+        shelfId: "hidden-gems",
+        title: "Hidden Gems",
+        subtitle: undefined,
+        emoji: undefined,
+        items: [
+          {
+            tmdbId: 999,
+            title: "Assembled Movie",
+            releaseDate: "2024-01-01",
+            posterPath: null,
+            posterUrl: null,
+            voteAverage: 8.0,
+            inLibrary: false,
+            isWatched: false,
+            onWatchlist: false,
+          },
+        ],
+        hasMore: false,
+      },
+    ]);
+    renderPage();
+    expect(screen.getByText("Hidden Gems")).toBeTruthy();
+    expect(screen.getByText("Assembled Movie")).toBeTruthy();
+  });
 
-    it("prefixes shelf title with emoji when present", () => {
-      setupDefaults();
-      defaultAssembleSession([
-        {
-          shelfId: "because-you-watched:42",
-          title: "Because you watched Interstellar",
-          subtitle: "Movies similar to a recent watch",
-          emoji: "🎬",
-          items: [
-            {
-              tmdbId: 888,
-              title: "Arrival",
-              releaseDate: "2016-11-11",
-              posterPath: null,
-              posterUrl: null,
-              voteAverage: 7.6,
-              inLibrary: false,
-              isWatched: false,
-              onWatchlist: false,
-            },
-          ],
-          hasMore: false,
-        },
-      ]);
-      renderPage();
-      expect(screen.getByText("🎬 Because you watched Interstellar")).toBeTruthy();
-    });
+  it("prefixes shelf title with emoji when present", () => {
+    setupDefaults();
+    defaultAssembleSession([
+      {
+        shelfId: "because-you-watched:42",
+        title: "Because you watched Interstellar",
+        subtitle: "Movies similar to a recent watch",
+        emoji: "🎬",
+        items: [
+          {
+            tmdbId: 888,
+            title: "Arrival",
+            releaseDate: "2016-11-11",
+            posterPath: null,
+            posterUrl: null,
+            voteAverage: 7.6,
+            inLibrary: false,
+            isWatched: false,
+            onWatchlist: false,
+          },
+        ],
+        hasMore: false,
+      },
+    ]);
+    renderPage();
+    expect(screen.getByText("🎬 Because you watched Interstellar")).toBeTruthy();
+  });
 
-    it("hides assembled shelves section when no shelves returned", () => {
-      setupDefaults();
-      defaultAssembleSession([]);
-      renderPage();
-      // No assembled shelf headings visible — trending section should still show
-      expect(screen.getByText("Trending")).toBeTruthy();
-    });
+  it("hides assembled shelves section when no shelves returned", () => {
+    setupDefaults();
+    defaultAssembleSession([]);
+    renderPage();
+    // No assembled shelf headings visible
+    expect(screen.queryByText("Hidden Gems")).toBeNull();
   });
 });
