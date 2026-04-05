@@ -1,7 +1,7 @@
 # US-03: Context consumer API
 
 > PRD: [058 — Contextual Intelligence](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,12 +9,12 @@ As a developer, I want a clean API for consumers (Search, AI) to read the curren
 
 ## Acceptance Criteria
 
-- [ ] `useAppContext()` returns full `AppContext` object
-- [ ] `useCurrentApp()` convenience hook returns just the app string
-- [ ] `useCurrentEntity()` convenience hook returns the entity if on a drill-down page, null otherwise
-- [ ] Context is always up-to-date (reflects current navigation state)
-- [ ] TypeScript types exported for consumer use
-- [ ] Works from any component in the tree (shell, app packages, @pops/ui)
+- [x] `useAppContext()` returns full `AppContext` object
+- [x] `useCurrentApp()` convenience hook returns just the app string
+- [x] `useCurrentEntity()` convenience hook returns the entity if on a drill-down page, null otherwise
+- [x] Context is always up-to-date (reflects current navigation state)
+- [x] TypeScript types exported for consumer use
+- [x] Works from any component in the tree (shell, app packages, @pops/ui)
 
 ## Notes
 
