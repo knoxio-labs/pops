@@ -1,7 +1,7 @@
 # PRD-058: Contextual Intelligence
 
 > Epic: [07 — Search](../../epics/07-search.md)
-> Status: Not started
+> Status: Partial
 
 ## Overview
 
@@ -43,9 +43,9 @@ interface AppContext {
 
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
-| 01 | [us-01-context-provider](us-01-context-provider.md) | React context/store for app context, URL-based app detection | Not started | No (first) |
-| 02 | [us-02-page-context-hooks](us-02-page-context-hooks.md) | Hooks for pages to set their page-level context (entity, filters) | Not started | Blocked by us-01 |
-| 03 | [us-03-context-consumer-api](us-03-context-consumer-api.md) | Consumer API for Search and AI to read current context | Not started | Blocked by us-01 |
+| 01 | [us-01-context-provider](us-01-context-provider.md) | React context/store for app context, URL-based app detection | Done | No (first) |
+| 02 | [us-02-page-context-hooks](us-02-page-context-hooks.md) | Hooks for pages to set their page-level context (entity, filters) | Partial | Blocked by us-01 |
+| 03 | [us-03-context-consumer-api](us-03-context-consumer-api.md) | Consumer API for Search and AI to read current context | Done | Blocked by us-01 |
 
 ## Out of Scope
 
