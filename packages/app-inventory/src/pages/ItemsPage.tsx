@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useSetPageContext } from "@pops/navigation";
 import {
   Package,
   LayoutGrid,
@@ -334,6 +335,17 @@ export function ItemsPage() {
   const handleViewChange = (mode: ViewMode) => setViewMode(mode);
 
   const hasActiveFilters = !!(typeFilter || conditionFilter || inUseFilter || locationFilter);
+
+  useSetPageContext({
+    page: "inventory",
+    filters: {
+      ...(search && { search }),
+      ...(typeFilter && { type: typeFilter }),
+      ...(conditionFilter && { condition: conditionFilter }),
+      ...(inUseFilter && { inUse: inUseFilter }),
+      ...(locationFilter && { locationId: locationFilter }),
+    },
+  });
 
   return (
     <div className="space-y-6">

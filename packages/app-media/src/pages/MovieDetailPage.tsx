@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router";
+import { useSetPageContext } from "@pops/navigation";
 import {
   Alert,
   AlertTitle,
@@ -72,6 +73,14 @@ export function MovieDetailPage() {
     undefined,
     { enabled: !Number.isNaN(movieId) }
   );
+
+  useSetPageContext({
+    page: "movie-detail",
+    pageType: "drill-down",
+    entity: data?.data
+      ? { uri: `pops:media/movie/${movieId}`, type: "movie", title: data.data.title }
+      : undefined,
+  });
 
   if (Number.isNaN(movieId)) {
     return (
