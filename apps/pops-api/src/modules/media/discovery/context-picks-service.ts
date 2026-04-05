@@ -7,7 +7,7 @@ import { movies } from "@pops/db-types";
 import type { TmdbClient } from "../tmdb/client.js";
 import type { DiscoverResult } from "./types.js";
 import { getActiveCollections, type ContextCollection } from "./context-collections.js";
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 
 /** A context collection result set for the API response. */
 export interface ContextPicksCollection {
@@ -46,6 +46,8 @@ async function fetchCollectionResults(
   collection: ContextCollection,
   libraryIds: Set<number>,
   dismissedIds: Set<number>,
+  watchedIds: Set<number>,
+  watchlistIds: Set<number>,
   page: number
 ): Promise<DiscoverResult[]> {
   const response = await client.discoverMovies({
@@ -73,8 +75,8 @@ async function fetchCollectionResults(
         genreIds: r.genreIds,
         popularity: r.popularity,
         inLibrary,
-        isWatched: false,
-        onWatchlist: false,
+        isWatched: watchedIds.has(r.tmdbId),
+        onWatchlist: watchlistIds.has(r.tmdbId),
       };
     });
 }
@@ -95,13 +97,22 @@ export async function getContextPicks(
 
   const activeCollections = getActiveCollections(hour, month, dayOfWeek);
   const libraryIds = getLibraryTmdbIds();
-
   const dismissedIds = getDismissedTmdbIds();
+  const watchedIds = getWatchedTmdbIds();
+  const watchlistIds = getWatchlistTmdbIds();
 
   const collectionResults = await Promise.all(
     activeCollections.map(async (col) => {
       const page = pages?.[col.id] ?? 1;
-      const results = await fetchCollectionResults(client, col, libraryIds, dismissedIds, page);
+      const results = await fetchCollectionResults(
+        client,
+        col,
+        libraryIds,
+        dismissedIds,
+        watchedIds,
+        watchlistIds,
+        page
+      );
       return {
         id: col.id,
         title: col.title,

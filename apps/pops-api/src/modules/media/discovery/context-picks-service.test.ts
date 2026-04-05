@@ -13,6 +13,8 @@ vi.mock("./context-collections.js", async (importOriginal) => {
 
 vi.mock("./flags.js", () => ({
   getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
+  getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
 // Mock database access
@@ -28,7 +30,7 @@ vi.mock("../../../db.js", () => ({
 
 import { getContextPicks } from "./context-picks-service.js";
 import { getActiveCollections } from "./context-collections.js";
-import { getDismissedTmdbIds } from "./flags.js";
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
 
 /** Build a mock TMDB search response. */
 function makeTmdbResponse(tmdbIds: number[]): TmdbSearchResponse {
@@ -255,5 +257,49 @@ describe("getContextPicks", () => {
       "https://image.tmdb.org/t/p/w342/poster999.jpg"
     );
     expect(result.collections[0]!.results[0]!.inLibrary).toBe(false);
+  });
+
+  it("sets isWatched=true when tmdbId is in watch history", async () => {
+    vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([10]));
+
+    vi.mocked(getActiveCollections).mockReturnValue([
+      {
+        id: "test",
+        title: "Test",
+        emoji: "🧪",
+        genreIds: [18],
+        keywordIds: [],
+        trigger: () => true,
+      },
+    ]);
+
+    const client = makeMockClient([makeTmdbResponse([10, 20])]);
+    const result = await getContextPicks(client);
+
+    const results = result.collections[0]!.results;
+    expect(results.find((r) => r.tmdbId === 10)!.isWatched).toBe(true);
+    expect(results.find((r) => r.tmdbId === 20)!.isWatched).toBe(false);
+  });
+
+  it("sets onWatchlist=true when tmdbId is on watchlist", async () => {
+    vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([20]));
+
+    vi.mocked(getActiveCollections).mockReturnValue([
+      {
+        id: "test",
+        title: "Test",
+        emoji: "🧪",
+        genreIds: [18],
+        keywordIds: [],
+        trigger: () => true,
+      },
+    ]);
+
+    const client = makeMockClient([makeTmdbResponse([10, 20])]);
+    const result = await getContextPicks(client);
+
+    const results = result.collections[0]!.results;
+    expect(results.find((r) => r.tmdbId === 20)!.onWatchlist).toBe(true);
+    expect(results.find((r) => r.tmdbId === 10)!.onWatchlist).toBe(false);
   });
 });
