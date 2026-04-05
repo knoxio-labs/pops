@@ -14,6 +14,7 @@ COPY packages/app-media/package.json ./packages/app-media/
 COPY packages/app-inventory/package.json ./packages/app-inventory/
 COPY packages/app-ai/package.json ./packages/app-ai/
 COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/navigation/package.json ./packages/navigation/
 
 # Install pnpm and dependencies (cached across builds)
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
@@ -33,6 +34,7 @@ COPY packages/app-media/ ./packages/app-media/
 COPY packages/app-inventory/ ./packages/app-inventory/
 COPY packages/app-ai/ ./packages/app-ai/
 COPY packages/api-client/ ./packages/api-client/
+COPY packages/navigation/ ./packages/navigation/
 COPY apps/pops-api/ ./apps/pops-api/
 COPY apps/pops-shell/ ./apps/pops-shell/
 
