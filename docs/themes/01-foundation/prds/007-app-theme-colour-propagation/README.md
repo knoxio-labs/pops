@@ -1,7 +1,7 @@
 # PRD-007: App Theme Colour Propagation
 
 > Epic: [02 — Shell & App Switcher](../../epics/02-shell-app-switcher.md)
-> Status: Partial
+> Status: Done
 
 ## Overview
 
