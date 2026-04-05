@@ -1,7 +1,7 @@
 # PRD-008: API Server
 
 > Epic: [03 — API Server](../../epics/03-api-server.md)
-> Status: Partial
+> Status: Done
 
 ## Overview
 
