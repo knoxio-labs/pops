@@ -135,7 +135,7 @@ Cleanup: rows older than 30 days are deleted on startup or periodically.
 
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
-| 01 | [us-01-shelf-interface](us-01-shelf-interface.md) | ShelfDefinition + ShelfInstance interfaces, shelf registry, generate() contract | Not started | No (first) |
+| 01 | [us-01-shelf-interface](us-01-shelf-interface.md) | ShelfDefinition + ShelfInstance interfaces, shelf registry, generate() contract | Done | No (first) |
 | 02 | [us-02-session-assembly](us-02-session-assembly.md) | Assembly algorithm: score, select, order, variety constraints, jitter | Not started | Blocked by us-01 |
 | 03 | [us-03-shelf-impressions](us-03-shelf-impressions.md) | shelf_impressions table, record shown shelves, compute freshness, cleanup | Not started | Yes |
 | 04 | [us-04-seed-shelves-watch](us-04-seed-shelves-watch.md) | "Because you watched {Movie}" shelf: rotation logic, TMDB recs per seed | Not started | Blocked by us-01 |
