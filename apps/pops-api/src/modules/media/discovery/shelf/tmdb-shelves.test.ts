@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { PreferenceProfile } from "../types.js";
 import type { TmdbSearchResponse } from "../../tmdb/types.js";
 
@@ -156,7 +156,7 @@ describe("hidden-gems shelf", () => {
   it("generate() returns 1 instance with shelfId=hidden-gems", () => {
     mockDecade(1990);
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "hidden-gems");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     expect(instances).toHaveLength(1);
     expect(instances[0]!.shelfId).toBe("hidden-gems");
   });
@@ -167,7 +167,7 @@ describe("hidden-gems shelf", () => {
     mockGetTmdbClient.mockReturnValue(client);
 
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "hidden-gems");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     await instances[0]!.query({ limit: 10, offset: 0 });
 
     expect(client.discoverMovies).toHaveBeenCalledWith(
@@ -183,7 +183,7 @@ describe("hidden-gems shelf", () => {
 describe("critics-vs-audiences shelf", () => {
   it("generate() returns 1 instance with shelfId=critics-vs-audiences", () => {
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "critics-vs-audiences");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     expect(instances).toHaveLength(1);
     expect(instances[0]!.shelfId).toBe("critics-vs-audiences");
   });
@@ -193,7 +193,7 @@ describe("critics-vs-audiences shelf", () => {
     mockGetTmdbClient.mockReturnValue(client);
 
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "critics-vs-audiences");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     await instances[0]!.query({ limit: 10, offset: 0 });
 
     expect(client.discoverMovies).toHaveBeenCalledWith(
@@ -205,7 +205,7 @@ describe("critics-vs-audiences shelf", () => {
 describe("award-winners shelf", () => {
   it("generate() returns 1 instance with shelfId=award-winners", () => {
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "award-winners");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     expect(instances).toHaveLength(1);
     expect(instances[0]!.shelfId).toBe("award-winners");
   });
@@ -215,7 +215,7 @@ describe("award-winners shelf", () => {
     mockGetTmdbClient.mockReturnValue(client);
 
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "award-winners");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     await instances[0]!.query({ limit: 10, offset: 0 });
 
     expect(client.discoverMovies).toHaveBeenCalledWith(
@@ -230,7 +230,7 @@ describe("decade-picks shelf", () => {
   it("generate() returns 1 instance with shelfId=decade-picks", () => {
     mockDecade(1990);
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "decade-picks");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     expect(instances).toHaveLength(1);
     expect(instances[0]!.shelfId).toBe("decade-picks");
   });
@@ -238,7 +238,7 @@ describe("decade-picks shelf", () => {
   it("generate() title uses the most-watched decade", () => {
     mockDecade(1980);
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "decade-picks");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     expect(instances[0]!.title).toContain("1980");
   });
 
@@ -248,7 +248,7 @@ describe("decade-picks shelf", () => {
     mockGetTmdbClient.mockReturnValue(client);
 
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "decade-picks");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     await instances[0]!.query({ limit: 10, offset: 0 });
 
     expect(client.discoverMovies).toHaveBeenCalledWith(
@@ -273,7 +273,7 @@ describe("decade-picks shelf", () => {
     } as unknown as ReturnType<typeof getDrizzle>);
 
     const [call] = mockRegisterShelf.mock.calls.filter((c) => c[0]?.id === "decade-picks");
-    const instances = call![0]!.generate(profile);
+    const instances = call![0].generate(profile);
     expect(instances[0]!.title).toContain("1990");
   });
 });
