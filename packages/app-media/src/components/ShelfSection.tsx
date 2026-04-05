@@ -86,7 +86,6 @@ export function ShelfSection({
       ([entry]) => {
         if (entry?.isIntersecting) {
           setIsVisible(true);
-          observer.disconnect();
         }
       },
       { rootMargin: "200px" }
