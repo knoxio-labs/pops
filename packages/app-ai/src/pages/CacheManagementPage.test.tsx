@@ -191,7 +191,7 @@ describe("CacheManagementPage", () => {
     });
   });
 
-  // AC: Toast confirmation showing how many entries were removed
+  // AC: Loading skeletons shown while data is fetching
   it("shows loading skeletons while data loads", () => {
     setupDefaults({ loading: true });
     renderPage();

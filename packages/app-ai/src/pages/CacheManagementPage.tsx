@@ -58,6 +58,7 @@ export function CacheManagementPage() {
     onSuccess: (data) => {
       toast.success(`Removed ${data.removed} stale cache entries`);
       void utils.core.aiUsage.cacheStats.invalidate();
+      void utils.core.aiUsage.getStats.invalidate();
     },
     onError: () => {
       toast.error("Failed to clear stale cache");
@@ -68,6 +69,7 @@ export function CacheManagementPage() {
     onSuccess: (data) => {
       toast.success(`Cleared ${data.removed} cache entries`);
       void utils.core.aiUsage.cacheStats.invalidate();
+      void utils.core.aiUsage.getStats.invalidate();
     },
     onError: () => {
       toast.error("Failed to clear cache");
@@ -166,7 +168,7 @@ export function CacheManagementPage() {
                 min={1}
                 max={365}
                 value={staleDays}
-                onChange={(e) => setStaleDays(Number(e.target.value) || 30)}
+                onChange={(e) => setStaleDays(e.target.value === "" ? 30 : Number(e.target.value))}
                 className="w-16 h-8 px-2 py-1 text-sm text-center"
                 aria-label="Days threshold for stale entries"
               />
