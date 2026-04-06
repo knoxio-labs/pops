@@ -189,6 +189,9 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
   // Wrap insert + Elo update in a transaction
   const rawDb = getDb();
   const row = rawDb.transaction(() => {
+    // Compute Elo deltas and update scores first so deltas can be stored on the comparison
+    const { deltaA, deltaB } = updateEloScores(input);
+
     const result = drizzleDb
       .insert(comparisons)
       .values({
@@ -200,11 +203,10 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
         winnerType: input.winnerType,
         winnerId: input.winnerId,
         drawTier: input.drawTier ?? null,
+        deltaA,
+        deltaB,
       })
       .run();
-
-    // Update Elo scores
-    updateEloScores(input);
 
     const inserted = drizzleDb
       .select()
@@ -261,7 +263,7 @@ function getOrCreateScore(mediaType: string, mediaId: number, dimensionId: numbe
   return score;
 }
 
-function updateEloScores(input: RecordComparisonInput): void {
+function updateEloScores(input: RecordComparisonInput): { deltaA: number; deltaB: number } {
   const db = getDrizzle();
 
   const scoreA = getOrCreateScore(input.mediaAType, input.mediaAId, input.dimensionId);
@@ -281,6 +283,8 @@ function updateEloScores(input: RecordComparisonInput): void {
 
   const newScoreA = scoreA.score + ELO_K * (actualA - expectedA);
   const newScoreB = scoreB.score + ELO_K * (actualB - expectedB);
+  const deltaA = Math.round(newScoreA - scoreA.score);
+  const deltaB = Math.round(newScoreB - scoreB.score);
   const now = new Date().toISOString();
 
   db.update(mediaScores)
@@ -300,6 +304,8 @@ function updateEloScores(input: RecordComparisonInput): void {
     })
     .where(eq(mediaScores.id, scoreB.id))
     .run();
+
+  return { deltaA, deltaB };
 }
 
 export interface ComparisonListResult {

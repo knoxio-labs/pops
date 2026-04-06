@@ -15,6 +15,7 @@ Build the pairwise comparison system (per ADR-010). Two movies presented side by
 | 063 | [Post-Watch Debrief](../prds/063-post-watch-debrief/README.md) | Rapid-fire comparison session for newly watched movies — one opponent per dimension, median-score calibration | Done |
 | 064 | [Batch Tier List](../prds/064-batch-tier-list/README.md) | Drag-and-drop S/A/B/C/D tier ranking for 8 movies per dimension, implied pairwise comparisons | Done |
 | 066 | [Arena Redesign](../prds/066-arena-redesign/README.md) | Zone-based layout, dimension dropdown, tooltips — UI-only redesign of the compare arena | Done |
+| 067 | [Comparison History Enhancements](../prds/067-comparison-history-enhancements/README.md) | ELO delta badges in history rows, search filter, delete button UX | In progress |
 
 ## Dependencies
 
