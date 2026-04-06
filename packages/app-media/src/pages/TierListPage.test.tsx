@@ -6,6 +6,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const mockDimensionsQuery = vi.fn();
 const mockTierListQuery = vi.fn();
+const mockRefetch = vi.fn();
 const mockMutate = vi.fn();
 
 vi.mock("../lib/trpc", () => ({
@@ -23,7 +24,10 @@ vi.mock("../lib/trpc", () => ({
           useQuery: (...args: unknown[]) => mockDimensionsQuery(...args),
         },
         getTierListMovies: {
-          useQuery: (...args: unknown[]) => mockTierListQuery(...args),
+          useQuery: (...args: unknown[]) => {
+            const result = mockTierListQuery(...args);
+            return { ...result, refetch: mockRefetch, isFetching: false };
+          },
         },
         submitTierList: {
           useMutation: () => ({
@@ -152,6 +156,15 @@ describe("TierListPage", () => {
     fireEvent.click(tabs[1]!);
 
     expect(mockTierListQuery).toHaveBeenCalledWith({ dimensionId: 2 }, expect.any(Object));
+  });
+
+  it("refresh button calls refetch", () => {
+    setupPage();
+    renderPage();
+
+    fireEvent.click(screen.getByLabelText("Refresh movie pool"));
+
+    expect(mockRefetch).toHaveBeenCalled();
   });
 
   it("shows empty state when no movies available", () => {

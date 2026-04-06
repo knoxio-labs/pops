@@ -8,7 +8,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { Alert, AlertTitle, AlertDescription, Skeleton, cn } from "@pops/ui";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
 import { useTierListSubmit, type TierPlacement } from "../hooks/useTierListSubmit";
@@ -46,6 +46,8 @@ export function TierListPage() {
     data: tierMoviesData,
     isLoading: moviesLoading,
     error: moviesError,
+    refetch,
+    isFetching,
   } = trpc.media.comparisons.getTierListMovies.useQuery(
     { dimensionId: effectiveDimension! },
     { enabled: effectiveDimension != null, staleTime: Infinity }
@@ -122,6 +124,14 @@ export function TierListPage() {
       <div className="flex items-center gap-3">
         <LayoutGrid className="h-6 w-6 text-indigo-500" />
         <h1 className="text-2xl font-bold">Tier List</h1>
+        <button
+          aria-label="Refresh movie pool"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="ml-auto p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       {dimsLoading ? (
