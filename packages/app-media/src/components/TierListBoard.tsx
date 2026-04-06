@@ -82,62 +82,64 @@ export function TierListBoard({ movies, onSubmit, submitPending }: TierListBoard
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const findContainer = useCallback(
-    (id: number): Tier | "unranked" => {
-      for (const tier of TIERS) {
-        if (placements[tier].includes(id)) return tier;
-      }
-      return "unranked";
-    },
-    [placements]
-  );
-
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(Number(event.active.id));
   }, []);
 
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event;
-      if (!over) return;
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
 
-      const activeIdNum = Number(active.id);
-      const overId = String(over.id);
+    const activeIdNum = Number(active.id);
+    const overId = String(over.id);
 
-      const sourceContainer = findContainer(activeIdNum);
+    setPlacements((prev) => {
+      // Find source container using fresh state to avoid stale closure issues with rapid pointer movement
+      let sourceContainer: Tier | "unranked" = "unranked";
+      for (const tier of TIERS) {
+        if (prev[tier].includes(activeIdNum)) {
+          sourceContainer = tier;
+          break;
+        }
+      }
 
-      // Determine target: if overId is a tier name, target that tier; otherwise find which tier contains the over item
+      // Determine target container
       let targetContainer: Tier | "unranked";
       if (TIERS.includes(overId as Tier)) {
         targetContainer = overId as Tier;
       } else if (overId === "unranked") {
         targetContainer = "unranked";
       } else {
-        targetContainer = findContainer(Number(overId));
-      }
-
-      if (sourceContainer === targetContainer) return;
-
-      setPlacements((prev) => {
-        const next = { ...prev };
-
-        // Remove from source tier
-        if (sourceContainer !== "unranked") {
-          next[sourceContainer] = prev[sourceContainer].filter((id) => id !== activeIdNum);
-        }
-
-        // Add to target tier
-        if (targetContainer !== "unranked") {
-          if (!next[targetContainer].includes(activeIdNum)) {
-            next[targetContainer] = [...prev[targetContainer], activeIdNum];
+        // overId is a movie id — find which tier it's in using fresh state
+        let found: Tier | "unranked" = "unranked";
+        for (const tier of TIERS) {
+          if (prev[tier].includes(Number(overId))) {
+            found = tier;
+            break;
           }
         }
+        targetContainer = found;
+      }
 
-        return next;
-      });
-    },
-    [findContainer]
-  );
+      if (sourceContainer === targetContainer) return prev;
+
+      const next = { ...prev };
+
+      // Remove from source tier
+      if (sourceContainer !== "unranked") {
+        next[sourceContainer] = prev[sourceContainer].filter((id) => id !== activeIdNum);
+      }
+
+      // Add to target tier
+      if (targetContainer !== "unranked") {
+        if (!next[targetContainer].includes(activeIdNum)) {
+          next[targetContainer] = [...prev[targetContainer], activeIdNum];
+        }
+      }
+
+      return next;
+    });
+  }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -148,34 +150,34 @@ export function TierListBoard({ movies, onSubmit, submitPending }: TierListBoard
     const activeIdNum = Number(active.id);
     const overId = String(over.id);
 
-    // If dropped on unranked zone, remove from all tiers
-    if (overId === "unranked") {
-      setPlacements((prev) => {
-        const next = { ...prev };
-        for (const tier of TIERS) {
-          next[tier] = prev[tier].filter((id) => id !== activeIdNum);
-        }
-        return next;
-      });
-      return;
-    }
+    setPlacements((prev) => {
+      // Determine target container — handles tier names, "unranked", and movie ids
+      let targetContainer: Tier | "unranked";
+      if (TIERS.includes(overId as Tier)) {
+        targetContainer = overId as Tier;
+      } else if (overId === "unranked") {
+        targetContainer = "unranked";
+      } else {
+        // overId is a movie id — find which tier it's in using fresh state
+        const targetTier = TIERS.find((t) => prev[t].includes(Number(overId)));
+        if (!targetTier) return prev; // over movie is unranked — no change
+        targetContainer = targetTier;
+      }
 
-    // If dropped on a tier label, ensure it's in that tier
-    if (TIERS.includes(overId as Tier)) {
-      const targetTier = overId as Tier;
-      setPlacements((prev) => {
-        const next = { ...prev };
-        // Remove from all other tiers
-        for (const tier of TIERS) {
-          next[tier] = prev[tier].filter((id) => id !== activeIdNum);
-        }
-        // Add to target
-        if (!next[targetTier].includes(activeIdNum)) {
-          next[targetTier] = [...next[targetTier], activeIdNum];
-        }
-        return next;
-      });
-    }
+      const next = { ...prev };
+
+      // Remove from all tiers
+      for (const tier of TIERS) {
+        next[tier] = prev[tier].filter((id) => id !== activeIdNum);
+      }
+
+      // Add to target tier if applicable
+      if (targetContainer !== "unranked") {
+        next[targetContainer] = [...next[targetContainer], activeIdNum];
+      }
+
+      return next;
+    });
   }, []);
 
   const handleSubmit = useCallback(() => {
