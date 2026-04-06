@@ -11,7 +11,7 @@ export interface ArenaActionBarProps {
   movieB: ArenaMovie;
   onSkip: () => void;
   onStale: (movieId: number) => void;
-  onNA: () => void;
+  onNA: (movieId: number) => void;
   onBlacklist: (movie: ArenaMovie) => void;
   onDone: () => void;
   skipPending?: boolean;
@@ -103,11 +103,18 @@ export function ArenaActionBar({
               {
                 items: [
                   {
-                    label: "N/A (exclude both)",
-                    value: "na",
+                    label: `N/A: ${movieA.title}`,
+                    value: "na-a",
                     icon: <Ban className="h-4 w-4" />,
                     disabled: naPending,
-                    onSelect: onNA,
+                    onSelect: () => onNA(movieA.id),
+                  },
+                  {
+                    label: `N/A: ${movieB.title}`,
+                    value: "na-b",
+                    icon: <Ban className="h-4 w-4" />,
+                    disabled: naPending,
+                    onSelect: () => onNA(movieB.id),
                   },
                 ],
               },
@@ -115,7 +122,7 @@ export function ArenaActionBar({
                 label: "Destructive",
                 items: [
                   {
-                    label: `Not Watched: ${movieA.title}`,
+                    label: `Not watched: ${movieA.title}`,
                     value: "blacklist-a",
                     variant: "destructive" as const,
                     icon: <EyeOff className="h-4 w-4" />,
@@ -123,7 +130,7 @@ export function ArenaActionBar({
                     onSelect: () => onBlacklist(movieA),
                   },
                   {
-                    label: `Not Watched: ${movieB.title}`,
+                    label: `Not watched: ${movieB.title}`,
                     value: "blacklist-b",
                     variant: "destructive" as const,
                     icon: <EyeOff className="h-4 w-4" />,
@@ -139,41 +146,87 @@ export function ArenaActionBar({
 
       {/* Secondary row: visible on desktop only */}
       <div className="hidden md:flex justify-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onNA}
-          disabled={naPending}
-          className="text-muted-foreground"
-          data-testid="na-button"
-        >
-          <Ban className="h-3.5 w-3.5 mr-1.5" />
-          {naPending ? "Excluding…" : "N/A"}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNA(movieA.id)}
+              disabled={naPending}
+              className="text-muted-foreground"
+              aria-label={`N/A: ${movieA.title}`}
+              data-testid="na-a-button"
+            >
+              <Ban className="h-3.5 w-3.5 mr-1.5" />
+              <span className="hidden sm:inline">N/A:</span>
+              <span className="truncate max-w-[8rem]">{movieA.title}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Exclude {movieA.title} from this dimension
+          </TooltipContent>
+        </Tooltip>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onBlacklist(movieA)}
-          disabled={blacklistPending}
-          className="text-destructive border-destructive/50 hover:bg-destructive/10"
-          data-testid="not-watched-a-button"
-        >
-          <EyeOff className="h-3.5 w-3.5 mr-1.5" />
-          Not Watched: {movieA.title}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNA(movieB.id)}
+              disabled={naPending}
+              className="text-muted-foreground"
+              aria-label={`N/A: ${movieB.title}`}
+              data-testid="na-b-button"
+            >
+              <Ban className="h-3.5 w-3.5 mr-1.5" />
+              <span className="hidden sm:inline">N/A:</span>
+              <span className="truncate max-w-[8rem]">{movieB.title}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Exclude {movieB.title} from this dimension
+          </TooltipContent>
+        </Tooltip>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onBlacklist(movieB)}
-          disabled={blacklistPending}
-          className="text-destructive border-destructive/50 hover:bg-destructive/10"
-          data-testid="not-watched-b-button"
-        >
-          <EyeOff className="h-3.5 w-3.5 mr-1.5" />
-          Not Watched: {movieB.title}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onBlacklist(movieA)}
+              disabled={blacklistPending}
+              className="text-destructive border-destructive/50 hover:bg-destructive/10"
+              aria-label={`Not watched: ${movieA.title}`}
+              data-testid="not-watched-a-button"
+            >
+              <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+              Not watched
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Mark {movieA.title} as not watched — removes all comparison data globally
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onBlacklist(movieB)}
+              disabled={blacklistPending}
+              className="text-destructive border-destructive/50 hover:bg-destructive/10"
+              aria-label={`Not watched: ${movieB.title}`}
+              data-testid="not-watched-b-button"
+            >
+              <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+              Not watched
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Mark {movieB.title} as not watched — removes all comparison data globally
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

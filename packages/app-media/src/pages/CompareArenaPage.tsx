@@ -178,25 +178,27 @@ export function CompareArenaPage() {
   );
 
   // N/A (dimension exclusion) mutation
-  const excludeAMutation = trpc.media.comparisons.excludeFromDimension.useMutation();
-  const excludeBMutation = trpc.media.comparisons.excludeFromDimension.useMutation();
-  const naIsPending = excludeAMutation.isPending || excludeBMutation.isPending;
+  const excludeMutation = trpc.media.comparisons.excludeFromDimension.useMutation();
+  const naIsPending = excludeMutation.isPending;
 
-  const handleNA = useCallback(() => {
-    if (!pairData?.data || !dimensionId || naIsPending) return;
+  const handleNA = useCallback(
+    (movieId: number) => {
+      if (!pairData?.data || !dimensionId || naIsPending) return;
 
-    const { movieA, movieB } = pairData.data;
-    excludeAMutation.mutate({ mediaType: "movie", mediaId: movieA.id, dimensionId });
-    excludeBMutation.mutate(
-      { mediaType: "movie", mediaId: movieB.id, dimensionId },
-      {
-        onSuccess: () => {
-          toast.success("Both movies excluded from this dimension");
-          utils.media.comparisons.getSmartPair.invalidate();
-        },
-      }
-    );
-  }, [pairData, dimensionId, naIsPending, excludeAMutation, excludeBMutation, utils]);
+      const { movieA, movieB } = pairData.data;
+      const movie = movieId === movieA.id ? movieA : movieB;
+      excludeMutation.mutate(
+        { mediaType: "movie", mediaId: movieId, dimensionId },
+        {
+          onSuccess: () => {
+            toast.success(`${movie.title} excluded from this dimension`);
+            utils.media.comparisons.getSmartPair.invalidate();
+          },
+        }
+      );
+    },
+    [pairData, dimensionId, naIsPending, excludeMutation, utils]
+  );
 
   // Blacklist (Not Watched) mutation
   const [blacklistTarget, setBlacklistTarget] = useState<{

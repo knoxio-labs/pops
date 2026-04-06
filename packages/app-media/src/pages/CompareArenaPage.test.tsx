@@ -20,13 +20,9 @@ const mockSkipMutate = vi.fn() as ReturnType<typeof vi.fn> & {
 const mockMarkStaleMutate = vi.fn() as ReturnType<typeof vi.fn> & {
   _opts?: Record<string, unknown>;
 };
-const mockExcludeMutateA = vi.fn() as ReturnType<typeof vi.fn> & {
+const mockExcludeMutate = vi.fn() as ReturnType<typeof vi.fn> & {
   _opts?: Record<string, unknown>;
 };
-const mockExcludeMutateB = vi.fn() as ReturnType<typeof vi.fn> & {
-  _opts?: Record<string, unknown>;
-};
-let excludeCallCount = 0;
 const mockBlacklistMutate = vi.fn() as ReturnType<typeof vi.fn> & {
   _opts?: Record<string, unknown>;
 };
@@ -68,10 +64,8 @@ vi.mock("../lib/trpc", () => ({
         },
         excludeFromDimension: {
           useMutation: (opts?: Record<string, unknown>) => {
-            excludeCallCount++;
-            const mockFn = excludeCallCount % 2 === 1 ? mockExcludeMutateA : mockExcludeMutateB;
-            if (opts) mockFn._opts = opts;
-            return { mutate: mockFn, isPending: false };
+            if (opts) mockExcludeMutate._opts = opts;
+            return { mutate: mockExcludeMutate, isPending: false };
           },
         },
         blacklistMovie: {
@@ -156,7 +150,6 @@ function setupArena() {
 describe("CompareArenaPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    excludeCallCount = 0;
     // Default mocks — overridden by setupArena but needed for standalone tests
     mockWatchlistListQuery.mockReturnValue({
       data: { data: [] },
@@ -443,53 +436,63 @@ describe("CompareArenaPage", () => {
     expect(mockRecordMutate).not.toHaveBeenCalled();
   });
 
-  it("renders N/A button in action bar", () => {
+  it("renders per-movie N/A buttons in action bar", () => {
     setupArena();
     renderPage();
 
-    expect(screen.getByText("N/A")).toBeTruthy();
+    expect(screen.getByLabelText("N/A: The Matrix")).toBeTruthy();
+    expect(screen.getByLabelText("N/A: Inception")).toBeTruthy();
   });
 
-  it("N/A button calls excludeFromDimension for both movies", () => {
+  it("N/A button for movie A calls excludeFromDimension for that movie only", () => {
     setupArena();
     renderPage();
 
-    fireEvent.click(screen.getByText("N/A"));
+    fireEvent.click(screen.getByLabelText("N/A: The Matrix"));
 
-    // Should call exclude for movie A (id: 10) — no options arg
-    expect(mockExcludeMutateA).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaType: "movie", mediaId: 10, dimensionId: 1 })
+    expect(mockExcludeMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ mediaType: "movie", mediaId: 10, dimensionId: 1 }),
+      expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    // Should call exclude for movie B (id: 20) — with onSuccess options
-    expect(mockExcludeMutateB).toHaveBeenCalledWith(
+    expect(mockExcludeMutate).toHaveBeenCalledTimes(1);
+    expect(mockRecordMutate).not.toHaveBeenCalled();
+  });
+
+  it("N/A button for movie B calls excludeFromDimension for that movie only", () => {
+    setupArena();
+    renderPage();
+
+    fireEvent.click(screen.getByLabelText("N/A: Inception"));
+
+    expect(mockExcludeMutate).toHaveBeenCalledWith(
       expect.objectContaining({ mediaType: "movie", mediaId: 20, dimensionId: 1 }),
       expect.objectContaining({ onSuccess: expect.any(Function) })
     );
-    // Should NOT record a comparison
+    expect(mockExcludeMutate).toHaveBeenCalledTimes(1);
     expect(mockRecordMutate).not.toHaveBeenCalled();
   });
 
   it("renders Not Watched buttons for both movies on cards and in action bar", () => {
     setupArena();
     renderPage();
-    // Card buttons have aria-label, action bar buttons have data-testid + text
+    // Card buttons have aria-label; action bar buttons have data-testid
     expect(screen.getByLabelText("Not watched The Matrix")).toBeTruthy();
     expect(screen.getByLabelText("Not watched Inception")).toBeTruthy();
-    expect(screen.getByText("Not Watched: The Matrix")).toBeTruthy();
-    expect(screen.getByText("Not Watched: Inception")).toBeTruthy();
+    expect(screen.getByTestId("not-watched-a-button")).toBeTruthy();
+    expect(screen.getByTestId("not-watched-b-button")).toBeTruthy();
   });
 
-  it("renders Not Watched action bar buttons with movie titles", () => {
+  it("renders Not Watched action bar buttons as global (no per-dimension label)", () => {
     setupArena();
     renderPage();
-    expect(screen.getByText("Not Watched: The Matrix")).toBeTruthy();
-    expect(screen.getByText("Not Watched: Inception")).toBeTruthy();
+    expect(screen.getByTestId("not-watched-a-button")).toBeTruthy();
+    expect(screen.getByTestId("not-watched-b-button")).toBeTruthy();
   });
 
   it("opens confirmation dialog when action bar Not Watched button is clicked", () => {
     setupArena();
     renderPage();
-    fireEvent.click(screen.getByText("Not Watched: The Matrix"));
+    fireEvent.click(screen.getByTestId("not-watched-a-button"));
     expect(screen.getByText("Mark as not watched?")).toBeTruthy();
     expect(screen.getByText("Cancel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not Watched" })).toBeTruthy();
@@ -502,7 +505,7 @@ describe("CompareArenaPage", () => {
       isLoading: false,
     });
     renderPage();
-    fireEvent.click(screen.getByText("Not Watched: The Matrix"));
+    fireEvent.click(screen.getByTestId("not-watched-a-button"));
     expect(screen.getByText("5")).toBeTruthy();
     expect(screen.getByText(/comparisons involving/)).toBeTruthy();
   });
@@ -510,7 +513,7 @@ describe("CompareArenaPage", () => {
   it("calls blacklistMovie mutation on confirm", () => {
     setupArena();
     renderPage();
-    fireEvent.click(screen.getByText("Not Watched: Inception"));
+    fireEvent.click(screen.getByTestId("not-watched-b-button"));
     fireEvent.click(screen.getByRole("button", { name: "Not Watched" }));
     expect(mockBlacklistMutate).toHaveBeenCalledWith({ mediaType: "movie", mediaId: 20 });
   });
@@ -518,7 +521,7 @@ describe("CompareArenaPage", () => {
   it("closes dialog on cancel without calling blacklist", () => {
     setupArena();
     renderPage();
-    fireEvent.click(screen.getByText("Not Watched: The Matrix"));
+    fireEvent.click(screen.getByTestId("not-watched-a-button"));
     expect(screen.getByText("Mark as not watched?")).toBeTruthy();
     fireEvent.click(screen.getByText("Cancel"));
     expect(mockBlacklistMutate).not.toHaveBeenCalled();

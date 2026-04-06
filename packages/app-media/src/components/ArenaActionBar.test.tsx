@@ -35,7 +35,8 @@ describe("ArenaActionBar", () => {
 
   it("renders desktop-only secondary actions", () => {
     renderBar();
-    expect(screen.getByTestId("na-button")).toBeInTheDocument();
+    expect(screen.getByTestId("na-a-button")).toBeInTheDocument();
+    expect(screen.getByTestId("na-b-button")).toBeInTheDocument();
     expect(screen.getByTestId("not-watched-a-button")).toBeInTheDocument();
     expect(screen.getByTestId("not-watched-b-button")).toBeInTheDocument();
   });
@@ -61,11 +62,18 @@ describe("ArenaActionBar", () => {
     expect(onStale).toHaveBeenCalledWith(2);
   });
 
-  it("calls onNA when N/A button clicked", () => {
+  it("calls onNA with movie A id when N/A A button clicked", () => {
     const onNA = vi.fn();
     renderBar({ onNA });
-    fireEvent.click(screen.getByTestId("na-button"));
-    expect(onNA).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId("na-a-button"));
+    expect(onNA).toHaveBeenCalledWith(1);
+  });
+
+  it("calls onNA with movie B id when N/A B button clicked", () => {
+    const onNA = vi.fn();
+    renderBar({ onNA });
+    fireEvent.click(screen.getByTestId("na-b-button"));
+    expect(onNA).toHaveBeenCalledWith(2);
   });
 
   it("calls onBlacklist with movie A when not-watched A clicked", () => {
