@@ -419,7 +419,6 @@ export function CompareArenaPage() {
             stalePending={markStaleMutation.isPending}
             onBlacklist={() => handleBlacklist(pairData.data.movieA)}
             blacklistPending={blacklistMutation.isPending}
-            dimensionName={activeDimName}
           />
 
           {/* Center column — actions for both movies */}
@@ -522,7 +521,6 @@ export function CompareArenaPage() {
             stalePending={markStaleMutation.isPending}
             onBlacklist={() => handleBlacklist(pairData.data.movieB)}
             blacklistPending={blacklistMutation.isPending}
-            dimensionName={activeDimName}
           />
         </div>
       ) : null}
@@ -584,7 +582,6 @@ function MovieCard({
   stalePending,
   onBlacklist,
   blacklistPending,
-  dimensionName,
 }: {
   movie: { id: number; title: string; posterPath: string | null; posterUrl: string | null };
   onPick: () => void;
@@ -598,7 +595,6 @@ function MovieCard({
   stalePending?: boolean;
   onBlacklist?: () => void;
   blacklistPending?: boolean;
-  dimensionName?: string;
 }) {
   const posterSrc = movie.posterUrl ?? undefined;
   const [imgError, setImgError] = useState(false);
@@ -706,7 +702,7 @@ function MovieCard({
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                Not watched — remove from {dimensionName ?? "rankings"}
+                Not watched — exclude globally from all rankings
               </TooltipContent>
             </Tooltip>
           )}
