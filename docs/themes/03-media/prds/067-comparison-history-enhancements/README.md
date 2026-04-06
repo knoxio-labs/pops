@@ -54,6 +54,7 @@ The Matrix  +12  beat  Inception  -12    CINEMATOGRAPHY  4/6/2026  [🗑]
 - ELO scores are updated before the comparison row is inserted, so deltas reflect the actual score change
 - Existing comparisons with null deltas render without badges — no backfill needed
 - For draws (`winnerId = 0`), the draw state is handled separately (see tb-321). ELO deltas are still stored and shown once the draw display is fixed
+- **Stored deltas are point-in-time snapshots.** If ELO scores are retroactively recalculated (e.g. via comparison delete or blacklist), the stored deltas on existing rows are not updated. They reflect what the delta was at the moment the comparison was recorded, not the current net effect after recalculation. This is intentional — historical deltas are honest about what happened at that moment.
 
 ## User Stories
 
