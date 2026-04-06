@@ -55,6 +55,7 @@ export function CompareArenaPage() {
   const {
     data: pairData,
     isLoading: pairLoading,
+    isFetching: pairFetching,
     error: pairError,
     refetch: refetchPair,
   } = trpc.media.comparisons.getSmartPair.useQuery(
@@ -360,7 +361,7 @@ export function CompareArenaPage() {
       )}
 
       {/* Arena */}
-      {pairLoading ? (
+      {pairLoading || pairFetching ? (
         <div className="grid grid-cols-2 gap-8">
           <MovieCardSkeleton />
           <MovieCardSkeleton />
