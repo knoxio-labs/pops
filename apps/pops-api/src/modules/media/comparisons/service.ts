@@ -1,7 +1,7 @@
 /**
  * Comparisons service — dimensions, 1v1 comparisons, and Elo scores.
  */
-import { eq, and, or, asc, count, desc } from "drizzle-orm";
+import { eq, and, or, asc, count, desc, like, inArray, type SQL } from "drizzle-orm";
 import { getDb, getDrizzle } from "../../../db.js";
 import {
   comparisonDimensions,
@@ -452,25 +452,41 @@ export function blacklistMovie(mediaType: string, mediaId: number): BlacklistMov
  */
 export function listAllComparisons(
   dimensionId: number | undefined,
+  search: string | undefined,
   limit: number,
   offset: number
 ): ComparisonListResult {
   const db = getDrizzle();
 
-  const conditions = dimensionId ? eq(comparisons.dimensionId, dimensionId) : undefined;
+  const conditions: SQL[] = [];
+  if (dimensionId) conditions.push(eq(comparisons.dimensionId, dimensionId));
+  if (search) {
+    const matchingIds = db
+      .select({ id: movies.id })
+      .from(movies)
+      .where(like(movies.title, `%${search}%`))
+      .all()
+      .map((r) => r.id);
+    if (matchingIds.length === 0) return { rows: [], total: 0 };
+    const movieFilter = or(
+      inArray(comparisons.mediaAId, matchingIds),
+      inArray(comparisons.mediaBId, matchingIds)
+    );
+    if (movieFilter) conditions.push(movieFilter);
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const rows = db
     .select()
     .from(comparisons)
-    .where(conditions)
+    .where(where)
     .orderBy(desc(comparisons.comparedAt))
     .limit(limit)
     .offset(offset)
     .all();
 
-  const countRow = conditions
-    ? db.select({ total: count() }).from(comparisons).where(conditions).all()[0]
-    : db.select({ total: count() }).from(comparisons).all()[0];
+  const countRow = db.select({ total: count() }).from(comparisons).where(where).all()[0];
   const total = countRow?.total ?? 0;
 
   return { rows, total };

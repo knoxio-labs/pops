@@ -2,27 +2,41 @@
  * ComparisonHistoryPage — paginated list of all comparisons with delete capability.
  * Allows users to review past comparisons and undo mistakes.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { Button, Card, CardContent, Skeleton, Select } from "@pops/ui";
+import { Button, Card, CardContent, Skeleton, Select, Input } from "@pops/ui";
 import { Trash2, ChevronLeft, ChevronRight, History } from "lucide-react";
 import { trpc } from "../lib/trpc";
 
 const PAGE_SIZE = 20;
 
+function useDebouncedValue(value: string, delay: number): string {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
 export function ComparisonHistoryPage() {
   const [page, setPage] = useState(0);
   const [dimensionFilter, setDimensionFilter] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
 
   const { data: dimensionsData } = trpc.media.comparisons.listDimensions.useQuery();
   const dimensions = dimensionsData?.data ?? [];
 
   const parsedDimensionId = dimensionFilter ? Number(dimensionFilter) : undefined;
+  const searchParam = debouncedSearch.trim() || undefined;
 
   const { data, isLoading, refetch } = trpc.media.comparisons.listAll.useQuery({
     dimensionId: parsedDimensionId,
+    search: searchParam,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   });
@@ -89,6 +103,15 @@ export function ComparisonHistoryPage() {
       </div>
 
       <div className="flex items-center gap-4">
+        <Input
+          value={searchInput}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+            setPage(0);
+          }}
+          placeholder="Search by movie title…"
+          className="w-56"
+        />
         <Select
           value={dimensionFilter}
           onChange={(e) => {
