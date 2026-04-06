@@ -249,3 +249,4 @@ describe("ComparisonHistoryPage", () => {
       expect.objectContaining({ search: undefined })
     );
   });
+});
