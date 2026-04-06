@@ -331,6 +331,25 @@ describe("CompareArenaPage", () => {
     mockPairQuery.mockReturnValue({
       data: undefined,
       isLoading: true,
+      isFetching: true,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByText("The Matrix")).toBeNull();
+    expect(screen.queryByText("Not enough watched movies")).toBeNull();
+  });
+
+  it("renders loading skeletons when pair is fetching (background refetch)", () => {
+    mockDimensionsQuery.mockReturnValue({
+      data: { data: [dim1] },
+      isLoading: false,
+    });
+    mockPairQuery.mockReturnValue({
+      data: { data: { movieA, movieB, dimensionId: 1 } },
+      isLoading: false,
+      isFetching: true,
       error: null,
     });
 
