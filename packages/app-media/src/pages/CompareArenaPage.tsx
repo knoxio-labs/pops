@@ -141,10 +141,11 @@ export function CompareArenaPage() {
     { enabled: !!pairData?.data }
   );
 
-  const watchlistedMovieIds = new Set(
+  // Map from mediaId → watchlist entry id for toggle support
+  const watchlistedMovies = new Map(
     (watchlistData?.data ?? [])
       .filter((e: { mediaType: string }) => e.mediaType === "movie")
-      .map((e: { mediaId: number }) => e.mediaId)
+      .map((e: { mediaId: number; id: number }) => [e.mediaId, e.id])
   );
 
   const addToWatchlistMutation = trpc.media.watchlist.add.useMutation({
@@ -153,6 +154,16 @@ export function CompareArenaPage() {
       const movie =
         variables.mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
       toast.success(`${movie?.title ?? "Movie"} added to watchlist`);
+    },
+  });
+
+  const removeFromWatchlistMutation = trpc.media.watchlist.remove.useMutation({
+    onSuccess: (_data: unknown, variables: { id: number }) => {
+      utils.media.watchlist.list.invalidate();
+      const mediaId = [...watchlistedMovies.entries()].find(([, entryId]) => entryId === variables.id)?.[0];
+      const movie =
+        mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
+      toast.success(`${movie?.title ?? "Movie"} removed from watchlist`);
     },
   });
 
@@ -234,14 +245,16 @@ export function CompareArenaPage() {
     blacklistMutation.mutate({ mediaType: "movie", mediaId: blacklistTarget.id });
   }, [blacklistTarget, blacklistMutation]);
 
-  const handleAddToWatchlist = useCallback(
+  const handleToggleWatchlist = useCallback(
     (movieId: number) => {
-      addToWatchlistMutation.mutate({
-        mediaType: "movie",
-        mediaId: movieId,
-      });
+      const entryId = watchlistedMovies.get(movieId);
+      if (entryId !== undefined) {
+        removeFromWatchlistMutation.mutate({ id: entryId });
+      } else {
+        addToWatchlistMutation.mutate({ mediaType: "movie", mediaId: movieId });
+      }
     },
-    [addToWatchlistMutation]
+    [watchlistedMovies, addToWatchlistMutation, removeFromWatchlistMutation]
   );
 
   const handlePick = useCallback(
@@ -375,7 +388,7 @@ export function CompareArenaPage() {
         </div>
       ) : pairData?.data === null ? (
         <div className="text-center py-12 text-muted-foreground">
-          {watchlistedMovieIds.size > 0 ? (
+          {watchlistedMovies.size > 0 ? (
             <>
               <p className="text-lg mb-2">Not enough movies</p>
               <p className="text-sm">
@@ -412,9 +425,9 @@ export function CompareArenaPage() {
                   : null
             }
             isWinner={scoreDelta?.winnerId === pairData.data.movieA.id}
-            onAddToWatchlist={() => handleAddToWatchlist(pairData.data.movieA.id)}
-            isOnWatchlist={watchlistedMovieIds.has(pairData.data.movieA.id)}
-            watchlistPending={addToWatchlistMutation.isPending}
+            onToggleWatchlist={() => handleToggleWatchlist(pairData.data.movieA.id)}
+            isOnWatchlist={watchlistedMovies.has(pairData.data.movieA.id)}
+            watchlistPending={addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending}
             onMarkStale={() => handleMarkStale(pairData.data.movieA.id)}
             stalePending={markStaleMutation.isPending}
             onNA={() => handleNA(pairData.data.movieA.id)}
@@ -499,9 +512,9 @@ export function CompareArenaPage() {
                   : null
             }
             isWinner={scoreDelta?.winnerId === pairData.data.movieB.id}
-            onAddToWatchlist={() => handleAddToWatchlist(pairData.data.movieB.id)}
-            isOnWatchlist={watchlistedMovieIds.has(pairData.data.movieB.id)}
-            watchlistPending={addToWatchlistMutation.isPending}
+            onToggleWatchlist={() => handleToggleWatchlist(pairData.data.movieB.id)}
+            isOnWatchlist={watchlistedMovies.has(pairData.data.movieB.id)}
+            watchlistPending={addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending}
             onMarkStale={() => handleMarkStale(pairData.data.movieB.id)}
             stalePending={markStaleMutation.isPending}
             onNA={() => handleNA(pairData.data.movieB.id)}
@@ -562,7 +575,7 @@ function MovieCard({
   disabled,
   scoreDelta,
   isWinner,
-  onAddToWatchlist,
+  onToggleWatchlist,
   isOnWatchlist,
   watchlistPending,
   onMarkStale,
@@ -577,7 +590,7 @@ function MovieCard({
   disabled?: boolean;
   scoreDelta?: number | null;
   isWinner?: boolean;
-  onAddToWatchlist?: () => void;
+  onToggleWatchlist?: () => void;
   isOnWatchlist?: boolean;
   watchlistPending?: boolean;
   onMarkStale?: () => void;
@@ -622,26 +635,26 @@ function MovieCard({
         </button>
 
         {/* TOP ZONE — non-dismissing actions */}
-        {onAddToWatchlist && (
+        {onToggleWatchlist && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAddToWatchlist();
+                  onToggleWatchlist();
                 }}
-                disabled={isOnWatchlist || watchlistPending}
+                disabled={watchlistPending}
                 className={`absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-sm transition-colors ${
                   isOnWatchlist
-                    ? "bg-app-accent/90 text-app-accent-foreground"
+                    ? "bg-app-accent/90 text-app-accent-foreground hover:bg-red-500/80 hover:text-white"
                     : "bg-black/50 text-white/80 hover:text-white hover:bg-black/70"
                 }`}
-                aria-label={isOnWatchlist ? "On watchlist" : `Add ${movie.title} to watchlist`}
+                aria-label={isOnWatchlist ? `Remove ${movie.title} from watchlist` : `Add ${movie.title} to watchlist`}
               >
                 <Bookmark className={`h-4 w-4 ${isOnWatchlist ? "fill-current" : ""}`} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{isOnWatchlist ? "On watchlist" : "Add to watchlist"}</TooltipContent>
+            <TooltipContent>{isOnWatchlist ? "Remove from watchlist" : "Add to watchlist"}</TooltipContent>
           </Tooltip>
         )}
 
