@@ -160,9 +160,10 @@ export function CompareArenaPage() {
   const removeFromWatchlistMutation = trpc.media.watchlist.remove.useMutation({
     onSuccess: (_data: unknown, variables: { id: number }) => {
       utils.media.watchlist.list.invalidate();
-      const mediaId = [...watchlistedMovies.entries()].find(([, entryId]) => entryId === variables.id)?.[0];
-      const movie =
-        mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
+      const mediaId = [...watchlistedMovies.entries()].find(
+        ([, entryId]) => entryId === variables.id
+      )?.[0];
+      const movie = mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
       toast.success(`${movie?.title ?? "Movie"} removed from watchlist`);
     },
   });
@@ -427,7 +428,9 @@ export function CompareArenaPage() {
             isWinner={scoreDelta?.winnerId === pairData.data.movieA.id}
             onToggleWatchlist={() => handleToggleWatchlist(pairData.data.movieA.id)}
             isOnWatchlist={watchlistedMovies.has(pairData.data.movieA.id)}
-            watchlistPending={addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending}
+            watchlistPending={
+              addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending
+            }
             onMarkStale={() => handleMarkStale(pairData.data.movieA.id)}
             stalePending={markStaleMutation.isPending}
             onNA={() => handleNA(pairData.data.movieA.id)}
@@ -514,7 +517,9 @@ export function CompareArenaPage() {
             isWinner={scoreDelta?.winnerId === pairData.data.movieB.id}
             onToggleWatchlist={() => handleToggleWatchlist(pairData.data.movieB.id)}
             isOnWatchlist={watchlistedMovies.has(pairData.data.movieB.id)}
-            watchlistPending={addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending}
+            watchlistPending={
+              addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending
+            }
             onMarkStale={() => handleMarkStale(pairData.data.movieB.id)}
             stalePending={markStaleMutation.isPending}
             onNA={() => handleNA(pairData.data.movieB.id)}
@@ -649,12 +654,18 @@ function MovieCard({
                     ? "bg-app-accent/90 text-app-accent-foreground hover:bg-red-500/80 hover:text-white"
                     : "bg-black/50 text-white/80 hover:text-white hover:bg-black/70"
                 }`}
-                aria-label={isOnWatchlist ? `Remove ${movie.title} from watchlist` : `Add ${movie.title} to watchlist`}
+                aria-label={
+                  isOnWatchlist
+                    ? `Remove ${movie.title} from watchlist`
+                    : `Add ${movie.title} to watchlist`
+                }
               >
                 <Bookmark className={`h-4 w-4 ${isOnWatchlist ? "fill-current" : ""}`} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{isOnWatchlist ? "Remove from watchlist" : "Add to watchlist"}</TooltipContent>
+            <TooltipContent>
+              {isOnWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+            </TooltipContent>
           </Tooltip>
         )}
 
