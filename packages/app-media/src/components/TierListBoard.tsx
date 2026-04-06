@@ -235,6 +235,7 @@ function TierRow({
   return (
     <div
       ref={setNodeRef}
+      aria-label={`Tier ${tier}`}
       className={`flex items-stretch min-h-[80px] rounded-lg border transition-colors ${
         TIER_COLORS[tier]
       } ${isOver ? "ring-2 ring-primary" : ""}`}
@@ -264,6 +265,7 @@ function UnrankedPool({ movies }: { movies: TierMovie[] }) {
   return (
     <div
       ref={setNodeRef}
+      aria-label="Unranked movies"
       className={`mt-4 rounded-lg border border-dashed border-muted-foreground/30 p-3 transition-colors ${
         isOver ? "ring-2 ring-primary bg-muted/50" : "bg-muted/20"
       }`}
@@ -303,6 +305,7 @@ function DraggableMovieCard({ movie }: { movie: TierMovie }) {
       style={style}
       {...attributes}
       {...listeners}
+      aria-label={movie.title}
       className="flex items-center gap-1.5 bg-background border rounded-md px-2 py-1.5 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow"
       data-testid={`movie-card-${movie.mediaId}`}
     >

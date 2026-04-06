@@ -1,8 +1,50 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+// Capture DndContext handlers so drag tests can simulate drag-end events
+const dndHandlers = vi.hoisted(() => ({
+  onDragEnd: undefined as ((e: { active: { id: string }; over: { id: string } | null }) => void) | undefined,
+}));
+
+vi.mock("@dnd-kit/core", async () => {
+  const { createElement, Fragment } = await import("react");
+  return {
+    DndContext: ({ children, onDragEnd }: { children: unknown; onDragEnd?: (e: unknown) => void }) => {
+      dndHandlers.onDragEnd = onDragEnd as typeof dndHandlers.onDragEnd;
+      return createElement(Fragment, null, children);
+    },
+    DragOverlay: () => null,
+    closestCenter: "closestCenter",
+    PointerSensor: class PointerSensor {},
+    useSensor: (sensor: unknown) => sensor,
+    useSensors: (...sensors: unknown[]) => sensors,
+    useDroppable: () => ({ setNodeRef: () => {}, isOver: false }),
+  };
+});
+
+vi.mock("@dnd-kit/sortable", async () => {
+  const { createElement, Fragment } = await import("react");
+  return {
+    useSortable: () => ({
+      attributes: {},
+      listeners: {},
+      setNodeRef: () => {},
+      transform: null,
+      transition: undefined,
+      isDragging: false,
+    }),
+    SortableContext: ({ children }: { children: unknown }) =>
+      createElement(Fragment, null, children),
+    horizontalListSortingStrategy: "horizontal",
+  };
+});
+
+vi.mock("@dnd-kit/utilities", () => ({
+  CSS: { Transform: { toString: () => "" } },
+}));
 
 const mockDimensionsQuery = vi.fn();
 const mockTierListQuery = vi.fn();
@@ -182,22 +224,12 @@ describe("TierListPage", () => {
     setupPage();
     renderPage();
 
-    const movieCard = screen.getByLabelText("The Matrix");
-    const tierS = screen.getByLabelText("Tier S");
+    // Simulate drag-end: movie id 10 (The Matrix, mapped to mediaId 10) dropped on tier S
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "10" }, over: { id: "S" } });
+    });
 
-    const movieData = JSON.stringify(movies[0]);
-    const dataTransfer = {
-      getData: () => movieData,
-      setData: vi.fn(),
-      effectAllowed: "",
-      dropEffect: "",
-    };
-
-    fireEvent.dragStart(movieCard, { dataTransfer });
-    fireEvent.dragOver(tierS, { dataTransfer });
-    fireEvent.drop(tierS, { dataTransfer });
-
-    // Movie should now be in tier S, not in unranked pool
+    // Movie should now be in tier S — unranked count drops from 3 to 2
     expect(screen.getByText("Unranked (2)")).toBeTruthy();
   });
 
@@ -205,23 +237,16 @@ describe("TierListPage", () => {
     setupPage();
     renderPage();
 
-    const movieData = JSON.stringify(movies[0]);
-    const dataTransfer = {
-      getData: () => movieData,
-      setData: vi.fn(),
-      effectAllowed: "",
-      dropEffect: "",
-    };
-
     // Drop into tier S
-    const tierS = screen.getByLabelText("Tier S");
-    fireEvent.drop(tierS, { dataTransfer });
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "10" }, over: { id: "S" } });
+    });
 
-    // Now move from S to A
-    const tierA = screen.getByLabelText("Tier A");
-    fireEvent.drop(tierA, { dataTransfer });
+    // Move from S to A — still only 1 placed (not duplicated)
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "10" }, over: { id: "A" } });
+    });
 
-    // Still only 1 movie placed (moved, not duplicated)
     expect(screen.getByText("Unranked (2)")).toBeTruthy();
   });
 
@@ -229,23 +254,16 @@ describe("TierListPage", () => {
     setupPage();
     renderPage();
 
-    const movieData = JSON.stringify(movies[0]);
-    const dataTransfer = {
-      getData: () => movieData,
-      setData: vi.fn(),
-      effectAllowed: "",
-      dropEffect: "",
-    };
-
     // Place in tier S
-    const tierS = screen.getByLabelText("Tier S");
-    fireEvent.drop(tierS, { dataTransfer });
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "10" }, over: { id: "S" } });
+    });
     expect(screen.getByText("Unranked (2)")).toBeTruthy();
 
-    // Drop back to unranked pool
-    const pool = screen.getByLabelText("Unranked movies");
-    fireEvent.dragOver(pool, { dataTransfer });
-    fireEvent.drop(pool, { dataTransfer });
+    // Return to unranked pool
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "10" }, over: { id: "unranked" } });
+    });
     expect(screen.getByText("Unranked (3)")).toBeTruthy();
   });
 
@@ -253,24 +271,12 @@ describe("TierListPage", () => {
     setupPage();
     renderPage();
 
-    const dataTransfer1 = {
-      getData: () => JSON.stringify(movies[0]),
-      setData: vi.fn(),
-      effectAllowed: "",
-      dropEffect: "",
-    };
-    const dataTransfer2 = {
-      getData: () => JSON.stringify(movies[1]),
-      setData: vi.fn(),
-      effectAllowed: "",
-      dropEffect: "",
-    };
-
-    const tierS = screen.getByLabelText("Tier S");
-    const tierA = screen.getByLabelText("Tier A");
-
-    fireEvent.drop(tierS, { dataTransfer: dataTransfer1 });
-    fireEvent.drop(tierA, { dataTransfer: dataTransfer2 });
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "10" }, over: { id: "S" } });
+    });
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "20" }, over: { id: "A" } });
+    });
 
     const submitBtn = screen.getByRole("button", { name: /Submit Tier List/i });
     expect(submitBtn).not.toBeDisabled();

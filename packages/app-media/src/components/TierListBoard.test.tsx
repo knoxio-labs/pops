@@ -1,6 +1,50 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { TierListBoard, type TierMovie } from "./TierListBoard";
+
+// Capture DndContext handlers so tests can simulate drag-end events
+const dndHandlers = vi.hoisted(() => ({
+  onDragEnd: undefined as ((e: { active: { id: string }; over: { id: string } | null }) => void) | undefined,
+  onDragOver: undefined as ((e: unknown) => void) | undefined,
+}));
+
+vi.mock("@dnd-kit/core", async () => {
+  const { createElement, Fragment } = await import("react");
+  return {
+    DndContext: ({ children, onDragEnd, onDragOver }: { children: unknown; onDragEnd?: (e: unknown) => void; onDragOver?: (e: unknown) => void }) => {
+      dndHandlers.onDragEnd = onDragEnd as typeof dndHandlers.onDragEnd;
+      dndHandlers.onDragOver = onDragOver;
+      return createElement(Fragment, null, children);
+    },
+    DragOverlay: () => null,
+    closestCenter: "closestCenter",
+    PointerSensor: class PointerSensor {},
+    useSensor: (sensor: unknown) => sensor,
+    useSensors: (...sensors: unknown[]) => sensors,
+    useDroppable: () => ({ setNodeRef: () => {}, isOver: false }),
+  };
+});
+
+vi.mock("@dnd-kit/sortable", async () => {
+  const { createElement, Fragment } = await import("react");
+  return {
+    useSortable: () => ({
+      attributes: {},
+      listeners: {},
+      setNodeRef: () => {},
+      transform: null,
+      transition: undefined,
+      isDragging: false,
+    }),
+    SortableContext: ({ children }: { children: unknown }) =>
+      createElement(Fragment, null, children),
+    horizontalListSortingStrategy: "horizontal",
+  };
+});
+
+vi.mock("@dnd-kit/utilities", () => ({
+  CSS: { Transform: { toString: () => "" } },
+}));
 
 const sampleMovies: TierMovie[] = [
   {
@@ -95,5 +139,54 @@ describe("TierListBoard", () => {
     expect(screen.getByText("All movies placed!")).toBeTruthy();
     const submitBtn = screen.getByRole("button", { name: /submit tier list/i });
     expect(submitBtn.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("drag triggers correct tier update — movie moves from unranked to tier S", () => {
+    render(<TierListBoard movies={sampleMovies} onSubmit={vi.fn()} />);
+
+    // Initially 4 unranked
+    expect(screen.getByText("Unranked (4)")).toBeTruthy();
+
+    // Simulate drag-end: movie 1 (The Matrix) dropped onto tier S
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "1" }, over: { id: "S" } });
+    });
+
+    // The Matrix should now be placed — unranked drops to 3
+    expect(screen.getByText("Unranked (3)")).toBeTruthy();
+    // Submit button should now be enabled (1 placed — still disabled until 2)
+    const submitBtn = screen.getByRole("button", { name: /submit tier list/i });
+    expect(submitBtn.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("drag triggers correct tier update — 2 placements enable submit", () => {
+    render(<TierListBoard movies={sampleMovies} onSubmit={vi.fn()} />);
+
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "1" }, over: { id: "S" } });
+    });
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "2" }, over: { id: "A" } });
+    });
+
+    expect(screen.getByText("Unranked (2)")).toBeTruthy();
+    const submitBtn = screen.getByRole("button", { name: /submit tier list/i });
+    expect(submitBtn.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("drag triggers correct tier update — movie returns to unranked when dropped on unranked zone", () => {
+    render(<TierListBoard movies={sampleMovies} onSubmit={vi.fn()} />);
+
+    // Place The Matrix in tier S
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "1" }, over: { id: "S" } });
+    });
+    expect(screen.getByText("Unranked (3)")).toBeTruthy();
+
+    // Return to unranked
+    act(() => {
+      dndHandlers.onDragEnd?.({ active: { id: "1" }, over: { id: "unranked" } });
+    });
+    expect(screen.getByText("Unranked (4)")).toBeTruthy();
   });
 });
