@@ -28,7 +28,7 @@
     "@pops/api-client": "workspace:*",
     "@pops/navigation": "workspace:*",
     "@pops/ui": "workspace:*",
-    "lucide-react": "^0.563.0",
+    "lucide-react": "^1.7.0",
     "@tanstack/react-query": "5.96.2",
     "@tailwindcss/vite": "4.2.2",
     "react": "^19.0.0",
