@@ -18,7 +18,10 @@
       "better-sqlite3",
       "esbuild",
       "msw"
-    ]
+    ],
+    "overrides": {
+      "cssstyle": "6.0.2"
+    }
   },
   "devDependencies": {
     "prettier": "^3.8.1",
