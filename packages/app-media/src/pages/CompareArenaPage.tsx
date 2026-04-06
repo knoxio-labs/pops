@@ -119,7 +119,13 @@ export function CompareArenaPage() {
         } else {
           const expectedWinner = 1 / (1 + Math.pow(10, (scoreB - scoreA) / 400));
           const winnerDelta = Math.round(32 * (1 - expectedWinner));
-          setScoreDelta({ winnerId, loserId, winnerDelta, loserDelta: -winnerDelta, isDraw: false });
+          setScoreDelta({
+            winnerId,
+            loserId,
+            winnerDelta,
+            loserDelta: -winnerDelta,
+            isDraw: false,
+          });
         }
       } catch {
         // Score fetch failed — skip animation
@@ -435,7 +441,9 @@ export function CompareArenaPage() {
                     ? (scoreDelta?.loserDelta ?? null)
                     : null
               }
-              isWinner={scoreDelta?.isDraw ? undefined : scoreDelta?.winnerId === pairData.data.movieA.id}
+              isWinner={
+                scoreDelta?.isDraw ? undefined : scoreDelta?.winnerId === pairData.data.movieA.id
+              }
               onAddToWatchlist={() => handleAddToWatchlist(pairData.data.movieA.id)}
               isOnWatchlist={watchlistedMovieIds.has(pairData.data.movieA.id)}
               watchlistPending={addToWatchlistMutation.isPending}
@@ -522,7 +530,9 @@ export function CompareArenaPage() {
                     ? (scoreDelta?.loserDelta ?? null)
                     : null
               }
-              isWinner={scoreDelta?.isDraw ? undefined : scoreDelta?.winnerId === pairData.data.movieB.id}
+              isWinner={
+                scoreDelta?.isDraw ? undefined : scoreDelta?.winnerId === pairData.data.movieB.id
+              }
               onAddToWatchlist={() => handleAddToWatchlist(pairData.data.movieB.id)}
               isOnWatchlist={watchlistedMovieIds.has(pairData.data.movieB.id)}
               watchlistPending={addToWatchlistMutation.isPending}
