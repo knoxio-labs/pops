@@ -202,7 +202,11 @@ export function TierListPage() {
                     </p>
                   </div>
                 ) : (
-                  <TierListBoard movies={movies} onSubmit={handleSubmit} submitPending={isPending} />
+                  <TierListBoard
+                    movies={movies}
+                    onSubmit={handleSubmit}
+                    submitPending={isPending}
+                  />
                 )}
               </div>
             )
