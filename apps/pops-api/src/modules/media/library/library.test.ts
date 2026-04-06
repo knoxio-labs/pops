@@ -114,22 +114,21 @@ describe("library.addMovie", () => {
   it("maps genre names correctly from TMDB detail", async () => {
     const { TmdbClient } = await import("../tmdb/client.js");
     const MockTmdbClient = vi.mocked(TmdbClient);
-    MockTmdbClient.mockImplementation(
-      () =>
-        ({
-          getMovie: vi.fn().mockResolvedValue({
-            ...MOCK_TMDB_DETAIL,
-            genres: [
-              { id: 28, name: "Action" },
-              { id: 12, name: "Adventure" },
-              { id: 878, name: "Science Fiction" },
-            ],
-          }),
-          searchMovies: vi.fn(),
-          getMovieImages: vi.fn(),
-          getGenreList: vi.fn(),
-        }) as unknown as InstanceType<typeof TmdbClient>
-    );
+    MockTmdbClient.mockImplementation(function () {
+      return {
+        getMovie: vi.fn().mockResolvedValue({
+          ...MOCK_TMDB_DETAIL,
+          genres: [
+            { id: 28, name: "Action" },
+            { id: 12, name: "Adventure" },
+            { id: 878, name: "Science Fiction" },
+          ],
+        }),
+        searchMovies: vi.fn(),
+        getMovieImages: vi.fn(),
+        getGenreList: vi.fn(),
+      } as unknown as InstanceType<typeof TmdbClient>;
+    });
 
     const result = await caller.media.library.addMovie({ tmdbId: 550 });
 
@@ -139,15 +138,14 @@ describe("library.addMovie", () => {
   it("throws NOT_FOUND when TMDB returns 404", async () => {
     const { TmdbClient } = await import("../tmdb/client.js");
     const MockTmdbClient = vi.mocked(TmdbClient);
-    MockTmdbClient.mockImplementation(
-      () =>
-        ({
-          getMovie: vi.fn().mockRejectedValue(new TmdbApiError(404, "Not Found")),
-          searchMovies: vi.fn(),
-          getMovieImages: vi.fn(),
-          getGenreList: vi.fn(),
-        }) as unknown as InstanceType<typeof TmdbClient>
-    );
+    MockTmdbClient.mockImplementation(function () {
+      return {
+        getMovie: vi.fn().mockRejectedValue(new TmdbApiError(404, "Not Found")),
+        searchMovies: vi.fn(),
+        getMovieImages: vi.fn(),
+        getGenreList: vi.fn(),
+      } as unknown as InstanceType<typeof TmdbClient>;
+    });
 
     await expect(caller.media.library.addMovie({ tmdbId: 999999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
@@ -157,15 +155,14 @@ describe("library.addMovie", () => {
   it("throws INTERNAL_SERVER_ERROR on TMDB API failure", async () => {
     const { TmdbClient } = await import("../tmdb/client.js");
     const MockTmdbClient = vi.mocked(TmdbClient);
-    MockTmdbClient.mockImplementation(
-      () =>
-        ({
-          getMovie: vi.fn().mockRejectedValue(new TmdbApiError(500, "Internal Server Error")),
-          searchMovies: vi.fn(),
-          getMovieImages: vi.fn(),
-          getGenreList: vi.fn(),
-        }) as unknown as InstanceType<typeof TmdbClient>
-    );
+    MockTmdbClient.mockImplementation(function () {
+      return {
+        getMovie: vi.fn().mockRejectedValue(new TmdbApiError(500, "Internal Server Error")),
+        searchMovies: vi.fn(),
+        getMovieImages: vi.fn(),
+        getGenreList: vi.fn(),
+      } as unknown as InstanceType<typeof TmdbClient>;
+    });
 
     await expect(caller.media.library.addMovie({ tmdbId: 550 })).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
