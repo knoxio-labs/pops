@@ -6,15 +6,23 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 // Capture DndContext handlers so drag tests can simulate drag-end events
 const dndHandlers = vi.hoisted(() => ({
-  onDragEnd: undefined as ((e: { active: { id: string }; over: { id: string } | null }) => void) | undefined,
+  onDragEnd: undefined as
+    | ((e: { active: { id: string }; over: { id: string } | null }) => void)
+    | undefined,
 }));
 
 vi.mock("@dnd-kit/core", async () => {
   const { createElement, Fragment } = await import("react");
   return {
-    DndContext: ({ children, onDragEnd }: { children: unknown; onDragEnd?: (e: unknown) => void }) => {
+    DndContext: ({
+      children,
+      onDragEnd,
+    }: {
+      children: unknown;
+      onDragEnd?: (e: unknown) => void;
+    }) => {
       dndHandlers.onDragEnd = onDragEnd as typeof dndHandlers.onDragEnd;
-      return createElement(Fragment, null, children);
+      return createElement(Fragment, null, children as any);
     },
     DragOverlay: () => null,
     closestCenter: "closestCenter",
@@ -37,7 +45,7 @@ vi.mock("@dnd-kit/sortable", async () => {
       isDragging: false,
     }),
     SortableContext: ({ children }: { children: unknown }) =>
-      createElement(Fragment, null, children),
+      createElement(Fragment, null, children as any),
     horizontalListSortingStrategy: "horizontal",
   };
 });

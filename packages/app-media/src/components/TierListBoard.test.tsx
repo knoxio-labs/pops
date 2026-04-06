@@ -4,17 +4,27 @@ import { TierListBoard, type TierMovie } from "./TierListBoard";
 
 // Capture DndContext handlers so tests can simulate drag-end events
 const dndHandlers = vi.hoisted(() => ({
-  onDragEnd: undefined as ((e: { active: { id: string }; over: { id: string } | null }) => void) | undefined,
+  onDragEnd: undefined as
+    | ((e: { active: { id: string }; over: { id: string } | null }) => void)
+    | undefined,
   onDragOver: undefined as ((e: unknown) => void) | undefined,
 }));
 
 vi.mock("@dnd-kit/core", async () => {
   const { createElement, Fragment } = await import("react");
   return {
-    DndContext: ({ children, onDragEnd, onDragOver }: { children: unknown; onDragEnd?: (e: unknown) => void; onDragOver?: (e: unknown) => void }) => {
+    DndContext: ({
+      children,
+      onDragEnd,
+      onDragOver,
+    }: {
+      children: unknown;
+      onDragEnd?: (e: unknown) => void;
+      onDragOver?: (e: unknown) => void;
+    }) => {
       dndHandlers.onDragEnd = onDragEnd as typeof dndHandlers.onDragEnd;
       dndHandlers.onDragOver = onDragOver;
-      return createElement(Fragment, null, children);
+      return createElement(Fragment, null, children as any);
     },
     DragOverlay: () => null,
     closestCenter: "closestCenter",
@@ -37,7 +47,7 @@ vi.mock("@dnd-kit/sortable", async () => {
       isDragging: false,
     }),
     SortableContext: ({ children }: { children: unknown }) =>
-      createElement(Fragment, null, children),
+      createElement(Fragment, null, children as any),
     horizontalListSortingStrategy: "horizontal",
   };
 });
