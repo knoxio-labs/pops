@@ -214,4 +214,38 @@ describe("ComparisonHistoryPage", () => {
 
     expect(screen.getByText(/Page 1 of/)).toBeInTheDocument();
   });
-});
+
+  it("renders search input", () => {
+    setupLoaded();
+    renderPage();
+
+    expect(screen.getByPlaceholderText("Search by movie title…")).toBeInTheDocument();
+  });
+
+  it("typing in search triggers filtered query after debounce", () => {
+    setupLoaded();
+    renderPage();
+
+    const searchInput = screen.getByPlaceholderText("Search by movie title…");
+    fireEvent.change(searchInput, { target: { value: "Dark" } });
+
+    // Before debounce: still called with no search
+    expect(mockListAllQuery).not.toHaveBeenLastCalledWith(expect.objectContaining({ search: "Dark" }));
+
+    // After 300ms debounce
+    vi.advanceTimersByTime(300);
+    expect(mockListAllQuery).toHaveBeenLastCalledWith(expect.objectContaining({ search: "Dark" }));
+  });
+
+  it("empty search does not pass search param to query", () => {
+    setupLoaded();
+    renderPage();
+
+    const searchInput = screen.getByPlaceholderText("Search by movie title…");
+    fireEvent.change(searchInput, { target: { value: "   " } });
+    vi.advanceTimersByTime(300);
+
+    expect(mockListAllQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: undefined })
+    );
+  });
