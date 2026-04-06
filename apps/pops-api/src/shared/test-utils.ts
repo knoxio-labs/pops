@@ -211,6 +211,8 @@ export function createTestDb(): Database {
       winner_type   TEXT NOT NULL,
       winner_id     INTEGER NOT NULL,
       draw_tier     TEXT,
+      delta_a       INTEGER,
+      delta_b       INTEGER,
       compared_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_comparisons_dimension_id ON comparisons(dimension_id);

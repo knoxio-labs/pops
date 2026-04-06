@@ -39,6 +39,10 @@ export interface Comparison {
   winnerType: string;
   winnerId: number;
   drawTier: string | null;
+  /** ELO point change for media A. Null for historical comparisons recorded before this field was added. */
+  deltaA: number | null;
+  /** ELO point change for media B. Null for historical comparisons recorded before this field was added. */
+  deltaB: number | null;
   comparedAt: string;
 }
 
@@ -53,6 +57,8 @@ export function toComparison(row: ComparisonRow): Comparison {
     winnerType: row.winnerType,
     winnerId: row.winnerId,
     drawTier: row.drawTier,
+    deltaA: row.deltaA ?? null,
+    deltaB: row.deltaB ?? null,
     comparedAt: row.comparedAt,
   };
 }

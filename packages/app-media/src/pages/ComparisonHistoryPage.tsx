@@ -156,6 +156,8 @@ export function ComparisonHistoryPage() {
               mediaBId: number;
               winnerType: string;
               winnerId: number;
+              deltaA: number | null;
+              deltaB: number | null;
               comparedAt: string;
             }) => (
               <ComparisonRow
@@ -197,6 +199,25 @@ export function ComparisonHistoryPage() {
   );
 }
 
+function EloDelta({ delta }: { delta: number | null }) {
+  if (delta === null) return null;
+  const isPositive = delta > 0;
+  return (
+    <span
+      className={`text-2xs font-mono tabular-nums px-1 py-0.5 rounded ${
+        isPositive
+          ? "text-green-500 bg-green-500/10"
+          : delta < 0
+            ? "text-red-500 bg-red-500/10"
+            : "text-muted-foreground"
+      }`}
+    >
+      {isPositive ? "+" : ""}
+      {delta}
+    </span>
+  );
+}
+
 function ComparisonRow({
   comparison,
   dimensionName,
@@ -208,6 +229,8 @@ function ComparisonRow({
     mediaAId: number;
     mediaBId: number;
     winnerId: number;
+    deltaA: number | null;
+    deltaB: number | null;
     comparedAt: string;
   };
   dimensionName: string;
@@ -216,6 +239,8 @@ function ComparisonRow({
 }) {
   const winnerId = comparison.winnerId;
   const loserId = comparison.mediaAId === winnerId ? comparison.mediaBId : comparison.mediaAId;
+  const winnerDelta = comparison.mediaAId === winnerId ? comparison.deltaA : comparison.deltaB;
+  const loserDelta = comparison.mediaAId === winnerId ? comparison.deltaB : comparison.deltaA;
 
   return (
     <Card className="group">
@@ -224,8 +249,10 @@ function ComparisonRow({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-sm">
               <MovieTitle mediaId={winnerId} className="font-semibold text-foreground" />
+              <EloDelta delta={winnerDelta} />
               <span className="text-muted-foreground">beat</span>
               <MovieTitle mediaId={loserId} className="text-muted-foreground" />
+              <EloDelta delta={loserDelta} />
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-2xs text-muted-foreground uppercase tracking-wider">
