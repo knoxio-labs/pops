@@ -333,7 +333,7 @@ export const comparisonsRouter = router({
     }
   }),
 
-  /** Get a debrief session by media — looks up most recent pending/active session. */
+  /** Get a debrief session by media — looks up most recent session (including complete). */
   getDebrief: protectedProcedure.input(GetDebriefSchema).query(({ input }) => {
     try {
       const debrief = debriefService.getDebriefByMedia(input.mediaType, input.mediaId);

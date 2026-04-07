@@ -212,7 +212,8 @@ export function getDebriefByMedia(
 ): DebriefResponse {
   const db = getDrizzle();
 
-  // Find the most recent pending/active session for this media
+  // Find the most recent session for this media (including complete,
+  // so the completion summary can render after the last comparison)
   const session = db
     .select({ id: debriefSessions.id })
     .from(debriefSessions)
@@ -221,7 +222,7 @@ export function getDebriefByMedia(
       and(
         eq(watchHistory.mediaType, mediaType),
         eq(watchHistory.mediaId, mediaId),
-        inArray(debriefSessions.status, ["pending", "active"])
+        inArray(debriefSessions.status, ["pending", "active", "complete"])
       )
     )
     .orderBy(asc(debriefSessions.id))
