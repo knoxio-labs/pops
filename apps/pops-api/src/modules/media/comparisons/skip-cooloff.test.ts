@@ -69,18 +69,22 @@ describe("skip cooloff", () => {
       // First skip at global count 0 → skip_until = 10
       recordSkip(dimId, "movie", movieA, "movie", movieB);
 
-      // Add 5 comparisons
-      const movieC = seedMovie(db, { title: "Movie C", tmdb_id: 300 });
-      seedWatchHistoryEntry(db, { media_type: "movie", media_id: movieC, completed: 1 });
+      // Add 5 comparisons (each must be a unique pair to avoid override dedup)
+      const extraMovies: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        const m = seedMovie(db, { title: `Extra ${i}`, tmdb_id: 300 + i });
+        seedWatchHistoryEntry(db, { media_type: "movie", media_id: m, completed: 1 });
+        extraMovies.push(m);
+      }
       for (let i = 0; i < 5; i++) {
         recordComparison({
           dimensionId: dimId,
           mediaAType: "movie",
-          mediaAId: movieA,
+          mediaAId: extraMovies[i]!,
           mediaBType: "movie",
-          mediaBId: movieC,
+          mediaBId: extraMovies[i + 1]!,
           winnerType: "movie",
-          winnerId: movieA,
+          winnerId: extraMovies[i]!,
         });
       }
       expect(getGlobalComparisonCount()).toBe(5);
@@ -112,18 +116,22 @@ describe("skip cooloff", () => {
       recordSkip(dimId, "movie", movieA, "movie", movieB);
       // skip_until = 10
 
-      // Add 10 comparisons to reach global count = 10
-      const movieC = seedMovie(db, { title: "Movie C", tmdb_id: 300 });
-      seedWatchHistoryEntry(db, { media_type: "movie", media_id: movieC, completed: 1 });
+      // Add 10 comparisons (each must be a unique pair to avoid override dedup)
+      const extraMovies: number[] = [];
+      for (let i = 0; i < 11; i++) {
+        const m = seedMovie(db, { title: `Extra ${i}`, tmdb_id: 300 + i });
+        seedWatchHistoryEntry(db, { media_type: "movie", media_id: m, completed: 1 });
+        extraMovies.push(m);
+      }
       for (let i = 0; i < 10; i++) {
         recordComparison({
           dimensionId: dimId,
           mediaAType: "movie",
-          mediaAId: movieA,
+          mediaAId: extraMovies[i]!,
           mediaBType: "movie",
-          mediaBId: movieC,
+          mediaBId: extraMovies[i + 1]!,
           winnerType: "movie",
-          winnerId: movieA,
+          winnerId: extraMovies[i]!,
         });
       }
 

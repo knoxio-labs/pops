@@ -139,6 +139,57 @@ export function updateDimension(id: number, input: UpdateDimensionInput): Compar
   return getDimension(id);
 }
 
+// ── Source Hierarchy ──
+
+/** Source authority ranking: higher rank = more authoritative. null/historical = 0. */
+const SOURCE_RANK: Record<string, number> = { "": 0, tier_list: 1, arena: 2 };
+function sourceRank(source: string | null | undefined): number {
+  return SOURCE_RANK[source ?? ""] ?? 0;
+}
+
+/**
+ * Find an existing comparison for the same normalized pair on a dimension.
+ * Returns the row if found, undefined otherwise.
+ */
+function findExistingComparison(
+  dimensionId: number,
+  mediaAType: string,
+  mediaAId: number,
+  mediaBType: string,
+  mediaBId: number
+): ComparisonRow | undefined {
+  const drizzleDb = getDrizzle();
+  const [normAType, normAId, normBType, normBId] = normalizePairOrder(
+    mediaAType,
+    mediaAId,
+    mediaBType,
+    mediaBId
+  );
+  return drizzleDb
+    .select()
+    .from(comparisons)
+    .where(
+      and(
+        eq(comparisons.dimensionId, dimensionId),
+        or(
+          and(
+            eq(comparisons.mediaAType, normAType),
+            eq(comparisons.mediaAId, normAId),
+            eq(comparisons.mediaBType, normBType),
+            eq(comparisons.mediaBId, normBId)
+          ),
+          and(
+            eq(comparisons.mediaAType, normBType),
+            eq(comparisons.mediaAId, normBId),
+            eq(comparisons.mediaBType, normAType),
+            eq(comparisons.mediaBId, normAId)
+          )
+        )
+      )
+    )
+    .get();
+}
+
 // ── Comparisons ──
 
 /** Elo K-factor for score updates. */
@@ -186,9 +237,32 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
     throw new ValidationError("Winner must match either media A or media B, or be 0 for a draw");
   }
 
+  const newSource = input.source ?? "arena";
+
   // Wrap insert + Elo update in a transaction
   const rawDb = getDb();
   const row = rawDb.transaction(() => {
+    // Check for existing comparison on this pair+dimension
+    let needsRecalc = false;
+    const existing = findExistingComparison(
+      input.dimensionId,
+      input.mediaAType,
+      input.mediaAId,
+      input.mediaBType,
+      input.mediaBId
+    );
+
+    if (existing) {
+      if (sourceRank(newSource) >= sourceRank(existing.source)) {
+        // Override: delete old, will recalc after insert
+        drizzleDb.delete(comparisons).where(eq(comparisons.id, existing.id)).run();
+        needsRecalc = true;
+      } else {
+        // Skip: existing has higher authority
+        return existing;
+      }
+    }
+
     // Compute Elo deltas and update scores first so deltas can be stored on the comparison
     const { deltaA, deltaB } = updateEloScores(input);
 
@@ -203,6 +277,7 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
         winnerType: input.winnerType,
         winnerId: input.winnerId,
         drawTier: input.drawTier ?? null,
+        source: newSource,
         deltaA,
         deltaB,
       })
@@ -214,6 +289,12 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
       .where(eq(comparisons.id, Number(result.lastInsertRowid)))
       .get();
     if (!inserted) throw new Error("Failed to retrieve recorded comparison");
+
+    // If we deleted an old row, recalc the whole dimension
+    if (needsRecalc) {
+      recalcDimensionElo(input.dimensionId);
+    }
+
     return inserted;
   })();
 
@@ -1686,9 +1767,10 @@ const STALENESS_THRESHOLD = 0.3;
 /**
  * Select up to 8 movies for a tier list placement round.
  *
- * Strategy:
- *  - Prefer low comparison count (high uncertainty)
- *  - Mix of score ranges (sample from quantiles)
+ * Strategy — greedy maximum coverage:
+ *  1. Fetch all eligible movies and all existing comparison pairs
+ *  2. Greedily pick movies that maximize NEW pairwise comparisons
+ *  3. Tie-break by lowest comparison count (highest uncertainty)
  *  - Exclude: blacklisted, excluded-for-dimension, staleness < 0.3
  *  - Returns fewer than 8 if not enough eligible (min 0)
  */
@@ -1697,7 +1779,7 @@ export function getTierListMovies(dimensionId: number): TierListMovie[] {
 
   const rawDb = getDb();
 
-  // Get eligible movies: non-excluded, with comparisons, joined to movie metadata
+  // Get eligible movies: non-excluded, with scores, joined to movie metadata
   const rows = rawDb
     .prepare(
       `SELECT
@@ -1733,49 +1815,92 @@ export function getTierListMovies(dimensionId: number): TierListMovie[] {
 
   // If we have 8 or fewer, return them all
   if (rows.length <= MAX_TIER_LIST_MOVIES) {
-    return rows.map((row) => ({
-      id: row.mediaId,
-      title: row.title,
-      posterUrl: row.moviePosterOverride
-        ? row.moviePosterOverride
-        : row.moviePosterPath && row.movieTmdbId
-          ? `/media/images/movie/${row.movieTmdbId}/poster.jpg`
-          : null,
-      score: Math.round(row.score * 10) / 10,
-      comparisonCount: row.comparisonCount,
-    }));
+    return rows.map(toTierListMovie);
   }
 
-  // Sample from quantiles to get a mix of score ranges
-  // Take some from low-comparison-count (already sorted by count ASC)
-  // and sample across score distribution
+  // Build set of existing comparison pair keys for this dimension
+  const existingPairs = new Set<string>();
+  const pairRows = rawDb
+    .prepare(
+      `SELECT media_a_type, media_a_id, media_b_type, media_b_id
+       FROM comparisons
+       WHERE dimension_id = ?`
+    )
+    .all(dimensionId) as Array<{
+    media_a_type: string;
+    media_a_id: number;
+    media_b_type: string;
+    media_b_id: number;
+  }>;
+  for (const p of pairRows) {
+    const [nAt, nAi, nBt, nBi] = normalizePairOrder(
+      p.media_a_type,
+      p.media_a_id,
+      p.media_b_type,
+      p.media_b_id
+    );
+    existingPairs.add(`${nAt}:${nAi}:${nBt}:${nBi}`);
+  }
+
+  // Greedy selection: pick movies that maximize new pairwise comparisons
   const selected: typeof rows = [];
-  const used = new Set<number>();
+  const selectedIds = new Set<number>();
 
-  // First: take top 4 by lowest comparison count (highest uncertainty)
-  for (const row of rows) {
-    if (selected.length >= 4) break;
-    selected.push(row);
-    used.add(row.mediaId);
-  }
+  for (let round = 0; round < MAX_TIER_LIST_MOVIES && rows.length > 0; round++) {
+    let bestIdx = -1;
+    let bestNewPairs = -1;
+    let bestCompCount = Infinity;
 
-  // Then: sample remaining 4 from score quantiles
-  const remaining = rows.filter((r) => !used.has(r.mediaId));
-  if (remaining.length > 0) {
-    // Sort remaining by score for quantile sampling
-    remaining.sort((a, b) => a.score - b.score);
-    const quantileCount = Math.min(4, remaining.length);
-    for (let i = 0; i < quantileCount; i++) {
-      const idx = Math.floor((i / quantileCount) * remaining.length);
-      const row = remaining[idx];
-      if (row && !used.has(row.mediaId)) {
-        selected.push(row);
-        used.add(row.mediaId);
+    for (let i = 0; i < rows.length; i++) {
+      const candidate = rows[i];
+      if (!candidate || selectedIds.has(candidate.mediaId)) continue;
+
+      // Count new pairs this candidate would create with already-selected movies
+      let newPairs = 0;
+      for (const sel of selected) {
+        const [nAt, nAi, nBt, nBi] = normalizePairOrder(
+          "movie",
+          candidate.mediaId,
+          "movie",
+          sel.mediaId
+        );
+        const key = `${nAt}:${nAi}:${nBt}:${nBi}`;
+        if (!existingPairs.has(key)) {
+          newPairs++;
+        }
+      }
+
+      // Tie-break: more new pairs wins, then lower comparison count
+      if (
+        newPairs > bestNewPairs ||
+        (newPairs === bestNewPairs && candidate.comparisonCount < bestCompCount)
+      ) {
+        bestIdx = i;
+        bestNewPairs = newPairs;
+        bestCompCount = candidate.comparisonCount;
       }
     }
+
+    if (bestIdx === -1) break;
+    const pick = rows[bestIdx];
+    if (!pick) break;
+    selected.push(pick);
+    selectedIds.add(pick.mediaId);
   }
 
-  return selected.map((row) => ({
+  return selected.map(toTierListMovie);
+}
+
+function toTierListMovie(row: {
+  mediaId: number;
+  title: string;
+  moviePosterOverride: string | null;
+  moviePosterPath: string | null;
+  movieTmdbId: number | null;
+  score: number;
+  comparisonCount: number;
+}): TierListMovie {
+  return {
     id: row.mediaId,
     title: row.title,
     posterUrl: row.moviePosterOverride
@@ -1785,7 +1910,7 @@ export function getTierListMovies(dimensionId: number): TierListMovie[] {
         : null,
     score: Math.round(row.score * 10) / 10,
     comparisonCount: row.comparisonCount,
-  }));
+  };
 }
 
 // ── Debrief Dismiss ──
@@ -1896,7 +2021,8 @@ function normalizePairOrder(
  */
 export function batchRecordComparisons(
   dimensionId: number,
-  items: BatchComparisonItem[]
+  items: BatchComparisonItem[],
+  source?: string | null
 ): BatchRecordResult {
   const rawDb = getDb();
   const drizzleDb = getDrizzle();
@@ -1907,10 +2033,34 @@ export function batchRecordComparisons(
     throw new ValidationError("Cannot record comparisons for inactive dimension");
   }
 
-  let count = 0;
+  let insertedCount = 0;
+  let skippedCount = 0;
+  const idsToDelete: number[] = [];
 
   rawDb.transaction(() => {
     for (const item of items) {
+      const itemSource = item.source ?? source ?? null;
+
+      // Check for existing comparison on this pair+dimension
+      const existing = findExistingComparison(
+        dimensionId,
+        item.mediaAType,
+        item.mediaAId,
+        item.mediaBType,
+        item.mediaBId
+      );
+
+      if (existing) {
+        if (sourceRank(itemSource) >= sourceRank(existing.source)) {
+          // Override: mark old row for deletion
+          idsToDelete.push(existing.id);
+        } else {
+          // Skip: existing has higher authority
+          skippedCount++;
+          continue;
+        }
+      }
+
       const comparisonInput: RecordComparisonInput = {
         dimensionId,
         mediaAType: item.mediaAType,
@@ -1936,18 +2086,29 @@ export function batchRecordComparisons(
           winnerType: comparisonInput.winnerType,
           winnerId: comparisonInput.winnerId,
           drawTier: comparisonInput.drawTier ?? null,
+          source: itemSource,
           deltaA,
           deltaB,
         })
         .run();
 
       if (Number(result.lastInsertRowid) > 0) {
-        count++;
+        insertedCount++;
       }
+    }
+
+    // Delete overridden rows after all inserts
+    if (idsToDelete.length > 0) {
+      drizzleDb.delete(comparisons).where(inArray(comparisons.id, idsToDelete)).run();
     }
   })();
 
-  return { count };
+  // Recalc once if any rows were overridden
+  if (idsToDelete.length > 0) {
+    recalcDimensionElo(dimensionId);
+  }
+
+  return { count: insertedCount, skipped: skippedCount };
 }
 
 // ── Tier List Submission ──
@@ -1995,7 +2156,11 @@ export function submitTierList(input: SubmitTierListInput): SubmitTierListResult
   }));
 
   // Batch-record comparisons (validates dimension + inserts + ELO updates)
-  const { count: comparisonsRecorded } = batchRecordComparisons(input.dimensionId, batchItems);
+  const { count: comparisonsRecorded, skipped } = batchRecordComparisons(
+    input.dimensionId,
+    batchItems,
+    "tier_list"
+  );
 
   // Set tier overrides for each placement
   rawDb.transaction(() => {
@@ -2026,7 +2191,7 @@ export function submitTierList(input: SubmitTierListInput): SubmitTierListResult
     });
   }
 
-  return { comparisonsRecorded, scoreChanges };
+  return { comparisonsRecorded, skipped, scoreChanges };
 }
 
 // ── Debrief Comparison ──

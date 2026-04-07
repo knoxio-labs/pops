@@ -39,6 +39,8 @@ export interface Comparison {
   winnerType: string;
   winnerId: number;
   drawTier: string | null;
+  /** Source of this comparison: "arena" (1v1), "tier_list" (batch tier placement), or null (historical). */
+  source: string | null;
   /** ELO point change for media A. Null for historical comparisons recorded before this field was added. */
   deltaA: number | null;
   /** ELO point change for media B. Null for historical comparisons recorded before this field was added. */
@@ -57,6 +59,7 @@ export function toComparison(row: ComparisonRow): Comparison {
     winnerType: row.winnerType,
     winnerId: row.winnerId,
     drawTier: row.drawTier,
+    source: row.source ?? null,
     deltaA: row.deltaA ?? null,
     deltaB: row.deltaB ?? null,
     comparedAt: row.comparedAt,
@@ -152,6 +155,9 @@ export type UpdateDimensionInput = z.infer<typeof UpdateDimensionSchema>;
 const DRAW_TIERS = ["high", "mid", "low"] as const;
 export type DrawTier = (typeof DRAW_TIERS)[number];
 
+const COMPARISON_SOURCES = ["arena", "tier_list"] as const;
+export type ComparisonSource = (typeof COMPARISON_SOURCES)[number];
+
 export const RecordComparisonSchema = z.object({
   dimensionId: z.number().int().positive(),
   mediaAType: z.enum(MEDIA_TYPES),
@@ -161,6 +167,7 @@ export const RecordComparisonSchema = z.object({
   winnerType: z.enum(MEDIA_TYPES),
   winnerId: z.number().int().nonnegative(), // 0 = draw
   drawTier: z.enum(DRAW_TIERS).nullable().optional(),
+  source: z.enum(COMPARISON_SOURCES).nullable().optional(),
 });
 export type RecordComparisonInput = z.infer<typeof RecordComparisonSchema>;
 
@@ -322,6 +329,7 @@ export interface ScoreChange {
 
 export interface SubmitTierListResult {
   comparisonsRecorded: number;
+  skipped: number;
   scoreChanges: ScoreChange[];
 }
 
@@ -347,6 +355,7 @@ export const BatchComparisonItemSchema = z.object({
   winnerType: z.enum(MEDIA_TYPES),
   winnerId: z.number().int().nonnegative(), // 0 = draw
   drawTier: z.enum(DRAW_TIERS).nullable().optional(),
+  source: z.enum(COMPARISON_SOURCES).nullable().optional(),
 });
 export type BatchComparisonItem = z.infer<typeof BatchComparisonItemSchema>;
 
@@ -358,4 +367,5 @@ export type BatchRecordComparisonsInput = z.infer<typeof BatchRecordComparisonsS
 
 export interface BatchRecordResult {
   count: number;
+  skipped: number;
 }
