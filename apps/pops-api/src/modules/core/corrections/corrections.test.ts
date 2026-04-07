@@ -417,7 +417,13 @@ describe("corrections", () => {
             ],
           },
           feedback: "Too broad — needs to be more specific",
-          impactSummary: { total: 2, newMatches: 1, removedMatches: 0, statusChanges: 0, netMatchedDelta: 1 },
+          impactSummary: {
+            total: 2,
+            newMatches: 1,
+            removedMatches: 0,
+            statusChanges: 0,
+            netMatchedDelta: 1,
+          },
         });
 
         expect(result.message).toBe("ChangeSet rejected");
