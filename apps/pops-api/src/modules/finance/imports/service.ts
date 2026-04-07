@@ -103,7 +103,7 @@ function buildSuggestedTags(
   });
 }
 
-function applyLearnedCorrection(args: {
+export function applyLearnedCorrection(args: {
   transaction: ParsedTransaction;
   minConfidence: number;
   knownTags: string[];
@@ -152,6 +152,13 @@ function applyLearnedCorrection(args: {
         entityId,
         entityName: correction.entityName ?? "Unknown",
         matchType: "learned",
+        confidence: correction.confidence,
+      },
+      ruleProvenance: {
+        source: "correction",
+        ruleId: correction.id,
+        pattern: correction.descriptionPattern,
+        matchType: correction.matchType,
         confidence: correction.confidence,
       },
       status,
