@@ -142,9 +142,15 @@ export function updateDimension(id: number, input: UpdateDimensionInput): Compar
 // ── Source Hierarchy ──
 
 /** Source authority ranking: higher rank = more authoritative. null/historical = 0. */
-const SOURCE_RANK: Record<string, number> = { "": 0, tier_list: 1, arena: 2 };
 function sourceRank(source: string | null | undefined): number {
-  return SOURCE_RANK[source ?? ""] ?? 0;
+  switch (source) {
+    case "arena":
+      return 2;
+    case "tier_list":
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 /**
@@ -243,7 +249,6 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
   const rawDb = getDb();
   const row = rawDb.transaction(() => {
     // Check for existing comparison on this pair+dimension
-    let needsRecalc = false;
     const existing = findExistingComparison(
       input.dimensionId,
       input.mediaAType,
@@ -254,16 +259,42 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
 
     if (existing) {
       if (sourceRank(newSource) >= sourceRank(existing.source)) {
-        // Override: delete old, will recalc after insert
+        // Override: delete old row, insert new, then full recalc
         drizzleDb.delete(comparisons).where(eq(comparisons.id, existing.id)).run();
-        needsRecalc = true;
+
+        // Insert without incremental ELO — recalc will rebuild everything
+        const result = drizzleDb
+          .insert(comparisons)
+          .values({
+            dimensionId: input.dimensionId,
+            mediaAType: input.mediaAType,
+            mediaAId: input.mediaAId,
+            mediaBType: input.mediaBType,
+            mediaBId: input.mediaBId,
+            winnerType: input.winnerType,
+            winnerId: input.winnerId,
+            drawTier: input.drawTier ?? null,
+            source: newSource,
+          })
+          .run();
+
+        // Full recalc replays all comparisons and sets correct deltas
+        recalcDimensionElo(input.dimensionId);
+
+        const inserted = drizzleDb
+          .select()
+          .from(comparisons)
+          .where(eq(comparisons.id, Number(result.lastInsertRowid)))
+          .get();
+        if (!inserted) throw new Error("Failed to retrieve recorded comparison");
+        return inserted;
       } else {
         // Skip: existing has higher authority
         return existing;
       }
     }
 
-    // Compute Elo deltas and update scores first so deltas can be stored on the comparison
+    // No existing — compute Elo deltas incrementally and store on the comparison
     const { deltaA, deltaB } = updateEloScores(input);
 
     const result = drizzleDb
@@ -289,12 +320,6 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
       .where(eq(comparisons.id, Number(result.lastInsertRowid)))
       .get();
     if (!inserted) throw new Error("Failed to retrieve recorded comparison");
-
-    // If we deleted an old row, recalc the whole dimension
-    if (needsRecalc) {
-      recalcDimensionElo(input.dimensionId);
-    }
-
     return inserted;
   })();
 
@@ -1329,6 +1354,7 @@ export function recalcAllDimensions(): number {
   const dims = drizzleDb
     .select({ id: comparisonDimensions.id })
     .from(comparisonDimensions)
+    .where(eq(comparisonDimensions.active, 1))
     .all();
   for (const dim of dims) {
     recalcDimensionElo(dim.id);
@@ -2055,8 +2081,6 @@ export function batchRecordComparisons(
 
   rawDb.transaction(() => {
     for (const item of items) {
-      const itemSource = item.source ?? source ?? null;
-
       // Check for existing comparison on this pair+dimension
       const existing = findExistingComparison(
         dimensionId,
@@ -2067,7 +2091,7 @@ export function batchRecordComparisons(
       );
 
       if (existing) {
-        if (sourceRank(itemSource) >= sourceRank(existing.source)) {
+        if (sourceRank(source) >= sourceRank(existing.source)) {
           // Override: mark old row for deletion
           idsToDelete.push(existing.id);
         } else {
@@ -2102,7 +2126,7 @@ export function batchRecordComparisons(
           winnerType: comparisonInput.winnerType,
           winnerId: comparisonInput.winnerId,
           drawTier: comparisonInput.drawTier ?? null,
-          source: itemSource,
+          source: source ?? null,
           deltaA,
           deltaB,
         })
@@ -2113,16 +2137,12 @@ export function batchRecordComparisons(
       }
     }
 
-    // Delete overridden rows after all inserts
+    // Delete overridden rows and recalc inside the transaction for atomicity
     if (idsToDelete.length > 0) {
       drizzleDb.delete(comparisons).where(inArray(comparisons.id, idsToDelete)).run();
+      recalcDimensionElo(dimensionId);
     }
   })();
-
-  // Recalc once if any rows were overridden
-  if (idsToDelete.length > 0) {
-    recalcDimensionElo(dimensionId);
-  }
 
   return { count: insertedCount, skipped: skippedCount };
 }

@@ -415,4 +415,27 @@ describe("recordComparison — override/skip dedup", () => {
     expect(row.source).toBe("arena");
     expect(countComparisons(dimId)).toBe(1);
   });
+
+  it("finds existing comparison regardless of A/B ordering", () => {
+    const dimId = seedDimension(db, { name: "Overall" });
+    const m1 = seedWatchedMovie(100, "Movie A");
+    const m2 = seedWatchedMovie(101, "Movie B");
+
+    // Seed comparison as (m2, m1) — reversed order
+    seedComparison(dimId, m2, m1, m2, "tier_list");
+
+    // Record as (m1, m2) — should still find and override
+    const row = recordComparison({
+      dimensionId: dimId,
+      mediaAType: "movie",
+      mediaAId: m1,
+      mediaBType: "movie",
+      mediaBId: m2,
+      winnerType: "movie",
+      winnerId: m1,
+    });
+
+    expect(row.source).toBe("arena");
+    expect(countComparisons(dimId)).toBe(1);
+  });
 });

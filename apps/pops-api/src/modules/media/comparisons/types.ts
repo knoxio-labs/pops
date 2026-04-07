@@ -355,7 +355,6 @@ export const BatchComparisonItemSchema = z.object({
   winnerType: z.enum(MEDIA_TYPES),
   winnerId: z.number().int().nonnegative(), // 0 = draw
   drawTier: z.enum(DRAW_TIERS).nullable().optional(),
-  source: z.enum(COMPARISON_SOURCES).nullable().optional(),
 });
 export type BatchComparisonItem = z.infer<typeof BatchComparisonItemSchema>;
 
