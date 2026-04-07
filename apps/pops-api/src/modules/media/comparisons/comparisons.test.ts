@@ -1273,7 +1273,6 @@ describe("tiered draws", () => {
 });
 
 describe("calculateConfidence", () => {
-  // Import the pure function directly for unit tests
   it("returns 0 at count=0", async () => {
     const { calculateConfidence } = await import("./types.js");
     expect(calculateConfidence(0)).toBe(0);
@@ -1292,6 +1291,49 @@ describe("calculateConfidence", () => {
   it("returns ~0.82 at count=30", async () => {
     const { calculateConfidence } = await import("./types.js");
     expect(calculateConfidence(30)).toBeCloseTo(0.8204, 2);
+  });
+});
+
+describe("calculateOverallConfidence", () => {
+  it("returns 0 when all dimensions have 0 comparisons", async () => {
+    const { calculateOverallConfidence } = await import("./types.js");
+    expect(calculateOverallConfidence([0, 0, 0], 3)).toBe(0);
+  });
+
+  it("returns 0 when totalActiveDimensions is 0", async () => {
+    const { calculateOverallConfidence } = await import("./types.js");
+    expect(calculateOverallConfidence([], 0)).toBe(0);
+  });
+
+  it("penalizes sparse coverage", async () => {
+    const { calculateOverallConfidence, calculateConfidence } = await import("./types.js");
+    // 7 comparisons in 1 of 10 dimensions → (1/10) × conf(7)
+    const expected = (1 / 10) * calculateConfidence(7);
+    expect(calculateOverallConfidence([7], 10)).toBeCloseTo(expected, 4);
+  });
+
+  it("rewards full coverage", async () => {
+    const { calculateOverallConfidence, calculateConfidence } = await import("./types.js");
+    // 3 comparisons in all 3 dimensions → (3/3) × conf(3)
+    const expected = (3 / 3) * calculateConfidence(3);
+    expect(calculateOverallConfidence([3, 3, 3], 3)).toBeCloseTo(expected, 4);
+  });
+
+  it("computes coverage × avgDepth for mixed counts", async () => {
+    const { calculateOverallConfidence, calculateConfidence } = await import("./types.js");
+    // 3 comparisons in dim1, 1 in dim2, 0 in dim3 (but only 2 dims have scores)
+    // coverage = 2/3, avgDepth = (conf(3) + conf(1)) / 2
+    const avgDepth = (calculateConfidence(3) + calculateConfidence(1)) / 2;
+    const expected = (2 / 3) * avgDepth;
+    expect(calculateOverallConfidence([3, 1], 3)).toBeCloseTo(expected, 4);
+  });
+
+  it("missing dimensions count against coverage but not depth", async () => {
+    const { calculateOverallConfidence, calculateConfidence } = await import("./types.js");
+    // Movie has scores in 2 of 5 dims, both with 10 comparisons
+    // coverage = 2/5, avgDepth = conf(10)
+    const expected = (2 / 5) * calculateConfidence(10);
+    expect(calculateOverallConfidence([10, 10], 5)).toBeCloseTo(expected, 4);
   });
 });
 
@@ -1348,7 +1390,7 @@ describe("confidence in API responses", () => {
     expect(movie1!.confidence).toBeCloseTo(1 - 1 / Math.sqrt(3), 3); // count=2 → sqrt(3)
   });
 
-  it("overall rankings confidence = min confidence across dimensions", async () => {
+  it("overall rankings confidence = coverage × average depth", async () => {
     const dim1 = seedDimension(db, { name: "Story", active: 1 });
     const dim2 = seedDimension(db, { name: "Visuals", active: 1 });
 
@@ -1394,8 +1436,12 @@ describe("confidence in API responses", () => {
     const movie1 = result.data.find((r) => r.mediaId === 1);
     expect(movie1).toBeDefined();
     // dim1: 3 comparisons → confidence ~0.5, dim2: 1 comparison → confidence ~0.29
-    // overall = min = ~0.29
-    expect(movie1!.confidence).toBeCloseTo(1 - 1 / Math.sqrt(2), 3); // count=1 → sqrt(2)
+    // coverage = 2/2 = 1.0, avgDepth = (0.5 + 0.29) / 2 ≈ 0.396
+    // overall = 1.0 × 0.396 ≈ 0.396
+    const conf1 = 1 - 1 / Math.sqrt(4); // count=3
+    const conf2 = 1 - 1 / Math.sqrt(2); // count=1
+    const expected = (2 / 2) * ((conf1 + conf2) / 2);
+    expect(movie1!.confidence).toBeCloseTo(expected, 3);
   });
 
   it("per-dimension rankings exclude excluded movies", async () => {

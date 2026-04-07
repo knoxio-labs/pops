@@ -64,12 +64,35 @@ export function toComparison(row: ComparisonRow): Comparison {
 }
 
 /**
- * Derive confidence (0–1) from how many comparisons a media item has undergone.
+ * Derive per-dimension confidence (0–1) from how many comparisons a media item
+ * has undergone on a single dimension.
  * Formula: 1 - (1 / sqrt(comparisonCount + 1))
  * At 0 comparisons → 0, at 1 → ~0.29, at 3 → ~0.5, at 30 → ~0.82.
  */
 export function calculateConfidence(comparisonCount: number): number {
   return 1 - 1 / Math.sqrt(comparisonCount + 1);
+}
+
+/**
+ * Derive overall confidence (0–1) from dimension coverage and depth.
+ *
+ * Option C: coverageRatio × averageDepth
+ *  - coverageRatio = dimensionsWithComparisons / totalActiveDimensions
+ *  - averageDepth  = mean of per-dimension confidence across scored dimensions
+ *
+ * A movie with 7 comparisons in 3 of 10 dimensions → (3/10) × 0.65 ≈ 0.20
+ * A movie with 3 comparisons across all 10 dimensions → (10/10) × 0.50 = 0.50
+ */
+export function calculateOverallConfidence(
+  perDimensionCounts: number[],
+  totalActiveDimensions: number
+): number {
+  if (totalActiveDimensions === 0) return 0;
+  const scored = perDimensionCounts.filter((c) => c > 0);
+  if (scored.length === 0) return 0;
+  const coverageRatio = scored.length / totalActiveDimensions;
+  const avgDepth = scored.reduce((sum, c) => sum + calculateConfidence(c), 0) / scored.length;
+  return coverageRatio * avgDepth;
 }
 
 /** API response shape for a media score. */

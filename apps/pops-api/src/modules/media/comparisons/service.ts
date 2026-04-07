@@ -18,6 +18,7 @@ import {
 import { NotFoundError, ConflictError, ValidationError } from "../../../shared/errors.js";
 import {
   calculateConfidence,
+  calculateOverallConfidence,
   type ComparisonDimensionRow,
   type ComparisonRow,
   type MediaScoreRow,
@@ -902,9 +903,16 @@ export function getSmartPair(dimensionId?: number): SmartPairResult | null {
       const recB = recencyWeight(b.daysSinceLastWatch);
       const staleA = a.staleness;
       const staleB = b.staleness;
+      // Boost pairs where either movie has low confidence on this dimension.
+      // confidenceNeed is 1.0 at 0 comparisons, ~0.71 at 1, ~0.5 at 3, ~0.18 at 30.
+      // Use max so a single under-compared movie is enough to boost the pair.
+      const confNeed = Math.max(
+        1 - calculateConfidence(a.comparisonCount),
+        1 - calculateConfidence(b.comparisonCount)
+      );
       const jitter = 0.7 + Math.random() * 0.6; // [0.7, 1.3]
 
-      const priority = infoGain * recA * recB * staleA * staleB * jitter;
+      const priority = infoGain * recA * recB * staleA * staleB * confNeed * jitter;
       scoredPairs.push({ movieA: a, movieB: b, priority });
     }
   }
@@ -1136,6 +1144,8 @@ export function getRankings(
     )
     .get(...filterParams) as { total: number };
 
+  const totalActiveDimensions = activeDimensionIds.length;
+
   const rows = rawDb
     .prepare(
       `SELECT
@@ -1143,7 +1153,7 @@ export function getRankings(
         ms.media_id as mediaId,
         SUM(ms.score * cd.weight) / SUM(cd.weight) as score,
         SUM(ms.comparison_count) as comparisonCount,
-        MIN(ms.comparison_count) as minComparisonCount,
+        GROUP_CONCAT(ms.comparison_count) as perDimCounts,
         COALESCE(m.title, tv.name, 'Unknown') as title,
         CASE
           WHEN ms.media_type = 'movie' THEN CAST(SUBSTR(m.release_date, 1, 4) AS INTEGER)
@@ -1172,7 +1182,7 @@ export function getRankings(
     mediaId: number;
     score: number;
     comparisonCount: number;
-    minComparisonCount: number;
+    perDimCounts: string;
     title: string;
     year: number | null;
     moviePosterPath: string | null;
@@ -1184,17 +1194,20 @@ export function getRankings(
   }>;
 
   return {
-    rows: rows.map((row, i) => ({
-      rank: offset + i + 1,
-      mediaType: row.mediaType,
-      mediaId: row.mediaId,
-      title: row.title,
-      year: row.year,
-      posterUrl: resolvePosterUrl(row),
-      score: Math.round(row.score * 10) / 10,
-      comparisonCount: row.comparisonCount,
-      confidence: calculateConfidence(row.minComparisonCount),
-    })),
+    rows: rows.map((row, i) => {
+      const counts = row.perDimCounts.split(",").map(Number);
+      return {
+        rank: offset + i + 1,
+        mediaType: row.mediaType,
+        mediaId: row.mediaId,
+        title: row.title,
+        year: row.year,
+        posterUrl: resolvePosterUrl(row),
+        score: Math.round(row.score * 10) / 10,
+        comparisonCount: row.comparisonCount,
+        confidence: calculateOverallConfidence(counts, totalActiveDimensions),
+      };
+    }),
     total: countResult.total,
   };
 }
