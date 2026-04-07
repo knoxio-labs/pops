@@ -361,9 +361,7 @@ describe("corrections", () => {
         entityName: "Woolworths",
         tags: ["Groceries"],
       });
-      const list = (await caller.core.corrections.list({})) as unknown as {
-        data: Array<{ id: string; descriptionPattern: string }>;
-      };
+      const list = await caller.core.corrections.list({});
       const existingId = list.data.find((r) => r.descriptionPattern === "WOOLWORTHS")?.id ?? null;
       expect(existingId).not.toBeNull();
 
