@@ -217,6 +217,7 @@ export const correctionsRouter = router({
           event: "corrections.proposal.preview",
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
+          ops: input.changeSet.ops,
           transactionCount: input.transactions.length,
           minConfidence: input.minConfidence,
           impactSummary: result.summary,
@@ -227,6 +228,7 @@ export const correctionsRouter = router({
           event: "corrections.proposal.preview",
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
+          ops: input.changeSet.ops,
           transactionCount: input.transactions.length,
           minConfidence: input.minConfidence,
           err,
@@ -250,6 +252,8 @@ export const correctionsRouter = router({
           event: "corrections.proposal.apply",
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
+          ops: input.changeSet.ops,
+          outcome: "approved",
           resultRuleCount: rows.length,
         });
         return { data: rows.map(toCorrection), message: "ChangeSet applied" };
@@ -258,6 +262,8 @@ export const correctionsRouter = router({
           event: "corrections.proposal.apply",
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
+          ops: input.changeSet.ops,
+          outcome: "approved",
           err,
         });
         if (err instanceof NotFoundError) {
@@ -265,5 +271,38 @@ export const correctionsRouter = router({
         }
         throw err;
       }
+    }),
+
+  /**
+   * Reject a proposed ChangeSet (audit only; applies no rule changes).
+   * This provides traceability for rejection feedback even before the full proposal engine exists.
+   */
+  rejectChangeSet: protectedProcedure
+    .input(
+      z.object({
+        changeSet: ChangeSetSchema,
+        feedback: z.string().min(1),
+        impactSummary: z
+          .object({
+            total: z.number().int().nonnegative(),
+            newMatches: z.number().int().nonnegative(),
+            removedMatches: z.number().int().nonnegative(),
+            statusChanges: z.number().int().nonnegative(),
+            netMatchedDelta: z.number().int(),
+          })
+          .optional(),
+      })
+    )
+    .mutation(({ input, ctx }) => {
+      logger.info({
+        event: "corrections.proposal.reject",
+        userEmail: ctx.user.email,
+        opCount: input.changeSet.ops.length,
+        ops: input.changeSet.ops,
+        outcome: "rejected",
+        feedback: input.feedback,
+        impactSummary: input.impactSummary ?? null,
+      });
+      return { message: "ChangeSet rejected" };
     }),
 });

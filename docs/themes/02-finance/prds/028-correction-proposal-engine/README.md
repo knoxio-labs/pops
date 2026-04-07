@@ -1,7 +1,7 @@
 # PRD-028: Correction Proposal Engine
 
 > Epic: [03 — Corrections](../../epics/03-corrections.md)
-> Status: Not started
+> Status: Partial
 
 ## Overview
 

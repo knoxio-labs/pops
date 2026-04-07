@@ -210,53 +210,55 @@ describe("corrections", () => {
 
   describe("previewChangeSet", () => {
     it("previews added rule impact deterministically", async () => {
-      const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => logger);
-
-      const result = await caller.core.corrections.previewChangeSet({
-        changeSet: {
-          ops: [
-            {
-              op: "add",
-              data: {
-                descriptionPattern: "WOOLWORTHS",
-                matchType: "contains",
-                entityId: null,
-                entityName: "Woolworths",
-                tags: [],
-                transactionType: null,
-                confidence: 0.95,
+      const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+      try {
+        const result = await caller.core.corrections.previewChangeSet({
+          changeSet: {
+            ops: [
+              {
+                op: "add",
+                data: {
+                  descriptionPattern: "WOOLWORTHS",
+                  matchType: "contains",
+                  entityId: null,
+                  entityName: "Woolworths",
+                  tags: [],
+                  transactionType: null,
+                  confidence: 0.95,
+                },
               },
-            },
+            ],
+          },
+          transactions: [
+            { description: "WOOLWORTHS SUPERMARKETS AU" },
+            { description: "TOTALLY UNKNOWN" },
           ],
-        },
-        transactions: [
-          { description: "WOOLWORTHS SUPERMARKETS AU" },
-          { description: "TOTALLY UNKNOWN" },
-        ],
-        minConfidence: 0.7,
-      });
-
-      expect(result.summary.total).toBe(2);
-      expect(result.summary.newMatches).toBe(1);
-      expect(result.diffs[0]?.after.matched).toBe(true);
-      expect(result.diffs[0]?.after.ruleId).toMatch(/^temp:/);
-      expect(result.diffs[1]?.after.matched).toBe(false);
-
-      expect(infoSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "corrections.proposal.preview",
-          userEmail: "test@example.com",
-          opCount: 1,
-          transactionCount: 2,
           minConfidence: 0.7,
-          impactSummary: expect.objectContaining({
-            total: 2,
-            newMatches: 1,
-          }),
-        })
-      );
+        });
 
-      infoSpy.mockRestore();
+        expect(result.summary.total).toBe(2);
+        expect(result.summary.newMatches).toBe(1);
+        expect(result.diffs[0]?.after.matched).toBe(true);
+        expect(result.diffs[0]?.after.ruleId).toMatch(/^temp:/);
+        expect(result.diffs[1]?.after.matched).toBe(false);
+
+        expect(infoSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: "corrections.proposal.preview",
+            userEmail: "test@example.com",
+            opCount: 1,
+            ops: expect.any(Array),
+            transactionCount: 2,
+            minConfidence: 0.7,
+            impactSummary: expect.objectContaining({
+              total: 2,
+              newMatches: 1,
+            }),
+          })
+        );
+      } finally {
+        infoSpy.mockRestore();
+      }
     });
 
     it("previews disable removes matches", async () => {
@@ -277,91 +279,122 @@ describe("corrections", () => {
       expect(result.diffs[0]?.before.matched).toBe(true);
       expect(result.diffs[0]?.after.matched).toBe(false);
     });
+
+    it("logs error when ChangeSet references missing rule id", async () => {
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      try {
+        await expect(
+          caller.core.corrections.previewChangeSet({
+            changeSet: { ops: [{ op: "disable", id: "does-not-exist" }] },
+            transactions: [{ description: "NETFLIX" }],
+            minConfidence: 0.7,
+          })
+        ).rejects.toThrow();
+
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: "corrections.proposal.preview",
+            userEmail: "test@example.com",
+            opCount: 1,
+            ops: expect.any(Array),
+            err: expect.anything(),
+          })
+        );
+      } finally {
+        errorSpy.mockRestore();
+      }
+    });
   });
 
   describe("applyChangeSet", () => {
     it("applies operations atomically (disable + add)", async () => {
-      const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => logger);
+      const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+      try {
+        const created = await caller.core.corrections.createOrUpdate({
+          descriptionPattern: "NETFLIX",
+          matchType: "exact",
+          tags: [],
+        });
+        await caller.core.corrections.update({ id: created.data.id, data: { confidence: 0.95 } });
 
-      const created = await caller.core.corrections.createOrUpdate({
-        descriptionPattern: "NETFLIX",
-        matchType: "exact",
-        tags: [],
-      });
-      await caller.core.corrections.update({ id: created.data.id, data: { confidence: 0.95 } });
-
-      const result = await caller.core.corrections.applyChangeSet({
-        changeSet: {
-          ops: [
-            { op: "disable", id: created.data.id },
-            {
-              op: "add",
-              data: {
-                descriptionPattern: "SPOTIFY",
-                matchType: "exact",
-                tags: [],
-                confidence: 0.95,
+        const result = await caller.core.corrections.applyChangeSet({
+          changeSet: {
+            ops: [
+              { op: "disable", id: created.data.id },
+              {
+                op: "add",
+                data: {
+                  descriptionPattern: "SPOTIFY",
+                  matchType: "exact",
+                  tags: [],
+                  confidence: 0.95,
+                },
               },
-            },
-          ],
-        },
-      });
+            ],
+          },
+        });
 
-      expect(
-        result.data.some((r) => r.descriptionPattern === "NETFLIX" && r.isActive === false)
-      ).toBe(true);
-      expect(result.data.some((r) => r.descriptionPattern === "SPOTIFY")).toBe(true);
+        expect(
+          result.data.some((r) => r.descriptionPattern === "NETFLIX" && r.isActive === false)
+        ).toBe(true);
+        expect(result.data.some((r) => r.descriptionPattern === "SPOTIFY")).toBe(true);
 
-      expect(infoSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "corrections.proposal.apply",
-          userEmail: "test@example.com",
-          opCount: 2,
-          resultRuleCount: expect.any(Number),
-        })
-      );
-
-      infoSpy.mockRestore();
+        expect(infoSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: "corrections.proposal.apply",
+            userEmail: "test@example.com",
+            opCount: 2,
+            ops: expect.any(Array),
+            outcome: "approved",
+            resultRuleCount: expect.any(Number),
+          })
+        );
+      } finally {
+        infoSpy.mockRestore();
+      }
     });
 
     it("rolls back on invalid edit target", async () => {
-      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => logger);
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      try {
+        // seed a known correction
+        await caller.core.corrections.createOrUpdate({
+          descriptionPattern: "COLES",
+          matchType: "exact",
+          tags: [],
+        });
 
-      // seed a known correction
-      await caller.core.corrections.createOrUpdate({
-        descriptionPattern: "COLES",
-        matchType: "exact",
-        tags: [],
-      });
+        await expect(
+          caller.core.corrections.applyChangeSet({
+            changeSet: {
+              ops: [
+                {
+                  op: "add",
+                  data: { descriptionPattern: "WOOLWORTHS", matchType: "exact", tags: [] },
+                },
+                { op: "edit", id: "does-not-exist", data: { confidence: 0.9 } },
+              ],
+            },
+          })
+        ).rejects.toThrow();
 
-      await expect(
-        caller.core.corrections.applyChangeSet({
-          changeSet: {
-            ops: [
-              {
-                op: "add",
-                data: { descriptionPattern: "WOOLWORTHS", matchType: "exact", tags: [] },
-              },
-              { op: "edit", id: "does-not-exist", data: { confidence: 0.9 } },
-            ],
-          },
-        })
-      ).rejects.toThrow();
+        // Ensure the add op was not committed due to rollback.
+        const list = await caller.core.corrections.list({});
+        expect(list.data.some((r) => r.descriptionPattern === "WOOLWORTHS")).toBe(false);
 
-      // Ensure the add op was not committed due to rollback.
-      const list = await caller.core.corrections.list({});
-      expect(list.data.some((r) => r.descriptionPattern === "WOOLWORTHS")).toBe(false);
-
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "corrections.proposal.apply",
-          userEmail: "test@example.com",
-          opCount: 2,
-          err: expect.anything(),
-        })
-      );
-
-      errorSpy.mockRestore();
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: "corrections.proposal.apply",
+            userEmail: "test@example.com",
+            opCount: 2,
+            ops: expect.any(Array),
+            outcome: "approved",
+            err: expect.anything(),
+          })
+        );
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
   });
 
