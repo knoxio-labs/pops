@@ -7,7 +7,21 @@
  */
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Skeleton, cn } from "@pops/ui";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Skeleton,
+  cn,
+} from "@pops/ui";
 import { LayoutGrid, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../lib/trpc";
@@ -92,6 +106,80 @@ export function TierListPage() {
       toast.success("Tier list submitted!");
     },
   });
+
+  // --- Dismiss mutations (same as Arena) ---
+  const utils = trpc.useUtils();
+
+  // Mark stale
+  const markStaleMutation = trpc.media.comparisons.markStale.useMutation({
+    onSuccess: (
+      data: { data: { staleness: number } },
+      variables: { mediaType: string; mediaId: number }
+    ) => {
+      const movie = movies.find((m) => m.mediaId === variables.mediaId);
+      const staleness = data.data.staleness;
+      const timesMarked = Math.round(Math.log(staleness) / Math.log(0.5));
+      toast.success(`${movie?.title ?? "Movie"} marked stale (×${timesMarked})`);
+      refetch();
+    },
+  });
+
+  const handleMarkStale = useCallback(
+    (movieId: number) => {
+      if (markStaleMutation.isPending) return;
+      markStaleMutation.mutate({ mediaType: "movie", mediaId: movieId });
+    },
+    [markStaleMutation]
+  );
+
+  // N/A (dimension exclusion)
+  const excludeMutation = trpc.media.comparisons.excludeFromDimension.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const handleNA = useCallback(
+    (movieId: number) => {
+      if (!effectiveDimension || excludeMutation.isPending) return;
+      const movie = movies.find((m) => m.mediaId === movieId);
+      excludeMutation.mutate(
+        { mediaType: "movie", mediaId: movieId, dimensionId: effectiveDimension },
+        {
+          onSuccess: () => {
+            toast.success(`${movie?.title ?? "Movie"} excluded from this dimension`);
+          },
+        }
+      );
+    },
+    [effectiveDimension, excludeMutation, movies]
+  );
+
+  // Blacklist (Not Watched) — with confirmation dialog
+  const [blacklistTarget, setBlacklistTarget] = useState<{
+    id: number;
+    title: string;
+  } | null>(null);
+
+  const blacklistMutation = trpc.media.comparisons.blacklistMovie.useMutation({
+    onSuccess: (_data: unknown, variables: { mediaType: string; mediaId: number }) => {
+      const movie = movies.find((m) => m.mediaId === variables.mediaId);
+      toast.success(`${movie?.title ?? "Movie"} marked as not watched`);
+      setBlacklistTarget(null);
+      refetch();
+      utils.media.comparisons.getSmartPair.invalidate();
+    },
+  });
+
+  const handleNotWatched = useCallback(
+    (movieId: number) => {
+      const movie = movies.find((m) => m.mediaId === movieId);
+      if (movie) {
+        setBlacklistTarget({ id: movie.mediaId, title: movie.title });
+      }
+    },
+    [movies]
+  );
 
   const handleDimensionChange = useCallback(
     (dimId: number) => {
@@ -206,6 +294,9 @@ export function TierListPage() {
                     movies={movies}
                     onSubmit={handleSubmit}
                     submitPending={isPending}
+                    onNotWatched={handleNotWatched}
+                    onMarkStale={handleMarkStale}
+                    onNA={handleNA}
                   />
                 )}
               </div>
@@ -213,6 +304,40 @@ export function TierListPage() {
           )}
         </>
       )}
+
+      {/* Blacklist confirmation dialog */}
+      <AlertDialog
+        open={blacklistTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setBlacklistTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as not watched?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove <strong>{blacklistTarget?.title}</strong> from all comparisons and
+              rankings across every dimension. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (blacklistTarget) {
+                  blacklistMutation.mutate({
+                    mediaType: "movie",
+                    mediaId: blacklistTarget.id,
+                  });
+                }
+              }}
+              disabled={blacklistMutation.isPending}
+            >
+              {blacklistMutation.isPending ? "Removing\u2026" : "Not watched"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

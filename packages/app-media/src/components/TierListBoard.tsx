@@ -21,7 +21,7 @@ import {
 import { useSortable, SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
-import { ImageOff, GripVertical } from "lucide-react";
+import { ImageOff, GripVertical, EyeOff, Clock, Ban } from "lucide-react";
 
 const TIERS = ["S", "A", "B", "C", "D"] as const;
 export type Tier = (typeof TIERS)[number];
@@ -53,13 +53,45 @@ export interface TierMovie {
 
 export type TierPlacements = Record<Tier, number[]>;
 
+const DISMISS_ZONES = ["not-watched", "stale", "n-a"] as const;
+type DismissZone = (typeof DISMISS_ZONES)[number];
+
+const DISMISS_ZONE_CONFIG: Record<DismissZone, { label: string; icon: typeof EyeOff; color: string }> =
+  {
+    "not-watched": {
+      label: "Not Watched",
+      icon: EyeOff,
+      color: "border-red-500/40 text-red-400 bg-red-500/10",
+    },
+    stale: {
+      label: "Stale",
+      icon: Clock,
+      color: "border-yellow-500/40 text-yellow-400 bg-yellow-500/10",
+    },
+    "n-a": {
+      label: "N/A",
+      icon: Ban,
+      color: "border-muted-foreground/40 text-muted-foreground bg-muted/30",
+    },
+  };
+
 interface TierListBoardProps {
   movies: TierMovie[];
   onSubmit: (placements: Array<{ movieId: number; tier: Tier }>) => void;
   submitPending?: boolean;
+  onNotWatched?: (movieId: number) => void;
+  onMarkStale?: (movieId: number) => void;
+  onNA?: (movieId: number) => void;
 }
 
-export function TierListBoard({ movies, onSubmit, submitPending }: TierListBoardProps) {
+export function TierListBoard({
+  movies,
+  onSubmit,
+  submitPending,
+  onNotWatched,
+  onMarkStale,
+  onNA,
+}: TierListBoardProps) {
   const [placements, setPlacements] = useState<TierPlacements>({
     S: [],
     A: [],
@@ -141,44 +173,65 @@ export function TierListBoard({ movies, onSubmit, submitPending }: TierListBoard
     });
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveId(null);
 
-    if (!over) return;
+      if (!over) return;
 
-    const activeIdNum = Number(active.id);
-    const overId = String(over.id);
+      const activeIdNum = Number(active.id);
+      const overId = String(over.id);
 
-    setPlacements((prev) => {
-      // Determine target container — handles tier names, "unranked", and movie ids
-      let targetContainer: Tier | "unranked";
-      if (TIERS.includes(overId as Tier)) {
-        targetContainer = overId as Tier;
-      } else if (overId === "unranked") {
-        targetContainer = "unranked";
-      } else {
-        // overId is a movie id — find which tier it's in using fresh state
-        const targetTier = TIERS.find((t) => prev[t].includes(Number(overId)));
-        if (!targetTier) return prev; // over movie is unranked — no change
-        targetContainer = targetTier;
+      // Check if dropped on a dismiss zone
+      if (DISMISS_ZONES.includes(overId as DismissZone)) {
+        const zone = overId as DismissZone;
+        // Remove from all tiers first
+        setPlacements((prev) => {
+          const next = { ...prev };
+          for (const tier of TIERS) {
+            next[tier] = prev[tier].filter((id) => id !== activeIdNum);
+          }
+          return next;
+        });
+        // Trigger the appropriate callback
+        if (zone === "not-watched") onNotWatched?.(activeIdNum);
+        else if (zone === "stale") onMarkStale?.(activeIdNum);
+        else if (zone === "n-a") onNA?.(activeIdNum);
+        return;
       }
 
-      const next = { ...prev };
+      setPlacements((prev) => {
+        // Determine target container — handles tier names, "unranked", and movie ids
+        let targetContainer: Tier | "unranked";
+        if (TIERS.includes(overId as Tier)) {
+          targetContainer = overId as Tier;
+        } else if (overId === "unranked") {
+          targetContainer = "unranked";
+        } else {
+          // overId is a movie id — find which tier it's in using fresh state
+          const targetTier = TIERS.find((t) => prev[t].includes(Number(overId)));
+          if (!targetTier) return prev; // over movie is unranked — no change
+          targetContainer = targetTier;
+        }
 
-      // Remove from all tiers
-      for (const tier of TIERS) {
-        next[tier] = prev[tier].filter((id) => id !== activeIdNum);
-      }
+        const next = { ...prev };
 
-      // Add to target tier if applicable
-      if (targetContainer !== "unranked") {
-        next[targetContainer] = [...next[targetContainer], activeIdNum];
-      }
+        // Remove from all tiers
+        for (const tier of TIERS) {
+          next[tier] = prev[tier].filter((id) => id !== activeIdNum);
+        }
 
-      return next;
-    });
-  }, []);
+        // Add to target tier if applicable
+        if (targetContainer !== "unranked") {
+          next[targetContainer] = [...next[targetContainer], activeIdNum];
+        }
+
+        return next;
+      });
+    },
+    [onNotWatched, onMarkStale, onNA]
+  );
 
   const handleSubmit = useCallback(() => {
     const result: Array<{ movieId: number; tier: Tier }> = [];
@@ -208,6 +261,15 @@ export function TierListBoard({ movies, onSubmit, submitPending }: TierListBoard
 
         {/* Unranked pool */}
         <UnrankedPool movies={unrankedMovies} />
+
+        {/* Dismiss zones */}
+        {(onNotWatched || onMarkStale || onNA) && (
+          <div className="flex gap-2 mt-4">
+            {onNotWatched && <DismissDropZone zone="not-watched" />}
+            {onMarkStale && <DismissDropZone zone="stale" />}
+            {onNA && <DismissDropZone zone="n-a" />}
+          </div>
+        )}
 
         {/* Submit */}
         <div className="flex justify-center pt-4">
@@ -286,6 +348,24 @@ function UnrankedPool({ movies }: { movies: TierMovie[] }) {
           ))}
         </div>
       </SortableContext>
+    </div>
+  );
+}
+
+function DismissDropZone({ zone }: { zone: DismissZone }) {
+  const config = DISMISS_ZONE_CONFIG[zone];
+  const Icon = config.icon;
+  const { setNodeRef, isOver } = useDroppable({ id: zone });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed p-3 transition-all ${config.color} ${
+        isOver ? "ring-2 ring-primary scale-[1.02] border-solid" : ""
+      }`}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="text-sm font-medium">{config.label}</span>
     </div>
   );
 }
