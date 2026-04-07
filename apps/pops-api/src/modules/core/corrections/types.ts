@@ -64,7 +64,7 @@ export function toCorrection(row: CorrectionRow): Correction {
       }
     })(),
     transactionType: row.transactionType,
-    isActive: row.isActive,
+    isActive: Boolean(row.isActive),
     confidence: row.confidence,
     timesApplied: row.timesApplied,
     createdAt: row.createdAt,
@@ -178,6 +178,44 @@ export interface ChangeSetPreviewSummary {
   removedMatches: number;
   statusChanges: number;
   netMatchedDelta: number;
+}
+
+// ---------------------------------------------------------------------------
+// ChangeSet proposal + impact preview (Issue #1643)
+// ---------------------------------------------------------------------------
+
+export interface CorrectionClassificationOutcome {
+  ruleId: string | null;
+  entityId: string | null;
+  entityName: string | null;
+  location: string | null;
+  tags: string[];
+  transactionType: "purchase" | "transfer" | "income" | null;
+}
+
+export interface ChangeSetImpactCounts {
+  affected: number;
+  entityChanges: number;
+  locationChanges: number;
+  tagChanges: number;
+  typeChanges: number;
+}
+
+export interface ChangeSetImpactItem {
+  transactionId: string;
+  description: string;
+  before: CorrectionClassificationOutcome;
+  after: CorrectionClassificationOutcome;
+  changed: boolean;
+}
+
+export interface ChangeSetProposal {
+  changeSet: ChangeSet;
+  rationale: string;
+  preview: {
+    counts: ChangeSetImpactCounts;
+    affected: ChangeSetImpactItem[];
+  };
 }
 
 /**

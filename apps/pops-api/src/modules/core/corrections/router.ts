@@ -236,4 +236,32 @@ export const correctionsRouter = router({
         throw err;
       }
     }),
+
+  /**
+   * Generate a bundled ChangeSet proposal from a correction signal.
+   * Returns rationale + bounded impact preview (counts + affected list).
+   */
+  proposeChangeSet: protectedProcedure
+    .input(
+      z.object({
+        signal: z.object({
+          descriptionPattern: z.string().min(1),
+          matchType: z.enum(["exact", "contains", "regex"]),
+          entityId: z.string().nullable().optional(),
+          entityName: z.string().nullable().optional(),
+          location: z.string().nullable().optional(),
+          tags: z.array(z.string()).optional(),
+          transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
+        }),
+        minConfidence: z.number().min(0).max(1).default(0.7),
+        maxPreviewItems: z.coerce.number().int().positive().max(500).default(200),
+      })
+    )
+    .query(({ input }) => {
+      return service.proposeChangeSetFromCorrectionSignal({
+        signal: input.signal,
+        minConfidence: input.minConfidence,
+        maxPreviewItems: input.maxPreviewItems,
+      });
+    }),
 });

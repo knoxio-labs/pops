@@ -259,7 +259,9 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
     );
 
     if (existing) {
-      if (sourceRank(newSource) >= sourceRank(existing.source)) {
+      const rawExistingSource: unknown = existing.source;
+      const existingSource = typeof rawExistingSource === "string" ? rawExistingSource : null;
+      if (sourceRank(newSource) >= sourceRank(existingSource)) {
         // Override: delete old row, insert new, then full recalc
         drizzleDb.delete(comparisons).where(eq(comparisons.id, existing.id)).run();
 
@@ -2104,7 +2106,10 @@ export function batchRecordComparisons(
       );
 
       if (existing) {
-        if (sourceRank(source) >= sourceRank(existing.source)) {
+        const rawExistingSource: unknown = existing.source;
+        const existingSource = typeof rawExistingSource === "string" ? rawExistingSource : null;
+        const incomingSource = typeof source === "string" ? source : null;
+        if (sourceRank(incomingSource) >= sourceRank(existingSource)) {
           // Override: delete old row immediately to prevent stale lookups
           drizzleDb.delete(comparisons).where(eq(comparisons.id, existing.id)).run();
           hasOverrides = true;

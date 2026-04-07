@@ -320,6 +320,51 @@ describe("corrections", () => {
     });
   });
 
+  describe("proposeChangeSet", () => {
+    it("generates a ChangeSet proposal and includes type-only outcomes", async () => {
+      // Seed a transaction that should be affected by a rule that only sets transactionType.
+      const tx = db
+        .prepare(
+          `INSERT INTO transactions (description, account, amount, date, type, tags, last_edited_time)
+           VALUES (@description, @account, @amount, @date, @type, @tags, @last_edited_time)`
+        )
+        .run({
+          description: "TRANSFER TO SAVINGS",
+          account: "Up",
+          amount: -10,
+          date: "2026-01-01",
+          type: "purchase",
+          tags: "[]",
+          last_edited_time: new Date().toISOString(),
+        });
+
+      const insertedId = String(tx.lastInsertRowid);
+      // Ensure we can read the actual UUID primary key (id column) back.
+      const row = db
+        .prepare(`SELECT id, description FROM transactions WHERE rowid = ?`)
+        .get(Number(insertedId)) as { id: string; description: string };
+
+      const result = await caller.core.corrections.proposeChangeSet({
+        signal: {
+          descriptionPattern: "TRANSFER TO SAVINGS",
+          matchType: "exact",
+          tags: [],
+          transactionType: "transfer",
+        },
+        minConfidence: 0,
+        maxPreviewItems: 200,
+      });
+
+      expect(result.changeSet.ops).toHaveLength(1);
+      expect(result.preview.counts.affected).toBeGreaterThan(0);
+      expect(result.preview.affected.some((a) => a.transactionId === row.id)).toBe(true);
+
+      const affected = result.preview.affected.find((a) => a.transactionId === row.id);
+      expect(affected?.before.transactionType).toBeNull();
+      expect(affected?.after.transactionType).toBe("transfer");
+    });
+  });
+
   describe("update", () => {
     it("updates tags on existing correction", async () => {
       const created = await caller.core.corrections.createOrUpdate({
