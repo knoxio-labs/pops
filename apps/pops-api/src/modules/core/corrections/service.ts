@@ -15,10 +15,11 @@ import type {
   ChangeSetOp,
   ChangeSetPreviewDiff,
   ChangeSetPreviewSummary,
+  CorrectionMatchSummary,
 } from "./types.js";
 import { normalizeDescription, classifyCorrectionMatch } from "./types.js";
 
-export function summarizeMatch(match: CorrectionMatchResult | null) {
+export function summarizeMatch(match: CorrectionMatchResult | null): CorrectionMatchSummary {
   if (!match) return { matched: false, status: null, ruleId: null, confidence: null };
   return {
     matched: true,
@@ -95,7 +96,7 @@ export function applyChangeSetToRules(rules: CorrectionRow[], changeSet: ChangeS
     const existing = byId.get(op.id);
     if (!existing) continue;
 
-    const replace = (updated: CorrectionRow) => {
+    const replace = (updated: CorrectionRow): void => {
       const idx = next.findIndex((r) => r.id === existing.id);
       if (idx !== -1) next[idx] = updated;
       byId.set(existing.id, updated);
@@ -164,62 +165,6 @@ export function previewChangeSetImpact(args: {
   };
 }
 
-function applySingleOpTx(tx: any, op: ChangeSetOp): void {
-  if (op.op === "add") {
-    const normalized = normalizeDescription(op.data.descriptionPattern);
-    tx.insert(transactionCorrections)
-      .values({
-        descriptionPattern: normalized,
-        matchType: op.data.matchType,
-        entityId: op.data.entityId ?? null,
-        entityName: op.data.entityName ?? null,
-        location: op.data.location ?? null,
-        tags: JSON.stringify(op.data.tags ?? []),
-        transactionType: op.data.transactionType ?? null,
-        isActive: op.data.isActive ?? true,
-        confidence: op.data.confidence ?? 0.5,
-      })
-      .run();
-    return;
-  }
-
-  // For edit/disable/remove we validate existence first.
-  const [existing] = tx
-    .select()
-    .from(transactionCorrections)
-    .where(eq(transactionCorrections.id, op.id))
-    .all();
-  if (!existing) {
-    throw new NotFoundError("Correction", op.id);
-  }
-
-  if (op.op === "edit") {
-    const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
-    if (op.data.entityId !== undefined) updates.entityId = op.data.entityId;
-    if (op.data.entityName !== undefined) updates.entityName = op.data.entityName;
-    if (op.data.location !== undefined) updates.location = op.data.location;
-    if (op.data.tags !== undefined) updates.tags = JSON.stringify(op.data.tags);
-    if (op.data.transactionType !== undefined) updates.transactionType = op.data.transactionType;
-    if (op.data.isActive !== undefined) updates.isActive = op.data.isActive;
-    if (op.data.confidence !== undefined) updates.confidence = op.data.confidence;
-
-    tx.update(transactionCorrections).set(updates).where(eq(transactionCorrections.id, op.id)).run();
-    return;
-  }
-
-  if (op.op === "disable") {
-    tx.update(transactionCorrections)
-      .set({ isActive: false })
-      .where(eq(transactionCorrections.id, op.id))
-      .run();
-    return;
-  }
-
-  if (op.op === "remove") {
-    tx.delete(transactionCorrections).where(eq(transactionCorrections.id, op.id)).run();
-  }
-}
-
 export function applyChangeSet(changeSet: ChangeSet): CorrectionRow[] {
   const db = getDrizzle();
 
@@ -229,7 +174,58 @@ export function applyChangeSet(changeSet: ChangeSet): CorrectionRow[] {
     const ops = [...changeSet.ops].sort((a, b) => order[a.op] - order[b.op]);
 
     for (const op of ops) {
-      applySingleOpTx(tx, op);
+      if (op.op === "add") {
+        tx.insert(transactionCorrections)
+          .values({
+            descriptionPattern: normalizeDescription(op.data.descriptionPattern),
+            matchType: op.data.matchType,
+            entityId: op.data.entityId ?? null,
+            entityName: op.data.entityName ?? null,
+            location: op.data.location ?? null,
+            tags: JSON.stringify(op.data.tags ?? []),
+            transactionType: op.data.transactionType ?? null,
+            isActive: op.data.isActive ?? true,
+            confidence: op.data.confidence ?? 0.5,
+          })
+          .run();
+        continue;
+      }
+
+      // For edit/disable/remove we validate existence first.
+      const existing = tx
+        .select()
+        .from(transactionCorrections)
+        .where(eq(transactionCorrections.id, op.id))
+        .get();
+      if (!existing) throw new NotFoundError("Correction", op.id);
+
+      if (op.op === "edit") {
+        const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
+        if (op.data.entityId !== undefined) updates.entityId = op.data.entityId;
+        if (op.data.entityName !== undefined) updates.entityName = op.data.entityName;
+        if (op.data.location !== undefined) updates.location = op.data.location;
+        if (op.data.tags !== undefined) updates.tags = JSON.stringify(op.data.tags);
+        if (op.data.transactionType !== undefined) updates.transactionType = op.data.transactionType;
+        if (op.data.isActive !== undefined) updates.isActive = op.data.isActive;
+        if (op.data.confidence !== undefined) updates.confidence = op.data.confidence;
+
+        tx.update(transactionCorrections)
+          .set(updates)
+          .where(eq(transactionCorrections.id, op.id))
+          .run();
+        continue;
+      }
+
+      if (op.op === "disable") {
+        tx.update(transactionCorrections)
+          .set({ isActive: false })
+          .where(eq(transactionCorrections.id, op.id))
+          .run();
+        continue;
+      }
+
+      // remove
+      tx.delete(transactionCorrections).where(eq(transactionCorrections.id, op.id)).run();
     }
 
     return tx

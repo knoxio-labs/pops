@@ -10,7 +10,6 @@ import {
   UpdateCorrectionSchema,
   FindCorrectionSchema,
   ChangeSetSchema,
-  type ChangeSet,
   toCorrection,
 } from "./types.js";
 import * as service from "./service.js";
@@ -204,7 +203,7 @@ export const correctionsRouter = router({
       const dbRules = service.listCorrections(undefined, 10_000, 0).rows;
       return service.previewChangeSetImpact({
         rules: dbRules,
-        changeSet: input.changeSet as ChangeSet,
+        changeSet: input.changeSet,
         transactions: input.transactions,
         minConfidence: input.minConfidence,
       });
@@ -216,7 +215,7 @@ export const correctionsRouter = router({
   applyChangeSet: protectedProcedure
     .input(z.object({ changeSet: ChangeSetSchema }))
     .mutation(({ input }) => {
-      const rows = service.applyChangeSet(input.changeSet as ChangeSet);
+      const rows = service.applyChangeSet(input.changeSet);
       return { data: rows.map(toCorrection), message: "ChangeSet applied" };
     }),
 });
