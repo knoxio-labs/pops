@@ -16,6 +16,7 @@ export const comparisons = sqliteTable(
     winnerType: text("winner_type").notNull(),
     winnerId: integer("winner_id").notNull(),
     drawTier: text("draw_tier"),
+    source: text("source"),
     deltaA: integer("delta_a"),
     deltaB: integer("delta_b"),
     comparedAt: text("compared_at")
