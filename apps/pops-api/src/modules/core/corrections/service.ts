@@ -48,7 +48,7 @@ export function findMatchingCorrectionFromRules(
 
   const exactMatches = eligible
     .filter((r) => r.matchType === "exact" && r.descriptionPattern === normalized)
-    .sort((a, b) => (b.confidence - a.confidence) || (b.timesApplied - a.timesApplied));
+    .sort((a, b) => b.confidence - a.confidence || b.timesApplied - a.timesApplied);
 
   if (exactMatches[0]) return classifyCorrectionMatch(exactMatches[0]);
 
@@ -59,7 +59,7 @@ export function findMatchingCorrectionFromRules(
         r.descriptionPattern.length > 0 &&
         normalized.includes(r.descriptionPattern)
     )
-    .sort((a, b) => (b.confidence - a.confidence) || (b.timesApplied - a.timesApplied));
+    .sort((a, b) => b.confidence - a.confidence || b.timesApplied - a.timesApplied);
 
   if (containsMatches[0]) return classifyCorrectionMatch(containsMatches[0]);
 
@@ -73,14 +73,17 @@ export function findMatchingCorrectionFromRules(
         return false;
       }
     })
-    .sort((a, b) => (b.confidence - a.confidence) || (b.timesApplied - a.timesApplied));
+    .sort((a, b) => b.confidence - a.confidence || b.timesApplied - a.timesApplied);
 
   if (regexMatches[0]) return classifyCorrectionMatch(regexMatches[0]);
 
   return null;
 }
 
-export function applyChangeSetToRules(rules: CorrectionRow[], changeSet: ChangeSet): CorrectionRow[] {
+export function applyChangeSetToRules(
+  rules: CorrectionRow[],
+  changeSet: ChangeSet
+): CorrectionRow[] {
   const byId = new Map(rules.map((r) => [r.id, r]));
   const next: CorrectionRow[] = [...rules];
 
@@ -128,7 +131,9 @@ export function applyChangeSetToRules(rules: CorrectionRow[], changeSet: ChangeS
         location: op.data.location !== undefined ? op.data.location : existing.location,
         tags: op.data.tags !== undefined ? JSON.stringify(op.data.tags) : existing.tags,
         transactionType:
-          op.data.transactionType !== undefined ? op.data.transactionType : existing.transactionType,
+          op.data.transactionType !== undefined
+            ? op.data.transactionType
+            : existing.transactionType,
         isActive: op.data.isActive !== undefined ? op.data.isActive : existing.isActive,
         confidence: op.data.confidence !== undefined ? op.data.confidence : existing.confidence,
       });
@@ -160,7 +165,9 @@ export function previewChangeSetImpact(args: {
       findMatchingCorrectionFromRules(t.description, rulesAfter, args.minConfidence)
     );
     const changed =
-      before.matched !== after.matched || before.status !== after.status || before.ruleId !== after.ruleId;
+      before.matched !== after.matched ||
+      before.status !== after.status ||
+      before.ruleId !== after.ruleId;
 
     return { checksum: t.checksum, description: t.description, before, after, changed };
   });
@@ -223,7 +230,8 @@ export function applyChangeSet(changeSet: ChangeSet): CorrectionRow[] {
         if (op.data.entityName !== undefined) updates.entityName = op.data.entityName;
         if (op.data.location !== undefined) updates.location = op.data.location;
         if (op.data.tags !== undefined) updates.tags = JSON.stringify(op.data.tags);
-        if (op.data.transactionType !== undefined) updates.transactionType = op.data.transactionType;
+        if (op.data.transactionType !== undefined)
+          updates.transactionType = op.data.transactionType;
         if (op.data.isActive !== undefined) updates.isActive = op.data.isActive;
         if (op.data.confidence !== undefined) updates.confidence = op.data.confidence;
 
@@ -422,7 +430,9 @@ export function findAllMatchingCorrections(description: string): CorrectionRow[]
   const regexCandidates = db
     .select()
     .from(transactionCorrections)
-    .where(and(eq(transactionCorrections.isActive, true), eq(transactionCorrections.matchType, "regex")))
+    .where(
+      and(eq(transactionCorrections.isActive, true), eq(transactionCorrections.matchType, "regex"))
+    )
     .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
     .all();
 

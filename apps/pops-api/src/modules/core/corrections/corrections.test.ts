@@ -286,9 +286,9 @@ describe("corrections", () => {
         },
       });
 
-      expect(result.data.some((r) => r.descriptionPattern === "NETFLIX" && r.isActive === false)).toBe(
-        true
-      );
+      expect(
+        result.data.some((r) => r.descriptionPattern === "NETFLIX" && r.isActive === false)
+      ).toBe(true);
       expect(result.data.some((r) => r.descriptionPattern === "SPOTIFY")).toBe(true);
     });
 
