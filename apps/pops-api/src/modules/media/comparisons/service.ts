@@ -1946,6 +1946,9 @@ export function batchRecordComparisons(
         drawTier: item.drawTier ?? null,
       };
 
+      // Compute Elo deltas first so they can be stored on the comparison row
+      const { deltaA, deltaB } = updateEloScores(comparisonInput);
+
       const result = drizzleDb
         .insert(comparisons)
         .values({
@@ -1957,11 +1960,12 @@ export function batchRecordComparisons(
           winnerType: comparisonInput.winnerType,
           winnerId: comparisonInput.winnerId,
           drawTier: comparisonInput.drawTier ?? null,
+          deltaA,
+          deltaB,
         })
         .run();
 
       if (Number(result.lastInsertRowid) > 0) {
-        updateEloScores(comparisonInput);
         count++;
       }
     }
