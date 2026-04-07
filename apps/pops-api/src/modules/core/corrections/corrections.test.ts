@@ -1,14 +1,9 @@
 /**
  * Corrections module tests — CRUD, pattern matching, and tags.
  */
-<<<<<<< HEAD
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { setupTestContext, seedEntity } from "../../../shared/test-utils.js";
-import { logger } from "../../../lib/logger.js";
-=======
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { setupTestContext, seedEntity, seedTransaction } from "../../../shared/test-utils.js";
->>>>>>> origin/main
+import { logger } from "../../../lib/logger.js";
 
 const ctx = setupTestContext();
 
