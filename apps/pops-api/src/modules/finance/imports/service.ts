@@ -642,6 +642,51 @@ export async function processImportWithProgress(
       });
 
       try {
+        // Step 1: Apply learned corrections (highest priority)
+        // When a correction matches, skip all subsequent matching stages.
+        const correctionResult = findMatchingCorrection(transaction.description, 0.7);
+
+        if (correctionResult) {
+          const { correction, status } = correctionResult;
+          const entityId = correction.entityId;
+          if (entityId) {
+            logger.debug(
+              {
+                index: i + 1,
+                total: newTransactions.length,
+                description: transaction.description.substring(0, 50),
+                entityName: correction.entityName,
+                confidence: correction.confidence,
+                status,
+              },
+              "[Import] Applied learned correction"
+            );
+
+            matched.push({
+              ...transaction,
+              location: correction.location ?? transaction.location,
+              entity: {
+                entityId,
+                entityName: correction.entityName ?? "Unknown",
+                matchType: "learned" as never, // UI-only matchType
+                confidence: correction.confidence,
+              },
+              status,
+              suggestedTags: buildSuggestedTags(
+                transaction.description,
+                entityId,
+                parseCorrectionTags(correction.tags),
+                null,
+                knownTags,
+                correction.descriptionPattern
+              ),
+            });
+
+            batchItem.status = "success";
+            continue; // Skip all subsequent matching stages
+          }
+        }
+
         const match = matchEntity(transaction.description, entityLookup, aliases);
 
         if (match) {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { processImport, executeImport, createEntity } from "./service.js";
+import { processImport, processImportWithProgress, executeImport, createEntity } from "./service.js";
 import type { ParsedTransaction, ConfirmedTransaction } from "./types.js";
 import { createTestDb, seedEntity, seedTransaction } from "../../../shared/test-utils.js";
 import { setDb, closeDb } from "../../../db.js";
@@ -12,6 +12,7 @@ import {
   transactionCorrections,
 } from "@pops/db-types";
 import { clearCache } from "./lib/ai-categorizer.js";
+import { setProgress, getProgress } from "./progress-store.js";
 
 /**
  * Unit tests for import service with SQLite-only writes.
@@ -441,6 +442,55 @@ describe("suggestedTags", () => {
     const tags = result.matched[0]?.suggestedTags ?? [];
     const groceriesTags = tags.filter((t) => t.tag === "Groceries");
     expect(groceriesTags.length).toBe(1);
+  });
+});
+
+describe("processImportWithProgress", () => {
+  it("applies learned corrections first and skips subsequent matching stages", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-progress-1",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: "woolworths-id",
+        entityName: "Woolworths",
+        tags: '["Groceries","Weekly Shop"]',
+        confidence: 0.95,
+      })
+      .run();
+
+    // If AI were called, this would throw and we'd fail the test.
+    mockConfig.throwError = true;
+    mockConfig.errorType = "API_ERROR";
+
+    const sessionId = "11111111-1111-1111-1111-111111111111";
+    setProgress(sessionId, {
+      sessionId,
+      status: "processing",
+      currentStep: "deduplicating",
+      totalTransactions: 1,
+      processedCount: 0,
+      currentBatch: [],
+      errors: [],
+      startedAt: new Date().toISOString(),
+    });
+
+    await processImportWithProgress(sessionId, [baseParsedTransaction], "Amex");
+
+    const progress = getProgress(sessionId);
+    expect(progress?.status).toBe("completed");
+    expect(progress?.result).toBeDefined();
+
+    const result = progress?.result as Awaited<ReturnType<typeof processImport>>;
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0]!.entity.matchType).toBe("learned");
+
+    const tags = result.matched[0]!.suggestedTags ?? [];
+    expect(tags).toContainEqual(
+      expect.objectContaining({ tag: "Groceries", source: "rule", pattern: "woolworths" })
+    );
   });
 });
 
