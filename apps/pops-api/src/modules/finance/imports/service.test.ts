@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { processImport, executeImport, createEntity } from "./service.js";
+import {
+  processImport,
+  processImportWithProgress,
+  executeImport,
+  createEntity,
+} from "./service.js";
 import type { ParsedTransaction, ConfirmedTransaction } from "./types.js";
 import { createTestDb, seedEntity, seedTransaction } from "../../../shared/test-utils.js";
 import { setDb, closeDb } from "../../../db.js";
@@ -12,6 +17,7 @@ import {
   transactionCorrections,
 } from "@pops/db-types";
 import { clearCache } from "./lib/ai-categorizer.js";
+import { setProgress, getProgress } from "./progress-store.js";
 
 /**
  * Unit tests for import service with SQLite-only writes.
@@ -441,6 +447,170 @@ describe("suggestedTags", () => {
     const tags = result.matched[0]?.suggestedTags ?? [];
     const groceriesTags = tags.filter((t) => t.tag === "Groceries");
     expect(groceriesTags.length).toBe(1);
+  });
+});
+
+describe("processImportWithProgress", () => {
+  it("applies learned corrections first and skips subsequent matching stages", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-progress-1",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: "woolworths-id",
+        entityName: "Woolworths",
+        tags: '["Groceries","Weekly Shop"]',
+        confidence: 0.95,
+      })
+      .run();
+
+    // If AI were called, this would throw and we'd fail the test.
+    mockConfig.throwError = true;
+    mockConfig.errorType = "API_ERROR";
+
+    const sessionId = "11111111-1111-1111-1111-111111111111";
+    setProgress(sessionId, {
+      sessionId,
+      status: "processing",
+      currentStep: "deduplicating",
+      totalTransactions: 1,
+      processedCount: 0,
+      currentBatch: [],
+      errors: [],
+      startedAt: new Date().toISOString(),
+    });
+
+    await processImportWithProgress(sessionId, [baseParsedTransaction], "Amex");
+
+    const progress = getProgress(sessionId);
+    expect(progress?.status).toBe("completed");
+    expect(progress?.result).toBeDefined();
+
+    const result = progress?.result as Awaited<ReturnType<typeof processImport>>;
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0]!.entity.matchType).toBe("learned");
+
+    const tags = result.matched[0]!.suggestedTags ?? [];
+    expect(tags).toContainEqual(
+      expect.objectContaining({ tag: "Groceries", source: "rule", pattern: "woolworths" })
+    );
+  });
+
+  it("falls through to entity matching when correction matches without entityId", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-progress-no-entity",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: null,
+        entityName: "Woolworths",
+        tags: '["Groceries"]',
+        confidence: 0.95,
+      })
+      .run();
+
+    const sessionId = "22222222-2222-2222-2222-222222222222";
+    setProgress(sessionId, {
+      sessionId,
+      status: "processing",
+      currentStep: "deduplicating",
+      totalTransactions: 1,
+      processedCount: 0,
+      currentBatch: [],
+      errors: [],
+      startedAt: new Date().toISOString(),
+    });
+
+    await processImportWithProgress(sessionId, [baseParsedTransaction], "Amex");
+
+    const progress = getProgress(sessionId);
+    const result = progress?.result as Awaited<ReturnType<typeof processImport>>;
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0]!.entity.matchType).toBe("prefix");
+  });
+
+  it("routes low-confidence corrections to uncertain", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-progress-low-confidence",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: "woolworths-id",
+        entityName: "Woolworths",
+        tags: '["Groceries"]',
+        confidence: 0.8,
+      })
+      .run();
+
+    const sessionId = "33333333-3333-3333-3333-333333333333";
+    setProgress(sessionId, {
+      sessionId,
+      status: "processing",
+      currentStep: "deduplicating",
+      totalTransactions: 1,
+      processedCount: 0,
+      currentBatch: [],
+      errors: [],
+      startedAt: new Date().toISOString(),
+    });
+
+    await processImportWithProgress(sessionId, [baseParsedTransaction], "Amex");
+
+    const progress = getProgress(sessionId);
+    const result = progress?.result as Awaited<ReturnType<typeof processImport>>;
+    expect(result.uncertain.length).toBe(1);
+    expect(result.uncertain[0]!.entity.matchType).toBe("learned");
+    expect(result.matched.length).toBe(0);
+  });
+
+  it("handles mixed batch independently (one correction match, one normal match)", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
+    seedEntity(db, { name: "Netflix", id: "netflix-id" });
+    orm()
+      .insert(transactionCorrections)
+      .values({
+        id: "corr-progress-mixed",
+        descriptionPattern: "woolworths",
+        matchType: "contains",
+        entityId: "woolworths-id",
+        entityName: "Woolworths",
+        tags: "[]",
+        confidence: 0.95,
+      })
+      .run();
+
+    const sessionId = "44444444-4444-4444-4444-444444444444";
+    setProgress(sessionId, {
+      sessionId,
+      status: "processing",
+      currentStep: "deduplicating",
+      totalTransactions: 2,
+      processedCount: 0,
+      currentBatch: [],
+      errors: [],
+      startedAt: new Date().toISOString(),
+    });
+
+    const t2: ParsedTransaction = {
+      ...baseParsedTransaction,
+      description: "NETFLIX.COM SUBSCRIPTION",
+      rawRow: '{"Date":"13/02/2026","Description":"NETFLIX.COM SUBSCRIPTION"}',
+      checksum: "netflix-123",
+    };
+
+    await processImportWithProgress(sessionId, [baseParsedTransaction, t2], "Amex");
+
+    const progress = getProgress(sessionId);
+    const result = progress?.result as Awaited<ReturnType<typeof processImport>>;
+    expect(result.matched.length).toBe(2);
+    expect(result.matched.some((t) => t.entity.matchType === "learned")).toBe(true);
+    expect(result.matched.some((t) => t.entity.matchType === "prefix")).toBe(true);
   });
 });
 
