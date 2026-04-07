@@ -258,10 +258,17 @@ export const correctionsRouter = router({
       })
     )
     .query(({ input }) => {
-      return service.proposeChangeSetFromCorrectionSignal({
-        signal: input.signal,
-        minConfidence: input.minConfidence,
-        maxPreviewItems: input.maxPreviewItems,
-      });
+      try {
+        return service.proposeChangeSetFromCorrectionSignal({
+          signal: input.signal,
+          minConfidence: input.minConfidence,
+          maxPreviewItems: input.maxPreviewItems,
+        });
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        }
+        throw err;
+      }
     }),
 });

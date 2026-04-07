@@ -49,7 +49,6 @@ export interface Comparison {
 }
 
 export function toComparison(row: ComparisonRow): Comparison {
-  const rawSource: unknown = row.source;
   return {
     id: row.id,
     dimensionId: row.dimensionId,
@@ -60,7 +59,7 @@ export function toComparison(row: ComparisonRow): Comparison {
     winnerType: row.winnerType,
     winnerId: row.winnerId,
     drawTier: row.drawTier,
-    source: typeof rawSource === "string" ? rawSource : null,
+    source: row.source ?? null,
     deltaA: row.deltaA ?? null,
     deltaB: row.deltaB ?? null,
     comparedAt: row.comparedAt,

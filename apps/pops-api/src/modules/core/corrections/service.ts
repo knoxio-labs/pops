@@ -6,6 +6,7 @@ import { eq, gte, desc, count, sql, and } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
 import { transactionCorrections, transactions } from "@pops/db-types";
 import { NotFoundError } from "../../../shared/errors.js";
+import { parseJsonStringArray } from "../../../shared/json.js";
 import type {
   CorrectionRow,
   CreateCorrectionInput,
@@ -195,19 +196,6 @@ export function previewChangeSetImpact(args: {
   };
 }
 
-function parseJsonTags(json: string | null | undefined): string[] {
-  if (!json) return [];
-  try {
-    const parsed = JSON.parse(json) as unknown;
-    if (Array.isArray(parsed)) {
-      return parsed.filter((t): t is string => typeof t === "string");
-    }
-  } catch {
-    // ignore malformed json
-  }
-  return [];
-}
-
 function outcomeFromMatch(match: CorrectionMatchResult | null): CorrectionClassificationOutcome {
   if (!match) {
     return {
@@ -226,7 +214,7 @@ function outcomeFromMatch(match: CorrectionMatchResult | null): CorrectionClassi
     entityId: r.entityId ?? null,
     entityName: r.entityName ?? null,
     location: r.location ?? null,
-    tags: parseJsonTags(r.tags),
+    tags: parseJsonStringArray(r.tags),
     transactionType: r.transactionType ?? null,
   };
 }
@@ -272,8 +260,6 @@ function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCount
   let typeChanges = 0;
 
   for (const item of items) {
-    if (!item.changed) continue;
-
     if (
       item.before.entityId !== item.after.entityId ||
       item.before.entityName !== item.after.entityName
@@ -295,7 +281,7 @@ function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCount
   }
 
   return {
-    affected: items.filter((i) => i.changed).length,
+    affected: items.length,
     entityChanges,
     locationChanges,
     tagChanges,
@@ -382,6 +368,14 @@ export function proposeChangeSetFromCorrectionSignal(args: {
       };
 
   // Bounded preview: prefilter candidates using LIKE where possible.
+  // Note: Our normalization strips digits and collapses whitespace; apply the same transformations in SQL
+  // so the prefilter doesn't miss legitimate candidates.
+  const sqlNormalizedDescription = sql`upper(${transactions.description})`;
+  const sqlNoDigits = sql`replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(${sqlNormalizedDescription}, '0', ''), '1', ''), '2', ''), '3', ''), '4', ''), '5', ''), '6', ''), '7', ''), '8', ''), '9', '')`;
+  const sqlCollapsedSpaces = sql`replace(replace(replace(${sqlNoDigits}, '  ', ' '), '  ', ' '), '  ', ' ')`;
+
+  const sqlPrefilterExpression =
+    matchType === "regex" ? sqlNormalizedDescription : sqlCollapsedSpaces;
   const upperPattern = normalizedPattern;
   const candidates = db
     .select({
@@ -394,7 +388,11 @@ export function proposeChangeSetFromCorrectionSignal(args: {
       location: transactions.location,
     })
     .from(transactions)
-    .where(sql`upper(${transactions.description}) LIKE '%' || ${upperPattern} || '%'`)
+    .where(
+      matchType === "regex"
+        ? undefined
+        : sql`${sqlPrefilterExpression} LIKE '%' || ${upperPattern} || '%'`
+    )
     .limit(args.maxPreviewItems)
     .all();
 
@@ -423,11 +421,11 @@ export function proposeChangeSetFromCorrectionSignal(args: {
     // Apply rule tag semantics as "merge" (consistent with import bulk apply semantics).
     const before: CorrectionClassificationOutcome = {
       ...beforeBase,
-      tags: mergeTags(parseJsonTags(t.tags), beforeBase.tags).sort(),
+      tags: mergeTags(parseJsonStringArray(t.tags), beforeBase.tags).sort(),
     };
     const after: CorrectionClassificationOutcome = {
       ...afterBase,
-      tags: mergeTags(parseJsonTags(t.tags), afterBase.tags).sort(),
+      tags: mergeTags(parseJsonStringArray(t.tags), afterBase.tags).sort(),
     };
 
     // If the rule sets a transactionType, that classification outcome should surface even if it's the only change.
@@ -439,7 +437,6 @@ export function proposeChangeSetFromCorrectionSignal(args: {
       description: t.description,
       before,
       after,
-      changed,
     });
   }
 

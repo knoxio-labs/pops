@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { TransactionCorrectionRow } from "@pops/db-types";
+import { parseJsonStringArray } from "../../../shared/json.js";
 
 export type CorrectionRow = TransactionCorrectionRow;
 
@@ -52,17 +53,7 @@ export function toCorrection(row: CorrectionRow): Correction {
     entityId: row.entityId,
     entityName: row.entityName,
     location: row.location,
-    tags: (() => {
-      try {
-        const parsed = JSON.parse(row.tags) as unknown;
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item): item is string => typeof item === "string");
-        }
-        return [];
-      } catch {
-        return [];
-      }
-    })(),
+    tags: parseJsonStringArray(row.tags),
     transactionType: row.transactionType,
     isActive: Boolean(row.isActive),
     confidence: row.confidence,
@@ -206,7 +197,6 @@ export interface ChangeSetImpactItem {
   description: string;
   before: CorrectionClassificationOutcome;
   after: CorrectionClassificationOutcome;
-  changed: boolean;
 }
 
 export interface ChangeSetProposal {
