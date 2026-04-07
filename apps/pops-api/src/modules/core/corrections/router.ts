@@ -9,6 +9,8 @@ import {
   CreateCorrectionSchema,
   UpdateCorrectionSchema,
   FindCorrectionSchema,
+  ChangeSetSchema,
+  type ChangeSet,
   toCorrection,
 } from "./types.js";
 import * as service from "./service.js";
@@ -176,5 +178,45 @@ export const correctionsRouter = router({
     .mutation(async ({ input }) => {
       const proposals = await generateRules(input.transactions);
       return { proposals };
+    }),
+
+  /**
+   * Preview impact of a ChangeSet against a set of transaction descriptions.
+   * Deterministic: uses the same matching semantics as processing.
+   */
+  previewChangeSet: protectedProcedure
+    .input(
+      z.object({
+        changeSet: ChangeSetSchema,
+        transactions: z
+          .array(
+            z.object({
+              checksum: z.string().optional(),
+              description: z.string().min(1),
+            })
+          )
+          .min(1)
+          .max(500),
+        minConfidence: z.number().min(0).max(1).default(0.7),
+      })
+    )
+    .query(({ input }) => {
+      const dbRules = service.listCorrections(undefined, 10_000, 0).rows;
+      return service.previewChangeSetImpact({
+        rules: dbRules,
+        changeSet: input.changeSet as ChangeSet,
+        transactions: input.transactions,
+        minConfidence: input.minConfidence,
+      });
+    }),
+
+  /**
+   * Apply a ChangeSet atomically (single transaction).
+   */
+  applyChangeSet: protectedProcedure
+    .input(z.object({ changeSet: ChangeSetSchema }))
+    .mutation(({ input }) => {
+      const rows = service.applyChangeSet(input.changeSet as ChangeSet);
+      return { data: rows.map(toCorrection), message: "ChangeSet applied" };
     }),
 });
