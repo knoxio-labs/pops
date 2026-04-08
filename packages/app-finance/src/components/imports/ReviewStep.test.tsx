@@ -132,14 +132,25 @@ vi.mock("./TransactionCard", async () => {
     TransactionCard: ({
       transaction,
       onAcceptAiSuggestion,
+      onEdit,
     }: {
       transaction: { description: string; entity?: { entityName?: string } };
       onAcceptAiSuggestion?: (t: unknown) => void;
+      onEdit?: (t: unknown) => void;
     }) =>
       React.createElement(
         "div",
         { "data-testid": `tx-${transaction.description}` },
         transaction.description,
+        onEdit &&
+          React.createElement(
+            "button",
+            {
+              "aria-label": `Edit ${transaction.description}`,
+              onClick: () => onEdit(transaction),
+            },
+            "Edit"
+          ),
         onAcceptAiSuggestion &&
           React.createElement(
             "button",
@@ -192,9 +203,27 @@ vi.mock("./TransactionGroup", async () => {
   };
 });
 
-vi.mock("./EditableTransactionCard", () => ({
-  EditableTransactionCard: () => null,
-}));
+vi.mock("./EditableTransactionCard", async () => {
+  const React = await import("react");
+  return {
+    EditableTransactionCard: ({
+      transaction,
+      onSave,
+    }: {
+      transaction: { description: string };
+      onSave: (t: unknown, edited: unknown, shouldLearn?: boolean) => void;
+    }) =>
+      React.createElement(
+        "button",
+        {
+          "data-testid": `save-edit-${transaction.description}`,
+          onClick: () =>
+            onSave(transaction, { description: `${transaction.description} FIXED` }, false),
+        },
+        "Save Once"
+      ),
+  };
+});
 
 vi.mock("./BatchProposalsPanel", () => ({
   BatchProposalsPanel: () => null,
@@ -444,6 +473,42 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
       (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("Applied to")
     );
     expect(appliedToCalls).toHaveLength(0);
+  });
+});
+
+describe("ReviewStep — rule-matched edit proposal flow", () => {
+  it("opens a ChangeSet proposal when saving edits to a rule-matched transaction", async () => {
+    mockAnalyzeCorrectionMutateAsync.mockResolvedValue({
+      data: { matchType: "prefix", pattern: "WOOLWORTHS", confidence: 0.9 },
+    });
+
+    const tx = makeTx("WOOLWORTHS 1234 SYDNEY", {
+      status: "matched",
+      ruleProvenance: { pattern: "WOOLWORTHS", matchType: "contains", confidence: 0.95 },
+      entity: {
+        entityId: "ent-1",
+        entityName: "Woolworths",
+        matchType: "learned",
+        confidence: 0.95,
+      },
+    });
+
+    mockProcessedTransactions = { matched: [tx], uncertain: [], failed: [], skipped: [] };
+    render(<ReviewStep />);
+
+    // Click edit and save (mocked EditableTransactionCard emits Save Once)
+    fireEvent.click(screen.getByLabelText(`Edit ${tx.description}`));
+    fireEvent.click(screen.getByTestId(`save-edit-${tx.description}`));
+
+    await vi.waitFor(() => {
+      const props = lastProposalDialogProps as { signal?: unknown };
+      expect(props.signal).toEqual(
+        expect.objectContaining({
+          entityId: "ent-1",
+          entityName: "Woolworths",
+        })
+      );
+    });
   });
 });
 
