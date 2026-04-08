@@ -24,6 +24,7 @@ type ViewMode = "list" | "grouped";
 export function ReviewStep() {
   const { processedTransactions, setConfirmedTransactions, nextStep, prevStep, findSimilar } =
     useImportStore();
+  const { processSessionId, setProcessedTransactions } = useImportStore();
 
   const [localTransactions, setLocalTransactions] = useState(processedTransactions);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -183,6 +184,8 @@ export function ReviewStep() {
 
   const createCorrectionMutation = trpc.core.corrections.createOrUpdate.useMutation();
   const analyzeCorrectionMutation = trpc.core.corrections.analyzeCorrection.useMutation();
+  const applyChangeSetAndReevaluateMutation =
+    trpc.finance.imports.applyChangeSetAndReevaluate.useMutation();
 
   /**
    * Auto-save a correction rule, re-evaluate remaining uncertain/failed transactions,
@@ -207,12 +210,105 @@ export function ReviewStep() {
           if (analysis && analysis.pattern.length >= 3) {
             // Map "prefix" to "contains" for corrections table (prefix not a DB matchType)
             const matchType = analysis.matchType === "prefix" ? "contains" : analysis.matchType;
-            createCorrectionMutation.mutate({
-              descriptionPattern: analysis.pattern,
-              matchType,
-              entityId,
-              entityName,
-            });
+            if (processSessionId) {
+              applyChangeSetAndReevaluateMutation
+                .mutateAsync({
+                  sessionId: processSessionId,
+                  changeSet: {
+                    ops: [
+                      {
+                        op: "add",
+                        data: {
+                          descriptionPattern: analysis.pattern,
+                          matchType,
+                          entityId,
+                          entityName,
+                        },
+                      },
+                    ],
+                  },
+                })
+                .then((r) => {
+                  setLocalTransactions(r.result);
+                  setProcessedTransactions(r.result);
+                  toast.success(`ChangeSet applied — ${r.affectedCount} updated`);
+                })
+                .catch(() => {
+                  toast.error("Failed to apply ChangeSet");
+                });
+            } else {
+              createCorrectionMutation.mutate({
+                descriptionPattern: analysis.pattern,
+                matchType,
+                entityId,
+                entityName,
+              });
+            }
+          } else {
+            if (processSessionId) {
+              applyChangeSetAndReevaluateMutation
+                .mutateAsync({
+                  sessionId: processSessionId,
+                  changeSet: {
+                    ops: [
+                      {
+                        op: "add",
+                        data: {
+                          descriptionPattern: fallbackPattern,
+                          matchType: "contains",
+                          entityId,
+                          entityName,
+                        },
+                      },
+                    ],
+                  },
+                })
+                .then((r) => {
+                  setLocalTransactions(r.result);
+                  setProcessedTransactions(r.result);
+                  toast.success(`ChangeSet applied — ${r.affectedCount} updated`);
+                })
+                .catch(() => {
+                  toast.error("Failed to apply ChangeSet");
+                });
+            } else {
+              createCorrectionMutation.mutate({
+                descriptionPattern: fallbackPattern,
+                matchType: "contains",
+                entityId,
+                entityName,
+              });
+            }
+          }
+        })
+        .catch(() => {
+          // AI unavailable — use fallback pattern
+          if (processSessionId) {
+            applyChangeSetAndReevaluateMutation
+              .mutateAsync({
+                sessionId: processSessionId,
+                changeSet: {
+                  ops: [
+                    {
+                      op: "add",
+                      data: {
+                        descriptionPattern: fallbackPattern,
+                        matchType: "contains",
+                        entityId,
+                        entityName,
+                      },
+                    },
+                  ],
+                },
+              })
+              .then((r) => {
+                setLocalTransactions(r.result);
+                setProcessedTransactions(r.result);
+                toast.success(`ChangeSet applied — ${r.affectedCount} updated`);
+              })
+              .catch(() => {
+                toast.error("Failed to apply ChangeSet");
+              });
           } else {
             createCorrectionMutation.mutate({
               descriptionPattern: fallbackPattern,
@@ -221,76 +317,18 @@ export function ReviewStep() {
               entityName,
             });
           }
-        })
-        .catch(() => {
-          // AI unavailable — use fallback pattern
-          createCorrectionMutation.mutate({
-            descriptionPattern: fallbackPattern,
-            matchType: "contains",
-            entityId,
-            entityName,
-          });
         });
 
-      // Re-evaluate and move matching transactions immediately (don't wait for AI).
-      // Toast is called inside the updater so it has access to the computed count.
-      const normalizedEntityName = entityName.toUpperCase();
-
-      setLocalTransactions((prev) => {
-        const toMove: ProcessedTransaction[] = [];
-        const remainingUncertain: ProcessedTransaction[] = [];
-        const remainingFailed: ProcessedTransaction[] = [];
-
-        for (const t of prev.uncertain) {
-          if (t.description.toUpperCase().includes(normalizedEntityName)) {
-            toMove.push(t);
-          } else {
-            remainingUncertain.push(t);
-          }
-        }
-
-        for (const t of prev.failed) {
-          if (t.description.toUpperCase().includes(normalizedEntityName)) {
-            toMove.push(t);
-          } else {
-            remainingFailed.push(t);
-          }
-        }
-
-        if (toMove.length > 0) {
-          toast.success(
-            `Rule created: "${entityName}". Applied to ${toMove.length} more transaction${toMove.length !== 1 ? "s" : ""}`
-          );
-        } else {
-          toast.success(`Rule created: "${entityName}"`);
-        }
-
-        if (toMove.length === 0) return prev;
-
-        return {
-          ...prev,
-          uncertain: remainingUncertain,
-          failed: remainingFailed,
-          matched: [
-            ...prev.matched,
-            ...toMove.map(
-              (t) =>
-                ({
-                  ...t,
-                  entity: {
-                    entityId,
-                    entityName,
-                    matchType: "learned" as never,
-                    confidence: 0.8,
-                  },
-                  status: "matched" as const,
-                }) as ProcessedTransaction
-            ),
-          ],
-        };
-      });
+      // Re-evaluation is handled server-side by applyChangeSetAndReevaluate so the UI can
+      // swap in the updated buckets from the same matching engine used during processing.
     },
-    [createCorrectionMutation, analyzeCorrectionMutation]
+    [
+      createCorrectionMutation,
+      analyzeCorrectionMutation,
+      applyChangeSetAndReevaluateMutation,
+      processSessionId,
+      setProcessedTransactions,
+    ]
   );
 
   /**

@@ -12,6 +12,7 @@ import type {
   ParsedTransaction,
   ConfirmedTransaction,
 } from "./types.js";
+import type { ChangeSet } from "../../core/corrections/types.js";
 
 /**
  * Unit tests for imports tRPC router.
@@ -29,6 +30,7 @@ vi.mock("./lib/ai-categorizer.js", async (importOriginal) => {
 });
 
 import { resetMockAi } from "./lib/ai-categorizer.mock.js";
+import { mockConfig } from "./lib/ai-categorizer.mock.js";
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
@@ -414,5 +416,100 @@ describe("imports router - Authorization", () => {
     ).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
+  });
+});
+
+describe("imports.applyChangeSetAndReevaluate", () => {
+  it("applies ChangeSet and returns updated buckets for the same session", async () => {
+    seedEntity(db, { name: "Woolworths", id: "woolworths-id" });
+    mockConfig.alwaysReturnNull = true;
+
+    // Create a processImport session with an uncertain transaction.
+    const { sessionId } = await caller.finance.imports.processImport({
+      transactions: [
+        {
+          date: "2026-02-13",
+          description: "ACME SUPPLIES 1234",
+          amount: -125.5,
+          account: "Amex",
+          rawRow: "{}",
+          checksum: "abc123",
+        },
+      ],
+      account: "Amex",
+    });
+
+    const before = await waitForCompletion<ProcessImportOutput>(sessionId);
+    expect(before.uncertain.length).toBe(1);
+
+    const changeSet: ChangeSet = {
+      ops: [
+        {
+          op: "add",
+          data: {
+            descriptionPattern: "ACME SUPPLIES",
+            matchType: "contains",
+            entityId: "woolworths-id",
+            entityName: "Woolworths",
+            tags: [],
+            confidence: 0.95,
+          },
+        },
+      ],
+    };
+
+    const res = await caller.finance.imports.applyChangeSetAndReevaluate({
+      sessionId,
+      changeSet,
+      minConfidence: 0.7,
+    });
+
+    expect(res.affectedCount).toBeGreaterThan(0);
+    expect(res.result.matched.some((t) => t.checksum === "abc123")).toBe(true);
+    expect(res.result.uncertain.some((t) => t.checksum === "abc123")).toBe(false);
+  });
+
+  it("does not update the session result if ChangeSet apply fails", async () => {
+    const { sessionId } = await caller.finance.imports.processImport({
+      transactions: [
+        {
+          date: "2026-02-13",
+          description: "UNKNOWN",
+          amount: -10,
+          account: "Amex",
+          rawRow: "{}",
+          checksum: "zzz999",
+        },
+      ],
+      account: "Amex",
+    });
+
+    const before = await waitForCompletion<ProcessImportOutput>(sessionId);
+    expect(before.uncertain.length).toBe(1);
+
+    const badChangeSet: ChangeSet = {
+      ops: [
+        {
+          op: "edit",
+          id: "does-not-exist",
+          data: { confidence: 0.9 },
+        },
+      ],
+    };
+
+    await expect(
+      caller.finance.imports.applyChangeSetAndReevaluate({
+        sessionId,
+        changeSet: badChangeSet,
+        minConfidence: 0.7,
+      })
+    ).rejects.toThrow();
+
+    const afterProgress = await caller.finance.imports.getImportProgress({ sessionId });
+    expect(afterProgress?.status).toBe("completed");
+    const after = afterProgress?.result as ProcessImportOutput;
+
+    // Still unchanged: the uncertain transaction remains.
+    expect(after.uncertain.some((t) => t.checksum === "zzz999")).toBe(true);
   });
 });
