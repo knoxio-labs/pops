@@ -10,6 +10,7 @@ import { TransactionCard } from "./TransactionCard";
 import { TransactionGroup } from "./TransactionGroup";
 import { EditableTransactionCard } from "./EditableTransactionCard";
 import { BatchProposalsPanel } from "./BatchProposalsPanel";
+import { CorrectionProposalDialog } from "./CorrectionProposalDialog";
 import { toast } from "sonner";
 import type { ConfirmedTransaction } from "@pops/api/modules/finance/imports";
 import { groupTransactionsByEntity } from "../../lib/transaction-utils";
@@ -24,7 +25,6 @@ type ViewMode = "list" | "grouped";
 export function ReviewStep() {
   const { processedTransactions, setConfirmedTransactions, nextStep, prevStep, findSimilar } =
     useImportStore();
-  const { processSessionId, setProcessedTransactions } = useImportStore();
 
   const [localTransactions, setLocalTransactions] = useState(processedTransactions);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -34,13 +34,20 @@ export function ReviewStep() {
   >(null);
   const [editingTransaction, setEditingTransaction] = useState<ProcessedTransaction | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("grouped");
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const [proposalSignal, setProposalSignal] = useState<{
+    descriptionPattern: string;
+    matchType: "exact" | "contains" | "regex";
+    entityId?: string | null;
+    entityName?: string | null;
+    location?: string | null;
+    tags?: string[];
+    transactionType?: "purchase" | "transfer" | "income" | null;
+  } | null>(null);
 
   // Default to Uncertain tab when uncertain transactions exist, otherwise Matched
   const initialTab = localTransactions.uncertain.length > 0 ? "uncertain" : "matched";
   const [activeTab, setActiveTab] = useState(initialTab);
-
-  // Track rejected patterns so they aren't re-suggested during this import session
-  const rejectedPatterns = useRef<Set<string>>(new Set());
 
   // Batch analysis — accumulate corrections, trigger AI analysis
   const batchAnalysis = useBatchAnalysis();
@@ -60,7 +67,7 @@ export function ReviewStep() {
         currentTags: (t.suggestedTags ?? []).map((s) => s.tag),
       }));
     if (seed.length > 0) batchAnalysis.seedTransactions(seed);
-  }, []);
+  }, [batchAnalysis, localTransactions.matched]);
 
   // Preserve scroll position per tab
   const scrollPositions = useRef<Map<string, number>>(new Map());
@@ -173,8 +180,17 @@ export function ReviewStep() {
           }
         );
       }
+
+      // Feed batch analysis so the AI-suggested rules panel remains useful.
+      batchAnalysis.addCorrection({
+        description: transaction.description,
+        entityName,
+        amount: transaction.amount,
+        account: transaction.account,
+        currentTags: (transaction.suggestedTags ?? []).map((s) => s.tag),
+      });
     },
-    [findSimilar, handleAutoMatchSimilar]
+    [batchAnalysis, findSimilar, handleAutoMatchSimilar]
   );
 
   const handleCreateEntity = useCallback((transaction: ProcessedTransaction) => {
@@ -182,167 +198,84 @@ export function ReviewStep() {
     setShowCreateDialog(true);
   }, []);
 
-  const createCorrectionMutation = trpc.core.corrections.createOrUpdate.useMutation();
   const analyzeCorrectionMutation = trpc.core.corrections.analyzeCorrection.useMutation();
-  const applyChangeSetAndReevaluateMutation =
-    trpc.finance.imports.applyChangeSetAndReevaluate.useMutation();
+  // NOTE: The backend supports apply+re-evaluate, but for now this UI uses core.corrections.applyChangeSet
+  // and leaves import-session re-evaluation as a follow-up task.
 
-  const applyChangeSet = useCallback(
-    (args: {
-      pattern: string;
-      matchType: "exact" | "contains" | "regex";
-      entityId: string;
-      entityName: string;
+  const computeFallbackPattern = useCallback((description: string) => {
+    return description.toUpperCase().replace(/\d+/g, "").replace(/\s+/g, " ").trim();
+  }, []);
+
+  const generateProposal = useCallback(
+    async (args: {
+      description: string;
+      entityId: string | null;
+      entityName: string | null;
+      amount: number;
+      location?: string | null;
+      transactionType?: "purchase" | "transfer" | "income" | null;
     }) => {
-      if (!processSessionId) return Promise.resolve();
-      return applyChangeSetAndReevaluateMutation
-        .mutateAsync({
-          sessionId: processSessionId,
-          changeSet: {
-            ops: [
-              {
-                op: "add",
-                data: {
-                  descriptionPattern: args.pattern,
-                  matchType: args.matchType,
-                  entityId: args.entityId,
-                  entityName: args.entityName,
-                },
-              },
-            ],
-          },
-        })
-        .then((r) => {
-          setLocalTransactions(r.result);
-          setProcessedTransactions(r.result);
-          toast.success(`ChangeSet applied — ${r.affectedCount} updated`);
-        })
-        .catch(() => {
-          toast.error("Failed to apply ChangeSet");
+      const fallbackPattern = computeFallbackPattern(args.description);
+
+      try {
+        const res = await analyzeCorrectionMutation.mutateAsync({
+          description: args.description,
+          entityName: args.entityName ?? "unknown",
+          amount: args.amount,
         });
+        const analysis = res.data;
+
+        const suggestedPattern =
+          analysis && analysis.pattern.length >= 3 ? analysis.pattern : fallbackPattern;
+        const suggestedMatchType =
+          analysis && analysis.pattern.length >= 3
+            ? analysis.matchType === "prefix"
+              ? "contains"
+              : analysis.matchType
+            : "contains";
+
+        setProposalSignal({
+          descriptionPattern: suggestedPattern,
+          matchType: suggestedMatchType,
+          entityId: args.entityId,
+          entityName: args.entityName,
+          location: args.location ?? null,
+          transactionType: args.transactionType ?? null,
+          tags: [],
+        });
+        setProposalOpen(true);
+        toast.success("Proposal generated — review and approve to learn");
+      } catch {
+        setProposalSignal({
+          descriptionPattern: fallbackPattern,
+          matchType: "contains",
+          entityId: args.entityId,
+          entityName: args.entityName,
+          location: args.location ?? null,
+          transactionType: args.transactionType ?? null,
+          tags: [],
+        });
+        setProposalOpen(true);
+        toast.info("Proposal generated (fallback) — review and approve to learn");
+      }
     },
-    [
-      applyChangeSetAndReevaluateMutation,
-      processSessionId,
-      setProcessedTransactions,
-      setLocalTransactions,
-    ]
+    [analyzeCorrectionMutation, computeFallbackPattern]
   );
 
   /**
-   * Auto-save a correction rule, re-evaluate remaining uncertain/failed transactions,
-   * move matches to the matched tab, and show a toast with the result.
-   *
-   * Calls Claude to analyze the correction for a smarter pattern (matchType + pattern + confidence).
-   * Falls back to a simple contains-based pattern if AI is unavailable.
+   * Generate a Correction Proposal (ChangeSet) from a correction signal.
+   * Rule changes only happen after explicit approval in the proposal dialog.
    */
   const autoSaveRuleAndReEvaluate = useCallback(
     (description: string, entityId: string, entityName: string, amount: number) => {
-      const fallbackPattern = description
-        .toUpperCase()
-        .replace(/\d+/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      // Fire AI analysis in background — save correction with result or fallback
-      analyzeCorrectionMutation
-        .mutateAsync({ description, entityName, amount })
-        .then((res) => {
-          const analysis = res.data;
-          if (analysis && analysis.pattern.length >= 3) {
-            // Map "prefix" to "contains" for corrections table (prefix not a DB matchType)
-            const matchType: "exact" | "contains" | "regex" =
-              analysis.matchType === "prefix" ? "contains" : analysis.matchType;
-            if (processSessionId) {
-              void applyChangeSet({
-                pattern: analysis.pattern,
-                matchType,
-                entityId,
-                entityName,
-              });
-            } else {
-              createCorrectionMutation.mutate({
-                descriptionPattern: analysis.pattern,
-                matchType,
-                entityId,
-                entityName,
-              });
-            }
-          } else {
-            if (processSessionId) {
-              void applyChangeSet({
-                pattern: fallbackPattern,
-                matchType: "contains",
-                entityId,
-                entityName,
-              });
-            } else {
-              createCorrectionMutation.mutate({
-                descriptionPattern: fallbackPattern,
-                matchType: "contains",
-                entityId,
-                entityName,
-              });
-            }
-          }
-        })
-        .catch(() => {
-          // AI unavailable — use fallback pattern
-          if (processSessionId) {
-            void applyChangeSet({
-              pattern: fallbackPattern,
-              matchType: "contains",
-              entityId,
-              entityName,
-            });
-          } else {
-            createCorrectionMutation.mutate({
-              descriptionPattern: fallbackPattern,
-              matchType: "contains",
-              entityId,
-              entityName,
-            });
-          }
-        });
-
-      // Re-evaluation is handled server-side by applyChangeSetAndReevaluate so the UI can
-      // swap in the updated buckets from the same matching engine used during processing.
+      void generateProposal({ description, entityId, entityName, amount });
     },
-    [
-      createCorrectionMutation,
-      analyzeCorrectionMutation,
-      applyChangeSetAndReevaluateMutation,
-      applyChangeSet,
-      processSessionId,
-      setProcessedTransactions,
-    ]
-  );
-
-  /**
-   * Count how many remaining uncertain/failed transactions would match a pattern.
-   * Excludes the transaction being accepted (identified by checksum).
-   */
-  const countPatternMatches = useCallback(
-    (entityName: string, excludeChecksum: string) => {
-      const normalised = entityName.toUpperCase();
-      let count = 0;
-      for (const t of localTransactions.uncertain) {
-        if (t.checksum !== excludeChecksum && t.description.toUpperCase().includes(normalised))
-          count++;
-      }
-      for (const t of localTransactions.failed) {
-        if (t.checksum !== excludeChecksum && t.description.toUpperCase().includes(normalised))
-          count++;
-      }
-      return count;
-    },
-    [localTransactions.uncertain, localTransactions.failed]
+    [generateProposal]
   );
 
   /**
    * Accept AI suggestion for a single transaction.
-   * High-confidence (>= 0.8): auto-saves a correction rule and re-evaluates.
-   * Low-confidence (< 0.8): shows a confirmation toast for the user to accept or reject.
+   * Always generates a bundled Correction Proposal (ChangeSet) for the user to approve/reject.
    */
   const handleAcceptAiSuggestion = useCallback(
     (transaction: ProcessedTransaction) => {
@@ -365,61 +298,14 @@ export function ReviewStep() {
         return;
       }
 
-      const confidence = transaction.entity.confidence ?? 0;
       const entityName = transaction.entity.entityName;
-      const pattern = transaction.description
-        .toUpperCase()
-        .replace(/\d+/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
 
       // Always accept the transaction itself
       handleEntitySelect(transaction, entityId, entityName);
 
-      if (confidence >= 0.8) {
-        // High confidence — auto-save rule
-        autoSaveRuleAndReEvaluate(
-          transaction.description,
-          entityId,
-          entityName,
-          transaction.amount
-        );
-      } else if (!rejectedPatterns.current.has(pattern)) {
-        // Low confidence — show confirmation toast
-        const matchCount = countPatternMatches(entityName, transaction.checksum);
-        const matchSuffix =
-          matchCount > 0
-            ? `. Would apply to ${matchCount} more transaction${matchCount !== 1 ? "s" : ""}`
-            : "";
-
-        toast.info(`Create rule: contains "${entityName}"?${matchSuffix}`, {
-          action: {
-            label: "Accept",
-            onClick: () => {
-              autoSaveRuleAndReEvaluate(
-                transaction.description,
-                entityId!,
-                entityName,
-                transaction.amount
-              );
-            },
-          },
-          cancel: {
-            label: "Reject",
-            onClick: () => {
-              rejectedPatterns.current.add(pattern);
-            },
-          },
-        });
-      }
+      autoSaveRuleAndReEvaluate(transaction.description, entityId, entityName, transaction.amount);
     },
-    [
-      handleEntitySelect,
-      entities,
-      handleCreateEntity,
-      autoSaveRuleAndReEvaluate,
-      countPatternMatches,
-    ]
+    [handleEntitySelect, entities, handleCreateEntity, autoSaveRuleAndReEvaluate]
   );
 
   /**
@@ -615,41 +501,44 @@ export function ReviewStep() {
         editedFields.amount !== transaction.amount ||
         editedFields.entity?.entityId !== transaction.entity?.entityId ||
         editedFields.location !== transaction.location ||
-        editedFields.online !== transaction.online;
+        editedFields.online !== transaction.online ||
+        editedFields.transactionType !== transaction.transactionType;
 
       if (shouldLearn && hasChanges) {
-        // Save correction pattern
-        createCorrectionMutation.mutate({
-          descriptionPattern: transaction.description,
-          matchType: "exact",
-          entityId: editedFields.entity?.entityId ?? transaction.entity?.entityId,
-          entityName: editedFields.entity?.entityName ?? transaction.entity?.entityName,
-          location: editedFields.location ?? transaction.location,
+        const entityId = editedFields.entity?.entityId ?? transaction.entity?.entityId ?? null;
+        const entityName =
+          editedFields.entity?.entityName ?? transaction.entity?.entityName ?? null;
+        const updatedDescription = editedFields.description ?? transaction.description;
+        const updatedAmount = editedFields.amount ?? transaction.amount;
+        const updatedLocation = editedFields.location ?? transaction.location ?? null;
+        const updatedType =
+          editedFields.transactionType ?? transaction.transactionType ?? "purchase";
+        void generateProposal({
+          description: updatedDescription,
+          entityId,
+          entityName,
+          amount: updatedAmount,
+          location: updatedLocation,
+          transactionType: updatedType,
         });
-        // Feed into batch analysis for refined pattern proposals
-        batchAnalysis.addCorrection({
-          description: transaction.description,
-          entityName: editedFields.entity?.entityName ?? transaction.entity?.entityName ?? null,
-          amount: transaction.amount,
-          account: transaction.account,
-          currentTags: (transaction.suggestedTags ?? []).map((s) => s.tag),
-        });
-        toast.success("Correction saved!");
+
+        if (entityName) {
+          batchAnalysis.addCorrection({
+            description: updatedDescription,
+            entityName,
+            amount: updatedAmount,
+            account: transaction.account,
+            currentTags: (transaction.suggestedTags ?? []).map((s) => s.tag),
+          });
+        }
       } else if (hasChanges && !shouldLearn) {
         // Show toast asking if they want to learn
         toast.info("Apply this correction to future imports?", {
           description: "This will help auto-match similar transactions next time.",
           action: {
-            label: "Learn Pattern",
+            label: "Save & Learn",
             onClick: () => {
-              createCorrectionMutation.mutate({
-                descriptionPattern: transaction.description,
-                matchType: "exact",
-                entityId: editedFields.entity?.entityId ?? transaction.entity?.entityId,
-                entityName: editedFields.entity?.entityName ?? transaction.entity?.entityName,
-                location: editedFields.location ?? transaction.location,
-              });
-              toast.success("Pattern saved!");
+              handleSaveEdit(transaction, editedFields, true);
             },
           },
         });
@@ -658,7 +547,7 @@ export function ReviewStep() {
         toast.success("Transaction updated");
       }
     },
-    [createCorrectionMutation, batchAnalysis]
+    [batchAnalysis, generateProposal]
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -706,6 +595,20 @@ export function ReviewStep() {
 
   return (
     <div className="space-y-6">
+      <CorrectionProposalDialog
+        open={proposalOpen}
+        onOpenChange={setProposalOpen}
+        signal={proposalSignal}
+        previewTransactions={[
+          ...localTransactions.matched,
+          ...localTransactions.uncertain,
+          ...localTransactions.failed,
+          ...localTransactions.skipped,
+        ].map((t) => ({ checksum: t.checksum, description: t.description }))}
+        onApproved={() => {
+          // TODO(#1647): Re-evaluate remaining transactions after approval.
+        }}
+      />
       <div>
         <h2 className="text-2xl font-semibold mb-2">Review</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
