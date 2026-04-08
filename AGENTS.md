@@ -10,7 +10,7 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 
 **Domains:** Finance (transactions, budgets, entities) | Media (movies, TV, watchlist, watch history, Plex/TMDB/TVDB integration) | Inventory (items, locations, warranties, insurance) | AI (usage tracking, model config, rules)
 
-Phase 0 (data import) is complete. Phase 1 (Foundation) is **in progress**.
+Phases 0 (infrastructure) and 1 (foundation) are complete. Phase 2 (core apps) is **in progress** — Finance, Media, Inventory, and AI Ops are largely shipped. See `docs/roadmap.md` for the full tracker.
 
 ## Commands
 
@@ -282,19 +282,22 @@ When a movie is added to the POPS library, automatically checks Plex Discover cl
 - **Chat:** Moltbot (Telegram)
 - **Backup:** Backblaze B2 via rclone (encrypted)
 
-## Import Tools
+## Import Pipeline
 
-Stubs in `tools/src/`. Original implementations in `~/Downloads/transactions/` need migration.
-Shared logic lives in `tools/src/lib/` — entity matcher, deduplicator, CSV parser, AI categorizer.
+Two interfaces: the **Import Wizard** (6-step UI in `app-finance`) and **CLI scripts** (`packages/import-tools/`).
 
-### Entity Matching Strategy (`tools/src/lib/entity-matcher.ts`)
-1. Manual aliases — hardcoded map of bank descriptions to entity names (per-bank)
-2. Exact match — case-insensitive against `entity_lookup.json`
-3. Prefix match — description starts with entity name (longest wins)
-4. Contains match — entity name found anywhere in description (min 4 chars, longest wins)
-5. Punctuation stripping — removes apostrophes for matching
+### Entity Matching Chain (`apps/pops-api/src/modules/finance/imports/`)
 
-Hit rate: ~95-100% with aliases. AI fallback handles the rest and caches results to `ai_entity_cache.json`.
+6-stage pipeline, highest priority first:
+1. **Learned corrections** — fuzzy match on normalized description against `v_active_corrections`
+2. **Manual aliases** — case-insensitive substring match from per-entity alias map
+3. **Exact match** — full description equals entity name
+4. **Prefix match** — description starts with entity name (longest wins)
+5. **Contains match** — entity name anywhere in description (min 4 chars, longest wins)
+6. **Punctuation stripping** — strip apostrophes, retry stages 2-5
+7. **AI fallback** — Claude Haiku API call, cached to disk + DB, rate-limited
+
+Hit rate: ~95-100% with aliases. AI fallback handles the rest. See `docs/themes/02-finance/prds/021-entity-matching-engine/` for the full PRD.
 
 ## Security Rules (Do Not Violate)
 
@@ -318,24 +321,17 @@ Hit rate: ~95-100% with aliases. AI fallback handles the rest and caches results
 
 ## Phases
 
-| Phase | Target | Status |
-|---|---|---|
-| 0 — Data Import | Feb 2026 | **Done** |
-| 1 — Foundation | Mar 2026 | **In Progress** |
-| 2 — Intelligence | Apr 2026 | Not Started |
-| 3 — Receipts & Inventory | May 2026 | Not Started |
-| 4 — Mobile | Jun 2026 | Not Started |
-| 5 — Polish | Jul+ 2026 | Not Started |
+| Phase | Status |
+|---|---|
+| 0 — Infrastructure | Done |
+| 1 — Foundation | Done |
+| 2 — Core Apps (Finance, Media, Inventory, AI Ops) | In progress |
+| 3 — AI Layer | Not started |
+| 4 — Expansion Apps | Not started |
+| 5 — Mobile & Hardware | Not started |
+| 6 — Long Tail | Not started |
 
-## Notion Project
-
-Full project documentation lives in Notion under **POPS - Personal Ops** (`30240f45-3d91-8017-b119-fe2ecd847f5f`). Key pages:
-- Architecture: `30240f45-3d91-81ba-aee5-e2cf0aa798c7`
-- Current State: `30240f45-3d91-81fa-9d75-e98050cc5e39`
-- Research & Decisions: `30240f45-3d91-8144-a9f8-cd9cb2f1ac0c`
-- Security Audit: `30240f45-3d91-81ea-a3ce-f38df117e7eb`
-- Phase 1 — Foundation: `30240f45-3d91-81e5-bfde-f14589113d62`
-- POPS Tracker (database): `a36c7a6b-be2f-4f94-8da5-c4c5ad9882b5`
+See `docs/roadmap.md` for the detailed implementation tracker.
 
 ## Development Workflow
 
