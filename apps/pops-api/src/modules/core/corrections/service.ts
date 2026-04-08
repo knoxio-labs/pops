@@ -22,21 +22,21 @@ import type {
   ChangeSetImpactCounts,
   ChangeSetImpactItem,
   CorrectionSignal,
+  ChangeSetImpactSummary,
 } from "./types.js";
-import { normalizeDescription, classifyCorrectionMatch, ChangeSetSchema } from "./types.js";
+import {
+  normalizeDescription,
+  classifyCorrectionMatch,
+  ChangeSetSchema,
+  ChangeSetImpactSummarySchema,
+} from "./types.js";
 
 interface RejectedChangeSetFeedbackRecord {
   createdAt: string;
   userEmail: string;
   feedback: string;
   changeSet: ChangeSet;
-  impactSummary: {
-    total: number;
-    newMatches: number;
-    removedMatches: number;
-    statusChanges: number;
-    netMatchedDelta: number;
-  } | null;
+  impactSummary: ChangeSetImpactSummary | null;
 }
 
 function feedbackKey(args: {
@@ -77,17 +77,14 @@ function loadLatestRejectedFeedback(args: {
     const changeSetResult = ChangeSetSchema.safeParse(changeSetUnknown);
     if (!changeSetResult.success) return null;
 
-    const impactSummary =
-      impactSummaryUnknown && typeof impactSummaryUnknown === "object"
-        ? (impactSummaryUnknown as RejectedChangeSetFeedbackRecord["impactSummary"])
-        : null;
+    const impactSummaryResult = ChangeSetImpactSummarySchema.safeParse(impactSummaryUnknown);
 
     return {
       createdAt,
       userEmail,
       feedback,
       changeSet: changeSetResult.data,
-      impactSummary,
+      impactSummary: impactSummaryResult.success ? impactSummaryResult.data : null,
     };
   } catch {
     return null;

@@ -12,6 +12,7 @@ import {
   FindCorrectionSchema,
   CorrectionSignalSchema,
   ChangeSetSchema,
+  ChangeSetImpactSummarySchema,
   toCorrection,
 } from "./types.js";
 import * as service from "./service.js";
@@ -311,15 +312,7 @@ export const correctionsRouter = router({
         signal: CorrectionSignalSchema,
         changeSet: ChangeSetSchema,
         feedback: z.string().min(1),
-        impactSummary: z
-          .object({
-            total: z.number().int().nonnegative(),
-            newMatches: z.number().int().nonnegative(),
-            removedMatches: z.number().int().nonnegative(),
-            statusChanges: z.number().int().nonnegative(),
-            netMatchedDelta: z.number().int(),
-          })
-          .optional(),
+        impactSummary: ChangeSetImpactSummarySchema.optional(),
       })
     )
     .mutation(({ input, ctx }) => {

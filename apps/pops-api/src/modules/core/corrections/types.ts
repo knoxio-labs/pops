@@ -163,6 +163,15 @@ export const ChangeSetSchema = z.object({
 });
 export type ChangeSet = z.infer<typeof ChangeSetSchema>;
 
+export const ChangeSetImpactSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  newMatches: z.number().int().nonnegative(),
+  removedMatches: z.number().int().nonnegative(),
+  statusChanges: z.number().int().nonnegative(),
+  netMatchedDelta: z.number().int(),
+});
+export type ChangeSetImpactSummary = z.infer<typeof ChangeSetImpactSummarySchema>;
+
 export interface CorrectionMatchSummary {
   matched: boolean;
   status: CorrectionMatchStatus | null;
