@@ -4,7 +4,7 @@
  */
 import { eq, gte, desc, count, sql, and } from "drizzle-orm";
 import { getDrizzle } from "../../../db.js";
-import { transactionCorrections, transactions } from "@pops/db-types";
+import { settings, transactionCorrections, transactions } from "@pops/db-types";
 import { NotFoundError } from "../../../shared/errors.js";
 import { parseJsonStringArray } from "../../../shared/json.js";
 import type {
@@ -21,8 +21,135 @@ import type {
   CorrectionClassificationOutcome,
   ChangeSetImpactCounts,
   ChangeSetImpactItem,
+  CorrectionSignal,
+  ChangeSetImpactSummary,
 } from "./types.js";
-import { normalizeDescription, classifyCorrectionMatch } from "./types.js";
+import {
+  normalizeDescription,
+  classifyCorrectionMatch,
+  ChangeSetSchema,
+  ChangeSetImpactSummarySchema,
+} from "./types.js";
+
+interface RejectedChangeSetFeedbackRecord {
+  createdAt: string;
+  userEmail: string;
+  feedback: string;
+  changeSet: ChangeSet;
+  impactSummary: ChangeSetImpactSummary | null;
+}
+
+function feedbackKey(args: {
+  matchType: "exact" | "contains" | "regex";
+  normalizedPattern: string;
+}): string {
+  return `corrections.changeSetRejections:${args.matchType}:${args.normalizedPattern}`;
+}
+
+function loadLatestRejectedFeedback(args: {
+  matchType: "exact" | "contains" | "regex";
+  normalizedPattern: string;
+}): RejectedChangeSetFeedbackRecord | null {
+  const row =
+    getDrizzle()
+      .select()
+      .from(settings)
+      .where(eq(settings.key, feedbackKey(args)))
+      .get() ?? null;
+  if (!row) return null;
+
+  try {
+    const parsedUnknown = JSON.parse(row.value) as unknown;
+    if (!parsedUnknown || typeof parsedUnknown !== "object") return null;
+
+    const parsed = parsedUnknown as Record<string, unknown>;
+
+    const createdAt = parsed["createdAt"];
+    const userEmail = parsed["userEmail"];
+    const feedback = parsed["feedback"];
+    const changeSetUnknown = parsed["changeSet"];
+    const impactSummaryUnknown = parsed["impactSummary"];
+
+    if (typeof createdAt !== "string") return null;
+    if (typeof userEmail !== "string") return null;
+    if (typeof feedback !== "string") return null;
+
+    const changeSetResult = ChangeSetSchema.safeParse(changeSetUnknown);
+    if (!changeSetResult.success) return null;
+
+    const impactSummaryResult = ChangeSetImpactSummarySchema.safeParse(impactSummaryUnknown);
+
+    return {
+      createdAt,
+      userEmail,
+      feedback,
+      changeSet: changeSetResult.data,
+      impactSummary: impactSummaryResult.success ? impactSummaryResult.data : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function persistRejectedChangeSetFeedback(args: {
+  signal: CorrectionSignal;
+  changeSet: ChangeSet;
+  feedback: string;
+  impactSummary: RejectedChangeSetFeedbackRecord["impactSummary"];
+  userEmail: string;
+}): void {
+  const db = getDrizzle();
+  const normalizedPattern = normalizeDescription(args.signal.descriptionPattern);
+
+  // Latest-wins storage (overwrites previous record for the same key).
+  const record: RejectedChangeSetFeedbackRecord = {
+    createdAt: new Date().toISOString(),
+    userEmail: args.userEmail,
+    feedback: args.feedback,
+    changeSet: args.changeSet,
+    impactSummary: args.impactSummary,
+  };
+
+  db.insert(settings)
+    .values({
+      key: feedbackKey({ matchType: args.signal.matchType, normalizedPattern }),
+      value: JSON.stringify(record),
+    })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value: JSON.stringify(record) },
+    })
+    .run();
+}
+
+function deriveFollowupSignal(args: {
+  signal: CorrectionSignal;
+  feedbackRecord: RejectedChangeSetFeedbackRecord;
+}): CorrectionSignal {
+  const feedbackLower = args.feedbackRecord.feedback.toLowerCase();
+
+  // Minimal heuristic adaptation: if feedback asks for a different match type, comply.
+  // This ensures follow-up proposals can meaningfully differ even before a richer engine exists.
+  if (feedbackLower.includes("exact") && args.signal.matchType !== "exact") {
+    return { ...args.signal, matchType: "exact" };
+  }
+  if (feedbackLower.includes("contains") && args.signal.matchType !== "contains") {
+    return { ...args.signal, matchType: "contains" };
+  }
+  if (feedbackLower.includes("regex") && args.signal.matchType !== "regex") {
+    return { ...args.signal, matchType: "regex" };
+  }
+
+  // Common broad/narrow nudge.
+  if (feedbackLower.includes("too broad") && args.signal.matchType === "contains") {
+    return { ...args.signal, matchType: "exact" };
+  }
+  if (feedbackLower.includes("too narrow") && args.signal.matchType === "exact") {
+    return { ...args.signal, matchType: "contains" };
+  }
+
+  return args.signal;
+}
 
 export function summarizeMatch(match: CorrectionMatchResult | null): CorrectionMatchSummary {
   if (!match) return { matched: false, status: null, ruleId: null, confidence: null };
@@ -300,22 +427,21 @@ function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCount
  * transfer-only outcomes (type-only diffs) as affected items.
  */
 export function proposeChangeSetFromCorrectionSignal(args: {
-  signal: {
-    descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
-    entityId?: string | null;
-    entityName?: string | null;
-    location?: string | null;
-    tags?: string[];
-    transactionType?: "purchase" | "transfer" | "income" | null;
-  };
+  signal: CorrectionSignal;
   minConfidence: number;
   maxPreviewItems: number;
 }): ChangeSetProposal {
   const db = getDrizzle();
 
   const normalizedPattern = normalizeDescription(args.signal.descriptionPattern);
-  const matchType = args.signal.matchType;
+  const latestFeedback = loadLatestRejectedFeedback({
+    matchType: args.signal.matchType,
+    normalizedPattern,
+  });
+  const effectiveSignal = latestFeedback
+    ? deriveFollowupSignal({ signal: args.signal, feedbackRecord: latestFeedback })
+    : args.signal;
+  const matchType = effectiveSignal.matchType;
 
   const existing = db
     .select()
@@ -330,36 +456,40 @@ export function proposeChangeSetFromCorrectionSignal(args: {
 
   const changeSet: ChangeSet = existing
     ? {
-        source: "correction-signal",
-        reason: "Update existing correction rule from user correction signal",
+        source: latestFeedback ? "correction-signal-followup" : "correction-signal",
+        reason: latestFeedback
+          ? `Follow-up proposal after rejection feedback: "${latestFeedback.feedback}"`
+          : "Update existing correction rule from user correction signal",
         ops: [
           {
             op: "edit",
             id: existing.id,
             data: {
-              entityId: args.signal.entityId,
-              entityName: args.signal.entityName,
-              location: args.signal.location,
-              tags: args.signal.tags,
-              transactionType: args.signal.transactionType,
+              entityId: effectiveSignal.entityId,
+              entityName: effectiveSignal.entityName,
+              location: effectiveSignal.location,
+              tags: effectiveSignal.tags,
+              transactionType: effectiveSignal.transactionType,
             },
           },
         ],
       }
     : {
-        source: "correction-signal",
-        reason: "Create new correction rule from user correction signal",
+        source: latestFeedback ? "correction-signal-followup" : "correction-signal",
+        reason: latestFeedback
+          ? `Follow-up proposal after rejection feedback: "${latestFeedback.feedback}"`
+          : "Create new correction rule from user correction signal",
         ops: [
           {
             op: "add",
             data: {
               descriptionPattern: normalizedPattern,
               matchType,
-              entityId: args.signal.entityId ?? null,
-              entityName: args.signal.entityName ?? null,
-              location: args.signal.location ?? null,
-              tags: args.signal.tags ?? [],
-              transactionType: args.signal.transactionType ?? null,
+              entityId: effectiveSignal.entityId ?? null,
+              entityName: effectiveSignal.entityName ?? null,
+              location: effectiveSignal.location ?? null,
+              tags: effectiveSignal.tags ?? [],
+              transactionType: effectiveSignal.transactionType ?? null,
               confidence: 0.95,
               isActive: true,
             },
@@ -442,9 +572,12 @@ export function proposeChangeSetFromCorrectionSignal(args: {
 
   const counts = computeImpactCounts(affected);
 
-  const rationale = existing
+  const baseRationale = existing
     ? `Edit correction rule ${existing.id} (${matchType}:${normalizedPattern}) based on correction signal`
     : `Add new correction rule (${matchType}:${normalizedPattern}) based on correction signal`;
+  const rationale = latestFeedback
+    ? `${baseRationale}. Follow-up after rejection feedback: "${latestFeedback.feedback}"`
+    : baseRationale;
 
   return {
     changeSet,

@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { setupTestContext, seedEntity, seedTransaction } from "../../../shared/test-utils.js";
 import { logger } from "../../../lib/logger.js";
+import * as service from "./service.js";
 
 const ctx = setupTestContext();
 
@@ -403,6 +404,11 @@ describe("corrections", () => {
       const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
       try {
         const result = await caller.core.corrections.rejectChangeSet({
+          signal: {
+            descriptionPattern: "WOOLWORTHS",
+            matchType: "contains",
+            tags: [],
+          },
           changeSet: {
             ops: [
               {
@@ -446,6 +452,11 @@ describe("corrections", () => {
     it("rejects empty feedback", async () => {
       await expect(
         caller.core.corrections.rejectChangeSet({
+          signal: {
+            descriptionPattern: "WOOLWORTHS",
+            matchType: "contains",
+            tags: [],
+          },
           changeSet: {
             ops: [
               {
@@ -462,6 +473,46 @@ describe("corrections", () => {
           feedback: "",
         })
       ).rejects.toThrow();
+    });
+
+    it("still returns success when persistence fails", async () => {
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      const persistSpy = vi
+        .spyOn(service, "persistRejectedChangeSetFeedback")
+        .mockImplementation(() => {
+          throw new Error("db down");
+        });
+
+      try {
+        const result = await caller.core.corrections.rejectChangeSet({
+          signal: { descriptionPattern: "WOOLWORTHS", matchType: "contains", tags: [] },
+          changeSet: {
+            ops: [
+              {
+                op: "add",
+                data: {
+                  descriptionPattern: "WOOLWORTHS",
+                  matchType: "contains",
+                  tags: [],
+                  confidence: 0.95,
+                },
+              },
+            ],
+          },
+          feedback: "any feedback",
+        });
+
+        expect(result.message).toBe("ChangeSet rejected");
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: "corrections.proposal.reject.persistence_failed",
+            err: expect.anything(),
+          })
+        );
+      } finally {
+        persistSpy.mockRestore();
+        errorSpy.mockRestore();
+      }
     });
   });
 
@@ -556,6 +607,103 @@ describe("corrections", () => {
       });
 
       expect(result.preview.affected.some((a) => a.transactionId === id)).toBe(true);
+    });
+
+    it("incorporates rejection feedback into follow-up proposals", async () => {
+      await caller.core.corrections.rejectChangeSet({
+        signal: { descriptionPattern: "WOOLWORTHS", matchType: "contains", tags: [] },
+        changeSet: {
+          source: "correction-signal",
+          reason: "Initial proposal",
+          ops: [
+            {
+              op: "add",
+              data: { descriptionPattern: "WOOLWORTHS", matchType: "contains", tags: [] },
+            },
+          ],
+        },
+        feedback: "Too broad, should be exact match",
+        impactSummary: {
+          total: 10,
+          newMatches: 10,
+          removedMatches: 0,
+          statusChanges: 0,
+          netMatchedDelta: 10,
+        },
+      });
+
+      const result = await caller.core.corrections.proposeChangeSet({
+        signal: { descriptionPattern: "WOOLWORTHS", matchType: "contains", tags: [] },
+        minConfidence: 0,
+        maxPreviewItems: 10,
+      });
+
+      expect(result.changeSet.source).toBe("correction-signal-followup");
+      expect(result.rationale).toContain("Follow-up");
+      expect(result.rationale).toContain("Too broad, should be exact match");
+      expect(result.changeSet.reason).toContain("Too broad, should be exact match");
+      // Heuristic adaptation: feedback requested exact match.
+      expect(result.changeSet.ops[0]?.op).toBe("add");
+      if (!result.changeSet.ops[0] || result.changeSet.ops[0].op !== "add")
+        throw new Error("Expected add op");
+      expect(result.changeSet.ops[0].data.matchType).toBe("exact");
+    });
+
+    it("overwrites rejection feedback for the same signal (latest wins)", async () => {
+      await caller.core.corrections.rejectChangeSet({
+        signal: { descriptionPattern: "FOO", matchType: "contains", tags: [] },
+        changeSet: {
+          source: "correction-signal",
+          reason: "Initial proposal",
+          ops: [
+            { op: "add", data: { descriptionPattern: "FOO", matchType: "contains", tags: [] } },
+          ],
+        },
+        feedback: "first",
+      });
+
+      await caller.core.corrections.rejectChangeSet({
+        signal: { descriptionPattern: "FOO", matchType: "contains", tags: [] },
+        changeSet: {
+          source: "correction-signal",
+          reason: "Initial proposal",
+          ops: [
+            { op: "add", data: { descriptionPattern: "FOO", matchType: "contains", tags: [] } },
+          ],
+        },
+        feedback: "second",
+      });
+
+      const result = await caller.core.corrections.proposeChangeSet({
+        signal: { descriptionPattern: "FOO", matchType: "contains", tags: [] },
+        minConfidence: 0,
+        maxPreviewItems: 10,
+      });
+
+      expect(result.rationale).toContain("second");
+      expect(result.rationale).not.toContain("first");
+    });
+
+    it("isolates rejection feedback across different signals", async () => {
+      await caller.core.corrections.rejectChangeSet({
+        signal: { descriptionPattern: "ALPHA", matchType: "contains", tags: [] },
+        changeSet: {
+          source: "correction-signal",
+          reason: "Initial proposal",
+          ops: [
+            { op: "add", data: { descriptionPattern: "ALPHA", matchType: "contains", tags: [] } },
+          ],
+        },
+        feedback: "alpha feedback",
+      });
+
+      const beta = await caller.core.corrections.proposeChangeSet({
+        signal: { descriptionPattern: "BETA", matchType: "contains", tags: [] },
+        minConfidence: 0,
+        maxPreviewItems: 10,
+      });
+
+      expect(beta.rationale).not.toContain("alpha feedback");
     });
   });
 

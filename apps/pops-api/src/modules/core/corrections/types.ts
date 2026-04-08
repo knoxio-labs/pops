@@ -89,6 +89,21 @@ export const CreateCorrectionSchema = z.object({
 export type CreateCorrectionInput = z.infer<typeof CreateCorrectionSchema>;
 
 /**
+ * Correction signal: the user's intended rule definition (pattern + attributes).
+ * Used for proposal generation and rejection feedback association.
+ */
+export const CorrectionSignalSchema = z.object({
+  descriptionPattern: z.string().min(1),
+  matchType: z.enum(["exact", "contains", "regex"]),
+  entityId: z.string().nullable().optional(),
+  entityName: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
+});
+export type CorrectionSignal = z.infer<typeof CorrectionSignalSchema>;
+
+/**
  * Zod schema for updating a correction
  */
 export const UpdateCorrectionSchema = z.object({
@@ -147,6 +162,15 @@ export const ChangeSetSchema = z.object({
   ops: z.array(ChangeSetOpSchema).min(1),
 });
 export type ChangeSet = z.infer<typeof ChangeSetSchema>;
+
+export const ChangeSetImpactSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  newMatches: z.number().int().nonnegative(),
+  removedMatches: z.number().int().nonnegative(),
+  statusChanges: z.number().int().nonnegative(),
+  netMatchedDelta: z.number().int(),
+});
+export type ChangeSetImpactSummary = z.infer<typeof ChangeSetImpactSummarySchema>;
 
 export interface CorrectionMatchSummary {
   matched: boolean;
