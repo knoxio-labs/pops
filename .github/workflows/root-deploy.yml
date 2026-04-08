@@ -150,15 +150,14 @@ jobs:
         env:
           BUILD_VERSION: ${{ github.run_number }}
 
-  # Deploy to N95 server
+  # Deploy to server
   deploy:
-    name: Deploy to N95
+    name: Deploy
     runs-on: self-hosted
     needs: [changes, lint, typecheck, test, build]
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     environment:
       name: production
-      url: https://pops.jmiranda.dev
     env:
       BUILD_VERSION: ${{ github.run_number }}
 

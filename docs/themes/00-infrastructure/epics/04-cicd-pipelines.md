@@ -4,7 +4,7 @@
 
 ## Scope
 
-GitHub Actions workflows for quality gates (typecheck, lint, test, build) and automated deployment. Merges to main auto-deploy to the N95 via a self-hosted runner. Smart deploy detects what changed and only rebuilds/restarts affected services.
+GitHub Actions workflows for quality gates (typecheck, lint, test, build) and automated deployment. Merges to main auto-deploy to the server via a self-hosted runner. Smart deploy detects what changed and only rebuilds/restarts affected services.
 
 ## PRDs
 

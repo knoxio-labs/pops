@@ -20,7 +20,7 @@ Set up a self-hosted production environment on dedicated hardware with zero-trus
 
 | # | Epic | Summary | Status |
 |---|------|---------|--------|
-| 0 | [Hardware & OS](epics/00-hardware-os.md) | N95 provisioning, OS hardening, SSH, firewall | Done |
+| 0 | [Hardware & OS](epics/00-hardware-os.md) | Server provisioning, OS hardening, SSH, firewall | Done |
 | 1 | [Docker Runtime](epics/01-docker-runtime.md) | Docker Compose, multi-network architecture, health checks, volumes | Done |
 | 2 | [Networking & Access](epics/02-networking-access.md) | Cloudflare Tunnel ingress, Cloudflare Access zero-trust auth | Done |
 | 3 | [Secrets Management](epics/03-secrets-management.md) | Ansible Vault for provisioning, Docker secrets for runtime | Done |

@@ -1,13 +1,13 @@
 ---
 # Non-secret configuration for POPS servers
 
-domain: jmiranda.dev
+domain: example.com  # Override via POPS_DOMAIN in .env
 timezone: Australia/Melbourne
 
 # Service user (created by bootstrap playbook)
 pops_user: pops
 
-# Paths on the N95
+# Paths on the server
 docker_compose_dir: /opt/pops
 sqlite_data_dir: /opt/pops/data/sqlite
 paperless_data_dir: /opt/pops/data/paperless

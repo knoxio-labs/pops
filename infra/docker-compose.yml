@@ -86,7 +86,7 @@ services:
     environment:
       PAPERLESS_SECRET_KEY_FILE: /run/secrets/paperless_secret_key
       PAPERLESS_REDIS: redis://paperless-redis:6379
-      PAPERLESS_URL: https://pops-paperless.jmiranda.dev
+      PAPERLESS_URL: https://pops-paperless.${POPS_DOMAIN:-localhost}
       PAPERLESS_TIME_ZONE: Australia/Melbourne
       PAPERLESS_OCR_LANGUAGE: eng
       PAPERLESS_ADMIN_USER: admin

@@ -226,7 +226,7 @@ run = "docker compose -f infra/docker-compose.yml --profile tools run --rm tools
 # ============================================================================
 
 [tasks."ansible:provision"]
-description = "Provision fresh N95 (full run)"
+description = "Provision fresh server (full run)"
 dir = "infra/ansible"
 run = "ansible-playbook playbooks/site.yml"
 

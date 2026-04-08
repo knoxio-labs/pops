@@ -4,11 +4,26 @@ set -e
 # POPS Deployment Script
 # Usage: ./deploy.sh [options]
 #
-# Simple one-command deployment to N95 server.
-# Runs Ansible playbook to deploy latest code.
+# One-command deployment to the POPS server.
+# Reads server config from .env (POPS_HOST, POPS_SSH_KEY, etc.)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# Load .env if it exists (for POPS_HOST, POPS_SSH_KEY, etc.)
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
+
+# Server configuration (from .env or defaults)
+POPS_SSH_KEY="${POPS_SSH_KEY:-~/.ssh/pops}"
+POPS_HOST="${POPS_HOST:-pops.local}"
+POPS_SSH_PORT="${POPS_SSH_PORT:-2222}"
+POPS_SSH_USER="${POPS_SSH_USER:-pops}"
+POPS_DOMAIN="${POPS_DOMAIN:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -56,6 +71,13 @@ while [[ $# -gt 0 ]]; do
             echo "  ./deploy.sh                 # Deploy to production"
             echo "  ./deploy.sh --dry-run       # Preview changes"
             echo "  ./deploy.sh -v              # Deploy with verbose output"
+            echo ""
+            echo "Server config (from .env):"
+            echo "  POPS_HOST=$POPS_HOST"
+            echo "  POPS_SSH_KEY=$POPS_SSH_KEY"
+            echo "  POPS_SSH_PORT=$POPS_SSH_PORT"
+            echo "  POPS_SSH_USER=$POPS_SSH_USER"
+            echo "  POPS_DOMAIN=$POPS_DOMAIN"
             exit 0
             ;;
         *)
@@ -69,6 +91,9 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo -e "${BLUE}POPS Deployment${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
+
+# Expand tilde in SSH key path
+POPS_SSH_KEY="${POPS_SSH_KEY/#\~/$HOME}"
 
 # Check prerequisites
 echo -e "${YELLOW}Checking prerequisites...${NC}"
@@ -87,20 +112,20 @@ if [ ! -f ~/.ansible/pops-vault-password ]; then
 fi
 echo -e "${GREEN}✓ Vault password configured${NC}"
 
-if [ ! -f ~/.ssh/pops_n95 ]; then
+if [ ! -f "$POPS_SSH_KEY" ]; then
     echo -e "${RED}✗ SSH key not found${NC}"
-    echo "Expected: ~/.ssh/pops_n95"
+    echo "Expected: $POPS_SSH_KEY (set POPS_SSH_KEY in .env)"
     exit 1
 fi
 echo -e "${GREEN}✓ SSH key found${NC}"
 
 # Test SSH connection
 echo -e "${YELLOW}Testing SSH connection...${NC}"
-if ssh -p 2222 -i ~/.ssh/pops_n95 -o ConnectTimeout=5 pops@pops.local "echo 'SSH OK'" > /dev/null 2>&1; then
+if ssh -p "$POPS_SSH_PORT" -i "$POPS_SSH_KEY" -o ConnectTimeout=5 "${POPS_SSH_USER}@${POPS_HOST}" "echo 'SSH OK'" > /dev/null 2>&1; then
     echo -e "${GREEN}✓ SSH connection successful${NC}"
 else
-    echo -e "${RED}✗ Cannot connect to N95${NC}"
-    echo "Check that N95 is reachable at pops.local:2222"
+    echo -e "${RED}✗ Cannot connect to server${NC}"
+    echo "Check that ${POPS_HOST}:${POPS_SSH_PORT} is reachable"
     exit 1
 fi
 
@@ -180,7 +205,7 @@ echo ""
 
 # Show deployment info
 echo -e "${BLUE}Deployment details:${NC}"
-echo "  Target: pops.local (N95 server)"
+echo "  Target: ${POPS_HOST}"
 echo "  Branch: $(git branch --show-current)"
 echo "  Commit: $(git rev-parse --short HEAD)"
 echo "  Version: $NEXT_VERSION"
@@ -203,6 +228,14 @@ echo -e "${YELLOW}Running Ansible deployment...${NC}"
 echo ""
 
 ANSIBLE_ARGS="-i inventory/hosts.yml --vault-password-file ~/.ansible/pops-vault-password"
+ANSIBLE_ARGS="$ANSIBLE_ARGS -e ansible_ssh_private_key_file=$POPS_SSH_KEY"
+ANSIBLE_ARGS="$ANSIBLE_ARGS -e ansible_host=$POPS_HOST"
+ANSIBLE_ARGS="$ANSIBLE_ARGS -e ansible_port=$POPS_SSH_PORT"
+ANSIBLE_ARGS="$ANSIBLE_ARGS -e ansible_user=$POPS_SSH_USER"
+
+if [ -n "$POPS_DOMAIN" ]; then
+    ANSIBLE_ARGS="$ANSIBLE_ARGS -e domain=$POPS_DOMAIN"
+fi
 
 if [ "$DRY_RUN" = true ]; then
     ANSIBLE_ARGS="$ANSIBLE_ARGS --check"
@@ -230,7 +263,7 @@ Deployed services:
 - pops-shell: $(cd apps/pops-shell && git log -1 --pretty=format:'%h %s')
 
 Deployed at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-Deployed to: pops.local (N95)"
+Deployed to: ${POPS_HOST}"
 
         git tag -a "$NEXT_VERSION" -m "$COMMIT_MSG"
         echo -e "${GREEN}✓ Created tag $NEXT_VERSION${NC}"
@@ -244,17 +277,18 @@ Deployed to: pops.local (N95)"
 
         echo ""
         echo "Services deployed:"
-        echo "  • Finance API:    http://localhost:3000"
-        echo "  • Shell:          https://pops.jmiranda.dev"
-        echo "  • Metabase:       http://localhost:3001"
+        echo "  • API:       http://localhost:3000"
+        if [ -n "$POPS_DOMAIN" ]; then
+            echo "  • Shell:     https://pops.${POPS_DOMAIN}"
+        fi
         echo ""
         echo "Version: $NEXT_VERSION"
         echo ""
         echo "Check status:"
-        echo "  ssh -p 2222 pops@pops.local 'cd /opt/pops && docker compose ps'"
+        echo "  ssh -p ${POPS_SSH_PORT} ${POPS_SSH_USER}@${POPS_HOST} 'cd /opt/pops && docker compose ps'"
         echo ""
         echo "View logs:"
-        echo "  ssh -p 2222 pops@pops.local 'cd /opt/pops && docker compose logs -f'"
+        echo "  ssh -p ${POPS_SSH_PORT} ${POPS_SSH_USER}@${POPS_HOST} 'cd /opt/pops && docker compose logs -f'"
     fi
 else
     echo ""
@@ -265,6 +299,6 @@ else
     echo "Check Ansible output above for errors"
     echo ""
     echo "View server logs:"
-    echo "  ssh -p 2222 pops@pops.local 'cd /opt/pops && docker compose logs --tail=50'"
+    echo "  ssh -p ${POPS_SSH_PORT} ${POPS_SSH_USER}@${POPS_HOST} 'cd /opt/pops && docker compose logs --tail=50'"
     exit 1
 fi

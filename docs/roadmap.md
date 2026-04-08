@@ -34,7 +34,7 @@ Live status of every theme and epic. Updated as work completes.
 
 | Epic                            | Status | Notes                               |
 | ------------------------------- | ------ | ----------------------------------- |
-| N95 provisioning & OS hardening | Done   | Ansible playbook, SSH, firewall     |
+| Server provisioning & OS hardening | Done   | Ansible playbook, SSH, firewall     |
 | Docker Compose & networking     | Done   | 3 networks, 7+ services             |
 | Cloudflare Tunnel + Access      | Done   | Zero-trust, no port forwarding      |
 | CI/CD workflows                 | Done   | 8 GitHub Actions workflows          |
@@ -152,7 +152,7 @@ Live status of every theme and epic. Updated as work completes.
 
 > Provision the hardware and deployment pipeline that runs everything.
 
-- **N95 Mini PC** — Provision, harden, Docker runtime
+- **Server** — Provision, harden, Docker runtime
 - **Networking** — Cloudflare Tunnel, zero-trust access, Docker networks
 - **CI/CD** — GitHub Actions, automated quality gates, deployment workflows
 - **Secrets** — Ansible Vault, Docker secrets, environment management
