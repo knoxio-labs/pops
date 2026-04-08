@@ -20,7 +20,8 @@ export function resolvePosterUrl(row: {
 }): string | null {
   if (row.mediaType === "movie") {
     if (row.moviePosterOverride) return row.moviePosterOverride;
-    if (row.moviePosterPath && row.movieTmdbId) return `/media/images/movie/${row.movieTmdbId}/poster.jpg`;
+    if (row.moviePosterPath && row.movieTmdbId)
+      return `/media/images/movie/${row.movieTmdbId}/poster.jpg`;
     return null;
   }
   if (row.tvPosterOverride) return row.tvPosterOverride;
@@ -206,4 +207,3 @@ export function getRankings(
     total: countResult.total,
   };
 }
-

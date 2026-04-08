@@ -353,4 +353,3 @@ export function getSmartPair(dimensionId?: number): SmartPairResult | null {
 
   return { ...buildRandomPairResult(selected.movieA, selected.movieB), dimensionId: selectedDimId };
 }
-

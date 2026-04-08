@@ -261,16 +261,25 @@ async function processImportCore(args: {
 }> {
   const { transactions, account, importBatchId, onProgress } = args;
 
-  logger.info({ importBatchId, account, totalCount: transactions.length }, "[Import] Starting processImport");
+  logger.info(
+    { importBatchId, account, totalCount: transactions.length },
+    "[Import] Starting processImport"
+  );
 
   // Step 1: Checksum-based deduplication against SQLite
   onProgress?.({ currentStep: "deduplicating", processedCount: 0 });
-  logger.info({ checksumCount: transactions.length }, "[Import] Querying SQLite for existing checksums");
+  logger.info(
+    { checksumCount: transactions.length },
+    "[Import] Querying SQLite for existing checksums"
+  );
   const checksums = transactions.map((t) => t.checksum);
   const existingChecksums = findExistingChecksums(checksums);
 
   logger.info(
-    { duplicateCount: existingChecksums.size, newCount: transactions.length - existingChecksums.size },
+    {
+      duplicateCount: existingChecksums.size,
+      newCount: transactions.length - existingChecksums.size,
+    },
     "[Import] Deduplication complete"
   );
 
@@ -375,7 +384,13 @@ async function processImportCore(args: {
             matchType: match.matchType,
           },
           status: "matched",
-          suggestedTags: buildSuggestedTags(transaction.description, entityEntry.id, [], null, knownTags),
+          suggestedTags: buildSuggestedTags(
+            transaction.description,
+            entityEntry.id,
+            [],
+            null,
+            knownTags
+          ),
         });
 
         batchItem.status = "success";
@@ -435,7 +450,13 @@ async function processImportCore(args: {
                 confidence: 0.7,
               },
               status: "uncertain",
-              suggestedTags: buildSuggestedTags(transaction.description, null, [], aiResult.category, knownTags),
+              suggestedTags: buildSuggestedTags(
+                transaction.description,
+                null,
+                [],
+                aiResult.category,
+                knownTags
+              ),
             });
 
             batchItem.status = "success";
@@ -469,7 +490,8 @@ async function processImportCore(args: {
         errors.push({
           description: transaction.description.substring(0, 50),
           error:
-            formattedError.message + (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
+            formattedError.message +
+            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
         });
       }
     } finally {
@@ -637,7 +659,8 @@ function executeImportCore(args: {
         errors.push({
           description: transaction.description.substring(0, 50),
           error:
-            formattedError.message + (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
+            formattedError.message +
+            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
         });
       }
     } finally {
@@ -700,7 +723,11 @@ export async function processImportWithProgress(
       "[Import] Starting background processImport"
     );
 
-    const { output: result, errors, processedNewCount } = await processImportCore({
+    const {
+      output: result,
+      errors,
+      processedNewCount,
+    } = await processImportCore({
       transactions,
       account,
       importBatchId,
@@ -770,13 +797,22 @@ export function executeImportWithProgress(
       currentBatch: [],
       errors: [],
     });
-    const { output: result, errors, processedCount } = executeImportCore({
+    const {
+      output: result,
+      errors,
+      processedCount,
+    } = executeImportCore({
       transactions,
       onProgress: (update) => updateProgress(sessionId, update),
     });
 
     logger.info(
-      { sessionId, imported: result.imported, failedCount: result.failed.length, skipped: result.skipped },
+      {
+        sessionId,
+        imported: result.imported,
+        failedCount: result.failed.length,
+        skipped: result.skipped,
+      },
       "[Import] Background executeImport complete"
     );
 

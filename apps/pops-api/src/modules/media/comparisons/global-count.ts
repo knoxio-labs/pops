@@ -7,4 +7,3 @@ export function getGlobalComparisonCount(): number {
     | undefined;
   return row?.cnt ?? 0;
 }
-

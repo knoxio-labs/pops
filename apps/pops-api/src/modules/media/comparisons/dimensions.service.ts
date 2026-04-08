@@ -36,7 +36,11 @@ export function seedDefaultDimensions(): boolean {
 
 export function listDimensions(): ComparisonDimensionRow[] {
   const db = getDrizzle();
-  const rows = db.select().from(comparisonDimensions).orderBy(asc(comparisonDimensions.sortOrder)).all();
+  const rows = db
+    .select()
+    .from(comparisonDimensions)
+    .orderBy(asc(comparisonDimensions.sortOrder))
+    .all();
   if (rows.length === 0) {
     seedDefaultDimensions();
     return db
@@ -98,4 +102,3 @@ export function updateDimension(id: number, input: UpdateDimensionInput): Compar
 
   return getDimension(id);
 }
-

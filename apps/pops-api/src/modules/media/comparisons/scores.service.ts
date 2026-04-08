@@ -22,4 +22,3 @@ export function getScoresForMedia(
     .orderBy(desc(mediaScores.score))
     .all();
 }
-
