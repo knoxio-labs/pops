@@ -89,6 +89,21 @@ export const CreateCorrectionSchema = z.object({
 export type CreateCorrectionInput = z.infer<typeof CreateCorrectionSchema>;
 
 /**
+ * Correction signal: the user's intended rule definition (pattern + attributes).
+ * Used for proposal generation and rejection feedback association.
+ */
+export const CorrectionSignalSchema = z.object({
+  descriptionPattern: z.string().min(1),
+  matchType: z.enum(["exact", "contains", "regex"]),
+  entityId: z.string().nullable().optional(),
+  entityName: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
+});
+export type CorrectionSignal = z.infer<typeof CorrectionSignalSchema>;
+
+/**
  * Zod schema for updating a correction
  */
 export const UpdateCorrectionSchema = z.object({

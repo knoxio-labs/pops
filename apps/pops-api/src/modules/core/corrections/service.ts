@@ -21,8 +21,9 @@ import type {
   CorrectionClassificationOutcome,
   ChangeSetImpactCounts,
   ChangeSetImpactItem,
+  CorrectionSignal,
 } from "./types.js";
-import { normalizeDescription, classifyCorrectionMatch } from "./types.js";
+import { normalizeDescription, classifyCorrectionMatch, ChangeSetSchema } from "./types.js";
 
 interface RejectedChangeSetFeedbackRecord {
   createdAt: string;
@@ -58,26 +59,35 @@ function loadLatestRejectedFeedback(args: {
   if (!row) return null;
 
   try {
-    const parsed = JSON.parse(row.value) as unknown;
-    if (!parsed || typeof parsed !== "object") return null;
+    const parsedUnknown = JSON.parse(row.value) as unknown;
+    if (!parsedUnknown || typeof parsedUnknown !== "object") return null;
 
-    const createdAt = (parsed as Record<string, unknown>)["createdAt"];
-    const userEmail = (parsed as Record<string, unknown>)["userEmail"];
-    const feedback = (parsed as Record<string, unknown>)["feedback"];
-    const changeSet = (parsed as Record<string, unknown>)["changeSet"];
-    const impactSummary = (parsed as Record<string, unknown>)["impactSummary"];
+    const parsed = parsedUnknown as Record<string, unknown>;
+
+    const createdAt = parsed["createdAt"];
+    const userEmail = parsed["userEmail"];
+    const feedback = parsed["feedback"];
+    const changeSetUnknown = parsed["changeSet"];
+    const impactSummaryUnknown = parsed["impactSummary"];
 
     if (typeof createdAt !== "string") return null;
     if (typeof userEmail !== "string") return null;
     if (typeof feedback !== "string") return null;
-    if (!changeSet || typeof changeSet !== "object") return null;
+
+    const changeSetResult = ChangeSetSchema.safeParse(changeSetUnknown);
+    if (!changeSetResult.success) return null;
+
+    const impactSummary =
+      impactSummaryUnknown && typeof impactSummaryUnknown === "object"
+        ? (impactSummaryUnknown as RejectedChangeSetFeedbackRecord["impactSummary"])
+        : null;
 
     return {
       createdAt,
       userEmail,
       feedback,
-      changeSet: changeSet as ChangeSet,
-      impactSummary: (impactSummary as RejectedChangeSetFeedbackRecord["impactSummary"]) ?? null,
+      changeSet: changeSetResult.data,
+      impactSummary,
     };
   } catch {
     return null;
@@ -85,15 +95,7 @@ function loadLatestRejectedFeedback(args: {
 }
 
 export function persistRejectedChangeSetFeedback(args: {
-  signal: {
-    descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
-    entityId?: string | null;
-    entityName?: string | null;
-    location?: string | null;
-    tags?: string[];
-    transactionType?: "purchase" | "transfer" | "income" | null;
-  };
+  signal: CorrectionSignal;
   changeSet: ChangeSet;
   feedback: string;
   impactSummary: RejectedChangeSetFeedbackRecord["impactSummary"];
@@ -102,6 +104,7 @@ export function persistRejectedChangeSetFeedback(args: {
   const db = getDrizzle();
   const normalizedPattern = normalizeDescription(args.signal.descriptionPattern);
 
+  // Latest-wins storage (overwrites previous record for the same key).
   const record: RejectedChangeSetFeedbackRecord = {
     createdAt: new Date().toISOString(),
     userEmail: args.userEmail,
@@ -120,6 +123,35 @@ export function persistRejectedChangeSetFeedback(args: {
       set: { value: JSON.stringify(record) },
     })
     .run();
+}
+
+function deriveFollowupSignal(args: {
+  signal: CorrectionSignal;
+  feedbackRecord: RejectedChangeSetFeedbackRecord;
+}): CorrectionSignal {
+  const feedbackLower = args.feedbackRecord.feedback.toLowerCase();
+
+  // Minimal heuristic adaptation: if feedback asks for a different match type, comply.
+  // This ensures follow-up proposals can meaningfully differ even before a richer engine exists.
+  if (feedbackLower.includes("exact") && args.signal.matchType !== "exact") {
+    return { ...args.signal, matchType: "exact" };
+  }
+  if (feedbackLower.includes("contains") && args.signal.matchType !== "contains") {
+    return { ...args.signal, matchType: "contains" };
+  }
+  if (feedbackLower.includes("regex") && args.signal.matchType !== "regex") {
+    return { ...args.signal, matchType: "regex" };
+  }
+
+  // Common broad/narrow nudge.
+  if (feedbackLower.includes("too broad") && args.signal.matchType === "contains") {
+    return { ...args.signal, matchType: "exact" };
+  }
+  if (feedbackLower.includes("too narrow") && args.signal.matchType === "exact") {
+    return { ...args.signal, matchType: "contains" };
+  }
+
+  return args.signal;
 }
 
 export function summarizeMatch(match: CorrectionMatchResult | null): CorrectionMatchSummary {
@@ -398,24 +430,21 @@ function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCount
  * transfer-only outcomes (type-only diffs) as affected items.
  */
 export function proposeChangeSetFromCorrectionSignal(args: {
-  signal: {
-    descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
-    entityId?: string | null;
-    entityName?: string | null;
-    location?: string | null;
-    tags?: string[];
-    transactionType?: "purchase" | "transfer" | "income" | null;
-  };
+  signal: CorrectionSignal;
   minConfidence: number;
   maxPreviewItems: number;
 }): ChangeSetProposal {
   const db = getDrizzle();
 
   const normalizedPattern = normalizeDescription(args.signal.descriptionPattern);
-  const matchType = args.signal.matchType;
-
-  const latestFeedback = loadLatestRejectedFeedback({ matchType, normalizedPattern });
+  const latestFeedback = loadLatestRejectedFeedback({
+    matchType: args.signal.matchType,
+    normalizedPattern,
+  });
+  const effectiveSignal = latestFeedback
+    ? deriveFollowupSignal({ signal: args.signal, feedbackRecord: latestFeedback })
+    : args.signal;
+  const matchType = effectiveSignal.matchType;
 
   const existing = db
     .select()
@@ -439,11 +468,11 @@ export function proposeChangeSetFromCorrectionSignal(args: {
             op: "edit",
             id: existing.id,
             data: {
-              entityId: args.signal.entityId,
-              entityName: args.signal.entityName,
-              location: args.signal.location,
-              tags: args.signal.tags,
-              transactionType: args.signal.transactionType,
+              entityId: effectiveSignal.entityId,
+              entityName: effectiveSignal.entityName,
+              location: effectiveSignal.location,
+              tags: effectiveSignal.tags,
+              transactionType: effectiveSignal.transactionType,
             },
           },
         ],
@@ -459,11 +488,11 @@ export function proposeChangeSetFromCorrectionSignal(args: {
             data: {
               descriptionPattern: normalizedPattern,
               matchType,
-              entityId: args.signal.entityId ?? null,
-              entityName: args.signal.entityName ?? null,
-              location: args.signal.location ?? null,
-              tags: args.signal.tags ?? [],
-              transactionType: args.signal.transactionType ?? null,
+              entityId: effectiveSignal.entityId ?? null,
+              entityName: effectiveSignal.entityName ?? null,
+              location: effectiveSignal.location ?? null,
+              tags: effectiveSignal.tags ?? [],
+              transactionType: effectiveSignal.transactionType ?? null,
               confidence: 0.95,
               isActive: true,
             },

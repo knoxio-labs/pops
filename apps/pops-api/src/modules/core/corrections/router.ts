@@ -10,6 +10,7 @@ import {
   CreateCorrectionSchema,
   UpdateCorrectionSchema,
   FindCorrectionSchema,
+  CorrectionSignalSchema,
   ChangeSetSchema,
   toCorrection,
 } from "./types.js";
@@ -280,15 +281,7 @@ export const correctionsRouter = router({
   proposeChangeSet: protectedProcedure
     .input(
       z.object({
-        signal: z.object({
-          descriptionPattern: z.string().min(1),
-          matchType: z.enum(["exact", "contains", "regex"]),
-          entityId: z.string().nullable().optional(),
-          entityName: z.string().nullable().optional(),
-          location: z.string().nullable().optional(),
-          tags: z.array(z.string()).optional(),
-          transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
-        }),
+        signal: CorrectionSignalSchema,
         minConfidence: z.number().min(0).max(1).default(0.7),
         maxPreviewItems: z.coerce.number().int().positive().max(500).default(200),
       })
@@ -315,15 +308,7 @@ export const correctionsRouter = router({
   rejectChangeSet: protectedProcedure
     .input(
       z.object({
-        signal: z.object({
-          descriptionPattern: z.string().min(1),
-          matchType: z.enum(["exact", "contains", "regex"]),
-          entityId: z.string().nullable().optional(),
-          entityName: z.string().nullable().optional(),
-          location: z.string().nullable().optional(),
-          tags: z.array(z.string()).optional(),
-          transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
-        }),
+        signal: CorrectionSignalSchema,
         changeSet: ChangeSetSchema,
         feedback: z.string().min(1),
         impactSummary: z
@@ -338,13 +323,23 @@ export const correctionsRouter = router({
       })
     )
     .mutation(({ input, ctx }) => {
-      service.persistRejectedChangeSetFeedback({
-        signal: input.signal,
-        changeSet: input.changeSet,
-        feedback: input.feedback,
-        impactSummary: input.impactSummary ?? null,
-        userEmail: ctx.user.email,
-      });
+      try {
+        service.persistRejectedChangeSetFeedback({
+          signal: input.signal,
+          changeSet: input.changeSet,
+          feedback: input.feedback,
+          impactSummary: input.impactSummary ?? null,
+          userEmail: ctx.user.email,
+        });
+      } catch (err) {
+        logger.error({
+          event: "corrections.proposal.reject.persistence_failed",
+          userEmail: ctx.user.email,
+          opCount: input.changeSet.ops.length,
+          ops: input.changeSet.ops,
+          err,
+        });
+      }
       logger.info({
         event: "corrections.proposal.reject",
         userEmail: ctx.user.email,
