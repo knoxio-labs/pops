@@ -425,7 +425,7 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
 });
 
 describe("ReviewStep — low-confidence confirmation flow", () => {
-  it("shows confirmation toast for low-confidence suggestion instead of auto-saving", () => {
+  it("shows confirmation toast for low-confidence suggestion instead of auto-saving", async () => {
     const tx = makeTx("SPOTIFY PREMIUM", {
       entity: { entityId: "ent-3", entityName: "Spotify", matchType: "ai", confidence: 0.6 },
     });
@@ -448,9 +448,11 @@ describe("ReviewStep — low-confidence confirmation flow", () => {
     fireEvent.click(screen.getByTestId("accept-SPOTIFY PREMIUM"));
 
     // Low-confidence confirmations are replaced by proposal flow
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringContaining("Proposal generated — review and approve to learn")
-    );
+    await vi.waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        expect.stringContaining("Proposal generated — review and approve to learn")
+      );
+    });
   });
 
   it("auto-saves rule when confidence >= 0.8 (high confidence path)", async () => {
@@ -472,7 +474,7 @@ describe("ReviewStep — low-confidence confirmation flow", () => {
     });
   });
 
-  it("confirmation toast shows match count when other transactions would match", () => {
+  it("confirmation toast shows match count when other transactions would match", async () => {
     const tx1 = makeTx("SPOTIFY PREMIUM", {
       entity: { entityId: "ent-3", entityName: "Spotify", matchType: "ai", confidence: 0.6 },
     });
@@ -494,9 +496,11 @@ describe("ReviewStep — low-confidence confirmation flow", () => {
 
     fireEvent.click(screen.getByTestId("accept-SPOTIFY PREMIUM"));
 
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringContaining("Proposal generated — review and approve to learn")
-    );
+    await vi.waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        expect.stringContaining("Proposal generated — review and approve to learn")
+      );
+    });
   });
 
   it("always routes low-confidence suggestions into proposal flow", async () => {
@@ -609,8 +613,10 @@ describe("ReviewStep — AI correction analysis", () => {
     await vi.waitFor(() => {
       expect(mockAnalyzeCorrectionMutateAsync).toHaveBeenCalled();
     });
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringContaining("Proposal generated — review and approve to learn")
-    );
+    await vi.waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        expect.stringContaining("Proposal generated — review and approve to learn")
+      );
+    });
   });
 });

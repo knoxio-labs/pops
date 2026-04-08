@@ -226,6 +226,7 @@ export function ReviewStep() {
             tags: [],
           });
           setProposalOpen(true);
+          toast.success("Proposal generated — review and approve to learn");
         })
         .catch(() => {
           setProposalSignal({
@@ -236,9 +237,8 @@ export function ReviewStep() {
             tags: [],
           });
           setProposalOpen(true);
+          toast.success("Proposal generated — review and approve to learn");
         });
-
-      toast.success("Proposal generated — review and approve to learn");
     },
     [analyzeCorrectionMutation]
   );

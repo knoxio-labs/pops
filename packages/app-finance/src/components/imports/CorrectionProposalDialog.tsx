@@ -15,21 +15,13 @@ import {
   Badge,
   Separator,
 } from "@pops/ui";
+import type { inferRouterInputs } from "@trpc/server";
 import { toast } from "sonner";
+import type { AppRouter } from "@pops/api-client";
 import { trpc } from "../../lib/trpc";
 
-type MatchType = "exact" | "contains" | "regex";
-type TransactionType = "purchase" | "transfer" | "income";
-
-export interface CorrectionSignal {
-  descriptionPattern: string;
-  matchType: MatchType;
-  entityId?: string | null;
-  entityName?: string | null;
-  location?: string | null;
-  tags?: string[];
-  transactionType?: TransactionType | null;
-}
+type CorrectionSignal =
+  inferRouterInputs<AppRouter>["core"]["corrections"]["proposeChangeSet"]["signal"];
 
 export interface CorrectionProposalDialogProps {
   open: boolean;
@@ -55,21 +47,25 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const minConfidence = props.minConfidence ?? 0.7;
 
+  const disabledSignal: CorrectionSignal = useMemo(
+    () => ({ descriptionPattern: "_", matchType: "exact", tags: [] }),
+    []
+  );
+
   const safePreviewTransactions = useMemo(() => {
     // API limits previewChangeSet to max 500 items
     return props.previewTransactions.slice(0, 500);
   }, [props.previewTransactions]);
 
+  const proposeInput = useMemo(() => {
+    if (!props.signal) return null;
+    return { signal: props.signal, minConfidence, maxPreviewItems: 200 };
+  }, [props.signal, minConfidence]);
+
   const proposeQuery = trpc.core.corrections.proposeChangeSet.useQuery(
-    props.signal
-      ? {
-          signal: props.signal,
-          minConfidence,
-          maxPreviewItems: 200,
-        }
-      : (undefined as never),
+    proposeInput ?? { signal: disabledSignal, minConfidence, maxPreviewItems: 200 },
     {
-      enabled: Boolean(props.open && props.signal),
+      enabled: Boolean(props.open && proposeInput),
       staleTime: 0,
       retry: false,
     }
@@ -77,16 +73,24 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const changeSet = proposeQuery.data?.changeSet ?? null;
 
+  const previewInput = useMemo(() => {
+    if (!changeSet) return null;
+    return { changeSet, transactions: safePreviewTransactions, minConfidence };
+  }, [changeSet, safePreviewTransactions, minConfidence]);
+
+  const disabledChangeSet = useMemo(
+    () => ({
+      source: "disabled",
+      reason: "disabled",
+      ops: [{ op: "add" as const, data: { descriptionPattern: "_", matchType: "exact" as const } }],
+    }),
+    []
+  );
+
   const previewQuery = trpc.core.corrections.previewChangeSet.useQuery(
-    changeSet
-      ? {
-          changeSet,
-          transactions: safePreviewTransactions,
-          minConfidence,
-        }
-      : (undefined as never),
+    previewInput ?? { changeSet: disabledChangeSet, transactions: [], minConfidence },
     {
-      enabled: Boolean(props.open && changeSet && safePreviewTransactions.length > 0),
+      enabled: Boolean(props.open && previewInput && safePreviewTransactions.length > 0),
       staleTime: 0,
       retry: false,
     }
