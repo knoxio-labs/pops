@@ -453,6 +453,52 @@ export function ReviewStep() {
       editedFields: Partial<ProcessedTransaction>,
       shouldLearn: boolean = false
     ) => {
+      const isRuleMatched =
+        Boolean(transaction.ruleProvenance) || transaction.entity?.matchType === "learned";
+
+      // Detect what changed (include description/amount changes so Save & Learn works for any edit)
+      const hasChanges =
+        editedFields.description !== transaction.description ||
+        editedFields.amount !== transaction.amount ||
+        editedFields.entity?.entityId !== transaction.entity?.entityId ||
+        editedFields.location !== transaction.location ||
+        editedFields.online !== transaction.online ||
+        editedFields.transactionType !== transaction.transactionType;
+
+      if (isRuleMatched && hasChanges) {
+        setEditingTransaction(null);
+
+        const entityId = editedFields.entity?.entityId ?? transaction.entity?.entityId ?? null;
+        const entityName =
+          editedFields.entity?.entityName ?? transaction.entity?.entityName ?? null;
+        const updatedDescription = editedFields.description ?? transaction.description;
+        const updatedAmount = editedFields.amount ?? transaction.amount;
+        const updatedLocation = editedFields.location ?? transaction.location ?? null;
+        const updatedType =
+          editedFields.transactionType ?? transaction.transactionType ?? "purchase";
+
+        void generateProposal({
+          description: updatedDescription,
+          entityId,
+          entityName,
+          amount: updatedAmount,
+          location: updatedLocation,
+          transactionType: updatedType,
+        });
+
+        if (entityName) {
+          batchAnalysis.addCorrection({
+            description: updatedDescription,
+            entityName,
+            amount: updatedAmount,
+            account: transaction.account,
+            currentTags: (transaction.suggestedTags ?? []).map((s) => s.tag),
+          });
+        }
+
+        return;
+      }
+
       const updatedTx: ProcessedTransaction = {
         ...transaction,
         ...editedFields,
@@ -494,15 +540,6 @@ export function ReviewStep() {
         };
       });
       setEditingTransaction(null);
-
-      // Detect what changed (include description/amount changes so Save & Learn works for any edit)
-      const hasChanges =
-        editedFields.description !== transaction.description ||
-        editedFields.amount !== transaction.amount ||
-        editedFields.entity?.entityId !== transaction.entity?.entityId ||
-        editedFields.location !== transaction.location ||
-        editedFields.online !== transaction.online ||
-        editedFields.transactionType !== transaction.transactionType;
 
       if (shouldLearn && hasChanges) {
         const entityId = editedFields.entity?.entityId ?? transaction.entity?.entityId ?? null;
