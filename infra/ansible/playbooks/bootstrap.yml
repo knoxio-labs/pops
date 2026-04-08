@@ -32,7 +32,7 @@
     - name: Deploy SSH public key for pops
       ansible.posix.authorized_key:
         user: "{{ pops_user }}"
-        key: "{{ lookup('file', '~/.ssh/pops_n95.pub') }}"
+        key: "{{ lookup('file', ansible_ssh_private_key_file + '.pub') }}"
         state: present
 
     - name: Allow pops passwordless sudo
@@ -46,7 +46,7 @@
 
     - name: Verify SSH key login works
       ansible.builtin.command:
-        cmd: "ssh -i ~/.ssh/pops_n95 -o StrictHostKeyChecking=no -o BatchMode=yes {{ pops_user }}@{{ ansible_host }} whoami"
+        cmd: "ssh -i {{ ansible_ssh_private_key_file }} -o StrictHostKeyChecking=no -o BatchMode=yes {{ pops_user }}@{{ ansible_host }} whoami"
       delegate_to: localhost
       become: false
       changed_when: false

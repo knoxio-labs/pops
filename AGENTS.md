@@ -6,7 +6,7 @@ If another agent-specific file exists (e.g. `CLAUDE.md`), it should **only** poi
 
 ## Project Overview
 
-POPS (Personal Operations System) is a self-hosted personal operations platform covering finance, media, inventory, and AI. SQLite is the **primary data store**. Self-hosted services on an N95 mini PC provide analytics, dashboards, and AI-powered automation. Cloudflare Tunnel exposes services with zero port forwarding.
+POPS (Personal Operations System) is a self-hosted personal operations platform covering finance, media, inventory, and AI. SQLite is the **primary data store**. Self-hosted services on a home server provide analytics, dashboards, and AI-powered automation. Cloudflare Tunnel exposes services with zero port forwarding.
 
 **Domains:** Finance (transactions, budgets, entities) | Media (movies, TV, watchlist, watch history, Plex/TMDB/TVDB integration) | Inventory (items, locations, warranties, insurance) | AI (usage tracking, model config, rules)
 
@@ -60,7 +60,7 @@ mise docker:logs      # Show logs
 
 **Ansible:**
 ```bash
-mise ansible:provision    # Full N95 provision
+mise ansible:provision    # Full server provision
 mise ansible:deploy       # Deploy services only
 mise ansible:check        # Syntax check
 mise ansible:view         # View vault contents (read-only)
@@ -139,7 +139,7 @@ docker compose -f infra/docker-compose.yml config          # Validate compose fi
 # All ansible commands must run from the infra/ansible/ directory due to relative roles_path
 cd infra/ansible
 
-# Provision fresh N95 (full run)
+# Provision fresh server (full run)
 ansible-playbook playbooks/site.yml
 
 # Deploy/update services only (skip OS hardening)
@@ -186,7 +186,7 @@ infra/
 - `packages/app-*` — Domain-specific frontend packages (pages, components, hooks)
 - `packages/db-types/` — Drizzle schema definitions and inferred TypeScript types
 - `packages/import-tools/` — Bank import scripts (standalone, not in pnpm workspace)
-- `infra/ansible/` — Ansible playbooks + roles for provisioning the N95 mini PC
+- `infra/ansible/` — Ansible playbooks + roles for provisioning the home server
 
 ### Docker Networks
 - `pops-frontend` — cloudflared, pops-shell, metabase, pops-api
@@ -206,7 +206,7 @@ Interfaces: iPhone (PWA) | Telegram (Moltbot) | Web (Metabase)
     │
     Cloudflare Tunnel + Cloudflare Access (Zero Trust)
     │
-N95 Mini PC (Docker Compose):
+Server (Docker Compose):
     pops-api ── Node.js tRPC API over SQLite (Drizzle ORM)
     metabase ───── Dashboards & analytics
     moltbot ────── AI assistant (Telegram + finance plugin)

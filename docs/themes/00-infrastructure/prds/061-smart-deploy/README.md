@@ -10,7 +10,7 @@ Build a deploy pipeline that detects which services changed and only rebuilds/re
 ## Current State
 
 Every merge to main triggers a full Ansible deploy that:
-1. Git pulls the entire repo on the N95
+1. Git pulls the entire repo on the server
 2. Templates the docker-compose.yml
 3. Builds ALL custom Docker images (pops-api, pops-shell)
 4. Pulls ALL third-party images (metabase, paperless, moltbot, cloudflared)
@@ -120,12 +120,12 @@ US-01 and US-05 can start in parallel. US-02 and US-03 depend on US-01. US-04 de
 - Infra PR merges → full Ansible deploy
 - Health check catches a broken container and triggers full deploy recovery
 - Manual workflow_dispatch always does full deploy
-- Runner provisioning via Ansible works on a fresh N95
+- Runner provisioning via Ansible works on a fresh server
 
 ## Out of Scope
 
 - Blue/green or canary deployments
 - Rollback mechanism (revert the PR instead)
 - Multi-environment deployment (staging, production)
-- Container registry (images built locally on the N95)
+- Container registry (images built locally on the server)
 - Deployment notifications (Slack, email)

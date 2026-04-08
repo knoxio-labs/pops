@@ -1,6 +1,6 @@
 # Go-Live Runbook
 
-Step-by-step procedure for transitioning from a dev database to production data on the N95 mini PC.
+Step-by-step procedure for transitioning from a dev database to production data on the server.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ Before starting, verify all of the following:
 - [ ] Production guards are active (`db:init`, `db:seed`, `db:clear` refuse to run when `NODE_ENV=production` — PRD-060 US-02)
 - [ ] Pre-migration backup is working (VACUUM INTO before migrations — PRD-060 US-03)
 - [ ] All pending migrations apply cleanly to a seeded test database
-- [ ] `.env` on the N95 has correct values (Up API token, TMDB key, Plex URL/token, Claude API key)
+- [ ] `.env` on the server has correct values (Up API token, TMDB key, Plex URL/token, Claude API key)
 - [ ] Ansible vault is up to date (`mise ansible:view` to confirm)
 
 ## Step 1: Deploy Fresh
@@ -167,7 +167,7 @@ mise audit
 | `mise entities:lookup` | Safe | Rebuild entity cache |
 | `mise docker:up` | Safe | Start/restart services |
 | `mise docker:down` | Safe | Stop services |
-| `mise ansible:deploy` | Careful | Deploy to N95 |
+| `mise ansible:deploy` | Careful | Deploy to server |
 | `drizzle-kit generate` | Careful | Generate schema migration |
 | `drizzle-kit migrate` | Careful | Apply pending migrations (prefer auto-apply on startup) |
 | `mise import:*` | Careful | Import bank data (idempotent, but verify first) |

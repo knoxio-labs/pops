@@ -5,7 +5,7 @@
 
 ## Description
 
-As a developer, I want the GitHub Actions self-hosted runner to be set up automatically by Ansible provisioning so that a fresh N95 server gets the runner without manual steps.
+As a developer, I want the GitHub Actions self-hosted runner to be set up automatically by Ansible provisioning so that a fresh server gets the runner without manual steps.
 
 ## Acceptance Criteria
 
@@ -16,8 +16,8 @@ As a developer, I want the GitHub Actions self-hosted runner to be set up automa
 - [x] Role ensures the service is enabled and started
 - [x] Role is idempotent — running it again on an already-configured runner is a no-op
 - [x] Registration token is fetched via the GitHub API (requires a PAT or app token stored in Ansible Vault)
-- [x] Runner labels: `self-hosted`, `linux`, `x64`, `n95`
-- [x] Runner name: `pops-n95`
+- [x] Runner labels: configured via `POPS_RUNNER_LABELS` env var
+- [x] Runner name: configured via `POPS_RUNNER_NAME` env var
 - [x] Role included in `playbooks/site.yml` (full provision) but NOT in `playbooks/deploy.yml` (service deploy only)
 - [x] Ansible vault password file is created at `~/.ansible/pops-vault-password` with correct permissions (600)
 - [x] Ansible itself is installed (via apt) as a dependency

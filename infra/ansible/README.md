@@ -1,6 +1,6 @@
 # Ansible Infrastructure
 
-Infrastructure-as-code for POPS (Personal Operations System) deployment on N95 mini PC running Ubuntu 24.04.
+Infrastructure-as-code for POPS (Personal Operations System) deployment on Ubuntu 24.04.
 
 ## Directory Structure
 
@@ -94,7 +94,7 @@ ansible-playbook ansible/playbooks/site.yml --check
 ansible-playbook ansible/playbooks/site.yml
 
 # Limit to specific host
-ansible-playbook ansible/playbooks/site.yml --limit pops-n95
+ansible-playbook ansible/playbooks/site.yml --limit server
 
 # Run specific tags
 ansible-playbook ansible/playbooks/site.yml --tags docker,deploy

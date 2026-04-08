@@ -14,7 +14,7 @@ As a developer, I want the deploy to only rebuild and restart services that chan
 - [x] If `backend` is true and `infra` is false: run `docker compose build pops-api && docker compose up -d pops-api`
 - [x] If both `frontend` and `backend` are true: build and restart both (but not third-party images)
 - [x] If `infra` is true: run full Ansible deploy (current behaviour)
-- [x] Docker commands run in the compose directory on the N95 (`/opt/pops`)
+- [x] Docker commands run in the compose directory on the server (`/opt/pops`)
 - [x] Git pull runs before any build to get latest code
 - [x] Docker layer caching reduces rebuild time for incremental changes
 - [x] Manual `workflow_dispatch` always triggers full deploy regardless of path detection

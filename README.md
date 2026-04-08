@@ -1,6 +1,6 @@
 # POPS — Personal Operations System
 
-Self-hosted personal operations platform. Finance, media tracking, home inventory, and AI operations — all in one monorepo, running on an N95 mini PC behind Cloudflare Tunnel.
+Self-hosted personal operations platform. Finance, media tracking, home inventory, and AI operations — all in one monorepo, deployed to a home server behind Cloudflare Tunnel.
 
 SQLite is the source of truth. Claude API handles categorization and entity matching. Everything deploys via Ansible + Docker Compose.
 
@@ -12,7 +12,7 @@ Interfaces
        │
   Cloudflare Tunnel + Zero Trust
        │
-N95 Mini PC (Docker Compose)
+Server (Docker Compose)
   pops-shell ──── React PWA (Vite + nginx)
   pops-api ────── tRPC API (Express + Drizzle ORM + SQLite)
   metabase ────── Dashboards & analytics
@@ -125,12 +125,12 @@ cd apps/pops-shell && pnpm test:e2e
 ## Deploy
 
 ```bash
-./deploy.sh                    # Full deploy to N95 via Ansible
+./deploy.sh                    # Full deploy via Ansible
 ./deploy.sh --dry-run          # Preview changes
 ./deploy.sh --skip-checks      # Skip quality gates (faster)
 ```
 
-Requires: Ansible (`brew install ansible`), SSH key (`~/.ssh/pops_n95`), vault password (`~/.ansible/pops-vault-password`). See [`docs/DEPLOYMENT_SETUP.md`](docs/DEPLOYMENT_SETUP.md) for setup.
+Requires: Ansible (`brew install ansible`), SSH key (configured via `POPS_SSH_KEY` in `.env`), vault password (`~/.ansible/pops-vault-password`). See [`docs/DEPLOYMENT_SETUP.md`](docs/DEPLOYMENT_SETUP.md) for setup.
 
 ## Repo Structure
 

@@ -7,7 +7,7 @@
 
 | Requirement            | Details                                                                                                                                   |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| SSH access             | Port 2222 on the N95 (or physical access)                                                                                                 |
+| SSH access             | Port 2222 on the server (or physical access)                                                                                              |
 | rclone                 | Installed and configured with the `pops-b2` remote                                                                                        |
 | age                    | Installed (`apt install age`)                                                                                                             |
 | Backup passphrase      | From Ansible Vault (`vault_backup_encryption_passphrase`) — also stored in `/opt/pops/secrets/backup_encryption_passphrase` on the server |
@@ -155,7 +155,7 @@ If the server is completely new (fresh OS install):
 5. **Start services** — `docker compose up -d`
 6. **Verify** — follow Step 8
 7. **Re-enable backup timer** — `sudo systemctl enable --now pops-backup.timer`
-8. **Verify Cloudflare Tunnel** — check `https://pops.jmiranda.dev` is accessible
+8. **Verify Cloudflare Tunnel** — check the public URL is accessible (domain configured via `POPS_DOMAIN` in `.env`)
 
 ## Troubleshooting
 
