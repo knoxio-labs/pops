@@ -52,7 +52,8 @@ vi.mock("../../lib/trpc", () => ({
       imports: {
         applyChangeSetAndReevaluate: {
           useMutation: () => ({
-            mutateAsync: (...args: unknown[]) => mockApplyChangeSetAndReevaluateMutateAsync(...args),
+            mutateAsync: (...args: unknown[]) =>
+              mockApplyChangeSetAndReevaluateMutateAsync(...args),
             isPending: false,
           }),
         },
