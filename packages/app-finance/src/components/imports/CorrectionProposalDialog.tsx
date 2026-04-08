@@ -15,22 +15,25 @@ import {
   Badge,
   Separator,
 } from "@pops/ui";
-import type { inferRouterInputs } from "@trpc/server";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { toast } from "sonner";
 import type { AppRouter } from "@pops/api-client";
 import { trpc } from "../../lib/trpc";
 
 type CorrectionSignal =
   inferRouterInputs<AppRouter>["core"]["corrections"]["proposeChangeSet"]["signal"];
+type ApplyChangeSetAndReevaluateOutput =
+  inferRouterOutputs<AppRouter>["finance"]["imports"]["applyChangeSetAndReevaluate"];
 
 export interface CorrectionProposalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  sessionId: string;
   signal: CorrectionSignal | null;
   /** Import-session descriptions used for deterministic previewChangeSet */
   previewTransactions: Array<{ checksum?: string; description: string }>;
   minConfidence?: number;
-  onApproved?: () => void;
+  onApproved?: (result: ApplyChangeSetAndReevaluateOutput["result"], affectedCount: number) => void;
 }
 
 function opLabel(op: { op: string }): string {
@@ -96,10 +99,10 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     }
   );
 
-  const applyMutation = trpc.core.corrections.applyChangeSet.useMutation({
-    onSuccess: () => {
-      toast.success("Rules updated");
-      props.onApproved?.();
+  const applyMutation = trpc.finance.imports.applyChangeSetAndReevaluate.useMutation({
+    onSuccess: (res) => {
+      toast.success("Rules applied");
+      props.onApproved?.(res.result, res.affectedCount);
       props.onOpenChange(false);
       setFeedback("");
     },
@@ -129,7 +132,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const handleApprove = () => {
     if (!changeSet) return;
-    applyMutation.mutate({ changeSet });
+    if (!props.sessionId) {
+      toast.error("Missing import session id");
+      return;
+    }
+    applyMutation.mutate({ sessionId: props.sessionId, changeSet, minConfidence });
   };
 
   const handleReject = () => {
@@ -271,8 +278,8 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
           >
             Reject
           </Button>
-          <Button onClick={handleApprove} disabled={isBusy || !changeSet}>
-            Approve
+          <Button onClick={handleApprove} disabled={isBusy || !changeSet || !props.sessionId}>
+            {applyMutation.isPending ? "Applying & re-evaluating…" : "Approve"}
           </Button>
         </DialogFooter>
       </DialogContent>

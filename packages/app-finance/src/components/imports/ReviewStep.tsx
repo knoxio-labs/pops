@@ -23,8 +23,14 @@ type ViewMode = "list" | "grouped";
  * Step 4: Review transactions and resolve uncertain/failed matches
  */
 export function ReviewStep() {
-  const { processedTransactions, setConfirmedTransactions, nextStep, prevStep, findSimilar } =
-    useImportStore();
+  const {
+    processedTransactions,
+    processSessionId,
+    setConfirmedTransactions,
+    nextStep,
+    prevStep,
+    findSimilar,
+  } = useImportStore();
 
   const [localTransactions, setLocalTransactions] = useState(processedTransactions);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -199,8 +205,6 @@ export function ReviewStep() {
   }, []);
 
   const analyzeCorrectionMutation = trpc.core.corrections.analyzeCorrection.useMutation();
-  // NOTE: The backend supports apply+re-evaluate, but for now this UI uses core.corrections.applyChangeSet
-  // and leaves import-session re-evaluation as a follow-up task.
 
   const computeFallbackPattern = useCallback((description: string) => {
     return description.toUpperCase().replace(/\d+/g, "").replace(/\s+/g, " ").trim();
@@ -635,6 +639,7 @@ export function ReviewStep() {
       <CorrectionProposalDialog
         open={proposalOpen}
         onOpenChange={setProposalOpen}
+        sessionId={processSessionId ?? ""}
         signal={proposalSignal}
         previewTransactions={[
           ...localTransactions.matched,
@@ -642,8 +647,11 @@ export function ReviewStep() {
           ...localTransactions.failed,
           ...localTransactions.skipped,
         ].map((t) => ({ checksum: t.checksum, description: t.description }))}
-        onApproved={() => {
-          // TODO(#1647): Re-evaluate remaining transactions after approval.
+        onApproved={(result, affectedCount) => {
+          setLocalTransactions(result);
+          toast.success(
+            `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? "" : "s"} re-evaluated`
+          );
         }}
       />
       <div>

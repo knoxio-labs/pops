@@ -116,12 +116,42 @@ vi.mock("./EntityCreateDialog", () => ({
 }));
 
 let lastProposalDialogProps: unknown = null;
+let proposalDialogApproveMode: "success" | "error" = "success";
+let proposalDialogApprovePayload: { result: unknown; affectedCount: number } | null = null;
 vi.mock("./CorrectionProposalDialog", async () => {
   const React = await import("react");
+  const { toast } = await import("sonner");
   return {
     CorrectionProposalDialog: (props: unknown) => {
       lastProposalDialogProps = props;
-      return React.createElement("div", { "data-testid": "proposal-dialog" });
+      const p = props as {
+        onApproved?: (result: unknown, affectedCount: number) => void;
+        sessionId?: string;
+      };
+      return React.createElement(
+        "div",
+        { "data-testid": "proposal-dialog" },
+        React.createElement(
+          "button",
+          {
+            "data-testid": "proposal-approve",
+            onClick: () => {
+              if (!p.sessionId) {
+                toast.error("Missing import session id");
+                return;
+              }
+              if (proposalDialogApproveMode === "error") {
+                toast.error("boom");
+                return;
+              }
+              const payload =
+                proposalDialogApprovePayload ?? ({ result: {}, affectedCount: 0 } as const);
+              p.onApproved?.(payload.result, payload.affectedCount);
+            },
+          },
+          "Approve"
+        )
+      );
     },
   };
 });
@@ -297,6 +327,8 @@ function makeTx(description: string, overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   lastProposalDialogProps = null;
+  proposalDialogApproveMode = "success";
+  proposalDialogApprovePayload = null;
   mockEntitiesQuery.mockReturnValue({
     data: {
       data: [
@@ -473,6 +505,54 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
       (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("Applied to")
     );
     expect(appliedToCalls).toHaveLength(0);
+  });
+
+  it("approval updates localTransactions with re-evaluated result and shows affected-count toast", async () => {
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [makeTx("WOOLWORTHS 1234 SYDNEY")],
+      failed: [],
+      skipped: [],
+    };
+    render(<ReviewStep />);
+
+    proposalDialogApprovePayload = {
+      result: {
+        matched: [makeTx("WOOLWORTHS 1234 SYDNEY", { status: "matched" })],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      },
+      affectedCount: 1,
+    };
+
+    fireEvent.click(screen.getByTestId("proposal-approve"));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
+
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      expect.stringContaining("Rules applied — 1 transaction re-evaluated")
+    );
+  });
+
+  it("approval failure shows error toast and local state remains unchanged", async () => {
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [makeTx("WOOLWORTHS 1234 SYDNEY")],
+      failed: [],
+      skipped: [],
+    };
+    render(<ReviewStep />);
+
+    proposalDialogApproveMode = "error";
+    fireEvent.click(screen.getByTestId("proposal-approve"));
+
+    expect(mockToastError).toHaveBeenCalledWith("boom");
+    expect(screen.getByText(/Matched \(0\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Uncertain \(1\)/)).toBeInTheDocument();
   });
 });
 
