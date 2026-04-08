@@ -378,7 +378,8 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
     fireEvent.click(screen.getByTestId("accept-WOOLWORTHS 1234 SYDNEY"));
 
     const ruleCreatedCalls = mockToastSuccess.mock.calls.filter(
-      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("Rule created")
+      (call: unknown[]) =>
+        typeof call[0] === "string" && (call[0] as string).includes("Rule created")
     );
     expect(ruleCreatedCalls).toHaveLength(0);
   });
@@ -399,7 +400,7 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
     fireEvent.click(screen.getByTestId("accept-WOOLWORTHS 1234 SYDNEY"));
 
     await vi.waitFor(() => {
-      expect(mockApplyChangeSetAndReevaluateMutateAsync).toHaveBeenCalled();
+      expect(mockAnalyzeCorrectionMutateAsync).toHaveBeenCalled();
     });
   });
 

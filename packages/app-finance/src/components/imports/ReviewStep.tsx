@@ -25,7 +25,6 @@ type ViewMode = "list" | "grouped";
 export function ReviewStep() {
   const { processedTransactions, setConfirmedTransactions, nextStep, prevStep, findSimilar } =
     useImportStore();
-  const { processSessionId, setProcessedTransactions } = useImportStore();
 
   const [localTransactions, setLocalTransactions] = useState(processedTransactions);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -191,50 +190,8 @@ export function ReviewStep() {
   }, []);
 
   const analyzeCorrectionMutation = trpc.core.corrections.analyzeCorrection.useMutation();
-  const applyChangeSetAndReevaluateMutation =
-    trpc.finance.imports.applyChangeSetAndReevaluate.useMutation();
-
-  const applyChangeSet = useCallback(
-    (args: {
-      pattern: string;
-      matchType: "exact" | "contains" | "regex";
-      entityId: string;
-      entityName: string;
-    }) => {
-      if (!processSessionId) return Promise.resolve();
-      return applyChangeSetAndReevaluateMutation
-        .mutateAsync({
-          sessionId: processSessionId,
-          changeSet: {
-            ops: [
-              {
-                op: "add",
-                data: {
-                  descriptionPattern: args.pattern,
-                  matchType: args.matchType,
-                  entityId: args.entityId,
-                  entityName: args.entityName,
-                },
-              },
-            ],
-          },
-        })
-        .then((r) => {
-          setLocalTransactions(r.result);
-          setProcessedTransactions(r.result);
-          toast.success(`ChangeSet applied — ${r.affectedCount} updated`);
-        })
-        .catch(() => {
-          toast.error("Failed to apply ChangeSet");
-        });
-    },
-    [
-      applyChangeSetAndReevaluateMutation,
-      processSessionId,
-      setProcessedTransactions,
-      setLocalTransactions,
-    ]
-  );
+  // NOTE: The backend supports apply+re-evaluate, but for now this UI uses core.corrections.applyChangeSet
+  // and leaves import-session re-evaluation as a follow-up task.
 
   /**
    * Generate a Correction Proposal (ChangeSet) from a correction signal.
