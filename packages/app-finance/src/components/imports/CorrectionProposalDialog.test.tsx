@@ -415,10 +415,7 @@ describe("CorrectionProposalDialog", () => {
     };
     expect(call.sessionId).toBe("11111111-1111-1111-1111-111111111111");
     expect(call.changeSet.ops).toHaveLength(2);
-    expect(props.onApproved).toHaveBeenCalledWith(
-      expect.objectContaining({ matched: [] }),
-      3
-    );
+    expect(props.onApproved).toHaveBeenCalledWith(expect.objectContaining({ matched: [] }), 3);
   });
 
   it("reject flow requires feedback and calls rejectChangeSet", async () => {
@@ -542,9 +539,7 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("triggering-diff")).toHaveTextContent(
-      "assigned entity: Woolworths"
-    );
+    expect(screen.getByTestId("triggering-diff")).toHaveTextContent("assigned entity: Woolworths");
   });
 
   it("renders 'was → now' diff line for an entity rename", async () => {
@@ -585,7 +580,13 @@ describe("CorrectionProposalDialog", () => {
       changeSet: { source: "test", ops: [] },
       rationale: "empty",
       preview: {
-        counts: { affected: 0, entityChanges: 0, locationChanges: 0, tagChanges: 0, typeChanges: 0 },
+        counts: {
+          affected: 0,
+          entityChanges: 0,
+          locationChanges: 0,
+          tagChanges: 0,
+          typeChanges: 0,
+        },
         affected: [],
       },
     };

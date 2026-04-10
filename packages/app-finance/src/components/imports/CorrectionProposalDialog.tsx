@@ -46,11 +46,7 @@ type EditRuleData = Extract<ServerChangeSetOp, { op: "edit" }>["data"];
  *  Uppercases, strips digits, collapses whitespace. Duplicated here to avoid
  *  pulling server code into the frontend bundle. */
 export function normalizeForMatch(value: string): string {
-  return value
-    .toUpperCase()
-    .replace(/\d+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.toUpperCase().replace(/\d+/g, "").replace(/\s+/g, " ").trim();
 }
 
 export function transactionMatchesSignal(
@@ -186,9 +182,7 @@ function opKindLabel(kind: OpKind): string {
   return "Remove rule";
 }
 
-function opKindBadgeVariant(
-  kind: OpKind
-): "default" | "secondary" | "outline" | "destructive" {
+function opKindBadgeVariant(kind: OpKind): "default" | "secondary" | "outline" | "destructive" {
   if (kind === "add") return "default";
   if (kind === "edit") return "secondary";
   if (kind === "disable") return "outline";
@@ -269,10 +263,7 @@ export interface CorrectionProposalDialogProps {
    *  current ChangeSet before sending. */
   previewTransactions: Array<{ checksum?: string; description: string }>;
   minConfidence?: number;
-  onApproved?: (
-    result: ApplyChangeSetAndReevaluateOutput["result"],
-    affectedCount: number
-  ) => void;
+  onApproved?: (result: ApplyChangeSetAndReevaluateOutput["result"], affectedCount: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -597,14 +588,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   // ---- handlers -----------------------------------------------------------
 
-  const updateOp = useCallback(
-    (clientId: string, mutator: (op: LocalOp) => LocalOp) => {
-      setLocalOps((prev) =>
-        prev.map((o) => (o.clientId === clientId ? { ...mutator(o), dirty: true } : o))
-      );
-    },
-    []
-  );
+  const updateOp = useCallback((clientId: string, mutator: (op: LocalOp) => LocalOp) => {
+    setLocalOps((prev) =>
+      prev.map((o) => (o.clientId === clientId ? { ...mutator(o), dirty: true } : o))
+    );
+  }, []);
 
   const handleDeleteOp = useCallback(
     (clientId: string) => {
@@ -710,15 +698,14 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     if (!props.signal) return;
     const currentChangeSet = localOpsToChangeSet(localOps);
     if (!currentChangeSet) {
-      toast.error("ChangeSet is empty — add at least one operation before asking the AI to revise.");
+      toast.error(
+        "ChangeSet is empty — add at least one operation before asking the AI to revise."
+      );
       return;
     }
 
     const userMsgId = `u-${Date.now()}`;
-    setAiMessages((prev) => [
-      ...prev,
-      { id: userMsgId, role: "user", text: instruction },
-    ]);
+    setAiMessages((prev) => [...prev, { id: userMsgId, role: "user", text: instruction }]);
     setAiInstruction("");
     setAiBusy(true);
 
@@ -795,8 +782,8 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     previewView === "combined"
       ? "Combined effect of entire ChangeSet"
       : selectedOp
-      ? `Effect of selected operation`
-      : "No operation selected";
+        ? `Effect of selected operation`
+        : "No operation selected";
 
   const excludeIds = useMemo(() => {
     const set = new Set<string>();
@@ -988,9 +975,7 @@ function ContextPanel(props: {
   combinedSummary: PreviewChangeSetOutput["summary"] | null;
 }) {
   const { signal, triggeringTransaction, rationale, opCount, combinedSummary } = props;
-  const diff = triggeringTransaction
-    ? formatCorrectionDiff(signal, triggeringTransaction)
-    : null;
+  const diff = triggeringTransaction ? formatCorrectionDiff(signal, triggeringTransaction) : null;
   return (
     <div className="px-6 py-3 bg-muted/30 border-t space-y-3">
       {triggeringTransaction && (
@@ -1020,9 +1005,7 @@ function ContextPanel(props: {
       )}
       <div className="flex flex-wrap items-start gap-4">
         <div className="flex-1 min-w-0 space-y-1">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            Proposed rule
-          </div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Proposed rule</div>
           <div className="text-sm">
             When description <strong>{matchTypeLabel(signal.matchType)}</strong>{" "}
             <code className="rounded bg-background px-1 py-0.5 text-xs">
@@ -1199,9 +1182,7 @@ function OpsListPanel(props: {
         )}
         {(addMode === "edit" || addMode === "disable" || addMode === "remove") && (
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground px-1">
-              Pick a rule to {addMode}
-            </div>
+            <div className="text-xs text-muted-foreground px-1">Pick a rule to {addMode}</div>
             <RulePicker
               value={null}
               excludeIds={props.excludeIds}
@@ -1242,9 +1223,7 @@ function DetailPanel(props: {
   if (op.kind === "add") {
     return (
       <div className="p-6 overflow-auto space-y-4">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">
-          Add new rule
-        </div>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">Add new rule</div>
         <RuleDataEditor
           data={op.data}
           onChange={(next) =>
@@ -1319,8 +1298,8 @@ function TargetRuleCard(props: { rule: CorrectionRule | null; targetRuleId: stri
     <div className="rounded-md border bg-muted/30 p-3 space-y-1">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">Target rule</div>
       <div className="text-sm">
-        <code className="rounded bg-background px-1 py-0.5 text-xs">{r.descriptionPattern}</code>{" "}
-        · <span className="text-xs">{r.matchType}</span>
+        <code className="rounded bg-background px-1 py-0.5 text-xs">{r.descriptionPattern}</code> ·{" "}
+        <span className="text-xs">{r.matchType}</span>
       </div>
       <div className="text-xs text-muted-foreground">
         {[r.entityName, r.location, r.transactionType].filter(Boolean).join(" · ") ||

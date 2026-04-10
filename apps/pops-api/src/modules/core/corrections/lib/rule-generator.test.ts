@@ -94,9 +94,7 @@ describe("analyzeCorrection", () => {
     // the entity name back as the pattern. The validator must reject it so
     // the frontend fallback takes over.
     mockCreate.mockResolvedValue(
-      makeAiResponse(
-        '{"matchType":"contains","pattern":"AMERICAN EXPRESS","confidence":0.8}'
-      )
+      makeAiResponse('{"matchType":"contains","pattern":"AMERICAN EXPRESS","confidence":0.8}')
     );
 
     const result = await analyzeCorrection({
@@ -110,9 +108,7 @@ describe("analyzeCorrection", () => {
 
   it("accepts the full description as the pattern when no shorter identifier exists", async () => {
     mockCreate.mockResolvedValue(
-      makeAiResponse(
-        '{"matchType":"exact","pattern":"MEMBERSHIP FEE","confidence":0.7}'
-      )
+      makeAiResponse('{"matchType":"exact","pattern":"MEMBERSHIP FEE","confidence":0.7}')
     );
 
     const result = await analyzeCorrection({
@@ -294,9 +290,7 @@ describe("patternMatchesDescription", () => {
   });
 
   it("does not match when pattern is absent from description", () => {
-    expect(patternMatchesDescription("AMERICAN EXPRESS", "contains", "MEMBERSHIP FEE")).toBe(
-      false
-    );
+    expect(patternMatchesDescription("AMERICAN EXPRESS", "contains", "MEMBERSHIP FEE")).toBe(false);
   });
 
   it("matches exact when normalized pattern equals normalized description", () => {
@@ -308,9 +302,7 @@ describe("patternMatchesDescription", () => {
   });
 
   it("matches regex patterns against the normalized description", () => {
-    expect(patternMatchesDescription("WOOLWORTHS.*", "regex", "WOOLWORTHS 1234 SYDNEY")).toBe(
-      true
-    );
+    expect(patternMatchesDescription("WOOLWORTHS.*", "regex", "WOOLWORTHS 1234 SYDNEY")).toBe(true);
   });
 
   it("returns false for invalid regex patterns", () => {

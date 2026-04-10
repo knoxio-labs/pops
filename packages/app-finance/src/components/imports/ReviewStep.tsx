@@ -723,11 +723,7 @@ export function ReviewStep() {
       </Tabs>
 
       <div className="flex justify-between gap-3 items-center">
-        <Button
-          variant="outline"
-          onClick={() => goToStep(2)}
-          title="Back to column mapping"
-        >
+        <Button variant="outline" onClick={() => goToStep(2)} title="Back to column mapping">
           Back
         </Button>
         <div className="flex flex-col items-end gap-1">

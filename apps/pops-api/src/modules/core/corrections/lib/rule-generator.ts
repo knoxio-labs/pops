@@ -72,8 +72,7 @@ export function patternMatchesDescription(
   const normalizedDescription = normalizeDescription(description);
   // Patterns are stored normalized in the DB; mirror that here so the
   // validation matches what would actually persist.
-  const normalizedPattern =
-    matchType === "regex" ? pattern : normalizeDescription(pattern);
+  const normalizedPattern = matchType === "regex" ? pattern : normalizeDescription(pattern);
 
   if (normalizedPattern.length === 0) return false;
 

@@ -65,7 +65,8 @@ export function RulePicker(props: RulePickerProps) {
     return rules.filter((r) => {
       if (exclude?.has(r.id)) return false;
       if (!needle) return true;
-      const haystack = `${r.descriptionPattern} ${r.entityName ?? ""} ${r.location ?? ""}`.toLowerCase();
+      const haystack =
+        `${r.descriptionPattern} ${r.entityName ?? ""} ${r.location ?? ""}`.toLowerCase();
       return haystack.includes(needle);
     });
   }, [rules, search, props.excludeIds]);
