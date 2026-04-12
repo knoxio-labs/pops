@@ -8,7 +8,7 @@
  */
 import { eq } from 'drizzle-orm';
 
-import { settings, rotationCandidates } from '@pops/db-types';
+import { rotationCandidates, settings } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
 import { getRadarrClient } from '../arr/service.js';
