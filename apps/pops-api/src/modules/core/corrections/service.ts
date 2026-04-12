@@ -449,11 +449,11 @@ export function buildTargetRulesMap(
 /**
  * Pure in-memory matcher used for previews and determinism tests.
  * Mirrors production semantics:
- * - normalizeDescription
- * - exact matches win over contains matches
+ * - normalizeDescription on input
+ * - rules sorted by priority ASC (lower = higher priority), id ASC tie-breaker
  * - ignore inactive rules
  * - ignore rules below minConfidence
- * - tie-break by confidence desc, then timesApplied desc
+ * - first matching rule in priority order wins
  */
 export function findMatchingCorrectionFromRules(
   description: string,
