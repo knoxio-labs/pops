@@ -476,15 +476,16 @@ export function findMatchingCorrectionFromRules(
 
 /** Test whether a single rule's pattern matches a normalized description. */
 function ruleMatchesDescription(rule: CorrectionRow, normalized: string): boolean {
+  const pattern = rule.descriptionPattern;
   switch (rule.matchType) {
     case "exact":
-      return rule.descriptionPattern === normalized;
+      return pattern.toUpperCase() === normalized;
     case "contains":
-      return rule.descriptionPattern.length > 0 && normalized.includes(rule.descriptionPattern);
+      return pattern.length > 0 && normalized.includes(pattern.toUpperCase());
     case "regex":
-      if (rule.descriptionPattern.length === 0) return false;
+      if (pattern.length === 0) return false;
       try {
-        return new RegExp(rule.descriptionPattern).test(normalized);
+        return new RegExp(pattern, "i").test(normalized);
       } catch {
         return false;
       }
