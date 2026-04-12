@@ -23,9 +23,10 @@ export async function getRadarrDiskSpace(): Promise<number> {
   const client = getRadarrClient();
   if (!client) throw new Error('Radarr not configured');
   const disks = await client.getDiskSpace();
-  if (disks.length === 0) throw new Error('Radarr returned no disk space info');
+  const disk = disks[0];
+  if (!disk) throw new Error('Radarr returned no disk space info');
   // Use the first root folder disk (primary media disk)
-  return disks[0]!.freeSpace / BYTES_PER_GB;
+  return disk.freeSpace / BYTES_PER_GB;
 }
 
 /** Fetch sizeOnDisk for all movies from Radarr, returning a map of TMDB ID → size in GB. */
@@ -82,10 +83,10 @@ export interface EligibleMovie {
  * - Movies currently downloading in Radarr
  * - Movies with sizeOnDisk = 0 in Radarr
  */
-export async function getEligibleForRemoval(
+export function getEligibleForRemoval(
   movieSizes: MovieSizeMap,
   downloadingTmdbIds: Set<number>
-): Promise<EligibleMovie[]> {
+): EligibleMovie[] {
   const db = getDrizzle();
   const now = new Date().toISOString();
 
@@ -127,7 +128,8 @@ export async function getEligibleForRemoval(
     // Exclude movies currently downloading
     if (downloadingTmdbIds.has(m.tmdbId)) return false;
     // Exclude movies with no file (sizeOnDisk = 0 or not in Radarr)
-    if (!movieSizes.has(m.tmdbId) || movieSizes.get(m.tmdbId)! <= 0) return false;
+    const sizeGb = movieSizes.get(m.tmdbId);
+    if (sizeGb === undefined || sizeGb <= 0) return false;
     return true;
   });
 }
