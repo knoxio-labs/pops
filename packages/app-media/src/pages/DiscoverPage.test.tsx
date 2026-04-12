@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -9,7 +9,7 @@ const mockAssembleSessionRefetch = vi.fn();
 const mockProfileQuery = vi.fn();
 const mockGetDismissedQuery = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       discovery: {
@@ -31,7 +31,7 @@ vi.mock("../lib/trpc", () => ({
 }));
 
 // Mock useDiscoverCardActions to avoid wiring up all mutation deps
-vi.mock("../hooks/useDiscoverCardActions", () => ({
+vi.mock('../hooks/useDiscoverCardActions', () => ({
   useDiscoverCardActions: () => ({
     addingToLibrary: new Set<number>(),
     addingToWatchlist: new Set<number>(),
@@ -48,7 +48,7 @@ vi.mock("../hooks/useDiscoverCardActions", () => ({
 }));
 
 // Mock ShelfSection — renders shelfId + title as a simple section marker
-vi.mock("../components/ShelfSection", () => ({
+vi.mock('../components/ShelfSection', () => ({
   ShelfSection: ({ shelfId, title }: { shelfId: string; title: string }) => (
     <section data-testid={`shelf-${shelfId}`}>
       <h2>{title}</h2>
@@ -56,11 +56,11 @@ vi.mock("../components/ShelfSection", () => ({
   ),
 }));
 
-vi.mock("../components/PreferenceProfile", () => ({
+vi.mock('../components/PreferenceProfile', () => ({
   PreferenceProfile: () => <div data-testid="preference-profile" />,
 }));
 
-import { DiscoverPage } from "./DiscoverPage";
+import { DiscoverPage } from './DiscoverPage';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ function defaultDismissed() {
   });
 }
 
-function defaultSession(shelves = [makeShelf("trending-tmdb", "Trending")]) {
+function defaultSession(shelves = [makeShelf('trending-tmdb', 'Trending')]) {
   mockAssembleSessionQuery.mockReturnValue({
     data: { shelves },
     isLoading: false,
@@ -112,7 +112,7 @@ function setupDefaults() {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={["/media/discover"]}>
+    <MemoryRouter initialEntries={['/media/discover']}>
       <DiscoverPage />
     </MemoryRouter>
   );
@@ -120,14 +120,14 @@ function renderPage() {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("DiscoverPage — loading", () => {
+describe('DiscoverPage — loading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultProfile();
     defaultDismissed();
   });
 
-  it("renders loading skeleton while assembleSession is in flight", () => {
+  it('renders loading skeleton while assembleSession is in flight', () => {
     mockAssembleSessionQuery.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -136,12 +136,12 @@ describe("DiscoverPage — loading", () => {
     renderPage();
 
     // Skeleton rows are rendered as animated pulse divs — page header still present
-    expect(screen.getByText("Discover")).toBeTruthy();
+    expect(screen.getByText('Discover')).toBeTruthy();
     // No ShelfSection rendered yet
-    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
   });
 
-  it("does not render shelf sections while loading", () => {
+  it('does not render shelf sections while loading', () => {
     mockAssembleSessionQuery.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -153,29 +153,29 @@ describe("DiscoverPage — loading", () => {
   });
 });
 
-describe("DiscoverPage — error state", () => {
+describe('DiscoverPage — error state', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultProfile();
     defaultDismissed();
   });
 
-  it("shows error message when assembleSession fails", () => {
+  it('shows error message when assembleSession fails', () => {
     mockAssembleSessionQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: { message: "Server error" },
+      error: { message: 'Server error' },
     });
     renderPage();
 
     expect(screen.getByText(/Failed to load discover shelves/)).toBeTruthy();
   });
 
-  it("does not render shelves on error", () => {
+  it('does not render shelves on error', () => {
     mockAssembleSessionQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: { message: "Server error" },
+      error: { message: 'Server error' },
     });
     renderPage();
 
@@ -183,141 +183,141 @@ describe("DiscoverPage — error state", () => {
   });
 });
 
-describe("DiscoverPage — shelf rendering", () => {
+describe('DiscoverPage — shelf rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultProfile();
     defaultDismissed();
   });
 
-  it("renders a ShelfSection for each shelf returned by assembly", () => {
+  it('renders a ShelfSection for each shelf returned by assembly', () => {
     defaultSession([
-      makeShelf("trending-tmdb", "Trending"),
-      makeShelf("hidden-gems", "Hidden Gems"),
-      makeShelf("new-releases", "New Releases"),
+      makeShelf('trending-tmdb', 'Trending'),
+      makeShelf('hidden-gems', 'Hidden Gems'),
+      makeShelf('new-releases', 'New Releases'),
     ]);
     renderPage();
 
-    expect(screen.getByTestId("shelf-trending-tmdb")).toBeTruthy();
-    expect(screen.getByTestId("shelf-hidden-gems")).toBeTruthy();
-    expect(screen.getByTestId("shelf-new-releases")).toBeTruthy();
+    expect(screen.getByTestId('shelf-trending-tmdb')).toBeTruthy();
+    expect(screen.getByTestId('shelf-hidden-gems')).toBeTruthy();
+    expect(screen.getByTestId('shelf-new-releases')).toBeTruthy();
   });
 
-  it("renders shelves in the order returned by assembly", () => {
+  it('renders shelves in the order returned by assembly', () => {
     defaultSession([
-      makeShelf("shelf-a", "Shelf A"),
-      makeShelf("shelf-b", "Shelf B"),
-      makeShelf("shelf-c", "Shelf C"),
+      makeShelf('shelf-a', 'Shelf A'),
+      makeShelf('shelf-b', 'Shelf B'),
+      makeShelf('shelf-c', 'Shelf C'),
     ]);
     renderPage();
 
-    const sections = screen.getAllByRole("heading", { level: 2 });
-    expect(sections[0]!.textContent).toBe("Shelf A");
-    expect(sections[1]!.textContent).toBe("Shelf B");
-    expect(sections[2]!.textContent).toBe("Shelf C");
+    const sections = screen.getAllByRole('heading', { level: 2 });
+    expect(sections[0]!.textContent).toBe('Shelf A');
+    expect(sections[1]!.textContent).toBe('Shelf B');
+    expect(sections[2]!.textContent).toBe('Shelf C');
   });
 
-  it("shows empty state spinner when assembly returns no shelves", () => {
+  it('shows empty state spinner when assembly returns no shelves', () => {
     defaultSession([]);
     renderPage();
 
-    expect(screen.getByText("Assembling your discover page…")).toBeTruthy();
+    expect(screen.getByText('Assembling your discover page…')).toBeTruthy();
   });
 
-  it("renders page header always", () => {
+  it('renders page header always', () => {
     setupDefaults();
     renderPage();
 
-    expect(screen.getByText("Discover")).toBeTruthy();
-    expect(screen.getByText("Find your next favourite movie")).toBeTruthy();
+    expect(screen.getByText('Discover')).toBeTruthy();
+    expect(screen.getByText('Find your next favourite movie')).toBeTruthy();
   });
 });
 
-describe("DiscoverPage — compare-to-unlock CTA", () => {
+describe('DiscoverPage — compare-to-unlock CTA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     defaultDismissed();
     defaultSession();
   });
 
-  it("shows CTA when totalComparisons < 5", () => {
+  it('shows CTA when totalComparisons < 5', () => {
     defaultProfile(2);
     renderPage();
 
-    expect(screen.getByText("Compare more movies to unlock recommendations")).toBeTruthy();
+    expect(screen.getByText('Compare more movies to unlock recommendations')).toBeTruthy();
   });
 
-  it("shows exact comparison count in CTA", () => {
+  it('shows exact comparison count in CTA', () => {
     defaultProfile(3);
     renderPage();
 
     expect(screen.getByText(/you have 3 so far/)).toBeTruthy();
   });
 
-  it("links CTA to /media/compare", () => {
+  it('links CTA to /media/compare', () => {
     defaultProfile(0);
     renderPage();
 
-    const link = screen.getByText("Start Comparing").closest("a");
-    expect(link?.getAttribute("href")).toBe("/media/compare");
+    const link = screen.getByText('Start Comparing').closest('a');
+    expect(link?.getAttribute('href')).toBe('/media/compare');
   });
 
-  it("hides CTA when totalComparisons >= 5", () => {
+  it('hides CTA when totalComparisons >= 5', () => {
     defaultProfile(5);
     renderPage();
 
-    expect(screen.queryByText("Compare more movies to unlock recommendations")).toBeNull();
+    expect(screen.queryByText('Compare more movies to unlock recommendations')).toBeNull();
   });
 
-  it("hides CTA when totalComparisons > 5", () => {
+  it('hides CTA when totalComparisons > 5', () => {
     defaultProfile(10);
     renderPage();
 
-    expect(screen.queryByText("Compare more movies to unlock recommendations")).toBeNull();
+    expect(screen.queryByText('Compare more movies to unlock recommendations')).toBeNull();
   });
 
-  it("hides CTA while profile is loading", () => {
+  it('hides CTA while profile is loading', () => {
     mockProfileQuery.mockReturnValue({ data: undefined, isLoading: true });
     renderPage();
 
-    expect(screen.queryByText("Compare more movies to unlock recommendations")).toBeNull();
+    expect(screen.queryByText('Compare more movies to unlock recommendations')).toBeNull();
   });
 });
 
-describe("DiscoverPage — PreferenceProfile", () => {
+describe('DiscoverPage — PreferenceProfile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaults();
   });
 
-  it("renders PreferenceProfile", () => {
+  it('renders PreferenceProfile', () => {
     renderPage();
 
-    expect(screen.getByTestId("preference-profile")).toBeTruthy();
+    expect(screen.getByTestId('preference-profile')).toBeTruthy();
   });
 });
 
-describe("DiscoverPage — Refresh button", () => {
+describe('DiscoverPage — Refresh button', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaults();
   });
 
-  it("renders the Refresh button", () => {
+  it('renders the Refresh button', () => {
     renderPage();
 
-    expect(screen.getByRole("button", { name: /refresh shelf selection/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /refresh shelf selection/i })).toBeTruthy();
   });
 
-  it("calls session refetch on click", () => {
+  it('calls session refetch on click', () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /refresh shelf selection/i }));
+    fireEvent.click(screen.getByRole('button', { name: /refresh shelf selection/i }));
 
     expect(mockAssembleSessionRefetch).toHaveBeenCalledTimes(1);
   });
 
-  it("disables Refresh button while isFetching", () => {
+  it('disables Refresh button while isFetching', () => {
     mockAssembleSessionQuery.mockReturnValue({
       data: { shelves: [] },
       isLoading: false,
@@ -326,7 +326,7 @@ describe("DiscoverPage — Refresh button", () => {
     });
     renderPage();
 
-    const btn = screen.getByRole("button", { name: /refresh shelf selection/i });
+    const btn = screen.getByRole('button', { name: /refresh shelf selection/i });
     expect(btn).toBeDisabled();
   });
 });

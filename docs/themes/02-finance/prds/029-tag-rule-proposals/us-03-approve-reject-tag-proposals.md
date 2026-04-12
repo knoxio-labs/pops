@@ -18,4 +18,3 @@ As a user, I want to approve or reject tag rule proposals with feedback, so that
   - group scope accept/reject affects all transactions in the group (with merge semantics)
   - transaction scope accept/reject affects only that transaction
 - [x] Accepting a **New** tag makes it part of the user’s tag vocabulary going forward.
-

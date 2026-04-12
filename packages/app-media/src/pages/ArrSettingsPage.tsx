@@ -4,8 +4,8 @@
  * Allows users to configure Radarr and Sonarr URLs and API keys
  * via the settings table (replacing env-var-only configuration).
  */
-import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import {
   Button,
   Label,
@@ -17,11 +17,11 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbPage,
-} from "@pops/ui";
-import { ArrowLeft, RefreshCw, Film, Tv, Save } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { ConnectionBadge } from "../components/ConnectionBadge";
+} from '@pops/ui';
+import { ArrowLeft, RefreshCw, Film, Tv, Save } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { ConnectionBadge } from '../components/ConnectionBadge';
 
 function ServiceCard({
   label,
@@ -50,7 +50,7 @@ function ServiceCard({
   testing: boolean;
   testResult: { configured: boolean; connected: boolean; version?: string; error?: string } | null;
 }) {
-  const configured = !!(url && (hasKey || (apiKey && apiKey !== "••••••••")));
+  const configured = !!(url && (hasKey || (apiKey && apiKey !== '••••••••')));
 
   const normalizeUrl = () => {
     const normalized = ensureProtocol(url);
@@ -113,8 +113,8 @@ function ServiceCard({
       )}
       {testResult && !testResult.connected && (
         <div className="space-y-1">
-          <p className="text-xs text-red-400">{testResult.error ?? "Connection failed"}</p>
-          {url.startsWith("http://") && (
+          <p className="text-xs text-red-400">{testResult.error ?? 'Connection failed'}</p>
+          {url.startsWith('http://') && (
             <p className="text-xs text-muted-foreground">Try using https:// instead</p>
           )}
         </div>
@@ -125,15 +125,15 @@ function ServiceCard({
 
 function ensureProtocol(url: string): string {
   const trimmed = url.trim();
-  if (!trimmed || trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (!trimmed || trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
   return `https://${trimmed}`;
 }
 
 export function ArrSettingsPage() {
-  const [radarrUrl, setRadarrUrl] = useState("");
-  const [radarrApiKey, setRadarrApiKey] = useState("");
-  const [sonarrUrl, setSonarrUrl] = useState("");
-  const [sonarrApiKey, setSonarrApiKey] = useState("");
+  const [radarrUrl, setRadarrUrl] = useState('');
+  const [radarrApiKey, setRadarrApiKey] = useState('');
+  const [sonarrUrl, setSonarrUrl] = useState('');
+  const [sonarrApiKey, setSonarrApiKey] = useState('');
 
   const utils = trpc.useUtils();
   const settingsQuery = trpc.media.arr.getSettings.useQuery();
@@ -149,7 +149,7 @@ export function ArrSettingsPage() {
   }, [settingsQuery.data?.data]);
 
   const onSaveSuccess = () => {
-    toast.success("Settings saved");
+    toast.success('Settings saved');
     void utils.media.arr.getConfig.invalidate();
   };
   const onSaveError = (err: { message: string }) => toast.error(`Failed to save: ${err.message}`);

@@ -1,1 +1,1 @@
-export { photosRouter } from "./router.js";
+export { photosRouter } from './router.js';

@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { Slider } from "./slider";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { Slider } from './slider';
 
 const meta: Meta<typeof Slider> = {
-  title: "Inputs/Slider",
+  title: 'Inputs/Slider',
   component: Slider,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -295,7 +295,7 @@ export const WithLabels: Story = {
   args: {},
   render: () => {
     const [value, setValue] = useState([3]);
-    const labels = ["Very Low", "Low", "Medium", "High", "Very High"];
+    const labels = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
 
     return (
       <div className="space-y-6 w-96">
@@ -304,7 +304,7 @@ export const WithLabels: Story = {
           <Slider value={value} onValueChange={setValue} min={0} max={4} step={1} />
           <div className="flex justify-between text-xs text-muted-foreground">
             {labels.map((label, i) => (
-              <span key={i} className={value[0] === i ? "font-medium text-foreground" : ""}>
+              <span key={i} className={value[0] === i ? 'font-medium text-foreground' : ''}>
                 {label}
               </span>
             ))}

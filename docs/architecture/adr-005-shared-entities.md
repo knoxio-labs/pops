@@ -10,11 +10,11 @@ Entities (merchants, companies, people, brands) appear across multiple domains â
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Shared entity table in `core/` module | One source of truth, cross-domain linking, consistent naming | Requires a `type` column to distinguish categories |
-| Per-domain entity tables | Full isolation per domain | Duplicate data, no cross-domain linking, inconsistent naming |
-| No entity abstraction (inline strings) | Zero overhead | No linking, no search, no consistency |
+| Option                                 | Pros                                                         | Cons                                                         |
+| -------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Shared entity table in `core/` module  | One source of truth, cross-domain linking, consistent naming | Requires a `type` column to distinguish categories           |
+| Per-domain entity tables               | Full isolation per domain                                    | Duplicate data, no cross-domain linking, inconsistent naming |
+| No entity abstraction (inline strings) | Zero overhead                                                | No linking, no search, no consistency                        |
 
 ## Decision
 

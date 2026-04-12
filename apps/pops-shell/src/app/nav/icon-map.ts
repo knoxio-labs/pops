@@ -35,7 +35,7 @@ import {
   History,
   Shuffle,
   type LucideIcon,
-} from "lucide-react";
+} from 'lucide-react';
 
 export const iconMap: Record<string, LucideIcon> = {
   DollarSign,

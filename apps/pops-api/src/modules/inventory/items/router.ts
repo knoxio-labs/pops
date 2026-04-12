@@ -1,18 +1,18 @@
 /**
  * Inventory tRPC router — CRUD procedures for inventory items.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   CreateInventoryItemSchema,
   UpdateInventoryItemSchema,
   InventoryQuerySchema,
   toInventoryItem,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError } from '../../../shared/errors.js';
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -24,9 +24,9 @@ export const inventoryRouter = router({
     const limit = input.limit ?? DEFAULT_LIMIT;
     const offset = input.offset ?? DEFAULT_OFFSET;
 
-    const inUse = input.inUse === "true" ? true : input.inUse === "false" ? false : undefined;
+    const inUse = input.inUse === 'true' ? true : input.inUse === 'false' ? false : undefined;
     const deductible =
-      input.deductible === "true" ? true : input.deductible === "false" ? false : undefined;
+      input.deductible === 'true' ? true : input.deductible === 'false' ? false : undefined;
 
     const { rows, total, totalReplacementValue, totalResaleValue } = service.listInventoryItems(
       input.search,
@@ -76,7 +76,7 @@ export const inventoryRouter = router({
       return { data: toInventoryItem(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -87,7 +87,7 @@ export const inventoryRouter = router({
     const row = service.createInventoryItem(input);
     return {
       data: toInventoryItem(row),
-      message: "Inventory item created",
+      message: 'Inventory item created',
     };
   }),
 
@@ -104,11 +104,11 @@ export const inventoryRouter = router({
         const row = service.updateInventoryItem(input.id, input.data);
         return {
           data: toInventoryItem(row),
-          message: "Inventory item updated",
+          message: 'Inventory item updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -118,10 +118,10 @@ export const inventoryRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     try {
       service.deleteInventoryItem(input.id);
-      return { message: "Inventory item deleted" };
+      return { message: 'Inventory item deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

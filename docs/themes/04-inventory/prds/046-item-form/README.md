@@ -9,81 +9,81 @@ Build a dual-mode form for creating and editing inventory items. The form includ
 
 ## Routes
 
-| Route | Page |
-|-------|------|
-| `/inventory/items/new` | Create mode |
+| Route                       | Page                      |
+| --------------------------- | ------------------------- |
+| `/inventory/items/new`      | Create mode               |
 | `/inventory/items/:id/edit` | Edit mode (pre-populated) |
 
 ## Form Fields
 
-| Field | Type | Required | Validation | Default |
-|-------|------|----------|------------|---------|
-| Name | Text input | Yes | Non-empty | — |
-| Type | Select + custom entry | Yes | Non-empty | — |
-| Brand | Text input | No | — | null |
-| Model | Text input | No | — | null |
-| Asset ID | Text input + auto-generate | No | Unique (validated on blur) | null |
-| Location | Location picker | No | Valid location ID | null |
-| Condition | Select | No | One of: new, good, fair, poor, broken | "good" |
-| Purchase Date | Date picker | No | Valid ISO date | null |
-| Purchase Price | Currency input | No | Non-negative number | null |
-| Replacement Value | Currency input | No | Non-negative number | null |
-| Resale Value | Currency input | No | Non-negative number | null |
-| Warranty Expiry | Date picker | No | Valid ISO date | null |
-| Notes | Markdown textarea | No | — | null |
+| Field             | Type                       | Required | Validation                            | Default |
+| ----------------- | -------------------------- | -------- | ------------------------------------- | ------- |
+| Name              | Text input                 | Yes      | Non-empty                             | —       |
+| Type              | Select + custom entry      | Yes      | Non-empty                             | —       |
+| Brand             | Text input                 | No       | —                                     | null    |
+| Model             | Text input                 | No       | —                                     | null    |
+| Asset ID          | Text input + auto-generate | No       | Unique (validated on blur)            | null    |
+| Location          | Location picker            | No       | Valid location ID                     | null    |
+| Condition         | Select                     | No       | One of: new, good, fair, poor, broken | "good"  |
+| Purchase Date     | Date picker                | No       | Valid ISO date                        | null    |
+| Purchase Price    | Currency input             | No       | Non-negative number                   | null    |
+| Replacement Value | Currency input             | No       | Non-negative number                   | null    |
+| Resale Value      | Currency input             | No       | Non-negative number                   | null    |
+| Warranty Expiry   | Date picker                | No       | Valid ISO date                        | null    |
+| Notes             | Markdown textarea          | No       | —                                     | null    |
 
 ## UI Components
 
 ### Location Picker
 
-| Element | Detail |
-|---------|--------|
-| Trigger | Button showing current selection as breadcrumb: "Home > Bedroom > Wardrobe" |
-| Overlay | Tree view of all locations with expand/collapse, opens on trigger click |
-| Search | Filter input within the overlay to find locations by name |
+| Element   | Detail                                                                                          |
+| --------- | ----------------------------------------------------------------------------------------------- |
+| Trigger   | Button showing current selection as breadcrumb: "Home > Bedroom > Wardrobe"                     |
+| Overlay   | Tree view of all locations with expand/collapse, opens on trigger click                         |
+| Search    | Filter input within the overlay to find locations by name                                       |
 | Quick-add | "Add Location" button within the overlay creates a new location inline without leaving the form |
-| Empty | "No locations — create one" with inline quick-add |
+| Empty     | "No locations — create one" with inline quick-add                                               |
 
 ### Photo Upload
 
-| Element | Detail |
-|---------|--------|
-| Desktop | Drag-and-drop zone + file picker button |
-| Mobile | Camera trigger via `<input type="file" accept="image/*" capture="environment">` |
-| Compression | On upload: resize to 1920px max dimension, HEIC→JPEG, strip EXIF |
-| Preview | Thumbnail grid of uploaded/existing photos |
-| Reorder | Drag to reorder photos in edit mode |
-| Delete | Remove button on each photo thumbnail with confirmation |
+| Element     | Detail                                                                          |
+| ----------- | ------------------------------------------------------------------------------- |
+| Desktop     | Drag-and-drop zone + file picker button                                         |
+| Mobile      | Camera trigger via `<input type="file" accept="image/*" capture="environment">` |
+| Compression | On upload: resize to 1920px max dimension, HEIC→JPEG, strip EXIF                |
+| Preview     | Thumbnail grid of uploaded/existing photos                                      |
+| Reorder     | Drag to reorder photos in edit mode                                             |
+| Delete      | Remove button on each photo thumbnail with confirmation                         |
 
 ### Asset ID Generation
 
-| Element | Detail |
-|---------|--------|
+| Element              | Detail                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------- |
 | Auto-generate button | Adjacent to asset ID input; generates TYPE prefix + sequential number (e.g., "HDMI01") |
-| Manual entry | Always accepted; auto-generate is optional |
-| Uniqueness check | Validated on blur; shows inline error if duplicate |
+| Manual entry         | Always accepted; auto-generate is optional                                             |
+| Uniqueness check     | Validated on blur; shows inline error if duplicate                                     |
 
 ### Notes Editor
 
-| Element | Detail |
-|---------|--------|
-| Input | Textarea for markdown content |
+| Element | Detail                                                                |
+| ------- | --------------------------------------------------------------------- |
+| Input   | Textarea for markdown content                                         |
 | Preview | Toggle to render markdown preview alongside or replacing the textarea |
 
 ## API Dependencies
 
-| Procedure | Usage |
-|-----------|-------|
-| `inventory.items.create` | Create new item |
-| `inventory.items.update` | Update existing item |
-| `inventory.items.get` | Pre-populate form in edit mode |
-| `inventory.items.searchByAssetId` | Validate asset ID uniqueness on blur |
-| `inventory.locations.getTree` | Populate location picker tree |
-| `inventory.locations.create` | Quick-add location from within picker |
-| `inventory.photos.upload` | Upload compressed photo |
-| `inventory.photos.delete` | Remove photo |
-| `inventory.photos.reorder` | Save new photo order |
-| `inventory.photos.listForItem` | Load existing photos in edit mode |
+| Procedure                         | Usage                                 |
+| --------------------------------- | ------------------------------------- |
+| `inventory.items.create`          | Create new item                       |
+| `inventory.items.update`          | Update existing item                  |
+| `inventory.items.get`             | Pre-populate form in edit mode        |
+| `inventory.items.searchByAssetId` | Validate asset ID uniqueness on blur  |
+| `inventory.locations.getTree`     | Populate location picker tree         |
+| `inventory.locations.create`      | Quick-add location from within picker |
+| `inventory.photos.upload`         | Upload compressed photo               |
+| `inventory.photos.delete`         | Remove photo                          |
+| `inventory.photos.reorder`        | Save new photo order                  |
+| `inventory.photos.listForItem`    | Load existing photos in edit mode     |
 
 ## Business Rules
 
@@ -100,25 +100,25 @@ Build a dual-mode form for creating and editing inventory items. The form includ
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Asset ID already in use | Inline error on blur: "Asset ID already in use by ITEM_NAME" |
-| Asset ID belongs to current item (edit mode) | No error — the item can keep its own asset ID |
-| Type select with no existing types | Only custom entry available |
-| Photo upload fails | Error toast, photo not added to list |
-| HEIC file on desktop (no native support) | Converted to JPEG during compression step |
-| Very large image (>10MB) | Compressed to within 1920px bound before upload |
-| Location deleted while picker is open | Tree refreshes on next open; stale selection cleared |
-| Navigate away with unsaved changes | Browser confirmation dialog |
+| Case                                         | Behaviour                                                    |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| Asset ID already in use                      | Inline error on blur: "Asset ID already in use by ITEM_NAME" |
+| Asset ID belongs to current item (edit mode) | No error — the item can keep its own asset ID                |
+| Type select with no existing types           | Only custom entry available                                  |
+| Photo upload fails                           | Error toast, photo not added to list                         |
+| HEIC file on desktop (no native support)     | Converted to JPEG during compression step                    |
+| Very large image (>10MB)                     | Compressed to within 1920px bound before upload              |
+| Location deleted while picker is open        | Tree refreshes on next open; stale selection cleared         |
+| Navigate away with unsaved changes           | Browser confirmation dialog                                  |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-form-layout](us-01-form-layout.md) | Form with all fields, validation rules, create/edit modes, submit handlers | Partial | Yes |
-| 02 | [us-02-location-picker](us-02-location-picker.md) | Location picker with breadcrumb display, tree overlay, search, inline quick-add | Partial | Yes |
-| 03 | [us-03-photo-upload](us-03-photo-upload.md) | Photo upload with drag-and-drop, camera, compression, reorder, delete | Partial | Yes |
-| 04 | [us-04-asset-id-generation](us-04-asset-id-generation.md) | Auto-generate asset ID from type prefix + sequential number, uniqueness validation on blur | Not started | Yes |
+| #   | Story                                                     | Summary                                                                                    | Status      | Parallelisable |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------- | -------------- |
+| 01  | [us-01-form-layout](us-01-form-layout.md)                 | Form with all fields, validation rules, create/edit modes, submit handlers                 | Partial     | Yes            |
+| 02  | [us-02-location-picker](us-02-location-picker.md)         | Location picker with breadcrumb display, tree overlay, search, inline quick-add            | Partial     | Yes            |
+| 03  | [us-03-photo-upload](us-03-photo-upload.md)               | Photo upload with drag-and-drop, camera, compression, reorder, delete                      | Partial     | Yes            |
+| 04  | [us-04-asset-id-generation](us-04-asset-id-generation.md) | Auto-generate asset ID from type prefix + sequential number, uniqueness validation on blur | Not started | Yes            |
 
 All four stories can be built in parallel. US-01 provides the form shell; US-02, US-03, and US-04 are self-contained components that plug into the form.
 

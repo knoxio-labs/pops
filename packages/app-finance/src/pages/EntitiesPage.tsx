@@ -1,12 +1,12 @@
 /**
  * Entities page - manage merchants/payees with CRUD
  */
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { trpc } from '../lib/trpc';
 import {
   DataTable,
   SortableHeader,
@@ -36,10 +36,10 @@ import {
   AlertDialogTitle,
   PageHeader,
   Label,
-} from "@pops/ui";
-import type { ColumnFilter } from "@pops/ui";
-import { MoreHorizontal, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+} from '@pops/ui';
+import type { ColumnFilter } from '@pops/ui';
+import { MoreHorizontal, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Entity {
   id: string;
@@ -54,17 +54,17 @@ interface Entity {
   transactionCount?: number;
 }
 
-const ENTITY_TYPES = ["company", "person", "place", "brand", "organisation"] as const;
+const ENTITY_TYPES = ['company', 'person', 'place', 'brand', 'organisation'] as const;
 
 const TRANSACTION_TYPES = [
-  { label: "None", value: "" },
-  { label: "Purchase", value: "purchase" },
-  { label: "Transfer", value: "transfer" },
-  { label: "Income", value: "income" },
+  { label: 'None', value: '' },
+  { label: 'Purchase', value: 'purchase' },
+  { label: 'Transfer', value: 'transfer' },
+  { label: 'Income', value: 'income' },
 ];
 
 const EntityFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   type: z.string(),
   abn: z.string(),
   aliases: z.array(z.string()),
@@ -76,13 +76,13 @@ const EntityFormSchema = z.object({
 type EntityFormValues = z.infer<typeof EntityFormSchema>;
 
 const DEFAULT_FORM_VALUES: EntityFormValues = {
-  name: "",
-  type: "company",
-  abn: "",
+  name: '',
+  type: 'company',
+  abn: '',
   aliases: [],
-  defaultTransactionType: "",
+  defaultTransactionType: '',
   defaultTags: [],
-  notes: "",
+  notes: '',
 };
 
 export function EntitiesPage() {
@@ -99,7 +99,7 @@ export function EntitiesPage() {
 
   const createMutation = trpc.core.entities.create.useMutation({
     onSuccess: () => {
-      toast.success("Entity created");
+      toast.success('Entity created');
       utils.core.entities.list.invalidate();
       setIsDialogOpen(false);
     },
@@ -108,7 +108,7 @@ export function EntitiesPage() {
 
   const updateMutation = trpc.core.entities.update.useMutation({
     onSuccess: () => {
-      toast.success("Entity updated");
+      toast.success('Entity updated');
       utils.core.entities.list.invalidate();
       setIsDialogOpen(false);
       setEditingEntity(null);
@@ -118,7 +118,7 @@ export function EntitiesPage() {
 
   const deleteMutation = trpc.core.entities.delete.useMutation({
     onSuccess: () => {
-      toast.success("Entity deleted");
+      toast.success('Entity deleted');
       utils.core.entities.list.invalidate();
       setDeletingId(null);
     },
@@ -140,12 +140,12 @@ export function EntitiesPage() {
     setEditingEntity(entity);
     form.reset({
       name: entity.name,
-      type: entity.type || "company",
-      abn: entity.abn || "",
+      type: entity.type || 'company',
+      abn: entity.abn || '',
       aliases: entity.aliases,
-      defaultTransactionType: entity.defaultTransactionType || "",
+      defaultTransactionType: entity.defaultTransactionType || '',
       defaultTags: entity.defaultTags,
-      notes: entity.notes || "",
+      notes: entity.notes || '',
     });
     setIsDialogOpen(true);
   };
@@ -170,7 +170,7 @@ export function EntitiesPage() {
 
   const columns: ColumnDef<Entity>[] = [
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -187,8 +187,8 @@ export function EntitiesPage() {
       ),
     },
     {
-      accessorKey: "type",
-      header: "Type",
+      accessorKey: 'type',
+      header: 'Type',
       cell: ({ row }) => {
         const type = row.original.type;
         if (!type) {
@@ -202,8 +202,8 @@ export function EntitiesPage() {
       },
     },
     {
-      accessorKey: "abn",
-      header: "ABN",
+      accessorKey: 'abn',
+      header: 'ABN',
       cell: ({ row }) => (
         <span className="text-sm font-mono">
           {row.original.abn || <span className="text-muted-foreground">—</span>}
@@ -211,8 +211,8 @@ export function EntitiesPage() {
       ),
     },
     {
-      accessorKey: "aliases",
-      header: "Aliases",
+      accessorKey: 'aliases',
+      header: 'Aliases',
       cell: ({ row }) => {
         const aliases = row.original.aliases;
         if (!aliases || aliases.length === 0) {
@@ -234,7 +234,7 @@ export function EntitiesPage() {
         );
       },
       filterFn: (row, columnId, filterValue) => {
-        const searchTerm = String(filterValue ?? "")
+        const searchTerm = String(filterValue ?? '')
           .toLowerCase()
           .trim();
         if (!searchTerm) {
@@ -246,8 +246,8 @@ export function EntitiesPage() {
       },
     },
     {
-      accessorKey: "defaultTransactionType",
-      header: "Default Type",
+      accessorKey: 'defaultTransactionType',
+      header: 'Default Type',
       cell: ({ row }) => {
         const defaultType = row.original.defaultTransactionType;
         if (!defaultType) {
@@ -261,8 +261,8 @@ export function EntitiesPage() {
       },
     },
     {
-      accessorKey: "defaultTags",
-      header: "Default Tags",
+      accessorKey: 'defaultTags',
+      header: 'Default Tags',
       cell: ({ row }) => {
         const tags = row.original.defaultTags;
         if (tags.length === 0) {
@@ -280,7 +280,7 @@ export function EntitiesPage() {
       },
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => (
         <div className="text-right">
           <DropdownMenu
@@ -309,11 +309,11 @@ export function EntitiesPage() {
 
   const tableFilters: ColumnFilter[] = [
     {
-      id: "type",
-      type: "select",
-      label: "Type",
+      id: 'type',
+      type: 'select',
+      label: 'Type',
       options: [
-        { label: "All Types", value: "" },
+        { label: 'All Types', value: '' },
         ...ENTITY_TYPES.map((t) => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: t })),
       ],
     },
@@ -345,7 +345,7 @@ export function EntitiesPage() {
             ? showOrphanedOnly
               ? `${data.pagination.total} orphaned entities`
               : `${data.pagination.total} total entities`
-            : "Manage merchants and payees"
+            : 'Manage merchants and payees'
         }
         actions={
           <Button onClick={handleAdd}>
@@ -363,11 +363,11 @@ export function EntitiesPage() {
         <>
           <div className="flex items-center gap-2">
             <Button
-              variant={showOrphanedOnly ? "default" : "outline"}
+              variant={showOrphanedOnly ? 'default' : 'outline'}
               size="sm"
               onClick={() => setShowOrphanedOnly((prev) => !prev)}
             >
-              {showOrphanedOnly ? "Showing orphaned only" : "Show orphaned only"}
+              {showOrphanedOnly ? 'Showing orphaned only' : 'Show orphaned only'}
             </Button>
           </div>
           <DataTable
@@ -389,13 +389,13 @@ export function EntitiesPage() {
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>{editingEntity ? "Edit Entity" : "New Entity"}</DialogTitle>
+              <DialogTitle>{editingEntity ? 'Edit Entity' : 'New Entity'}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <TextInput
                 label="Name"
                 placeholder="e.g. Woolworths, Netflix"
-                {...form.register("name")}
+                {...form.register('name')}
                 error={form.formState.errors.name?.message}
               />
               <div className="grid grid-cols-2 gap-4">
@@ -405,12 +405,12 @@ export function EntitiesPage() {
                     label: t.charAt(0).toUpperCase() + t.slice(1),
                     value: t,
                   }))}
-                  {...form.register("type")}
+                  {...form.register('type')}
                 />
                 <TextInput
                   label="ABN (Optional)"
                   placeholder="00 000 000 000"
-                  {...form.register("abn")}
+                  {...form.register('abn')}
                 />
               </div>
               <div className="space-y-2">
@@ -430,7 +430,7 @@ export function EntitiesPage() {
               <Select
                 label="Default Transaction Type (Optional)"
                 options={TRANSACTION_TYPES}
-                {...form.register("defaultTransactionType")}
+                {...form.register('defaultTransactionType')}
               />
               <div className="space-y-2">
                 <Label>Default Tags</Label>
@@ -448,7 +448,7 @@ export function EntitiesPage() {
               </div>
               <div className="space-y-2">
                 <Label>Notes (Optional)</Label>
-                <Textarea placeholder="Additional details..." {...form.register("notes")} />
+                <Textarea placeholder="Additional details..." {...form.register('notes')} />
               </div>
             </div>
             <DialogFooter>
@@ -462,7 +462,7 @@ export function EntitiesPage() {
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingEntity ? "Update" : "Create"}
+                {editingEntity ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
           </form>
@@ -486,7 +486,7 @@ export function EntitiesPage() {
               onClick={() => deletingId && deleteMutation.mutate({ id: deletingId })}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

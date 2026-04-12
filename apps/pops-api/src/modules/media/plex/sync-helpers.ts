@@ -4,13 +4,13 @@
  * Extracted from service.ts, sync-movies.ts, and sync-tv.ts to eliminate
  * duplicated watch-history logging and external ID extraction logic.
  */
-import { eq, and } from "drizzle-orm";
-import { episodes, seasons } from "@pops/db-types";
-import type { PlexClient } from "./client.js";
-import type { PlexMediaItem, PlexEpisode } from "./types.js";
-import { getDrizzle } from "../../../db.js";
-import { getTvShowByTvdbId } from "../tv-shows/service.js";
-import { logWatch } from "../watch-history/service.js";
+import { eq, and } from 'drizzle-orm';
+import { episodes, seasons } from '@pops/db-types';
+import type { PlexClient } from './client.js';
+import type { PlexMediaItem, PlexEpisode } from './types.js';
+import { getDrizzle } from '../../../db.js';
+import { getTvShowByTvdbId } from '../tv-shows/service.js';
+import { logWatch } from '../watch-history/service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,13 +88,13 @@ export function extractExternalIdAsNumber(item: PlexMediaItem, source: string): 
 export function logMovieWatch(movieId: number, lastViewedAtUnix: number | null): boolean {
   try {
     const result = logWatch({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: movieId,
       watchedAt: lastViewedAtUnix
         ? new Date(lastViewedAtUnix * 1000).toISOString()
         : new Date().toISOString(),
       completed: 1,
-      source: "plex_sync",
+      source: 'plex_sync',
     });
     return result.created;
   } catch {
@@ -171,13 +171,13 @@ export function syncEpisodeWatches(
       }
 
       const result = logWatch({
-        mediaType: "episode",
+        mediaType: 'episode',
         mediaId: episode.id,
         watchedAt: plexEp.lastViewedAt
           ? new Date(plexEp.lastViewedAt * 1000).toISOString()
           : new Date().toISOString(),
         completed: 1,
-        source: "plex_sync",
+        source: 'plex_sync',
       });
 
       if (result.created) {

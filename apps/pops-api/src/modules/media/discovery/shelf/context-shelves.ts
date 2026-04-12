@@ -19,13 +19,13 @@
  *   context:oscar-season      — February/March, Oscar/academy-award keywords
  *   context:rainy-day         — Always active (fallback), Comedy + Drama + Animation
  */
-import { getTmdbClient } from "../../tmdb/index.js";
-import { toDiscoverResults, getLibraryTmdbIds } from "../tmdb-service.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "../flags.js";
-import { CONTEXT_COLLECTIONS, type ContextCollection } from "../context-collections.js";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile } from "../types.js";
+import { getTmdbClient } from '../../tmdb/index.js';
+import { toDiscoverResults, getLibraryTmdbIds } from '../tmdb-service.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from '../flags.js';
+import { CONTEXT_COLLECTIONS, type ContextCollection } from '../context-collections.js';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile } from '../types.js';
 
 /** Score for a context shelf that is always active (rainy-day fallback). */
 const FALLBACK_SCORE = 0.4;
@@ -34,7 +34,7 @@ const CONTEXT_SCORE = 0.7;
 
 /** Build a ShelfInstance from an active ContextCollection. */
 function buildContextInstance(collection: ContextCollection): ShelfInstance {
-  const isFallback = collection.id === "rainy-day";
+  const isFallback = collection.id === 'rainy-day';
 
   return {
     shelfId: `context:${collection.id}`,
@@ -49,7 +49,7 @@ function buildContextInstance(collection: ContextCollection): ShelfInstance {
         client.discoverMovies({
           genreIds: collection.genreIds.length > 0 ? collection.genreIds : undefined,
           keywordIds: collection.keywordIds.length > 0 ? collection.keywordIds : undefined,
-          sortBy: "vote_average.desc",
+          sortBy: 'vote_average.desc',
           voteCountGte: 100,
           page,
         }),
@@ -74,9 +74,9 @@ function buildContextInstance(collection: ContextCollection): ShelfInstance {
 // ---------------------------------------------------------------------------
 
 export const contextShelfDefinition: ShelfDefinition = {
-  id: "context",
+  id: 'context',
   template: true,
-  category: "context",
+  category: 'context',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     const now = new Date();
     const hour = now.getHours();

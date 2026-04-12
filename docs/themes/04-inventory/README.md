@@ -21,28 +21,28 @@ Build a home inventory app that tracks every physical item — from a $5,000 Mac
 
 ## Epics
 
-| # | Epic | Summary | Status |
-|---|------|---------|--------|
-| 0 | [Schema & Data Model](epics/00-schema-data-model.md) | Location tree, connections junction table, asset IDs, photos, notes | Partial |
-| 1 | [App Package & CRUD UI](epics/01-app-package-crud-ui.md) | `@pops/app-inventory` — list/grid views, detail page, create/edit forms, photo gallery | Partial |
-| 2 | [Location Tree Management](epics/02-location-tree-management.md) | Hierarchical browser, CRUD operations, item browsing per location | Partial |
-| 3 | [Connections & Graph](epics/03-connections-graph.md) | Bidirectional links, connection chain tracing, graph visualisation | Partial |
-| 4 | [Paperless-ngx Integration](epics/04-paperless-integration.md) | Document search, linking receipts/warranties/manuals, thumbnail display | Partial |
-| 5 | [Warranty, Value & Reporting](epics/05-warranty-value-reporting.md) | Warranty alerts, asset value dashboard, room-level reports, insurance exports | Partial |
+| #   | Epic                                                                | Summary                                                                                | Status  |
+| --- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------- |
+| 0   | [Schema & Data Model](epics/00-schema-data-model.md)                | Location tree, connections junction table, asset IDs, photos, notes                    | Partial |
+| 1   | [App Package & CRUD UI](epics/01-app-package-crud-ui.md)            | `@pops/app-inventory` — list/grid views, detail page, create/edit forms, photo gallery | Partial |
+| 2   | [Location Tree Management](epics/02-location-tree-management.md)    | Hierarchical browser, CRUD operations, item browsing per location                      | Partial |
+| 3   | [Connections & Graph](epics/03-connections-graph.md)                | Bidirectional links, connection chain tracing, graph visualisation                     | Partial |
+| 4   | [Paperless-ngx Integration](epics/04-paperless-integration.md)      | Document search, linking receipts/warranties/manuals, thumbnail display                | Partial |
+| 5   | [Warranty, Value & Reporting](epics/05-warranty-value-reporting.md) | Warranty alerts, asset value dashboard, room-level reports, insurance exports          | Partial |
 
 Epic 0 prerequisite to everything. Epic 1 after 0. Epics 2-5 parallel after 1.
 
 ## Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Location model | Self-referential tree (`parent_id`) | Arbitrary depth, multiple roots |
-| Connections | Untyped bidirectional junction table | Item metadata carries semantic meaning, no connection types needed |
-| Asset IDs | First-class unique text field | Human-readable prefixes (HDMI01, ETHER04) for physical identification |
-| Photos | Local filesystem, compressed on upload | Max 1920px, ~500 MB budget |
-| Borrowed items | Location-based ("Friend X" as root) | Handles 80% case, proper lending system is future |
-| Notes | Free-form text, rendered as markdown | Rich specs per item |
-| Paperless-ngx | Read-only (search + link) | No upload from POPS |
+| Decision       | Choice                                 | Rationale                                                             |
+| -------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| Location model | Self-referential tree (`parent_id`)    | Arbitrary depth, multiple roots                                       |
+| Connections    | Untyped bidirectional junction table   | Item metadata carries semantic meaning, no connection types needed    |
+| Asset IDs      | First-class unique text field          | Human-readable prefixes (HDMI01, ETHER04) for physical identification |
+| Photos         | Local filesystem, compressed on upload | Max 1920px, ~500 MB budget                                            |
+| Borrowed items | Location-based ("Friend X" as root)    | Handles 80% case, proper lending system is future                     |
+| Notes          | Free-form text, rendered as markdown   | Rich specs per item                                                   |
+| Paperless-ngx  | Read-only (search + link)              | No upload from POPS                                                   |
 
 ## Risks
 

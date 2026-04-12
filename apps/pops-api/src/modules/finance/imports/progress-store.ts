@@ -4,17 +4,17 @@
  * Stores real-time progress updates that can be polled by the frontend.
  * Progress entries auto-expire after 5 minutes to prevent memory leaks.
  */
-import type { ProcessImportOutput, ExecuteImportOutput } from "./types.js";
+import type { ProcessImportOutput, ExecuteImportOutput } from './types.js';
 
 export interface ImportProgress {
   sessionId: string;
-  status: "processing" | "completed" | "failed";
-  currentStep: "deduplicating" | "matching" | "writing";
+  status: 'processing' | 'completed' | 'failed';
+  currentStep: 'deduplicating' | 'matching' | 'writing';
   totalTransactions: number;
   processedCount: number;
   currentBatch: Array<{
     description: string;
-    status: "processing" | "success" | "failed";
+    status: 'processing' | 'success' | 'failed';
     error?: string;
   }>;
   errors: Array<{ description: string; error: string }>;

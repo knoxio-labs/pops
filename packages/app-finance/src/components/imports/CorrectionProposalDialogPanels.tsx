@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Plus, Trash2, RefreshCcw, Sparkles, X } from "lucide-react";
-import { Badge, Button, Input, Label, Select, Separator, Textarea } from "@pops/ui";
+import { useState } from 'react';
+import { Plus, Trash2, RefreshCcw, Sparkles, X } from 'lucide-react';
+import { Badge, Button, Input, Label, Select, Separator, Textarea } from '@pops/ui';
 
-import { RulePicker, type CorrectionRule } from "./RulePicker";
+import { RulePicker, type CorrectionRule } from './RulePicker';
 import {
   PREVIEW_CHANGESET_MAX_TRANSACTIONS,
   matchTypeLabel,
@@ -15,17 +15,17 @@ import {
   type LocalOp,
   type PreviewChangeSetOutput,
   type TriggeringTransactionContext,
-} from "./CorrectionProposalDialog";
+} from './CorrectionProposalDialog';
 
 // ---------------------------------------------------------------------------
 // Local types used only by panels
 // ---------------------------------------------------------------------------
 
-export type PreviewView = "selected" | "combined";
+export type PreviewView = 'selected' | 'combined';
 
 export interface AiMessage {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   text: string;
 }
 
@@ -70,14 +70,14 @@ function formatCorrectionDiff(
     );
   }
 
-  return parts.length > 0 ? parts.join(" · ") : null;
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function formatCurrency(amount: number): string {
   try {
     return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: "USD",
+      style: 'currency',
+      currency: 'USD',
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
@@ -90,7 +90,7 @@ export function ContextPanel(props: {
   triggeringTransaction: TriggeringTransactionContext | null;
   rationale: string | null;
   opCount: number;
-  combinedSummary: PreviewChangeSetOutput["summary"] | null;
+  combinedSummary: PreviewChangeSetOutput['summary'] | null;
 }) {
   const { signal, triggeringTransaction, rationale, opCount, combinedSummary } = props;
   const diff = triggeringTransaction ? formatCorrectionDiff(signal, triggeringTransaction) : null;
@@ -125,25 +125,25 @@ export function ContextPanel(props: {
         <div className="flex-1 min-w-0 space-y-1">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Proposed rule</div>
           <div className="text-sm">
-            When description <strong>{matchTypeLabel(signal.matchType)}</strong>{" "}
+            When description <strong>{matchTypeLabel(signal.matchType)}</strong>{' '}
             <code className="rounded bg-background px-1 py-0.5 text-xs">
               {signal.descriptionPattern}
             </code>
             {signal.entityName && (
               <>
-                {" "}
+                {' '}
                 → <strong>{signal.entityName}</strong>
               </>
             )}
             {signal.transactionType && (
               <>
-                {" "}
+                {' '}
                 · type <strong>{signal.transactionType}</strong>
               </>
             )}
             {signal.location && (
               <>
-                {" "}
+                {' '}
                 · location <strong>{signal.location}</strong>
               </>
             )}
@@ -152,7 +152,7 @@ export function ContextPanel(props: {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">
-            {opCount} op{opCount === 1 ? "" : "s"}
+            {opCount} op{opCount === 1 ? '' : 's'}
           </Badge>
           {combinedSummary && (
             <>
@@ -173,11 +173,11 @@ export function OpsListPanel(props: {
   onSelect: (clientId: string) => void;
   onDelete: (clientId: string) => void;
   onAddNewRule: () => void;
-  onAddTargeted: (kind: "edit" | "disable" | "remove", rule: CorrectionRule) => void;
+  onAddTargeted: (kind: 'edit' | 'disable' | 'remove', rule: CorrectionRule) => void;
   excludeIds: ReadonlySet<string>;
   disabled: boolean;
 }) {
-  const [addMode, setAddMode] = useState<"menu" | "edit" | "disable" | "remove" | null>(null);
+  const [addMode, setAddMode] = useState<'menu' | 'edit' | 'disable' | 'remove' | null>(null);
   return (
     <div className="flex flex-col min-h-0 border-r">
       <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b">
@@ -196,7 +196,7 @@ export function OpsListPanel(props: {
                 <li
                   key={op.clientId}
                   className={`px-3 py-2 cursor-pointer hover:bg-muted/50 ${
-                    selected ? "bg-muted" : ""
+                    selected ? 'bg-muted' : ''
                   }`}
                   onClick={() => props.onSelect(op.clientId)}
                 >
@@ -245,13 +245,13 @@ export function OpsListPanel(props: {
             size="sm"
             variant="outline"
             className="w-full justify-start"
-            onClick={() => setAddMode("menu")}
+            onClick={() => setAddMode('menu')}
             disabled={props.disabled}
           >
             <Plus className="mr-1 h-3.5 w-3.5" /> Add operation
           </Button>
         )}
-        {addMode === "menu" && (
+        {addMode === 'menu' && (
           <div className="space-y-1">
             <Button
               size="sm"
@@ -268,7 +268,7 @@ export function OpsListPanel(props: {
               size="sm"
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => setAddMode("edit")}
+              onClick={() => setAddMode('edit')}
             >
               Edit existing rule…
             </Button>
@@ -276,7 +276,7 @@ export function OpsListPanel(props: {
               size="sm"
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => setAddMode("disable")}
+              onClick={() => setAddMode('disable')}
             >
               Disable existing rule…
             </Button>
@@ -284,7 +284,7 @@ export function OpsListPanel(props: {
               size="sm"
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => setAddMode("remove")}
+              onClick={() => setAddMode('remove')}
             >
               Remove existing rule…
             </Button>
@@ -298,7 +298,7 @@ export function OpsListPanel(props: {
             </Button>
           </div>
         )}
-        {(addMode === "edit" || addMode === "disable" || addMode === "remove") && (
+        {(addMode === 'edit' || addMode === 'disable' || addMode === 'remove') && (
           <div className="space-y-1">
             <div className="text-xs text-muted-foreground px-1">Pick a rule to {addMode}</div>
             <RulePicker
@@ -338,7 +338,7 @@ export function DetailPanel(props: {
     );
   }
 
-  if (op.kind === "add") {
+  if (op.kind === 'add') {
     return (
       <div className="p-6 overflow-auto space-y-4">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">Add new rule</div>
@@ -346,7 +346,7 @@ export function DetailPanel(props: {
           data={op.data}
           onChange={(next) =>
             onChange((current) => {
-              if (current.kind !== "add") return current;
+              if (current.kind !== 'add') return current;
               return { ...current, data: next };
             })
           }
@@ -357,7 +357,7 @@ export function DetailPanel(props: {
     );
   }
 
-  if (op.kind === "edit") {
+  if (op.kind === 'edit') {
     return (
       <div className="p-6 overflow-auto space-y-4">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">Edit rule</div>
@@ -367,7 +367,7 @@ export function DetailPanel(props: {
           data={op.data}
           onChange={(next) =>
             onChange((current) => {
-              if (current.kind !== "edit") return current;
+              if (current.kind !== 'edit') return current;
               return { ...current, data: next };
             })
           }
@@ -381,7 +381,7 @@ export function DetailPanel(props: {
   return (
     <div className="p-6 overflow-auto space-y-4">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">
-        {op.kind === "disable" ? "Disable rule" : "Remove rule"}
+        {op.kind === 'disable' ? 'Disable rule' : 'Remove rule'}
       </div>
       <TargetRuleCard rule={op.targetRule} targetRuleId={op.targetRuleId} />
       <div className="space-y-2">
@@ -390,7 +390,7 @@ export function DetailPanel(props: {
           value={op.rationale}
           onChange={(e) =>
             onChange((current) => {
-              if (current.kind !== "disable" && current.kind !== "remove") return current;
+              if (current.kind !== 'disable' && current.kind !== 'remove') return current;
               return { ...current, rationale: e.target.value };
             })
           }
@@ -416,12 +416,12 @@ function TargetRuleCard(props: { rule: CorrectionRule | null; targetRuleId: stri
     <div className="rounded-md border bg-muted/30 p-3 space-y-1">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">Target rule</div>
       <div className="text-sm">
-        <code className="rounded bg-background px-1 py-0.5 text-xs">{r.descriptionPattern}</code> ·{" "}
+        <code className="rounded bg-background px-1 py-0.5 text-xs">{r.descriptionPattern}</code> ·{' '}
         <span className="text-xs">{r.matchType}</span>
       </div>
       <div className="text-xs text-muted-foreground">
-        {[r.entityName, r.location, r.transactionType].filter(Boolean).join(" · ") ||
-          "no outcome set"}
+        {[r.entityName, r.location, r.transactionType].filter(Boolean).join(' · ') ||
+          'no outcome set'}
       </div>
     </div>
   );
@@ -431,7 +431,7 @@ function RuleDataEditor(props: {
   data: AddRuleData;
   onChange: (next: AddRuleData) => void;
   disabled: boolean;
-  mode: "add";
+  mode: 'add';
 }) {
   const { data, onChange, disabled } = props;
   return (
@@ -451,13 +451,13 @@ function RuleDataEditor(props: {
           onChange={(e) =>
             onChange({
               ...data,
-              matchType: e.target.value as "exact" | "contains" | "regex",
+              matchType: e.target.value as 'exact' | 'contains' | 'regex',
             })
           }
           options={[
-            { value: "exact", label: "Exact" },
-            { value: "contains", label: "Contains" },
-            { value: "regex", label: "Regex" },
+            { value: 'exact', label: 'Exact' },
+            { value: 'contains', label: 'Contains' },
+            { value: 'regex', label: 'Regex' },
           ]}
           disabled={disabled}
         />
@@ -465,7 +465,7 @@ function RuleDataEditor(props: {
       <div className="space-y-1">
         <Label>Entity name</Label>
         <Input
-          value={data.entityName ?? ""}
+          value={data.entityName ?? ''}
           onChange={(e) => onChange({ ...data, entityName: e.target.value || undefined })}
           placeholder="e.g. Woolworths"
           disabled={disabled}
@@ -474,21 +474,21 @@ function RuleDataEditor(props: {
       <div className="space-y-1">
         <Label>Transaction type</Label>
         <Select
-          value={data.transactionType ?? ""}
+          value={data.transactionType ?? ''}
           onChange={(e) =>
             onChange({
               ...data,
               transactionType:
-                e.target.value === ""
+                e.target.value === ''
                   ? undefined
-                  : (e.target.value as "purchase" | "transfer" | "income"),
+                  : (e.target.value as 'purchase' | 'transfer' | 'income'),
             })
           }
           options={[
-            { value: "", label: "— none —" },
-            { value: "purchase", label: "Purchase" },
-            { value: "transfer", label: "Transfer" },
-            { value: "income", label: "Income" },
+            { value: '', label: '— none —' },
+            { value: 'purchase', label: 'Purchase' },
+            { value: 'transfer', label: 'Transfer' },
+            { value: 'income', label: 'Income' },
           ]}
           disabled={disabled}
         />
@@ -496,7 +496,7 @@ function RuleDataEditor(props: {
       <div className="space-y-1">
         <Label>Location</Label>
         <Input
-          value={data.location ?? ""}
+          value={data.location ?? ''}
           onChange={(e) => onChange({ ...data, location: e.target.value || undefined })}
           disabled={disabled}
         />
@@ -516,7 +516,7 @@ function EditDataEditor(props: {
       <div className="space-y-1">
         <Label>Entity name</Label>
         <Input
-          value={data.entityName ?? ""}
+          value={data.entityName ?? ''}
           onChange={(e) => onChange({ ...data, entityName: e.target.value || undefined })}
           disabled={disabled}
         />
@@ -524,21 +524,21 @@ function EditDataEditor(props: {
       <div className="space-y-1">
         <Label>Transaction type</Label>
         <Select
-          value={data.transactionType ?? ""}
+          value={data.transactionType ?? ''}
           onChange={(e) =>
             onChange({
               ...data,
               transactionType:
-                e.target.value === ""
+                e.target.value === ''
                   ? undefined
-                  : (e.target.value as "purchase" | "transfer" | "income"),
+                  : (e.target.value as 'purchase' | 'transfer' | 'income'),
             })
           }
           options={[
-            { value: "", label: "— none —" },
-            { value: "purchase", label: "Purchase" },
-            { value: "transfer", label: "Transfer" },
-            { value: "income", label: "Income" },
+            { value: '', label: '— none —' },
+            { value: 'purchase', label: 'Purchase' },
+            { value: 'transfer', label: 'Transfer' },
+            { value: 'income', label: 'Income' },
           ]}
           disabled={disabled}
         />
@@ -546,7 +546,7 @@ function EditDataEditor(props: {
       <div className="space-y-1">
         <Label>Location</Label>
         <Input
-          value={data.location ?? ""}
+          value={data.location ?? ''}
           onChange={(e) => onChange({ ...data, location: e.target.value || undefined })}
           disabled={disabled}
         />
@@ -587,16 +587,16 @@ export function ImpactPanel(props: {
       <div className="px-4 py-2 border-b flex gap-1">
         <Button
           size="sm"
-          variant={props.view === "selected" ? "default" : "outline"}
-          onClick={() => props.onViewChange("selected")}
+          variant={props.view === 'selected' ? 'default' : 'outline'}
+          onClick={() => props.onViewChange('selected')}
           className="flex-1"
         >
           Selected
         </Button>
         <Button
           size="sm"
-          variant={props.view === "combined" ? "default" : "outline"}
-          onClick={() => props.onViewChange("combined")}
+          variant={props.view === 'combined' ? 'default' : 'outline'}
+          onClick={() => props.onViewChange('combined')}
           className="flex-1"
         >
           Combined
@@ -663,8 +663,8 @@ function ImpactContent(props: { result: PreviewChangeSetOutput }) {
             >
               <div className="font-medium truncate">{d.description}</div>
               <div className="text-[10px] text-muted-foreground">
-                {d.before.matched ? d.before.status : "unmatched"} →{" "}
-                {d.after.matched ? d.after.status : "unmatched"}
+                {d.before.matched ? d.before.status : 'unmatched'} →{' '}
+                {d.after.matched ? d.after.status : 'unmatched'}
               </div>
             </div>
           ))}
@@ -723,10 +723,10 @@ export function AiHelperPanel(props: {
             <div
               key={m.id}
               className={`text-xs ${
-                m.role === "user" ? "text-foreground" : "text-muted-foreground italic"
+                m.role === 'user' ? 'text-foreground' : 'text-muted-foreground italic'
               }`}
             >
-              <span className="font-semibold mr-1">{m.role === "user" ? "You:" : "AI:"}</span>
+              <span className="font-semibold mr-1">{m.role === 'user' ? 'You:' : 'AI:'}</span>
               {m.text}
             </div>
           ))}
@@ -737,7 +737,7 @@ export function AiHelperPanel(props: {
           value={props.instruction}
           onChange={(e) => props.onInstructionChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               props.onSubmit();
             }
@@ -747,7 +747,7 @@ export function AiHelperPanel(props: {
           className="flex-1"
         />
         <Button onClick={props.onSubmit} disabled={props.busy || !props.instruction.trim()}>
-          {props.busy ? "…" : "Send"}
+          {props.busy ? '…' : 'Send'}
         </Button>
       </div>
     </div>
@@ -761,7 +761,7 @@ export function BrowseRuleDetailPanel(props: {
   onRemove: (rule: CorrectionRule) => void;
 }) {
   const { rule } = props;
-  const isPending = rule.id.startsWith("temp:");
+  const isPending = rule.id.startsWith('temp:');
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center gap-2">
@@ -866,7 +866,7 @@ export function RejectPanel(props: {
           onClick={props.onConfirm}
           disabled={props.busy || !props.feedback.trim()}
         >
-          {props.busy ? "Rejecting…" : "Confirm reject"}
+          {props.busy ? 'Rejecting…' : 'Confirm reject'}
         </Button>
       </div>
     </div>

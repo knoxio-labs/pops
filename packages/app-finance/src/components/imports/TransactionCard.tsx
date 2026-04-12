@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { ChevronRight, Sparkles, Zap, Pencil } from "lucide-react";
-import { Badge } from "@pops/ui";
-import { Button } from "@pops/ui";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@pops/ui";
-import { LocationField } from "./LocationField";
-import { EntitySelect } from "./EntitySelect";
-import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
+import { useState } from 'react';
+import { ChevronRight, Sparkles, Zap, Pencil } from 'lucide-react';
+import { Badge } from '@pops/ui';
+import { Button } from '@pops/ui';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
+import { LocationField } from './LocationField';
+import { EntitySelect } from './EntitySelect';
+import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
 
 interface TransactionCardProps {
   transaction: ProcessedTransaction;
@@ -20,7 +20,7 @@ interface TransactionCardProps {
   entities?: Array<{ id: string; name: string; type: string }>;
   readonly?: boolean;
   showMatchType?: boolean;
-  variant?: "matched" | "uncertain" | "failed";
+  variant?: 'matched' | 'uncertain' | 'failed';
 }
 
 /**
@@ -35,21 +35,21 @@ export function TransactionCard({
   entities,
   readonly = false,
   showMatchType = false,
-  variant = "matched",
+  variant = 'matched',
 }: TransactionCardProps) {
   const [isRawDataExpanded, setIsRawDataExpanded] = useState(false);
 
-  const hasAiSuggestion = transaction.entity?.matchType === "ai" && transaction.entity?.entityName;
+  const hasAiSuggestion = transaction.entity?.matchType === 'ai' && transaction.entity?.entityName;
 
   const ruleProvenance = transaction.ruleProvenance;
-  const isRuleMatched = Boolean(ruleProvenance) || transaction.entity?.matchType === "learned";
+  const isRuleMatched = Boolean(ruleProvenance) || transaction.entity?.matchType === 'learned';
 
   // Check if AI-suggested entity actually exists in the entities list
   const aiSuggestedEntityExists =
     hasAiSuggestion &&
     entities?.some((e) => e.name.toLowerCase() === transaction.entity?.entityName?.toLowerCase());
 
-  const isAutoMatched = transaction.entity?.matchType === ("auto-matched" as never);
+  const isAutoMatched = transaction.entity?.matchType === ('auto-matched' as never);
   const isEdited = (transaction as ProcessedTransaction & { manuallyEdited?: boolean })
     .manuallyEdited;
 
@@ -58,23 +58,23 @@ export function TransactionCard({
   try {
     rawData = JSON.parse(transaction.rawRow);
   } catch {
-    rawData = { error: "Failed to parse raw data" };
+    rawData = { error: 'Failed to parse raw data' };
   }
 
   // Border and background colors based on variant
   const borderColor =
-    variant === "uncertain"
-      ? "border-yellow-200 dark:border-yellow-800"
-      : variant === "failed"
-        ? "border-red-200 dark:border-red-800"
-        : "border-gray-200 dark:border-gray-700";
+    variant === 'uncertain'
+      ? 'border-yellow-200 dark:border-yellow-800'
+      : variant === 'failed'
+        ? 'border-red-200 dark:border-red-800'
+        : 'border-gray-200 dark:border-gray-700';
 
   const bgColor =
-    variant === "uncertain"
-      ? "bg-yellow-50 dark:bg-yellow-950"
-      : variant === "failed"
-        ? "bg-red-50 dark:bg-red-950"
-        : "bg-white dark:bg-gray-800";
+    variant === 'uncertain'
+      ? 'bg-yellow-50 dark:bg-yellow-950'
+      : variant === 'failed'
+        ? 'bg-red-50 dark:bg-red-950'
+        : 'bg-white dark:bg-gray-800';
 
   return (
     <div
@@ -109,8 +109,8 @@ export function TransactionCard({
                         `Pattern: ${ruleProvenance.pattern}`,
                         `Match type: ${ruleProvenance.matchType}`,
                         `Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`,
-                      ].join("\n")
-                    : "Rule matched"
+                      ].join('\n')
+                    : 'Rule matched'
                 }
               >
                 Rule matched
@@ -124,10 +124,10 @@ export function TransactionCard({
             <div className="mt-1 text-xs text-muted-foreground">
               <span className="font-mono">
                 {ruleProvenance.matchType}
-                {" • "}
+                {' • '}
                 {Math.round(ruleProvenance.confidence * 100)}%
               </span>
-              {" • "}
+              {' • '}
               <span
                 className="font-mono truncate inline-block max-w-[28ch] align-bottom"
                 title={ruleProvenance.pattern}
@@ -155,7 +155,7 @@ export function TransactionCard({
       {/* Field grid: account, location, type */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         <div className="text-sm">
-          <span className="text-gray-500">Account:</span>{" "}
+          <span className="text-gray-500">Account:</span>{' '}
           <span className="font-medium">{transaction.account}</span>
         </div>
 
@@ -185,7 +185,7 @@ export function TransactionCard({
                     onClick={() => onAcceptAiSuggestion(transaction)}
                     className="bg-purple-600 hover:bg-purple-700 flex-1"
                   >
-                    {aiSuggestedEntityExists ? "✓" : "+"} Accept "{transaction.entity.entityName}"
+                    {aiSuggestedEntityExists ? '✓' : '+'} Accept "{transaction.entity.entityName}"
                   </Button>
                 )}
                 {onCreateEntity && !aiSuggestedEntityExists && (
@@ -215,7 +215,7 @@ export function TransactionCard({
 
           <EntitySelect
             entities={entities ?? []}
-            value={transaction.entity?.entityId || ""}
+            value={transaction.entity?.entityId || ''}
             onChange={(entityId, entityName) => {
               if (onEntitySelect) {
                 onEntitySelect(transaction, entityId, entityName);
@@ -229,7 +229,7 @@ export function TransactionCard({
       {readonly && transaction.entity?.entityName && (
         <div className="mb-3">
           <div className="text-sm">
-            <span className="text-gray-500">Entity:</span>{" "}
+            <span className="text-gray-500">Entity:</span>{' '}
             <span className="font-medium">{transaction.entity.entityName}</span>
           </div>
           {showMatchType && (
@@ -249,7 +249,7 @@ export function TransactionCard({
       <Collapsible open={isRawDataExpanded} onOpenChange={setIsRawDataExpanded}>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
           <ChevronRight
-            className={`w-4 h-4 transition-transform ${isRawDataExpanded ? "rotate-90" : ""}`}
+            className={`w-4 h-4 transition-transform ${isRawDataExpanded ? 'rotate-90' : ''}`}
           />
           <span>Raw CSV data</span>
         </CollapsibleTrigger>

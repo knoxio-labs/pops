@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
 
 // ── Hoisted mocks ──────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ const {
   mockTvRefetch: vi.fn(),
 }));
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       search: {
@@ -50,9 +50,9 @@ vi.mock("../lib/trpc", () => ({
 let lastMovieCardProps: Record<string, unknown>[] = [];
 let lastTvCardProps: Record<string, unknown>[] = [];
 
-vi.mock("../components/SearchResultCard", () => ({
+vi.mock('../components/SearchResultCard', () => ({
   SearchResultCard: (props: Record<string, unknown>) => {
-    if (props.type === "movie") lastMovieCardProps.push(props);
+    if (props.type === 'movie') lastMovieCardProps.push(props);
     else lastTvCardProps.push(props);
     return (
       <div data-testid={`card-${props.type as string}-${props.title as string}`}>
@@ -65,16 +65,16 @@ vi.mock("../components/SearchResultCard", () => ({
   },
   buildPosterUrl: (path: string | null, type: string) => {
     if (!path) return null;
-    if (type === "movie" && path.startsWith("/")) return `https://image.tmdb.org/t/p/w342${path}`;
+    if (type === 'movie' && path.startsWith('/')) return `https://image.tmdb.org/t/p/w342${path}`;
     return path;
   },
 }));
 
-vi.mock("../components/RequestMovieButton", () => ({
+vi.mock('../components/RequestMovieButton', () => ({
   RequestMovieButton: () => null,
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
@@ -83,18 +83,18 @@ vi.mock("sonner", () => ({
 const MOVIE_RESULTS = [
   {
     tmdbId: 101,
-    title: "Inception",
-    overview: "A thief who steals corporate secrets through the use of dream-sharing technology.",
-    releaseDate: "2010-07-16",
-    posterPath: "/inception.jpg",
+    title: 'Inception',
+    overview: 'A thief who steals corporate secrets through the use of dream-sharing technology.',
+    releaseDate: '2010-07-16',
+    posterPath: '/inception.jpg',
     voteAverage: 8.8,
     genreIds: [28, 878],
   },
   {
     tmdbId: 102,
-    title: "Interstellar",
-    overview: "A team of explorers travel through a wormhole in space.",
-    releaseDate: "2014-11-07",
+    title: 'Interstellar',
+    overview: 'A team of explorers travel through a wormhole in space.',
+    releaseDate: '2014-11-07',
     posterPath: null,
     voteAverage: 8.6,
     genreIds: [18, 878],
@@ -104,21 +104,21 @@ const MOVIE_RESULTS = [
 const TV_RESULTS = [
   {
     tvdbId: 201,
-    name: "Breaking Bad",
-    overview: "A chemistry teacher turned meth cook.",
-    firstAirDate: "2008-01-20",
-    posterPath: "https://cdn.tvdb.com/bb.jpg",
-    genres: ["Drama"],
-    year: "2008",
+    name: 'Breaking Bad',
+    overview: 'A chemistry teacher turned meth cook.',
+    firstAirDate: '2008-01-20',
+    posterPath: 'https://cdn.tvdb.com/bb.jpg',
+    genres: ['Drama'],
+    year: '2008',
   },
   {
     tvdbId: 202,
-    name: "Severance",
+    name: 'Severance',
     overview: null,
-    firstAirDate: "2022-02-18",
+    firstAirDate: '2022-02-18',
     posterPath: null,
     genres: [],
-    year: "2022",
+    year: '2022',
   },
 ];
 
@@ -157,7 +157,7 @@ function setupEmptyLibrary() {
   mockLibraryTv.mockReturnValue({ data: { data: [] } });
 }
 
-function renderPage(path = "/media/search?q=inception") {
+function renderPage(path = '/media/search?q=inception') {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
@@ -167,7 +167,7 @@ function renderPage(path = "/media/search?q=inception") {
   );
 }
 
-import { SearchPage } from "./SearchPage";
+import { SearchPage } from './SearchPage';
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
@@ -180,100 +180,100 @@ beforeEach(() => {
   setupLibrary();
 });
 
-describe("SearchPage — both sections render independently", () => {
+describe('SearchPage — both sections render independently', () => {
   it("shows movie results and TV results simultaneously in 'Both' mode", () => {
     renderPage();
 
-    expect(screen.getByTestId("card-movie-Inception")).toBeInTheDocument();
-    expect(screen.getByTestId("card-tv-Breaking Bad")).toBeInTheDocument();
+    expect(screen.getByTestId('card-movie-Inception')).toBeInTheDocument();
+    expect(screen.getByTestId('card-tv-Breaking Bad')).toBeInTheDocument();
   });
 
-  it("shows only movie results when mode is Movies", async () => {
+  it('shows only movie results when mode is Movies', async () => {
     const user = userEvent.setup();
-    renderPage("/media/search?q=test");
-    await user.click(screen.getByRole("tab", { name: "Movies" }));
+    renderPage('/media/search?q=test');
+    await user.click(screen.getByRole('tab', { name: 'Movies' }));
 
-    expect(screen.queryByTestId("card-tv-Breaking Bad")).not.toBeInTheDocument();
-    expect(screen.getByTestId("card-movie-Inception")).toBeInTheDocument();
+    expect(screen.queryByTestId('card-tv-Breaking Bad')).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-movie-Inception')).toBeInTheDocument();
   });
 
-  it("shows only TV results when mode is TV Shows", async () => {
+  it('shows only TV results when mode is TV Shows', async () => {
     const user = userEvent.setup();
-    renderPage("/media/search?q=test");
-    await user.click(screen.getByRole("tab", { name: "TV Shows" }));
+    renderPage('/media/search?q=test');
+    await user.click(screen.getByRole('tab', { name: 'TV Shows' }));
 
-    expect(screen.queryByTestId("card-movie-Inception")).not.toBeInTheDocument();
-    expect(screen.getByTestId("card-tv-Breaking Bad")).toBeInTheDocument();
+    expect(screen.queryByTestId('card-movie-Inception')).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-tv-Breaking Bad')).toBeInTheDocument();
   });
 
-  it("movie section shows skeleton while loading, TV section shows results", () => {
+  it('movie section shows skeleton while loading, TV section shows results', () => {
     setupMovieResults({ data: null, isLoading: true });
     setupTvResults();
     renderPage();
 
     // TV results visible
-    expect(screen.getByTestId("card-tv-Breaking Bad")).toBeInTheDocument();
+    expect(screen.getByTestId('card-tv-Breaking Bad')).toBeInTheDocument();
     // Movie skeleton visible (skeleton divs in movie section)
-    expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+    expect(screen.getByText('Breaking Bad')).toBeInTheDocument();
     // No movie cards
-    expect(screen.queryByTestId("card-movie-Inception")).not.toBeInTheDocument();
+    expect(screen.queryByTestId('card-movie-Inception')).not.toBeInTheDocument();
   });
 
-  it("TV section shows skeleton while loading, movie section shows results", () => {
+  it('TV section shows skeleton while loading, movie section shows results', () => {
     setupTvResults({ data: null, isLoading: true });
     setupMovieResults();
     renderPage();
 
-    expect(screen.getByTestId("card-movie-Inception")).toBeInTheDocument();
-    expect(screen.queryByTestId("card-tv-Breaking Bad")).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-movie-Inception')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-tv-Breaking Bad')).not.toBeInTheDocument();
   });
 });
 
-describe("SearchPage — per-section error states", () => {
-  it("shows movie error with Retry button when movie search fails", () => {
-    setupMovieResults({ data: null, isLoading: false, error: { message: "TMDB error" } });
+describe('SearchPage — per-section error states', () => {
+  it('shows movie error with Retry button when movie search fails', () => {
+    setupMovieResults({ data: null, isLoading: false, error: { message: 'TMDB error' } });
     renderPage();
 
-    expect(screen.getByText("Movie search failed")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.getByText('Movie search failed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
-  it("calls movieSearch.refetch when movie Retry is clicked", () => {
-    setupMovieResults({ data: null, isLoading: false, error: { message: "Error" } });
+  it('calls movieSearch.refetch when movie Retry is clicked', () => {
+    setupMovieResults({ data: null, isLoading: false, error: { message: 'Error' } });
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(mockMovieRefetch).toHaveBeenCalled();
   });
 
-  it("shows TV error with Retry button when TV search fails", () => {
-    setupTvResults({ data: null, isLoading: false, error: { message: "TVDB error" } });
+  it('shows TV error with Retry button when TV search fails', () => {
+    setupTvResults({ data: null, isLoading: false, error: { message: 'TVDB error' } });
     renderPage();
 
-    expect(screen.getByText("TV search failed")).toBeInTheDocument();
+    expect(screen.getByText('TV search failed')).toBeInTheDocument();
   });
 
-  it("calls tvSearch.refetch when TV Retry is clicked", () => {
-    setupTvResults({ data: null, isLoading: false, error: { message: "Error" } });
+  it('calls tvSearch.refetch when TV Retry is clicked', () => {
+    setupTvResults({ data: null, isLoading: false, error: { message: 'Error' } });
     renderPage();
 
-    const retryButtons = screen.getAllByRole("button", { name: "Retry" });
+    const retryButtons = screen.getAllByRole('button', { name: 'Retry' });
     fireEvent.click(retryButtons[0]!);
     expect(mockTvRefetch).toHaveBeenCalled();
   });
 
-  it("TV section shows results independently when movie section has error", () => {
-    setupMovieResults({ data: null, isLoading: false, error: { message: "Error" } });
+  it('TV section shows results independently when movie section has error', () => {
+    setupMovieResults({ data: null, isLoading: false, error: { message: 'Error' } });
     setupTvResults();
     renderPage();
 
-    expect(screen.getByText("Movie search failed")).toBeInTheDocument();
-    expect(screen.getByTestId("card-tv-Breaking Bad")).toBeInTheDocument();
+    expect(screen.getByText('Movie search failed')).toBeInTheDocument();
+    expect(screen.getByTestId('card-tv-Breaking Bad')).toBeInTheDocument();
   });
 });
 
-describe("SearchPage — no results message", () => {
-  it("shows no results message when both sections return empty", () => {
+describe('SearchPage — no results message', () => {
+  it('shows no results message when both sections return empty', () => {
     setupMovieResults({ data: { results: [] } });
     setupTvResults({ data: { results: [] } });
     renderPage();
@@ -282,47 +282,47 @@ describe("SearchPage — no results message", () => {
     expect(screen.getByText(/inception/i)).toBeInTheDocument();
   });
 
-  it("does not show no-results message when results are present", () => {
+  it('does not show no-results message when results are present', () => {
     renderPage();
     expect(screen.queryByText(/No results found for/)).not.toBeInTheDocument();
   });
 
-  it("shows empty prompt when no query entered", () => {
-    renderPage("/media/search");
+  it('shows empty prompt when no query entered', () => {
+    renderPage('/media/search');
     expect(screen.getByText(/Start typing to search/)).toBeInTheDocument();
   });
 });
 
-describe("SearchPage — In Library badge", () => {
-  it("passes inLibrary=true for movies already in library (by tmdbId)", () => {
+describe('SearchPage — In Library badge', () => {
+  it('passes inLibrary=true for movies already in library (by tmdbId)', () => {
     renderPage();
 
-    const inceptionCard = lastMovieCardProps.find((p) => p.title === "Inception");
+    const inceptionCard = lastMovieCardProps.find((p) => p.title === 'Inception');
     expect(inceptionCard?.inLibrary).toBe(true);
   });
 
-  it("passes inLibrary=false for movies not in library", () => {
+  it('passes inLibrary=false for movies not in library', () => {
     renderPage();
 
-    const interstellarCard = lastMovieCardProps.find((p) => p.title === "Interstellar");
+    const interstellarCard = lastMovieCardProps.find((p) => p.title === 'Interstellar');
     expect(interstellarCard?.inLibrary).toBe(false);
   });
 
-  it("passes inLibrary=true for TV shows already in library (by tvdbId)", () => {
+  it('passes inLibrary=true for TV shows already in library (by tvdbId)', () => {
     renderPage();
 
-    const bbCard = lastTvCardProps.find((p) => p.title === "Breaking Bad");
+    const bbCard = lastTvCardProps.find((p) => p.title === 'Breaking Bad');
     expect(bbCard?.inLibrary).toBe(true);
   });
 
-  it("passes inLibrary=false for TV shows not in library", () => {
+  it('passes inLibrary=false for TV shows not in library', () => {
     renderPage();
 
-    const severanceCard = lastTvCardProps.find((p) => p.title === "Severance");
+    const severanceCard = lastTvCardProps.find((p) => p.title === 'Severance');
     expect(severanceCard?.inLibrary).toBe(false);
   });
 
-  it("all items show inLibrary=false when library is empty", () => {
+  it('all items show inLibrary=false when library is empty', () => {
     setupEmptyLibrary();
     renderPage();
 
@@ -331,48 +331,48 @@ describe("SearchPage — In Library badge", () => {
   });
 });
 
-describe("SearchPage — poster fallback (via card props)", () => {
-  it("passes null posterUrl when posterPath is null (movie)", () => {
+describe('SearchPage — poster fallback (via card props)', () => {
+  it('passes null posterUrl when posterPath is null (movie)', () => {
     renderPage();
 
-    const interstellarCard = lastMovieCardProps.find((p) => p.title === "Interstellar");
+    const interstellarCard = lastMovieCardProps.find((p) => p.title === 'Interstellar');
     expect(interstellarCard?.posterUrl).toBeNull();
   });
 
-  it("passes constructed posterUrl for TMDB relative paths", () => {
+  it('passes constructed posterUrl for TMDB relative paths', () => {
     renderPage();
 
-    const inceptionCard = lastMovieCardProps.find((p) => p.title === "Inception");
-    expect(inceptionCard?.posterUrl).toBe("https://image.tmdb.org/t/p/w342/inception.jpg");
+    const inceptionCard = lastMovieCardProps.find((p) => p.title === 'Inception');
+    expect(inceptionCard?.posterUrl).toBe('https://image.tmdb.org/t/p/w342/inception.jpg');
   });
 
-  it("passes null posterUrl when TV show has no poster", () => {
+  it('passes null posterUrl when TV show has no poster', () => {
     renderPage();
 
-    const severanceCard = lastTvCardProps.find((p) => p.title === "Severance");
+    const severanceCard = lastTvCardProps.find((p) => p.title === 'Severance');
     expect(severanceCard?.posterUrl).toBeNull();
   });
 
-  it("passes full TVDB URL when TV show has poster", () => {
+  it('passes full TVDB URL when TV show has poster', () => {
     renderPage();
 
-    const bbCard = lastTvCardProps.find((p) => p.title === "Breaking Bad");
-    expect(bbCard?.posterUrl).toBe("https://cdn.tvdb.com/bb.jpg");
+    const bbCard = lastTvCardProps.find((p) => p.title === 'Breaking Bad');
+    expect(bbCard?.posterUrl).toBe('https://cdn.tvdb.com/bb.jpg');
   });
 });
 
-describe("SearchPage — overview passed to cards", () => {
-  it("passes overview text to movie card", () => {
+describe('SearchPage — overview passed to cards', () => {
+  it('passes overview text to movie card', () => {
     renderPage();
 
-    const inceptionCard = lastMovieCardProps.find((p) => p.title === "Inception");
-    expect(inceptionCard?.overview).toContain("dream-sharing");
+    const inceptionCard = lastMovieCardProps.find((p) => p.title === 'Inception');
+    expect(inceptionCard?.overview).toContain('dream-sharing');
   });
 
-  it("passes null overview for TV shows with no overview", () => {
+  it('passes null overview for TV shows with no overview', () => {
     renderPage();
 
-    const severanceCard = lastTvCardProps.find((p) => p.title === "Severance");
+    const severanceCard = lastTvCardProps.find((p) => p.title === 'Severance');
     expect(severanceCard?.overview).toBeNull();
   });
 });

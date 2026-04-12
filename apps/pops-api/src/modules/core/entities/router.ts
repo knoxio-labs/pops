@@ -1,13 +1,13 @@
 /**
  * Entity tRPC router — CRUD procedures for entities.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
-import { CreateEntitySchema, UpdateEntitySchema, EntityQuerySchema, toEntity } from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
+import { CreateEntitySchema, UpdateEntitySchema, EntityQuerySchema, toEntity } from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -40,7 +40,7 @@ export const entitiesRouter = router({
       return { data: toEntity(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -52,11 +52,11 @@ export const entitiesRouter = router({
       const row = service.createEntity(input);
       return {
         data: toEntity(row),
-        message: "Entity created",
+        message: 'Entity created',
       };
     } catch (err) {
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -75,14 +75,14 @@ export const entitiesRouter = router({
         const row = service.updateEntity(input.id, input.data);
         return {
           data: toEntity(row),
-          message: "Entity updated",
+          message: 'Entity updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof ConflictError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
+          throw new TRPCError({ code: 'CONFLICT', message: err.message });
         }
         throw err;
       }
@@ -92,10 +92,10 @@ export const entitiesRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     try {
       service.deleteEntity(input.id);
-      return { message: "Entity deleted" };
+      return { message: 'Entity deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

@@ -8,9 +8,9 @@ Provision the production server: install OS, harden security, configure SSH acce
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
-| 012 | [Hardware & OS Provisioning](../prds/012-hardware-os-provisioning/README.md) | OS installation, SSH key auth, firewall rules, OS hardening via Ansible | Done |
+| #   | PRD                                                                          | Summary                                                                 | Status |
+| --- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ |
+| 012 | [Hardware & OS Provisioning](../prds/012-hardware-os-provisioning/README.md) | OS installation, SSH key auth, firewall rules, OS hardening via Ansible | Done   |
 
 ## Dependencies
 

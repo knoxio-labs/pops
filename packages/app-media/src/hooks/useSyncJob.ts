@@ -4,16 +4,16 @@
  * Starts a job via mutation (returns immediately), polls for progress,
  * and auto-restores running jobs on mount (survives page navigation).
  */
-import { useState, useEffect, useCallback, useRef } from "react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 
 type SyncJobType =
-  | "syncMovies"
-  | "syncTvShows"
-  | "syncWatchlist"
-  | "syncWatchHistory"
-  | "syncDiscoverWatches";
+  | 'syncMovies'
+  | 'syncTvShows'
+  | 'syncWatchlist'
+  | 'syncWatchHistory'
+  | 'syncDiscoverWatches';
 
 interface SyncJobProgress {
   processed: number;
@@ -23,7 +23,7 @@ interface SyncJobProgress {
 interface SyncJob {
   id: string;
   jobType: SyncJobType;
-  status: "running" | "completed" | "failed";
+  status: 'running' | 'completed' | 'failed';
   startedAt: string;
   completedAt: string | null;
   durationMs: number | null;
@@ -56,15 +56,15 @@ interface UseSyncJobReturn {
   /** The completed-at timestamp. */
   completedAt: string | null;
   /** Current job status. */
-  status: "idle" | "running" | "completed" | "failed";
+  status: 'idle' | 'running' | 'completed' | 'failed';
 }
 
 const JOB_TYPE_LABELS: Record<SyncJobType, string> = {
-  syncMovies: "Movie sync",
-  syncTvShows: "TV sync",
-  syncWatchlist: "Watchlist sync",
-  syncWatchHistory: "Watch history sync",
-  syncDiscoverWatches: "Cloud watch sync",
+  syncMovies: 'Movie sync',
+  syncTvShows: 'TV sync',
+  syncWatchlist: 'Watchlist sync',
+  syncWatchHistory: 'Watch history sync',
+  syncDiscoverWatches: 'Cloud watch sync',
 };
 
 export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
@@ -88,7 +88,7 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     restoredRef.current = true;
 
     const match = activeJobs.data.data.find(
-      (j) => j.jobType === jobType && j.status === "running"
+      (j) => j.jobType === jobType && j.status === 'running'
     ) as SyncJob | undefined;
     if (match) {
       setJobId(match.id);
@@ -100,12 +100,12 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
 
   // Poll for job status while we have an active job ID
   const statusQuery = trpc.media.plex.getSyncJobStatus.useQuery(
-    { jobId: jobId ?? "" },
+    { jobId: jobId ?? '' },
     {
       enabled: !!jobId,
       refetchInterval: (query) => {
         const status = query.state.data?.data?.status;
-        return status === "running" ? 1500 : false;
+        return status === 'running' ? 1500 : false;
       },
     }
   );
@@ -131,10 +131,10 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     const job = statusQuery.data?.data;
     if (!job || !jobId) return;
 
-    if (job.status === "completed") {
+    if (job.status === 'completed') {
       toast.success(`${label} complete`);
-    } else if (job.status === "failed") {
-      toast.error(`${label} failed: ${job.error ?? "Unknown error"}`);
+    } else if (job.status === 'failed') {
+      toast.error(`${label} failed: ${job.error ?? 'Unknown error'}`);
     }
     // Only trigger on status transitions — not on every poll
   }, [statusQuery.data?.data?.status]);
@@ -148,7 +148,7 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
 
   // Use polled data when available, otherwise the restored snapshot
   const job = (statusQuery.data?.data as SyncJob | undefined) ?? restoredJob;
-  const isRunning = isRestoring || job?.status === "running";
+  const isRunning = isRestoring || job?.status === 'running';
 
   return {
     start,
@@ -156,10 +156,10 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     isRunning,
     progress: isRunning ? (job?.progress ?? null) : null,
     result: job?.result ?? null,
-    error: job?.status === "failed" ? job.error : null,
+    error: job?.status === 'failed' ? job.error : null,
     durationMs: job?.durationMs ?? null,
     completedAt: job?.completedAt ?? null,
-    status: isRestoring ? "running" : !job ? "idle" : job.status,
+    status: isRestoring ? 'running' : !job ? 'idle' : job.status,
   };
 }
 

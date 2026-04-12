@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { Switch } from "./switch";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { Switch } from './switch';
 
 const meta: Meta<typeof Switch> = {
-  title: "Inputs/Switch",
+  title: 'Inputs/Switch',
   component: Switch,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -21,7 +21,7 @@ export const Default: Story = {
     return (
       <div className="flex items-center gap-4">
         <Switch checked={checked} onCheckedChange={setChecked} />
-        <span className="text-sm">{checked ? "On" : "Off"}</span>
+        <span className="text-sm">{checked ? 'On' : 'Off'}</span>
       </div>
     );
   },
@@ -34,7 +34,7 @@ export const DefaultChecked: Story = {
     return (
       <div className="flex items-center gap-4">
         <Switch checked={checked} onCheckedChange={setChecked} />
-        <span className="text-sm">{checked ? "Enabled" : "Disabled"}</span>
+        <span className="text-sm">{checked ? 'Enabled' : 'Disabled'}</span>
       </div>
     );
   },
@@ -248,8 +248,8 @@ export const InForm: Story = {
   args: {},
   render: () => {
     const [formData, setFormData] = useState({
-      name: "",
-      email: "",
+      name: '',
+      email: '',
       subscribe: true,
       terms: false,
     });

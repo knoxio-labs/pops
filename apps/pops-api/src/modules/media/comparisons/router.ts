@@ -1,10 +1,10 @@
 /**
  * Comparisons tRPC router — dimensions, comparisons, and scores.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   CreateDimensionSchema,
   UpdateDimensionSchema,
@@ -29,11 +29,11 @@ import {
   toDimension,
   toComparison,
   toMediaScore,
-} from "./types.js";
-import * as service from "./service.js";
-import * as stalenessService from "./staleness.js";
-import * as debriefService from "../debrief/service.js";
-import { NotFoundError, ConflictError, ValidationError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import * as stalenessService from './staleness.js';
+import * as debriefService from '../debrief/service.js';
+import { NotFoundError, ConflictError, ValidationError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 
@@ -48,10 +48,10 @@ export const comparisonsRouter = router({
   createDimension: protectedProcedure.input(CreateDimensionSchema).mutation(({ input }) => {
     try {
       const row = service.createDimension(input);
-      return { data: toDimension(row), message: "Dimension created" };
+      return { data: toDimension(row), message: 'Dimension created' };
     } catch (err) {
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -63,10 +63,10 @@ export const comparisonsRouter = router({
     .mutation(({ input }) => {
       try {
         const row = service.updateDimension(input.id, input.data);
-        return { data: toDimension(row), message: "Dimension updated" };
+        return { data: toDimension(row), message: 'Dimension updated' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -76,13 +76,13 @@ export const comparisonsRouter = router({
   record: protectedProcedure.input(RecordComparisonSchema).mutation(({ input }) => {
     try {
       const row = service.recordComparison(input);
-      return { data: toComparison(row), message: "Comparison recorded" };
+      return { data: toComparison(row), message: 'Comparison recorded' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof ValidationError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
       }
       throw err;
     }
@@ -125,10 +125,10 @@ export const comparisonsRouter = router({
   delete: protectedProcedure.input(DeleteComparisonSchema).mutation(({ input }) => {
     try {
       service.deleteComparison(input.id);
-      return { message: "Comparison deleted and scores recalculated" };
+      return { message: 'Comparison deleted and scores recalculated' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -137,7 +137,7 @@ export const comparisonsRouter = router({
   /** Blacklist a movie: mark watch events + purge comparisons + recalculate Elo. */
   blacklistMovie: protectedProcedure.input(BlacklistMovieSchema).mutation(({ input }) => {
     const result = service.blacklistMovie(input.mediaType, input.mediaId);
-    return { data: result, message: "Movie blacklisted and comparisons purged" };
+    return { data: result, message: 'Movie blacklisted and comparisons purged' };
   }),
 
   /** Get a smart pair using weighted probabilistic selection, with random fallback. */
@@ -153,12 +153,12 @@ export const comparisonsRouter = router({
             return { data: { ...randomPair, dimensionId: input.dimensionId }, reason: null };
           }
         }
-        return { data: null, reason: "insufficient_watched_movies" as const };
+        return { data: null, reason: 'insufficient_watched_movies' as const };
       }
       return { data: pair, reason: null };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -192,7 +192,7 @@ export const comparisonsRouter = router({
       return { comparisonsDeleted };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -202,10 +202,10 @@ export const comparisonsRouter = router({
   includeInDimension: protectedProcedure.input(DimensionExclusionSchema).mutation(({ input }) => {
     try {
       service.includeInDimension(input.mediaType, input.mediaId, input.dimensionId);
-      return { message: "Media included in dimension" };
+      return { message: 'Media included in dimension' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -240,7 +240,7 @@ export const comparisonsRouter = router({
       return { data: opponent };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -253,7 +253,7 @@ export const comparisonsRouter = router({
       return { data: movies };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -263,13 +263,13 @@ export const comparisonsRouter = router({
   submitTierList: protectedProcedure.input(SubmitTierListSchema).mutation(({ input }) => {
     try {
       const result = service.submitTierList(input);
-      return { data: result, message: "Tier list submitted" };
+      return { data: result, message: 'Tier list submitted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof ValidationError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
       }
       throw err;
     }
@@ -284,10 +284,10 @@ export const comparisonsRouter = router({
         return { data: result, message: `${result.count} comparisons recorded` };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof ValidationError) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
         }
         throw err;
       }
@@ -299,16 +299,16 @@ export const comparisonsRouter = router({
     .mutation(({ input }) => {
       try {
         const result = service.recordDebriefComparison(input);
-        return { data: result, message: "Debrief comparison recorded" };
+        return { data: result, message: 'Debrief comparison recorded' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof ValidationError) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
         }
         if (err instanceof ConflictError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
+          throw new TRPCError({ code: 'CONFLICT', message: err.message });
         }
         throw err;
       }
@@ -324,10 +324,10 @@ export const comparisonsRouter = router({
         input.mediaBType,
         input.mediaBId
       );
-      return { data: { skipUntil }, message: "Skip recorded" };
+      return { data: { skipUntil }, message: 'Skip recorded' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -340,7 +340,7 @@ export const comparisonsRouter = router({
       return { data: debrief };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -352,16 +352,16 @@ export const comparisonsRouter = router({
     .mutation(({ input }) => {
       try {
         service.dismissDebriefDimension(input.sessionId, input.dimensionId);
-        return { message: "Dimension dismissed" };
+        return { message: 'Dimension dismissed' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof ValidationError) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
         }
         if (err instanceof ConflictError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
+          throw new TRPCError({ code: 'CONFLICT', message: err.message });
         }
         throw err;
       }

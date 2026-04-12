@@ -1,17 +1,17 @@
-import { type Router as ExpressRouter, Router } from "express";
-import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { type Router as ExpressRouter, Router } from 'express';
+import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 const router: ExpressRouter = Router();
 
 function getWebhookSecret(): string {
-  const filePath = process.env["UP_WEBHOOK_SECRET_FILE"];
+  const filePath = process.env['UP_WEBHOOK_SECRET_FILE'];
   if (filePath) {
-    return readFileSync(filePath, "utf-8").trim();
+    return readFileSync(filePath, 'utf-8').trim();
   }
-  const envVal = process.env["UP_WEBHOOK_SECRET"];
+  const envVal = process.env['UP_WEBHOOK_SECRET'];
   if (envVal) return envVal;
-  throw new Error("Missing UP_WEBHOOK_SECRET_FILE or UP_WEBHOOK_SECRET");
+  throw new Error('Missing UP_WEBHOOK_SECRET_FILE or UP_WEBHOOK_SECRET');
 }
 
 /**
@@ -20,7 +20,7 @@ function getWebhookSecret(): string {
  */
 function verifySignature(body: Buffer, signature: string): boolean {
   const secret = getWebhookSecret();
-  const expected = createHmac("sha256", secret).update(body).digest("hex");
+  const expected = createHmac('sha256', secret).update(body).digest('hex');
   return expected === signature;
 }
 
@@ -28,21 +28,21 @@ function verifySignature(body: Buffer, signature: string): boolean {
  * POST /webhooks/up — receive Up Bank transaction webhooks.
  * This route bypasses API key auth (uses signature verification instead).
  */
-router.post("/webhooks/up", (req, res) => {
-  const signature = req.headers["x-up-authenticity-signature"];
-  if (typeof signature !== "string") {
-    res.status(401).json({ error: "Missing signature header" });
+router.post('/webhooks/up', (req, res) => {
+  const signature = req.headers['x-up-authenticity-signature'];
+  if (typeof signature !== 'string') {
+    res.status(401).json({ error: 'Missing signature header' });
     return;
   }
 
   // req.body is a Buffer when using express.raw()
   const rawBody = req.body as Buffer;
   if (!verifySignature(rawBody, signature)) {
-    res.status(403).json({ error: "Invalid signature" });
+    res.status(403).json({ error: 'Invalid signature' });
     return;
   }
 
-  const payload = JSON.parse(rawBody.toString("utf-8")) as {
+  const payload = JSON.parse(rawBody.toString('utf-8')) as {
     data?: {
       attributes?: { eventType?: string };
       relationships?: { transaction?: { data?: { id?: string } } };
@@ -65,7 +65,7 @@ router.post("/webhooks/up", (req, res) => {
 /**
  * POST /webhooks/up/ping — Up sends a ping to verify the endpoint.
  */
-router.post("/webhooks/up/ping", (_req, res) => {
+router.post('/webhooks/up/ping', (_req, res) => {
   res.status(200).json({ ok: true });
 });
 

@@ -2,11 +2,11 @@
  * Wish list service — CRUD operations against SQLite via Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
  */
-import { eq, and, like, asc, count } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { wishList } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
-import type { WishListRow, CreateWishListItemInput, UpdateWishListItemInput } from "./types.js";
+import { eq, and, like, asc, count } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { wishList } from '@pops/db-types';
+import { NotFoundError } from '../../../shared/errors.js';
+import type { WishListRow, CreateWishListItemInput, UpdateWishListItemInput } from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface WishListListResult {
@@ -52,7 +52,7 @@ export function getWishListItem(id: string): WishListRow {
   const db = getDrizzle();
   const row = db.select().from(wishList).where(eq(wishList.id, id)).get();
 
-  if (!row) throw new NotFoundError("Wish list item", id);
+  if (!row) throw new NotFoundError('Wish list item', id);
   return row;
 }
 
@@ -137,5 +137,5 @@ export function deleteWishListItem(id: string): void {
 
   const db = getDrizzle();
   const result = db.delete(wishList).where(eq(wishList.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Wish list item", id);
+  if (result.changes === 0) throw new NotFoundError('Wish list item', id);
 }

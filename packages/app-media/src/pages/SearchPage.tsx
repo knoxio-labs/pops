@@ -5,19 +5,19 @@
  * responsive result grid, "Add to Library" with loading state,
  * "In Library" badge for items already in the collection.
  */
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router";
-import { Button, TextInput, Skeleton, Tabs, TabsList, TabsTrigger } from "@pops/ui";
-import { AlertTriangle, Search } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router';
+import { Button, TextInput, Skeleton, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { AlertTriangle, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 import {
   SearchResultCard,
   buildPosterUrl,
   type SearchResultType,
-} from "../components/SearchResultCard";
+} from '../components/SearchResultCard';
 
-type SearchMode = "movies" | "tv" | "both";
+type SearchMode = 'movies' | 'tv' | 'both';
 
 /** TMDB movie search result shape (from media.search.movies). */
 interface MovieSearchResult {
@@ -53,8 +53,8 @@ function useDebouncedValue(value: string, delay: number): string {
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") ?? "");
-  const [mode, setMode] = useState<SearchMode>("both");
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+  const [mode, setMode] = useState<SearchMode>('both');
   const debouncedQuery = useDebouncedValue(query, 300);
 
   // Sync debounced query to URL ?q= param
@@ -63,9 +63,9 @@ export function SearchPage() {
       (prev) => {
         const next = new URLSearchParams(prev);
         if (debouncedQuery) {
-          next.set("q", debouncedQuery);
+          next.set('q', debouncedQuery);
         } else {
-          next.delete("q");
+          next.delete('q');
         }
         return next;
       },
@@ -78,8 +78,8 @@ export function SearchPage() {
   // Track items successfully added this session
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
-  const shouldSearchMovies = debouncedQuery.length > 0 && (mode === "movies" || mode === "both");
-  const shouldSearchTv = debouncedQuery.length > 0 && (mode === "tv" || mode === "both");
+  const shouldSearchMovies = debouncedQuery.length > 0 && (mode === 'movies' || mode === 'both');
+  const shouldSearchTv = debouncedQuery.length > 0 && (mode === 'tv' || mode === 'both');
 
   // Search queries
   const movieSearch = trpc.media.search.movies.useQuery(
@@ -123,14 +123,14 @@ export function SearchPage() {
 
   const handleAddMovie = useCallback(
     (tmdbId: number) => {
-      const key = makeKey("movie", tmdbId);
+      const key = makeKey('movie', tmdbId);
       setAddingIds((prev) => new Set(prev).add(key));
       addMovieMutation.mutate(
         { tmdbId },
         {
           onSuccess: () => {
             setAddedIds((prev) => new Set(prev).add(key));
-            toast.success("Movie added to library");
+            toast.success('Movie added to library');
           },
           onError: (err: { message: string }) => {
             toast.error(`Failed to add movie: ${err.message}`);
@@ -150,14 +150,14 @@ export function SearchPage() {
 
   const handleAddTvShow = useCallback(
     (tvdbId: number) => {
-      const key = makeKey("tv", tvdbId);
+      const key = makeKey('tv', tvdbId);
       setAddingIds((prev) => new Set(prev).add(key));
       addTvShowMutation.mutate(
         { tvdbId },
         {
           onSuccess: () => {
             setAddedIds((prev) => new Set(prev).add(key));
-            toast.success("TV show added to library");
+            toast.success('TV show added to library');
           },
           onError: (err: { message: string }) => {
             toast.error(`Failed to add TV show: ${err.message}`);
@@ -209,7 +209,7 @@ export function SearchPage() {
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
         prefix={<Search className="h-4 w-4" />}
         clearable
-        onClear={() => setQuery("")}
+        onClear={() => setQuery('')}
         autoFocus
       />
 
@@ -232,9 +232,9 @@ export function SearchPage() {
       {/* Movie section — independent loading/error/results */}
       {shouldSearchMovies && (
         <section>
-          {mode === "both" && (
+          {mode === 'both' && (
             <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-              Movies{movieResults.length > 0 ? ` (${movieResults.length})` : ""}
+              Movies{movieResults.length > 0 ? ` (${movieResults.length})` : ''}
             </h2>
           )}
           {movieSearch.isLoading && (
@@ -267,7 +267,7 @@ export function SearchPage() {
           {!movieSearch.isLoading && !movieSearch.error && movieResults.length > 0 && (
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {movieResults.map((movie: MovieSearchResult) => {
-                const key = makeKey("movie", movie.tmdbId);
+                const key = makeKey('movie', movie.tmdbId);
                 const inLibrary = movieTmdbIds.has(movie.tmdbId) || addedIds.has(key);
                 const localId = movieTmdbToLocalId.get(movie.tmdbId);
                 return (
@@ -278,7 +278,7 @@ export function SearchPage() {
                     title={movie.title}
                     year={movie.releaseDate?.slice(0, 4) ?? null}
                     overview={movie.overview}
-                    posterUrl={buildPosterUrl(movie.posterPath, "movie")}
+                    posterUrl={buildPosterUrl(movie.posterPath, 'movie')}
                     voteAverage={movie.voteAverage}
                     inLibrary={inLibrary}
                     isAdding={addingIds.has(key)}
@@ -295,9 +295,9 @@ export function SearchPage() {
       {/* TV section — independent loading/error/results */}
       {shouldSearchTv && (
         <section>
-          {mode === "both" && (
+          {mode === 'both' && (
             <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-              TV Shows{tvResults.length > 0 ? ` (${tvResults.length})` : ""}
+              TV Shows{tvResults.length > 0 ? ` (${tvResults.length})` : ''}
             </h2>
           )}
           {tvSearch.isLoading && (
@@ -330,7 +330,7 @@ export function SearchPage() {
           {!tvSearch.isLoading && !tvSearch.error && tvResults.length > 0 && (
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {tvResults.map((show: TvSearchResult) => {
-                const key = makeKey("tv", show.tvdbId);
+                const key = makeKey('tv', show.tvdbId);
                 const inLibrary = tvTvdbIds.has(show.tvdbId) || addedIds.has(key);
                 const localId = tvTvdbToLocalId.get(show.tvdbId);
                 return (
@@ -340,7 +340,7 @@ export function SearchPage() {
                     title={show.name}
                     year={show.year ?? show.firstAirDate?.slice(0, 4) ?? null}
                     overview={show.overview}
-                    posterUrl={buildPosterUrl(show.posterPath, "tv")}
+                    posterUrl={buildPosterUrl(show.posterPath, 'tv')}
                     genres={show.genres}
                     inLibrary={inLibrary}
                     isAdding={addingIds.has(key)}

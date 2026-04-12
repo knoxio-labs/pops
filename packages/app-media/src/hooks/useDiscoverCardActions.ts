@@ -4,9 +4,9 @@
  * Encapsulates add-to-library, watchlist, watched, rewatch, and dismiss mutations
  * so they can be reused across the discover page and dynamic shelf sections.
  */
-import { useState, useCallback } from "react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 
 export type DiscoverActionResult =
   | {
@@ -72,7 +72,7 @@ export function useDiscoverCardActions() {
         }
         return { ok: true, inLibrary: true } as const;
       } catch {
-        toast.error("Failed to add to library");
+        toast.error('Failed to add to library');
         return { ok: false } as const;
       } finally {
         setAddingToLibrary((prev) => {
@@ -91,7 +91,7 @@ export function useDiscoverCardActions() {
       try {
         const libResult = await addMovieMutation.mutateAsync({ tmdbId });
         const watchlistResult = await addWatchlistMutation.mutateAsync({
-          mediaType: "movie",
+          mediaType: 'movie',
           mediaId: libResult.data.id,
         });
         if (watchlistResult.created) {
@@ -102,7 +102,7 @@ export function useDiscoverCardActions() {
         void utils.media.watchlist.list.invalidate();
         return { ok: true, inLibrary: true, onWatchlist: true } as const;
       } catch {
-        toast.error("Failed to add to watchlist");
+        toast.error('Failed to add to watchlist');
         return { ok: false } as const;
       } finally {
         setAddingToWatchlist((prev) => {
@@ -122,7 +122,7 @@ export function useDiscoverCardActions() {
         // Ensure we have a library mediaId to query watchlist status.
         const libResult = await addMovieMutation.mutateAsync({ tmdbId });
         const status = await utils.media.watchlist.status.fetch({
-          mediaType: "movie",
+          mediaType: 'movie',
           mediaId: libResult.data.id,
         });
 
@@ -136,7 +136,7 @@ export function useDiscoverCardActions() {
         void utils.media.watchlist.list.invalidate();
         return { ok: true, inLibrary: true, onWatchlist: false } as const;
       } catch {
-        toast.error("Failed to remove from watchlist");
+        toast.error('Failed to remove from watchlist');
         return { ok: false } as const;
       } finally {
         setRemovingFromWatchlist((prev) => {
@@ -155,7 +155,7 @@ export function useDiscoverCardActions() {
       try {
         const libResult = await addMovieMutation.mutateAsync({ tmdbId });
         const watchResult = await logWatchMutation.mutateAsync({
-          mediaType: "movie",
+          mediaType: 'movie',
           mediaId: libResult.data.id,
         });
         toast.success(`Marked "${libResult.data.title}" as watched`);
@@ -170,7 +170,7 @@ export function useDiscoverCardActions() {
           onWatchlist: watchResult.watchlistRemoved ? false : undefined,
         } as const;
       } catch {
-        toast.error("Failed to mark as watched");
+        toast.error('Failed to mark as watched');
         return { ok: false } as const;
       } finally {
         setMarkingWatched((prev) => {
@@ -189,14 +189,14 @@ export function useDiscoverCardActions() {
       try {
         const libResult = await addMovieMutation.mutateAsync({ tmdbId });
         await logWatchMutation.mutateAsync({
-          mediaType: "movie",
+          mediaType: 'movie',
           mediaId: libResult.data.id,
         });
         toast.success(`Logged rewatch of "${libResult.data.title}"`);
         void utils.media.comparisons.getPendingDebriefs.invalidate();
         return { ok: true, inLibrary: true, isWatched: true } as const;
       } catch {
-        toast.error("Failed to log rewatch");
+        toast.error('Failed to log rewatch');
         return { ok: false } as const;
       } finally {
         setMarkingRewatched((prev) => {
@@ -223,7 +223,7 @@ export function useDiscoverCardActions() {
           next.delete(tmdbId);
           return next;
         });
-        toast.error("Failed to dismiss");
+        toast.error('Failed to dismiss');
         return { ok: false } as const;
       } finally {
         setDismissing((prev) => {

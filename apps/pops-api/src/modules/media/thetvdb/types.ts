@@ -1,7 +1,7 @@
 /**
  * TheTVDB v4 API response types, mapping functions, and Drizzle insert builders.
  */
-import type { TvShowInsert, SeasonInsert, EpisodeInsert } from "@pops/db-types";
+import type { TvShowInsert, SeasonInsert, EpisodeInsert } from '@pops/db-types';
 
 /** Typed error for TheTVDB API failures. */
 export class TvdbApiError extends Error {
@@ -10,7 +10,7 @@ export class TvdbApiError extends Error {
     message: string
   ) {
     super(message);
-    this.name = "TvdbApiError";
+    this.name = 'TvdbApiError';
   }
 }
 
@@ -207,7 +207,7 @@ export function mapSearchResult(raw: RawTvdbSearchResult): TvdbSearchResult {
 export function mapShowDetail(raw: RawTvdbSeriesExtended): TvdbShowDetail {
   // Filter to default/official broadcast order only
   const rawSeasons = (raw.seasons ?? []).filter(
-    (s) => !s.type || s.type.type === "default" || s.type.type === "official"
+    (s) => !s.type || s.type.type === 'default' || s.type.type === 'official'
   );
 
   return {
@@ -273,8 +273,8 @@ function pickBestArtwork(artworks: TvdbArtwork[], type: number): string | null {
   if (candidates.length === 0) return null;
 
   const sorted = [...candidates].sort((a, b) => {
-    const aEng = a.language === "eng" ? 1 : 0;
-    const bEng = b.language === "eng" ? 1 : 0;
+    const aEng = a.language === 'eng' ? 1 : 0;
+    const bEng = b.language === 'eng' ? 1 : 0;
     if (aEng !== bEng) return bEng - aEng;
     return b.score - a.score;
   });

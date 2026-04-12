@@ -10,11 +10,11 @@ The media app displays poster and backdrop images sourced from TMDB (movies) and
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Proxy external URLs (frontend hits TMDB/TheTVDB CDNs directly) | Zero disk usage, simplest implementation | Runtime dependency on external CDNs, latency on every load, no offline, throttling risk |
-| Download and cache locally | Zero external dependency at render time, fast (local network), works offline, persists if external URLs change | ~1.5 GB disk for a large library, need to manage storage and serve static files |
-| CDN proxy with service worker fallback | CDN freshness + offline capability | Two caching layers, complex invalidation, first load still depends on external CDN |
+| Option                                                         | Pros                                                                                                           | Cons                                                                                    |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Proxy external URLs (frontend hits TMDB/TheTVDB CDNs directly) | Zero disk usage, simplest implementation                                                                       | Runtime dependency on external CDNs, latency on every load, no offline, throttling risk |
+| Download and cache locally                                     | Zero external dependency at render time, fast (local network), works offline, persists if external URLs change | ~1.5 GB disk for a large library, need to manage storage and serve static files         |
+| CDN proxy with service worker fallback                         | CDN freshness + offline capability                                                                             | Two caching layers, complex invalidation, first load still depends on external CDN      |
 
 ## Decision
 

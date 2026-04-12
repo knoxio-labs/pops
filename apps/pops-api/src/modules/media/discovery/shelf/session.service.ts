@@ -14,9 +14,9 @@
  *   varietyBonus = 0.2 if category !== previous selected category, else 0
  *   contextBonus = 0.3 if category === 'context' (time-triggered shelves), else 0
  */
-import type { PreferenceProfile, ShelfInstance, ShelfCategory } from "./types.js";
-import { getRegisteredShelves } from "./registry.js";
-import { getShelfFreshness } from "./impressions.service.js";
+import type { PreferenceProfile, ShelfInstance, ShelfCategory } from './types.js';
+import { getRegisteredShelves } from './registry.js';
+import { getShelfFreshness } from './impressions.service.js';
 
 const SESSION_TARGET_MIN = 10;
 const SESSION_TARGET_MAX = 15;
@@ -28,11 +28,11 @@ const VARIETY_BONUS = 0.2;
 const CONTEXT_BOOST = 0.3;
 
 function isGenreShelf(shelfId: string): boolean {
-  return shelfId.startsWith("best-in-genre") || shelfId.startsWith("genre-crossover");
+  return shelfId.startsWith('best-in-genre') || shelfId.startsWith('genre-crossover');
 }
 
 function isPersonalShelf(shelfId: string): boolean {
-  return shelfId.startsWith("recommendations") || shelfId.startsWith("because-you-watched");
+  return shelfId.startsWith('recommendations') || shelfId.startsWith('because-you-watched');
 }
 
 interface ScoredCandidate {
@@ -45,7 +45,7 @@ interface ScoredCandidate {
 function computeScore(candidate: ScoredCandidate, lastCategory: ShelfCategory | null): number {
   const varietyBonus =
     lastCategory !== null && candidate.category !== lastCategory ? VARIETY_BONUS : 0;
-  const contextBonus = candidate.category === "context" ? CONTEXT_BOOST : 0;
+  const contextBonus = candidate.category === 'context' ? CONTEXT_BOOST : 0;
   return candidate.baseScore * (1 + varietyBonus + contextBonus);
 }
 
@@ -61,7 +61,7 @@ function weightedSample(candidates: ScoredCandidate[], scores: number[]): Scored
     }
   }
   const fallback = candidates.at(-1);
-  if (!fallback) throw new Error("weightedSample requires non-empty candidates array");
+  if (!fallback) throw new Error('weightedSample requires non-empty candidates array');
   return fallback;
 }
 
@@ -110,13 +110,13 @@ export function assembleSession(
     // Filter by variety constraints
     const localCountInWindow = selected.slice(-LOCAL_WINDOW_SIZE).filter((s) => {
       const c = allCandidates.find((c) => c.instance.shelfId === s.shelfId);
-      return c?.category === "local";
+      return c?.category === 'local';
     }).length;
 
     const eligible = remaining.filter((c) => {
-      if (c.category === "seed" && seedCount >= MAX_SEED_SHELVES) return false;
+      if (c.category === 'seed' && seedCount >= MAX_SEED_SHELVES) return false;
       if (isGenreShelf(c.instance.shelfId) && genreCount >= MAX_GENRE_SHELVES) return false;
-      if (c.category === "local" && localCountInWindow >= MAX_LOCAL_PER_WINDOW) return false;
+      if (c.category === 'local' && localCountInWindow >= MAX_LOCAL_PER_WINDOW) return false;
       return true;
     });
 
@@ -131,7 +131,7 @@ export function assembleSession(
     selected.push(picked.instance);
     remaining.splice(remaining.indexOf(picked), 1);
     lastCategory = picked.category;
-    if (picked.category === "seed") seedCount++;
+    if (picked.category === 'seed') seedCount++;
     if (isGenreShelf(picked.instance.shelfId)) genreCount++;
   }
 

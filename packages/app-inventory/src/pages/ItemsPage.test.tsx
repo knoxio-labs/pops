@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
 
 const mocks = vi.hoisted(() => ({
   dashboardQuery: vi.fn(),
@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   valueByTypeQuery: vi.fn(),
 }));
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     inventory: {
       reports: {
@@ -35,22 +35,22 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-vi.mock("../components/InventoryTable", () => ({
+vi.mock('../components/InventoryTable', () => ({
   InventoryTable: () => <div data-testid="inventory-table" />,
 }));
 
-vi.mock("../components/InventoryCard", () => ({
+vi.mock('../components/InventoryCard', () => ({
   InventoryCard: () => <div data-testid="inventory-card" />,
 }));
 
-vi.mock("../components/ValueBreakdown", () => ({
+vi.mock('../components/ValueBreakdown', () => ({
   ValueByTypeCard: () => <div data-testid="value-by-type" />,
 }));
 
-import { ItemsPage } from "./ItemsPage";
+import { ItemsPage } from './ItemsPage';
 
 /** Renders ItemsPage and a catch-all route so we can detect navigation. */
-function renderPage(initialPath = "/inventory") {
+function renderPage(initialPath = '/inventory') {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
@@ -84,16 +84,16 @@ const populatedDashboard = {
       warrantiesExpiringSoon: 3,
       recentlyAdded: [
         {
-          id: "item-1",
-          itemName: "MacBook Pro",
-          type: "Electronics",
-          assetId: "ELEC-001",
+          id: 'item-1',
+          itemName: 'MacBook Pro',
+          type: 'Electronics',
+          assetId: 'ELEC-001',
           lastEditedTime: new Date().toISOString(),
         },
         {
-          id: "item-2",
-          itemName: "Standing Desk",
-          type: "Furniture",
+          id: 'item-2',
+          itemName: 'Standing Desk',
+          type: 'Furniture',
           assetId: null,
           lastEditedTime: new Date().toISOString(),
         },
@@ -102,7 +102,7 @@ const populatedDashboard = {
   },
 };
 
-describe("ItemsPage", () => {
+describe('ItemsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.itemsQuery.mockReturnValue({
@@ -118,103 +118,103 @@ describe("ItemsPage", () => {
     mocks.valueByTypeQuery.mockReturnValue({ data: null, isLoading: false });
   });
 
-  describe("DashboardWidgets", () => {
-    it("renders loading skeletons while data is loading", () => {
+  describe('DashboardWidgets', () => {
+    it('renders loading skeletons while data is loading', () => {
       mocks.dashboardQuery.mockReturnValue({ data: null, isLoading: true });
       renderPage();
-      expect(screen.queryByText("Warranties")).not.toBeInTheDocument();
+      expect(screen.queryByText('Warranties')).not.toBeInTheDocument();
     });
 
-    it("renders all widget values with populated data", () => {
+    it('renders all widget values with populated data', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
       renderPage();
 
-      expect(screen.getByText("42")).toBeInTheDocument();
-      expect(screen.getByText("3")).toBeInTheDocument();
-      expect(screen.getByText("expiring")).toBeInTheDocument();
-      expect(screen.getByText("MacBook Pro")).toBeInTheDocument();
-      expect(screen.getByText("Standing Desk")).toBeInTheDocument();
+      expect(screen.getByText('42')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('expiring')).toBeInTheDocument();
+      expect(screen.getByText('MacBook Pro')).toBeInTheDocument();
+      expect(screen.getByText('Standing Desk')).toBeInTheDocument();
     });
 
-    it("renders empty state values when inventory is empty", () => {
+    it('renders empty state values when inventory is empty', () => {
       mocks.dashboardQuery.mockReturnValue({ ...emptyDashboard, isLoading: false });
       renderPage();
 
       // Item count shows 0, warranties shows 0 with "expiring" label
-      const zeros = screen.getAllByText("0");
+      const zeros = screen.getAllByText('0');
       expect(zeros.length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByText("No items yet")).toBeInTheDocument();
+      expect(screen.getByText('No items yet')).toBeInTheDocument();
     });
 
-    it("navigates to /inventory/warranties when warranty widget is clicked", () => {
+    it('navigates to /inventory/warranties when warranty widget is clicked', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
       renderPage();
 
-      const warrantyCard = screen.getByText("Warranties").closest("[role='button']");
+      const warrantyCard = screen.getByText('Warranties').closest("[role='button']");
       expect(warrantyCard).toBeInTheDocument();
       fireEvent.click(warrantyCard!);
-      expect(screen.getByTestId("warranties-page")).toBeInTheDocument();
+      expect(screen.getByTestId('warranties-page')).toBeInTheDocument();
     });
 
-    it("navigates to /inventory/warranties on Enter key", () => {
+    it('navigates to /inventory/warranties on Enter key', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
       renderPage();
 
-      const warrantyCard = screen.getByText("Warranties").closest("[role='button']");
-      fireEvent.keyDown(warrantyCard!, { key: "Enter" });
-      expect(screen.getByTestId("warranties-page")).toBeInTheDocument();
+      const warrantyCard = screen.getByText('Warranties').closest("[role='button']");
+      fireEvent.keyDown(warrantyCard!, { key: 'Enter' });
+      expect(screen.getByTestId('warranties-page')).toBeInTheDocument();
     });
 
-    it("navigates to /inventory/warranties on Space key", () => {
+    it('navigates to /inventory/warranties on Space key', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
       renderPage();
 
-      const warrantyCard = screen.getByText("Warranties").closest("[role='button']");
-      fireEvent.keyDown(warrantyCard!, { key: " " });
-      expect(screen.getByTestId("warranties-page")).toBeInTheDocument();
+      const warrantyCard = screen.getByText('Warranties').closest("[role='button']");
+      fireEvent.keyDown(warrantyCard!, { key: ' ' });
+      expect(screen.getByTestId('warranties-page')).toBeInTheDocument();
     });
 
-    it("navigates to item detail when recently added item is clicked", () => {
+    it('navigates to item detail when recently added item is clicked', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
       renderPage();
 
-      fireEvent.click(screen.getByText("MacBook Pro"));
-      expect(screen.getByTestId("item-detail-page")).toBeInTheDocument();
+      fireEvent.click(screen.getByText('MacBook Pro'));
+      expect(screen.getByTestId('item-detail-page')).toBeInTheDocument();
     });
 
-    it("does not render dashboard when search is active", () => {
+    it('does not render dashboard when search is active', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
-      renderPage("/inventory?q=test");
-      expect(screen.queryByText("Warranties")).not.toBeInTheDocument();
+      renderPage('/inventory?q=test');
+      expect(screen.queryByText('Warranties')).not.toBeInTheDocument();
     });
   });
 
-  describe("Filters", () => {
+  describe('Filters', () => {
     beforeEach(() => {
       mocks.dashboardQuery.mockReturnValue({ ...emptyDashboard, isLoading: false });
     });
 
-    it("renders Type select dropdown with dynamic options from database", () => {
+    it('renders Type select dropdown with dynamic options from database', () => {
       mocks.typesQuery.mockReturnValue({
-        data: { data: ["Electronics", "Furniture", "Appliances"] },
+        data: { data: ['Electronics', 'Furniture', 'Appliances'] },
       });
       renderPage();
 
-      const typeSelect = screen.getAllByRole("combobox")[0]!;
+      const typeSelect = screen.getAllByRole('combobox')[0]!;
       expect(typeSelect).toBeInTheDocument();
       // Options include: placeholder + "All Types" + 3 dynamic types = 5
-      const options = typeSelect.querySelectorAll("option");
+      const options = typeSelect.querySelectorAll('option');
       expect(options.length).toBe(5);
     });
 
-    it("renders Location select dropdown with hierarchical options", () => {
+    it('renders Location select dropdown with hierarchical options', () => {
       mocks.treeQuery.mockReturnValue({
         data: {
           data: [
             {
-              id: "loc-1",
-              name: "Home",
-              children: [{ id: "loc-2", name: "Office", children: [] }],
+              id: 'loc-1',
+              name: 'Home',
+              children: [{ id: 'loc-2', name: 'Office', children: [] }],
             },
           ],
         },
@@ -222,137 +222,137 @@ describe("ItemsPage", () => {
       renderPage();
 
       // Location select should have: All Locations, Home, └ Office
-      const selects = screen.getAllByRole("combobox");
+      const selects = screen.getAllByRole('combobox');
       const locationSelect = selects[selects.length - 1]!; // last select
-      const options = locationSelect.querySelectorAll("option");
+      const options = locationSelect.querySelectorAll('option');
       expect(options.length).toBeGreaterThanOrEqual(3);
     });
 
-    it("renders Condition select dropdown with all options", () => {
+    it('renders Condition select dropdown with all options', () => {
       renderPage();
 
-      const selects = screen.getAllByRole("combobox");
+      const selects = screen.getAllByRole('combobox');
       // Condition select: placeholder + All Conditions + Excellent + Good + Fair + Poor = 6
       const conditionSelect = selects[1]!; // second select
-      const options = conditionSelect.querySelectorAll("option");
+      const options = conditionSelect.querySelectorAll('option');
       expect(options.length).toBe(6);
     });
 
-    it("shows Clear filters button when a filter is active", () => {
+    it('shows Clear filters button when a filter is active', () => {
       mocks.dashboardQuery.mockReturnValue({ ...populatedDashboard, isLoading: false });
-      renderPage("/inventory?type=Electronics");
+      renderPage('/inventory?type=Electronics');
 
-      expect(screen.getByText("Clear filters")).toBeInTheDocument();
+      expect(screen.getByText('Clear filters')).toBeInTheDocument();
     });
 
-    it("does not show Clear filters button when no filters are active", () => {
+    it('does not show Clear filters button when no filters are active', () => {
       renderPage();
-      expect(screen.queryByText("Clear filters")).not.toBeInTheDocument();
+      expect(screen.queryByText('Clear filters')).not.toBeInTheDocument();
     });
   });
 
-  describe("Query parameter persistence", () => {
+  describe('Query parameter persistence', () => {
     beforeEach(() => {
       mocks.dashboardQuery.mockReturnValue({ ...emptyDashboard, isLoading: false });
     });
 
-    it("reads search query from URL params", () => {
-      renderPage("/inventory?q=MacBook");
+    it('reads search query from URL params', () => {
+      renderPage('/inventory?q=MacBook');
 
-      const searchInput = screen.getByPlaceholderText("Search items or asset IDs...");
-      expect(searchInput).toHaveValue("MacBook");
+      const searchInput = screen.getByPlaceholderText('Search items or asset IDs...');
+      expect(searchInput).toHaveValue('MacBook');
     });
 
-    it("reads type filter from URL params", () => {
-      mocks.typesQuery.mockReturnValue({ data: { data: ["Electronics"] } });
-      renderPage("/inventory?type=Electronics");
+    it('reads type filter from URL params', () => {
+      mocks.typesQuery.mockReturnValue({ data: { data: ['Electronics'] } });
+      renderPage('/inventory?type=Electronics');
 
-      const typeSelect = screen.getAllByRole("combobox")[0];
-      expect(typeSelect).toHaveValue("Electronics");
+      const typeSelect = screen.getAllByRole('combobox')[0];
+      expect(typeSelect).toHaveValue('Electronics');
     });
 
-    it("reads condition filter from URL params", () => {
-      renderPage("/inventory?condition=Good");
+    it('reads condition filter from URL params', () => {
+      renderPage('/inventory?condition=Good');
 
-      const selects = screen.getAllByRole("combobox");
+      const selects = screen.getAllByRole('combobox');
       const conditionSelect = selects[1];
-      expect(conditionSelect).toHaveValue("Good");
+      expect(conditionSelect).toHaveValue('Good');
     });
   });
 
-  describe("Asset ID search", () => {
+  describe('Asset ID search', () => {
     beforeEach(() => {
       mocks.dashboardQuery.mockReturnValue({ ...emptyDashboard, isLoading: false });
     });
 
-    it("navigates to item detail on Enter when asset ID matches", async () => {
+    it('navigates to item detail on Enter when asset ID matches', async () => {
       mocks.searchByAssetId.mockResolvedValue({
-        data: { id: "item-99", itemName: "Test Item" },
+        data: { id: 'item-99', itemName: 'Test Item' },
       });
 
-      renderPage("/inventory?q=ELEC-001");
+      renderPage('/inventory?q=ELEC-001');
 
-      const searchInput = screen.getByPlaceholderText("Search items or asset IDs...");
-      fireEvent.keyDown(searchInput, { key: "Enter" });
+      const searchInput = screen.getByPlaceholderText('Search items or asset IDs...');
+      fireEvent.keyDown(searchInput, { key: 'Enter' });
 
       await waitFor(() => {
-        expect(mocks.searchByAssetId).toHaveBeenCalledWith({ assetId: "ELEC-001" });
+        expect(mocks.searchByAssetId).toHaveBeenCalledWith({ assetId: 'ELEC-001' });
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId("item-detail-page")).toBeInTheDocument();
+        expect(screen.getByTestId('item-detail-page')).toBeInTheDocument();
       });
     });
 
-    it("stays on list page when asset ID does not match", async () => {
+    it('stays on list page when asset ID does not match', async () => {
       mocks.searchByAssetId.mockResolvedValue({ data: null });
 
-      renderPage("/inventory?q=NONEXISTENT");
+      renderPage('/inventory?q=NONEXISTENT');
 
-      const searchInput = screen.getByPlaceholderText("Search items or asset IDs...");
-      fireEvent.keyDown(searchInput, { key: "Enter" });
+      const searchInput = screen.getByPlaceholderText('Search items or asset IDs...');
+      fireEvent.keyDown(searchInput, { key: 'Enter' });
 
       await waitFor(() => {
-        expect(mocks.searchByAssetId).toHaveBeenCalledWith({ assetId: "NONEXISTENT" });
+        expect(mocks.searchByAssetId).toHaveBeenCalledWith({ assetId: 'NONEXISTENT' });
       });
 
       // Should still be on inventory page
-      expect(screen.getByText("Inventory")).toBeInTheDocument();
+      expect(screen.getByText('Inventory')).toBeInTheDocument();
     });
 
-    it("does not search on Enter when search is empty", () => {
+    it('does not search on Enter when search is empty', () => {
       renderPage();
 
-      const searchInput = screen.getByPlaceholderText("Search items or asset IDs...");
-      fireEvent.keyDown(searchInput, { key: "Enter" });
+      const searchInput = screen.getByPlaceholderText('Search items or asset IDs...');
+      fireEvent.keyDown(searchInput, { key: 'Enter' });
 
       expect(mocks.searchByAssetId).not.toHaveBeenCalled();
     });
   });
 
-  describe("Empty state", () => {
+  describe('Empty state', () => {
     beforeEach(() => {
       mocks.dashboardQuery.mockReturnValue({ ...emptyDashboard, isLoading: false });
     });
 
-    it("shows empty state with Add button when no items exist", () => {
+    it('shows empty state with Add button when no items exist', () => {
       renderPage();
 
-      expect(screen.getByText("No inventory items yet.")).toBeInTheDocument();
-      expect(screen.getByText("Add your first item")).toBeInTheDocument();
+      expect(screen.getByText('No inventory items yet.')).toBeInTheDocument();
+      expect(screen.getByText('Add your first item')).toBeInTheDocument();
     });
 
-    it("navigates to new item page when Add button is clicked", () => {
+    it('navigates to new item page when Add button is clicked', () => {
       renderPage();
 
-      fireEvent.click(screen.getByText("Add your first item"));
-      expect(screen.getByTestId("item-new-page")).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Add your first item'));
+      expect(screen.getByTestId('item-new-page')).toBeInTheDocument();
     });
 
-    it("shows no-results state when filters match nothing", () => {
-      renderPage("/inventory?type=NonexistentType");
+    it('shows no-results state when filters match nothing', () => {
+      renderPage('/inventory?type=NonexistentType');
 
-      expect(screen.getByText("No items match your filters.")).toBeInTheDocument();
+      expect(screen.getByText('No items match your filters.')).toBeInTheDocument();
     });
   });
 });

@@ -2,60 +2,60 @@
  * DateTime input components using native HTML date/time inputs
  * Includes DateInput, TimeInput, and DateTimeInput
  */
-import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../lib/utils";
+import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../lib/utils';
 
 const containerVariants = cva(
-  "flex items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0",
+  'flex items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0',
   {
     variants: {
       variant: {
-        default: "border border-border",
-        ghost: "border-0 hover:bg-accent",
-        underline: "border-0 border-b border-border",
+        default: 'border border-border',
+        ghost: 'border-0 hover:bg-accent',
+        underline: 'border-0 border-b border-border',
       },
       size: {
-        sm: "h-9 px-3 py-1 text-xs",
-        default: "h-11 px-3 py-2 text-sm",
-        lg: "h-12 px-4 py-2 text-base",
+        sm: 'h-9 px-3 py-1 text-xs',
+        default: 'h-11 px-3 py-2 text-sm',
+        lg: 'h-12 px-4 py-2 text-base',
       },
       shape: {
-        default: "rounded-md",
-        pill: "rounded-full",
+        default: 'rounded-md',
+        pill: 'rounded-full',
       },
     },
     compoundVariants: [
       {
-        variant: "underline",
-        shape: ["default", "pill"],
-        class: "rounded-none",
+        variant: 'underline',
+        shape: ['default', 'pill'],
+        class: 'rounded-none',
       },
     ],
     defaultVariants: {
-      variant: "default",
-      size: "default",
-      shape: "default",
+      variant: 'default',
+      size: 'default',
+      shape: 'default',
     },
   }
 );
 
 const inputVariants = cva(
-  "flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 disabled:cursor-not-allowed [color-scheme:light] dark:[color-scheme:dark]",
+  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 disabled:cursor-not-allowed [color-scheme:light] dark:[color-scheme:dark]',
   {
     variants: {
       size: {
-        sm: "text-xs",
-        default: "text-sm",
-        lg: "text-base",
+        sm: 'text-xs',
+        default: 'text-sm',
+        lg: 'text-base',
       },
       centered: {
-        true: "text-center",
-        false: "",
+        true: 'text-center',
+        false: '',
       },
     },
     defaultVariants: {
-      size: "default",
+      size: 'default',
       centered: false,
     },
   }
@@ -63,7 +63,7 @@ const inputVariants = cva(
 
 interface BaseInputProps
   extends
-    Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "prefix" | "type">,
+    Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix' | 'type'>,
     VariantProps<typeof containerVariants> {
   /**
    * Icon or content to display before the input
@@ -123,17 +123,17 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
             size,
             shape,
           }),
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && 'opacity-50 cursor-not-allowed',
           containerClassName
         )}
-        style={isFocused ? { borderColor: "var(--ring)" } : undefined}
+        style={isFocused ? { borderColor: 'var(--ring)' } : undefined}
       >
         {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
         <input
           ref={ref}
           type="date"
           className={cn(inputVariants({ size, className }))}
-          style={{ outline: "none", boxShadow: "none" }}
+          style={{ outline: 'none', boxShadow: 'none' }}
           onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
@@ -145,7 +145,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
   }
 );
 
-DateInput.displayName = "DateInput";
+DateInput.displayName = 'DateInput';
 
 // Time Input
 export type TimeInputProps = BaseInputProps;
@@ -187,17 +187,17 @@ export const TimeInput = forwardRef<HTMLInputElement, TimeInputProps>(
             size,
             shape,
           }),
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && 'opacity-50 cursor-not-allowed',
           containerClassName
         )}
-        style={isFocused ? { borderColor: "var(--ring)" } : undefined}
+        style={isFocused ? { borderColor: 'var(--ring)' } : undefined}
       >
         {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
         <input
           ref={ref}
           type="time"
           className={cn(inputVariants({ size, className }))}
-          style={{ outline: "none", boxShadow: "none" }}
+          style={{ outline: 'none', boxShadow: 'none' }}
           onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
@@ -209,7 +209,7 @@ export const TimeInput = forwardRef<HTMLInputElement, TimeInputProps>(
   }
 );
 
-TimeInput.displayName = "TimeInput";
+TimeInput.displayName = 'TimeInput';
 
 // DateTime Input
 export type DateTimeInputProps = BaseInputProps;
@@ -251,17 +251,17 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
             size,
             shape,
           }),
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && 'opacity-50 cursor-not-allowed',
           containerClassName
         )}
-        style={isFocused ? { borderColor: "var(--ring)" } : undefined}
+        style={isFocused ? { borderColor: 'var(--ring)' } : undefined}
       >
         {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
         <input
           ref={ref}
           type="datetime-local"
           className={cn(inputVariants({ size, className }))}
-          style={{ outline: "none", boxShadow: "none" }}
+          style={{ outline: 'none', boxShadow: 'none' }}
           onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
@@ -273,4 +273,4 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
   }
 );
 
-DateTimeInput.displayName = "DateTimeInput";
+DateTimeInput.displayName = 'DateTimeInput';

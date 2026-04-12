@@ -18,8 +18,8 @@
  *     }),
  *   );
  */
-import { type RequestHandler } from "msw";
-import { setupServer } from "msw/node";
+import { type RequestHandler } from 'msw';
+import { setupServer } from 'msw/node';
 
 /** Default handlers — add shared mock endpoints here */
 const handlers: RequestHandler[] = [];

@@ -4,14 +4,14 @@
  * Overlay sidebar for mobile (<768px) with backdrop.
  * Desktop navigation is handled by AppRail + PageNav.
  */
-import { Link, useLocation } from "react-router";
-import { registeredApps } from "@/app/nav/registry";
-import { iconMap } from "@/app/nav/icon-map";
-import { isPageActive } from "@/app/nav/path-utils";
-import { useUIStore } from "@/store/uiStore";
-import { X } from "lucide-react";
-import { Button } from "@pops/ui";
-import { BuildVersion } from "./BuildVersion";
+import { Link, useLocation } from 'react-router';
+import { registeredApps } from '@/app/nav/registry';
+import { iconMap } from '@/app/nav/icon-map';
+import { isPageActive } from '@/app/nav/path-utils';
+import { useUIStore } from '@/store/uiStore';
+import { X } from 'lucide-react';
+import { Button } from '@pops/ui';
+import { BuildVersion } from './BuildVersion';
 
 interface SidebarProps {
   open: boolean;
@@ -69,8 +69,8 @@ export function Sidebar({ open }: SidebarProps) {
                   onClick={handleNavClick}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium min-h-[44px] ${
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted hover:text-foreground"
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   {Icon && <Icon className="h-5 w-5 shrink-0" />}

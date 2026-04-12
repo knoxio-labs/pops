@@ -5,16 +5,16 @@
  * Each seed generates one ShelfInstance that queries TMDB recommendations for that movie.
  * Instance score is derived from genre alignment between the seed movie and the user profile.
  */
-import { sql, and, eq } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { movies, watchHistory, mediaScores } from "@pops/db-types";
-import { getTmdbClient } from "../../tmdb/index.js";
-import { getLibraryTmdbIds, toDiscoverResults } from "../tmdb-service.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "../flags.js";
-import { scoreDiscoverResults } from "../service.js";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile } from "../types.js";
+import { sql, and, eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { movies, watchHistory, mediaScores } from '@pops/db-types';
+import { getTmdbClient } from '../../tmdb/index.js';
+import { getLibraryTmdbIds, toDiscoverResults } from '../tmdb-service.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from '../flags.js';
+import { scoreDiscoverResults } from '../service.js';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile } from '../types.js';
 
 const MAX_SEEDS = 10;
 const RECENT_DAYS = 30;
@@ -49,11 +49,11 @@ function selectSeeds(): { recent: SeedMovie[]; older: SeedMovie[] } {
     .from(watchHistory)
     .innerJoin(
       movies,
-      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, "movie"))
+      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, 'movie'))
     )
     .leftJoin(
       mediaScores,
-      and(eq(mediaScores.mediaId, movies.id), eq(mediaScores.mediaType, "movie"))
+      and(eq(mediaScores.mediaId, movies.id), eq(mediaScores.mediaType, 'movie'))
     )
     .where(eq(watchHistory.completed, 1))
     .groupBy(movies.id)
@@ -69,7 +69,7 @@ function selectSeeds(): { recent: SeedMovie[]; older: SeedMovie[] } {
       id: row.id,
       tmdbId: row.tmdbId,
       title: row.title,
-      genres: row.genres ?? "[]",
+      genres: row.genres ?? '[]',
       avgEloScore: row.avgEloScore,
       watchedAt: row.watchedAt,
     };
@@ -134,8 +134,8 @@ function buildInstance(seed: SeedMovie, profile: PreferenceProfile): ShelfInstan
   return {
     shelfId: `because-you-watched:${seed.id}`,
     title: `Because you watched ${seed.title}`,
-    subtitle: "Movies similar to a recent watch",
-    emoji: "🎬",
+    subtitle: 'Movies similar to a recent watch',
+    emoji: '🎬',
     score,
     seedMovieId: seed.id,
     query: async ({ limit, offset }) => {
@@ -164,9 +164,9 @@ function buildInstance(seed: SeedMovie, profile: PreferenceProfile): ShelfInstan
 }
 
 export const becauseYouWatchedShelf: ShelfDefinition = {
-  id: "because-you-watched",
+  id: 'because-you-watched',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const { recent, older } = selectSeeds();
 

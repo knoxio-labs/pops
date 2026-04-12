@@ -1,11 +1,11 @@
 /**
  * Inventory reports service — warranty tracking and insurance report queries.
  */
-import { isNotNull, asc, sql, desc, and, gte, lte, count, eq } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { homeInventory, locations, itemPhotos, itemDocuments } from "@pops/db-types";
-import type { InventoryRow } from "../items/types.js";
-import type { ValueBreakdownEntry, DashboardSummary, RecentItem } from "./types.js";
+import { isNotNull, asc, sql, desc, and, gte, lte, count, eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { homeInventory, locations, itemPhotos, itemDocuments } from '@pops/db-types';
+import type { InventoryRow } from '../items/types.js';
+import type { ValueBreakdownEntry, DashboardSummary, RecentItem } from './types.js';
 
 /** Warranty "expiring soon" window in days. */
 const WARRANTY_WINDOW_DAYS = 90;
@@ -28,8 +28,8 @@ export function getDashboard(): DashboardSummary {
 
   const now = new Date();
   const cutoff = new Date(now.getTime() + WARRANTY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const nowIso = now.toISOString().split("T")[0] ?? "";
-  const cutoffIso = cutoff.toISOString().split("T")[0] ?? "";
+  const nowIso = now.toISOString().split('T')[0] ?? '';
+  const cutoffIso = cutoff.toISOString().split('T')[0] ?? '';
 
   const [warrantyResult] = db
     .select({ cnt: count() })
@@ -80,7 +80,7 @@ export function listWarrantyItems(): WarrantyListItem[] {
     .from(homeInventory)
     .leftJoin(
       itemDocuments,
-      and(eq(itemDocuments.itemId, homeInventory.id), eq(itemDocuments.documentType, "warranty"))
+      and(eq(itemDocuments.itemId, homeInventory.id), eq(itemDocuments.documentType, 'warranty'))
     )
     .where(isNotNull(homeInventory.warrantyExpires))
     .orderBy(homeInventory.warrantyExpires)
@@ -122,7 +122,7 @@ export interface InsuranceReportResult {
 interface InsuranceReportOptions {
   locationId?: string;
   includeChildren?: boolean;
-  sortBy?: "value" | "name" | "type";
+  sortBy?: 'value' | 'name' | 'type';
 }
 
 /**
@@ -130,7 +130,7 @@ interface InsuranceReportOptions {
  * Items are grouped by location. Each item includes its first photo path and receipt IDs.
  */
 export function getInsuranceReport(options: InsuranceReportOptions = {}): InsuranceReportResult {
-  const { locationId, includeChildren = true, sortBy = "value" } = options;
+  const { locationId, includeChildren = true, sortBy = 'value' } = options;
   const db = getDrizzle();
 
   // Get location IDs to filter by
@@ -162,7 +162,7 @@ export function getInsuranceReport(options: InsuranceReportOptions = {}): Insura
   const docs = db
     .select()
     .from(itemDocuments)
-    .where(eq(itemDocuments.documentType, "receipt"))
+    .where(eq(itemDocuments.documentType, 'receipt'))
     .all();
   const receiptMap = new Map<string, number[]>();
   for (const doc of docs) {
@@ -182,12 +182,12 @@ export function getInsuranceReport(options: InsuranceReportOptions = {}): Insura
   // Sort items
   filteredItems.sort((a, b) => {
     switch (sortBy) {
-      case "value":
+      case 'value':
         return (b.replacementValue ?? 0) - (a.replacementValue ?? 0);
-      case "name":
+      case 'name':
         return a.itemName.localeCompare(b.itemName);
-      case "type":
-        return (a.type ?? "").localeCompare(b.type ?? "");
+      case 'type':
+        return (a.type ?? '').localeCompare(b.type ?? '');
     }
   });
 
@@ -212,7 +212,7 @@ export function getInsuranceReport(options: InsuranceReportOptions = {}): Insura
       replacementValue: item.replacementValue,
       photoPath: firstPhotoMap.get(item.id) ?? null,
       locationId: item.locationId,
-      locationName: item.locationId ? (locationNameMap.get(item.locationId) ?? "Unknown") : null,
+      locationName: item.locationId ? (locationNameMap.get(item.locationId) ?? 'Unknown') : null,
       receiptDocumentIds: receiptMap.get(item.id) ?? [],
     });
     if (item.replacementValue != null) {
@@ -225,7 +225,7 @@ export function getInsuranceReport(options: InsuranceReportOptions = {}): Insura
   for (const [locId, items] of groupMap) {
     groups.push({
       locationId: locId,
-      locationName: locId ? (locationNameMap.get(locId) ?? "Unknown") : "No Location",
+      locationName: locId ? (locationNameMap.get(locId) ?? 'Unknown') : 'No Location',
       items,
     });
   }

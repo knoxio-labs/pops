@@ -2,9 +2,9 @@
  * RadioInput component - Radio group with labels using shadcn primitives
  * Built on @radix-ui/react-radio-group
  */
-import { forwardRef } from "react";
-import { cn } from "../lib/utils";
-import { RadioGroup, RadioGroupItem } from "../primitives/radio-group";
+import { forwardRef } from 'react';
+import { cn } from '../lib/utils';
+import { RadioGroup, RadioGroupItem } from '../primitives/radio-group';
 
 export interface RadioOption {
   label: string;
@@ -61,7 +61,7 @@ export interface RadioInputProps {
   /**
    * Layout orientation
    */
-  orientation?: "vertical" | "horizontal";
+  orientation?: 'vertical' | 'horizontal';
   /**
    * Container className
    */
@@ -98,14 +98,14 @@ export const RadioInput = forwardRef<HTMLDivElement, RadioInputProps>(
       required = false,
       error = false,
       errorMessage,
-      orientation = "vertical",
+      orientation = 'vertical',
       className,
       ...props
     },
     ref
   ) => {
     return (
-      <div className={cn("flex flex-col gap-3", className)} ref={ref}>
+      <div className={cn('flex flex-col gap-3', className)} ref={ref}>
         {(label || description) && (
           <div className="flex flex-col gap-1">
             {label && (
@@ -126,7 +126,7 @@ export const RadioInput = forwardRef<HTMLDivElement, RadioInputProps>(
           required={required}
           aria-invalid={error}
           className={cn(
-            orientation === "horizontal" ? "grid gap-3 sm:flex sm:flex-row sm:gap-4" : "grid gap-3"
+            orientation === 'horizontal' ? 'grid gap-3 sm:flex sm:flex-row sm:gap-4' : 'grid gap-3'
           )}
           {...props}
         >
@@ -142,8 +142,8 @@ export const RadioInput = forwardRef<HTMLDivElement, RadioInputProps>(
                 <label
                   htmlFor={`radio-${option.value}`}
                   className={cn(
-                    "text-sm font-medium leading-none cursor-pointer select-none",
-                    (option.disabled || disabled) && "opacity-50 cursor-not-allowed"
+                    'text-sm font-medium leading-none cursor-pointer select-none',
+                    (option.disabled || disabled) && 'opacity-50 cursor-not-allowed'
                   )}
                 >
                   {option.label}
@@ -161,4 +161,4 @@ export const RadioInput = forwardRef<HTMLDivElement, RadioInputProps>(
   }
 );
 
-RadioInput.displayName = "RadioInput";
+RadioInput.displayName = 'RadioInput';

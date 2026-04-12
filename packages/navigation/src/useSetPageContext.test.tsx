@@ -1,11 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
-import { AppContextProvider } from "./AppContextProvider";
-import { useAppContext } from "./hooks";
-import { useSetPageContext } from "./hooks";
-import type { SetPageContextOptions } from "./hooks";
-import { useState } from "react";
+import { describe, it, expect } from 'vitest';
+import { render, screen, act, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import { AppContextProvider } from './AppContextProvider';
+import { useAppContext } from './hooks';
+import { useSetPageContext } from './hooks';
+import type { SetPageContextOptions } from './hooks';
+import { useState } from 'react';
 
 /** Renders children inside a MemoryRouter + AppContextProvider at the given path. */
 function renderAt(path: string, ui: React.ReactNode) {
@@ -22,10 +22,10 @@ function TestPage(props: SetPageContextOptions) {
   const ctx = useAppContext();
   return (
     <div>
-      <span data-testid="page">{ctx.page ?? "null"}</span>
+      <span data-testid="page">{ctx.page ?? 'null'}</span>
       <span data-testid="pageType">{ctx.pageType}</span>
-      <span data-testid="entity">{ctx.entity ? ctx.entity.title : "none"}</span>
-      <span data-testid="filters">{ctx.filters ? JSON.stringify(ctx.filters) : "none"}</span>
+      <span data-testid="entity">{ctx.entity ? ctx.entity.title : 'none'}</span>
+      <span data-testid="filters">{ctx.filters ? JSON.stringify(ctx.filters) : 'none'}</span>
     </div>
   );
 }
@@ -35,56 +35,56 @@ function ContextReader() {
   const ctx = useAppContext();
   return (
     <div>
-      <span data-testid="page">{ctx.page ?? "null"}</span>
+      <span data-testid="page">{ctx.page ?? 'null'}</span>
       <span data-testid="pageType">{ctx.pageType}</span>
-      <span data-testid="entity">{ctx.entity ? ctx.entity.title : "none"}</span>
-      <span data-testid="filters">{ctx.filters ? JSON.stringify(ctx.filters) : "none"}</span>
+      <span data-testid="entity">{ctx.entity ? ctx.entity.title : 'none'}</span>
+      <span data-testid="filters">{ctx.filters ? JSON.stringify(ctx.filters) : 'none'}</span>
     </div>
   );
 }
 
-describe("useSetPageContext", () => {
-  it("sets page context on mount", async () => {
-    renderAt("/media", <TestPage page="library" />);
+describe('useSetPageContext', () => {
+  it('sets page context on mount', async () => {
+    renderAt('/media', <TestPage page="library" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("page")).toHaveTextContent("library");
-      expect(screen.getByTestId("pageType")).toHaveTextContent("top-level");
+      expect(screen.getByTestId('page')).toHaveTextContent('library');
+      expect(screen.getByTestId('pageType')).toHaveTextContent('top-level');
     });
   });
 
-  it("sets pageType when provided", async () => {
-    renderAt("/media", <TestPage page="movie-detail" pageType="drill-down" />);
+  it('sets pageType when provided', async () => {
+    renderAt('/media', <TestPage page="movie-detail" pageType="drill-down" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("page")).toHaveTextContent("movie-detail");
-      expect(screen.getByTestId("pageType")).toHaveTextContent("drill-down");
+      expect(screen.getByTestId('page')).toHaveTextContent('movie-detail');
+      expect(screen.getByTestId('pageType')).toHaveTextContent('drill-down');
     });
   });
 
-  it("sets entity on drill-down pages", async () => {
-    const entity = { uri: "pops:media/movie/42", type: "movie", title: "Fight Club" };
-    renderAt("/media", <TestPage page="movie-detail" pageType="drill-down" entity={entity} />);
+  it('sets entity on drill-down pages', async () => {
+    const entity = { uri: 'pops:media/movie/42', type: 'movie', title: 'Fight Club' };
+    renderAt('/media', <TestPage page="movie-detail" pageType="drill-down" entity={entity} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("entity")).toHaveTextContent("Fight Club");
+      expect(screen.getByTestId('entity')).toHaveTextContent('Fight Club');
     });
   });
 
-  it("sets filters on list pages", async () => {
+  it('sets filters on list pages', async () => {
     renderAt(
-      "/finance",
-      <TestPage page="transactions" filters={{ category: "food", month: "2026-03" }} />
+      '/finance',
+      <TestPage page="transactions" filters={{ category: 'food', month: '2026-03' }} />
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("filters")).toHaveTextContent(
-        JSON.stringify({ category: "food", month: "2026-03" })
+      expect(screen.getByTestId('filters')).toHaveTextContent(
+        JSON.stringify({ category: 'food', month: '2026-03' })
       );
     });
   });
 
-  it("clears context on unmount", async () => {
+  it('clears context on unmount', async () => {
     function Toggler() {
       const [showPage, setShowPage] = useState(true);
       return (
@@ -95,28 +95,28 @@ describe("useSetPageContext", () => {
       );
     }
 
-    renderAt("/media", <Toggler />);
+    renderAt('/media', <Toggler />);
 
     // Page is set
     await waitFor(() => {
-      expect(screen.getByTestId("page")).toHaveTextContent("library");
+      expect(screen.getByTestId('page')).toHaveTextContent('library');
     });
 
     // Unmount the page component
     act(() => {
-      screen.getByRole("button", { name: "unmount" }).click();
+      screen.getByRole('button', { name: 'unmount' }).click();
     });
 
     // Context should be cleared
     await waitFor(() => {
-      expect(screen.getByTestId("page")).toHaveTextContent("null");
-      expect(screen.getByTestId("pageType")).toHaveTextContent("top-level");
-      expect(screen.getByTestId("entity")).toHaveTextContent("none");
+      expect(screen.getByTestId('page')).toHaveTextContent('null');
+      expect(screen.getByTestId('pageType')).toHaveTextContent('top-level');
+      expect(screen.getByTestId('entity')).toHaveTextContent('none');
     });
   });
 
-  it("clears entity and filters on unmount after drill-down", async () => {
-    const entity = { uri: "pops:media/movie/42", type: "movie", title: "Fight Club" };
+  it('clears entity and filters on unmount after drill-down', async () => {
+    const entity = { uri: 'pops:media/movie/42', type: 'movie', title: 'Fight Club' };
 
     function Toggler() {
       const [showPage, setShowPage] = useState(true);
@@ -127,7 +127,7 @@ describe("useSetPageContext", () => {
               page="movie-detail"
               pageType="drill-down"
               entity={entity}
-              filters={{ tab: "cast" }}
+              filters={{ tab: 'cast' }}
             />
           ) : (
             <ContextReader />
@@ -137,20 +137,20 @@ describe("useSetPageContext", () => {
       );
     }
 
-    renderAt("/media", <Toggler />);
+    renderAt('/media', <Toggler />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("entity")).toHaveTextContent("Fight Club");
-      expect(screen.getByTestId("filters")).toHaveTextContent(JSON.stringify({ tab: "cast" }));
+      expect(screen.getByTestId('entity')).toHaveTextContent('Fight Club');
+      expect(screen.getByTestId('filters')).toHaveTextContent(JSON.stringify({ tab: 'cast' }));
     });
 
     act(() => {
-      screen.getByRole("button", { name: "unmount" }).click();
+      screen.getByRole('button', { name: 'unmount' }).click();
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("entity")).toHaveTextContent("none");
-      expect(screen.getByTestId("filters")).toHaveTextContent("none");
+      expect(screen.getByTestId('entity')).toHaveTextContent('none');
+      expect(screen.getByTestId('filters')).toHaveTextContent('none');
     });
   });
 });

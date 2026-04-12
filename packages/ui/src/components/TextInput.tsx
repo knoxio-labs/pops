@@ -2,60 +2,60 @@
  * TextInput component with variants, prefix/suffix, and clear functionality
  * Supports controlled and uncontrolled modes
  */
-import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../lib/utils";
+import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../lib/utils';
 
 const containerVariants = cva(
-  "flex items-center gap-2 w-full bg-background text-foreground transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium outline-0 focus:outline-0 focus-visible:outline-0 focus-within:outline-0 ring-0 focus:ring-0 focus-visible:ring-0 focus-within:ring-0",
+  'flex items-center gap-2 w-full bg-background text-foreground transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium outline-0 focus:outline-0 focus-visible:outline-0 focus-within:outline-0 ring-0 focus:ring-0 focus-visible:ring-0 focus-within:ring-0',
   {
     variants: {
       variant: {
-        default: "border border-border",
-        ghost: "border-0 hover:bg-accent",
-        underline: "border-0 border-b border-border",
+        default: 'border border-border',
+        ghost: 'border-0 hover:bg-accent',
+        underline: 'border-0 border-b border-border',
       },
       size: {
-        sm: "h-9 px-3 py-1 text-xs",
-        default: "h-11 px-3 py-2 text-sm",
-        lg: "h-12 px-4 py-2 text-base",
+        sm: 'h-9 px-3 py-1 text-xs',
+        default: 'h-11 px-3 py-2 text-sm',
+        lg: 'h-12 px-4 py-2 text-base',
       },
       shape: {
-        default: "rounded-md",
-        pill: "rounded-full",
+        default: 'rounded-md',
+        pill: 'rounded-full',
       },
     },
     compoundVariants: [
       {
-        variant: "underline",
-        shape: ["default", "pill"],
-        class: "rounded-none",
+        variant: 'underline',
+        shape: ['default', 'pill'],
+        class: 'rounded-none',
       },
     ],
     defaultVariants: {
-      variant: "default",
-      size: "default",
-      shape: "default",
+      variant: 'default',
+      size: 'default',
+      shape: 'default',
     },
   }
 );
 
 const inputVariants = cva(
-  "flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed",
+  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed',
   {
     variants: {
       size: {
-        sm: "text-xs",
-        default: "text-sm",
-        lg: "text-base",
+        sm: 'text-xs',
+        default: 'text-sm',
+        lg: 'text-base',
       },
       centered: {
-        true: "text-center",
-        false: "",
+        true: 'text-center',
+        false: '',
       },
     },
     defaultVariants: {
-      size: "default",
+      size: 'default',
       centered: false,
     },
   }
@@ -63,7 +63,7 @@ const inputVariants = cva(
 
 export interface TextInputProps
   extends
-    Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "prefix">,
+    Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'>,
     VariantProps<typeof containerVariants> {
   /**
    * Label for the input
@@ -135,7 +135,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
     },
     ref
   ) => {
-    const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+    const [internalValue, setInternalValue] = useState(defaultValue ?? '');
     const [isFocused, setIsFocused] = useState(false);
     const isControlled = controlledValue !== undefined;
     const value = isControlled ? controlledValue : internalValue;
@@ -160,13 +160,13 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
 
     const handleClear = () => {
       if (!isControlled) {
-        setInternalValue("");
+        setInternalValue('');
       }
       onClear?.();
 
       // Create a synthetic event to trigger onChange
       const syntheticEvent = {
-        target: { value: "" },
+        target: { value: '' },
       } as React.ChangeEvent<HTMLInputElement>;
       onChange?.(syntheticEvent);
     };
@@ -187,17 +187,17 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
               size,
               shape,
             }),
-            disabled && "opacity-50 cursor-not-allowed",
-            error && "border-destructive ring-destructive/20",
+            disabled && 'opacity-50 cursor-not-allowed',
+            error && 'border-destructive ring-destructive/20',
             containerClassName
           )}
-          style={isFocused && !error ? { borderColor: "var(--ring)" } : undefined}
+          style={isFocused && !error ? { borderColor: 'var(--ring)' } : undefined}
         >
           {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
           <input
             ref={ref}
             className={cn(inputVariants({ size, centered, className }))}
-            style={{ outline: "none", boxShadow: "none" }}
+            style={{ outline: 'none', boxShadow: 'none' }}
             value={value}
             onChange={handleChange}
             onFocus={handleFocus}
@@ -227,7 +227,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
   }
 );
 
-TextInput.displayName = "TextInput";
+TextInput.displayName = 'TextInput';
 
 /**
  * X icon for clear button

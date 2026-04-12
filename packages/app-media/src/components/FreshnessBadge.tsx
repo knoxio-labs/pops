@@ -11,21 +11,21 @@ interface FreshnessBadgeProps {
   staleness: number;
 }
 
-type FreshnessLevel = "Fresh" | "Recent" | "Fading" | "Stale";
+type FreshnessLevel = 'Fresh' | 'Recent' | 'Fading' | 'Stale';
 
 const LEVEL_STYLES: Record<FreshnessLevel, string> = {
-  Fresh: "bg-green-500/20 text-green-700 dark:text-green-400",
-  Recent: "bg-blue-500/20 text-blue-700 dark:text-blue-400",
-  Fading: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400",
-  Stale: "bg-red-500/20 text-red-700 dark:text-red-400",
+  Fresh: 'bg-green-500/20 text-green-700 dark:text-green-400',
+  Recent: 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
+  Fading: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400',
+  Stale: 'bg-red-500/20 text-red-700 dark:text-red-400',
 };
 
 function getLevel(daysSinceWatch: number, staleness: number): FreshnessLevel {
-  if (staleness < 1.0) return "Stale";
-  if (daysSinceWatch <= 30) return "Fresh";
-  if (daysSinceWatch <= 90) return "Recent";
-  if (daysSinceWatch <= 365) return "Fading";
-  return "Stale";
+  if (staleness < 1.0) return 'Stale';
+  if (daysSinceWatch <= 30) return 'Fresh';
+  if (daysSinceWatch <= 90) return 'Recent';
+  if (daysSinceWatch <= 365) return 'Fading';
+  return 'Stale';
 }
 
 export function FreshnessBadge({ daysSinceWatch, staleness }: FreshnessBadgeProps) {

@@ -1,16 +1,16 @@
-import express from "express";
-import helmet from "helmet";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { authMiddleware } from "./middleware/auth.js";
-import { rateLimiter } from "./middleware/rate-limit.js";
-import { envContextMiddleware } from "./middleware/env-context.js";
-import healthRouter from "./routes/health.js";
-import upBankRouter from "./routes/webhooks/up-bank.js";
-import { envRouter } from "./modules/core/envs/router.js";
-import mediaImagesRouter from "./routes/media/images.js";
-import documentThumbnailRouter from "./routes/inventory/documents.js";
-import { appRouter } from "./router.js";
-import { createContext } from "./trpc.js";
+import express from 'express';
+import helmet from 'helmet';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { authMiddleware } from './middleware/auth.js';
+import { rateLimiter } from './middleware/rate-limit.js';
+import { envContextMiddleware } from './middleware/env-context.js';
+import healthRouter from './routes/health.js';
+import upBankRouter from './routes/webhooks/up-bank.js';
+import { envRouter } from './modules/core/envs/router.js';
+import mediaImagesRouter from './routes/media/images.js';
+import documentThumbnailRouter from './routes/inventory/documents.js';
+import { appRouter } from './router.js';
+import { createContext } from './trpc.js';
 
 /**
  * Create and configure the Express application.
@@ -27,7 +27,7 @@ export function createApp(): express.Express {
 
   // Webhook route needs raw body for signature verification — MUST come before express.json()
   // because body parsers consume the stream; once json() runs, raw() sees an empty body.
-  app.use("/webhooks/up", express.raw({ type: "application/json" }));
+  app.use('/webhooks/up', express.raw({ type: 'application/json' }));
 
   // JSON body parsing for all other routes (env CRUD, tRPC).
   // Intentionally placed AFTER the raw webhook registration above.
@@ -61,7 +61,7 @@ export function createApp(): express.Express {
 
   // tRPC handler (auth via context/procedures)
   app.use(
-    "/trpc",
+    '/trpc',
     createExpressMiddleware({
       router: appRouter,
       createContext,

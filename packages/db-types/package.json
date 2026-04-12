@@ -21,8 +21,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "format:fix": "prettier --write \"src/**/*.ts\""
+    "format:check": "oxfmt -c ../../.oxfmtrc.json --check \"src/**/*.ts\"",
+    "format:fix": "oxfmt -c ../../.oxfmtrc.json --write \"src/**/*.ts\""
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2"

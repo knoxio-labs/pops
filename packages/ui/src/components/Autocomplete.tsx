@@ -2,8 +2,8 @@
  * Autocomplete component - Text input with suggestions using shadcn primitives
  * Built on Popover + Command for proper positioning and filtering
  */
-import { useState, useRef, useEffect } from "react";
-import { cn } from "../lib/utils";
+import { useState, useRef, useEffect } from 'react';
+import { cn } from '../lib/utils';
 import {
   Command,
   CommandEmpty,
@@ -11,8 +11,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../primitives/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
+} from '../primitives/command';
+import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
 
 export interface AutocompleteSuggestion {
   label: string;
@@ -72,11 +72,11 @@ export interface AutocompleteProps {
  */
 export function Autocomplete({
   suggestions,
-  value = "",
+  value = '',
   onChange,
   onSelect,
-  placeholder = "Search...",
-  emptyMessage = "No results found.",
+  placeholder = 'Search...',
+  emptyMessage = 'No results found.',
   disabled = false,
   className,
 }: AutocompleteProps) {
@@ -106,7 +106,7 @@ export function Autocomplete({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Command className={cn("overflow-visible bg-transparent", className)}>
+      <Command className={cn('overflow-visible bg-transparent', className)}>
         <PopoverTrigger asChild>
           <CommandInput
             ref={inputRef}

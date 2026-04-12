@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { TransactionRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { TransactionRow } from '@pops/db-types';
 
 export type { TransactionRow };
 
@@ -35,7 +35,7 @@ export function toTransaction(row: TransactionRow): Transaction {
           try {
             const parsed = JSON.parse(row.tags) as unknown;
             if (Array.isArray(parsed)) {
-              return parsed.filter((item): item is string => typeof item === "string");
+              return parsed.filter((item): item is string => typeof item === 'string');
             }
             return [];
           } catch {
@@ -55,11 +55,11 @@ export function toTransaction(row: TransactionRow): Transaction {
 
 /** Zod schema for creating a transaction. */
 export const CreateTransactionSchema = z.object({
-  description: z.string().min(1, "Description is required"),
-  account: z.string().min(1, "Account is required"),
+  description: z.string().min(1, 'Description is required'),
+  account: z.string().min(1, 'Account is required'),
   amount: z.number(),
-  date: z.string().min(1, "Date is required"),
-  type: z.string().min(1, "Type is required"),
+  date: z.string().min(1, 'Date is required'),
+  type: z.string().min(1, 'Type is required'),
   tags: z.array(z.string()).optional().default([]),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
@@ -76,10 +76,10 @@ export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>;
 
 /** Zod schema for updating a transaction (all fields optional). */
 export const UpdateTransactionSchema = z.object({
-  description: z.string().min(1, "Description cannot be empty").optional(),
-  account: z.string().min(1, "Account cannot be empty").optional(),
+  description: z.string().min(1, 'Description cannot be empty').optional(),
+  account: z.string().min(1, 'Account cannot be empty').optional(),
   amount: z.number().optional(),
-  date: z.string().min(1, "Date cannot be empty").optional(),
+  date: z.string().min(1, 'Date cannot be empty').optional(),
   type: z.string().optional(),
   tags: z.array(z.string()).optional(),
   entityId: z.string().nullable().optional(),

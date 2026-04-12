@@ -4,38 +4,38 @@
  * Each shelf is tested by mocking the underlying service function it wraps.
  * No business logic is re-tested — we verify delegation and interface mapping.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock("../../tmdb/index.js", () => ({
+vi.mock('../../tmdb/index.js', () => ({
   getTmdbClient: vi.fn(() => ({})),
 }));
 
-vi.mock("../tmdb-service.js", () => ({
+vi.mock('../tmdb-service.js', () => ({
   getTrending: vi.fn(),
   getRecommendations: vi.fn(),
   getWatchlistRecommendations: vi.fn(),
 }));
 
-vi.mock("../plex-service.js", () => ({
+vi.mock('../plex-service.js', () => ({
   getTrendingFromPlex: vi.fn(),
 }));
 
-vi.mock("../service.js", () => ({
+vi.mock('../service.js', () => ({
   getPreferenceProfile: vi.fn(),
   getUnwatchedLibraryMovies: vi.fn(),
   scoreDiscoverResults: vi.fn(),
   getRewatchSuggestions: vi.fn(),
 }));
 
-vi.mock("./registry.js", () => ({
+vi.mock('./registry.js', () => ({
   registerShelf: vi.fn(),
   getRegisteredShelves: vi.fn(() => []),
   _clearRegistry: vi.fn(),
 }));
 
-import * as tmdbService from "../tmdb-service.js";
-import * as plexService from "../plex-service.js";
-import * as service from "../service.js";
+import * as tmdbService from '../tmdb-service.js';
+import * as plexService from '../plex-service.js';
+import * as service from '../service.js';
 import {
   trendingTmdbShelf,
   trendingPlexShelf,
@@ -43,7 +43,7 @@ import {
   fromYourWatchlistShelf,
   worthRewatchingShelf,
   fromYourServerShelf,
-} from "./existing-shelves.js";
+} from './existing-shelves.js';
 
 const mockTrendingService = vi.mocked(tmdbService.getTrending);
 const mockGetRecommendations = vi.mocked(tmdbService.getRecommendations);
@@ -68,8 +68,8 @@ function makeDiscoverResult(tmdbId: number) {
   return {
     tmdbId,
     title: `Movie ${tmdbId}`,
-    overview: "",
-    releaseDate: "2024-01-01",
+    overview: '',
+    releaseDate: '2024-01-01',
     posterPath: null,
     posterUrl: null,
     backdropPath: null,
@@ -85,7 +85,7 @@ function makeDiscoverResult(tmdbId: number) {
 
 /** Minimal ScoredDiscoverResult stub. */
 function makeScoredResult(tmdbId: number) {
-  return { ...makeDiscoverResult(tmdbId), matchPercentage: 80, matchReason: "genre" };
+  return { ...makeDiscoverResult(tmdbId), matchPercentage: 80, matchReason: 'genre' };
 }
 
 /** Minimal RewatchSuggestion stub. */
@@ -94,7 +94,7 @@ function makeRewatchSuggestion(tmdbId: number) {
     id: tmdbId,
     tmdbId,
     title: `Movie ${tmdbId}`,
-    releaseDate: "2020-01-01",
+    releaseDate: '2020-01-01',
     posterPath: null,
     posterUrl: null,
     voteAverage: 8.0,
@@ -108,20 +108,20 @@ function makeRewatchSuggestion(tmdbId: number) {
 // trending-tmdb
 // ---------------------------------------------------------------------------
 
-describe("trendingTmdbShelf", () => {
+describe('trendingTmdbShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("has category=tmdb, template=false, id=trending-tmdb", () => {
-    expect(trendingTmdbShelf.category).toBe("tmdb");
+  it('has category=tmdb, template=false, id=trending-tmdb', () => {
+    expect(trendingTmdbShelf.category).toBe('tmdb');
     expect(trendingTmdbShelf.template).toBe(false);
-    expect(trendingTmdbShelf.id).toBe("trending-tmdb");
+    expect(trendingTmdbShelf.id).toBe('trending-tmdb');
   });
 
-  it("generates exactly one instance", () => {
+  it('generates exactly one instance', () => {
     expect(trendingTmdbShelf.generate(stubProfile)).toHaveLength(1);
   });
 
-  it("returns results from getTrending", async () => {
+  it('returns results from getTrending', async () => {
     const results = [makeDiscoverResult(1), makeDiscoverResult(2)];
     mockTrendingService.mockResolvedValue({ results, totalResults: 2, page: 1 });
 
@@ -131,7 +131,7 @@ describe("trendingTmdbShelf", () => {
     expect(out[0]!.tmdbId).toBe(1);
   });
 
-  it("returns empty when getTrending returns no results", async () => {
+  it('returns empty when getTrending returns no results', async () => {
     mockTrendingService.mockResolvedValue({ results: [], totalResults: 0, page: 1 });
 
     const [instance] = trendingTmdbShelf.generate(stubProfile);
@@ -139,7 +139,7 @@ describe("trendingTmdbShelf", () => {
     expect(out).toHaveLength(0);
   });
 
-  it("applies offset within TMDB page", async () => {
+  it('applies offset within TMDB page', async () => {
     // offset=5 → page=1, start=5
     const results = Array.from({ length: 20 }, (_, i) => makeDiscoverResult(i + 1));
     mockTrendingService.mockResolvedValue({ results, totalResults: 20, page: 1 });
@@ -155,15 +155,15 @@ describe("trendingTmdbShelf", () => {
 // trending-plex
 // ---------------------------------------------------------------------------
 
-describe("trendingPlexShelf", () => {
+describe('trendingPlexShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("has category=external, id=trending-plex", () => {
-    expect(trendingPlexShelf.category).toBe("external");
-    expect(trendingPlexShelf.id).toBe("trending-plex");
+  it('has category=external, id=trending-plex', () => {
+    expect(trendingPlexShelf.category).toBe('external');
+    expect(trendingPlexShelf.id).toBe('trending-plex');
   });
 
-  it("returns results from getTrendingFromPlex", async () => {
+  it('returns results from getTrendingFromPlex', async () => {
     const results = [makeDiscoverResult(10), makeDiscoverResult(11)];
     mockGetTrendingFromPlex.mockResolvedValue(results);
 
@@ -172,7 +172,7 @@ describe("trendingPlexShelf", () => {
     expect(out).toHaveLength(2);
   });
 
-  it("returns empty array when Plex is disconnected (null)", async () => {
+  it('returns empty array when Plex is disconnected (null)', async () => {
     mockGetTrendingFromPlex.mockResolvedValue(null);
 
     const [instance] = trendingPlexShelf.generate(stubProfile);
@@ -185,15 +185,15 @@ describe("trendingPlexShelf", () => {
 // recommendations
 // ---------------------------------------------------------------------------
 
-describe("recommendationsShelf", () => {
+describe('recommendationsShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("has category=profile, id=recommendations", () => {
-    expect(recommendationsShelf.category).toBe("profile");
-    expect(recommendationsShelf.id).toBe("recommendations");
+  it('has category=profile, id=recommendations', () => {
+    expect(recommendationsShelf.category).toBe('profile');
+    expect(recommendationsShelf.id).toBe('recommendations');
   });
 
-  it("returns empty when below cold-start threshold (< 5 comparisons)", async () => {
+  it('returns empty when below cold-start threshold (< 5 comparisons)', async () => {
     mockGetProfile.mockReturnValue({ ...stubProfile, totalComparisons: 3 });
 
     const [instance] = recommendationsShelf.generate(stubProfile);
@@ -202,11 +202,11 @@ describe("recommendationsShelf", () => {
     expect(mockGetRecommendations).not.toHaveBeenCalled();
   });
 
-  it("returns scored results above cold-start threshold", async () => {
+  it('returns scored results above cold-start threshold', async () => {
     mockGetProfile.mockReturnValue({ ...stubProfile, totalComparisons: 10 });
     mockGetRecommendations.mockResolvedValue({
       results: [makeDiscoverResult(20)],
-      sourceMovies: ["Movie 1"],
+      sourceMovies: ['Movie 1'],
     });
     const scored = [makeScoredResult(20)];
     mockScoreResults.mockReturnValue(scored);
@@ -222,15 +222,15 @@ describe("recommendationsShelf", () => {
 // from-your-watchlist
 // ---------------------------------------------------------------------------
 
-describe("fromYourWatchlistShelf", () => {
+describe('fromYourWatchlistShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("has category=tmdb, id=from-your-watchlist", () => {
-    expect(fromYourWatchlistShelf.category).toBe("tmdb");
-    expect(fromYourWatchlistShelf.id).toBe("from-your-watchlist");
+  it('has category=tmdb, id=from-your-watchlist', () => {
+    expect(fromYourWatchlistShelf.category).toBe('tmdb');
+    expect(fromYourWatchlistShelf.id).toBe('from-your-watchlist');
   });
 
-  it("returns results from getWatchlistRecommendations", async () => {
+  it('returns results from getWatchlistRecommendations', async () => {
     const results = [makeScoredResult(30), makeScoredResult(31)];
     mockGetWatchlistRecs.mockResolvedValue({ results, sourceMovies: [] });
 
@@ -239,7 +239,7 @@ describe("fromYourWatchlistShelf", () => {
     expect(out).toHaveLength(2);
   });
 
-  it("returns empty when no watchlist recommendations", async () => {
+  it('returns empty when no watchlist recommendations', async () => {
     mockGetWatchlistRecs.mockResolvedValue({ results: [], sourceMovies: [] });
 
     const [instance] = fromYourWatchlistShelf.generate(stubProfile);
@@ -252,15 +252,15 @@ describe("fromYourWatchlistShelf", () => {
 // worth-rewatching
 // ---------------------------------------------------------------------------
 
-describe("worthRewatchingShelf", () => {
+describe('worthRewatchingShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("has category=local, id=worth-rewatching", () => {
-    expect(worthRewatchingShelf.category).toBe("local");
-    expect(worthRewatchingShelf.id).toBe("worth-rewatching");
+  it('has category=local, id=worth-rewatching', () => {
+    expect(worthRewatchingShelf.category).toBe('local');
+    expect(worthRewatchingShelf.id).toBe('worth-rewatching');
   });
 
-  it("maps RewatchSuggestion to DiscoverResult shape", async () => {
+  it('maps RewatchSuggestion to DiscoverResult shape', async () => {
     mockGetRewatch.mockReturnValue([makeRewatchSuggestion(40)]);
 
     const [instance] = worthRewatchingShelf.generate(stubProfile);
@@ -269,10 +269,10 @@ describe("worthRewatchingShelf", () => {
     expect(out[0]!.tmdbId).toBe(40);
     expect(out[0]!.inLibrary).toBe(true);
     expect(out[0]!.isWatched).toBe(true);
-    expect(out[0]!.overview).toBe("");
+    expect(out[0]!.overview).toBe('');
   });
 
-  it("returns empty when no rewatch suggestions", async () => {
+  it('returns empty when no rewatch suggestions', async () => {
     mockGetRewatch.mockReturnValue([]);
 
     const [instance] = worthRewatchingShelf.generate(stubProfile);
@@ -285,15 +285,15 @@ describe("worthRewatchingShelf", () => {
 // from-your-server
 // ---------------------------------------------------------------------------
 
-describe("fromYourServerShelf", () => {
+describe('fromYourServerShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("has category=local, id=from-your-server", () => {
-    expect(fromYourServerShelf.category).toBe("local");
-    expect(fromYourServerShelf.id).toBe("from-your-server");
+  it('has category=local, id=from-your-server', () => {
+    expect(fromYourServerShelf.category).toBe('local');
+    expect(fromYourServerShelf.id).toBe('from-your-server');
   });
 
-  it("returns empty when no unwatched movies", async () => {
+  it('returns empty when no unwatched movies', async () => {
     mockGetUnwatched.mockReturnValue([]);
 
     const [instance] = fromYourServerShelf.generate(stubProfile);
@@ -302,7 +302,7 @@ describe("fromYourServerShelf", () => {
     expect(mockScoreResults).not.toHaveBeenCalled();
   });
 
-  it("returns scored unwatched library movies", async () => {
+  it('returns scored unwatched library movies', async () => {
     mockGetUnwatched.mockReturnValue([makeDiscoverResult(50)]);
     mockGetProfile.mockReturnValue(stubProfile);
     mockScoreResults.mockReturnValue([makeScoredResult(50)]);
@@ -318,7 +318,7 @@ describe("fromYourServerShelf", () => {
 // All shelves metadata
 // ---------------------------------------------------------------------------
 
-describe("all existing shelves", () => {
+describe('all existing shelves', () => {
   const allShelves = [
     trendingTmdbShelf,
     trendingPlexShelf,
@@ -328,13 +328,13 @@ describe("all existing shelves", () => {
     fromYourServerShelf,
   ];
 
-  it("all have template=false", () => {
+  it('all have template=false', () => {
     for (const shelf of allShelves) {
       expect(shelf.template).toBe(false);
     }
   });
 
-  it("all generate exactly one instance", () => {
+  it('all generate exactly one instance', () => {
     for (const shelf of allShelves) {
       expect(shelf.generate(stubProfile)).toHaveLength(1);
     }

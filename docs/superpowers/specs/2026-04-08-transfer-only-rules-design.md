@@ -9,10 +9,12 @@
 PRD-024 requires “transfer-only support”: rules must be able to classify a transaction as transfer/income without requiring an entity assignment.
 
 Issue #1650 scope explicitly calls out:
+
 - matching must support type-only rules
 - proposal engine supports creating/editing type-only rules
 
 Current code path blocks this:
+
 - `applyLearnedCorrection()` returns `null` when a matching correction has no `entityId`, causing type-only rules to fall through to entity matching / AI.
 
 ## Design
@@ -46,7 +48,7 @@ Ensure tests cover that type-only diffs (transactionType changes) are included i
 
 - `ProcessedTransaction` already supports `transactionType?: "purchase" | "transfer" | "income"`.
 - `entityMatchSchema` already models `entityId` and `entityName` as optional.
-- This change makes it *possible* for a `status: "matched"` item to have no entity, so consumers must not assume `entityId/entityName` exist for all matched transactions. (This PR remains backend-only; future UI hardening can follow if needed.)
+- This change makes it _possible_ for a `status: "matched"` item to have no entity, so consumers must not assume `entityId/entityName` exist for all matched transactions. (This PR remains backend-only; future UI hardening can follow if needed.)
 
 ## Tests (TDD)
 
@@ -54,4 +56,3 @@ Ensure tests cover that type-only diffs (transactionType changes) are included i
 - Import matching test: `processImport` (and re-eval path) can move an item into `matched` purely via a transfer-only learned correction.
 - Re-eval test: `affectedCount` increments for type-only changes.
 - Corrections proposal/preview test: type-only changes are represented as affected items.
-

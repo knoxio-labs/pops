@@ -1,17 +1,17 @@
 /**
  * Item photos service — attach/remove/reorder photos using Drizzle ORM.
  */
-import { existsSync, unlinkSync } from "node:fs";
-import { resolve } from "node:path";
-import { eq, count, asc } from "drizzle-orm";
-import { getDrizzle, getDb } from "../../../db.js";
-import { itemPhotos, homeInventory } from "@pops/db-types";
-import { NotFoundError, ValidationError } from "../../../shared/errors.js";
-import type { ItemPhotoRow, AttachPhotoInput, UpdatePhotoInput } from "./types.js";
+import { existsSync, unlinkSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { eq, count, asc } from 'drizzle-orm';
+import { getDrizzle, getDb } from '../../../db.js';
+import { itemPhotos, homeInventory } from '@pops/db-types';
+import { NotFoundError, ValidationError } from '../../../shared/errors.js';
+import type { ItemPhotoRow, AttachPhotoInput, UpdatePhotoInput } from './types.js';
 
 /** Reject path traversal attempts in file paths. */
 function assertSafeFilePath(filePath: string): void {
-  if (filePath.includes("..") || filePath.startsWith("/")) {
+  if (filePath.includes('..') || filePath.startsWith('/')) {
     throw new ValidationError("File path must be relative and cannot contain '..'");
   }
 }
@@ -30,14 +30,14 @@ function assertItemExists(itemId: string): void {
     .from(homeInventory)
     .where(eq(homeInventory.id, itemId))
     .all();
-  if (!item) throw new NotFoundError("Inventory item", itemId);
+  if (!item) throw new NotFoundError('Inventory item', itemId);
 }
 
 /** Get a single photo by ID. Throws NotFoundError if missing. */
 function getPhoto(id: number): ItemPhotoRow {
   const db = getDrizzle();
   const [row] = db.select().from(itemPhotos).where(eq(itemPhotos.id, id)).all();
-  if (!row) throw new NotFoundError("Item photo", String(id));
+  if (!row) throw new NotFoundError('Item photo', String(id));
   return row;
 }
 
@@ -140,7 +140,7 @@ export function reorderPhotos(itemId: string, orderedIds: number[]): ItemPhotoRo
   for (const photoId of orderedIds) {
     const photo = getPhoto(photoId);
     if (photo.itemId !== itemId) {
-      throw new NotFoundError("Item photo", String(photoId));
+      throw new NotFoundError('Item photo', String(photoId));
     }
   }
 

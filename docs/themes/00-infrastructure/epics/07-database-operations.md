@@ -8,9 +8,9 @@ Establish safe database lifecycle management: unify the migration system, protec
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
-| 060 | [Database Operations](../prds/060-database-operations/README.md) | Unify migration system on Drizzle, add production guards, pre-migration backups, migration safety tests, go-live runbook | Done |
+| #   | PRD                                                              | Summary                                                                                                                  | Status |
+| --- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------ |
+| 060 | [Database Operations](../prds/060-database-operations/README.md) | Unify migration system on Drizzle, add production guards, pre-migration backups, migration safety tests, go-live runbook | Done   |
 
 ## Dependencies
 

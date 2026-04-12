@@ -14,8 +14,8 @@ export interface PaginationParams {
 
 /** Parse limit/offset from Express query params, with sane defaults and bounds. */
 export function parsePagination(query: Record<string, unknown>): PaginationParams {
-  const rawLimit = Number(query["limit"]);
-  const rawOffset = Number(query["offset"]);
+  const rawLimit = Number(query['limit']);
+  const rawOffset = Number(query['offset']);
 
   return {
     limit: Math.min(

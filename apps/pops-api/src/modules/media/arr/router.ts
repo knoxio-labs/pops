@@ -1,39 +1,39 @@
 /**
  * Arr tRPC router — Radarr/Sonarr integration endpoints.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { ArrApiError } from "./types.js";
-import { RadarrClient } from "./radarr-client.js";
-import { SonarrClient } from "./sonarr-client.js";
-import * as arrService from "./service.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { ArrApiError } from './types.js';
+import { RadarrClient } from './radarr-client.js';
+import { SonarrClient } from './sonarr-client.js';
+import * as arrService from './service.js';
 
 const TestConnectionInput = z.object({
   url: z.string().min(1),
   apiKey: z.string().min(1),
 });
 
-const MASKED_KEY = "••••••••";
+const MASKED_KEY = '••••••••';
 
 /** If the API key is still masked, resolve the saved key from DB. */
-function resolveApiKey(formKey: string, service: "radarr" | "sonarr"): string | null {
+function resolveApiKey(formKey: string, service: 'radarr' | 'sonarr'): string | null {
   if (formKey !== MASKED_KEY) return formKey;
   const settings = arrService.getArrSettings();
-  return (service === "radarr" ? settings.radarrApiKey : settings.sonarrApiKey) ?? null;
+  return (service === 'radarr' ? settings.radarrApiKey : settings.sonarrApiKey) ?? null;
 }
 
 export const arrRouter = router({
   /** Test Radarr connection using provided form values. */
   testRadarr: protectedProcedure.input(TestConnectionInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(input.apiKey, "radarr");
+    const apiKey = resolveApiKey(input.apiKey, 'radarr');
     if (!apiKey) {
-      return { data: { configured: false, connected: false, error: "No API key provided" } };
+      return { data: { configured: false, connected: false, error: 'No API key provided' } };
     }
     const client = new RadarrClient(input.url, apiKey);
     try {
       const status = await client.testConnection();
-      if (status.appName && status.appName.toLowerCase() !== "radarr") {
+      if (status.appName && status.appName.toLowerCase() !== 'radarr') {
         return {
           data: {
             configured: true,
@@ -44,7 +44,7 @@ export const arrRouter = router({
       }
       return {
         data: { configured: true, connected: true, ...status },
-        message: "Radarr connection successful",
+        message: 'Radarr connection successful',
       };
     } catch (err) {
       const errorMsg =
@@ -55,14 +55,14 @@ export const arrRouter = router({
 
   /** Test Sonarr connection using provided form values. */
   testSonarr: protectedProcedure.input(TestConnectionInput).mutation(async ({ input }) => {
-    const apiKey = resolveApiKey(input.apiKey, "sonarr");
+    const apiKey = resolveApiKey(input.apiKey, 'sonarr');
     if (!apiKey) {
-      return { data: { configured: false, connected: false, error: "No API key provided" } };
+      return { data: { configured: false, connected: false, error: 'No API key provided' } };
     }
     const client = new SonarrClient(input.url, apiKey);
     try {
       const status = await client.testConnection();
-      if (status.appName && status.appName.toLowerCase() !== "sonarr") {
+      if (status.appName && status.appName.toLowerCase() !== 'sonarr') {
         return {
           data: {
             configured: true,
@@ -73,7 +73,7 @@ export const arrRouter = router({
       }
       return {
         data: { configured: true, connected: true, ...status },
-        message: "Sonarr connection successful",
+        message: 'Sonarr connection successful',
       };
     } catch (err) {
       const errorMsg =
@@ -92,10 +92,10 @@ export const arrRouter = router({
     const s = arrService.getArrSettings();
     return {
       data: {
-        radarrUrl: s.radarrUrl ?? "",
-        radarrApiKey: s.radarrApiKey ? "••••••••" : "",
-        sonarrUrl: s.sonarrUrl ?? "",
-        sonarrApiKey: s.sonarrApiKey ? "••••••••" : "",
+        radarrUrl: s.radarrUrl ?? '',
+        radarrApiKey: s.radarrApiKey ? '••••••••' : '',
+        sonarrUrl: s.sonarrUrl ?? '',
+        sonarrApiKey: s.sonarrApiKey ? '••••••••' : '',
         radarrHasKey: !!s.radarrApiKey,
         sonarrHasKey: !!s.sonarrApiKey,
       },
@@ -116,21 +116,21 @@ export const arrRouter = router({
       // Don't overwrite API keys with the masked placeholder
       const config: Parameters<typeof arrService.saveArrSettings>[0] = {};
       if (input.radarrUrl !== undefined) config.radarrUrl = input.radarrUrl;
-      if (input.radarrApiKey !== undefined && input.radarrApiKey !== "••••••••")
+      if (input.radarrApiKey !== undefined && input.radarrApiKey !== '••••••••')
         config.radarrApiKey = input.radarrApiKey;
       if (input.sonarrUrl !== undefined) config.sonarrUrl = input.sonarrUrl;
-      if (input.sonarrApiKey !== undefined && input.sonarrApiKey !== "••••••••")
+      if (input.sonarrApiKey !== undefined && input.sonarrApiKey !== '••••••••')
         config.sonarrApiKey = input.sonarrApiKey;
       arrService.saveArrSettings(config);
       arrService.clearStatusCache();
-      return { message: "Arr settings saved" };
+      return { message: 'Arr settings saved' };
     }),
 
   /** Get Radarr quality profiles. */
   getQualityProfiles: protectedProcedure.query(async () => {
     const client = arrService.getRadarrClient();
     if (!client) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Radarr is not configured" });
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
     }
     try {
       const profiles = await client.getQualityProfiles();
@@ -138,7 +138,7 @@ export const arrRouter = router({
     } catch (err) {
       if (err instanceof ArrApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Radarr error: ${err.message}`,
         });
       }
@@ -150,7 +150,7 @@ export const arrRouter = router({
   getRootFolders: protectedProcedure.query(async () => {
     const client = arrService.getRadarrClient();
     if (!client) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Radarr is not configured" });
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
     }
     try {
       const folders = await client.getRootFolders();
@@ -158,7 +158,7 @@ export const arrRouter = router({
     } catch (err) {
       if (err instanceof ArrApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Radarr error: ${err.message}`,
         });
       }
@@ -172,7 +172,7 @@ export const arrRouter = router({
     .query(async ({ input }) => {
       const client = arrService.getRadarrClient();
       if (!client) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Radarr is not configured" });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
       }
       try {
         const result = await client.checkMovie(input.tmdbId);
@@ -180,7 +180,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Radarr error: ${err.message}`,
           });
         }
@@ -202,7 +202,7 @@ export const arrRouter = router({
     .mutation(async ({ input }) => {
       const client = arrService.getRadarrClient();
       if (!client) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Radarr is not configured" });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
       }
       try {
         const movie = await client.addMovie(input);
@@ -211,7 +211,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Radarr error: ${err.message}`,
           });
         }
@@ -230,7 +230,7 @@ export const arrRouter = router({
     .mutation(async ({ input }) => {
       const client = arrService.getRadarrClient();
       if (!client) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Radarr is not configured" });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
       }
       try {
         const movie = await client.updateMonitoring(input.radarrId, input.monitored);
@@ -238,7 +238,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Radarr error: ${err.message}`,
           });
         }
@@ -252,7 +252,7 @@ export const arrRouter = router({
     .mutation(async ({ input }) => {
       const client = arrService.getRadarrClient();
       if (!client) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Radarr is not configured" });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
       }
       try {
         const result = await client.triggerSearch(input.radarrId);
@@ -260,7 +260,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Radarr error: ${err.message}`,
           });
         }
@@ -278,7 +278,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Radarr error: ${err.message}`,
           });
         }
@@ -294,7 +294,7 @@ export const arrRouter = router({
     } catch (err) {
       if (err instanceof ArrApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Arr queue error: ${err.message}`,
         });
       }
@@ -317,7 +317,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr calendar error: ${err.message}`,
           });
         }
@@ -335,7 +335,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
@@ -353,7 +353,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
@@ -365,7 +365,7 @@ export const arrRouter = router({
   getSonarrQualityProfiles: protectedProcedure.query(async () => {
     const client = arrService.getSonarrClient();
     if (!client) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sonarr is not configured" });
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Sonarr is not configured' });
     }
     try {
       const profiles = await client.getQualityProfiles();
@@ -373,7 +373,7 @@ export const arrRouter = router({
     } catch (err) {
       if (err instanceof ArrApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Sonarr error: ${err.message}`,
         });
       }
@@ -385,7 +385,7 @@ export const arrRouter = router({
   getSonarrRootFolders: protectedProcedure.query(async () => {
     const client = arrService.getSonarrClient();
     if (!client) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sonarr is not configured" });
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Sonarr is not configured' });
     }
     try {
       const folders = await client.getRootFolders();
@@ -393,7 +393,7 @@ export const arrRouter = router({
     } catch (err) {
       if (err instanceof ArrApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Sonarr error: ${err.message}`,
         });
       }
@@ -405,7 +405,7 @@ export const arrRouter = router({
   getSonarrLanguageProfiles: protectedProcedure.query(async () => {
     const client = arrService.getSonarrClient();
     if (!client) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sonarr is not configured" });
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Sonarr is not configured' });
     }
     try {
       const profiles = await client.getLanguageProfiles();
@@ -413,7 +413,7 @@ export const arrRouter = router({
     } catch (err) {
       if (err instanceof ArrApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Sonarr error: ${err.message}`,
         });
       }
@@ -441,7 +441,7 @@ export const arrRouter = router({
     .mutation(async ({ input }) => {
       const client = arrService.getSonarrClient();
       if (!client) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sonarr is not configured" });
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Sonarr is not configured' });
       }
       try {
         const series = await client.addSeries(input);
@@ -449,7 +449,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
@@ -477,7 +477,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
@@ -500,12 +500,12 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
-        if (err instanceof Error && err.message === "Sonarr not configured") {
-          throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+        if (err instanceof Error && err.message === 'Sonarr not configured') {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: err.message });
         }
         throw err;
       }
@@ -528,7 +528,7 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
@@ -551,12 +551,12 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
-        if (err instanceof Error && err.message === "Sonarr not configured") {
-          throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+        if (err instanceof Error && err.message === 'Sonarr not configured') {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: err.message });
         }
         throw err;
       }
@@ -577,12 +577,12 @@ export const arrRouter = router({
       } catch (err) {
         if (err instanceof ArrApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `Sonarr error: ${err.message}`,
           });
         }
-        if (err instanceof Error && err.message === "Sonarr not configured") {
-          throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+        if (err instanceof Error && err.message === 'Sonarr not configured') {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: err.message });
         }
         throw err;
       }

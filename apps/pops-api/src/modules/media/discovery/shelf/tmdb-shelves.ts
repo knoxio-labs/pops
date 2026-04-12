@@ -8,17 +8,17 @@
  *  4. award-winners     — TMDB keyword IDs for academy-award / golden-globe + top genres
  *  5. decade-picks      — Year range of the decade with most watches in watch_history
  */
-import { sql } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { watchHistory, movies } from "@pops/db-types";
-import { getTmdbClient } from "../../tmdb/index.js";
-import { TMDB_GENRE_MAP } from "../types.js";
-import { getLibraryTmdbIds, toDiscoverResults } from "../tmdb-service.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "../flags.js";
-import { scoreDiscoverResults } from "../service.js";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile } from "../types.js";
+import { sql } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { watchHistory, movies } from '@pops/db-types';
+import { getTmdbClient } from '../../tmdb/index.js';
+import { TMDB_GENRE_MAP } from '../types.js';
+import { getLibraryTmdbIds, toDiscoverResults } from '../tmdb-service.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from '../flags.js';
+import { scoreDiscoverResults } from '../service.js';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile } from '../types.js';
 
 // TMDB keyword IDs for award-winners shelf
 const ACADEMY_AWARD_KEYWORD_ID = 154712;
@@ -69,7 +69,7 @@ function buildTmdbInstance(
   emoji: string,
   score: number,
   profile: PreferenceProfile,
-  discoverOpts: (page: number) => Parameters<ReturnType<typeof getTmdbClient>["discoverMovies"]>[0]
+  discoverOpts: (page: number) => Parameters<ReturnType<typeof getTmdbClient>['discoverMovies']>[0]
 ): ShelfInstance {
   return {
     shelfId,
@@ -106,25 +106,25 @@ function buildTmdbInstance(
 // Shelf 1: New Releases
 // ────────────────────��────────────────────────
 const newReleasesShelf: ShelfDefinition = {
-  id: "new-releases",
+  id: 'new-releases',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const genreIds = topGenreIds(profile);
 
     return [
       buildTmdbInstance(
-        "new-releases",
-        "New Releases",
-        "Fresh titles from the last 30 days",
-        "🆕",
+        'new-releases',
+        'New Releases',
+        'Fresh titles from the last 30 days',
+        '🆕',
         0.7,
         profile,
         (page) => ({
           releaseDateGte: cutoff,
           genreIds: genreIds.length > 0 ? genreIds : undefined,
-          sortBy: "popularity.desc",
+          sortBy: 'popularity.desc',
           page,
         })
       ),
@@ -136,18 +136,18 @@ const newReleasesShelf: ShelfDefinition = {
 // Shelf 2: Hidden Gems
 // ─────────────────────────��───────────────────
 const hiddenGemsShelf: ShelfDefinition = {
-  id: "hidden-gems",
+  id: 'hidden-gems',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const genreIds = topGenreIds(profile);
 
     return [
       buildTmdbInstance(
-        "hidden-gems",
-        "Hidden Gems",
-        "Highly rated but undiscovered",
-        "💎",
+        'hidden-gems',
+        'Hidden Gems',
+        'Highly rated but undiscovered',
+        '💎',
         0.75,
         profile,
         (page) => ({
@@ -155,7 +155,7 @@ const hiddenGemsShelf: ShelfDefinition = {
           voteCountLte: 500,
           voteAverageGte: 7.0,
           genreIds: genreIds.length > 0 ? genreIds : undefined,
-          sortBy: "vote_average.desc",
+          sortBy: 'vote_average.desc',
           page,
         })
       ),
@@ -167,21 +167,21 @@ const hiddenGemsShelf: ShelfDefinition = {
 // Shelf 3: Critics vs Audiences
 // ──────────────────────────────────────────���──
 const criticsVsAudiencesShelf: ShelfDefinition = {
-  id: "critics-vs-audiences",
+  id: 'critics-vs-audiences',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     return [
       buildTmdbInstance(
-        "critics-vs-audiences",
-        "Critics vs Audiences",
-        "High ratings, low profile — the overlooked gems",
-        "🎭",
+        'critics-vs-audiences',
+        'Critics vs Audiences',
+        'High ratings, low profile — the overlooked gems',
+        '🎭',
         0.65,
         profile,
         (page) => ({
           voteAverageGte: 8.0,
-          sortBy: "popularity.asc",
+          sortBy: 'popularity.asc',
           page,
         })
       ),
@@ -193,24 +193,24 @@ const criticsVsAudiencesShelf: ShelfDefinition = {
 // Shelf 4: Award Winners
 // ─────────────────────────────────────────────
 const awardWinnersShelf: ShelfDefinition = {
-  id: "award-winners",
+  id: 'award-winners',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const genreIds = topGenreIds(profile);
 
     return [
       buildTmdbInstance(
-        "award-winners",
-        "Award Winners",
-        "Academy Award and Golden Globe recognised films",
-        "🏆",
+        'award-winners',
+        'Award Winners',
+        'Academy Award and Golden Globe recognised films',
+        '🏆',
         0.7,
         profile,
         (page) => ({
           keywordIds: [ACADEMY_AWARD_KEYWORD_ID, GOLDEN_GLOBE_KEYWORD_ID],
           genreIds: genreIds.length > 0 ? genreIds : undefined,
-          sortBy: "vote_average.desc",
+          sortBy: 'vote_average.desc',
           page,
         })
       ),
@@ -222,9 +222,9 @@ const awardWinnersShelf: ShelfDefinition = {
 // Shelf 5: Decade Picks
 // ─────────────────────────────────────────────
 const decadePicksShelf: ShelfDefinition = {
-  id: "decade-picks",
+  id: 'decade-picks',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const decade = getMostWatchedDecade();
     const dateGte = `${decade}-01-01`;
@@ -232,16 +232,16 @@ const decadePicksShelf: ShelfDefinition = {
 
     return [
       buildTmdbInstance(
-        "decade-picks",
+        'decade-picks',
         `Best of the ${decade}s`,
         `Top-rated films from ${decade}–${decade + 9}`,
-        "📅",
+        '📅',
         0.65,
         profile,
         (page) => ({
           releaseDateGte: dateGte,
           releaseDateLte: dateLte,
-          sortBy: "vote_average.desc",
+          sortBy: 'vote_average.desc',
           voteCountGte: 100,
           page,
         })

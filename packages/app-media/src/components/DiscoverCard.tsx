@@ -2,8 +2,8 @@
  * DiscoverCard — poster card for a TMDB discovery result.
  * Displays poster, title, year, TMDB rating, and action buttons.
  */
-import { useState } from "react";
-import { cn, Badge, Button, Skeleton } from "@pops/ui";
+import { useState } from 'react';
+import { cn, Badge, Button, Skeleton } from '@pops/ui';
 import {
   Film,
   Plus,
@@ -14,8 +14,8 @@ import {
   Loader2,
   RotateCw,
   X,
-} from "lucide-react";
-import { RequestMovieButton } from "./RequestMovieButton";
+} from 'lucide-react';
+import { RequestMovieButton } from './RequestMovieButton';
 
 export interface DiscoverCardProps {
   tmdbId: number;
@@ -80,7 +80,7 @@ export function DiscoverCard({
   const year = releaseDate ? releaseDate.slice(0, 4) : null;
 
   return (
-    <div className={cn("group flex w-36 shrink-0 flex-col gap-1.5 sm:w-40", className)}>
+    <div className={cn('group flex w-36 shrink-0 flex-col gap-1.5 sm:w-40', className)}>
       {/* Poster */}
       <div className="relative w-full overflow-hidden rounded-md bg-muted aspect-[2/3]">
         {/* Rating badge */}
@@ -112,9 +112,9 @@ export function DiscoverCard({
             alt={`${title} poster`}
             loading="lazy"
             className={cn(
-              "h-full w-full object-cover transition-opacity duration-200",
-              "group-hover:opacity-80",
-              imageLoaded ? "opacity-100" : "opacity-0"
+              'h-full w-full object-cover transition-opacity duration-200',
+              'group-hover:opacity-80',
+              imageLoaded ? 'opacity-100' : 'opacity-0'
             )}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
@@ -158,8 +158,8 @@ export function DiscoverCard({
               onWatchlist ? onRemoveFromWatchlist?.(tmdbId) : onAddToWatchlist?.(tmdbId)
             }
             disabled={isAddingToWatchlist || isRemovingFromWatchlist}
-            title={onWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-            aria-label={onWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+            title={onWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            aria-label={onWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
           >
             {isAddingToWatchlist || isRemovingFromWatchlist ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -236,12 +236,12 @@ export function DiscoverCard({
           <div className="flex items-center gap-1">
             <span
               className={cn(
-                "text-xs font-semibold",
+                'text-xs font-semibold',
                 matchPercentage >= 85
-                  ? "text-green-500"
+                  ? 'text-green-500'
                   : matchPercentage >= 70
-                    ? "text-emerald-500"
-                    : "text-muted-foreground"
+                    ? 'text-emerald-500'
+                    : 'text-muted-foreground'
               )}
             >
               {matchPercentage}% Match
@@ -256,4 +256,4 @@ export function DiscoverCard({
   );
 }
 
-DiscoverCard.displayName = "DiscoverCard";
+DiscoverCard.displayName = 'DiscoverCard';

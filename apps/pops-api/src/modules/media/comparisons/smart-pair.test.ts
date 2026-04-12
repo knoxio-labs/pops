@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { Database } from "better-sqlite3";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Database } from 'better-sqlite3';
 import {
   setupTestContext,
   seedDimension,
   seedMovie,
   seedWatchHistoryEntry,
   seedWatchlistEntry,
-} from "../../../shared/test-utils.js";
-import { getSmartPair } from "./service.js";
+} from '../../../shared/test-utils.js';
+import { getSmartPair } from './service.js';
 
 const ctx = setupTestContext();
 let db: Database;
@@ -54,47 +54,47 @@ function seedCooloff(
   ).run(dimensionId, mediaAId, mediaBId, skipUntil);
 }
 
-describe("getSmartPair", () => {
-  it("returns a pair of watched movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club", poster_path: "/fc.jpg" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix", poster_path: "/mx.jpg" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
+describe('getSmartPair', () => {
+  it('returns a pair of watched movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club', poster_path: '/fc.jpg' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix', poster_path: '/mx.jpg' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
 
     const result = getSmartPair(dimId);
     expect(result).not.toBeNull();
-    expect(result!.movieA).toHaveProperty("id");
-    expect(result!.movieA).toHaveProperty("title");
-    expect(result!.movieB).toHaveProperty("id");
+    expect(result!.movieA).toHaveProperty('id');
+    expect(result!.movieA).toHaveProperty('title');
+    expect(result!.movieB).toHaveProperty('id');
     expect(result!.movieA.id).not.toBe(result!.movieB.id);
   });
 
-  it("returns null when fewer than 2 watched movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
+  it('returns null when fewer than 2 watched movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
 
     const result = getSmartPair(dimId);
     expect(result).toBeNull();
   });
 
-  it("returns null when no watched movies exist", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
+  it('returns null when no watched movies exist', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
 
     const result = getSmartPair(dimId);
     expect(result).toBeNull();
   });
 
-  it("excludes blacklisted movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
+  it('excludes blacklisted movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
     // m1 has a blacklisted watch entry (only blacklisted entries)
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1, blacklisted: 1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1, blacklisted: 1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m3 });
 
     // Run multiple times — m1 should never appear since all its watches are blacklisted
     for (let i = 0; i < 20; i++) {
@@ -105,14 +105,14 @@ describe("getSmartPair", () => {
     }
   });
 
-  it("excludes movies excluded for the dimension", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
+  it('excludes movies excluded for the dimension', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m3 });
 
     // Mark m1 as excluded for this dimension
     seedScore(dimId, m1, 1500, 0);
@@ -129,14 +129,14 @@ describe("getSmartPair", () => {
     }
   });
 
-  it("skips pairs on cooloff", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
+  it('skips pairs on cooloff', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m3 });
 
     // Put m1-m2 on cooloff (far future)
     seedCooloff(dimId, m1, m2, 999999);
@@ -150,15 +150,15 @@ describe("getSmartPair", () => {
     }
   });
 
-  it("favours close-score pairs over blowouts", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
+  it('favours close-score pairs over blowouts', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
     // Create 3 movies: m1 and m2 close in score, m3 far away
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m3 });
 
     seedScore(dimId, m1, 1500, 5);
     seedScore(dimId, m2, 1510, 5); // close to m1
@@ -170,37 +170,37 @@ describe("getSmartPair", () => {
     for (let i = 0; i < runs; i++) {
       const result = getSmartPair(dimId);
       expect(result).not.toBeNull();
-      const key = [result!.movieA.id, result!.movieB.id].sort().join("-");
+      const key = [result!.movieA.id, result!.movieB.id].sort().join('-');
       pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
     }
 
     // The close pair (m1-m2) should be selected more often than distant pairs
-    const closePair = [m1, m2].sort().join("-");
+    const closePair = [m1, m2].sort().join('-');
     const closeCount = pairCounts.get(closePair) ?? 0;
     expect(closeCount).toBeGreaterThan(runs * 0.3); // Should be dominant
   });
 
-  it("favours recently watched movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
+  it('favours recently watched movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
 
     // m1 watched yesterday, m2 watched yesterday, m3 watched 2 years ago
     const yesterday = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
     const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString();
     seedWatchHistoryEntry(db, {
-      media_type: "movie",
+      media_type: 'movie',
       media_id: m1,
       watched_at: yesterday,
     });
     seedWatchHistoryEntry(db, {
-      media_type: "movie",
+      media_type: 'movie',
       media_id: m2,
       watched_at: yesterday,
     });
     seedWatchHistoryEntry(db, {
-      media_type: "movie",
+      media_type: 'movie',
       media_id: m3,
       watched_at: twoYearsAgo,
     });
@@ -221,14 +221,14 @@ describe("getSmartPair", () => {
     expect(recentAppearances).toBeGreaterThan(oldAppearances);
   });
 
-  it("deprioritises stale movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
+  it('deprioritises stale movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m3 });
 
     // m3 is very stale
     seedStaleness(m3, 0.01);
@@ -249,13 +249,13 @@ describe("getSmartPair", () => {
     expect(freshAppearances).toBeGreaterThan(staleAppearances * 2);
   });
 
-  it("boosts under-sampled dimensions when no dimensionId given", () => {
-    const dim1 = seedDimension(db, { name: "Story" });
-    seedDimension(db, { name: "Visuals" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
+  it('boosts under-sampled dimensions when no dimensionId given', () => {
+    const dim1 = seedDimension(db, { name: 'Story' });
+    seedDimension(db, { name: 'Visuals' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
 
     // dim1 has many comparisons, dim2 has none
     seedScore(dim1, m1, 1600, 50);
@@ -271,12 +271,12 @@ describe("getSmartPair", () => {
     expect(result!.movieA.id).not.toBe(result!.movieB.id);
   });
 
-  it("produces variety via jitter (non-deterministic)", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
+  it('produces variety via jitter (non-deterministic)', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
     const movies: number[] = [];
     for (let i = 0; i < 10; i++) {
       const mid = seedMovie(db, { tmdb_id: 550 + i, title: `Movie ${i}` });
-      seedWatchHistoryEntry(db, { media_type: "movie", media_id: mid });
+      seedWatchHistoryEntry(db, { media_type: 'movie', media_id: mid });
       movies.push(mid);
     }
 
@@ -285,7 +285,7 @@ describe("getSmartPair", () => {
     for (let i = 0; i < 50; i++) {
       const result = getSmartPair(dimId);
       expect(result).not.toBeNull();
-      const key = [result!.movieA.id, result!.movieB.id].sort().join("-");
+      const key = [result!.movieA.id, result!.movieB.id].sort().join('-');
       uniquePairs.add(key);
     }
 
@@ -293,15 +293,15 @@ describe("getSmartPair", () => {
     expect(uniquePairs.size).toBeGreaterThan(5);
   });
 
-  it("excludes watchlisted movies when enough non-watchlisted movies remain", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    const m3 = seedMovie(db, { tmdb_id: 552, title: "Inception" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m3 });
-    seedWatchlistEntry(db, { media_type: "movie", media_id: m3 });
+  it('excludes watchlisted movies when enough non-watchlisted movies remain', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    const m3 = seedMovie(db, { tmdb_id: 552, title: 'Inception' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m3 });
+    seedWatchlistEntry(db, { media_type: 'movie', media_id: m3 });
 
     // m3 is watchlisted — should never appear since m1+m2 form a valid pair
     for (let i = 0; i < 20; i++) {
@@ -312,15 +312,15 @@ describe("getSmartPair", () => {
     }
   });
 
-  it("falls back to include watchlisted movies when fewer than 2 non-watchlisted remain", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
+  it('falls back to include watchlisted movies when fewer than 2 non-watchlisted remain', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
     // Both movies are on the watchlist — without fallback, would return null
-    seedWatchlistEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchlistEntry(db, { media_type: "movie", media_id: m2 });
+    seedWatchlistEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchlistEntry(db, { media_type: 'movie', media_id: m2 });
 
     // Should still return a pair using the watchlisted movies
     const result = getSmartPair(dimId);
@@ -329,12 +329,12 @@ describe("getSmartPair", () => {
     expect(ids.size).toBe(2);
   });
 
-  it("falls back to any eligible pair when all scored pairs are on cooloff", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedMovie(db, { tmdb_id: 550, title: "Fight Club" });
-    const m2 = seedMovie(db, { tmdb_id: 551, title: "The Matrix" });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m1 });
-    seedWatchHistoryEntry(db, { media_type: "movie", media_id: m2 });
+  it('falls back to any eligible pair when all scored pairs are on cooloff', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedMovie(db, { tmdb_id: 550, title: 'Fight Club' });
+    const m2 = seedMovie(db, { tmdb_id: 551, title: 'The Matrix' });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m1 });
+    seedWatchHistoryEntry(db, { media_type: 'movie', media_id: m2 });
 
     // Put the only possible pair on cooloff
     seedCooloff(dimId, m1, m2, 999999);

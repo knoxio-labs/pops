@@ -13,11 +13,11 @@ No new tables — uses the `tv_shows`, `seasons`, and `episodes` tables from PRD
 
 ## API Surface
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `media.search.tvShows` | query (string) | `{ results: TvdbSearchResult[] }` | Proxied TheTVDB search — not stored locally |
-| `media.library.addTvShow` | tvdbId (int) | `{ data: TvShow }` | Fetch show + all seasons + all episodes from TheTVDB, create in DB, download images. Idempotent — returns existing show if tvdbId already in library |
-| `media.library.refreshTvShow` | id (int), redownloadImages? (boolean, default false), refreshEpisodes? (boolean, default true) | `{ data: TvShow, diff: RefreshDiff }` | Re-fetch metadata, report episodes/seasons added/updated |
+| Procedure                     | Input                                                                                          | Output                                | Notes                                                                                                                                                |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `media.search.tvShows`        | query (string)                                                                                 | `{ results: TvdbSearchResult[] }`     | Proxied TheTVDB search — not stored locally                                                                                                          |
+| `media.library.addTvShow`     | tvdbId (int)                                                                                   | `{ data: TvShow }`                    | Fetch show + all seasons + all episodes from TheTVDB, create in DB, download images. Idempotent — returns existing show if tvdbId already in library |
+| `media.library.refreshTvShow` | id (int), redownloadImages? (boolean, default false), refreshEpisodes? (boolean, default true) | `{ data: TvShow, diff: RefreshDiff }` | Re-fetch metadata, report episodes/seasons added/updated                                                                                             |
 
 ### TvdbSearchResult shape
 
@@ -56,6 +56,7 @@ No new tables — uses the `tv_shows`, `seasons`, and `episodes` tables from PRD
 ## Image Caching
 
 **Storage paths:**
+
 - Show poster: `/media/images/tv/{tvdbId}/poster.jpg`
 - Season poster: `/media/images/tv/{tvdbId}/season_{num}.jpg`
 
@@ -81,27 +82,27 @@ No new tables — uses the `tv_shows`, `seasons`, and `episodes` tables from PRD
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| tvdbId already in library (addTvShow) | Return existing show record, skip fetch and download |
-| TheTVDB API returns 404 for tvdbId | Return error — show not found on TheTVDB |
-| JWT token expired mid-request | Auto-refresh token, retry the failed request once |
-| THETVDB_API_KEY missing/invalid | Startup validation fails with clear error message |
-| Show has no seasons on TheTVDB | Show record created with empty seasons list |
-| Season has no episodes on TheTVDB | Season record created; listEpisodes returns empty |
-| Image download fails | Record created with null posterPath; fallback chain handles display |
-| refreshTvShow finds new season | New season and its episodes inserted, diff reports seasonsAdded |
-| refreshTvShow finds new episode in existing season | Episode inserted, diff reports episodesAdded |
-| refreshTvShow on non-existent id | Returns 404 |
-| TheTVDB returns show with no poster | posterPath stored as null; fallback chain renders placeholder |
+| Case                                               | Behaviour                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| tvdbId already in library (addTvShow)              | Return existing show record, skip fetch and download                |
+| TheTVDB API returns 404 for tvdbId                 | Return error — show not found on TheTVDB                            |
+| JWT token expired mid-request                      | Auto-refresh token, retry the failed request once                   |
+| THETVDB_API_KEY missing/invalid                    | Startup validation fails with clear error message                   |
+| Show has no seasons on TheTVDB                     | Show record created with empty seasons list                         |
+| Season has no episodes on TheTVDB                  | Season record created; listEpisodes returns empty                   |
+| Image download fails                               | Record created with null posterPath; fallback chain handles display |
+| refreshTvShow finds new season                     | New season and its episodes inserted, diff reports seasonsAdded     |
+| refreshTvShow finds new episode in existing season | Episode inserted, diff reports episodesAdded                        |
+| refreshTvShow on non-existent id                   | Returns 404                                                         |
+| TheTVDB returns show with no poster                | posterPath stored as null; fallback chain renders placeholder       |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-thetvdb-http-client](us-01-thetvdb-http-client.md) | HTTP client with JWT auth, auto-refresh, search endpoint | Done | Yes |
-| 02 | [us-02-image-cache](us-02-image-cache.md) | Poster download for shows/seasons, local storage, serving | Done | Yes |
-| 03 | [us-03-add-to-library](us-03-add-to-library.md) | addTvShow flow (fetch show + seasons + episodes, create all, download images), refreshTvShow with diff reporting | Done | Blocked by us-01, us-02 |
+| #   | Story                                                     | Summary                                                                                                          | Status | Parallelisable          |
+| --- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------ | ----------------------- |
+| 01  | [us-01-thetvdb-http-client](us-01-thetvdb-http-client.md) | HTTP client with JWT auth, auto-refresh, search endpoint                                                         | Done   | Yes                     |
+| 02  | [us-02-image-cache](us-02-image-cache.md)                 | Poster download for shows/seasons, local storage, serving                                                        | Done   | Yes                     |
+| 03  | [us-03-add-to-library](us-03-add-to-library.md)           | addTvShow flow (fetch show + seasons + episodes, create all, download images), refreshTvShow with diff reporting | Done   | Blocked by us-01, us-02 |
 
 US-01 and US-02 can run in parallel. US-03 composes them into the add-to-library and refresh flows.
 

@@ -34,6 +34,7 @@ Route: `/media/debrief/:movieId`
 For each dimension, select an opponent near the **median score** (~60th percentile on a 0–100 normalized scale). The question is: "Is this movie roughly better or worse than average?"
 
 Selection algorithm:
+
 1. Get all scored movies for this dimension (exclude the debrief movie itself)
 2. Find the median score
 3. Select the movie closest to the median that the debrief movie hasn't been compared against in this dimension
@@ -41,6 +42,7 @@ Selection algorithm:
 5. If no eligible opponent exists, skip this dimension
 
 The opponent should NOT be:
+
 - The same movie
 - Excluded from this dimension
 - A movie with all watch events blacklisted
@@ -50,15 +52,15 @@ The opponent should NOT be:
 
 ### debrief_status
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | INTEGER | PK, auto-increment | |
-| `media_type` | TEXT | NOT NULL | `'movie'` |
-| `media_id` | INTEGER | NOT NULL | |
-| `dimension_id` | INTEGER | NOT NULL, FK | |
-| `debriefed` | INTEGER | NOT NULL, DEFAULT 0 | 1 = comparison recorded for this dimension |
-| `dismissed` | INTEGER | NOT NULL, DEFAULT 0 | 1 = user dismissed without comparing |
-| `created_at` | TEXT | NOT NULL | When the debrief was queued (usually = watch event time) |
+| Column         | Type    | Constraints         | Description                                              |
+| -------------- | ------- | ------------------- | -------------------------------------------------------- |
+| `id`           | INTEGER | PK, auto-increment  |                                                          |
+| `media_type`   | TEXT    | NOT NULL            | `'movie'`                                                |
+| `media_id`     | INTEGER | NOT NULL            |                                                          |
+| `dimension_id` | INTEGER | NOT NULL, FK        |                                                          |
+| `debriefed`    | INTEGER | NOT NULL, DEFAULT 0 | 1 = comparison recorded for this dimension               |
+| `dismissed`    | INTEGER | NOT NULL, DEFAULT 0 | 1 = user dismissed without comparing                     |
+| `created_at`   | TEXT    | NOT NULL            | When the debrief was queued (usually = watch event time) |
 
 UNIQUE index on `(media_type, media_id, dimension_id)`.
 
@@ -77,23 +79,23 @@ Rows are created when a watch event is logged — one row per active dimension. 
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Movie has no eligible opponents for a dimension | Skip that dimension, mark as dismissed with reason |
-| All dimensions debriefed already | Debrief button hidden, notification absent |
-| User watches the same movie again | New debrief rows created (reset debriefed/dismissed to 0) |
-| Dimension deactivated after debrief queued | Row stays but is ignored by the UI (only show active dimensions) |
-| User navigates away mid-debrief | Completed dimensions saved, remaining still pending |
+| Case                                            | Behaviour                                                        |
+| ----------------------------------------------- | ---------------------------------------------------------------- |
+| Movie has no eligible opponents for a dimension | Skip that dimension, mark as dismissed with reason               |
+| All dimensions debriefed already                | Debrief button hidden, notification absent                       |
+| User watches the same movie again               | New debrief rows created (reset debriefed/dismissed to 0)        |
+| Dimension deactivated after debrief queued      | Row stays but is ignored by the UI (only show active dimensions) |
+| User navigates away mid-debrief                 | Completed dimensions saved, remaining still pending              |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-debrief-schema](us-01-debrief-schema.md) | debrief_status table, auto-queue on watch event | Done | Yes |
-| 02 | [us-02-opponent-selection](us-02-opponent-selection.md) | Median-score opponent selection per dimension | Done | Yes |
-| 03 | [us-03-debrief-api](us-03-debrief-api.md) | tRPC endpoints: getDebrief, recordDebriefComparison, dismissDimension | Done | Blocked by us-01, us-02 |
-| 04 | [us-04-debrief-page](us-04-debrief-page.md) | Debrief route with comparison cards, dimension progress, bail-out, summary | Done | Blocked by us-03 |
-| 05 | [us-05-debrief-notifications](us-05-debrief-notifications.md) | History tile button, library banner, detail page button for pending debriefs | Done | Blocked by us-03 |
+| #   | Story                                                         | Summary                                                                      | Status | Parallelisable          |
+| --- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------ | ----------------------- |
+| 01  | [us-01-debrief-schema](us-01-debrief-schema.md)               | debrief_status table, auto-queue on watch event                              | Done   | Yes                     |
+| 02  | [us-02-opponent-selection](us-02-opponent-selection.md)       | Median-score opponent selection per dimension                                | Done   | Yes                     |
+| 03  | [us-03-debrief-api](us-03-debrief-api.md)                     | tRPC endpoints: getDebrief, recordDebriefComparison, dismissDimension        | Done   | Blocked by us-01, us-02 |
+| 04  | [us-04-debrief-page](us-04-debrief-page.md)                   | Debrief route with comparison cards, dimension progress, bail-out, summary   | Done   | Blocked by us-03        |
+| 05  | [us-05-debrief-notifications](us-05-debrief-notifications.md) | History tile button, library banner, detail page button for pending debriefs | Done   | Blocked by us-03        |
 
 US-01 and US-02 can parallelise. US-04 and US-05 can parallelise once US-03 is done.
 

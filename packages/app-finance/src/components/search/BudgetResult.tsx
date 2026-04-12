@@ -1,4 +1,4 @@
-import { registerResultComponent, type ResultComponentProps } from "@pops/navigation";
+import { registerResultComponent, type ResultComponentProps } from '@pops/navigation';
 
 /**
  * Highlight the matched portion of text based on query and matchType.
@@ -11,11 +11,11 @@ function highlightMatch(text: string, query: string, matchType: string): React.R
   const lowerQuery = query.toLowerCase();
 
   let start = -1;
-  if (matchType === "exact") {
+  if (matchType === 'exact') {
     start = 0;
-  } else if (matchType === "prefix") {
+  } else if (matchType === 'prefix') {
     start = 0;
-  } else if (matchType === "contains") {
+  } else if (matchType === 'contains') {
     start = lowerText.indexOf(lowerQuery);
   }
 
@@ -34,27 +34,27 @@ function highlightMatch(text: string, query: string, matchType: string): React.R
 }
 
 function formatAmount(amount: number | null | undefined): string {
-  if (amount == null) return "—";
-  return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (amount == null) return '—';
+  return `$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatPeriod(period: string | null | undefined): string {
-  if (!period) return "";
-  if (period === "monthly") return "Monthly";
-  if (period === "yearly") return "Yearly";
+  if (!period) return '';
+  if (period === 'monthly') return 'Monthly';
+  if (period === 'yearly') return 'Yearly';
   // Handle date-like periods e.g. "2025-06"
   return period;
 }
 
 export function BudgetResult({ data }: ResultComponentProps) {
-  const category = (data.category as string) ?? "";
+  const category = (data.category as string) ?? '';
   const period = data.period as string | null | undefined;
   const amount = data.amount as number | null | undefined;
-  const query = (data._query as string) ?? "";
-  const matchField = (data._matchField as string) ?? "";
-  const matchType = (data._matchType as string) ?? "";
+  const query = (data._query as string) ?? '';
+  const matchField = (data._matchField as string) ?? '';
+  const matchType = (data._matchType as string) ?? '';
 
-  const shouldHighlight = matchField === "category" && query;
+  const shouldHighlight = matchField === 'category' && query;
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -71,4 +71,4 @@ export function BudgetResult({ data }: ResultComponentProps) {
   );
 }
 
-registerResultComponent("budgets", BudgetResult);
+registerResultComponent('budgets', BudgetResult);

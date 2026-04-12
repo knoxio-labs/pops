@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { SettingRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { SettingRow } from '@pops/db-types';
 
 export type { SettingRow };
 
@@ -19,7 +19,7 @@ export function toSetting(row: SettingRow): Setting {
 
 /** Schema for setting a value (upsert) */
 export const SetSettingSchema = z.object({
-  key: z.string().min(1, "Key is required"),
+  key: z.string().min(1, 'Key is required'),
   value: z.string(),
 });
 export type SetSettingInput = z.infer<typeof SetSettingSchema>;

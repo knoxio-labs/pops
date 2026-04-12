@@ -4,8 +4,8 @@
  *
  * Fetches session data via getDebrief and current scores for the movie.
  */
-import { useNavigate } from "react-router";
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Skeleton } from "@pops/ui";
+import { useNavigate } from 'react-router';
+import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Skeleton } from '@pops/ui';
 import {
   Trophy,
   CheckCircle,
@@ -15,11 +15,11 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-} from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 interface DebriefResultsSummaryProps {
-  mediaType: "movie" | "episode";
+  mediaType: 'movie' | 'episode';
   mediaId: number;
 }
 
@@ -36,7 +36,7 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
 
   // Fetch current scores for the debriefed movie
   const { data: scoresData } = trpc.media.comparisons.scores.useQuery(
-    { mediaType: "movie", mediaId: debrief?.movie.mediaId ?? 0 },
+    { mediaType: 'movie', mediaId: debrief?.movie.mediaId ?? 0 },
     { enabled: !!debrief }
   );
 
@@ -48,8 +48,8 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
     return (
       <div className="text-center py-12 text-muted-foreground" data-testid="results-error">
         <p className="text-lg mb-2">Could not load debrief results</p>
-        <p className="text-sm">{error?.message ?? "Session not found"}</p>
-        <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/media")}>
+        <p className="text-sm">{error?.message ?? 'Session not found'}</p>
+        <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/media')}>
           Back to Library
         </Button>
       </div>
@@ -57,12 +57,12 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
   }
 
   const compared = debrief.dimensions.filter(
-    (d) => d.status === "complete" && d.comparisonId !== null
+    (d) => d.status === 'complete' && d.comparisonId !== null
   );
   const skipped = debrief.dimensions.filter(
-    (d) => d.status === "complete" && d.comparisonId === null
+    (d) => d.status === 'complete' && d.comparisonId === null
   );
-  const pending = debrief.dimensions.filter((d) => d.status === "pending");
+  const pending = debrief.dimensions.filter((d) => d.status === 'pending');
 
   // Build score map: dimensionId -> score
   const scoreByDimension = new Map(
@@ -99,12 +99,12 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
                     {score != null && (
                       <span className="text-xs text-muted-foreground">{Math.round(score)}</span>
                     )}
-                    {dim.status === "complete" && dim.comparisonId !== null ? (
+                    {dim.status === 'complete' && dim.comparisonId !== null ? (
                       <Badge variant="default" className="gap-1">
                         <CheckCircle className="h-3 w-3" />
                         Compared
                       </Badge>
-                    ) : dim.status === "complete" && dim.comparisonId === null ? (
+                    ) : dim.status === 'complete' && dim.comparisonId === null ? (
                       <Badge variant="secondary" className="gap-1">
                         <XCircle className="h-3 w-3" />
                         Skipped
@@ -141,10 +141,10 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
                         <span
                           className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${
                             isPositive
-                              ? "bg-green-500/20 text-green-700 dark:text-green-400"
+                              ? 'bg-green-500/20 text-green-700 dark:text-green-400'
                               : isNegative
-                                ? "bg-red-500/20 text-red-700 dark:text-red-400"
-                                : "bg-muted text-muted-foreground"
+                                ? 'bg-red-500/20 text-red-700 dark:text-red-400'
+                                : 'bg-muted text-muted-foreground'
                           }`}
                           data-testid={`score-delta-${s.dimensionId}`}
                         >
@@ -155,7 +155,7 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
                           ) : (
                             <Minus className="h-3 w-3" />
                           )}
-                          {isPositive ? "+" : ""}
+                          {isPositive ? '+' : ''}
                           {delta}
                         </span>
                       </div>
@@ -169,7 +169,7 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
           {/* Summary counts */}
           <div className="text-muted-foreground border-t pt-3 text-sm">
             {compared.length} compared, {skipped.length} skipped
-            {pending.length > 0 ? `, ${pending.length} pending` : ""}
+            {pending.length > 0 ? `, ${pending.length} pending` : ''}
           </div>
 
           {/* Actions */}
@@ -186,7 +186,7 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
             <Button
               variant="default"
               size="sm"
-              onClick={() => navigate("/media")}
+              onClick={() => navigate('/media')}
               data-testid="done-btn"
             >
               Done

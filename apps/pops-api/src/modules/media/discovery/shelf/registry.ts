@@ -3,7 +3,7 @@
  * Shelf implementations call registerShelf() at module load time.
  * The session assembler calls getRegisteredShelves() to discover all shelves.
  */
-import type { ShelfDefinition } from "./types.js";
+import type { ShelfDefinition } from './types.js';
 
 const _registry = new Map<string, ShelfDefinition>();
 

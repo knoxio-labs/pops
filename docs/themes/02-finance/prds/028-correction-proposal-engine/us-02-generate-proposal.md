@@ -22,4 +22,3 @@ As a user, I want the system to propose the right generalisation when I correct 
 - [ ] Each operation includes a brief rationale and the proposed confidence/activation semantics.
 - [ ] The response includes an impact preview for the current import session, computed by the same deterministic matcher used in processing.
 - [ ] Generation is bounded: the set of existing rules and transactions sent to the generator must be scoped per the PRD scope-control rule, on both initial and revise paths.
-

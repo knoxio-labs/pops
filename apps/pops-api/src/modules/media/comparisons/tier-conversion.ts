@@ -2,7 +2,7 @@
  * Pure tier-to-comparison conversion — transforms tier placements into
  * implied pairwise comparisons without any DB access.
  */
-import { type Tier, TIER_RANK_ORDER } from "./types.js";
+import { type Tier, TIER_RANK_ORDER } from './types.js';
 
 export interface TierPlacement {
   movieId: number;
@@ -13,16 +13,16 @@ export interface PairwiseComparison {
   mediaAId: number;
   mediaBId: number;
   winnerId: number;
-  drawTier: "high" | "mid" | "low" | null;
+  drawTier: 'high' | 'mid' | 'low' | null;
 }
 
 /** Map each tier to its draw tier when two movies share the same tier. */
-const TIER_DRAW_MAP: Record<Tier, "high" | "mid" | "low"> = {
-  S: "high",
-  A: "high",
-  B: "mid",
-  C: "low",
-  D: "low",
+const TIER_DRAW_MAP: Record<Tier, 'high' | 'mid' | 'low'> = {
+  S: 'high',
+  A: 'high',
+  B: 'mid',
+  C: 'low',
+  D: 'low',
 };
 
 /**

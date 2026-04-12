@@ -2,7 +2,7 @@
  * DropdownMenu component - Wrapper around shadcn dropdown-menu
  * Provides a simpler API for common use cases
  */
-import { type ReactNode } from "react";
+import { type ReactNode } from 'react';
 import {
   DropdownMenu as DropdownMenuPrimitive,
   DropdownMenuContent,
@@ -10,13 +10,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from "../primitives/dropdown-menu";
+} from '../primitives/dropdown-menu';
 
 export interface DropdownMenuItem {
   label: string;
   value: string;
   disabled?: boolean;
-  variant?: "default" | "destructive";
+  variant?: 'default' | 'destructive';
   icon?: ReactNode;
   onSelect?: () => void;
 }
@@ -42,11 +42,11 @@ export interface DropdownMenuProps {
   /**
    * Content alignment relative to trigger
    */
-  align?: "start" | "center" | "end";
+  align?: 'start' | 'center' | 'end';
   /**
    * Side of trigger to open on
    */
-  side?: "top" | "bottom" | "left" | "right";
+  side?: 'top' | 'bottom' | 'left' | 'right';
   /**
    * Custom content instead of items
    */
@@ -84,8 +84,8 @@ export function DropdownMenu({
   trigger,
   items,
   groups,
-  align = "start",
-  side = "bottom",
+  align = 'start',
+  side = 'bottom',
   children,
   className,
 }: DropdownMenuProps) {
@@ -138,4 +138,4 @@ export {
   DropdownMenuItem as DropdownMenuItemPrimitive,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from "../primitives/dropdown-menu";
+} from '../primitives/dropdown-menu';

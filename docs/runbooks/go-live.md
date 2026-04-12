@@ -64,6 +64,7 @@ Check the following:
 ## Step 4: Verify Guards and Backup
 
 1. Verify guards are active:
+
    ```bash
    # These should all fail with a clear error
    mise db:init     # Expected: "Refusing to run against production database"
@@ -156,21 +157,21 @@ mise audit
 
 ## Command Reference
 
-| Command | Safety | When to use |
-|---------|--------|------------|
-| `mise dev` | Safe | Local development |
-| `mise test` | Safe | Run test suite |
-| `mise build` | Safe | Build all packages |
-| `mise typecheck` | Safe | Type checking |
-| `mise lint` | Safe | Linting |
-| `mise audit` | Safe | Check database stats |
-| `mise entities:lookup` | Safe | Rebuild entity cache |
-| `mise docker:up` | Safe | Start/restart services |
-| `mise docker:down` | Safe | Stop services |
-| `mise ansible:deploy` | Careful | Deploy to server |
-| `drizzle-kit generate` | Careful | Generate schema migration |
-| `drizzle-kit migrate` | Careful | Apply pending migrations (prefer auto-apply on startup) |
-| `mise import:*` | Careful | Import bank data (idempotent, but verify first) |
-| `mise db:init` | **Destructive** | First-time setup only — never after go-live |
-| `mise db:seed` | **Destructive** | Dev/test only — never after go-live |
-| `mise db:clear` | **Destructive** | Dev/test only — never after go-live |
+| Command                | Safety          | When to use                                             |
+| ---------------------- | --------------- | ------------------------------------------------------- |
+| `mise dev`             | Safe            | Local development                                       |
+| `mise test`            | Safe            | Run test suite                                          |
+| `mise build`           | Safe            | Build all packages                                      |
+| `mise typecheck`       | Safe            | Type checking                                           |
+| `mise lint`            | Safe            | Linting                                                 |
+| `mise audit`           | Safe            | Check database stats                                    |
+| `mise entities:lookup` | Safe            | Rebuild entity cache                                    |
+| `mise docker:up`       | Safe            | Start/restart services                                  |
+| `mise docker:down`     | Safe            | Stop services                                           |
+| `mise ansible:deploy`  | Careful         | Deploy to server                                        |
+| `drizzle-kit generate` | Careful         | Generate schema migration                               |
+| `drizzle-kit migrate`  | Careful         | Apply pending migrations (prefer auto-apply on startup) |
+| `mise import:*`        | Careful         | Import bank data (idempotent, but verify first)         |
+| `mise db:init`         | **Destructive** | First-time setup only — never after go-live             |
+| `mise db:seed`         | **Destructive** | Dev/test only — never after go-live                     |
+| `mise db:clear`        | **Destructive** | Dev/test only — never after go-live                     |

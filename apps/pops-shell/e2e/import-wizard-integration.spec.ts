@@ -22,8 +22,8 @@
  * Note: Deduplication is handled against SQLite. No external API calls are
  * made during these tests.
  */
-import { test, expect, type Page } from "@playwright/test";
-import { useRealEndpoint } from "./helpers/use-real-api";
+import { test, expect, type Page } from '@playwright/test';
+import { useRealEndpoint } from './helpers/use-real-api';
 
 // ---------------------------------------------------------------------------
 // CSV content — descriptions chosen to exercise the entity matcher
@@ -48,11 +48,11 @@ const singleMatchCSV = `Date,Description,Amount
 // Helpers
 // ---------------------------------------------------------------------------
 
-const uploadCSVFile = async (page: Page, csvContent: string, fileName = "integration-test.csv") => {
+const uploadCSVFile = async (page: Page, csvContent: string, fileName = 'integration-test.csv') => {
   const fileInput = page.locator('input[type="file"]');
   await fileInput.setInputFiles({
     name: fileName,
-    mimeType: "text/csv",
+    mimeType: 'text/csv',
     buffer: Buffer.from(csvContent),
   });
   await expect(page.getByText(fileName)).toBeVisible();
@@ -64,26 +64,26 @@ const uploadCSVFile = async (page: Page, csvContent: string, fileName = "integra
  */
 const navigateToReview = async (page: Page, csvContent: string) => {
   await uploadCSVFile(page, csvContent);
-  await page.getByRole("button", { name: /next/i }).click();
+  await page.getByRole('button', { name: /next/i }).click();
 
-  await expect(page.getByText("Map Columns")).toBeVisible();
-  await page.getByRole("button", { name: /next/i }).click();
+  await expect(page.getByText('Map Columns')).toBeVisible();
+  await page.getByRole('button', { name: /next/i }).click();
 
   // Real backend processes in background. Named env context automatically skips
   // external API calls, so processing is fast. 30s is a safe upper bound.
-  await expect(page.getByRole("heading", { name: "Review" })).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible({ timeout: 30000 });
 };
 
 /** Mock write endpoints (executeImport, createEntity, corrections). */
 const mockWriteEndpoints = async (page: Page) => {
   await page.route(/\/trpc\/imports\.executeImport/, async (route) => {
-    const isBatch = new URL(route.request().url()).searchParams.has("batch");
+    const isBatch = new URL(route.request().url()).searchParams.has('batch');
     const body = isBatch
-      ? [{ result: { data: { sessionId: "exec-mock-session" } } }]
-      : { result: { data: { sessionId: "exec-mock-session" } } };
+      ? [{ result: { data: { sessionId: 'exec-mock-session' } } }]
+      : { result: { data: { sessionId: 'exec-mock-session' } } };
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
+      contentType: 'application/json',
       body: JSON.stringify(body),
     });
   });
@@ -91,80 +91,80 @@ const mockWriteEndpoints = async (page: Page) => {
   // Progress for the execute session — returns immediately completed
   await page.route(/\/trpc\/imports\.getImportProgress/, async (route) => {
     const url = new URL(route.request().url());
-    const rawInput = url.searchParams.get("input") ?? "{}";
-    let sessionId = "unknown";
+    const rawInput = url.searchParams.get('input') ?? '{}';
+    let sessionId = 'unknown';
     try {
       const parsed = JSON.parse(decodeURIComponent(rawInput)) as Record<string, unknown>;
-      const batchItem = (parsed["0"] ?? parsed) as Record<string, unknown>;
-      const json = (batchItem["json"] ?? batchItem) as Record<string, unknown>;
-      sessionId = (json["sessionId"] as string) ?? "unknown";
+      const batchItem = (parsed['0'] ?? parsed) as Record<string, unknown>;
+      const json = (batchItem['json'] ?? batchItem) as Record<string, unknown>;
+      sessionId = (json['sessionId'] as string) ?? 'unknown';
     } catch {
       /* ignore */
     }
 
     // Only intercept the execute mock session — let process sessions through to real API
-    if (sessionId === "exec-mock-session") {
-      const isBatch = url.searchParams.has("batch");
+    if (sessionId === 'exec-mock-session') {
+      const isBatch = url.searchParams.has('batch');
       const body = isBatch
         ? [
             {
               result: {
-                data: { status: "completed", result: { imported: 3, failed: [], skipped: 0 } },
+                data: { status: 'completed', result: { imported: 3, failed: [], skipped: 0 } },
               },
             },
           ]
         : {
             result: {
-              data: { status: "completed", result: { imported: 3, failed: [], skipped: 0 } },
+              data: { status: 'completed', result: { imported: 3, failed: [], skipped: 0 } },
             },
           };
       await route.fulfill({
         status: 200,
-        contentType: "application/json",
+        contentType: 'application/json',
         body: JSON.stringify(body),
       });
     } else {
       // Let real process-phase progress through to the real API
       const redirectUrl = new URL(route.request().url());
-      redirectUrl.searchParams.set("env", "e2e");
+      redirectUrl.searchParams.set('env', 'e2e');
       const response = await route.fetch({ url: redirectUrl.toString() });
       await route.fulfill({ response });
     }
   });
 
   await page.route(/\/trpc\/imports\.createEntity/, async (route) => {
-    const isBatch = new URL(route.request().url()).searchParams.has("batch");
+    const isBatch = new URL(route.request().url()).searchParams.has('batch');
     const body = isBatch
-      ? [{ result: { data: { entityId: "new-entity-id", entityName: "New Entity" } } }]
-      : { result: { data: { entityId: "new-entity-id", entityName: "New Entity" } } };
+      ? [{ result: { data: { entityId: 'new-entity-id', entityName: 'New Entity' } } }]
+      : { result: { data: { entityId: 'new-entity-id', entityName: 'New Entity' } } };
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
+      contentType: 'application/json',
       body: JSON.stringify(body),
     });
   });
 
   await page.route(/\/trpc\/corrections\.createOrUpdate/, async (route) => {
-    const isBatch = new URL(route.request().url()).searchParams.has("batch");
+    const isBatch = new URL(route.request().url()).searchParams.has('batch');
     const body = isBatch
       ? [{ result: { data: { success: true } } }]
       : { result: { data: { success: true } } };
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
+      contentType: 'application/json',
       body: JSON.stringify(body),
     });
   });
 
   // Mock transactions.availableTags endpoint (used by TagEditor in TagReviewStep)
   await page.route(/\/trpc\/transactions\.availableTags/, async (route) => {
-    const isBatch = new URL(route.request().url()).searchParams.has("batch");
+    const isBatch = new URL(route.request().url()).searchParams.has('batch');
     const body = isBatch
-      ? [{ result: { data: ["Groceries", "Subscriptions", "Transport"] } }]
-      : { result: { data: ["Groceries", "Subscriptions", "Transport"] } };
+      ? [{ result: { data: ['Groceries', 'Subscriptions', 'Transport'] } }]
+      : { result: { data: ['Groceries', 'Subscriptions', 'Transport'] } };
     await route.fulfill({
       status: 200,
-      contentType: "application/json",
+      contentType: 'application/json',
       body: JSON.stringify(body),
     });
   });
@@ -174,80 +174,80 @@ const mockWriteEndpoints = async (page: Page) => {
 // Tests: entity matching via real backend
 // ---------------------------------------------------------------------------
 
-test.describe.skip("Import Wizard — real entity matching against seeded DB", () => {
+test.describe.skip('Import Wizard — real entity matching against seeded DB', () => {
   test.beforeEach(async ({ page }) => {
     // processImport and process-phase getImportProgress are real
-    await useRealEndpoint(page, "imports\\.processImport");
-    await useRealEndpoint(page, "entities\\.list");
+    await useRealEndpoint(page, 'imports\\.processImport');
+    await useRealEndpoint(page, 'entities\\.list');
     await mockWriteEndpoints(page);
 
-    await page.goto("/finance/import");
-    await expect(page.getByText("Upload CSV")).toBeVisible();
+    await page.goto('/finance/import');
+    await expect(page.getByText('Upload CSV')).toBeVisible();
   });
 
-  test("WOOLWORTHS METRO prefix-matches Woolworths entity from seeded DB", async ({ page }) => {
+  test('WOOLWORTHS METRO prefix-matches Woolworths entity from seeded DB', async ({ page }) => {
     await navigateToReview(page, integrationCSV);
 
     // Woolworths and Netflix should be in Matched tab (matched by prefix/alias)
-    const matchedTab = page.getByRole("tab", { name: /matched/i });
+    const matchedTab = page.getByRole('tab', { name: /matched/i });
     await matchedTab.click();
 
-    await expect(page.getByText("WOOLWORTHS METRO 1234")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('WOOLWORTHS METRO 1234')).toBeVisible({ timeout: 5000 });
   });
 
-  test("NETFLIX SUBSCRIPTION prefix-matches Netflix entity from seeded DB", async ({ page }) => {
+  test('NETFLIX SUBSCRIPTION prefix-matches Netflix entity from seeded DB', async ({ page }) => {
     await navigateToReview(page, integrationCSV);
 
-    const matchedTab = page.getByRole("tab", { name: /matched/i });
+    const matchedTab = page.getByRole('tab', { name: /matched/i });
     await matchedTab.click();
 
-    await expect(page.getByText("NETFLIX SUBSCRIPTION")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('NETFLIX SUBSCRIPTION')).toBeVisible({ timeout: 5000 });
   });
 
-  test("unknown merchant ends up in Uncertain tab", async ({ page }) => {
+  test('unknown merchant ends up in Uncertain tab', async ({ page }) => {
     await navigateToReview(page, integrationCSV);
 
-    const uncertainTab = page.getByRole("tab", { name: /uncertain/i });
+    const uncertainTab = page.getByRole('tab', { name: /uncertain/i });
     await uncertainTab.click();
 
     // Grouped view (default) collapses transactions — switch to list view so the
     // description is rendered in the DOM and can be asserted.
-    await page.getByRole("button", { name: "List" }).click();
+    await page.getByRole('button', { name: 'List' }).click();
 
-    await expect(page.getByText("TOTALLY UNKNOWN MERCHANT XYZ")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('TOTALLY UNKNOWN MERCHANT XYZ')).toBeVisible({ timeout: 5000 });
   });
 
-  test("SHELL SERVICE STATION prefix-matches Shell entity", async ({ page }) => {
+  test('SHELL SERVICE STATION prefix-matches Shell entity', async ({ page }) => {
     await navigateToReview(page, singleMatchCSV);
 
-    const matchedTab = page.getByRole("tab", { name: /matched/i });
+    const matchedTab = page.getByRole('tab', { name: /matched/i });
     await matchedTab.click();
 
-    await expect(page.getByText("SHELL SERVICE STATION")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('SHELL SERVICE STATION')).toBeVisible({ timeout: 5000 });
   });
 
-  test("real entities.list populates dropdowns in uncertain cards", async ({ page }) => {
+  test('real entities.list populates dropdowns in uncertain cards', async ({ page }) => {
     await navigateToReview(page, integrationCSV);
 
-    const uncertainTab = page.getByRole("tab", { name: /uncertain/i });
+    const uncertainTab = page.getByRole('tab', { name: /uncertain/i });
     await uncertainTab.click();
 
     // The entity select dropdown should contain seeded entities (Woolworths, Coles, Netflix...)
-    const entitySelect = page.locator("select").first();
+    const entitySelect = page.locator('select').first();
     if (await entitySelect.isVisible().catch(() => false)) {
-      const options = await entitySelect.locator("option").allTextContents();
+      const options = await entitySelect.locator('option').allTextContents();
       const entityNames = options.map((o) => o.trim()).filter(Boolean);
-      expect(entityNames).toEqual(expect.arrayContaining(["Woolworths", "Coles", "Netflix"]));
+      expect(entityNames).toEqual(expect.arrayContaining(['Woolworths', 'Coles', 'Netflix']));
     }
   });
 
-  test("matched count reflects real entity matching results", async ({ page }) => {
+  test('matched count reflects real entity matching results', async ({ page }) => {
     await navigateToReview(page, integrationCSV);
 
     // CSV has 3 rows: 2 matched (Woolworths, Netflix), 1 uncertain (unknown merchant)
-    const matchedTab = page.getByRole("tab", { name: /matched/i });
+    const matchedTab = page.getByRole('tab', { name: /matched/i });
     const matchedText = await matchedTab.textContent();
-    const matchedCount = parseInt(matchedText?.match(/\((\d+)\)/)?.[1] ?? "0");
+    const matchedCount = parseInt(matchedText?.match(/\((\d+)\)/)?.[1] ?? '0');
 
     // We expect 2 matched (allowing for dedup warnings that might affect count slightly)
     expect(matchedCount).toBeGreaterThanOrEqual(1);

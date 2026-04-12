@@ -48,11 +48,11 @@ The dialog is a large-surface modal with five regions, all visible at once:
 
 ## Actions
 
-| Action | Meaning |
-|--------|---------|
-| **Cancel** | Close the dialog. No rule changes, no feedback persisted. |
-| **Apply** | Apply the current ChangeSet atomically via the US-03 path. Disabled while any operation's preview is stale or the ChangeSet is empty. |
-| **Reject with feedback** | Close the dialog, persist rejection feedback for training. Escape hatch only; see [US-04](us-04-reject-feedback.md). |
+| Action                   | Meaning                                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cancel**               | Close the dialog. No rule changes, no feedback persisted.                                                                             |
+| **Apply**                | Apply the current ChangeSet atomically via the US-03 path. Disabled while any operation's preview is stale or the ChangeSet is empty. |
+| **Reject with feedback** | Close the dialog, persist rejection feedback for training. Escape hatch only; see [US-04](us-04-reject-feedback.md).                  |
 
 ## Acceptance Criteria
 

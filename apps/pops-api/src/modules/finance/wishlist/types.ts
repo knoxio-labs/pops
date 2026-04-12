@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { WISH_LIST_PRIORITIES, type WishListRow, type WishListPriority } from "@pops/db-types";
+import { z } from 'zod';
+import { WISH_LIST_PRIORITIES, type WishListRow, type WishListPriority } from '@pops/db-types';
 
 export { WISH_LIST_PRIORITIES, type WishListPriority, type WishListRow };
 
@@ -39,22 +39,22 @@ export function toWishListItem(row: WishListRow): WishListItem {
 
 /** Zod schema for creating a wish list item. */
 export const CreateWishListItemSchema = z.object({
-  item: z.string().min(1, "Item is required"),
+  item: z.string().min(1, 'Item is required'),
   targetAmount: z.number().nullable().optional(),
   saved: z.number().nullable().optional(),
   priority: z.enum(WISH_LIST_PRIORITIES).nullable().optional(),
-  url: z.string().url("Invalid URL").nullable().optional(),
+  url: z.string().url('Invalid URL').nullable().optional(),
   notes: z.string().nullable().optional(),
 });
 export type CreateWishListItemInput = z.infer<typeof CreateWishListItemSchema>;
 
 /** Zod schema for updating a wish list item (all fields optional). */
 export const UpdateWishListItemSchema = z.object({
-  item: z.string().min(1, "Item cannot be empty").optional(),
+  item: z.string().min(1, 'Item cannot be empty').optional(),
   targetAmount: z.number().nullable().optional(),
   saved: z.number().nullable().optional(),
   priority: z.enum(WISH_LIST_PRIORITIES).nullable().optional(),
-  url: z.string().url("Invalid URL").nullable().optional(),
+  url: z.string().url('Invalid URL').nullable().optional(),
   notes: z.string().nullable().optional(),
 });
 export type UpdateWishListItemInput = z.infer<typeof UpdateWishListItemSchema>;

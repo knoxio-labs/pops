@@ -2,33 +2,33 @@
  * ChipInput component stories
  * Demonstrates multi-value input with chips like Gmail's email field
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { ChipInput } from "./ChipInput";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { ChipInput } from './ChipInput';
 
 const meta: Meta<typeof ChipInput> = {
   component: ChipInput,
-  title: "Inputs/Chips",
-  tags: ["autodocs"],
+  title: 'Inputs/Chips',
+  tags: ['autodocs'],
   argTypes: {
     variant: {
-      control: "select",
-      options: ["default", "ghost", "underline"],
-      description: "Visual style variant",
+      control: 'select',
+      options: ['default', 'ghost', 'underline'],
+      description: 'Visual style variant',
     },
     shape: {
-      control: "select",
-      options: ["default", "pill"],
-      description: "Shape of the container",
+      control: 'select',
+      options: ['default', 'pill'],
+      description: 'Shape of the container',
     },
     chipVariant: {
-      control: "select",
-      options: ["default", "primary", "success"],
-      description: "Variant for the chips",
+      control: 'select',
+      options: ['default', 'primary', 'success'],
+      description: 'Variant for the chips',
     },
     allowDuplicates: {
-      control: "boolean",
-      description: "Allow duplicate values",
+      control: 'boolean',
+      description: 'Allow duplicate values',
     },
   },
 };
@@ -39,56 +39,56 @@ type Story = StoryObj<typeof ChipInput>;
 // Basic
 export const Default: Story = {
   args: {
-    placeholder: "Type and press Enter...",
+    placeholder: 'Type and press Enter...',
   },
 };
 
 export const WithDefaultValues: Story = {
   args: {
-    defaultValue: ["apple", "banana", "orange"],
-    placeholder: "Add more fruits...",
+    defaultValue: ['apple', 'banana', 'orange'],
+    placeholder: 'Add more fruits...',
   },
 };
 
 // Variants
 export const Ghost: Story = {
   args: {
-    variant: "ghost",
-    defaultValue: ["tag1", "tag2"],
-    placeholder: "Ghost variant",
+    variant: 'ghost',
+    defaultValue: ['tag1', 'tag2'],
+    placeholder: 'Ghost variant',
   },
 };
 
 export const Underline: Story = {
   args: {
-    variant: "underline",
-    defaultValue: ["tag1", "tag2"],
-    placeholder: "Underline variant",
+    variant: 'underline',
+    defaultValue: ['tag1', 'tag2'],
+    placeholder: 'Underline variant',
   },
 };
 
 export const Pill: Story = {
   args: {
-    shape: "pill",
-    defaultValue: ["tag1", "tag2"],
-    placeholder: "Pill shape",
+    shape: 'pill',
+    defaultValue: ['tag1', 'tag2'],
+    placeholder: 'Pill shape',
   },
 };
 
 // Chip variants
 export const PrimaryChips: Story = {
   args: {
-    chipVariant: "primary",
-    defaultValue: ["important", "urgent"],
-    placeholder: "Primary chips",
+    chipVariant: 'primary',
+    defaultValue: ['important', 'urgent'],
+    placeholder: 'Primary chips',
   },
 };
 
 export const SuccessChips: Story = {
   args: {
-    chipVariant: "success",
-    defaultValue: ["completed", "approved"],
-    placeholder: "Success chips",
+    chipVariant: 'success',
+    defaultValue: ['completed', 'approved'],
+    placeholder: 'Success chips',
   },
 };
 
@@ -96,22 +96,22 @@ export const SuccessChips: Story = {
 export const AllowDuplicates: Story = {
   args: {
     allowDuplicates: true,
-    defaultValue: ["tag", "tag", "tag"],
-    placeholder: "Duplicates allowed",
+    defaultValue: ['tag', 'tag', 'tag'],
+    placeholder: 'Duplicates allowed',
   },
 };
 
 export const WithValidation: Story = {
   render: (args) => {
     const [values, setValues] = useState<string[]>([]);
-    const [error, setError] = useState<string>("");
+    const [error, setError] = useState<string>('');
 
     const validateEmail = (value: string) => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const isValid = emailRegex.test(value);
       if (!isValid) {
         setError(`"${value}" is not a valid email`);
-        setTimeout(() => setError(""), 3000);
+        setTimeout(() => setError(''), 3000);
       }
       return isValid;
     };
@@ -134,12 +134,12 @@ export const WithValidation: Story = {
 // Controlled
 export const Controlled: Story = {
   render: (args) => {
-    const [values, setValues] = useState(["tag1", "tag2"]);
+    const [values, setValues] = useState(['tag1', 'tag2']);
     return (
       <div className="space-y-4">
         <ChipInput {...args} value={values} onChange={setValues} placeholder="Add tags..." />
         <div className="text-sm text-muted-foreground">
-          <p>Current values: {values.join(", ")}</p>
+          <p>Current values: {values.join(', ')}</p>
           <button onClick={() => setValues([])} className="mt-2 text-xs underline">
             Clear all
           </button>
@@ -193,7 +193,7 @@ export const EmailInput: Story = {
 
 export const TagEditor: Story = {
   render: () => {
-    const [tags, setTags] = useState(["react", "typescript", "vite"]);
+    const [tags, setTags] = useState(['react', 'typescript', 'vite']);
 
     return (
       <div className="space-y-4 max-w-lg">
@@ -204,7 +204,7 @@ export const TagEditor: Story = {
         <div className="text-sm text-muted-foreground">
           <p>Popular tags:</p>
           <div className="flex flex-wrap gap-2 mt-2">
-            {["javascript", "css", "html", "nodejs"].map((tag) => (
+            {['javascript', 'css', 'html', 'nodejs'].map((tag) => (
               <button
                 key={tag}
                 onClick={() => {
@@ -226,17 +226,17 @@ export const TagEditor: Story = {
 
 export const CategorySelector: Story = {
   render: () => {
-    const [categories, setCategories] = useState<string[]>(["Food & Dining", "Transportation"]);
+    const [categories, setCategories] = useState<string[]>(['Food & Dining', 'Transportation']);
 
     const suggestions = [
-      "Food & Dining",
-      "Transportation",
-      "Entertainment",
-      "Shopping",
-      "Bills & Utilities",
-      "Healthcare",
-      "Travel",
-      "Education",
+      'Food & Dining',
+      'Transportation',
+      'Entertainment',
+      'Shopping',
+      'Bills & Utilities',
+      'Healthcare',
+      'Travel',
+      'Education',
     ];
 
     return (
@@ -310,17 +310,17 @@ export const States: Story = {
       </div>
       <div>
         <p className="text-sm font-medium mb-1">With values</p>
-        <ChipInput defaultValue={["tag1", "tag2", "tag3"]} />
+        <ChipInput defaultValue={['tag1', 'tag2', 'tag3']} />
       </div>
       <div>
         <p className="text-sm font-medium mb-1">Many values</p>
         <ChipInput
-          defaultValue={["apple", "banana", "orange", "grape", "kiwi", "mango", "pear", "peach"]}
+          defaultValue={['apple', 'banana', 'orange', 'grape', 'kiwi', 'mango', 'pear', 'peach']}
         />
       </div>
       <div>
         <p className="text-sm font-medium mb-1">Disabled</p>
-        <ChipInput defaultValue={["tag1", "tag2"]} disabled />
+        <ChipInput defaultValue={['tag1', 'tag2']} disabled />
       </div>
     </div>
   ),
@@ -330,10 +330,10 @@ export const States: Story = {
 export const AllVariants: Story = {
   render: () => (
     <div className="space-y-4">
-      <ChipInput defaultValue={["tag1", "tag2"]} placeholder="Default variant" />
-      <ChipInput defaultValue={["tag1", "tag2"]} placeholder="Ghost variant" variant="ghost" />
+      <ChipInput defaultValue={['tag1', 'tag2']} placeholder="Default variant" />
+      <ChipInput defaultValue={['tag1', 'tag2']} placeholder="Ghost variant" variant="ghost" />
       <ChipInput
-        defaultValue={["tag1", "tag2"]}
+        defaultValue={['tag1', 'tag2']}
         placeholder="Underline variant"
         variant="underline"
       />
@@ -360,7 +360,7 @@ export const PasteMultipleValues: Story = {
         <div className="text-xs text-muted-foreground space-y-2">
           <p>Try pasting this:</p>
           <pre className="p-2 bg-muted rounded text-xs">
-            john@example.com, jane@example.com{"\n"}alice@example.com
+            john@example.com, jane@example.com{'\n'}alice@example.com
           </pre>
         </div>
       </div>
@@ -371,10 +371,10 @@ export const PasteMultipleValues: Story = {
 // Interactive playground
 export const Playground: Story = {
   args: {
-    placeholder: "Type and press Enter...",
-    variant: "default",
-    shape: "default",
-    chipVariant: "default",
+    placeholder: 'Type and press Enter...',
+    variant: 'default',
+    shape: 'default',
+    chipVariant: 'default',
     allowDuplicates: false,
   },
 };

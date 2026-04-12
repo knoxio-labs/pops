@@ -30,49 +30,49 @@ External APIs
 
 ### Docker Networks
 
-| Network | Services | Purpose |
-|---|---|---|
-| `pops-frontend` | cloudflared, pops-shell, pops-api, metabase | Public-facing |
-| `pops-backend` | pops-api, moltbot, tools | Internal + SQLite access |
+| Network          | Services                                    | Purpose                      |
+| ---------------- | ------------------------------------------- | ---------------------------- |
+| `pops-frontend`  | cloudflared, pops-shell, pops-api, metabase | Public-facing                |
+| `pops-backend`   | pops-api, moltbot, tools                    | Internal + SQLite access     |
 | `pops-documents` | cloudflared, paperless-ngx, paperless-redis | Isolated document processing |
 
 ## Domains
 
-| Domain | Package | What it does |
-|---|---|---|
-| **Finance** | `app-finance` | Transactions, budgets, wishlists, entities, CSV import wizard with 6-stage entity matching + AI fallback, learned corrections |
-| **Media** | `app-media` | Movies & TV library, watchlist, watch history, ELO comparison arena, discovery, Plex/Radarr/Sonarr sync |
-| **Inventory** | `app-inventory` | Items, hierarchical locations, connections graph, warranties, insurance reports, Paperless-ngx document linking |
-| **AI Operations** | `app-ai` | Usage tracking, model config, rules browser, prompt viewer, cache management |
+| Domain            | Package         | What it does                                                                                                                  |
+| ----------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Finance**       | `app-finance`   | Transactions, budgets, wishlists, entities, CSV import wizard with 6-stage entity matching + AI fallback, learned corrections |
+| **Media**         | `app-media`     | Movies & TV library, watchlist, watch history, ELO comparison arena, discovery, Plex/Radarr/Sonarr sync                       |
+| **Inventory**     | `app-inventory` | Items, hierarchical locations, connections graph, warranties, insurance reports, Paperless-ngx document linking               |
+| **AI Operations** | `app-ai`        | Usage tracking, model config, rules browser, prompt viewer, cache management                                                  |
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js 24, pnpm 10 workspaces, Turborepo |
-| Database | SQLite via Drizzle ORM |
-| API | tRPC (type-safe end-to-end) |
-| Frontend | React, Vite, React Router, Tailwind v4, shadcn/ui (47 components) |
-| State | React Query (server), Zustand (client) |
-| Validation | Zod |
-| AI | Claude API (Haiku for categorization, entity matching) |
-| Testing | Vitest (unit), Playwright (E2E), Storybook |
-| Infra | Docker Compose, Ansible, Cloudflare Tunnel + Access |
-| CI | GitHub Actions (lint, typecheck, format, test, E2E, security) |
+| Layer      | Technology                                                        |
+| ---------- | ----------------------------------------------------------------- |
+| Runtime    | Node.js 24, pnpm 10 workspaces, Turborepo                         |
+| Database   | SQLite via Drizzle ORM                                            |
+| API        | tRPC (type-safe end-to-end)                                       |
+| Frontend   | React, Vite, React Router, Tailwind v4, shadcn/ui (47 components) |
+| State      | React Query (server), Zustand (client)                            |
+| Validation | Zod                                                               |
+| AI         | Claude API (Haiku for categorization, entity matching)            |
+| Testing    | Vitest (unit), Playwright (E2E), Storybook                        |
+| Infra      | Docker Compose, Ansible, Cloudflare Tunnel + Access               |
+| CI         | GitHub Actions (lint, typecheck, format, test, E2E, security)     |
 
 ## Status
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the full implementation tracker.
 
-| Phase | Status |
-|---|---|
-| 0 — Infrastructure | Done |
-| 1 — Foundation | Done |
+| Phase                                             | Status      |
+| ------------------------------------------------- | ----------- |
+| 0 — Infrastructure                                | Done        |
+| 1 — Foundation                                    | Done        |
 | 2 — Core Apps (Finance, Media, Inventory, AI Ops) | In progress |
-| 3 — AI Layer | Not started |
-| 4 — Expansion Apps | Not started |
-| 5 — Mobile & Hardware | Not started |
-| 6 — Long Tail | Not started |
+| 3 — AI Layer                                      | Not started |
+| 4 — Expansion Apps                                | Not started |
+| 5 — Mobile & Hardware                             | Not started |
+| 6 — Long Tail                                     | Not started |
 
 ## Quick Start
 

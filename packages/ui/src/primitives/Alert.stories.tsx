@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Alert, AlertDescription, AlertTitle } from "./alert";
-import { InfoIcon, TriangleAlertIcon, OctagonXIcon, CircleCheckIcon } from "lucide-react";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Alert, AlertDescription, AlertTitle } from './alert';
+import { InfoIcon, TriangleAlertIcon, OctagonXIcon, CircleCheckIcon } from 'lucide-react';
 
 const meta: Meta<typeof Alert> = {
-  title: "Feedback/Alert",
+  title: 'Feedback/Alert',
   component: Alert,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;

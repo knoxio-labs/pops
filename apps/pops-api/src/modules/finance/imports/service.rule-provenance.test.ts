@@ -1,54 +1,54 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { applyLearnedCorrection } from "./service.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { applyLearnedCorrection } from './service.js';
 
-vi.mock("../../core/corrections/service.js", () => {
+vi.mock('../../core/corrections/service.js', () => {
   return {
     findMatchingCorrection: vi.fn(),
   };
 });
 
-vi.mock("../../../shared/tag-suggester.js", () => {
+vi.mock('../../../shared/tag-suggester.js', () => {
   return {
     suggestTags: () => [],
   };
 });
 
-import { findMatchingCorrection } from "../../core/corrections/service.js";
+import { findMatchingCorrection } from '../../core/corrections/service.js';
 
-describe("applyLearnedCorrection ruleProvenance", () => {
+describe('applyLearnedCorrection ruleProvenance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("populates ruleProvenance fields from matched correction", () => {
+  it('populates ruleProvenance fields from matched correction', () => {
     vi.mocked(findMatchingCorrection).mockReturnValue({
-      status: "matched",
+      status: 'matched',
       correction: {
-        id: "corr_123",
-        descriptionPattern: "WOOLWORTHS",
-        matchType: "contains",
-        entityId: "ent_1",
-        entityName: "Woolworths",
+        id: 'corr_123',
+        descriptionPattern: 'WOOLWORTHS',
+        matchType: 'contains',
+        entityId: 'ent_1',
+        entityName: 'Woolworths',
         location: null,
-        tags: "[]",
+        tags: '[]',
         transactionType: null,
         isActive: true,
         confidence: 0.92,
         priority: 0,
         timesApplied: 10,
-        createdAt: "2026-01-01T00:00:00.000Z",
+        createdAt: '2026-01-01T00:00:00.000Z',
         lastUsedAt: null,
       },
     });
 
     const res = applyLearnedCorrection({
       transaction: {
-        date: "2026-04-01",
-        description: "WOOLWORTHS 1234",
+        date: '2026-04-01',
+        description: 'WOOLWORTHS 1234',
         amount: -12.34,
-        account: "Everyday",
-        rawRow: "{}",
-        checksum: "abc",
+        account: 'Everyday',
+        rawRow: '{}',
+        checksum: 'abc',
       },
       minConfidence: 0.7,
       knownTags: [],
@@ -58,25 +58,25 @@ describe("applyLearnedCorrection ruleProvenance", () => {
 
     expect(res).not.toBeNull();
     expect(res?.processed.ruleProvenance).toEqual({
-      source: "correction",
-      ruleId: "corr_123",
-      pattern: "WOOLWORTHS",
-      matchType: "contains",
+      source: 'correction',
+      ruleId: 'corr_123',
+      pattern: 'WOOLWORTHS',
+      matchType: 'contains',
       confidence: 0.92,
     });
   });
 
-  it("returns null when no correction matches", () => {
+  it('returns null when no correction matches', () => {
     vi.mocked(findMatchingCorrection).mockReturnValue(null);
 
     const res = applyLearnedCorrection({
       transaction: {
-        date: "2026-04-01",
-        description: "SOME MERCHANT",
+        date: '2026-04-01',
+        description: 'SOME MERCHANT',
         amount: -10,
-        account: "Everyday",
-        rawRow: "{}",
-        checksum: "abc",
+        account: 'Everyday',
+        rawRow: '{}',
+        checksum: 'abc',
       },
       minConfidence: 0.7,
       knownTags: [],

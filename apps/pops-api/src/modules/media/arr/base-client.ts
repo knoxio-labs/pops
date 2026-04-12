@@ -7,7 +7,7 @@
  * Each client instance maintains its own in-memory cache keyed by full URL
  * with a 30-second TTL, so Radarr and Sonarr caches cannot collide.
  */
-import { ArrApiError, type ArrSystemStatus } from "./types.js";
+import { ArrApiError, type ArrSystemStatus } from './types.js';
 
 interface CacheEntry {
   data: unknown;
@@ -19,7 +19,7 @@ const CONNECTION_TIMEOUT_MS = 10_000;
 
 /** Convert a network-level fetch error into a descriptive ArrApiError. */
 function toArrApiError(err: unknown, url: string): ArrApiError {
-  if (err instanceof DOMException && err.name === "TimeoutError") {
+  if (err instanceof DOMException && err.name === 'TimeoutError') {
     return new ArrApiError(`Connection timed out after ${CONNECTION_TIMEOUT_MS / 1000}s — ${url}`);
   }
   const message = err instanceof Error ? err.message : String(err);
@@ -33,7 +33,7 @@ export class ArrBaseClient {
 
   constructor(baseUrl: string, apiKey: string) {
     // Strip trailing slash
-    this.baseUrl = baseUrl.replace(/\/+$/, "");
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.apiKey = apiKey;
   }
 
@@ -50,10 +50,10 @@ export class ArrBaseClient {
     let response: Response;
     try {
       response = await fetch(url, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "X-Api-Key": this.apiKey,
-          Accept: "application/json",
+          'X-Api-Key': this.apiKey,
+          Accept: 'application/json',
         },
         signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
       });
@@ -85,11 +85,11 @@ export class ArrBaseClient {
     let response: Response;
     try {
       response = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "X-Api-Key": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          'X-Api-Key': this.apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
@@ -112,11 +112,11 @@ export class ArrBaseClient {
     let response: Response;
     try {
       response = await fetch(url, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "X-Api-Key": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          'X-Api-Key': this.apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(CONNECTION_TIMEOUT_MS),
@@ -134,6 +134,6 @@ export class ArrBaseClient {
 
   /** Test the connection by fetching system status. */
   async testConnection(): Promise<ArrSystemStatus> {
-    return this.get<ArrSystemStatus>("/system/status");
+    return this.get<ArrSystemStatus>('/system/status');
   }
 }

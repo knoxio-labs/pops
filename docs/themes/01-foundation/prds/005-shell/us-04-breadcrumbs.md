@@ -24,13 +24,13 @@ As a developer, I want a standard page header pattern with back button and bread
 ## Notes
 
 Standard page header pattern:
+
 ```tsx
 <div className="flex items-center gap-3">
-  <Link to={parentPath}><ArrowLeft className="h-5 w-5" /></Link>
-  <Breadcrumb items={[
-    { label: "Library", href: "/media" },
-    { label: movie.title },
-  ]} />
+  <Link to={parentPath}>
+    <ArrowLeft className="h-5 w-5" />
+  </Link>
+  <Breadcrumb items={[{ label: 'Library', href: '/media' }, { label: movie.title }]} />
 </div>
 ```
 

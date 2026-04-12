@@ -2,10 +2,10 @@
  * Environment variable loader
  * Supports both local development (.env) and production (Docker secrets)
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const SECRETS_DIR = "/run/secrets";
+const SECRETS_DIR = '/run/secrets';
 
 /**
  * Get environment variable from either:
@@ -19,7 +19,7 @@ export function getEnv(name: string): string | undefined {
   // Try Docker secret file first (production)
   const secretPath = join(SECRETS_DIR, name.toLowerCase());
   try {
-    const value = readFileSync(secretPath, "utf-8").trim();
+    const value = readFileSync(secretPath, 'utf-8').trim();
     if (value) return value;
   } catch {
     // Secret file doesn't exist, fall through to env var

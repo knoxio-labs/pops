@@ -37,17 +37,17 @@ Tag-related procedures are untouched; they already handle the use case.
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Existing test fixtures set `online: true` | Update the fixture; the field is silently dropped at the schema level so leaving it would surface as a Zod failure. |
+| Case                                             | Behaviour                                                                                                                                                                              |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing test fixtures set `online: true`        | Update the fixture; the field is silently dropped at the schema level so leaving it would surface as a Zod failure.                                                                    |
 | User had implicitly relied on the Amex heuristic | They can recreate it as a tag rule (`description contains ".COM.AU"` → tag `online`) in the existing tag-rule UI. Not migrated automatically — there is no persisted state to migrate. |
-| Other parsers (ANZ, ING, Up Bank) emit `online` | None do today. If a future parser wants to set "online", it sets a tag, not a field. |
+| Other parsers (ANZ, ING, Up Bank) emit `online`  | None do today. If a future parser wants to set "online", it sets a tag, not a field.                                                                                                   |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-drop-online-field](us-01-drop-online-field.md) | Delete `online` from import schemas, parsers, edit form, badge, and tests | Partial (manual e2e walkthrough pending) | No (single atomic change) |
+| #   | Story                                                 | Summary                                                                   | Status                                   | Parallelisable            |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------- | ------------------------- |
+| 01  | [us-01-drop-online-field](us-01-drop-online-field.md) | Delete `online` from import schemas, parsers, edit form, badge, and tests | Partial (manual e2e walkthrough pending) | No (single atomic change) |
 
 ## Out of Scope
 

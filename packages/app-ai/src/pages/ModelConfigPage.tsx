@@ -4,11 +4,11 @@
  * Allows configuring which AI model to use, monthly token budget,
  * and fallback behaviour when budget is exceeded. PRD-053/US-01.
  */
-import { useState, useEffect } from "react";
-import { Link } from "react-router";
-import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
-import { trpc } from "../lib/trpc";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
+import { toast } from 'sonner';
+import { ArrowLeft } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 import {
   Select,
   Button,
@@ -23,27 +23,27 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbPage,
-} from "@pops/ui";
+} from '@pops/ui';
 
 const SETTING_KEYS = {
-  model: "ai.model",
-  budget: "ai.monthlyTokenBudget",
-  fallback: "ai.budgetExceededFallback",
+  model: 'ai.model',
+  budget: 'ai.monthlyTokenBudget',
+  fallback: 'ai.budgetExceededFallback',
 } as const;
 
 const SUPPORTED_MODELS = [
-  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku (claude-haiku-4-5-20251001)" },
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku (claude-haiku-4-5-20251001)' },
 ];
 
 const FALLBACK_OPTIONS = [
-  { value: "skip", label: "Skip AI — do not call the model" },
-  { value: "alert", label: "Alert only — continue calling the model" },
+  { value: 'skip', label: 'Skip AI — do not call the model' },
+  { value: 'alert', label: 'Alert only — continue calling the model' },
 ];
 
 const DEFAULTS = {
-  model: "claude-haiku-4-5-20251001",
-  budget: "",
-  fallback: "skip",
+  model: 'claude-haiku-4-5-20251001',
+  budget: '',
+  fallback: 'skip',
 };
 
 export function ModelConfigPage() {
@@ -97,9 +97,9 @@ export function ModelConfigPage() {
         }),
         settingsMutation.mutateAsync({ key: SETTING_KEYS.fallback, value: fallback }),
       ]);
-      toast.success("AI configuration saved");
+      toast.success('AI configuration saved');
     } catch (err) {
-      toast.error(`Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`);
+      toast.error(`Failed to save: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
@@ -166,9 +166,9 @@ export function ModelConfigPage() {
         />
         <StatCard
           title="Monthly Budget"
-          value={budgetNum > 0 ? budgetNum.toLocaleString() : "No limit"}
-          description={budgetNum > 0 ? `${budgetUsedPct.toFixed(1)}% used` : "Set a budget below"}
-          color={budgetUsedPct > 90 ? "rose" : budgetUsedPct > 70 ? "amber" : "emerald"}
+          value={budgetNum > 0 ? budgetNum.toLocaleString() : 'No limit'}
+          description={budgetNum > 0 ? `${budgetUsedPct.toFixed(1)}% used` : 'Set a budget below'}
+          color={budgetUsedPct > 90 ? 'rose' : budgetUsedPct > 70 ? 'amber' : 'emerald'}
         />
       </div>
 
@@ -185,10 +185,10 @@ export function ModelConfigPage() {
             <div
               className={`h-full rounded-full transition-all ${
                 budgetUsedPct > 90
-                  ? "bg-destructive"
+                  ? 'bg-destructive'
                   : budgetUsedPct > 70
-                    ? "bg-amber-500"
-                    : "bg-emerald-500"
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500'
               }`}
               style={{ width: `${budgetUsedPct}%` }}
               role="progressbar"
@@ -240,9 +240,9 @@ export function ModelConfigPage() {
           <h3 className="font-semibold">Budget exceeded</h3>
           <p className="text-sm mt-1">
             Current month usage has reached the configured token budget.
-            {fallback === "skip"
-              ? " AI categorisation is currently disabled."
-              : " AI calls will continue but usage is over budget."}
+            {fallback === 'skip'
+              ? ' AI categorisation is currently disabled.'
+              : ' AI calls will continue but usage is over budget.'}
           </p>
         </Alert>
       )}

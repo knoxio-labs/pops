@@ -5,8 +5,8 @@
  * tree with item count badges. Supports adding root/child locations,
  * inline renaming, move-to-parent modal, and sibling reordering.
  */
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { toast } from "sonner";
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import {
   Badge,
   Button,
@@ -21,7 +21,7 @@ import {
   DialogDescription,
   DialogFooter,
   PageHeader,
-} from "@pops/ui";
+} from '@pops/ui';
 import {
   DndContext,
   DragOverlay,
@@ -32,14 +32,14 @@ import {
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   MapPin,
   ChevronRight,
@@ -54,10 +54,10 @@ import {
   Trash2,
   FileText,
   GripVertical,
-} from "lucide-react";
-import { Link } from "react-router";
-import { trpc } from "../lib/trpc";
-import { LocationContentsPanel } from "../components/LocationContentsPanel";
+} from 'lucide-react';
+import { Link } from 'react-router';
+import { trpc } from '../lib/trpc';
+import { LocationContentsPanel } from '../components/LocationContentsPanel';
 
 interface LocationTreeNode {
   id: string;
@@ -151,7 +151,7 @@ function InlineInput({
   placeholder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [value, setValue] = useState(defaultValue ?? "");
+  const [value, setValue] = useState(defaultValue ?? '');
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -159,10 +159,10 @@ function InlineInput({
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       const trimmed = value.trim();
       if (trimmed) onSave(trimmed);
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       onCancel();
     }
   };
@@ -208,7 +208,7 @@ function MoveTargetPicker({
                 disabled={disabled}
                 onClick={() => onSelect(node.id)}
                 className={`w-full text-left flex items-center gap-1.5 py-1.5 px-2 rounded-md transition-colors ${
-                  disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-muted/50 cursor-pointer"
+                  disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted/50 cursor-pointer'
                 }`}
                 style={{
                   paddingLeft: `calc(${depth} * var(--tree-picker-step) + var(--tree-indent-base))`,
@@ -256,7 +256,7 @@ function DropIndicatorLine({ depth }: { depth: number }) {
       className="relative h-0.5 my-[-1px] z-10"
       style={{
         marginLeft: `calc(${depth} * var(--tree-indent-step) + var(--tree-indent-base))`,
-        marginRight: "8px",
+        marginRight: '8px',
       }}
       data-testid="drop-indicator"
     >
@@ -274,7 +274,7 @@ interface LocationNodeProps {
   onAddChild: (parentId: string) => void;
   onRename: (id: string, newName: string) => void;
   onMoveStart: (id: string) => void;
-  onReorder: (id: string, direction: "up" | "down") => void;
+  onReorder: (id: string, direction: 'up' | 'down') => void;
   onDelete: (id: string) => void;
   addingChildOf: string | null;
   onNewChildSave: (name: string) => void;
@@ -344,9 +344,9 @@ function LocationNode({
         <div
           className={`group flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer transition-colors hover:bg-app-accent/10 ${
             isSelected
-              ? "bg-app-accent/20 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]"
-              : ""
-          } ${isOver && !isDragging ? "ring-2 ring-app-accent/50 bg-app-accent/5" : ""}`}
+              ? 'bg-app-accent/20 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]'
+              : ''
+          } ${isOver && !isDragging ? 'ring-2 ring-app-accent/50 bg-app-accent/5' : ''}`}
           style={{
             paddingLeft: `calc(${depth} * var(--tree-indent-step) + var(--tree-indent-base))`,
           }}
@@ -382,7 +382,7 @@ function LocationNode({
               <button
                 type="button"
                 className="p-0.5 rounded hover:bg-muted"
-                aria-label={open ? "Collapse" : "Expand"}
+                aria-label={open ? 'Collapse' : 'Expand'}
               >
                 {open ? (
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -421,7 +421,7 @@ function LocationNode({
                 className="p-0.5 rounded hover:bg-muted hidden [@media(pointer:coarse)]:inline-flex"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onReorder(node.id, "up");
+                  onReorder(node.id, 'up');
                 }}
                 aria-label="Move up"
                 title="Move up"
@@ -435,7 +435,7 @@ function LocationNode({
                 className="p-0.5 rounded hover:bg-muted hidden [@media(pointer:coarse)]:inline-flex"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onReorder(node.id, "down");
+                  onReorder(node.id, 'down');
                 }}
                 aria-label="Move down"
                 title="Move down"
@@ -575,7 +575,7 @@ export function LocationTreePage() {
 
   const createMutation = trpc.inventory.locations.create.useMutation({
     onSuccess: () => {
-      toast.success("Location created");
+      toast.success('Location created');
       utils.inventory.locations.tree.invalidate();
       setAddingChildOf(null);
       setAddingRoot(false);
@@ -585,7 +585,7 @@ export function LocationTreePage() {
 
   const updateMutation = trpc.inventory.locations.update.useMutation({
     onSuccess: () => {
-      toast.success("Location updated");
+      toast.success('Location updated');
       utils.inventory.locations.tree.invalidate();
     },
     onError: (err) => toast.error(`Failed to update location: ${err.message}`),
@@ -593,7 +593,7 @@ export function LocationTreePage() {
 
   const deleteMutation = trpc.inventory.locations.delete.useMutation({
     onSuccess: (result) => {
-      if ("requiresConfirmation" in result && result.requiresConfirmation && result.stats) {
+      if ('requiresConfirmation' in result && result.requiresConfirmation && result.stats) {
         // Need user confirmation — show dialog
         const node = deleteConfirm
           ? { id: deleteConfirm.id, name: deleteConfirm.name }
@@ -607,7 +607,7 @@ export function LocationTreePage() {
         }
         return;
       }
-      toast.success("Location deleted");
+      toast.success('Location deleted');
       utils.inventory.locations.tree.invalidate();
       if (selectedId === pendingDeleteRef.current?.id) {
         setSelectedId(null);
@@ -706,12 +706,12 @@ export function LocationTreePage() {
   );
 
   const handleReorder = useCallback(
-    (id: string, direction: "up" | "down") => {
+    (id: string, direction: 'up' | 'down') => {
       const siblings = getSiblings(id, treeNodes, nodeMap);
       const idx = siblings.findIndex((s) => s.id === id);
       if (idx < 0) return;
 
-      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
       if (swapIdx < 0 || swapIdx >= siblings.length) return;
 
       const current = siblings[idx];
@@ -752,7 +752,7 @@ export function LocationTreePage() {
 
       // Prevent dropping on own descendants
       if (isDescendant(active.id as string, over.id as string, nodeMap)) {
-        toast.error("Cannot move a location into its own sub-location");
+        toast.error('Cannot move a location into its own sub-location');
         return;
       }
 
@@ -870,7 +870,7 @@ export function LocationTreePage() {
               {addingRoot && (
                 <div
                   className="flex items-center gap-1.5 py-1.5 px-2"
-                  style={{ paddingLeft: "var(--tree-indent-base)" }}
+                  style={{ paddingLeft: 'var(--tree-indent-base)' }}
                 >
                   <span className="w-[22px]" />
                   <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -916,7 +916,7 @@ export function LocationTreePage() {
               type="button"
               onClick={() => handleMoveTo(null)}
               className="w-full text-left flex items-center gap-1.5 py-1.5 px-2 rounded-md hover:bg-muted/50"
-              style={{ paddingLeft: "var(--tree-indent-base)" }}
+              style={{ paddingLeft: 'var(--tree-indent-base)' }}
             >
               <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-sm font-medium">Root level</span>
@@ -944,8 +944,8 @@ export function LocationTreePage() {
             <div className="space-y-2 text-sm">
               {deleteConfirm.stats.childCount > 0 && (
                 <p>
-                  This location has <strong>{deleteConfirm.stats.childCount}</strong> direct{" "}
-                  {deleteConfirm.stats.childCount === 1 ? "sub-location" : "sub-locations"}
+                  This location has <strong>{deleteConfirm.stats.childCount}</strong> direct{' '}
+                  {deleteConfirm.stats.childCount === 1 ? 'sub-location' : 'sub-locations'}
                   {deleteConfirm.stats.descendantCount > deleteConfirm.stats.childCount &&
                     ` (${deleteConfirm.stats.descendantCount} total)`}
                   . They will all be deleted.
@@ -953,8 +953,8 @@ export function LocationTreePage() {
               )}
               {deleteConfirm.stats.totalItemCount > 0 && (
                 <p>
-                  <strong>{deleteConfirm.stats.totalItemCount}</strong>{" "}
-                  {deleteConfirm.stats.totalItemCount === 1 ? "item" : "items"} will become
+                  <strong>{deleteConfirm.stats.totalItemCount}</strong>{' '}
+                  {deleteConfirm.stats.totalItemCount === 1 ? 'item' : 'items'} will become
                   unlocated.
                 </p>
               )}

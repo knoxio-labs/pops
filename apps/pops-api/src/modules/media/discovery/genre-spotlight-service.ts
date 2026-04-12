@@ -2,17 +2,17 @@
  * Genre spotlight service — selects top user genres and fetches
  * high-rated TMDB movies per genre, scored by user preference.
  */
-import type { TmdbClient } from "../tmdb/client.js";
+import type { TmdbClient } from '../tmdb/client.js';
 import type {
   DiscoverResult,
   ScoredDiscoverResult,
   PreferenceProfile,
   GenreAffinity,
   GenreDistribution,
-} from "./types.js";
-import { TMDB_GENRE_MAP } from "./types.js";
-import { scoreDiscoverResults } from "./service.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
+} from './types.js';
+import { TMDB_GENRE_MAP } from './types.js';
+import { scoreDiscoverResults } from './service.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from './flags.js';
 
 /** Genre name → TMDB genre ID reverse map. */
 const GENRE_NAME_TO_ID: Record<string, number> = {};
@@ -25,10 +25,10 @@ for (const [id, name] of Object.entries(TMDB_GENRE_MAP)) {
  * Stored as sorted pairs of genre names for easy lookup.
  */
 const RELATED_GENRE_PAIRS: [string, string][] = [
-  ["Action", "Adventure"],
-  ["Mystery", "Thriller"],
-  ["Drama", "Romance"],
-  ["Fantasy", "Science Fiction"],
+  ['Action', 'Adventure'],
+  ['Mystery', 'Thriller'],
+  ['Drama', 'Romance'],
+  ['Fantasy', 'Science Fiction'],
 ];
 
 /** Check if two genre names are related (should not both be in spotlight). */
@@ -124,7 +124,7 @@ export async function getGenreSpotlight(
       if (genreId === 0) return null;
       const response = await client.discoverMovies({
         genreIds: [genreId],
-        sortBy: "vote_average.desc",
+        sortBy: 'vote_average.desc',
         voteCountGte: 100,
         page: 1,
       });
@@ -178,14 +178,14 @@ export async function getGenreSpotlightPage(
   genreId: number,
   page: number
 ): Promise<GenreSpotlightPageResponse> {
-  const genreName = TMDB_GENRE_MAP[genreId] ?? "Unknown";
+  const genreName = TMDB_GENRE_MAP[genreId] ?? 'Unknown';
   const dismissedIds = getDismissedTmdbIds();
   const watchedIds = getWatchedTmdbIds();
   const watchlistIds = getWatchlistTmdbIds();
 
   const response = await client.discoverMovies({
     genreIds: [genreId],
-    sortBy: "vote_average.desc",
+    sortBy: 'vote_average.desc',
     voteCountGte: 100,
     page,
   });

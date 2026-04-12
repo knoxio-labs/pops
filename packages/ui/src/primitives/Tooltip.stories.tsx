@@ -1,15 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tooltip";
-import { Button } from "../components/Button";
-import { InfoIcon, HelpCircleIcon } from "lucide-react";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+import { Button } from '../components/Button';
+import { InfoIcon, HelpCircleIcon } from 'lucide-react';
 
 const meta: Meta<typeof Tooltip> = {
-  title: "Feedback/Tooltip",
+  title: 'Feedback/Tooltip',
   component: Tooltip,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
       <TooltipProvider>
@@ -236,7 +236,7 @@ export const Multiple: Story = {
   args: {},
   render: () => (
     <div className="flex flex-wrap gap-2">
-      {["Food", "Shopping", "Entertainment", "Transport", "Bills"].map((category) => (
+      {['Food', 'Shopping', 'Entertainment', 'Transport', 'Bills'].map((category) => (
         <Tooltip key={category}>
           <TooltipTrigger asChild>
             <Button variant="outline" size="sm">

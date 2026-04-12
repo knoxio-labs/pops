@@ -2,13 +2,13 @@
  * Inventory service — CRUD operations using Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
  */
-import crypto from "crypto";
-import { eq, like, count, and, sum, inArray, sql, isNotNull } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { homeInventory } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
-import { getDescendantLocationIds } from "../locations/service.js";
-import type { InventoryRow, CreateInventoryItemInput, UpdateInventoryItemInput } from "./types.js";
+import crypto from 'crypto';
+import { eq, like, count, and, sum, inArray, sql, isNotNull } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { homeInventory } from '@pops/db-types';
+import { NotFoundError } from '../../../shared/errors.js';
+import { getDescendantLocationIds } from '../locations/service.js';
+import type { InventoryRow, CreateInventoryItemInput, UpdateInventoryItemInput } from './types.js';
 
 /** Count + rows + value aggregates for a paginated list. */
 export interface InventoryListResult {
@@ -117,7 +117,7 @@ export function countByAssetPrefix(prefix: string): number {
   const [result] = db
     .select({ count: sql<number>`COUNT(*)` })
     .from(homeInventory)
-    .where(sql`LOWER(${homeInventory.assetId}) LIKE LOWER(${prefix + "%"})`)
+    .where(sql`LOWER(${homeInventory.assetId}) LIKE LOWER(${prefix + '%'})`)
     .all();
   return result?.count ?? 0;
 }
@@ -139,7 +139,7 @@ export function getInventoryItem(id: string): InventoryRow {
   const db = getDrizzle();
   const [row] = db.select().from(homeInventory).where(eq(homeInventory.id, id)).all();
 
-  if (!row) throw new NotFoundError("Inventory item", id);
+  if (!row) throw new NotFoundError('Inventory item', id);
   return row;
 }
 
@@ -294,5 +294,5 @@ export function deleteInventoryItem(id: string): void {
 
   const db = getDrizzle();
   const result = db.delete(homeInventory).where(eq(homeInventory.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Inventory item", id);
+  if (result.changes === 0) throw new NotFoundError('Inventory item', id);
 }

@@ -1,21 +1,21 @@
 /**
  * SearchResultCard stories — search result card variants for movies and TV shows.
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MemoryRouter } from "react-router";
-import { SearchResultCard } from "./SearchResultCard";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { MemoryRouter } from 'react-router';
+import { SearchResultCard } from './SearchResultCard';
 
 const meta: Meta<typeof SearchResultCard> = {
   component: SearchResultCard,
-  title: "Media/SearchResultCard",
-  tags: ["autodocs"],
+  title: 'Media/SearchResultCard',
+  tags: ['autodocs'],
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
   decorators: [
     (Story) => (
       <MemoryRouter>
-        <div style={{ maxWidth: "400px" }}>
+        <div style={{ maxWidth: '400px' }}>
           <Story />
         </div>
       </MemoryRouter>
@@ -28,57 +28,57 @@ type Story = StoryObj<typeof SearchResultCard>;
 
 export const Movie: Story = {
   args: {
-    type: "movie",
-    title: "Fight Club",
-    year: "1999",
+    type: 'movie',
+    title: 'Fight Club',
+    year: '1999',
     overview:
-      "An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into much more.",
-    posterUrl: "https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg",
+      'An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into much more.',
+    posterUrl: 'https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg',
     voteAverage: 8.4,
-    genres: ["Drama", "Thriller"],
+    genres: ['Drama', 'Thriller'],
   },
 };
 
 export const TvShow: Story = {
   args: {
-    type: "tv",
-    title: "Breaking Bad",
-    year: "2008",
+    type: 'tv',
+    title: 'Breaking Bad',
+    year: '2008',
     overview:
-      "A chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine.",
-    posterUrl: "https://artworks.thetvdb.com/banners/posters/81189-10.jpg",
-    genres: ["Drama", "Crime", "Thriller"],
+      'A chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine.',
+    posterUrl: 'https://artworks.thetvdb.com/banners/posters/81189-10.jpg',
+    genres: ['Drama', 'Crime', 'Thriller'],
   },
 };
 
 export const LongTitle: Story = {
   args: {
-    type: "movie",
+    type: 'movie',
     title: "The Lord of the Rings: The Return of the King — Extended Edition Director's Cut",
-    year: "2003",
-    overview: "Gandalf and Aragorn lead the World of Men against Sauron.",
+    year: '2003',
+    overview: 'Gandalf and Aragorn lead the World of Men against Sauron.',
     voteAverage: 9.0,
-    genres: ["Adventure", "Fantasy", "Action"],
+    genres: ['Adventure', 'Fantasy', 'Action'],
   },
 };
 
 export const NoPoster: Story = {
   args: {
-    type: "tv",
-    title: "Unknown Show",
-    year: "2024",
-    overview: "A show with no poster image available.",
+    type: 'tv',
+    title: 'Unknown Show',
+    year: '2024',
+    overview: 'A show with no poster image available.',
     posterUrl: null,
-    genres: ["Mystery"],
+    genres: ['Mystery'],
   },
 };
 
 export const InLibrary: Story = {
   args: {
-    type: "movie",
-    title: "Fight Club",
-    year: "1999",
-    posterUrl: "https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg",
+    type: 'movie',
+    title: 'Fight Club',
+    year: '1999',
+    posterUrl: 'https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg',
     voteAverage: 8.4,
     inLibrary: true,
   },
@@ -86,22 +86,22 @@ export const InLibrary: Story = {
 
 export const InLibraryClickable: Story = {
   args: {
-    type: "movie",
-    title: "Fight Club",
-    year: "1999",
-    posterUrl: "https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg",
+    type: 'movie',
+    title: 'Fight Club',
+    year: '1999',
+    posterUrl: 'https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg',
     voteAverage: 8.4,
     inLibrary: true,
-    href: "/media/movies/1",
+    href: '/media/movies/1',
   },
 };
 
 export const Adding: Story = {
   args: {
-    type: "movie",
-    title: "Fight Club",
-    year: "1999",
-    posterUrl: "https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg",
+    type: 'movie',
+    title: 'Fight Club',
+    year: '1999',
+    posterUrl: 'https://image.tmdb.org/t/p/w342/pB8BM7pdSp6B6Ih7QI4S2t015wi.jpg',
     voteAverage: 8.4,
     isAdding: true,
   },

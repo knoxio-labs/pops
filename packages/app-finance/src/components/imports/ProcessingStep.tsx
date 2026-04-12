@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Loader2, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
-import { useImportStore } from "../../store/importStore";
-import { trpc } from "../../lib/trpc";
-import { Button } from "@pops/ui";
-import type { ProcessImportOutput, ImportWarning } from "@pops/api/modules/finance/imports";
+import { useEffect, useState } from 'react';
+import { Loader2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useImportStore } from '../../store/importStore';
+import { trpc } from '../../lib/trpc';
+import { Button } from '@pops/ui';
+import type { ProcessImportOutput, ImportWarning } from '@pops/api/modules/finance/imports';
 
 /**
  * Step 3: Process transactions (deduplicate and match entities)
@@ -48,13 +48,13 @@ export function ProcessingStep() {
       setPollingEnabled(true);
     },
     onError: (error) => {
-      console.error("Processing error:", error);
+      console.error('Processing error:', error);
     },
   });
 
   // Poll for progress every 1 second when enabled
   const progressQuery = trpc.finance.imports.getImportProgress.useQuery(
-    { sessionId: processSessionId ?? "" },
+    { sessionId: processSessionId ?? '' },
     {
       enabled: pollingEnabled && !!processSessionId,
       refetchInterval: 1000,
@@ -64,7 +64,7 @@ export function ProcessingStep() {
 
   // Handle completion
   useEffect(() => {
-    if (progressQuery.data?.status === "completed" && progressQuery.data.result) {
+    if (progressQuery.data?.status === 'completed' && progressQuery.data.result) {
       setPollingEnabled(false);
 
       // Type-cast to ProcessImportOutput since this is the processImport step
@@ -73,19 +73,19 @@ export function ProcessingStep() {
 
       // Check if there are critical errors
       const hasCriticalError = result.warnings?.some(
-        (w: ImportWarning) => w.type === "AI_API_ERROR"
+        (w: ImportWarning) => w.type === 'AI_API_ERROR'
       );
 
       if (hasCriticalError) {
         // Don't auto-advance - let user see the error
-        console.error("[Import] Processing completed with critical errors - review warnings");
+        console.error('[Import] Processing completed with critical errors - review warnings');
       } else {
         // No critical errors - proceed to review (deduplication warnings are non-critical)
         nextStep();
       }
     }
 
-    if (progressQuery.data?.status === "failed") {
+    if (progressQuery.data?.status === 'failed') {
       setPollingEnabled(false);
     }
   }, [progressQuery.data, setProcessedTransactions, nextStep]);
@@ -101,7 +101,7 @@ export function ProcessingStep() {
     ) {
       processImportMutation.mutate({
         transactions: parsedTransactions,
-        account: "Amex",
+        account: 'Amex',
       });
     }
   }, [parsedTransactions.length, hasAlreadyProcessed]);
@@ -110,12 +110,12 @@ export function ProcessingStep() {
     processImportMutation.reset();
     processImportMutation.mutate({
       transactions: parsedTransactions,
-      account: "Amex",
+      account: 'Amex',
     });
   };
 
   const progress = progressQuery.data;
-  const isProcessing = pollingEnabled && progress?.status === "processing";
+  const isProcessing = pollingEnabled && progress?.status === 'processing';
 
   // Short-circuit: already processed (user came back via Back nav). Let them
   // click Continue without re-running the pipeline.
@@ -171,21 +171,21 @@ export function ProcessingStep() {
           <div className="flex justify-between">
             <span>Checking for duplicates</span>
             <span>
-              {progress?.currentStep === "deduplicating"
-                ? "In progress..."
-                : ["matching", "writing"].includes(progress?.currentStep ?? "")
-                  ? "Complete"
-                  : "Pending"}
+              {progress?.currentStep === 'deduplicating'
+                ? 'In progress...'
+                : ['matching', 'writing'].includes(progress?.currentStep ?? '')
+                  ? 'Complete'
+                  : 'Pending'}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Matching entities</span>
             <span>
-              {progress?.currentStep === "matching"
-                ? "In progress..."
-                : progress?.currentStep === "writing"
-                  ? "Complete"
-                  : "Pending"}
+              {progress?.currentStep === 'matching'
+                ? 'In progress...'
+                : progress?.currentStep === 'writing'
+                  ? 'Complete'
+                  : 'Pending'}
             </span>
           </div>
         </div>
@@ -203,9 +203,9 @@ export function ProcessingStep() {
                 key={idx}
                 className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
               >
-                {item.status === "processing" && <Loader2 className="w-3 h-3 animate-spin" />}
-                {item.status === "success" && <CheckCircle className="w-3 h-3 text-green-500" />}
-                {item.status === "failed" && <XCircle className="w-3 h-3 text-red-500" />}
+                {item.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin" />}
+                {item.status === 'success' && <CheckCircle className="w-3 h-3 text-green-500" />}
+                {item.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
                 <span className="truncate">{item.description}</span>
               </div>
             ))}
@@ -254,9 +254,9 @@ export function ProcessingStep() {
                       <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 space-y-1">
                         <p className="font-medium">
-                          {warning.type === "AI_CATEGORIZATION_UNAVAILABLE"
-                            ? "AI Categorization Unavailable"
-                            : "AI API Error"}
+                          {warning.type === 'AI_CATEGORIZATION_UNAVAILABLE'
+                            ? 'AI Categorization Unavailable'
+                            : 'AI API Error'}
                         </p>
                         <p className="text-xs">{warning.message}</p>
                         {warning.details && (
@@ -265,7 +265,7 @@ export function ProcessingStep() {
                         {warning.affectedCount && (
                           <p className="text-xs opacity-80">
                             {warning.affectedCount} transaction
-                            {warning.affectedCount !== 1 ? "s" : ""} could not be automatically
+                            {warning.affectedCount !== 1 ? 's' : ''} could not be automatically
                             categorized. You can manually categorize them in the review step.
                           </p>
                         )}
@@ -279,10 +279,10 @@ export function ProcessingStep() {
         )}
 
       {/* Fatal errors */}
-      {(processImportMutation.isError || progressQuery.data?.status === "failed") && (
+      {(processImportMutation.isError || progressQuery.data?.status === 'failed') && (
         <div className="p-4 max-w-md text-sm text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-200 rounded-lg">
           <p className="font-medium mb-1">Processing Failed</p>
-          <p>{processImportMutation.error?.message || "An unexpected error occurred"}</p>
+          <p>{processImportMutation.error?.message || 'An unexpected error occurred'}</p>
           {progressQuery.data?.errors && progressQuery.data.errors.length > 0 && (
             <div className="mt-2 space-y-1">
               {progressQuery.data.errors.map((error, idx) => (
@@ -299,10 +299,10 @@ export function ProcessingStep() {
       )}
 
       {/* Continue button when processing complete with warnings */}
-      {progressQuery.data?.status === "completed" &&
+      {progressQuery.data?.status === 'completed' &&
         (progressQuery.data.result as ProcessImportOutput)?.warnings?.some(
           (w: ImportWarning) =>
-            w.type === "AI_CATEGORIZATION_UNAVAILABLE" || w.type === "AI_API_ERROR"
+            w.type === 'AI_CATEGORIZATION_UNAVAILABLE' || w.type === 'AI_API_ERROR'
         ) && (
           <Button onClick={nextStep} className="mt-4">
             Continue to Review

@@ -10,11 +10,11 @@ POPS is a multi-domain platform where objects in one domain frequently reference
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| UUID on every table | Globally unique, no parsing needed | Opaque (can't tell what it refers to), slower to index, adds a column to every table for a future feature |
-| Global registry table (`objects`) | Single table for universal search | Write amplification, sync issues, significant overhead |
-| URI convention with a resolver | Zero schema changes, human-readable, parseable, incremental adoption | Not stored as a column — referencing systems store the URI as a string, no DB-level enforcement |
+| Option                            | Pros                                                                 | Cons                                                                                                      |
+| --------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| UUID on every table               | Globally unique, no parsing needed                                   | Opaque (can't tell what it refers to), slower to index, adds a column to every table for a future feature |
+| Global registry table (`objects`) | Single table for universal search                                    | Write amplification, sync issues, significant overhead                                                    |
+| URI convention with a resolver    | Zero schema changes, human-readable, parseable, incremental adoption | Not stored as a column — referencing systems store the URI as a string, no DB-level enforcement           |
 
 ## Decision
 
@@ -27,6 +27,7 @@ pops:{domain}/{type}/{id}
 Examples: `pops:finance/transaction/1234`, `pops:media/movie/42`, `pops:inventory/item/18`
 
 Rules:
+
 - `domain` matches the API module name (finance, media, inventory, core)
 - `type` is singular, kebab-case (transaction, movie, tv-show)
 - `id` is the primary key

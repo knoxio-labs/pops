@@ -7,26 +7,26 @@
  * - AI fallback with full row context
  * - Batch writes to SQLite
  */
-import { eq, and, isNotNull, ne, inArray, notInArray, asc } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { transactions, entities, tagVocabulary, transactionCorrections } from "@pops/db-types";
-import { logger } from "../../../lib/logger.js";
-import { formatImportError } from "../../../lib/errors.js";
-import { matchEntity } from "./lib/entity-matcher.js";
-import { loadEntityMaps } from "./lib/entity-lookup.js";
-import { categorizeWithAi, AiCategorizationError } from "./lib/ai-categorizer.js";
-import { updateProgress } from "./progress-store.js";
+import { eq, and, isNotNull, ne, inArray, notInArray, asc } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { transactions, entities, tagVocabulary, transactionCorrections } from '@pops/db-types';
+import { logger } from '../../../lib/logger.js';
+import { formatImportError } from '../../../lib/errors.js';
+import { matchEntity } from './lib/entity-matcher.js';
+import { loadEntityMaps } from './lib/entity-lookup.js';
+import { categorizeWithAi, AiCategorizationError } from './lib/ai-categorizer.js';
+import { updateProgress } from './progress-store.js';
 import {
   findMatchingCorrection,
   findMatchingCorrectionFromRules,
   listCorrections,
   applyChangeSetToRules,
-} from "../../core/corrections/service.js";
-import type { CorrectionRow, ChangeSet } from "../../core/corrections/types.js";
-import { suggestTags } from "../../../shared/tag-suggester.js";
-import type { TransactionRow } from "../transactions/types.js";
-import { applyChangeSet } from "../../core/corrections/service.js";
-import { ValidationError } from "../../../shared/errors.js";
+} from '../../core/corrections/service.js';
+import type { CorrectionRow, ChangeSet } from '../../core/corrections/types.js';
+import { suggestTags } from '../../../shared/tag-suggester.js';
+import type { TransactionRow } from '../transactions/types.js';
+import { applyChangeSet } from '../../core/corrections/service.js';
+import { ValidationError } from '../../../shared/errors.js';
 import type {
   ParsedTransaction,
   ProcessedTransaction,
@@ -41,7 +41,7 @@ import type {
   CommitPayload,
   CommitResult,
   FailedTransactionDetail,
-} from "./types.js";
+} from './types.js';
 
 export function reevaluateImportSessionResult(args: {
   result: ProcessImportOutput;
@@ -58,9 +58,9 @@ export function reevaluateImportSessionResult(args: {
 
   let affectedCount = 0;
 
-  const remaining: Array<{ tx: ProcessedTransaction; bucket: "uncertain" | "failed" }> = [
-    ...result.uncertain.map((tx) => ({ tx, bucket: "uncertain" as const })),
-    ...result.failed.map((tx) => ({ tx, bucket: "failed" as const })),
+  const remaining: Array<{ tx: ProcessedTransaction; bucket: 'uncertain' | 'failed' }> = [
+    ...result.uncertain.map((tx) => ({ tx, bucket: 'uncertain' as const })),
+    ...result.failed.map((tx) => ({ tx, bucket: 'failed' as const })),
   ];
 
   for (let i = 0; i < remaining.length; i++) {
@@ -93,7 +93,7 @@ export function reevaluateImportSessionResult(args: {
 
       if (changed) affectedCount += 1;
 
-      if (nextBucket === "matched") nextMatched.push(nextTx);
+      if (nextBucket === 'matched') nextMatched.push(nextTx);
       else nextUncertain.push(nextTx);
       continue;
     }
@@ -105,7 +105,7 @@ export function reevaluateImportSessionResult(args: {
       const entityEntry = entityLookup.get(match.entityName.toLowerCase());
       if (!entityEntry) {
         // If lookup is inconsistent, fall back to leaving it as-is rather than crashing the session.
-        if (prevBucket === "failed") nextFailed.push(prevTx);
+        if (prevBucket === 'failed') nextFailed.push(prevTx);
         else nextUncertain.push(prevTx);
         continue;
       }
@@ -117,7 +117,7 @@ export function reevaluateImportSessionResult(args: {
           entityName: entityEntry.name,
           matchType: match.matchType,
         },
-        status: "matched",
+        status: 'matched',
         error: undefined,
         suggestedTags: buildSuggestedTags(prevTx.description, entityEntry.id, [], null, knownTags),
       };
@@ -135,7 +135,7 @@ export function reevaluateImportSessionResult(args: {
     }
 
     // No deterministic match found: preserve current item as-is.
-    if (prevBucket === "failed") nextFailed.push(prevTx);
+    if (prevBucket === 'failed') nextFailed.push(prevTx);
     else nextUncertain.push(prevTx);
   }
 
@@ -155,7 +155,7 @@ function parseCorrectionTags(raw: string): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
-      return parsed.filter((t): t is string => typeof t === "string");
+      return parsed.filter((t): t is string => typeof t === 'string');
     }
     return [];
   } catch {
@@ -184,7 +184,7 @@ function loadKnownTags(): string[] {
   const rows = db
     .select({ tags: transactions.tags })
     .from(transactions)
-    .where(and(isNotNull(transactions.tags), ne(transactions.tags, "[]")))
+    .where(and(isNotNull(transactions.tags), ne(transactions.tags, '[]')))
     .all();
 
   const seen = new Set<string>();
@@ -203,7 +203,7 @@ function loadKnownTags(): string[] {
       const parsed = JSON.parse(row.tags) as unknown;
       if (Array.isArray(parsed)) {
         for (const t of parsed) {
-          if (typeof t === "string") seen.add(t);
+          if (typeof t === 'string') seen.add(t);
         }
       }
     } catch {
@@ -239,7 +239,7 @@ export function applyLearnedCorrection(args: {
   total: number;
   /** When provided, matches against this rule set instead of reading from DB. */
   rules?: CorrectionRow[];
-}): { processed: ProcessedTransaction; bucket: "matched" | "uncertain" } | null {
+}): { processed: ProcessedTransaction; bucket: 'matched' | 'uncertain' } | null {
   const { transaction, minConfidence, knownTags, index, total, rules } = args;
 
   const correctionResult = rules
@@ -261,7 +261,7 @@ export function applyLearnedCorrection(args: {
           transactionType: correction.transactionType,
           confidence: correction.confidence,
         },
-        "[Import] Applied learned type-only correction"
+        '[Import] Applied learned type-only correction'
       );
 
       return {
@@ -270,17 +270,17 @@ export function applyLearnedCorrection(args: {
           location: correction.location ?? transaction.location,
           transactionType: correction.transactionType,
           entity: {
-            matchType: "learned",
+            matchType: 'learned',
             confidence: correction.confidence,
           },
           ruleProvenance: {
-            source: "correction",
+            source: 'correction',
             ruleId: correction.id,
             pattern: correction.descriptionPattern,
             matchType: correction.matchType,
             confidence: correction.confidence,
           },
-          status: "matched",
+          status: 'matched',
           suggestedTags: buildSuggestedTags(
             transaction.description,
             null,
@@ -290,7 +290,7 @@ export function applyLearnedCorrection(args: {
             correction.descriptionPattern
           ),
         },
-        bucket: "matched",
+        bucket: 'matched',
       };
     }
 
@@ -302,7 +302,7 @@ export function applyLearnedCorrection(args: {
         confidence: correction.confidence,
         status,
       },
-      "[Import] Learned correction matched but has no entityId; falling through"
+      '[Import] Learned correction matched but has no entityId; falling through'
     );
     return null;
   }
@@ -316,7 +316,7 @@ export function applyLearnedCorrection(args: {
       confidence: correction.confidence,
       status,
     },
-    "[Import] Applied learned correction"
+    '[Import] Applied learned correction'
   );
 
   return {
@@ -325,12 +325,12 @@ export function applyLearnedCorrection(args: {
       location: correction.location ?? transaction.location,
       entity: {
         entityId,
-        entityName: correction.entityName ?? "Unknown",
-        matchType: "learned",
+        entityName: correction.entityName ?? 'Unknown',
+        matchType: 'learned',
         confidence: correction.confidence,
       },
       ruleProvenance: {
-        source: "correction",
+        source: 'correction',
         ruleId: correction.id,
         pattern: correction.descriptionPattern,
         matchType: correction.matchType,
@@ -346,7 +346,7 @@ export function applyLearnedCorrection(args: {
         correction.descriptionPattern
       ),
     },
-    bucket: status === "matched" ? "matched" : "uncertain",
+    bucket: status === 'matched' ? 'matched' : 'uncertain',
   };
 }
 
@@ -378,9 +378,9 @@ export function reevaluateImportSessionWithRules(args: {
 
   let affectedCount = 0;
 
-  const remaining: Array<{ tx: ProcessedTransaction; bucket: "uncertain" | "failed" }> = [
-    ...result.uncertain.map((tx) => ({ tx, bucket: "uncertain" as const })),
-    ...result.failed.map((tx) => ({ tx, bucket: "failed" as const })),
+  const remaining: Array<{ tx: ProcessedTransaction; bucket: 'uncertain' | 'failed' }> = [
+    ...result.uncertain.map((tx) => ({ tx, bucket: 'uncertain' as const })),
+    ...result.failed.map((tx) => ({ tx, bucket: 'failed' as const })),
   ];
 
   for (let i = 0; i < remaining.length; i++) {
@@ -414,7 +414,7 @@ export function reevaluateImportSessionWithRules(args: {
 
       if (changed) affectedCount += 1;
 
-      if (nextBucket === "matched") nextMatched.push(nextTx);
+      if (nextBucket === 'matched') nextMatched.push(nextTx);
       else nextUncertain.push(nextTx);
       continue;
     }
@@ -424,7 +424,7 @@ export function reevaluateImportSessionWithRules(args: {
     if (match) {
       const entityEntry = entityLookup.get(match.entityName.toLowerCase());
       if (!entityEntry) {
-        if (prevBucket === "failed") nextFailed.push(prevTx);
+        if (prevBucket === 'failed') nextFailed.push(prevTx);
         else nextUncertain.push(prevTx);
         continue;
       }
@@ -436,7 +436,7 @@ export function reevaluateImportSessionWithRules(args: {
           entityName: entityEntry.name,
           matchType: match.matchType,
         },
-        status: "matched",
+        status: 'matched',
         error: undefined,
         suggestedTags: buildSuggestedTags(prevTx.description, entityEntry.id, [], null, knownTags),
       };
@@ -448,7 +448,7 @@ export function reevaluateImportSessionWithRules(args: {
     }
 
     // No deterministic match found: preserve current item as-is.
-    if (prevBucket === "failed") nextFailed.push(prevTx);
+    if (prevBucket === 'failed') nextFailed.push(prevTx);
     else nextUncertain.push(prevTx);
   }
 
@@ -517,7 +517,7 @@ function insertTransaction(input: {
       account: input.account,
       amount: input.amount,
       date: input.date,
-      type: input.type || "",
+      type: input.type || '',
       tags: JSON.stringify(input.tags),
       entityId: input.entityId,
       entityName: input.entityName,
@@ -551,14 +551,14 @@ async function processImportCore(args: {
 
   logger.info(
     { importBatchId, account, totalCount: transactions.length },
-    "[Import] Starting processImport"
+    '[Import] Starting processImport'
   );
 
   // Step 1: Checksum-based deduplication against SQLite
-  onProgress?.({ currentStep: "deduplicating", processedCount: 0 });
+  onProgress?.({ currentStep: 'deduplicating', processedCount: 0 });
   logger.info(
     { checksumCount: transactions.length },
-    "[Import] Querying SQLite for existing checksums"
+    '[Import] Querying SQLite for existing checksums'
   );
   const checksums = transactions.map((t) => t.checksum);
   const existingChecksums = findExistingChecksums(checksums);
@@ -568,14 +568,14 @@ async function processImportCore(args: {
       duplicateCount: existingChecksums.size,
       newCount: transactions.length - existingChecksums.size,
     },
-    "[Import] Deduplication complete"
+    '[Import] Deduplication complete'
   );
 
   const newTransactions = transactions.filter((t) => !existingChecksums.has(t.checksum));
   const duplicates = transactions.filter((t) => existingChecksums.has(t.checksum));
 
   // Step 2: Load entity lookup, aliases, and known tags (once per batch)
-  onProgress?.({ currentStep: "matching", processedCount: 0 });
+  onProgress?.({ currentStep: 'matching', processedCount: 0 });
   const { entityLookup, aliasMap: aliases } = loadEntityMaps();
   const knownTags = loadKnownTags();
 
@@ -585,9 +585,9 @@ async function processImportCore(args: {
   const failed: ProcessedTransaction[] = [];
   const skipped: ProcessedTransaction[] = duplicates.map((t) => ({
     ...t,
-    entity: { matchType: "none" as const },
-    status: "skipped" as const,
-    skipReason: "Duplicate transaction (checksum match)",
+    entity: { matchType: 'none' as const },
+    status: 'skipped' as const,
+    skipReason: 'Duplicate transaction (checksum match)',
   }));
 
   // Track AI categorization issues and usage
@@ -601,7 +601,7 @@ async function processImportCore(args: {
 
   const currentBatch: Array<{
     description: string;
-    status: "processing" | "success" | "failed";
+    status: 'processing' | 'success' | 'failed';
     error?: string;
   }> = [];
   const errors: Array<{ description: string; error: string }> = [];
@@ -612,11 +612,11 @@ async function processImportCore(args: {
 
     const batchItem: {
       description: string;
-      status: "processing" | "success" | "failed";
+      status: 'processing' | 'success' | 'failed';
       error?: string;
     } = {
       description: transaction.description.substring(0, 50),
-      status: "processing",
+      status: 'processing',
     };
 
     if (onProgress) {
@@ -637,10 +637,10 @@ async function processImportCore(args: {
       });
 
       if (correctionApplied) {
-        if (correctionApplied.bucket === "matched") matched.push(correctionApplied.processed);
+        if (correctionApplied.bucket === 'matched') matched.push(correctionApplied.processed);
         else uncertain.push(correctionApplied.processed);
 
-        batchItem.status = "success";
+        batchItem.status = 'success';
         continue;
       }
 
@@ -656,7 +656,7 @@ async function processImportCore(args: {
             entityName: match.entityName,
             matchType: match.matchType,
           },
-          "[Import] Entity matched"
+          '[Import] Entity matched'
         );
 
         const entityEntry = entityLookup.get(match.entityName.toLowerCase());
@@ -671,7 +671,7 @@ async function processImportCore(args: {
             entityName: entityEntry.name,
             matchType: match.matchType,
           },
-          status: "matched",
+          status: 'matched',
           suggestedTags: buildSuggestedTags(
             transaction.description,
             entityEntry.id,
@@ -681,7 +681,7 @@ async function processImportCore(args: {
           ),
         });
 
-        batchItem.status = "success";
+        batchItem.status = 'success';
       } else {
         // No match - try AI categorization
         let aiResult = null;
@@ -716,9 +716,9 @@ async function processImportCore(args: {
               entity: {
                 entityId: entityEntry.id,
                 entityName: entityEntry.name,
-                matchType: "ai",
+                matchType: 'ai',
               },
-              status: "matched",
+              status: 'matched',
               suggestedTags: buildSuggestedTags(
                 transaction.description,
                 entityEntry.id,
@@ -728,16 +728,16 @@ async function processImportCore(args: {
               ),
             });
 
-            batchItem.status = "success";
+            batchItem.status = 'success';
           } else {
             uncertain.push({
               ...transaction,
               entity: {
                 entityName: aiResult.entityName,
-                matchType: "ai",
+                matchType: 'ai',
                 confidence: 0.7,
               },
-              status: "uncertain",
+              status: 'uncertain',
               suggestedTags: buildSuggestedTags(
                 transaction.description,
                 null,
@@ -747,31 +747,31 @@ async function processImportCore(args: {
               ),
             });
 
-            batchItem.status = "success";
+            batchItem.status = 'success';
           }
         } else {
-          const reason = aiError ? "AI categorization unavailable" : "No entity match found";
+          const reason = aiError ? 'AI categorization unavailable' : 'No entity match found';
           uncertain.push({
             ...transaction,
-            entity: { matchType: "none" },
-            status: "uncertain",
+            entity: { matchType: 'none' },
+            status: 'uncertain',
             error: reason,
             suggestedTags: buildSuggestedTags(transaction.description, null, [], null, knownTags),
           });
 
-          batchItem.status = "success";
+          batchItem.status = 'success';
         }
       }
     } catch (error) {
       failed.push({
         ...transaction,
-        entity: { matchType: "none" },
-        status: "failed",
-        error: error instanceof Error ? error.message : "Unknown error",
+        entity: { matchType: 'none' },
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      batchItem.status = "failed";
-      batchItem.error = error instanceof Error ? error.message : "Unknown error";
+      batchItem.status = 'failed';
+      batchItem.error = error instanceof Error ? error.message : 'Unknown error';
 
       if (onProgress) {
         const formattedError = formatImportError(error, { transaction: transaction.description });
@@ -779,7 +779,7 @@ async function processImportCore(args: {
           description: transaction.description.substring(0, 50),
           error:
             formattedError.message +
-            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
+            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ''),
         });
       }
     } finally {
@@ -792,7 +792,7 @@ async function processImportCore(args: {
   if (aiError && aiFailureCount > 0) {
     warnings.push({
       type:
-        aiError.code === "INSUFFICIENT_CREDITS" ? "AI_CATEGORIZATION_UNAVAILABLE" : "AI_API_ERROR",
+        aiError.code === 'INSUFFICIENT_CREDITS' ? 'AI_CATEGORIZATION_UNAVAILABLE' : 'AI_API_ERROR',
       message: aiError.message,
       affectedCount: aiFailureCount,
     });
@@ -822,7 +822,7 @@ async function processImportCore(args: {
       aiCacheHits,
       totalCostUsd: totalCostUsd.toFixed(6),
     },
-    "[Import] processImport complete"
+    '[Import] processImport complete'
   );
 
   return {
@@ -867,7 +867,7 @@ function executeImportCore(args: {
 
   const currentBatch: Array<{
     description: string;
-    status: "processing" | "success" | "failed";
+    status: 'processing' | 'success' | 'failed';
     error?: string;
   }> = [];
   const errors: Array<{ description: string; error: string }> = [];
@@ -878,11 +878,11 @@ function executeImportCore(args: {
 
     const batchItem: {
       description: string;
-      status: "processing" | "success" | "failed";
+      status: 'processing' | 'success' | 'failed';
       error?: string;
     } = {
       description: transaction.description.substring(0, 50),
-      status: "processing",
+      status: 'processing',
     };
 
     if (onProgress) {
@@ -893,11 +893,11 @@ function executeImportCore(args: {
 
     try {
       const type =
-        transaction.transactionType === "transfer"
-          ? "Transfer"
-          : transaction.transactionType === "income"
-            ? "Income"
-            : "Expense";
+        transaction.transactionType === 'transfer'
+          ? 'Transfer'
+          : transaction.transactionType === 'income'
+            ? 'Income'
+            : 'Expense';
 
       const row = insertTransaction({
         description: transaction.description,
@@ -920,12 +920,12 @@ function executeImportCore(args: {
           description: transaction.description.substring(0, 50),
           id: row.id,
         },
-        "[Import] Transaction written"
+        '[Import] Transaction written'
       );
 
       results.push({ transaction, success: true, pageId: row.id });
       imported++;
-      batchItem.status = "success";
+      batchItem.status = 'success';
     } catch (error) {
       logger.error(
         {
@@ -934,12 +934,12 @@ function executeImportCore(args: {
           description: transaction.description.substring(0, 50),
           error: error instanceof Error ? error.message : String(error),
         },
-        "[Import] Transaction write failed"
+        '[Import] Transaction write failed'
       );
 
-      const message = error instanceof Error ? error.message : "Unknown error";
+      const message = error instanceof Error ? error.message : 'Unknown error';
       results.push({ transaction, success: false, error: message });
-      batchItem.status = "failed";
+      batchItem.status = 'failed';
       batchItem.error = message;
 
       if (onProgress) {
@@ -948,7 +948,7 @@ function executeImportCore(args: {
           description: transaction.description.substring(0, 50),
           error:
             formattedError.message +
-            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
+            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ''),
         });
       }
     } finally {
@@ -966,11 +966,11 @@ function executeImportCore(args: {
 
 /** Execute import: write confirmed transactions to SQLite. */
 export function executeImport(transactions: ConfirmedTransaction[]): ExecuteImportOutput {
-  logger.info({ totalCount: transactions.length }, "[Import] Starting executeImport");
+  logger.info({ totalCount: transactions.length }, '[Import] Starting executeImport');
   const { output } = executeImportCore({ transactions });
   logger.info(
     { imported: output.imported, failedCount: output.failed.length, skipped: output.skipped },
-    "[Import] executeImport complete"
+    '[Import] executeImport complete'
   );
   return output;
 }
@@ -1008,7 +1008,7 @@ export async function processImportWithProgress(
 
     logger.info(
       { importBatchId, sessionId, account, totalCount: transactions.length },
-      "[Import] Starting background processImport"
+      '[Import] Starting background processImport'
     );
 
     const {
@@ -1034,11 +1034,11 @@ export async function processImportWithProgress(
         aiCacheHits: result.aiUsage?.cacheHits ?? 0,
         totalCostUsd: (result.aiUsage?.totalCostUsd ?? 0).toFixed(6),
       },
-      "[Import] Background processImport complete"
+      '[Import] Background processImport complete'
     );
 
     updateProgress(sessionId, {
-      status: "completed",
+      status: 'completed',
       processedCount: processedNewCount, // Set final count to total new
       result,
       errors,
@@ -1046,18 +1046,18 @@ export async function processImportWithProgress(
   } catch (error) {
     logger.error(
       { sessionId, error: error instanceof Error ? error.message : String(error) },
-      "[Import] Background processing failed"
+      '[Import] Background processing failed'
     );
 
     const formattedError = formatImportError(error);
     updateProgress(sessionId, {
-      status: "failed",
+      status: 'failed',
       errors: [
         {
-          description: "System",
+          description: 'System',
           error:
             formattedError.message +
-            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
+            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ''),
         },
       ],
     });
@@ -1075,11 +1075,11 @@ export function executeImportWithProgress(
   try {
     logger.info(
       { sessionId, totalCount: transactions.length },
-      "[Import] Starting background executeImport"
+      '[Import] Starting background executeImport'
     );
 
     updateProgress(sessionId, {
-      currentStep: "writing",
+      currentStep: 'writing',
       totalTransactions: transactions.length,
       processedCount: 0,
       currentBatch: [],
@@ -1101,11 +1101,11 @@ export function executeImportWithProgress(
         failedCount: result.failed.length,
         skipped: result.skipped,
       },
-      "[Import] Background executeImport complete"
+      '[Import] Background executeImport complete'
     );
 
     updateProgress(sessionId, {
-      status: "completed",
+      status: 'completed',
       processedCount, // Set final count to total
       result,
       errors,
@@ -1113,18 +1113,18 @@ export function executeImportWithProgress(
   } catch (error) {
     logger.error(
       { sessionId, error: error instanceof Error ? error.message : String(error) },
-      "[Import] Background execution failed"
+      '[Import] Background execution failed'
     );
 
     const formattedError = formatImportError(error);
     updateProgress(sessionId, {
-      status: "failed",
+      status: 'failed',
       errors: [
         {
-          description: "System",
+          description: 'System',
           error:
             formattedError.message +
-            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ""),
+            (formattedError.suggestion ? ` - ${formattedError.suggestion}` : ''),
         },
       ],
     });
@@ -1135,7 +1135,7 @@ export function executeImportWithProgress(
 // Commit import (PRD-031 US-03) — atomic write of entities + rules + transactions
 // ---------------------------------------------------------------------------
 
-const TEMP_ENTITY_PREFIX = "temp:entity:";
+const TEMP_ENTITY_PREFIX = 'temp:entity:';
 
 /**
  * Validate a commit payload before executing the transaction.
@@ -1147,7 +1147,7 @@ function validateCommitPayload(payload: CommitPayload): void {
 
   // Check for duplicate temp IDs
   if (tempIds.size !== payload.entities.length) {
-    throw new ValidationError("Duplicate temp IDs in entities array");
+    throw new ValidationError('Duplicate temp IDs in entities array');
   }
 
   // Check for duplicate entity names (case-insensitive)
@@ -1165,10 +1165,10 @@ function validateCommitPayload(payload: CommitPayload): void {
 
   for (const cs of payload.changeSets) {
     for (const op of cs.ops) {
-      if (op.op === "add" && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
+      if (op.op === 'add' && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
         referencedTempIds.add(op.data.entityId);
       }
-      if (op.op === "edit" && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
+      if (op.op === 'edit' && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
         referencedTempIds.add(op.data.entityId);
       }
     }
@@ -1192,17 +1192,17 @@ function validateCommitPayload(payload: CommitPayload): void {
  * Replace temp entity IDs with real DB IDs in a ChangeSet's ops (returns a new ChangeSet).
  */
 function resolveChangeSetTempIds(
-  cs: CommitPayload["changeSets"][number],
+  cs: CommitPayload['changeSets'][number],
   tempIdMap: Map<string, string>
-): CommitPayload["changeSets"][number] {
+): CommitPayload['changeSets'][number] {
   return {
     ...cs,
     ops: cs.ops.map((op) => {
-      if (op.op === "add" && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
+      if (op.op === 'add' && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
         const realId = tempIdMap.get(op.data.entityId);
         return { ...op, data: { ...op.data, entityId: realId ?? op.data.entityId } };
       }
-      if (op.op === "edit" && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
+      if (op.op === 'edit' && op.data.entityId?.startsWith(TEMP_ENTITY_PREFIX)) {
         const realId = tempIdMap.get(op.data.entityId);
         return { ...op, data: { ...op.data, entityId: realId ?? op.data.entityId } };
       }
@@ -1232,7 +1232,7 @@ export function commitImport(payload: CommitPayload): CommitResult {
       entitiesCreated++;
 
       // Update entity type if not default
-      if (pending.type !== "company") {
+      if (pending.type !== 'company') {
         db.update(entities).set({ type: pending.type }).where(eq(entities.id, entityId)).run();
       }
     }
@@ -1262,11 +1262,11 @@ export function commitImport(payload: CommitPayload): CommitResult {
 
       try {
         const type =
-          txn.transactionType === "transfer"
-            ? "Transfer"
-            : txn.transactionType === "income"
-              ? "Income"
-              : "Expense";
+          txn.transactionType === 'transfer'
+            ? 'Transfer'
+            : txn.transactionType === 'income'
+              ? 'Income'
+              : 'Expense';
 
         insertTransaction({
           description: txn.description,
@@ -1290,7 +1290,7 @@ export function commitImport(payload: CommitPayload): CommitResult {
             description: txn.description.substring(0, 50),
             error: errorMessage,
           },
-          "[CommitImport] Transaction write failed"
+          '[CommitImport] Transaction write failed'
         );
         transactionsFailed++;
         failedDetails.push({
@@ -1374,11 +1374,11 @@ function reclassifyExistingTransactions(
       const rule = match.correction;
       const newEntityId = rule.entityId ?? null;
       const newType = rule.transactionType
-        ? rule.transactionType === "transfer"
-          ? "Transfer"
-          : rule.transactionType === "income"
-            ? "Income"
-            : "Expense"
+        ? rule.transactionType === 'transfer'
+          ? 'Transfer'
+          : rule.transactionType === 'income'
+            ? 'Income'
+            : 'Expense'
         : null;
       const newLocation = rule.location ?? null;
 

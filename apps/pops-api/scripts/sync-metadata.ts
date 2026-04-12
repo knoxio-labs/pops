@@ -5,29 +5,29 @@
  *
  * Run with: tsx scripts/sync-metadata.ts
  */
-import "dotenv/config";
-import { getDb } from "../src/db.js";
-import { getTmdbClient, ImageCacheService } from "../src/modules/media/tmdb/index.js";
-import { TokenBucketRateLimiter } from "../src/modules/media/tmdb/rate-limiter.js";
-import { getTvdbClient } from "../src/modules/media/thetvdb/index.js";
-import { selectBestArtwork } from "../src/modules/media/library/tv-show-service.js";
+import 'dotenv/config';
+import { getDb } from '../src/db.js';
+import { getTmdbClient, ImageCacheService } from '../src/modules/media/tmdb/index.js';
+import { TokenBucketRateLimiter } from '../src/modules/media/tmdb/rate-limiter.js';
+import { getTvdbClient } from '../src/modules/media/thetvdb/index.js';
+import { selectBestArtwork } from '../src/modules/media/library/tv-show-service.js';
 
 async function main() {
   const db = getDb();
   const tmdbClient = getTmdbClient();
   const tvdbClient = getTvdbClient();
 
-  const imagesDir = process.env.MEDIA_IMAGES_DIR ?? "./data/media/images";
+  const imagesDir = process.env.MEDIA_IMAGES_DIR ?? './data/media/images';
   const rateLimiter = new TokenBucketRateLimiter(40, 4);
   const cacheService = new ImageCacheService(imagesDir, rateLimiter);
 
   if (!tmdbClient) {
-    console.error("❌ TMDB_API_KEY not set in environment");
+    console.error('❌ TMDB_API_KEY not set in environment');
     process.exit(1);
   }
 
   if (!tvdbClient) {
-    console.error("❌ THETVDB_API_KEY not set in environment");
+    console.error('❌ THETVDB_API_KEY not set in environment');
     process.exit(1);
   }
 
@@ -35,7 +35,7 @@ async function main() {
   console.log(`📂 Cache directory: ${imagesDir}`);
 
   // 1. Sync Movies
-  const movies = db.prepare("SELECT id, tmdb_id, title FROM movies").all() as any[];
+  const movies = db.prepare('SELECT id, tmdb_id, title FROM movies').all() as any[];
   console.log(`\n🎬 Syncing ${movies.length} movies...`);
 
   for (const movie of movies) {
@@ -74,15 +74,15 @@ async function main() {
         null
       );
 
-      console.log("✅");
+      console.log('✅');
     } catch (err) {
-      console.log("❌");
+      console.log('❌');
       console.error(`    Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   // 2. Sync TV Shows
-  const shows = db.prepare("SELECT id, tvdb_id, name FROM tv_shows").all() as any[];
+  const shows = db.prepare('SELECT id, tvdb_id, name FROM tv_shows').all() as any[];
   console.log(`\n📺 Syncing ${shows.length} TV shows...`);
 
   for (const show of shows) {
@@ -119,18 +119,18 @@ async function main() {
       // Download images
       await cacheService.downloadTvShowImages(show.tvdb_id, posterUrl, backdropUrl);
 
-      console.log("✅");
+      console.log('✅');
     } catch (err) {
-      console.log("❌");
+      console.log('❌');
       console.error(`    Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  console.log("\n✨ Sync complete!\n");
+  console.log('\n✨ Sync complete!\n');
   db.close();
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  console.error('Fatal error:', err);
   process.exit(1);
 });

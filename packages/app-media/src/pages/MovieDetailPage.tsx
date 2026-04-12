@@ -1,6 +1,6 @@
-import { useMemo } from "react";
-import { useParams, Link } from "react-router";
-import { useSetPageContext } from "@pops/navigation";
+import { useMemo } from 'react';
+import { useParams, Link } from 'react-router';
+import { useSetPageContext } from '@pops/navigation';
 import {
   Alert,
   AlertTitle,
@@ -13,17 +13,17 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbPage,
-} from "@pops/ui";
-import { trpc } from "../lib/trpc";
-import { formatCurrency, formatLanguage, formatRuntime } from "../lib/format";
-import { Button } from "@pops/ui";
-import { WatchlistToggle } from "../components/WatchlistToggle";
-import { ComparisonScores } from "../components/ComparisonScores";
-import { MarkAsWatchedButton } from "../components/MarkAsWatchedButton";
-import { ArrStatusBadge } from "../components/ArrStatusBadge";
-import { RequestMovieButton } from "../components/RequestMovieButton";
-import { FreshnessBadge } from "../components/FreshnessBadge";
-import { ExcludedDimensions } from "../components/ExcludedDimensions";
+} from '@pops/ui';
+import { trpc } from '../lib/trpc';
+import { formatCurrency, formatLanguage, formatRuntime } from '../lib/format';
+import { Button } from '@pops/ui';
+import { WatchlistToggle } from '../components/WatchlistToggle';
+import { ComparisonScores } from '../components/ComparisonScores';
+import { MarkAsWatchedButton } from '../components/MarkAsWatchedButton';
+import { ArrStatusBadge } from '../components/ArrStatusBadge';
+import { RequestMovieButton } from '../components/RequestMovieButton';
+import { FreshnessBadge } from '../components/FreshnessBadge';
+import { ExcludedDimensions } from '../components/ExcludedDimensions';
 
 function MovieDetailSkeleton() {
   return (
@@ -61,12 +61,12 @@ export function MovieDetailPage() {
   );
 
   const { data: watchHistoryData } = trpc.media.watchHistory.list.useQuery(
-    { mediaType: "movie", mediaId: movieId },
+    { mediaType: 'movie', mediaId: movieId },
     { enabled: !Number.isNaN(movieId) }
   );
 
   const { data: stalenessData } = trpc.media.comparisons.getStaleness.useQuery(
-    { mediaType: "movie", mediaId: movieId },
+    { mediaType: 'movie', mediaId: movieId },
     { enabled: !Number.isNaN(movieId) }
   );
 
@@ -78,12 +78,12 @@ export function MovieDetailPage() {
   const movieEntity = useMemo(
     () => ({
       uri: `pops:media/movie/${movieId}`,
-      type: "movie" as const,
-      title: data?.data?.title ?? "",
+      type: 'movie' as const,
+      title: data?.data?.title ?? '',
     }),
     [movieId, data?.data?.title]
   );
-  useSetPageContext({ page: "movie-detail", pageType: "drill-down", entity: movieEntity });
+  useSetPageContext({ page: 'movie-detail', pageType: 'drill-down', entity: movieEntity });
 
   if (Number.isNaN(movieId)) {
     return (
@@ -101,11 +101,11 @@ export function MovieDetailPage() {
   }
 
   if (error) {
-    const is404 = error.data?.code === "NOT_FOUND";
+    const is404 = error.data?.code === 'NOT_FOUND';
     return (
       <div className="p-6">
         <Alert variant="destructive">
-          <AlertTitle>{is404 ? "Movie not found" : "Error"}</AlertTitle>
+          <AlertTitle>{is404 ? 'Movie not found' : 'Error'}</AlertTitle>
           <AlertDescription>
             {is404 ? "This movie doesn't exist in your library." : error.message}
           </AlertDescription>
@@ -142,31 +142,31 @@ export function MovieDetailPage() {
 
   const pendingDebrief = (pendingDebriefData?.data ?? []).find(
     (d: { movieId: number; status: string }) =>
-      d.movieId === movie.id && (d.status === "pending" || d.status === "active")
+      d.movieId === movie.id && (d.status === 'pending' || d.status === 'active')
   );
 
   const metadataItems = [
-    { label: "Status", value: movie.status },
+    { label: 'Status', value: movie.status },
     {
-      label: "Language",
+      label: 'Language',
       value: movie.originalLanguage ? formatLanguage(movie.originalLanguage) : null,
     },
     {
-      label: "Budget",
+      label: 'Budget',
       value: movie.budget ? formatCurrency(movie.budget) : null,
     },
     {
-      label: "Revenue",
+      label: 'Revenue',
       value: movie.revenue ? formatCurrency(movie.revenue) : null,
     },
     {
-      label: "TMDB Rating",
+      label: 'TMDB Rating',
       value: movie.voteAverage
         ? `${movie.voteAverage.toFixed(1)} (${movie.voteCount} votes)`
         : null,
     },
     {
-      label: "Runtime",
+      label: 'Runtime',
       value: movie.runtime ? formatRuntime(movie.runtime) : null,
     },
   ].filter((item) => item.value != null);
@@ -312,10 +312,10 @@ export function MovieDetailPage() {
                 .sort((a, b) => new Date(a.watchedAt).getTime() - new Date(b.watchedAt).getTime())
                 .map((entry) => (
                   <li key={entry.id} className="text-sm text-muted-foreground">
-                    {new Date(entry.watchedAt).toLocaleDateString("en-AU", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
+                    {new Date(entry.watchedAt).toLocaleDateString('en-AU', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
                     })}
                   </li>
                 ))}

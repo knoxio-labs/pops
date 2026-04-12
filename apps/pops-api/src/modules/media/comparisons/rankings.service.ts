@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
-import { comparisonDimensions } from "@pops/db-types";
-import { getDb, getDrizzle } from "../../../db.js";
-import { calculateConfidence, calculateOverallConfidence, type RankedMediaEntry } from "./types.js";
+import { eq } from 'drizzle-orm';
+import { comparisonDimensions } from '@pops/db-types';
+import { getDb, getDrizzle } from '../../../db.js';
+import { calculateConfidence, calculateOverallConfidence, type RankedMediaEntry } from './types.js';
 
 export interface RankingsResult {
   rows: RankedMediaEntry[];
@@ -18,7 +18,7 @@ export function resolvePosterUrl(row: {
   tvTvdbId: number | null;
   tvPosterOverride: string | null;
 }): string | null {
-  if (row.mediaType === "movie") {
+  if (row.mediaType === 'movie') {
     if (row.moviePosterOverride) return row.moviePosterOverride;
     if (row.moviePosterPath && row.movieTmdbId)
       return `/media/images/movie/${row.movieTmdbId}/poster.jpg`;
@@ -39,7 +39,7 @@ export function getRankings(
 
   if (dimensionId) {
     // Per-dimension ranking — JOIN movies/tv_shows for title tie-breaking
-    const mediaTypeClause = mediaType ? "AND ms.media_type = ?" : "";
+    const mediaTypeClause = mediaType ? 'AND ms.media_type = ?' : '';
     const params: unknown[] = [dimensionId];
     if (mediaType) params.push(mediaType);
 
@@ -122,10 +122,10 @@ export function getRankings(
     return { rows: [], total: 0 };
   }
 
-  const dimensionPlaceholders = activeDimensionIds.map(() => "?").join(",");
+  const dimensionPlaceholders = activeDimensionIds.map(() => '?').join(',');
   const baseParams: unknown[] = [...activeDimensionIds];
 
-  const mediaTypeClause = mediaType ? "AND ms.media_type = ?" : "";
+  const mediaTypeClause = mediaType ? 'AND ms.media_type = ?' : '';
   const filterParams: unknown[] = mediaType ? [...baseParams, mediaType] : [...baseParams];
 
   const countResult = rawDb
@@ -191,7 +191,7 @@ export function getRankings(
 
   return {
     rows: rows.map((row, i) => {
-      const counts = row.perDimCounts.split(",").map(Number);
+      const counts = row.perDimCounts.split(',').map(Number);
       return {
         rank: offset + i + 1,
         mediaType: row.mediaType,

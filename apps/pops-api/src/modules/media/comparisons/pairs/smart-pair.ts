@@ -1,11 +1,11 @@
-import { eq } from "drizzle-orm";
-import { getDb, getDrizzle } from "../../../../db.js";
-import { mediaWatchlist } from "@pops/db-types";
-import { calculateConfidence } from "../types.js";
-import type { RandomPair, SmartPairResult } from "../types.js";
-import { getStaleness } from "../staleness.js";
-import { getDimension } from "../dimensions.service.js";
-import { getGlobalComparisonCount } from "../global-count.js";
+import { eq } from 'drizzle-orm';
+import { getDb, getDrizzle } from '../../../../db.js';
+import { mediaWatchlist } from '@pops/db-types';
+import { calculateConfidence } from '../types.js';
+import type { RandomPair, SmartPairResult } from '../types.js';
+import { getStaleness } from '../staleness.js';
+import { getDimension } from '../dimensions.service.js';
+import { getGlobalComparisonCount } from '../global-count.js';
 
 /** Candidate movie with metadata needed for weighted scoring. */
 interface CandidateMovie {
@@ -168,7 +168,7 @@ export function getSmartPair(dimensionId?: number): SmartPairResult | null {
     db
       .select({ mediaId: mediaWatchlist.mediaId })
       .from(mediaWatchlist)
-      .where(eq(mediaWatchlist.mediaType, "movie"))
+      .where(eq(mediaWatchlist.mediaType, 'movie'))
       .all()
       .map((r) => r.mediaId)
   );
@@ -216,7 +216,7 @@ export function getSmartPair(dimensionId?: number): SmartPairResult | null {
 
   // Get scores for sampled movies in this dimension
   const movieIds = sampled.map((m) => m.mediaId);
-  const placeholders = movieIds.map(() => "?").join(",");
+  const placeholders = movieIds.map(() => '?').join(',');
   const scoreRows = rawDb
     .prepare(
       `SELECT media_id as mediaId, score, comparison_count as comparisonCount
@@ -286,7 +286,7 @@ export function getSmartPair(dimensionId?: number): SmartPairResult | null {
       : 365; // default to a year if unknown
 
     const scoreInfo = scoreMap.get(movieId);
-    const staleness = getStaleness("movie", movieId);
+    const staleness = getStaleness('movie', movieId);
 
     candidates.push({
       id: movieId,

@@ -2,16 +2,16 @@
  * Transaction corrections service
  * Manages learned patterns from user edits — Drizzle ORM
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { eq, gte, desc, asc, count, sql, and } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { isNamedEnvContext } from "../../../db.js";
-import { getEnv } from "../../../env.js";
-import { aiUsage, settings, transactionCorrections, transactions } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
-import { parseJsonStringArray } from "../../../shared/json.js";
-import { logger } from "../../../lib/logger.js";
-import { withRateLimitRetry } from "../../../lib/ai-retry.js";
+import Anthropic from '@anthropic-ai/sdk';
+import { eq, gte, desc, asc, count, sql, and } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { isNamedEnvContext } from '../../../db.js';
+import { getEnv } from '../../../env.js';
+import { aiUsage, settings, transactionCorrections, transactions } from '@pops/db-types';
+import { NotFoundError } from '../../../shared/errors.js';
+import { parseJsonStringArray } from '../../../shared/json.js';
+import { logger } from '../../../lib/logger.js';
+import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import type {
   CorrectionRow,
   CreateCorrectionInput,
@@ -29,15 +29,15 @@ import type {
   ChangeSetImpactItem,
   CorrectionSignal,
   ChangeSetImpactSummary,
-} from "./types.js";
+} from './types.js';
 import {
   normalizeDescription,
   classifyCorrectionMatch,
   ChangeSetSchema,
   ChangeSetImpactSummarySchema,
   toCorrection,
-} from "./types.js";
-import { AdaptedSignalSchema } from "./types.js";
+} from './types.js';
+import { AdaptedSignalSchema } from './types.js';
 
 interface RejectedChangeSetFeedbackRecord {
   createdAt: string;
@@ -48,14 +48,14 @@ interface RejectedChangeSetFeedbackRecord {
 }
 
 function feedbackKey(args: {
-  matchType: "exact" | "contains" | "regex";
+  matchType: 'exact' | 'contains' | 'regex';
   normalizedPattern: string;
 }): string {
   return `corrections.changeSetRejections:${args.matchType}:${args.normalizedPattern}`;
 }
 
 function loadLatestRejectedFeedback(args: {
-  matchType: "exact" | "contains" | "regex";
+  matchType: 'exact' | 'contains' | 'regex';
   normalizedPattern: string;
 }): RejectedChangeSetFeedbackRecord | null {
   const row =
@@ -68,19 +68,19 @@ function loadLatestRejectedFeedback(args: {
 
   try {
     const parsedUnknown = JSON.parse(row.value) as unknown;
-    if (!parsedUnknown || typeof parsedUnknown !== "object") return null;
+    if (!parsedUnknown || typeof parsedUnknown !== 'object') return null;
 
     const parsed = parsedUnknown as Record<string, unknown>;
 
-    const createdAt = parsed["createdAt"];
-    const userEmail = parsed["userEmail"];
-    const feedback = parsed["feedback"];
-    const changeSetUnknown = parsed["changeSet"];
-    const impactSummaryUnknown = parsed["impactSummary"];
+    const createdAt = parsed['createdAt'];
+    const userEmail = parsed['userEmail'];
+    const feedback = parsed['feedback'];
+    const changeSetUnknown = parsed['changeSet'];
+    const impactSummaryUnknown = parsed['impactSummary'];
 
-    if (typeof createdAt !== "string") return null;
-    if (typeof userEmail !== "string") return null;
-    if (typeof feedback !== "string") return null;
+    if (typeof createdAt !== 'string') return null;
+    if (typeof userEmail !== 'string') return null;
+    if (typeof feedback !== 'string') return null;
 
     const changeSetResult = ChangeSetSchema.safeParse(changeSetUnknown);
     if (!changeSetResult.success) return null;
@@ -103,7 +103,7 @@ export function persistRejectedChangeSetFeedback(args: {
   signal: CorrectionSignal;
   changeSet: ChangeSet;
   feedback: string;
-  impactSummary: RejectedChangeSetFeedbackRecord["impactSummary"];
+  impactSummary: RejectedChangeSetFeedbackRecord['impactSummary'];
   userEmail: string;
 }): void {
   const db = getDrizzle();
@@ -142,7 +142,7 @@ export async function interpretRejectionFeedback(
     return originalSignal;
   }
 
-  const apiKey = getEnv("CLAUDE_API_KEY");
+  const apiKey = getEnv('CLAUDE_API_KEY');
   if (!apiKey) {
     return originalSignal;
   }
@@ -156,30 +156,30 @@ export async function interpretRejectionFeedback(
     const response = await withRateLimitRetry(
       () =>
         client.messages.create({
-          model: "claude-haiku-4-5-20251001",
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 250,
           messages: [
             {
-              role: "user",
+              role: 'user',
               content: `You are improving a transaction correction rule proposal.\n\nGiven:\n- originalSignal (the user's intended correction rule)\n- rejectedChangeSet (the proposal that was rejected)\n- feedback (free text)\n\nReturn an adapted signal that better matches the user's feedback.\n\nRules:\n- Reply in JSON only as: {"adaptedSignal": { ... }}\n- adaptedSignal MUST be a full signal object with keys: descriptionPattern, matchType, entityId, entityName, location, tags, transactionType.\n- Keep descriptionPattern semantically the same unless feedback explicitly requests changing it.\n- Prefer changing matchType (exact/contains/regex) when feedback indicates specificity.\n\noriginalSignal: ${JSON.stringify(originalSignal)}\nrejectedChangeSet: ${JSON.stringify(rejectedChangeSet)}\nfeedback: ${JSON.stringify(sanitizedFeedback)}\n`,
             },
           ],
         }),
-      "corrections.rejection.interpret",
-      { logger, logPrefix: "[AI]" }
+      'corrections.rejection.interpret',
+      { logger, logPrefix: '[AI]' }
     );
 
-    const text = response.content[0]?.type === "text" ? response.content[0].text : null;
+    const text = response.content[0]?.type === 'text' ? response.content[0].text : null;
     if (!text) return originalSignal;
 
     const cleanedText = text
       .trim()
-      .replace(/^```(?:json)?\s*\n?/gm, "")
-      .replace(/\n?```\s*$/gm, "");
+      .replace(/^```(?:json)?\s*\n?/gm, '')
+      .replace(/\n?```\s*$/gm, '');
 
     const parsed = JSON.parse(cleanedText) as unknown;
-    if (!parsed || typeof parsed !== "object") return originalSignal;
-    const adaptedUnknown = (parsed as Record<string, unknown>)["adaptedSignal"];
+    if (!parsed || typeof parsed !== 'object') return originalSignal;
+    const adaptedUnknown = (parsed as Record<string, unknown>)['adaptedSignal'];
 
     const adaptedResult = AdaptedSignalSchema.safeParse(adaptedUnknown);
     if (!adaptedResult.success) return originalSignal;
@@ -193,7 +193,7 @@ export async function interpretRejectionFeedback(
       .values({
         description: sanitizedFeedback,
         entityName: null,
-        category: "corrections.rejection_interpretation",
+        category: 'corrections.rejection_interpretation',
         inputTokens,
         outputTokens,
         costUsd,
@@ -207,7 +207,7 @@ export async function interpretRejectionFeedback(
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      "[AI] Rejection feedback interpretation failed"
+      '[AI] Rejection feedback interpretation failed'
     );
     return originalSignal;
   }
@@ -250,25 +250,25 @@ export async function reviseChangeSet(args: {
     // can still exercise the endpoint shape.
     return {
       changeSet: args.currentChangeSet,
-      rationale: "Named env context — AI revision skipped",
+      rationale: 'Named env context — AI revision skipped',
       targetRules: buildTargetRulesMap(args.currentChangeSet, rulesBefore),
     };
   }
 
-  const apiKey = getEnv("CLAUDE_API_KEY");
+  const apiKey = getEnv('CLAUDE_API_KEY');
   if (!apiKey) {
-    throw new Error("CLAUDE_API_KEY not configured");
+    throw new Error('CLAUDE_API_KEY not configured');
   }
 
   const sanitizedInstruction = args.instruction.trim().slice(0, 2000);
   if (sanitizedInstruction.length === 0) {
-    throw new Error("reviseChangeSet: instruction must be non-empty");
+    throw new Error('reviseChangeSet: instruction must be non-empty');
   }
 
   const triggeringLines = args.triggeringTransactions
     .slice(0, 100)
     .map((t, i) => `${i + 1}. "${t.description}"`)
-    .join("\n");
+    .join('\n');
 
   const currentChangeSetJson = JSON.stringify(args.currentChangeSet, null, 2);
   const signalJson = JSON.stringify(args.signal);
@@ -295,7 +295,7 @@ You may freely add, edit, split, merge, or remove any operation in the supplied 
 originalSignal: ${signalJson}
 
 triggeringTransactions:
-${triggeringLines || "(none provided)"}
+${triggeringLines || '(none provided)'}
 
 currentChangeSet:
 ${currentChangeSetJson}
@@ -313,66 +313,66 @@ Return ONLY a single JSON object, no markdown, no explanation:
     response = await withRateLimitRetry(
       () =>
         client.messages.create({
-          model: "claude-haiku-4-5-20251001",
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 2000,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: 'user', content: prompt }],
         }),
-      "corrections.revise",
-      { logger, logPrefix: "[AI]" }
+      'corrections.revise',
+      { logger, logPrefix: '[AI]' }
     );
   } catch (error) {
     logger.error(
       { error: error instanceof Error ? error.message : String(error) },
-      "[AI] reviseChangeSet call failed"
+      '[AI] reviseChangeSet call failed'
     );
     throw new Error(
       `reviseChangeSet: AI call failed — ${error instanceof Error ? error.message : String(error)}`
     );
   }
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : null;
+  const text = response.content[0]?.type === 'text' ? response.content[0].text : null;
   if (!text) {
-    throw new Error("reviseChangeSet: AI returned empty content");
+    throw new Error('reviseChangeSet: AI returned empty content');
   }
 
   const cleanedText = text
     .trim()
-    .replace(/^```(?:json)?\s*\n?/gm, "")
-    .replace(/\n?```\s*$/gm, "");
+    .replace(/^```(?:json)?\s*\n?/gm, '')
+    .replace(/\n?```\s*$/gm, '');
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(cleanedText);
   } catch (error) {
-    logger.error({ text: cleanedText }, "[AI] reviseChangeSet: failed to parse JSON");
+    logger.error({ text: cleanedText }, '[AI] reviseChangeSet: failed to parse JSON');
     throw new Error(
       `reviseChangeSet: AI returned invalid JSON — ${error instanceof Error ? error.message : String(error)}`
     );
   }
 
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("reviseChangeSet: AI response was not a JSON object");
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('reviseChangeSet: AI response was not a JSON object');
   }
 
   const container = parsed as Record<string, unknown>;
-  const changeSetResult = ChangeSetSchema.safeParse(container["changeSet"]);
+  const changeSetResult = ChangeSetSchema.safeParse(container['changeSet']);
   if (!changeSetResult.success) {
     logger.error(
-      { issues: changeSetResult.error.issues, raw: container["changeSet"] },
-      "[AI] reviseChangeSet: ChangeSet failed schema validation"
+      { issues: changeSetResult.error.issues, raw: container['changeSet'] },
+      '[AI] reviseChangeSet: ChangeSet failed schema validation'
     );
     throw new Error(
       `reviseChangeSet: AI returned a ChangeSet that failed schema validation — ${changeSetResult.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ")}`
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('; ')}`
     );
   }
 
-  const rationaleRaw = container["rationale"];
+  const rationaleRaw = container['rationale'];
   const rationale =
-    typeof rationaleRaw === "string" && rationaleRaw.trim().length > 0
+    typeof rationaleRaw === 'string' && rationaleRaw.trim().length > 0
       ? rationaleRaw.trim()
-      : "ChangeSet revised by AI helper";
+      : 'ChangeSet revised by AI helper';
 
   // Best-effort AI usage tracking — matches interpretRejectionFeedback pattern.
   try {
@@ -385,7 +385,7 @@ Return ONLY a single JSON object, no markdown, no explanation:
       .values({
         description: sanitizedInstruction,
         entityName: null,
-        category: "corrections.revise_changeset",
+        category: 'corrections.revise_changeset',
         inputTokens,
         outputTokens,
         costUsd,
@@ -432,7 +432,7 @@ export function buildTargetRulesMap(
 ): Record<string, Correction> {
   const referencedIds = new Set<string>();
   for (const op of changeSet.ops) {
-    if (op.op === "add") continue;
+    if (op.op === 'add') continue;
     referencedIds.add(op.id);
   }
   if (referencedIds.size === 0) return {};
@@ -478,14 +478,14 @@ export function findMatchingCorrectionFromRules(
 function ruleMatchesDescription(rule: CorrectionRow, normalized: string): boolean {
   const pattern = rule.descriptionPattern;
   switch (rule.matchType) {
-    case "exact":
+    case 'exact':
       return pattern.toUpperCase() === normalized;
-    case "contains":
+    case 'contains':
       return pattern.length > 0 && normalized.includes(pattern.toUpperCase());
-    case "regex":
+    case 'regex':
       if (pattern.length === 0) return false;
       try {
-        return new RegExp(pattern, "i").test(normalized);
+        return new RegExp(pattern, 'i').test(normalized);
       } catch {
         return false;
       }
@@ -503,11 +503,11 @@ export function applyChangeSetToRules(
 
   let tempCounter = 0;
   // Deterministic ordering: add → edit → disable → remove (match DB apply semantics)
-  const order: Record<ChangeSetOp["op"], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
+  const order: Record<ChangeSetOp['op'], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
   const ops = [...changeSet.ops].sort((a, b) => order[a.op] - order[b.op]);
 
   for (const op of ops) {
-    if (op.op === "add") {
+    if (op.op === 'add') {
       tempCounter += 1;
       const now = new Date().toISOString();
       next.push({
@@ -530,7 +530,7 @@ export function applyChangeSetToRules(
     }
 
     const existing = byId.get(op.id);
-    if (!existing) throw new NotFoundError("Correction", op.id);
+    if (!existing) throw new NotFoundError('Correction', op.id);
 
     const replace = (updated: CorrectionRow): void => {
       const idx = next.findIndex((r) => r.id === existing.id);
@@ -538,7 +538,7 @@ export function applyChangeSetToRules(
       byId.set(existing.id, updated);
     };
 
-    if (op.op === "edit") {
+    if (op.op === 'edit') {
       replace({
         ...existing,
         entityId: op.data.entityId !== undefined ? op.data.entityId : existing.entityId,
@@ -553,9 +553,9 @@ export function applyChangeSetToRules(
           op.data.isActive !== undefined ? Boolean(op.data.isActive) : Boolean(existing.isActive),
         confidence: op.data.confidence !== undefined ? op.data.confidence : existing.confidence,
       });
-    } else if (op.op === "disable") {
+    } else if (op.op === 'disable') {
       replace({ ...existing, isActive: false });
-    } else if (op.op === "remove") {
+    } else if (op.op === 'remove') {
       const idx = next.findIndex((r) => r.id === existing.id);
       if (idx !== -1) next.splice(idx, 1);
       byId.delete(existing.id);
@@ -746,13 +746,13 @@ export async function proposeChangeSetFromCorrectionSignal(args: {
 
   const changeSet: ChangeSet = existing
     ? {
-        source: latestFeedback ? "correction-signal-followup" : "correction-signal",
+        source: latestFeedback ? 'correction-signal-followup' : 'correction-signal',
         reason: latestFeedback
           ? `Follow-up proposal after rejection feedback: "${latestFeedback.feedback}"`
-          : "Update existing correction rule from user correction signal",
+          : 'Update existing correction rule from user correction signal',
         ops: [
           {
-            op: "edit",
+            op: 'edit',
             id: existing.id,
             data: {
               entityId: effectiveSignal.entityId,
@@ -765,13 +765,13 @@ export async function proposeChangeSetFromCorrectionSignal(args: {
         ],
       }
     : {
-        source: latestFeedback ? "correction-signal-followup" : "correction-signal",
+        source: latestFeedback ? 'correction-signal-followup' : 'correction-signal',
         reason: latestFeedback
           ? `Follow-up proposal after rejection feedback: "${latestFeedback.feedback}"`
-          : "Create new correction rule from user correction signal",
+          : 'Create new correction rule from user correction signal',
         ops: [
           {
-            op: "add",
+            op: 'add',
             data: {
               descriptionPattern: normalizedPattern,
               matchType,
@@ -795,7 +795,7 @@ export async function proposeChangeSetFromCorrectionSignal(args: {
   const sqlCollapsedSpaces = sql`replace(replace(replace(${sqlNoDigits}, '  ', ' '), '  ', ' '), '  ', ' ')`;
 
   const sqlPrefilterExpression =
-    matchType === "regex" ? sqlNormalizedDescription : sqlCollapsedSpaces;
+    matchType === 'regex' ? sqlNormalizedDescription : sqlCollapsedSpaces;
   const upperPattern = normalizedPattern;
   const candidates = db
     .select({
@@ -809,7 +809,7 @@ export async function proposeChangeSetFromCorrectionSignal(args: {
     })
     .from(transactions)
     .where(
-      matchType === "regex"
+      matchType === 'regex'
         ? undefined
         : sql`${sqlPrefilterExpression} LIKE '%' || ${upperPattern} || '%'`
     )
@@ -885,11 +885,11 @@ export function applyChangeSet(changeSet: ChangeSet): CorrectionRow[] {
 
   return db.transaction((tx) => {
     // Deterministic ordering: add → edit → disable → remove
-    const order: Record<ChangeSetOp["op"], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
+    const order: Record<ChangeSetOp['op'], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
     const ops = [...changeSet.ops].sort((a, b) => order[a.op] - order[b.op]);
 
     for (const op of ops) {
-      if (op.op === "add") {
+      if (op.op === 'add') {
         tx.insert(transactionCorrections)
           .values({
             descriptionPattern: normalizeDescription(op.data.descriptionPattern),
@@ -912,9 +912,9 @@ export function applyChangeSet(changeSet: ChangeSet): CorrectionRow[] {
         .from(transactionCorrections)
         .where(eq(transactionCorrections.id, op.id))
         .get();
-      if (!existing) throw new NotFoundError("Correction", op.id);
+      if (!existing) throw new NotFoundError('Correction', op.id);
 
-      if (op.op === "edit") {
+      if (op.op === 'edit') {
         const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
         if (op.data.entityId !== undefined) updates.entityId = op.data.entityId;
         if (op.data.entityName !== undefined) updates.entityName = op.data.entityName;
@@ -932,7 +932,7 @@ export function applyChangeSet(changeSet: ChangeSet): CorrectionRow[] {
         continue;
       }
 
-      if (op.op === "disable") {
+      if (op.op === 'disable') {
         tx.update(transactionCorrections)
           .set({ isActive: false })
           .where(eq(transactionCorrections.id, op.id))
@@ -993,7 +993,7 @@ export function listCorrections(
   minConfidence?: number,
   limit: number = 50,
   offset: number = 0,
-  matchType?: "exact" | "contains" | "regex"
+  matchType?: 'exact' | 'contains' | 'regex'
 ): { rows: CorrectionRow[]; total: number } {
   const db = getDrizzle();
 
@@ -1036,7 +1036,7 @@ export function getCorrection(id: string): CorrectionRow {
     .all();
 
   if (!row) {
-    throw new NotFoundError("Correction", id);
+    throw new NotFoundError('Correction', id);
   }
 
   return row;
@@ -1055,7 +1055,7 @@ export function findAllMatchingCorrections(description: string): CorrectionRow[]
     .where(
       and(
         eq(transactionCorrections.isActive, true),
-        eq(transactionCorrections.matchType, "exact"),
+        eq(transactionCorrections.matchType, 'exact'),
         eq(transactionCorrections.descriptionPattern, normalized)
       )
     )
@@ -1068,7 +1068,7 @@ export function findAllMatchingCorrections(description: string): CorrectionRow[]
     .where(
       and(
         eq(transactionCorrections.isActive, true),
-        eq(transactionCorrections.matchType, "contains"),
+        eq(transactionCorrections.matchType, 'contains'),
         sql`${normalized} LIKE '%' || ${transactionCorrections.descriptionPattern} || '%'`
       )
     )
@@ -1079,7 +1079,7 @@ export function findAllMatchingCorrections(description: string): CorrectionRow[]
     .select()
     .from(transactionCorrections)
     .where(
-      and(eq(transactionCorrections.isActive, true), eq(transactionCorrections.matchType, "regex"))
+      and(eq(transactionCorrections.isActive, true), eq(transactionCorrections.matchType, 'regex'))
     )
     .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
     .all();
@@ -1166,7 +1166,7 @@ export function createOrUpdateCorrection(input: CreateCorrectionInput): Correcti
     .all();
 
   if (!inserted) {
-    throw new NotFoundError("Correction", String(result.lastInsertRowid));
+    throw new NotFoundError('Correction', String(result.lastInsertRowid));
   }
 
   return inserted;
@@ -1232,7 +1232,7 @@ export function deleteCorrection(id: string): void {
   const result = db.delete(transactionCorrections).where(eq(transactionCorrections.id, id)).run();
 
   if (result.changes === 0) {
-    throw new NotFoundError("Correction", id);
+    throw new NotFoundError('Correction', id);
   }
 }
 

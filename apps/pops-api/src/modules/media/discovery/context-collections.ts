@@ -21,94 +21,94 @@ const FRIDAY = 5;
 const SATURDAY = 6;
 const SUNDAY = 0;
 
-const FALLBACK_ID = "rainy-day";
+const FALLBACK_ID = 'rainy-day';
 
 export const CONTEXT_COLLECTIONS: ContextCollection[] = [
   {
-    id: "date-night",
-    title: "Date Night",
-    emoji: "💕",
+    id: 'date-night',
+    title: 'Date Night',
+    emoji: '💕',
     genreIds: [10749, 35], // Romance + Comedy
     keywordIds: [],
     trigger: (hour, _month, dayOfWeek) =>
       (dayOfWeek === FRIDAY || dayOfWeek === SATURDAY) && hour >= 18 && hour <= 22,
   },
   {
-    id: "sunday-flicks",
-    title: "Sunday Flicks",
-    emoji: "☀️",
+    id: 'sunday-flicks',
+    title: 'Sunday Flicks',
+    emoji: '☀️',
     genreIds: [18], // Drama
     keywordIds: [],
     trigger: (_hour, _month, dayOfWeek) => dayOfWeek === SUNDAY,
   },
   {
-    id: "late-night",
-    title: "Late Night Thrillers",
-    emoji: "🌙",
+    id: 'late-night',
+    title: 'Late Night Thrillers',
+    emoji: '🌙',
     genreIds: [53, 9648], // Thriller + Mystery
     keywordIds: [],
     trigger: (hour) => hour >= 22 || hour <= 2,
   },
   {
-    id: "halloween",
-    title: "Halloween",
-    emoji: "🎃",
+    id: 'halloween',
+    title: 'Halloween',
+    emoji: '🎃',
     genreIds: [27], // Horror
     keywordIds: [3335], // TMDB keyword ID for "halloween"
     trigger: (_hour, month) => month === 10,
   },
   {
-    id: "christmas",
-    title: "Christmas Movies",
-    emoji: "🎄",
+    id: 'christmas',
+    title: 'Christmas Movies',
+    emoji: '🎄',
     genreIds: [],
     keywordIds: [207317], // TMDB keyword ID for "christmas"
     trigger: (_hour, month) => month === 12,
   },
   {
-    id: "oscar-season",
-    title: "Oscar Winners",
-    emoji: "🏆",
+    id: 'oscar-season',
+    title: 'Oscar Winners',
+    emoji: '🏆',
     genreIds: [],
     keywordIds: [293, 11487], // TMDB keyword IDs for "oscar" + "academy award"
     trigger: (_hour, month) => month === 2 || month === 3,
   },
   {
-    id: "morning",
-    title: "Morning Watch",
-    emoji: "🌅",
+    id: 'morning',
+    title: 'Morning Watch',
+    emoji: '🌅',
     genreIds: [35, 16, 10751], // Comedy + Animation + Family
     keywordIds: [],
     trigger: (hour) => hour >= 6 && hour <= 10,
   },
   {
-    id: "evening",
-    title: "Evening Picks",
-    emoji: "🌆",
+    id: 'evening',
+    title: 'Evening Picks',
+    emoji: '🌆',
     genreIds: [18, 53, 28], // Drama + Thriller + Action
     keywordIds: [],
     trigger: (hour) => hour >= 18 && hour <= 22,
   },
   {
-    id: "weekend",
-    title: "Weekend Watch",
-    emoji: "🎉",
+    id: 'weekend',
+    title: 'Weekend Watch',
+    emoji: '🎉',
     genreIds: [28, 12, 35], // Action + Adventure + Comedy
     keywordIds: [],
     trigger: (_hour, _month, dayOfWeek) => dayOfWeek === SATURDAY || dayOfWeek === SUNDAY,
   },
   {
-    id: "seasonal",
-    title: "Summer Blockbusters",
-    emoji: "☀️",
+    id: 'seasonal',
+    title: 'Summer Blockbusters',
+    emoji: '☀️',
     genreIds: [28, 12, 878], // Action + Adventure + Science Fiction
     keywordIds: [],
     trigger: (_hour, month) => month >= 6 && month <= 8,
   },
   {
     id: FALLBACK_ID,
-    title: "Rainy Day",
-    emoji: "🌧️",
+    title: 'Rainy Day',
+    emoji: '🌧️',
     genreIds: [35, 18, 16], // Comedy + Drama + Animation
     keywordIds: [],
     trigger: () => true, // always matches

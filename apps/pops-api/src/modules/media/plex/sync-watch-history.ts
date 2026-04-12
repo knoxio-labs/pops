@@ -6,16 +6,16 @@
  * import new media. It only updates watch history for existing items,
  * returning detailed diagnostics about what matched and what was missed.
  */
-import type { PlexClient } from "./client.js";
-import type { PlexMediaItem } from "./types.js";
+import type { PlexClient } from './client.js';
+import type { PlexMediaItem } from './types.js';
 import {
   extractExternalIdAsNumber,
   logMovieWatch,
   syncEpisodeWatches,
   type EpisodeSyncDiagnostics,
-} from "./sync-helpers.js";
-import { getMovieByTmdbId } from "../movies/service.js";
-import { getDb } from "../../../db.js";
+} from './sync-helpers.js';
+import { getMovieByTmdbId } from '../movies/service.js';
+import { getDb } from '../../../db.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,7 +92,7 @@ export async function syncWatchHistoryFromPlex(
 
   // Sync TV episode watches
   for (const item of tvItems) {
-    const tvdbId = extractExternalIdAsNumber(item, "tvdb");
+    const tvdbId = extractExternalIdAsNumber(item, 'tvdb');
     if (!tvdbId) {
       processed++;
       onProgress?.(processed, totalItems);
@@ -165,7 +165,7 @@ function syncMovieWatches(plexItems: PlexMediaItem[]): MovieWatchSyncResult {
     if (item.viewCount === 0) continue;
     result.watched++;
 
-    const tmdbId = extractExternalIdAsNumber(item, "tmdb");
+    const tmdbId = extractExternalIdAsNumber(item, 'tmdb');
     if (!tmdbId) {
       result.noLocalMatch++;
       continue;

@@ -5,14 +5,14 @@
  * Once visible, renders a HorizontalScrollRow with DiscoverCard items. Supports
  * "Show more" pagination via the getShelfPage tRPC endpoint.
  */
-import { useRef, useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
-import { Skeleton, Button } from "@pops/ui";
-import { Loader2 } from "lucide-react";
-import { trpc } from "../lib/trpc";
-import { HorizontalScrollRow } from "./HorizontalScrollRow";
-import { DiscoverCard } from "./DiscoverCard";
-import type { DiscoverActionResult } from "../hooks/useDiscoverCardActions";
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Skeleton, Button } from '@pops/ui';
+import { Loader2 } from 'lucide-react';
+import { trpc } from '../lib/trpc';
+import { HorizontalScrollRow } from './HorizontalScrollRow';
+import { DiscoverCard } from './DiscoverCard';
+import type { DiscoverActionResult } from '../hooks/useDiscoverCardActions';
 
 interface ShelfItem {
   tmdbId: number;
@@ -137,7 +137,7 @@ export function ShelfSection({
           setIsVisible(true);
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: '200px' }
     );
 
     observer.observe(sentinel);
@@ -158,7 +158,7 @@ export function ShelfSection({
       setOffset((prev) => prev + LOAD_MORE_LIMIT);
       setHasMore(data.hasMore);
     } catch {
-      toast.error("Failed to load more");
+      toast.error('Failed to load more');
     } finally {
       setLoadingMore(false);
     }
@@ -232,7 +232,7 @@ export function ShelfSection({
                   Loading…
                 </>
               ) : (
-                "Show more"
+                'Show more'
               )}
             </Button>
           </div>

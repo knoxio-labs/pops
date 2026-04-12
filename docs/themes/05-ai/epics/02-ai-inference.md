@@ -8,8 +8,8 @@ Build proactive AI capabilities — anomaly detection, smart automations, and sc
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
+| #   | PRD                                                                        | Summary                                                                                                            | Status      |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- |
 | 055 | [AI Inference & Monitoring](../prds/055-ai-inference-monitoring/README.md) | Anomaly detection (spending spikes, unusual patterns), scheduled analysis, Moltbot alerts, configurable thresholds | Not started |
 
 ## Dependencies

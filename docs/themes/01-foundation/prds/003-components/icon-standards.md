@@ -4,20 +4,20 @@ POPS uses [Lucide React](https://lucide.dev/) as its single icon library. No oth
 
 ## Icon Vocabulary
 
-| Action | Icon | Banned alternatives |
-|--------|------|---------------------|
-| Add / Create | `Plus` | |
-| Edit | `Pencil` | `Edit2`, `PenLine` |
-| Delete / Remove | `Trash2` | `Trash` |
-| Close / Dismiss | `X` | |
-| More actions | `MoreHorizontal` or `MoreVertical` | `Ellipsis` |
-| Search | `Search` | |
-| Settings | `Settings` | `Cog`, `Gear` |
-| Back / Navigate | `ArrowLeft`, `ChevronLeft` | |
-| External link | `ExternalLink` | |
-| Download | `Download` | |
-| Upload | `Upload` | |
-| Refresh | `RefreshCw` | `RefreshCcw` |
+| Action          | Icon                               | Banned alternatives |
+| --------------- | ---------------------------------- | ------------------- |
+| Add / Create    | `Plus`                             |                     |
+| Edit            | `Pencil`                           | `Edit2`, `PenLine`  |
+| Delete / Remove | `Trash2`                           | `Trash`             |
+| Close / Dismiss | `X`                                |                     |
+| More actions    | `MoreHorizontal` or `MoreVertical` | `Ellipsis`          |
+| Search          | `Search`                           |                     |
+| Settings        | `Settings`                         | `Cog`, `Gear`       |
+| Back / Navigate | `ArrowLeft`, `ChevronLeft`         |                     |
+| External link   | `ExternalLink`                     |                     |
+| Download        | `Download`                         |                     |
+| Upload          | `Upload`                           |                     |
+| Refresh         | `RefreshCw`                        | `RefreshCcw`        |
 
 ## Accessibility
 
@@ -39,11 +39,11 @@ POPS uses [Lucide React](https://lucide.dev/) as its single icon library. No oth
 
 ## Button Patterns
 
-| Context | Pattern | Example |
-|---------|---------|---------|
-| Page CTAs, form buttons | Icon + text | `<Button><Plus /> Add Item</Button>` |
-| Table rows, list items | Icon-only with `aria-label` | `<Button size="icon" aria-label="Edit">` |
-| Destructive actions | `variant="ghost"` + `text-destructive` | Delete, unlink, disconnect buttons |
+| Context                 | Pattern                                | Example                                  |
+| ----------------------- | -------------------------------------- | ---------------------------------------- |
+| Page CTAs, form buttons | Icon + text                            | `<Button><Plus /> Add Item</Button>`     |
+| Table rows, list items  | Icon-only with `aria-label`            | `<Button size="icon" aria-label="Edit">` |
+| Destructive actions     | `variant="ghost"` + `text-destructive` | Delete, unlink, disconnect buttons       |
 
 ## Navigation Icons
 

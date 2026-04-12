@@ -9,46 +9,46 @@ Build a prioritised list of movies and TV shows to watch next. Users add/remove 
 
 ## Routes
 
-| Route | Page |
-|-------|------|
+| Route              | Page      |
+| ------------------ | --------- |
 | `/media/watchlist` | Watchlist |
 
 ## UI Components
 
 ### Watchlist Page
 
-| Element | Detail |
-|---------|--------|
-| Desktop layout | Poster grid with numbered priority badges |
-| Mobile layout | Compact list with up/down reorder buttons |
-| Filter tabs | All / Movies / TV Shows |
-| Notes display | User notes shown below each item (e.g., "recommended by X") |
-| Empty state | "Your watchlist is empty" with CTA to browse library or search |
-| Loading state | Skeleton grid/list matching layout dimensions |
+| Element        | Detail                                                         |
+| -------------- | -------------------------------------------------------------- |
+| Desktop layout | Poster grid with numbered priority badges                      |
+| Mobile layout  | Compact list with up/down reorder buttons                      |
+| Filter tabs    | All / Movies / TV Shows                                        |
+| Notes display  | User notes shown below each item (e.g., "recommended by X")    |
+| Empty state    | "Your watchlist is empty" with CTA to browse library or search |
+| Loading state  | Skeleton grid/list matching layout dimensions                  |
 
 ### Reorder Controls
 
-| Platform | Mechanism |
-|----------|-----------|
-| Desktop | Drag-and-drop on poster cards |
-| Mobile | Up/down arrow buttons beside each entry |
+| Platform | Mechanism                               |
+| -------- | --------------------------------------- |
+| Desktop  | Drag-and-drop on poster cards           |
+| Mobile   | Up/down arrow buttons beside each entry |
 
 ### Priority Badges
 
-| Element | Detail |
-|---------|--------|
-| Badge position | Top-left corner of poster card |
-| Badge content | Sequential number (1, 2, 3...) based on priority order |
-| Badge style | Circular, solid background, contrasting text |
+| Element        | Detail                                                 |
+| -------------- | ------------------------------------------------------ |
+| Badge position | Top-left corner of poster card                         |
+| Badge content  | Sequential number (1, 2, 3...) based on priority order |
+| Badge style    | Circular, solid background, contrasting text           |
 
 ## API Dependencies
 
-| Procedure | Usage |
-|-----------|-------|
-| `media.watchlist.list` | Fetch all watchlist items ordered by priority, enriched with media metadata |
-| `media.watchlist.reorder` | Batch priority update after drag-and-drop or button reorder |
-| `media.watchlist.remove` | Remove an item from the watchlist |
-| `media.watchHistory.log` | Log a watch event (triggers auto-removal logic) |
+| Procedure                 | Usage                                                                       |
+| ------------------------- | --------------------------------------------------------------------------- |
+| `media.watchlist.list`    | Fetch all watchlist items ordered by priority, enriched with media metadata |
+| `media.watchlist.reorder` | Batch priority update after drag-and-drop or button reorder                 |
+| `media.watchlist.remove`  | Remove an item from the watchlist                                           |
+| `media.watchHistory.log`  | Log a watch event (triggers auto-removal logic)                             |
 
 ## Business Rules
 
@@ -64,25 +64,25 @@ Build a prioritised list of movies and TV shows to watch next. Users add/remove 
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Empty watchlist | Empty state with CTA to library and search |
-| Reorder with single item | No-op, reorder controls hidden |
-| Add item already on watchlist | No duplicate — existing entry unchanged |
-| Auto-remove movie on watch | Movie disappears from watchlist, priority numbers re-sequence |
-| Auto-remove TV show partially watched | Show stays on watchlist until every episode is completed |
-| Plex sync marks movie as watched | Watchlist entry preserved (source="plex_sync" skips removal) |
+| Case                                    | Behaviour                                                     |
+| --------------------------------------- | ------------------------------------------------------------- |
+| Empty watchlist                         | Empty state with CTA to library and search                    |
+| Reorder with single item                | No-op, reorder controls hidden                                |
+| Add item already on watchlist           | No duplicate — existing entry unchanged                       |
+| Auto-remove movie on watch              | Movie disappears from watchlist, priority numbers re-sequence |
+| Auto-remove TV show partially watched   | Show stays on watchlist until every episode is completed      |
+| Plex sync marks movie as watched        | Watchlist entry preserved (source="plex_sync" skips removal)  |
 | Undo mark-as-watched after auto-removal | Watch event deleted, but movie does NOT reappear on watchlist |
-| Drag-and-drop cancelled mid-drag | List reverts to original order (no API call) |
-| Very long notes text | Truncated in grid view, expandable on click or hover |
+| Drag-and-drop cancelled mid-drag        | List reverts to original order (no API call)                  |
+| Very long notes text                    | Truncated in grid view, expandable on click or hover          |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-watchlist-page](us-01-watchlist-page.md) | Watchlist page with responsive layout (grid desktop/list mobile), filter tabs, priority badges, notes display | Done | Yes |
-| 02 | [us-02-reorder](us-02-reorder.md) | Drag-and-drop reorder (desktop) and up/down buttons (mobile), batch priority update in transaction | Done | Blocked by us-01 |
-| 03 | [us-03-auto-removal](us-03-auto-removal.md) | Auto-remove from watchlist on manual watch completion, skip for plex_sync source | Done | Yes (parallel with us-01) |
+| #   | Story                                           | Summary                                                                                                       | Status | Parallelisable            |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------ | ------------------------- |
+| 01  | [us-01-watchlist-page](us-01-watchlist-page.md) | Watchlist page with responsive layout (grid desktop/list mobile), filter tabs, priority badges, notes display | Done   | Yes                       |
+| 02  | [us-02-reorder](us-02-reorder.md)               | Drag-and-drop reorder (desktop) and up/down buttons (mobile), batch priority update in transaction            | Done   | Blocked by us-01          |
+| 03  | [us-03-auto-removal](us-03-auto-removal.md)     | Auto-remove from watchlist on manual watch completion, skip for plex_sync source                              | Done   | Yes (parallel with us-01) |
 
 US-02 depends on US-01 (needs the watchlist grid/list to add reorder interactions). US-03 is backend logic and can be built independently.
 

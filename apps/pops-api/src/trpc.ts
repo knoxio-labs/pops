@@ -2,9 +2,9 @@
  * tRPC initialization, context, and base procedures.
  * All tRPC routers extend from the procedures defined here.
  */
-import { initTRPC, TRPCError } from "@trpc/server";
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import { verifyCloudflareJWT } from "./middleware/cloudflare-jwt.js";
+import { initTRPC, TRPCError } from '@trpc/server';
+import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
+import { verifyCloudflareJWT } from './middleware/cloudflare-jwt.js';
 
 /**
  * User context extracted from Cloudflare Access JWT
@@ -27,24 +27,24 @@ export interface Context {
  */
 export async function createContext({ req }: CreateExpressContextOptions): Promise<Context> {
   // In development, skip JWT validation and use mock user
-  if (process.env["NODE_ENV"] !== "production") {
+  if (process.env['NODE_ENV'] !== 'production') {
     return {
       user: {
-        email: "dev@example.com",
+        email: 'dev@example.com',
       },
     };
   }
 
   // If Cloudflare Access team name is not configured, trust the tunnel
-  if (!process.env["CLOUDFLARE_ACCESS_TEAM_NAME"]) {
+  if (!process.env['CLOUDFLARE_ACCESS_TEAM_NAME']) {
     return {
-      user: { email: "tunnel-authenticated@pops.local" },
+      user: { email: 'tunnel-authenticated@pops.local' },
     };
   }
 
-  const token = req.headers["cf-access-jwt-assertion"];
+  const token = req.headers['cf-access-jwt-assertion'];
 
-  if (typeof token === "string") {
+  if (typeof token === 'string') {
     try {
       const payload = await verifyCloudflareJWT(token);
       return {
@@ -53,7 +53,7 @@ export async function createContext({ req }: CreateExpressContextOptions): Promi
         },
       };
     } catch (error) {
-      console.error("[trpc] JWT verification failed:", error);
+      console.error('[trpc] JWT verification failed:', error);
       return { user: null };
     }
   }
@@ -78,8 +78,8 @@ export const publicProcedure = t.procedure;
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Missing or invalid Cloudflare Access JWT",
+      code: 'UNAUTHORIZED',
+      message: 'Missing or invalid Cloudflare Access JWT',
     });
   }
 

@@ -2,8 +2,8 @@
  * UI store - manages UI state like sidebar open/close
  * Persisted to localStorage
  */
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface UIState {
   sidebarOpen: boolean;
@@ -31,7 +31,7 @@ export const useUIStore = create<UIState>()(
       setPageNavOpen: (open) => set({ pageNavOpen: open }),
     }),
     {
-      name: "pops-ui-storage",
+      name: 'pops-ui-storage',
       partialize: (state) => ({
         sidebarOpen: state.sidebarOpen,
         railOpen: state.railOpen,

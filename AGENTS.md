@@ -19,6 +19,7 @@ Phases 0 (infrastructure) and 1 (foundation) are complete. Phase 2 (core apps) i
 POPS uses [mise](https://mise.jdx.dev/) for task running and tool version management. Run `mise tasks` to see all available tasks.
 
 **Quick Start:**
+
 ```bash
 mise dev              # Run all dev servers
 mise dev:api          # Run pops-api only
@@ -35,6 +36,7 @@ mise setup            # Initial project setup
 ```
 
 **Database Management:**
+
 ```bash
 mise db:init          # Initialize empty database with schema
 mise db:clear         # Clear all data (preserves schema)
@@ -42,6 +44,7 @@ mise db:seed          # Seed with comprehensive test data (78 records)
 ```
 
 **Import Tools:**
+
 ```bash
 CSV_PATH=file.csv mise import:anz --execute
 CSV_PATH=file.csv mise import:amex --execute
@@ -52,6 +55,7 @@ mise audit            # Show DB stats
 ```
 
 **Docker:**
+
 ```bash
 mise docker:build     # Build images
 mise docker:up        # Start services
@@ -59,6 +63,7 @@ mise docker:logs      # Show logs
 ```
 
 **Ansible:**
+
 ```bash
 mise ansible:provision    # Full server provision
 mise ansible:deploy       # Deploy services only
@@ -68,6 +73,7 @@ mise ansible:decrypt-env  # Decrypt vault → .env for local dev
 ```
 
 **Git Worktrees:**
+
 ```bash
 BRANCH=feat/name mise worktree:create
 BRANCH=feat/name mise worktree:remove
@@ -76,6 +82,7 @@ BRANCH=feat/name mise worktree:remove
 Run `mise tasks` for the full list. All tasks are defined in `mise.toml`.
 
 ### Services (each has its own package.json)
+
 ```bash
 cd apps/pops-api && pnpm install && pnpm dev        # API with watch mode
 cd apps/pops-shell && pnpm install && pnpm dev      # Vite dev server
@@ -89,6 +96,7 @@ cd apps/<service> && pnpm test:watch                # watch mode
 ```
 
 **Integration tests are CI-only.** The following tests create full Express apps and SQLite databases per test, which hangs in resource-constrained environments. They run in CI only:
+
 - `env-context.integration.test.ts`
 - `envs/router.integration.test.ts`
 - `ai-categorizer-disk.integration.test.ts`
@@ -96,6 +104,7 @@ cd apps/<service> && pnpm test:watch                # watch mode
 Do NOT run `pnpm test:integration` locally. CI handles these automatically.
 
 ### Tools (import scripts)
+
 ```bash
 cd packages/import-tools && pnpm install
 
@@ -109,9 +118,11 @@ pnpm entities:create --execute                              # Batch create entit
 pnpm entities:lookup                                        # Rebuild entity lookup
 pnpm audit                                                  # DB statistics
 ```
+
 Omit `--execute` for dry-run mode (no writes).
 
 ### Git Worktrees (manual)
+
 ```bash
 # Create a new worktree (branches off main, copies files)
 worktree-branch <branch-name>
@@ -127,6 +138,7 @@ git worktree remove ../<branch-name> && git branch -d <branch-name>
 ```
 
 ### Docker
+
 ```bash
 docker compose -f infra/docker-compose.yml build           # Build all custom images
 docker compose -f infra/docker-compose.yml up -d           # Start all services
@@ -135,6 +147,7 @@ docker compose -f infra/docker-compose.yml config          # Validate compose fi
 ```
 
 ### Ansible
+
 ```bash
 # All ansible commands must run from the infra/ansible/ directory due to relative roles_path
 cd infra/ansible
@@ -189,6 +202,7 @@ infra/
 - `infra/ansible/` — Ansible playbooks + roles for provisioning the home server
 
 ### Docker Networks
+
 - `pops-frontend` — cloudflared, pops-shell, metabase, pops-api
 - `pops-backend` — pops-api, moltbot, tools (SQLite access)
 - `pops-documents` — cloudflared, paperless-ngx, paperless-redis (isolated)
@@ -196,6 +210,7 @@ infra/
 pops-api bridges frontend ↔ backend. cloudflared bridges frontend ↔ documents.
 
 ### Secrets
+
 Production: Ansible Vault → `/opt/pops/secrets/` files → Docker Compose file-based secrets → `/run/secrets/` in containers.
 Local dev: `.env` file (copy from `.env.example`), read via `process.env`.
 
@@ -235,12 +250,14 @@ External APIs:
 POPS is the source of truth. External services are synced inward; deleting from Plex/Radarr/Sonarr does not affect POPS data.
 
 **Library sync (Plex local server → POPS):**
+
 1. Scheduler runs hourly (or manual trigger from Plex Settings page)
 2. Fetches all movies/TV shows from Plex library sections (paginated)
 3. Matches to TMDB/TVDB IDs, adds to POPS library (idempotent)
 4. Logs watch history for items with `viewCount > 0`
 
 **Cloud watch sync (Plex Discover cloud → POPS):**
+
 1. Manual trigger from Plex Settings (one-time backfill, ~700 items)
 2. For each POPS library item, searches Plex Discover by title
 3. Checks `userState` on cloud for watch status (catches streaming watches)
@@ -250,6 +267,7 @@ POPS is the source of truth. External services are synced inward; deleting from 
 When a movie is added to the POPS library, automatically checks Plex Discover cloud for watch status and logs it (fire-and-forget).
 
 **Watchlist sync (bidirectional):**
+
 - Plex → POPS: items on Plex watchlist are added to POPS watchlist
 - POPS → Plex: manually added watchlist items are pushed to Plex Discover
 
@@ -289,6 +307,7 @@ Two interfaces: the **Import Wizard** (6-step UI in `app-finance`) and **CLI scr
 ### Entity Matching Chain (`apps/pops-api/src/modules/finance/imports/`)
 
 6-stage pipeline, highest priority first:
+
 1. **Learned corrections** — fuzzy match on normalized description against `v_active_corrections`
 2. **Manual aliases** — case-insensitive substring match from per-entity alias map
 3. **Exact match** — full description equals entity name
@@ -321,15 +340,15 @@ Hit rate: ~95-100% with aliases. AI fallback handles the rest. See `docs/themes/
 
 ## Phases
 
-| Phase | Status |
-|---|---|
-| 0 — Infrastructure | Done |
-| 1 — Foundation | Done |
+| Phase                                             | Status      |
+| ------------------------------------------------- | ----------- |
+| 0 — Infrastructure                                | Done        |
+| 1 — Foundation                                    | Done        |
 | 2 — Core Apps (Finance, Media, Inventory, AI Ops) | In progress |
-| 3 — AI Layer | Not started |
-| 4 — Expansion Apps | Not started |
-| 5 — Mobile & Hardware | Not started |
-| 6 — Long Tail | Not started |
+| 3 — AI Layer                                      | Not started |
+| 4 — Expansion Apps                                | Not started |
+| 5 — Mobile & Hardware                             | Not started |
+| 6 — Long Tail                                     | Not started |
 
 See `docs/roadmap.md` for the detailed implementation tracker.
 
@@ -338,6 +357,7 @@ See `docs/roadmap.md` for the detailed implementation tracker.
 ### Database Management
 
 **For Local Development:**
+
 ```bash
 mise db:init     # First time: Initialize empty database
 mise db:seed     # Seed with test data (78 records)
@@ -346,6 +366,7 @@ mise dev:shell   # Start shell
 ```
 
 **For E2E Testing:**
+
 ```bash
 mise db:seed     # Reset to known test state
 # Run tests
@@ -353,6 +374,7 @@ mise db:seed     # Reset between test runs
 ```
 
 **Test Data Includes:**
+
 - 10 entities (Woolworths, Coles, Netflix, Spotify, Shell, Amazon AU, JB Hi-Fi, Apple, Bunnings, Employer)
 - 16 transactions (income, expenses, transfers across multiple accounts/categories)
 - 8 budgets (monthly and yearly)
@@ -409,11 +431,12 @@ cd apps/pops-shell && pnpm format --check && pnpm lint && pnpm typecheck
 
 1. **The PRD exists and is current.** If the area you're touching has no PRD, stop and write one before coding. If the PRD is stale (behavior described there no longer matches the goal spec), update the PRD before coding.
 2. **The user story covers what you're about to do.** If it doesn't, add or update the US. If you're changing behavior, update the acceptance criteria to reflect the new goal spec.
-3. **Your change matches the PRD's intent.** Not just what it says today — what it *should* say. If the PRD intent is unclear, stop and clarify before implementing.
+3. **Your change matches the PRD's intent.** Not just what it says today — what it _should_ say. If the PRD intent is unclear, stop and clarify before implementing.
 
 **PRDs and USs are greenfield artifacts.** They describe the goal specification of the system and the correct implementation, not the change history. Do not treat them as a changelog. When code and PRD disagree, one of them is wrong — decide which, and fix it.
 
 **Track every change through the docs.**
+
 - **Implementing** something new → mark the relevant acceptance criteria and US progress as you land the work.
 - **Fixing or changing** existing behavior → update the PRD/US to match the new correct behavior, even if the goal spec hasn't drifted. The docs should always describe the system as it is supposed to be after your change.
 
@@ -450,6 +473,7 @@ Full design context lives in `.impeccable.md`. Key principles for all UI work:
 **Anti-patterns:** Generic SaaS dashboards, brutalist/raw developer aesthetics.
 
 **5 Design Principles:**
+
 1. **Earned density** — More data, less chrome. Every non-content pixel justifies itself.
 2. **Quiet confidence** — Prominent through hierarchy, not loudness. No visual shouting.
 3. **Warmth through craft** — Warmth from typography, spacing, and transitions — not decoration.
@@ -462,9 +486,9 @@ Full design context lives in `.impeccable.md`. Key principles for all UI work:
 
 ### Services
 
-| Service | Port | Command |
-|---|---|---|
-| **pops-api** (Express + tRPC) | 3000 | `cd apps/pops-api && pnpm dev` |
+| Service                         | Port | Command                          |
+| ------------------------------- | ---- | -------------------------------- |
+| **pops-api** (Express + tRPC)   | 3000 | `cd apps/pops-api && pnpm dev`   |
 | **pops-shell** (Vite React PWA) | 5568 | `cd apps/pops-shell && pnpm dev` |
 
 ### Node.js version
@@ -485,4 +509,3 @@ Run `pnpm db:seed` from `apps/pops-api/` (or `mise db:seed`) to initialize and s
 - `SQLITE_PATH` in root `.env` must be an **absolute path** because pops-api runs from `apps/pops-api/` and loads the root `.env` via dotenvx path traversal (`../../.env`). A relative path would resolve incorrectly from the API's working directory.
 - The pops-shell Vite dev server uses port **5568** (not the default 5173).
 - `pnpm.onlyBuiltDependencies` in root `package.json` already covers `better-sqlite3`, `esbuild`, and `msw` — no interactive `pnpm approve-builds` needed.
-

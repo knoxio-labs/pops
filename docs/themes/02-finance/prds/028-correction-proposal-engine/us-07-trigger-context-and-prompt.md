@@ -10,7 +10,7 @@ Two compounding defects surface together:
 
 1. **The proposal prompt is framed around entity-name extraction.** `analyzeCorrection` currently asks the LLM to identify "which part of the description is the entity/merchant name", which implicitly assumes the entity name is a substring of the description. When a user creates a new entity with a name that has no textual overlap with the description (e.g. a "MEMBERSHIP FEE" row assigned to a new entity "American Express"), the model has no valid output and hallucinates — most commonly echoing the entity name back as the pattern, producing a rule that matches zero transactions.
 
-2. **The proposal dialog never shows the triggering transaction.** The context panel renders the *derived* signal (pattern → entity · type · location) but not the *source* (original description, amount, date, account, the specific correction the user made). Without that breadcrumb the user cannot diagnose why a bad proposal is bad. This is already specified in the PRD overview ("the proposal UI must show the triggering transaction(s) and the user's original correction intent") but was not implemented in US-06.
+2. **The proposal dialog never shows the triggering transaction.** The context panel renders the _derived_ signal (pattern → entity · type · location) but not the _source_ (original description, amount, date, account, the specific correction the user made). Without that breadcrumb the user cannot diagnose why a bad proposal is bad. This is already specified in the PRD overview ("the proposal UI must show the triggering transaction(s) and the user's original correction intent") but was not implemented in US-06.
 
 ## Acceptance Criteria
 

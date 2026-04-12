@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Separator } from "./separator";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Separator } from './separator';
 
 const meta: Meta<typeof Separator> = {
-  title: "Layout/Separator",
+  title: 'Layout/Separator',
   component: Separator,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -15,7 +15,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Horizontal: Story = {
   args: {
-    orientation: "horizontal",
+    orientation: 'horizontal',
   },
 };
 
@@ -112,9 +112,9 @@ export const BetweenSections: Story = {
         <h2 className="text-2xl font-bold">Recent Transactions</h2>
         <div className="space-y-2">
           {[
-            { desc: "Woolworths Sydney", date: "Feb 10", amount: "-$87.45" },
-            { desc: "Netflix Subscription", date: "Feb 09", amount: "-$22.99" },
-            { desc: "Salary Deposit", date: "Feb 05", amount: "+$3,500.00" },
+            { desc: 'Woolworths Sydney', date: 'Feb 10', amount: '-$87.45' },
+            { desc: 'Netflix Subscription', date: 'Feb 09', amount: '-$22.99' },
+            { desc: 'Salary Deposit', date: 'Feb 05', amount: '+$3,500.00' },
           ].map((txn, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg border p-3">
               <div>
@@ -122,7 +122,7 @@ export const BetweenSections: Story = {
                 <p className="text-xs text-muted-foreground">{txn.date}</p>
               </div>
               <p
-                className={`font-medium ${txn.amount.startsWith("+") ? "text-green-600" : "text-red-600"}`}
+                className={`font-medium ${txn.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}
               >
                 {txn.amount}
               </p>
@@ -147,10 +147,10 @@ export const InList: Story = {
   render: () => (
     <div className="w-100 rounded-lg border">
       {[
-        { name: "Checking Account", balance: "$2,458.32" },
-        { name: "Savings Account", balance: "$12,847.65" },
-        { name: "Credit Card", balance: "-$1,234.56" },
-        { name: "Investment Account", balance: "$45,678.90" },
+        { name: 'Checking Account', balance: '$2,458.32' },
+        { name: 'Savings Account', balance: '$12,847.65' },
+        { name: 'Credit Card', balance: '-$1,234.56' },
+        { name: 'Investment Account', balance: '$45,678.90' },
       ].map((account, i, arr) => (
         <div key={i}>
           <div className="flex items-center justify-between p-4">
@@ -239,10 +239,10 @@ export const Dashboard: Story = {
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: "Total Balance", value: "$14,071.41", trend: "+12.5%" },
-          { label: "Income", value: "$7,250.00", trend: "+8.2%" },
-          { label: "Expenses", value: "$4,892.34", trend: "-3.1%" },
-          { label: "Savings", value: "$2,357.66", trend: "+15.3%" },
+          { label: 'Total Balance', value: '$14,071.41', trend: '+12.5%' },
+          { label: 'Income', value: '$7,250.00', trend: '+8.2%' },
+          { label: 'Expenses', value: '$4,892.34', trend: '-3.1%' },
+          { label: 'Savings', value: '$2,357.66', trend: '+15.3%' },
         ].map((stat, i) => (
           <div key={i} className="rounded-lg border p-4 space-y-2">
             <p className="text-sm text-muted-foreground">{stat.label}</p>

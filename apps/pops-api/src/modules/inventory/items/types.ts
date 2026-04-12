@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { InventoryRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { InventoryRow } from '@pops/db-types';
 
 export type { InventoryRow };
 
@@ -61,7 +61,7 @@ export function toInventoryItem(row: InventoryRow): InventoryItem {
 
 /** Zod schema for creating an inventory item. */
 export const CreateInventoryItemSchema = z.object({
-  itemName: z.string().min(1, "Item name is required"),
+  itemName: z.string().min(1, 'Item name is required'),
   brand: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
   itemId: z.string().nullable().optional(),
@@ -87,7 +87,7 @@ export type CreateInventoryItemInput = z.infer<typeof CreateInventoryItemSchema>
 
 /** Zod schema for updating an inventory item (all fields optional). */
 export const UpdateInventoryItemSchema = z.object({
-  itemName: z.string().min(1, "Item name cannot be empty").optional(),
+  itemName: z.string().min(1, 'Item name cannot be empty').optional(),
   brand: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
   itemId: z.string().nullable().optional(),
@@ -117,8 +117,8 @@ export const InventoryQuerySchema = z.object({
   room: z.string().optional(),
   type: z.string().optional(),
   condition: z.string().optional(),
-  inUse: z.enum(["true", "false"]).optional(),
-  deductible: z.enum(["true", "false"]).optional(),
+  inUse: z.enum(['true', 'false']).optional(),
+  deductible: z.enum(['true', 'false']).optional(),
   locationId: z.string().optional(),
   includeChildren: z.boolean().optional().default(false),
   assetId: z.string().optional(),

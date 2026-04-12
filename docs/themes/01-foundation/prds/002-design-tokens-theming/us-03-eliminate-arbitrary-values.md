@@ -19,6 +19,7 @@ As a developer, I want all arbitrary Tailwind values replaced with token-based c
 ## Notes
 
 Specific replacements from the audit:
+
 - `min-w-[120px]` → `min-w-30`
 - `w-[180px]` → `w-45`, `min-w-[200px]` → `min-w-50`, `w-[150px]` → `w-38`, `w-[100px]` → `w-25`
 - `w-[70px]` → `w-18`

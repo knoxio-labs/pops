@@ -4,8 +4,8 @@
  * Auto-refreshes every 30s. Hidden when nothing is downloading
  * or when neither service is configured.
  */
-import { Badge } from "@pops/ui";
-import { trpc } from "../lib/trpc";
+import { Badge } from '@pops/ui';
+import { trpc } from '../lib/trpc';
 
 export function DownloadQueue() {
   const { data: configData } = trpc.media.arr.getConfig.useQuery();
@@ -37,7 +37,7 @@ export function DownloadQueue() {
           }) => (
             <div key={item.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
               <Badge variant="outline" className="text-2xs uppercase shrink-0">
-                {item.mediaType === "movie" ? "Movie" : "Episode"}
+                {item.mediaType === 'movie' ? 'Movie' : 'Episode'}
               </Badge>
 
               <div className="flex-1 min-w-0">

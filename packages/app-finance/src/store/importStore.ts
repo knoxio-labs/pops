@@ -1,19 +1,19 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 import type {
   ParsedTransaction,
   ProcessedTransaction as BaseProcessedTransaction,
   ConfirmedTransaction,
   ImportResult,
   ImportWarning,
-} from "@pops/api/modules/finance/imports";
-import type { ChangeSet } from "@pops/api/modules/core/corrections/types";
-import type { CommitResult } from "@pops/api/modules/finance/imports";
-import { findSimilarTransactions } from "../lib/transaction-utils";
+} from '@pops/api/modules/finance/imports';
+import type { ChangeSet } from '@pops/api/modules/core/corrections/types';
+import type { CommitResult } from '@pops/api/modules/finance/imports';
+import { findSimilarTransactions } from '../lib/transaction-utils';
 
-export type BankType = "Amex";
+export type BankType = 'Amex';
 export type { ChangeSet };
 
-export type EntityType = "company" | "person" | "government" | "bank";
+export type EntityType = 'company' | 'person' | 'government' | 'bank';
 
 // ---------------------------------------------------------------------------
 // Pending entity — created during import, stored locally until step 7 commit.
@@ -124,13 +124,13 @@ interface ImportStore {
   setBankType: (bankType: BankType) => void;
   setHeaders: (headers: string[]) => void;
   setRows: (rows: Record<string, string>[]) => void;
-  setColumnMap: (columnMap: ImportStore["columnMap"]) => void;
+  setColumnMap: (columnMap: ImportStore['columnMap']) => void;
   setParsedTransactions: (parsed: ParsedTransaction[]) => void;
   setProcessSessionId: (sessionId: string | null) => void;
-  setProcessedTransactions: (processed: ImportStore["processedTransactions"]) => void;
+  setProcessedTransactions: (processed: ImportStore['processedTransactions']) => void;
   setConfirmedTransactions: (confirmed: ConfirmedTransaction[]) => void;
   setExecuteSessionId: (sessionId: string | null) => void;
-  setImportResult: (result: ImportStore["importResult"]) => void;
+  setImportResult: (result: ImportStore['importResult']) => void;
   setCommitResult: (result: CommitResult | null) => void;
 
   nextStep: () => void;
@@ -165,16 +165,16 @@ interface ImportStore {
 const initialState = {
   currentStep: 1,
   file: null,
-  bankType: "Amex" as BankType,
+  bankType: 'Amex' as BankType,
   headers: [],
   rows: [],
   columnMap: {
-    date: "",
-    description: "",
-    amount: "",
+    date: '',
+    description: '',
+    amount: '',
   },
   parsedTransactions: [],
-  parsedTransactionsFingerprint: "",
+  parsedTransactionsFingerprint: '',
   processSessionId: null,
   processedForFingerprint: null,
   processedTransactions: {
@@ -199,8 +199,8 @@ const initialState = {
  * themselves or their order change. Empty list → empty string.
  */
 function fingerprintParsedTransactions(txns: ParsedTransaction[]): string {
-  if (txns.length === 0) return "";
-  return txns.map((t) => t.checksum).join("|");
+  if (txns.length === 0) return '';
+  return txns.map((t) => t.checksum).join('|');
 }
 
 /**
@@ -212,19 +212,19 @@ function fingerprintParsedTransactions(txns: ParsedTransaction[]): string {
  */
 const downstreamReset: Pick<
   ImportStore,
-  | "headers"
-  | "rows"
-  | "parsedTransactions"
-  | "parsedTransactionsFingerprint"
-  | "processSessionId"
-  | "processedForFingerprint"
-  | "processedTransactions"
-  | "confirmedTransactions"
-  | "executeSessionId"
-  | "importResult"
-  | "commitResult"
-  | "pendingEntities"
-  | "pendingChangeSets"
+  | 'headers'
+  | 'rows'
+  | 'parsedTransactions'
+  | 'parsedTransactionsFingerprint'
+  | 'processSessionId'
+  | 'processedForFingerprint'
+  | 'processedTransactions'
+  | 'confirmedTransactions'
+  | 'executeSessionId'
+  | 'importResult'
+  | 'commitResult'
+  | 'pendingEntities'
+  | 'pendingChangeSets'
 > = {
   headers: initialState.headers,
   rows: initialState.rows,

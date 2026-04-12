@@ -9,40 +9,40 @@ Track what's been watched at movie and episode level. Build a chronological hist
 
 ## Routes
 
-| Route | Page |
-|-------|------|
+| Route            | Page          |
+| ---------------- | ------------- |
 | `/media/history` | Watch History |
 
 ## UI Components
 
 ### History Page
 
-| Element | Detail |
-|---------|--------|
-| Filter tabs | All / Movies / Episodes |
-| History list | Chronological, most recent first |
-| Entry row | Poster thumbnail, title, watched date |
+| Element       | Detail                                                            |
+| ------------- | ----------------------------------------------------------------- |
+| Filter tabs   | All / Movies / Episodes                                           |
+| History list  | Chronological, most recent first                                  |
+| Entry row     | Poster thumbnail, title, watched date                             |
 | Episode entry | Show name + S01E03 format, links to show detail and season detail |
-| Pagination | Page-based with page size selector |
-| Empty state | "Nothing watched yet" with CTA to browse library |
-| Loading state | Skeleton list matching entry row dimensions |
+| Pagination    | Page-based with page size selector                                |
+| Empty state   | "Nothing watched yet" with CTA to browse library                  |
+| Loading state | Skeleton list matching entry row dimensions                       |
 
 ### Entry Row Layout
 
-| Element | Detail |
-|---------|--------|
-| Poster thumbnail | Small (60x90), same 3-tier fallback as MediaCard |
-| Title | Movie title or episode name |
-| Subtitle | For episodes: "Show Name — S01E03" with links to show and season |
-| Watched date | Relative ("2 days ago") with full date on hover/tooltip |
-| Delete action | Icon button, visible on hover (desktop) or swipe (mobile) |
+| Element          | Detail                                                           |
+| ---------------- | ---------------------------------------------------------------- |
+| Poster thumbnail | Small (60x90), same 3-tier fallback as MediaCard                 |
+| Title            | Movie title or episode name                                      |
+| Subtitle         | For episodes: "Show Name — S01E03" with links to show and season |
+| Watched date     | Relative ("2 days ago") with full date on hover/tooltip          |
+| Delete action    | Icon button, visible on hover (desktop) or swipe (mobile)        |
 
 ## API Dependencies
 
-| Procedure | Usage |
-|-----------|-------|
+| Procedure                       | Usage                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `media.watchHistory.listRecent` | Fetch paginated watch events enriched with media metadata (title, poster, show name for episodes) |
-| `media.watchHistory.delete` | Remove a watch event |
+| `media.watchHistory.delete`     | Remove a watch event                                                                              |
 
 ## Business Rules
 
@@ -55,22 +55,22 @@ Track what's been watched at movie and episode level. Build a chronological hist
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| No watch history | Empty state with CTA to library |
-| Episode with missing show data | Display episode title only, omit show name link |
-| Re-watch of same item | New entry in history (same item, different watchedAt) |
-| Delete last watch event for a movie | Movie no longer appears in history but stays in library |
-| Very long show/episode names | Truncated with ellipsis, full name on hover |
-| Filter returns no results | "No [movies/episodes] watched yet" message matching active filter |
+| Case                                | Behaviour                                                         |
+| ----------------------------------- | ----------------------------------------------------------------- |
+| No watch history                    | Empty state with CTA to library                                   |
+| Episode with missing show data      | Display episode title only, omit show name link                   |
+| Re-watch of same item               | New entry in history (same item, different watchedAt)             |
+| Delete last watch event for a movie | Movie no longer appears in history but stays in library           |
+| Very long show/episode names        | Truncated with ellipsis, full name on hover                       |
+| Filter returns no results           | "No [movies/episodes] watched yet" message matching active filter |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-history-page](us-01-history-page.md) | History page with chronological list, filter tabs (All/Movies/Episodes), pagination, poster/title/date display | Done | Yes |
-| 02 | [us-02-episode-enrichment](us-02-episode-enrichment.md) | Episode entries show show name, season/episode numbers (S01E03), link to show and season detail pages | Done | Blocked by us-01 |
-| 03 | [us-03-delete-watch-event](us-03-delete-watch-event.md) | Delete watch event action with confirmation, for correcting mistakes | Done | Yes (parallel with us-01) |
+| #   | Story                                                   | Summary                                                                                                        | Status | Parallelisable            |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ | ------------------------- |
+| 01  | [us-01-history-page](us-01-history-page.md)             | History page with chronological list, filter tabs (All/Movies/Episodes), pagination, poster/title/date display | Done   | Yes                       |
+| 02  | [us-02-episode-enrichment](us-02-episode-enrichment.md) | Episode entries show show name, season/episode numbers (S01E03), link to show and season detail pages          | Done   | Blocked by us-01          |
+| 03  | [us-03-delete-watch-event](us-03-delete-watch-event.md) | Delete watch event action with confirmation, for correcting mistakes                                           | Done   | Yes (parallel with us-01) |
 
 US-02 depends on US-01 (needs the history list to add episode-specific rendering). US-03 can be built in parallel with US-01 (independent delete interaction).
 

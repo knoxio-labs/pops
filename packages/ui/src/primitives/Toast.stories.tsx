@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { toast } from "sonner";
-import { Button } from "../components/Button";
-import { Toaster } from "./sonner";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { toast } from 'sonner';
+import { Button } from '../components/Button';
+import { Toaster } from './sonner';
 
 const meta: Meta = {
-  title: "Feedback/Toast",
+  title: 'Feedback/Toast',
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
       <>
@@ -27,8 +27,8 @@ export const Success: Story = {
   render: () => (
     <Button
       onClick={() =>
-        toast.success("Transaction saved", {
-          description: "Your transaction has been successfully saved.",
+        toast.success('Transaction saved', {
+          description: 'Your transaction has been successfully saved.',
         })
       }
     >
@@ -43,8 +43,8 @@ export const Error: Story = {
     <Button
       variant="destructive"
       onClick={() =>
-        toast.error("Failed to save", {
-          description: "An error occurred while saving the transaction.",
+        toast.error('Failed to save', {
+          description: 'An error occurred while saving the transaction.',
         })
       }
     >
@@ -59,8 +59,8 @@ export const Warning: Story = {
     <Button
       variant="outline"
       onClick={() =>
-        toast.warning("Unsaved changes", {
-          description: "You have unsaved changes that will be lost.",
+        toast.warning('Unsaved changes', {
+          description: 'You have unsaved changes that will be lost.',
         })
       }
     >
@@ -75,8 +75,8 @@ export const Info: Story = {
     <Button
       variant="secondary"
       onClick={() =>
-        toast.info("New feature available", {
-          description: "Check out the new transaction filters.",
+        toast.info('New feature available', {
+          description: 'Check out the new transaction filters.',
         })
       }
     >
@@ -90,8 +90,8 @@ export const Loading: Story = {
   render: () => (
     <Button
       onClick={() => {
-        toast.loading("Syncing transactions...", {
-          description: "Please wait while we sync your data.",
+        toast.loading('Syncing transactions...', {
+          description: 'Please wait while we sync your data.',
         });
       }}
     >
@@ -108,9 +108,9 @@ export const PromiseToast: Story = {
         const promise = new Promise<void>((resolve) => setTimeout(resolve, 2000));
 
         toast.promise(promise, {
-          loading: "Saving transaction...",
-          success: "Transaction saved successfully",
-          error: "Failed to save transaction",
+          loading: 'Saving transaction...',
+          success: 'Transaction saved successfully',
+          error: 'Failed to save transaction',
         });
       }}
     >
@@ -124,11 +124,11 @@ export const WithAction: Story = {
   render: () => (
     <Button
       onClick={() =>
-        toast.success("Transaction deleted", {
-          description: "The transaction has been removed.",
+        toast.success('Transaction deleted', {
+          description: 'The transaction has been removed.',
           action: {
-            label: "Undo",
-            onClick: () => toast.info("Transaction restored"),
+            label: 'Undo',
+            onClick: () => toast.info('Transaction restored'),
           },
         })
       }
@@ -145,7 +145,7 @@ export const CustomDuration: Story = {
       <Button
         variant="outline"
         onClick={() =>
-          toast.success("Quick message", {
+          toast.success('Quick message', {
             duration: 1000,
           })
         }
@@ -155,7 +155,7 @@ export const CustomDuration: Story = {
       <Button
         variant="outline"
         onClick={() =>
-          toast.success("Standard message", {
+          toast.success('Standard message', {
             duration: 4000,
           })
         }
@@ -165,7 +165,7 @@ export const CustomDuration: Story = {
       <Button
         variant="outline"
         onClick={() =>
-          toast.success("Long message", {
+          toast.success('Long message', {
             duration: 10000,
           })
         }
@@ -181,9 +181,9 @@ export const Multiple: Story = {
   render: () => (
     <Button
       onClick={() => {
-        toast.success("First notification");
-        setTimeout(() => toast.info("Second notification"), 300);
-        setTimeout(() => toast.warning("Third notification"), 600);
+        toast.success('First notification');
+        setTimeout(() => toast.info('Second notification'), 300);
+        setTimeout(() => toast.warning('Third notification'), 600);
       }}
     >
       Show Multiple Toasts

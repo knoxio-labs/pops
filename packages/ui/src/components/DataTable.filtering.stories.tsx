@@ -1,16 +1,16 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable, SortableHeader } from "./DataTable";
-import type { ColumnFilter } from "./DataTableFilters";
-import { dateRangeFilter, numberRangeFilter, multiSelectFilter } from "./DataTableFilters";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ColumnDef } from '@tanstack/react-table';
+import { DataTable, SortableHeader } from './DataTable';
+import type { ColumnFilter } from './DataTableFilters';
+import { dateRangeFilter, numberRangeFilter, multiSelectFilter } from './DataTableFilters';
 
 const meta: Meta<typeof DataTable> = {
-  title: "Data Display/Table/Filtering",
+  title: 'Data Display/Table/Filtering',
   component: DataTable,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -23,64 +23,64 @@ interface Transaction {
   amount: number;
   category: string;
   account: string;
-  status: "pending" | "completed" | "failed";
+  status: 'pending' | 'completed' | 'failed';
 }
 
 // Generate sample transactions
 const sampleTransactions: Transaction[] = Array.from({ length: 100 }, (_, i) => ({
   id: `txn-${i + 1}`,
-  date: new Date(2024, Math.floor(i / 10), (i % 10) + 1).toISOString().split("T")[0]!,
-  description: ["Woolworths", "Coles", "Amazon", "Netflix", "Uber", "Spotify", "Apple", "Google"][
+  date: new Date(2024, Math.floor(i / 10), (i % 10) + 1).toISOString().split('T')[0]!,
+  description: ['Woolworths', 'Coles', 'Amazon', 'Netflix', 'Uber', 'Spotify', 'Apple', 'Google'][
     i % 8
   ]!,
   amount: Math.random() * 400 - 200,
-  category: ["Food", "Shopping", "Entertainment", "Transport", "Bills"][i % 5]!,
-  account: ["Checking", "Savings", "Credit Card"][i % 3]!,
-  status: (["pending", "completed", "failed"] as const)[i % 3]!,
+  category: ['Food', 'Shopping', 'Entertainment', 'Transport', 'Bills'][i % 5]!,
+  account: ['Checking', 'Savings', 'Credit Card'][i % 3]!,
+  status: (['pending', 'completed', 'failed'] as const)[i % 3]!,
 }));
 
 const transactionColumns: ColumnDef<Transaction>[] = [
   {
-    accessorKey: "date",
+    accessorKey: 'date',
     header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
     filterFn: dateRangeFilter,
   },
   {
-    accessorKey: "description",
-    header: "Description",
+    accessorKey: 'description',
+    header: 'Description',
   },
   {
-    accessorKey: "amount",
+    accessorKey: 'amount',
     header: ({ column }) => <SortableHeader column={column}>Amount</SortableHeader>,
     cell: ({ row }) => {
-      const amount = row.getValue("amount") as number;
-      const formatted = new Intl.NumberFormat("en-AU", {
-        style: "currency",
-        currency: "AUD",
+      const amount = row.getValue('amount') as number;
+      const formatted = new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD',
       }).format(amount);
-      return <span className={amount < 0 ? "text-red-600" : "text-green-600"}>{formatted}</span>;
+      return <span className={amount < 0 ? 'text-red-600' : 'text-green-600'}>{formatted}</span>;
     },
     filterFn: numberRangeFilter,
   },
   {
-    accessorKey: "category",
-    header: "Category",
+    accessorKey: 'category',
+    header: 'Category',
     filterFn: multiSelectFilter,
   },
   {
-    accessorKey: "account",
-    header: "Account",
+    accessorKey: 'account',
+    header: 'Account',
     filterFn: multiSelectFilter,
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    accessorKey: 'status',
+    header: 'Status',
     cell: ({ row }) => {
-      const status = row.getValue("status") as string;
+      const status = row.getValue('status') as string;
       const colors = {
-        pending: "text-yellow-600",
-        completed: "text-green-600",
-        failed: "text-red-600",
+        pending: 'text-yellow-600',
+        completed: 'text-green-600',
+        failed: 'text-red-600',
       };
       return <span className={colors[status as keyof typeof colors]}>{status}</span>;
     },
@@ -93,10 +93,10 @@ export const TextFilter: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "description",
-        type: "text",
-        label: "Merchant",
-        placeholder: "Search by merchant name...",
+        id: 'description',
+        type: 'text',
+        label: 'Merchant',
+        placeholder: 'Search by merchant name...',
       },
     ];
 
@@ -117,25 +117,25 @@ export const SelectFilter: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "account",
-        type: "select",
-        label: "Account",
+        id: 'account',
+        type: 'select',
+        label: 'Account',
         options: [
-          { label: "All Accounts", value: "" },
-          { label: "Checking", value: "Checking" },
-          { label: "Savings", value: "Savings" },
-          { label: "Credit Card", value: "Credit Card" },
+          { label: 'All Accounts', value: '' },
+          { label: 'Checking', value: 'Checking' },
+          { label: 'Savings', value: 'Savings' },
+          { label: 'Credit Card', value: 'Credit Card' },
         ],
       },
       {
-        id: "status",
-        type: "select",
-        label: "Status",
+        id: 'status',
+        type: 'select',
+        label: 'Status',
         options: [
-          { label: "All Statuses", value: "" },
-          { label: "Pending", value: "pending" },
-          { label: "Completed", value: "completed" },
-          { label: "Failed", value: "failed" },
+          { label: 'All Statuses', value: '' },
+          { label: 'Pending', value: 'pending' },
+          { label: 'Completed', value: 'completed' },
+          { label: 'Failed', value: 'failed' },
         ],
       },
     ];
@@ -157,27 +157,27 @@ export const MultiSelectFilter: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "category",
-        type: "multiselect",
-        label: "Categories",
-        placeholder: "Select categories...",
+        id: 'category',
+        type: 'multiselect',
+        label: 'Categories',
+        placeholder: 'Select categories...',
         options: [
-          { label: "Food", value: "Food" },
-          { label: "Shopping", value: "Shopping" },
-          { label: "Entertainment", value: "Entertainment" },
-          { label: "Transport", value: "Transport" },
-          { label: "Bills", value: "Bills" },
+          { label: 'Food', value: 'Food' },
+          { label: 'Shopping', value: 'Shopping' },
+          { label: 'Entertainment', value: 'Entertainment' },
+          { label: 'Transport', value: 'Transport' },
+          { label: 'Bills', value: 'Bills' },
         ],
       },
       {
-        id: "account",
-        type: "multiselect",
-        label: "Accounts",
-        placeholder: "Select accounts...",
+        id: 'account',
+        type: 'multiselect',
+        label: 'Accounts',
+        placeholder: 'Select accounts...',
         options: [
-          { label: "Checking", value: "Checking" },
-          { label: "Savings", value: "Savings" },
-          { label: "Credit Card", value: "Credit Card" },
+          { label: 'Checking', value: 'Checking' },
+          { label: 'Savings', value: 'Savings' },
+          { label: 'Credit Card', value: 'Credit Card' },
         ],
       },
     ];
@@ -202,9 +202,9 @@ export const DateRangeFilter: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "date",
-        type: "daterange",
-        label: "Date Range",
+        id: 'date',
+        type: 'daterange',
+        label: 'Date Range',
       },
     ];
 
@@ -228,9 +228,9 @@ export const NumberRangeFilter: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "amount",
-        type: "numberrange",
-        label: "Amount Range",
+        id: 'amount',
+        type: 'numberrange',
+        label: 'Amount Range',
       },
     ];
 
@@ -254,54 +254,54 @@ export const CombinedFilters: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "description",
-        type: "text",
-        label: "Merchant",
-        placeholder: "Search merchant...",
+        id: 'description',
+        type: 'text',
+        label: 'Merchant',
+        placeholder: 'Search merchant...',
       },
       {
-        id: "date",
-        type: "daterange",
-        label: "Date Range",
+        id: 'date',
+        type: 'daterange',
+        label: 'Date Range',
       },
       {
-        id: "amount",
-        type: "numberrange",
-        label: "Amount Range",
+        id: 'amount',
+        type: 'numberrange',
+        label: 'Amount Range',
       },
       {
-        id: "category",
-        type: "multiselect",
-        label: "Categories",
-        placeholder: "Select categories...",
+        id: 'category',
+        type: 'multiselect',
+        label: 'Categories',
+        placeholder: 'Select categories...',
         options: [
-          { label: "Food", value: "Food" },
-          { label: "Shopping", value: "Shopping" },
-          { label: "Entertainment", value: "Entertainment" },
-          { label: "Transport", value: "Transport" },
-          { label: "Bills", value: "Bills" },
+          { label: 'Food', value: 'Food' },
+          { label: 'Shopping', value: 'Shopping' },
+          { label: 'Entertainment', value: 'Entertainment' },
+          { label: 'Transport', value: 'Transport' },
+          { label: 'Bills', value: 'Bills' },
         ],
       },
       {
-        id: "account",
-        type: "multiselect",
-        label: "Accounts",
-        placeholder: "Select accounts...",
+        id: 'account',
+        type: 'multiselect',
+        label: 'Accounts',
+        placeholder: 'Select accounts...',
         options: [
-          { label: "Checking", value: "Checking" },
-          { label: "Savings", value: "Savings" },
-          { label: "Credit Card", value: "Credit Card" },
+          { label: 'Checking', value: 'Checking' },
+          { label: 'Savings', value: 'Savings' },
+          { label: 'Credit Card', value: 'Credit Card' },
         ],
       },
       {
-        id: "status",
-        type: "select",
-        label: "Status",
+        id: 'status',
+        type: 'select',
+        label: 'Status',
         options: [
-          { label: "All", value: "" },
-          { label: "Pending", value: "pending" },
-          { label: "Completed", value: "completed" },
-          { label: "Failed", value: "failed" },
+          { label: 'All', value: '' },
+          { label: 'Pending', value: 'pending' },
+          { label: 'Completed', value: 'completed' },
+          { label: 'Failed', value: 'failed' },
         ],
       },
     ];
@@ -331,26 +331,26 @@ export const FiltersWithSearch: Story = {
   render: () => {
     const filters: ColumnFilter[] = [
       {
-        id: "category",
-        type: "multiselect",
-        label: "Categories",
+        id: 'category',
+        type: 'multiselect',
+        label: 'Categories',
         options: [
-          { label: "Food", value: "Food" },
-          { label: "Shopping", value: "Shopping" },
-          { label: "Entertainment", value: "Entertainment" },
-          { label: "Transport", value: "Transport" },
-          { label: "Bills", value: "Bills" },
+          { label: 'Food', value: 'Food' },
+          { label: 'Shopping', value: 'Shopping' },
+          { label: 'Entertainment', value: 'Entertainment' },
+          { label: 'Transport', value: 'Transport' },
+          { label: 'Bills', value: 'Bills' },
         ],
       },
       {
-        id: "status",
-        type: "select",
-        label: "Status",
+        id: 'status',
+        type: 'select',
+        label: 'Status',
         options: [
-          { label: "All", value: "" },
-          { label: "Pending", value: "pending" },
-          { label: "Completed", value: "completed" },
-          { label: "Failed", value: "failed" },
+          { label: 'All', value: '' },
+          { label: 'Pending', value: 'pending' },
+          { label: 'Completed', value: 'completed' },
+          { label: 'Failed', value: 'failed' },
         ],
       },
     ];

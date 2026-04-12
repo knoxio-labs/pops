@@ -11,12 +11,12 @@ The Plex watchlist is a **cloud-based feature** accessed via `https://discover.p
 
 ## Plex Watchlist API
 
-| Operation | Method | Endpoint |
-|-----------|--------|----------|
-| List watchlist | GET | `https://discover.provider.plex.tv/library/sections/watchlist/all` |
-| Add to watchlist | PUT | `https://discover.provider.plex.tv/actions/addToWatchlist?ratingKey={ratingKey}` |
-| Remove from watchlist | PUT | `https://discover.provider.plex.tv/actions/removeFromWatchlist?ratingKey={ratingKey}` |
-| Check item state | GET | `https://metadata.provider.plex.tv/library/metadata/{ratingKey}/userState` |
+| Operation             | Method | Endpoint                                                                              |
+| --------------------- | ------ | ------------------------------------------------------------------------------------- |
+| List watchlist        | GET    | `https://discover.provider.plex.tv/library/sections/watchlist/all`                    |
+| Add to watchlist      | PUT    | `https://discover.provider.plex.tv/actions/addToWatchlist?ratingKey={ratingKey}`      |
+| Remove from watchlist | PUT    | `https://discover.provider.plex.tv/actions/removeFromWatchlist?ratingKey={ratingKey}` |
+| Check item state      | GET    | `https://metadata.provider.plex.tv/library/metadata/{ratingKey}/userState`            |
 
 All requests use `X-Plex-Token` and `X-Plex-Client-Identifier` headers (same as library sync).
 
@@ -45,26 +45,26 @@ Plex watchlist items use a **discover ratingKey** (not the local library ratingK
 
 Add to `media_watchlist` table:
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| source | TEXT | DEFAULT 'manual' | Origin: `"manual"`, `"plex"`, or `"both"` |
-| plexRatingKey | TEXT | nullable | Plex discover ratingKey — required for POPS → Plex removal |
+| Column        | Type | Constraints      | Description                                                |
+| ------------- | ---- | ---------------- | ---------------------------------------------------------- |
+| source        | TEXT | DEFAULT 'manual' | Origin: `"manual"`, `"plex"`, or `"both"`                  |
+| plexRatingKey | TEXT | nullable         | Plex discover ratingKey — required for POPS → Plex removal |
 
 ## Conflict Resolution
 
-| Scenario | Behaviour |
-|----------|-----------|
+| Scenario                       | Behaviour                            |
+| ------------------------------ | ------------------------------------ |
 | Added in POPS, removed in Plex | Remove from POPS (Plex removal wins) |
 | Added in Plex, removed in POPS | Remove from Plex (POPS removal wins) |
-| Added in both independently | Keep in both, set source to `"both"` |
-| Removed in both independently | Stay removed (no conflict) |
+| Added in both independently    | Keep in both, set source to `"both"` |
+| Removed in both independently  | Stay removed (no conflict)           |
 
 The `source` column tracks origin so the sync can distinguish "user removed from POPS" (source was `"both"` or `"manual"`) from "never synced to POPS" (no record).
 
 ## API Surface
 
-| Procedure | Type | Input | Description |
-|-----------|------|-------|-------------|
+| Procedure                  | Type     | Input  | Description                        |
+| -------------------------- | -------- | ------ | ---------------------------------- |
 | `media.plex.syncWatchlist` | mutation | (none) | Trigger Plex → POPS watchlist sync |
 
 The scheduler (PRD-039 US-04) calls `syncWatchlist` after syncing movies and TV shows.
@@ -83,24 +83,24 @@ The scheduler (PRD-039 US-04) calls `syncWatchlist` after syncing movies and TV 
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Item on Plex watchlist but not in POPS library | Add to library first (same as library sync), then add to watchlist |
-| Item on POPS watchlist with no TMDB/TheTVDB ID | Cannot sync to Plex — skip with warning |
-| Plex API rate limit during inline push | Log error, local operation succeeds, next poll reconciles |
-| Plex disconnected | POPS → Plex calls are no-ops; Plex → POPS sync skipped |
-| Same item added in both systems independently | Set source to `"both"` during next Plex → POPS sync |
-| User removes from POPS, item was source="plex" | Remove locally, also remove from Plex |
-| User removes from POPS, item was source="manual" | Remove locally, also remove from Plex (user intent is clear) |
+| Case                                             | Behaviour                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------ |
+| Item on Plex watchlist but not in POPS library   | Add to library first (same as library sync), then add to watchlist |
+| Item on POPS watchlist with no TMDB/TheTVDB ID   | Cannot sync to Plex — skip with warning                            |
+| Plex API rate limit during inline push           | Log error, local operation succeeds, next poll reconciles          |
+| Plex disconnected                                | POPS → Plex calls are no-ops; Plex → POPS sync skipped             |
+| Same item added in both systems independently    | Set source to `"both"` during next Plex → POPS sync                |
+| User removes from POPS, item was source="plex"   | Remove locally, also remove from Plex                              |
+| User removes from POPS, item was source="manual" | Remove locally, also remove from Plex (user intent is clear)       |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-schema-source-tracking](us-01-schema-source-tracking.md) | Add `source` and `plexRatingKey` columns to watchlist table, migrate existing data | Done | No (first) |
-| 02 | [us-02-plex-to-pops-sync](us-02-plex-to-pops-sync.md) | Plex → POPS polling sync: fetch cloud watchlist, match IDs, add/remove with source tracking | Done | Blocked by us-01 |
-| 03 | [us-03-pops-to-plex-push](us-03-pops-to-plex-push.md) | POPS → Plex inline push: extend watchlist add/remove to call Plex API when connected | Done | Blocked by us-01 |
-| 04 | [us-04-sync-ui](us-04-sync-ui.md) | Watchlist sync status on Plex settings page: last sync, items synced/removed, manual trigger | Done | Blocked by us-02 |
+| #   | Story                                                           | Summary                                                                                      | Status | Parallelisable   |
+| --- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-schema-source-tracking](us-01-schema-source-tracking.md) | Add `source` and `plexRatingKey` columns to watchlist table, migrate existing data           | Done   | No (first)       |
+| 02  | [us-02-plex-to-pops-sync](us-02-plex-to-pops-sync.md)           | Plex → POPS polling sync: fetch cloud watchlist, match IDs, add/remove with source tracking  | Done   | Blocked by us-01 |
+| 03  | [us-03-pops-to-plex-push](us-03-pops-to-plex-push.md)           | POPS → Plex inline push: extend watchlist add/remove to call Plex API when connected         | Done   | Blocked by us-01 |
+| 04  | [us-04-sync-ui](us-04-sync-ui.md)                               | Watchlist sync status on Plex settings page: last sync, items synced/removed, manual trigger | Done   | Blocked by us-02 |
 
 US-02 and US-03 can parallelise after US-01.
 

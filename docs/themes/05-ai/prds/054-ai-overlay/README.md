@@ -56,12 +56,12 @@ Each verb maps to one or more tRPC calls behind the scenes. The AI never calls t
 
 ### Meta-tools (always available)
 
-| Tool | Purpose | Visible to user? |
-|------|---------|-----------------|
-| `help { domain }` | Returns verb list for a domain. Used when Claude needs cross-domain tools | No |
-| `fetch { uri }` | Retrieves data for AI reasoning. Returns data + contextual commands for that resource | No |
-| `search { query }` | Cross-domain search (PRD-057). Returns results + per-result commands | No |
-| `navigate { uri }` | Navigates the user's browser to a page | Yes (browser navigates) |
+| Tool               | Purpose                                                                               | Visible to user?        |
+| ------------------ | ------------------------------------------------------------------------------------- | ----------------------- |
+| `help { domain }`  | Returns verb list for a domain. Used when Claude needs cross-domain tools             | No                      |
+| `fetch { uri }`    | Retrieves data for AI reasoning. Returns data + contextual commands for that resource | No                      |
+| `search { query }` | Cross-domain search (PRD-057). Returns results + per-result commands                  | No                      |
+| `navigate { uri }` | Navigates the user's browser to a page                                                | Yes (browser navigates) |
 
 ### Lazy tool loading
 
@@ -84,18 +84,22 @@ fetch { uri: "pops:inventory/item/42" }
 ### Domain verb sets
 
 **Finance:**
+
 - Read: `search-transactions`, `get-transaction`, `get-budget-summary`, `get-wishlist`, `search-entities`, `get-entity`
 - Write: `create-budget`, `update-budget`, `add-to-wishlist`, `remove-from-wishlist`, `create-entity`
 
 **Media:**
+
 - Read: `search-library`, `get-movie`, `get-tv-show`, `get-watch-history`, `get-rankings`
 - Write: `add-to-library`, `add-to-watchlist`, `mark-watched`, `request-download`
 
 **Inventory:**
+
 - Read: `search-items`, `get-item`, `get-location-tree`, `get-connections`
 - Write: `create-item`, `update-item`, `move-item`, `add-connection`
 
 **AI:**
+
 - Read: `get-usage-stats`, `get-model-config`, `get-cache-stats`
 
 ### Permissions
@@ -113,22 +117,22 @@ Each verb has an allowed-consumers list. v1: all verbs allowed for the AI overla
 
 **ai_conversations**
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INTEGER | PK, auto-increment |
-| `context_snapshot` | TEXT | JSON: app, page, entity at conversation start |
-| `model` | TEXT | Claude model used |
-| `started_at` | TEXT | ISO timestamp |
+| Column             | Type    | Description                                   |
+| ------------------ | ------- | --------------------------------------------- |
+| `id`               | INTEGER | PK, auto-increment                            |
+| `context_snapshot` | TEXT    | JSON: app, page, entity at conversation start |
+| `model`            | TEXT    | Claude model used                             |
+| `started_at`       | TEXT    | ISO timestamp                                 |
 
 **ai_messages**
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INTEGER | PK, auto-increment |
-| `conversation_id` | INTEGER | FK → ai_conversations |
-| `role` | TEXT | "user", "assistant", "tool_call", "tool_result" |
-| `content` | TEXT | Message text or JSON for tool calls/results |
-| `created_at` | TEXT | ISO timestamp |
+| Column            | Type    | Description                                     |
+| ----------------- | ------- | ----------------------------------------------- |
+| `id`              | INTEGER | PK, auto-increment                              |
+| `conversation_id` | INTEGER | FK → ai_conversations                           |
+| `role`            | TEXT    | "user", "assistant", "tool_call", "tool_result" |
+| `content`         | TEXT    | Message text or JSON for tool calls/results     |
+| `created_at`      | TEXT    | ISO timestamp                                   |
 
 Cleanup: conversations older than 24h deleted on API startup.
 
@@ -156,13 +160,13 @@ Use `fetch` silently when you need data to answer a question.
 
 ## Error Handling
 
-| Error | UX |
-|-------|-----|
-| Claude API down | "AI is temporarily unavailable. Try again in a moment." + retry button |
-| Rate limited | "Please wait {N} seconds before sending another message." + countdown |
-| Tool call fails | Inline error card: "Failed to search transactions: {reason}". Claude can retry or explain |
-| Streaming interrupted | "Connection lost. Retry?" button re-sends the last message |
-| Conversation expired (24h) | "This conversation has expired. Starting a new one." + auto-new-chat |
+| Error                      | UX                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| Claude API down            | "AI is temporarily unavailable. Try again in a moment." + retry button                    |
+| Rate limited               | "Please wait {N} seconds before sending another message." + countdown                     |
+| Tool call fails            | Inline error card: "Failed to search transactions: {reason}". Claude can retry or explain |
+| Streaming interrupted      | "Connection lost. Retry?" button re-sends the last message                                |
+| Conversation expired (24h) | "This conversation has expired. Starting a new one." + auto-new-chat                      |
 
 ## Business Rules
 
@@ -176,32 +180,32 @@ Use `fetch` silently when you need data to answer a question.
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| User switches model mid-conversation | Next message uses new model, conversation context preserved |
-| Tool call returns empty results | Claude explains "I couldn't find any {thing}" naturally |
-| User asks about domain with no data | Claude responds helpfully: "You don't have any inventory items yet. Want to add some?" |
+| Case                                  | Behaviour                                                                                       |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| User switches model mid-conversation  | Next message uses new model, conversation context preserved                                     |
+| Tool call returns empty results       | Claude explains "I couldn't find any {thing}" naturally                                         |
+| User asks about domain with no data   | Claude responds helpfully: "You don't have any inventory items yet. Want to add some?"          |
 | Very long conversation (50+ messages) | Older messages truncated from Claude context, most recent 20 kept + summary of earlier messages |
-| User navigates during streaming | Stream continues, context updates on next message |
-| Panel opened with no context (root /) | System prompt shows "You are on the POPS home page" — all domains available |
+| User navigates during streaming       | Stream continues, context updates on next message                                               |
+| Panel opened with no context (root /) | System prompt shows "You are on the POPS home page" — all domains available                     |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-command-language](us-01-command-language.md) | Verb registry, domain verb definitions, param schemas, permission system | Not started | Yes |
-| 02 | [us-02-command-executor](us-02-command-executor.md) | Execute verbs by mapping to tRPC calls, return data + contextual commands | Not started | Blocked by us-01 |
-| 03 | [us-03-meta-tools](us-03-meta-tools.md) | help, fetch, search, navigate — the 4 always-available tools | Not started | Blocked by us-01 |
-| 04 | [us-04-conversation-schema](us-04-conversation-schema.md) | ai_conversations + ai_messages tables, 24h expiry, context snapshot | Not started | Yes |
-| 05 | [us-05-sse-endpoint](us-05-sse-endpoint.md) | POST /ai/chat SSE streaming endpoint, Claude API integration, tool execution loop | Not started | Blocked by us-02, us-03, us-04 |
-| 06 | [us-06-system-prompt](us-06-system-prompt.md) | Context-aware system prompt builder with lazy tool loading | Not started | Blocked by us-03 |
-| 07 | [us-07-finance-verbs](us-07-finance-verbs.md) | Finance domain verb implementations (search, get, create, update for transactions, budgets, entities, wishlist) | Not started | Blocked by us-01 |
-| 08 | [us-08-media-verbs](us-08-media-verbs.md) | Media domain verb implementations (search, get, add-to-library, watchlist, mark-watched, request-download) | Not started | Blocked by us-01 |
-| 09 | [us-09-inventory-verbs](us-09-inventory-verbs.md) | Inventory domain verb implementations (search, get, create, update, move, connect) | Not started | Blocked by us-01 |
-| 10 | [us-10-chat-panel-ui](us-10-chat-panel-ui.md) | Floating button, chat overlay, message list, input, close/minimise, model selector | Not started | Yes |
-| 11 | [us-11-streaming-renderer](us-11-streaming-renderer.md) | SSE stream consumption, token-by-token rendering, tool call cards, result links | Not started | Blocked by us-05, us-10 |
-| 12 | [us-12-conversation-persistence](us-12-conversation-persistence.md) | Load/save conversation on panel open/close, new chat button, expiry handling | Not started | Blocked by us-04, us-10 |
-| 13 | [us-13-usage-tracking](us-13-usage-tracking.md) | Record model, tokens, cost per conversation via PRD-052 AI usage system | Not started | Blocked by us-05 |
+| #   | Story                                                               | Summary                                                                                                         | Status      | Parallelisable                 |
+| --- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------ |
+| 01  | [us-01-command-language](us-01-command-language.md)                 | Verb registry, domain verb definitions, param schemas, permission system                                        | Not started | Yes                            |
+| 02  | [us-02-command-executor](us-02-command-executor.md)                 | Execute verbs by mapping to tRPC calls, return data + contextual commands                                       | Not started | Blocked by us-01               |
+| 03  | [us-03-meta-tools](us-03-meta-tools.md)                             | help, fetch, search, navigate — the 4 always-available tools                                                    | Not started | Blocked by us-01               |
+| 04  | [us-04-conversation-schema](us-04-conversation-schema.md)           | ai_conversations + ai_messages tables, 24h expiry, context snapshot                                             | Not started | Yes                            |
+| 05  | [us-05-sse-endpoint](us-05-sse-endpoint.md)                         | POST /ai/chat SSE streaming endpoint, Claude API integration, tool execution loop                               | Not started | Blocked by us-02, us-03, us-04 |
+| 06  | [us-06-system-prompt](us-06-system-prompt.md)                       | Context-aware system prompt builder with lazy tool loading                                                      | Not started | Blocked by us-03               |
+| 07  | [us-07-finance-verbs](us-07-finance-verbs.md)                       | Finance domain verb implementations (search, get, create, update for transactions, budgets, entities, wishlist) | Not started | Blocked by us-01               |
+| 08  | [us-08-media-verbs](us-08-media-verbs.md)                           | Media domain verb implementations (search, get, add-to-library, watchlist, mark-watched, request-download)      | Not started | Blocked by us-01               |
+| 09  | [us-09-inventory-verbs](us-09-inventory-verbs.md)                   | Inventory domain verb implementations (search, get, create, update, move, connect)                              | Not started | Blocked by us-01               |
+| 10  | [us-10-chat-panel-ui](us-10-chat-panel-ui.md)                       | Floating button, chat overlay, message list, input, close/minimise, model selector                              | Not started | Yes                            |
+| 11  | [us-11-streaming-renderer](us-11-streaming-renderer.md)             | SSE stream consumption, token-by-token rendering, tool call cards, result links                                 | Not started | Blocked by us-05, us-10        |
+| 12  | [us-12-conversation-persistence](us-12-conversation-persistence.md) | Load/save conversation on panel open/close, new chat button, expiry handling                                    | Not started | Blocked by us-04, us-10        |
+| 13  | [us-13-usage-tracking](us-13-usage-tracking.md)                     | Record model, tokens, cost per conversation via PRD-052 AI usage system                                         | Not started | Blocked by us-05               |
 
 US-01, US-04, US-10 can start in parallel. US-07, US-08, US-09 (domain verbs) can parallelise after US-01.
 

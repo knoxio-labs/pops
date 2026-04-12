@@ -2,11 +2,11 @@
  * Budget service — CRUD operations against SQLite via Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
  */
-import { eq, and, like, asc, count, isNull } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { budgets } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { BudgetRow, CreateBudgetInput, UpdateBudgetInput } from "./types.js";
+import { eq, and, like, asc, count, isNull } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { budgets } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
+import type { BudgetRow, CreateBudgetInput, UpdateBudgetInput } from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface BudgetListResult {
@@ -61,7 +61,7 @@ export function getBudget(id: string): BudgetRow {
   const db = getDrizzle();
   const row = db.select().from(budgets).where(eq(budgets.id, id)).get();
 
-  if (!row) throw new NotFoundError("Budget", id);
+  if (!row) throw new NotFoundError('Budget', id);
   return row;
 }
 
@@ -86,7 +86,7 @@ export function createBudget(input: CreateBudgetInput): BudgetRow {
     .get();
 
   if (existing) {
-    const periodDesc = input.period ? `'${input.period}'` : "null";
+    const periodDesc = input.period ? `'${input.period}'` : 'null';
     throw new ConflictError(
       `Budget with category '${input.category}' and period ${periodDesc} already exists`
     );
@@ -162,5 +162,5 @@ export function deleteBudget(id: string): void {
 
   const db = getDrizzle();
   const result = db.delete(budgets).where(eq(budgets.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Budget", id);
+  if (result.changes === 0) throw new NotFoundError('Budget', id);
 }

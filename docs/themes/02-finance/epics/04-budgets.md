@@ -8,8 +8,8 @@ Build budget tracking — spending categories with monthly or yearly limits. Sho
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
+| #   | PRD                                      | Summary                                                                                              | Status  |
+| --- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------- |
 | 025 | [Budgets](../prds/025-budgets/README.md) | Budget data model, CRUD page, period types (monthly/yearly), spend vs target, active/inactive toggle | Partial |
 
 ## Dependencies

@@ -1,15 +1,15 @@
 /**
  * Token bucket rate limiter tests.
  */
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { TokenBucketRateLimiter } from "./rate-limiter.js";
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { TokenBucketRateLimiter } from './rate-limiter.js';
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("TokenBucketRateLimiter", () => {
-  it("allows immediate acquisition when tokens are available", async () => {
+describe('TokenBucketRateLimiter', () => {
+  it('allows immediate acquisition when tokens are available', async () => {
     const limiter = new TokenBucketRateLimiter(5, 1);
 
     // Should resolve immediately for first 5 calls
@@ -20,7 +20,7 @@ describe("TokenBucketRateLimiter", () => {
     limiter.destroy();
   });
 
-  it("exhausts bucket after capacity is reached", async () => {
+  it('exhausts bucket after capacity is reached', async () => {
     vi.useFakeTimers();
     const limiter = new TokenBucketRateLimiter(3, 1);
 
@@ -47,7 +47,7 @@ describe("TokenBucketRateLimiter", () => {
     limiter.destroy();
   });
 
-  it("refills tokens over time", async () => {
+  it('refills tokens over time', async () => {
     vi.useFakeTimers();
     const limiter = new TokenBucketRateLimiter(2, 2); // 2 tokens/sec
 
@@ -65,7 +65,7 @@ describe("TokenBucketRateLimiter", () => {
     limiter.destroy();
   });
 
-  it("does not exceed capacity on refill", async () => {
+  it('does not exceed capacity on refill', async () => {
     vi.useFakeTimers();
     const limiter = new TokenBucketRateLimiter(3, 10); // Fast refill
 
@@ -93,7 +93,7 @@ describe("TokenBucketRateLimiter", () => {
     limiter.destroy();
   });
 
-  it("processes queued waiters in FIFO order", async () => {
+  it('processes queued waiters in FIFO order', async () => {
     vi.useFakeTimers();
     const limiter = new TokenBucketRateLimiter(1, 1);
     const order: number[] = [];
@@ -114,7 +114,7 @@ describe("TokenBucketRateLimiter", () => {
     limiter.destroy();
   });
 
-  it("works with TMDB-like settings (40 capacity, 4/sec refill)", async () => {
+  it('works with TMDB-like settings (40 capacity, 4/sec refill)', async () => {
     vi.useFakeTimers();
     const limiter = new TokenBucketRateLimiter(40, 4);
 
@@ -139,7 +139,7 @@ describe("TokenBucketRateLimiter", () => {
     limiter.destroy();
   });
 
-  it("destroy resolves pending waiters and clears timers", async () => {
+  it('destroy resolves pending waiters and clears timers', async () => {
     vi.useFakeTimers();
     const limiter = new TokenBucketRateLimiter(1, 1);
 

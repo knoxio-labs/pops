@@ -14,13 +14,13 @@ As a user, I want context-aware action buttons on every discover card that adapt
 - [x] Every `DiscoverCard` shows hover actions that adapt to the movie's current state
 - [x] Button states per movie state:
 
-| State | + (Add) | Bookmark (Watchlist) | Eye (Watched) | Download (Request) | X (Dismiss) |
-|-------|---------|---------------------|---------------|-------------------|-------------|
-| Not in library | Add to Library | Add to Watchlist | Mark as Watched | Request | Dismiss |
-| In library, not watched, not on watchlist | Hidden | Add to Watchlist | Mark as Watched | Request | Dismiss |
-| In library, on watchlist | Hidden | Remove from Watchlist (filled icon) | Mark as Watched | Request | Dismiss |
-| In library, watched, not on watchlist | Hidden | Add to Watchlist | Mark as Rewatched (repeat icon) | Request | Dismiss |
-| In library, watched, on watchlist | Hidden | Remove from Watchlist (filled icon) | Mark as Rewatched (repeat icon) | Request | Dismiss |
+| State                                     | + (Add)        | Bookmark (Watchlist)                | Eye (Watched)                   | Download (Request) | X (Dismiss) |
+| ----------------------------------------- | -------------- | ----------------------------------- | ------------------------------- | ------------------ | ----------- |
+| Not in library                            | Add to Library | Add to Watchlist                    | Mark as Watched                 | Request            | Dismiss     |
+| In library, not watched, not on watchlist | Hidden         | Add to Watchlist                    | Mark as Watched                 | Request            | Dismiss     |
+| In library, on watchlist                  | Hidden         | Remove from Watchlist (filled icon) | Mark as Watched                 | Request            | Dismiss     |
+| In library, watched, not on watchlist     | Hidden         | Add to Watchlist                    | Mark as Rewatched (repeat icon) | Request            | Dismiss     |
+| In library, watched, on watchlist         | Hidden         | Remove from Watchlist (filled icon) | Mark as Rewatched (repeat icon) | Request            | Dismiss     |
 
 - [x] "Add to Library" disappears immediately after any action that adds the movie (Add, Watchlist, Watched)
 - [x] Watchlist button toggles: outline bookmark icon = "Add to Watchlist", filled bookmark icon = "Remove from Watchlist"

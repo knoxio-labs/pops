@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Skeleton } from "./skeleton";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Skeleton } from './skeleton';
 
 const meta: Meta<typeof Skeleton> = {
-  title: "Data Display/Skeleton",
+  title: 'Data Display/Skeleton',
   component: Skeleton,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -15,19 +15,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    className: "h-12 w-12",
+    className: 'h-12 w-12',
   },
 };
 
 export const Circle: Story = {
   args: {
-    className: "h-12 w-12 rounded-full",
+    className: 'h-12 w-12 rounded-full',
   },
 };
 
 export const Rectangle: Story = {
   args: {
-    className: "h-24 w-full",
+    className: 'h-24 w-full',
   },
 };
 

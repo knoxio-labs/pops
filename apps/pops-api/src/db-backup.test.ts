@@ -5,11 +5,11 @@
  * verifying that VACUUM INTO backups are created, preserved, or deleted
  * as specified in PRD-060 US-03.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import BetterSqlite3 from "better-sqlite3";
-import { mkdtempSync, writeFileSync, readdirSync, mkdirSync, unlinkSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import BetterSqlite3 from 'better-sqlite3';
+import { mkdtempSync, writeFileSync, readdirSync, mkdirSync, unlinkSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 /** Minimal reproduction of the backup logic from db.ts for testability. */
 function getPendingMigrations(database: BetterSqlite3.Database, migrationsDir: string): string[] {
@@ -22,7 +22,7 @@ function getPendingMigrations(database: BetterSqlite3.Database, migrationsDir: s
 
   const applied = new Set(
     (
-      database.prepare("SELECT version FROM schema_migrations ORDER BY version").all() as {
+      database.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as {
         version: string;
       }[]
     ).map((r) => r.version)
@@ -31,10 +31,10 @@ function getPendingMigrations(database: BetterSqlite3.Database, migrationsDir: s
   let files: string[];
   try {
     files = readdirSync(migrationsDir)
-      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => f.endsWith('.sql'))
       .sort();
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw err;
   }
 
@@ -43,7 +43,7 @@ function getPendingMigrations(database: BetterSqlite3.Database, migrationsDir: s
 
 function hasData(database: BetterSqlite3.Database): boolean {
   try {
-    const row = database.prepare("SELECT COUNT(*) AS cnt FROM transactions").get() as
+    const row = database.prepare('SELECT COUNT(*) AS cnt FROM transactions').get() as
       | { cnt: number }
       | undefined;
     return (row?.cnt ?? 0) > 0;
@@ -61,7 +61,7 @@ function createPreMigrationBackup(
     return null;
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupPath = `${dbPath}.pre-migration-${timestamp}.bak`;
 
   database.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
@@ -76,11 +76,11 @@ function runMigrations(
   for (const file of pending) {
     const sql = String(
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require("node:fs").readFileSync(join(migrationsDir, file), "utf8")
+      require('node:fs').readFileSync(join(migrationsDir, file), 'utf8')
     );
     database.transaction(() => {
       database.exec(sql);
-      database.prepare("INSERT INTO schema_migrations (version) VALUES (?)").run(file);
+      database.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(file);
     })();
   }
 }
@@ -90,9 +90,9 @@ let dbPath: string;
 let migrationsDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), "db-backup-test-"));
-  dbPath = join(tmpDir, "test.db");
-  migrationsDir = join(tmpDir, "migrations");
+  tmpDir = mkdtempSync(join(tmpdir(), 'db-backup-test-'));
+  dbPath = join(tmpDir, 'test.db');
+  migrationsDir = join(tmpDir, 'migrations');
   mkdirSync(migrationsDir);
 });
 
@@ -100,12 +100,12 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe("pre-migration backup", () => {
-  it("creates backup when pending migrations exist and DB has data", () => {
+describe('pre-migration backup', () => {
+  it('creates backup when pending migrations exist and DB has data', () => {
     const db = new BetterSqlite3(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.exec("CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)");
-    db.exec("INSERT INTO transactions (amount) VALUES (100.00)");
+    db.pragma('journal_mode = WAL');
+    db.exec('CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)');
+    db.exec('INSERT INTO transactions (amount) VALUES (100.00)');
     db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,
@@ -114,8 +114,8 @@ describe("pre-migration backup", () => {
     `);
 
     writeFileSync(
-      join(migrationsDir, "001_add_notes.sql"),
-      "ALTER TABLE transactions ADD COLUMN notes TEXT"
+      join(migrationsDir, '001_add_notes.sql'),
+      'ALTER TABLE transactions ADD COLUMN notes TEXT'
     );
 
     const pending = getPendingMigrations(db, migrationsDir);
@@ -126,7 +126,7 @@ describe("pre-migration backup", () => {
 
     // Verify backup file exists and is a valid SQLite DB
     const backupDb = new BetterSqlite3(backupPath!);
-    const row = backupDb.prepare("SELECT COUNT(*) AS cnt FROM transactions").get() as {
+    const row = backupDb.prepare('SELECT COUNT(*) AS cnt FROM transactions').get() as {
       cnt: number;
     };
     expect(row.cnt).toBe(1);
@@ -134,11 +134,11 @@ describe("pre-migration backup", () => {
     db.close();
   });
 
-  it("deletes backup after successful migration", () => {
+  it('deletes backup after successful migration', () => {
     const db = new BetterSqlite3(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.exec("CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)");
-    db.exec("INSERT INTO transactions (amount) VALUES (100.00)");
+    db.pragma('journal_mode = WAL');
+    db.exec('CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)');
+    db.exec('INSERT INTO transactions (amount) VALUES (100.00)');
     db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,
@@ -147,8 +147,8 @@ describe("pre-migration backup", () => {
     `);
 
     writeFileSync(
-      join(migrationsDir, "001_add_notes.sql"),
-      "ALTER TABLE transactions ADD COLUMN notes TEXT"
+      join(migrationsDir, '001_add_notes.sql'),
+      'ALTER TABLE transactions ADD COLUMN notes TEXT'
     );
 
     const pending = getPendingMigrations(db, migrationsDir);
@@ -162,16 +162,16 @@ describe("pre-migration backup", () => {
     unlinkSync(backupPath);
 
     // Verify backup is gone
-    const files = readdirSync(tmpDir).filter((f) => f.endsWith(".bak"));
+    const files = readdirSync(tmpDir).filter((f) => f.endsWith('.bak'));
     expect(files).toHaveLength(0);
     db.close();
   });
 
-  it("preserves backup when migration fails", () => {
+  it('preserves backup when migration fails', () => {
     const db = new BetterSqlite3(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.exec("CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)");
-    db.exec("INSERT INTO transactions (amount) VALUES (100.00)");
+    db.pragma('journal_mode = WAL');
+    db.exec('CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)');
+    db.exec('INSERT INTO transactions (amount) VALUES (100.00)');
     db.exec(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,
@@ -179,7 +179,7 @@ describe("pre-migration backup", () => {
       )
     `);
 
-    writeFileSync(join(migrationsDir, "001_bad_migration.sql"), "INVALID SQL STATEMENT HERE");
+    writeFileSync(join(migrationsDir, '001_bad_migration.sql'), 'INVALID SQL STATEMENT HERE');
 
     const pending = getPendingMigrations(db, migrationsDir);
     const backupPath = createPreMigrationBackup(db, dbPath, pending.length)!;
@@ -189,12 +189,12 @@ describe("pre-migration backup", () => {
     expect(() => runMigrations(db, migrationsDir, pending)).toThrow();
 
     // Backup should still exist
-    const files = readdirSync(tmpDir).filter((f) => f.endsWith(".bak"));
+    const files = readdirSync(tmpDir).filter((f) => f.endsWith('.bak'));
     expect(files).toHaveLength(1);
 
     // Verify backup data is intact
     const backupDb = new BetterSqlite3(backupPath);
-    const row = backupDb.prepare("SELECT COUNT(*) AS cnt FROM transactions").get() as {
+    const row = backupDb.prepare('SELECT COUNT(*) AS cnt FROM transactions').get() as {
       cnt: number;
     };
     expect(row.cnt).toBe(1);
@@ -202,26 +202,26 @@ describe("pre-migration backup", () => {
     db.close();
   });
 
-  it("skips backup when no pending migrations", () => {
+  it('skips backup when no pending migrations', () => {
     const db = new BetterSqlite3(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.exec("CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)");
-    db.exec("INSERT INTO transactions (amount) VALUES (100.00)");
+    db.pragma('journal_mode = WAL');
+    db.exec('CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)');
+    db.exec('INSERT INTO transactions (amount) VALUES (100.00)');
 
     const pending = getPendingMigrations(db, migrationsDir);
     expect(pending).toHaveLength(0);
     db.close();
   });
 
-  it("skips backup when DB has no data (fresh install)", () => {
+  it('skips backup when DB has no data (fresh install)', () => {
     const db = new BetterSqlite3(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.exec("CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)");
+    db.pragma('journal_mode = WAL');
+    db.exec('CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL)');
     // No data inserted
 
     writeFileSync(
-      join(migrationsDir, "001_add_notes.sql"),
-      "ALTER TABLE transactions ADD COLUMN notes TEXT"
+      join(migrationsDir, '001_add_notes.sql'),
+      'ALTER TABLE transactions ADD COLUMN notes TEXT'
     );
 
     const pending = getPendingMigrations(db, migrationsDir);

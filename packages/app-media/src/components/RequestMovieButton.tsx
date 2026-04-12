@@ -5,13 +5,13 @@
  * Disabled when Radarr is not configured.
  * Returns null on query error (service unreachable).
  */
-import { useState } from "react";
-import { Button } from "@pops/ui";
-import { Download } from "lucide-react";
-import { trpc } from "../lib/trpc";
-import { RequestMovieModal } from "./RequestMovieModal";
+import { useState } from 'react';
+import { Button } from '@pops/ui';
+import { Download } from 'lucide-react';
+import { trpc } from '../lib/trpc';
+import { RequestMovieModal } from './RequestMovieModal';
 
-type ButtonVariant = "standard" | "compact";
+type ButtonVariant = 'standard' | 'compact';
 
 export interface RequestMovieButtonProps {
   tmdbId: number;
@@ -25,7 +25,7 @@ export function RequestMovieButton({
   tmdbId,
   title,
   year,
-  variant = "standard",
+  variant = 'standard',
   onRequest,
 }: RequestMovieButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,7 +40,7 @@ export function RequestMovieButton({
 
   // Not configured — show disabled button
   if (!config?.radarrConfigured) {
-    if (variant === "compact") {
+    if (variant === 'compact') {
       return (
         <Button
           size="icon"
@@ -70,7 +70,7 @@ export function RequestMovieButton({
 
   // Movie exists in Radarr — hide button
   const status = movieStatus.data?.data?.status;
-  if (status && status !== "not_found") return null;
+  if (status && status !== 'not_found') return null;
 
   const handleClick = () => {
     if (onRequest) {
@@ -80,7 +80,7 @@ export function RequestMovieButton({
     }
   };
 
-  if (variant === "compact") {
+  if (variant === 'compact') {
     return (
       <>
         <Button

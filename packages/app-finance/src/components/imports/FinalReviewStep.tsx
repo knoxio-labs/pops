@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react';
 import {
   CheckCircle,
   ChevronDown,
@@ -9,17 +9,17 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-} from "lucide-react";
-import { Button } from "@pops/ui";
-import { useImportStore } from "../../store/importStore";
-import { trpc } from "../../lib/trpc";
-import { buildCommitPayload } from "../../lib/commit-payload";
+} from 'lucide-react';
+import { Button } from '@pops/ui';
+import { useImportStore } from '../../store/importStore';
+import { trpc } from '../../lib/trpc';
+import { buildCommitPayload } from '../../lib/commit-payload';
 
 type ChangeSetOp =
-  | { op: "add"; data: { descriptionPattern: string; [k: string]: unknown } }
-  | { op: "edit"; id: string; data: { entityName?: string | null; [k: string]: unknown } }
-  | { op: "disable"; id: string }
-  | { op: "remove"; id: string };
+  | { op: 'add'; data: { descriptionPattern: string; [k: string]: unknown } }
+  | { op: 'edit'; id: string; data: { entityName?: string | null; [k: string]: unknown } }
+  | { op: 'disable'; id: string }
+  | { op: 'remove'; id: string };
 
 // ---------------------------------------------------------------------------
 // Collapsible section wrapper
@@ -60,24 +60,24 @@ function Section(props: {
 
 const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
   add: {
-    label: "Add",
+    label: 'Add',
     icon: <Plus className="h-3 w-3" />,
-    className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+    className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   },
   edit: {
-    label: "Edit",
+    label: 'Edit',
     icon: <Pencil className="h-3 w-3" />,
-    className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+    className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   },
   disable: {
-    label: "Disable",
+    label: 'Disable',
     icon: <Ban className="h-3 w-3" />,
-    className: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
+    className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
   },
   remove: {
-    label: "Remove",
+    label: 'Remove',
     icon: <Trash2 className="h-3 w-3" />,
-    className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+    className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   },
 };
 
@@ -88,12 +88,12 @@ const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; className
 /** Extract a human-readable label from a ChangeSet op. */
 function opDisplayLabel(op: ChangeSetOp): string {
   switch (op.op) {
-    case "add":
+    case 'add':
       return op.data.descriptionPattern;
-    case "edit":
+    case 'edit':
       return op.data.entityName ?? `Rule ${op.id.slice(0, 8)}`;
-    case "disable":
-    case "remove":
+    case 'disable':
+    case 'remove':
       return `Rule ${op.id.slice(0, 8)}`;
   }
 }
@@ -252,8 +252,8 @@ export function FinalReviewStep() {
         {hasTags && (
           <Section title="Tag Assignments" count={tagAssignmentCount}>
             <p className="text-sm text-muted-foreground">
-              {tagAssignmentCount} tag{tagAssignmentCount === 1 ? "" : "s"} will be applied across{" "}
-              {taggedTxnCount} transaction{taggedTxnCount === 1 ? "" : "s"}.
+              {tagAssignmentCount} tag{tagAssignmentCount === 1 ? '' : 's'} will be applied across{' '}
+              {taggedTxnCount} transaction{taggedTxnCount === 1 ? '' : 's'}.
             </p>
           </Section>
         )}
@@ -370,7 +370,7 @@ export function FinalReviewStep() {
         ) : (
           <Button onClick={handleCommit} disabled={isCommitting}>
             {isCommitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isCommitting ? "Committing..." : "Approve & Commit All"}
+            {isCommitting ? 'Committing...' : 'Approve & Commit All'}
           </Button>
         )}
       </div>

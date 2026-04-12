@@ -8,7 +8,7 @@ telegram:
   # Token loaded from Docker secret at runtime
   token_file: /run/secrets/telegram_bot_token
   # Restrict to owner's Telegram user ID only (security: reject all other messages)
-  allowed_user_ids: []  # TODO: add your Telegram user ID
+  allowed_user_ids: [] # TODO: add your Telegram user ID
 
 # AI backend
 ai:

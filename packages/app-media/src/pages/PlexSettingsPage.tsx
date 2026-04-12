@@ -4,8 +4,8 @@
  * Shows connection health, available libraries, and sync buttons
  * for importing movies and TV shows from Plex into the local library.
  */
-import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import {
   Button,
   Label,
@@ -18,7 +18,7 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbPage,
-} from "@pops/ui";
+} from '@pops/ui';
 import {
   ArrowLeft,
   RefreshCw,
@@ -34,11 +34,11 @@ import {
   History,
   Bookmark,
   Eye,
-} from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { ConnectionBadge } from "../components/ConnectionBadge";
-import { useSyncJob } from "../hooks/useSyncJob";
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { ConnectionBadge } from '../components/ConnectionBadge';
+import { useSyncJob } from '../hooks/useSyncJob';
 
 interface SyncResult {
   synced: number;
@@ -135,7 +135,7 @@ function SyncResultDisplay({ result, label }: { result: SyncResult; label: strin
             className="flex items-center gap-1 text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
           >
             {showSkipped ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showSkipped ? "Hide" : "Show"} skip reasons
+            {showSkipped ? 'Hide' : 'Show'} skip reasons
           </Button>
           {showSkipped && (
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -157,7 +157,7 @@ function SyncResultDisplay({ result, label }: { result: SyncResult; label: strin
             className="flex items-center gap-1 text-xs h-auto p-0 text-red-400 hover:text-red-300"
           >
             {showErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showErrors ? "Hide" : "Show"} error details
+            {showErrors ? 'Hide' : 'Show'} error details
           </Button>
           {showErrors && (
             <div className="mt-2 space-y-1 text-xs text-red-400/80">
@@ -199,7 +199,7 @@ function WatchlistSyncResultDisplay({ result }: { result: WatchlistSyncResult })
             className="flex items-center gap-1 text-xs h-auto p-0 text-muted-foreground hover:text-foreground"
           >
             {showSkipped ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showSkipped ? "Hide" : "Show"} skip reasons
+            {showSkipped ? 'Hide' : 'Show'} skip reasons
           </Button>
           {showSkipped && (
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -221,7 +221,7 @@ function WatchlistSyncResultDisplay({ result }: { result: WatchlistSyncResult })
             className="flex items-center gap-1 text-xs h-auto p-0 text-red-400 hover:text-red-300"
           >
             {showErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showErrors ? "Hide" : "Show"} error details
+            {showErrors ? 'Hide' : 'Show'} error details
           </Button>
           {showErrors && (
             <div className="mt-2 space-y-1 text-xs text-red-400/80">
@@ -261,7 +261,7 @@ function DiscoverSyncResultDisplay({
     <div className="rounded-md border bg-muted/30 p-3 space-y-2 text-sm">
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-medium">
-          {isRunning ? "Cloud Sync Progress:" : "Cloud Sync Results:"}
+          {isRunning ? 'Cloud Sync Progress:' : 'Cloud Sync Results:'}
         </span>
         {totalAdded > 0 && <span className="text-blue-400">{totalAdded} added to library</span>}
         {totalLogged > 0 && <span className="text-emerald-400">{totalLogged} watches logged</span>}
@@ -287,7 +287,7 @@ function DiscoverSyncResultDisplay({
             className="flex items-center gap-1 text-xs h-auto p-0 text-red-400 hover:text-red-300"
           >
             {showErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showErrors ? "Hide" : "Show"} error details
+            {showErrors ? 'Hide' : 'Show'} error details
           </Button>
           {showErrors && (
             <div className="mt-2 space-y-1 text-xs text-red-400/80">
@@ -357,7 +357,7 @@ function WatchHistorySyncResultDisplay({ result }: { result: WatchHistorySyncRes
             className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 transition-colors"
           >
             {showShows ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showShows ? "Hide" : "Show"} {gapShows.length} shows with matching issues
+            {showShows ? 'Hide' : 'Show'} {gapShows.length} shows with matching issues
           </button>
           {showShows && (
             <div className="mt-2 space-y-1">
@@ -399,7 +399,7 @@ function WatchHistorySyncResultDisplay({ result }: { result: WatchHistorySyncRes
                           <p className="text-amber-400">
                             Season not found: {d.seasonNotFound} episodes
                             {d.missingSeasonsPreview.length > 0 &&
-                              ` (seasons: ${d.missingSeasonsPreview.join(", ")})`}
+                              ` (seasons: ${d.missingSeasonsPreview.join(', ')})`}
                           </p>
                         )}
                         {d.episodeNotFound > 0 && (
@@ -409,8 +409,8 @@ function WatchHistorySyncResultDisplay({ result }: { result: WatchHistorySyncRes
                               <ul className="ml-3 mt-0.5">
                                 {d.missingEpisodesPreview.map((ep, j) => (
                                   <li key={j}>
-                                    S{String(ep.seasonNumber).padStart(2, "0")}E
-                                    {String(ep.episodeNumber).padStart(2, "0")} — {ep.title}
+                                    S{String(ep.seasonNumber).padStart(2, '0')}E
+                                    {String(ep.episodeNumber).padStart(2, '0')} — {ep.title}
                                   </li>
                                 ))}
                               </ul>
@@ -431,19 +431,19 @@ function WatchHistorySyncResultDisplay({ result }: { result: WatchHistorySyncRes
 }
 
 export function PlexSettingsPage() {
-  const [movieSectionId, setMovieSectionId] = useState<string>("");
-  const [tvSectionId, setTvSectionId] = useState<string>("");
+  const [movieSectionId, setMovieSectionId] = useState<string>('');
+  const [tvSectionId, setTvSectionId] = useState<string>('');
   const [pinId, setPinId] = useState<number | null>(null);
   const [pinCode, setPinCode] = useState<string | null>(null);
-  const [plexUrl, setPlexUrl] = useState<string>("");
+  const [plexUrl, setPlexUrl] = useState<string>('');
   const [schedulerHours, setSchedulerHours] = useState<number>(6);
 
   // Background sync jobs
-  const movieSync = useSyncJob("syncMovies");
-  const tvSync = useSyncJob("syncTvShows");
-  const watchlistSync = useSyncJob("syncWatchlist");
-  const watchHistorySync = useSyncJob("syncWatchHistory");
-  const discoverSync = useSyncJob("syncDiscoverWatches");
+  const movieSync = useSyncJob('syncMovies');
+  const tvSync = useSyncJob('syncTvShows');
+  const watchlistSync = useSyncJob('syncWatchlist');
+  const watchHistorySync = useSyncJob('syncWatchHistory');
+  const discoverSync = useSyncJob('syncDiscoverWatches');
   const syncStatus = trpc.media.plex.getSyncStatus.useQuery();
   const currentUrl = trpc.media.plex.getPlexUrl.useQuery();
   const savedSectionIds = trpc.media.plex.getSectionIds.useQuery();
@@ -486,7 +486,7 @@ export function PlexSettingsPage() {
 
   const saveUrl = trpc.media.plex.setUrl.useMutation({
     onSuccess: () => {
-      toast.success("Server URL saved");
+      toast.success('Server URL saved');
       syncStatus.refetch();
       connectionTest.refetch();
       currentUrl.refetch();
@@ -510,7 +510,7 @@ export function PlexSettingsPage() {
   const checkPin = trpc.media.plex.checkAuthPin.useMutation({
     onSuccess: (res: { data: { connected: boolean } }) => {
       if (res.data.connected) {
-        toast.success("Plex account connected");
+        toast.success('Plex account connected');
         setPinId(null);
         setPinCode(null);
         syncStatus.refetch();
@@ -524,7 +524,7 @@ export function PlexSettingsPage() {
 
   const disconnect = trpc.media.plex.disconnect.useMutation({
     onSuccess: () => {
-      toast.success("Plex account disconnected");
+      toast.success('Plex account disconnected');
       syncStatus.refetch();
       connectionTest.refetch();
     },
@@ -533,7 +533,7 @@ export function PlexSettingsPage() {
 
   const startScheduler = trpc.media.plex.startScheduler.useMutation({
     onSuccess: () => {
-      toast.success("Scheduler started");
+      toast.success('Scheduler started');
       schedulerStatus.refetch();
       syncLogs.refetch();
     },
@@ -542,7 +542,7 @@ export function PlexSettingsPage() {
 
   const stopScheduler = trpc.media.plex.stopScheduler.useMutation({
     onSuccess: () => {
-      toast.success("Scheduler stopped");
+      toast.success('Scheduler stopped');
       schedulerStatus.refetch();
     },
     onError: (err: { message: string }) => toast.error(`Failed to stop scheduler: ${err.message}`),
@@ -559,13 +559,13 @@ export function PlexSettingsPage() {
   const status = syncStatus.data?.data;
   const connected = connectionTest.data?.data.connected ?? false;
   const connectionError =
-    connectionTest.data?.data && "error" in connectionTest.data.data
+    connectionTest.data?.data && 'error' in connectionTest.data.data
       ? connectionTest.data.data.error
       : undefined;
   const libraryList = libraries.data?.data ?? [];
 
-  const movieLibraries = libraryList.filter((lib: { type: string }) => lib.type === "movie");
-  const tvLibraries = libraryList.filter((lib: { type: string }) => lib.type === "show");
+  const movieLibraries = libraryList.filter((lib: { type: string }) => lib.type === 'movie');
+  const tvLibraries = libraryList.filter((lib: { type: string }) => lib.type === 'show');
 
   const scheduler = schedulerStatus.data?.data;
   const isSchedulerRunning = scheduler?.isRunning ?? false;
@@ -682,7 +682,7 @@ export function PlexSettingsPage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      Enter this code at{" "}
+                      Enter this code at{' '}
                       <a
                         href="https://plex.tv/link"
                         target="_blank"
@@ -701,7 +701,7 @@ export function PlexSettingsPage() {
                         size="sm"
                         onClick={() => {
                           navigator.clipboard.writeText(pinCode);
-                          toast.success("Code copied");
+                          toast.success('Code copied');
                         }}
                         aria-label="Copy PIN code"
                       >
@@ -725,7 +725,7 @@ export function PlexSettingsPage() {
                 </div>
               ) : (
                 <Button onClick={() => getPin.mutate()} disabled={getPin.isPending}>
-                  {getPin.isPending ? "Requesting..." : "Connect to Plex"}
+                  {getPin.isPending ? 'Requesting...' : 'Connect to Plex'}
                 </Button>
               )}
               {getPin.error && <p className="text-xs text-red-400 mt-2">{getPin.error.message}</p>}
@@ -799,7 +799,7 @@ export function PlexSettingsPage() {
                     )}
                     {movieSync.isRunning && movieSync.progress
                       ? `Syncing... ${movieSync.progress.processed}/${movieSync.progress.total}`
-                      : "Sync Movies"}
+                      : 'Sync Movies'}
                   </Button>
 
                   {movieSync.result != null && (
@@ -851,7 +851,7 @@ export function PlexSettingsPage() {
                     )}
                     {tvSync.isRunning && tvSync.progress
                       ? `Syncing... ${tvSync.progress.processed}/${tvSync.progress.total}`
-                      : "Sync TV Shows"}
+                      : 'Sync TV Shows'}
                   </Button>
 
                   {tvSync.result != null && (
@@ -888,7 +888,7 @@ export function PlexSettingsPage() {
               )}
               {watchlistSync.isRunning && watchlistSync.progress
                 ? `Syncing... ${watchlistSync.progress.processed}/${watchlistSync.progress.total}`
-                : "Sync Watchlist"}
+                : 'Sync Watchlist'}
             </Button>
             {watchlistSync.result != null && (
               <WatchlistSyncResultDisplay result={watchlistSync.result as WatchlistSyncResult} />
@@ -928,7 +928,7 @@ export function PlexSettingsPage() {
               )}
               {watchHistorySync.isRunning && watchHistorySync.progress
                 ? `Syncing... ${watchHistorySync.progress.processed}/${watchHistorySync.progress.total}`
-                : "Sync Watch History"}
+                : 'Sync Watch History'}
             </Button>
             {!movieSectionId && !tvSectionId && (
               <p className="text-xs text-amber-400">Select a movie or TV library above first.</p>
@@ -966,7 +966,7 @@ export function PlexSettingsPage() {
               )}
               {discoverSync.isRunning && discoverSync.progress
                 ? `Checking... ${discoverSync.progress.processed}/${discoverSync.progress.total}`
-                : "Sync Cloud Watches"}
+                : 'Sync Cloud Watches'}
             </Button>
             <DiscoverSyncResultDisplay
               result={discoverSync.result as DiscoverWatchSyncResult | null}
@@ -1038,7 +1038,7 @@ export function PlexSettingsPage() {
               {isSchedulerRunning ? (
                 <>
                   <p className="text-emerald-400">
-                    Scheduler active — syncing every{" "}
+                    Scheduler active — syncing every{' '}
                     {Math.round((scheduler?.intervalMs ?? 0) / (60 * 60 * 1000))} hours
                   </p>
                   {scheduler?.nextSyncAt && (
@@ -1090,7 +1090,7 @@ export function PlexSettingsPage() {
                   )}
                   {log.errors && log.errors.length > 0 && (
                     <span className="text-red-400 text-xs">
-                      {log.errors.length} error{log.errors.length > 1 ? "s" : ""}
+                      {log.errors.length} error{log.errors.length > 1 ? 's' : ''}
                     </span>
                   )}
                 </div>

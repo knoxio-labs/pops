@@ -1,8 +1,8 @@
-import { like } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { budgets } from "@pops/db-types";
-import { registerSearchAdapter } from "../../core/search/index.js";
-import type { SearchAdapter, SearchHit, Query, SearchContext } from "../../core/search/index.js";
+import { like } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { budgets } from '@pops/db-types';
+import { registerSearchAdapter } from '../../core/search/index.js';
+import type { SearchAdapter, SearchHit, Query, SearchContext } from '../../core/search/index.js';
 
 export interface BudgetHitData {
   category: string;
@@ -13,20 +13,20 @@ export interface BudgetHitData {
 function scoreHit(
   category: string,
   query: string
-): { score: number; matchType: "exact" | "prefix" | "contains" } | null {
+): { score: number; matchType: 'exact' | 'prefix' | 'contains' } | null {
   const lower = category.toLowerCase();
   const q = query.toLowerCase();
 
-  if (lower === q) return { score: 1.0, matchType: "exact" };
-  if (lower.startsWith(q)) return { score: 0.8, matchType: "prefix" };
-  if (lower.includes(q)) return { score: 0.5, matchType: "contains" };
+  if (lower === q) return { score: 1.0, matchType: 'exact' };
+  if (lower.startsWith(q)) return { score: 0.8, matchType: 'prefix' };
+  if (lower.includes(q)) return { score: 0.5, matchType: 'contains' };
   return null;
 }
 
 export const budgetsSearchAdapter: SearchAdapter<BudgetHitData> = {
-  domain: "budgets",
-  icon: "PiggyBank",
-  color: "green",
+  domain: 'budgets',
+  icon: 'PiggyBank',
+  color: 'green',
 
   search(
     query: Query,
@@ -55,7 +55,7 @@ export const budgetsSearchAdapter: SearchAdapter<BudgetHitData> = {
       hits.push({
         uri: `/budgets/${row.id}`,
         score: match.score,
-        matchField: "category",
+        matchField: 'category',
         matchType: match.matchType,
         data: {
           category: row.category,

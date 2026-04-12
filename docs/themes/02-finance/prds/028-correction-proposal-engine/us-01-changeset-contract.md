@@ -22,4 +22,3 @@ As a user, I want correction proposals to be explicit and understandable, so tha
   - No ChangeSet can be applied without explicit approval
   - Rejection with feedback applies no changes
   - Applying a ChangeSet is atomic (all operations succeed or none)
-

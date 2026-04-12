@@ -8,9 +8,9 @@
  * Both maps are loaded once per import batch and shared across
  * all matching stages (correction, prefix, contains, etc.).
  */
-import { isNotNull } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { entities } from "@pops/db-types";
+import { isNotNull } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { entities } from '@pops/db-types';
 
 export interface EntityEntry {
   id: string;
@@ -54,7 +54,7 @@ export function loadEntityMaps(): EntityMaps {
 
   for (const row of aliasRows) {
     if (!row.aliases) continue;
-    const aliasList = row.aliases.split(",");
+    const aliasList = row.aliases.split(',');
     for (const raw of aliasList) {
       const alias = raw.trim();
       if (alias.length === 0) continue; // skip whitespace-only
@@ -78,7 +78,7 @@ export function buildEntityMaps(
     entityLookup.set(entity.name.toLowerCase(), { id: entity.id, name: entity.name });
 
     if (entity.aliases) {
-      const aliasList = entity.aliases.split(",");
+      const aliasList = entity.aliases.split(',');
       for (const raw of aliasList) {
         const alias = raw.trim();
         if (alias.length === 0) continue;

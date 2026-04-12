@@ -1,4 +1,4 @@
-import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
+import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
 
 /**
  * Transaction group for displaying similar transactions together
@@ -15,8 +15,8 @@ export interface TransactionGroup {
  */
 export function cleanDescription(desc: string): string {
   return desc
-    .replace(/\d+/g, "") // Remove numbers
-    .replace(/\s+/g, " ") // Normalize spaces
+    .replace(/\d+/g, '') // Remove numbers
+    .replace(/\s+/g, ' ') // Normalize spaces
     .trim()
     .toUpperCase();
 }
@@ -54,13 +54,13 @@ export function groupTransactionsByEntity(
   const groups = new Map<string, TransactionGroup>();
 
   for (const transaction of transactions) {
-    const key = transaction.entity?.entityName || "unknown";
+    const key = transaction.entity?.entityName || 'unknown';
     if (!groups.has(key)) {
       groups.set(key, {
-        entityName: transaction.entity?.entityName || "Unknown",
+        entityName: transaction.entity?.entityName || 'Unknown',
         category: undefined, // Category will be fetched from entities list if needed
         transactions: [],
-        aiSuggestion: transaction.entity?.matchType === "ai",
+        aiSuggestion: transaction.entity?.matchType === 'ai',
       });
     }
     groups.get(key)!.transactions.push(transaction);
@@ -78,9 +78,9 @@ export function groupTransactionsByEntity(
  */
 export interface LocationDetails {
   location: string | null;
-  source: "csv" | "entity-match" | "manual" | null;
+  source: 'csv' | 'entity-match' | 'manual' | null;
   extractedFrom?: string; // Raw CSV field value
-  confidence?: "high" | "medium" | "low";
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -99,14 +99,14 @@ export function extractLocationDetails(transaction: ProcessedTransaction): Locat
     const rawRow = JSON.parse(transaction.rawRow) as Record<string, string>;
 
     // Check common CSV location field names
-    const locationFields = ["Town/City", "location", "Location", "City", "city"];
+    const locationFields = ['Town/City', 'location', 'Location', 'City', 'city'];
     for (const field of locationFields) {
       if (rawRow[field] && rawRow[field].trim().length > 0) {
         return {
           location: transaction.location,
-          source: "csv",
+          source: 'csv',
           extractedFrom: `${field}: ${rawRow[field]}`,
-          confidence: "high",
+          confidence: 'high',
         };
       }
     }
@@ -114,15 +114,15 @@ export function extractLocationDetails(transaction: ProcessedTransaction): Locat
     // If location exists but not found in CSV, assume entity match
     return {
       location: transaction.location,
-      source: "entity-match",
-      confidence: "medium",
+      source: 'entity-match',
+      confidence: 'medium',
     };
   } catch {
     // Failed to parse rawRow, return basic info
     return {
       location: transaction.location,
       source: null,
-      confidence: "low",
+      confidence: 'low',
     };
   }
 }

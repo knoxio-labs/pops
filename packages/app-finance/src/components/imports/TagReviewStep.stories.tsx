@@ -3,11 +3,11 @@
  * Uses Storybook decorators to pre-populate the import store with confirmed
  * transaction fixtures so the component renders without a real backend.
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useEffect } from "react";
-import { TagReviewStep } from "./TagReviewStep";
-import { useImportStore } from "../../store/importStore";
-import type { ConfirmedTransaction } from "@pops/api/modules/finance/imports";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useEffect } from 'react';
+import { TagReviewStep } from './TagReviewStep';
+import { useImportStore } from '../../store/importStore';
+import type { ConfirmedTransaction } from '@pops/api/modules/finance/imports';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -20,9 +20,9 @@ const makeTransaction = (
     entityName?: string;
   }
 ): ConfirmedTransaction => ({
-  date: "2026-02-20",
-  account: "Amex",
-  rawRow: "{}",
+  date: '2026-02-20',
+  account: 'Amex',
+  rawRow: '{}',
   checksum: Math.random().toString(36).slice(2),
   tags: [],
   suggestedTags: [],
@@ -31,61 +31,61 @@ const makeTransaction = (
 
 const woolworthsTransactions: ConfirmedTransaction[] = [
   makeTransaction({
-    description: "WOOLWORTHS METRO 1234",
+    description: 'WOOLWORTHS METRO 1234',
     amount: -87.45,
-    entityName: "Woolworths",
-    entityId: "woolworths-id",
-    tags: ["Groceries"],
-    suggestedTags: [{ tag: "Groceries", source: "entity" }],
+    entityName: 'Woolworths',
+    entityId: 'woolworths-id',
+    tags: ['Groceries'],
+    suggestedTags: [{ tag: 'Groceries', source: 'entity' }],
   }),
   makeTransaction({
-    description: "WOOLWORTHS ONLINE",
+    description: 'WOOLWORTHS ONLINE',
     amount: -120.0,
-    entityName: "Woolworths",
-    entityId: "woolworths-id",
-    tags: ["Groceries", "Online"],
+    entityName: 'Woolworths',
+    entityId: 'woolworths-id',
+    tags: ['Groceries', 'Online'],
     suggestedTags: [
-      { tag: "Groceries", source: "rule", pattern: "woolworths" },
-      { tag: "Online", source: "ai" },
+      { tag: 'Groceries', source: 'rule', pattern: 'woolworths' },
+      { tag: 'Online', source: 'ai' },
     ],
   }),
 ];
 
 const netflixTransactions: ConfirmedTransaction[] = [
   makeTransaction({
-    description: "NETFLIX.COM",
+    description: 'NETFLIX.COM',
     amount: -22.99,
-    entityName: "Netflix",
-    entityId: "netflix-id",
-    tags: ["Subscriptions"],
-    suggestedTags: [{ tag: "Subscriptions", source: "ai" }],
+    entityName: 'Netflix',
+    entityId: 'netflix-id',
+    tags: ['Subscriptions'],
+    suggestedTags: [{ tag: 'Subscriptions', source: 'ai' }],
   }),
 ];
 
 const shellTransactions: ConfirmedTransaction[] = [
   makeTransaction({
-    description: "SHELL COLES EXPRESS",
+    description: 'SHELL COLES EXPRESS',
     amount: -75.5,
-    entityName: "Shell",
-    entityId: "shell-id",
-    tags: ["Transport"],
-    suggestedTags: [{ tag: "Transport", source: "rule", pattern: "shell" }],
+    entityName: 'Shell',
+    entityId: 'shell-id',
+    tags: ['Transport'],
+    suggestedTags: [{ tag: 'Transport', source: 'rule', pattern: 'shell' }],
   }),
   makeTransaction({
-    description: "SHELL SERVICE STATION",
+    description: 'SHELL SERVICE STATION',
     amount: -110.0,
-    entityName: "Shell",
-    entityId: "shell-id",
-    tags: ["Transport"],
-    suggestedTags: [{ tag: "Transport", source: "entity" }],
+    entityName: 'Shell',
+    entityId: 'shell-id',
+    tags: ['Transport'],
+    suggestedTags: [{ tag: 'Transport', source: 'entity' }],
   }),
 ];
 
 const noTagTransactions: ConfirmedTransaction[] = [
   makeTransaction({
-    description: "UNKNOWN MERCHANT XYZ",
+    description: 'UNKNOWN MERCHANT XYZ',
     amount: -50.0,
-    entityName: "Unknown Merchant",
+    entityName: 'Unknown Merchant',
     tags: [],
     suggestedTags: [],
   }),
@@ -119,9 +119,9 @@ function StoreSeeder({
 
 const meta: Meta<typeof TagReviewStep> = {
   component: TagReviewStep,
-  title: "Imports/TagReviewStep",
+  title: 'Imports/TagReviewStep',
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
   decorators: [
     (Story, context) => {
@@ -163,16 +163,16 @@ export const NoSuggestions: Story = {
   parameters: {
     transactions: [
       makeTransaction({
-        description: "SOME MERCHANT A",
+        description: 'SOME MERCHANT A',
         amount: -50.0,
-        entityName: "Merchant A",
+        entityName: 'Merchant A',
         tags: [],
         suggestedTags: [],
       }),
       makeTransaction({
-        description: "SOME MERCHANT B",
+        description: 'SOME MERCHANT B',
         amount: -30.0,
-        entityName: "Merchant B",
+        entityName: 'Merchant B',
         tags: [],
         suggestedTags: [],
       }),
@@ -192,15 +192,15 @@ export const Single: Story = {
   parameters: {
     transactions: [
       makeTransaction({
-        description: "WOOLWORTHS METRO",
+        description: 'WOOLWORTHS METRO',
         amount: -87.45,
-        entityName: "Woolworths",
-        entityId: "woolworths-id",
-        tags: ["Groceries", "Online", "Weekly Shop"],
+        entityName: 'Woolworths',
+        entityId: 'woolworths-id',
+        tags: ['Groceries', 'Online', 'Weekly Shop'],
         suggestedTags: [
-          { tag: "Groceries", source: "entity" },
-          { tag: "Online", source: "ai" },
-          { tag: "Weekly Shop", source: "rule", pattern: "woolworths" },
+          { tag: 'Groceries', source: 'entity' },
+          { tag: 'Online', source: 'ai' },
+          { tag: 'Weekly Shop', source: 'rule', pattern: 'woolworths' },
         ],
       }),
     ],

@@ -1,42 +1,42 @@
-import type { Preview } from "@storybook/react-vite";
-import "@pops/ui/theme/globals.css";
+import type { Preview } from '@storybook/react-vite';
+import '@pops/ui/theme/globals.css';
 
 const APP_COLOURS = [
-  { value: "app-emerald", title: "Emerald", left: "🟢" },
-  { value: "app-indigo", title: "Indigo", left: "🔵" },
-  { value: "app-amber", title: "Amber", left: "🟡" },
-  { value: "app-rose", title: "Rose", left: "🔴" },
-  { value: "app-sky", title: "Sky", left: "🩵" },
-  { value: "app-violet", title: "Violet", left: "🟣" },
+  { value: 'app-emerald', title: 'Emerald', left: '🟢' },
+  { value: 'app-indigo', title: 'Indigo', left: '🔵' },
+  { value: 'app-amber', title: 'Amber', left: '🟡' },
+  { value: 'app-rose', title: 'Rose', left: '🔴' },
+  { value: 'app-sky', title: 'Sky', left: '🩵' },
+  { value: 'app-violet', title: 'Violet', left: '🟣' },
 ];
 
 const preview: Preview = {
   globalTypes: {
     theme: {
-      description: "Toggle light / dark mode",
+      description: 'Toggle light / dark mode',
       toolbar: {
-        title: "Theme",
-        icon: "mirror",
+        title: 'Theme',
+        icon: 'mirror',
         items: [
-          { value: "light", title: "Light", icon: "sun" },
-          { value: "dark", title: "Dark", icon: "moon" },
+          { value: 'light', title: 'Light', icon: 'sun' },
+          { value: 'dark', title: 'Dark', icon: 'moon' },
         ],
         dynamicTitle: true,
       },
     },
     appColour: {
-      description: "App accent colour",
+      description: 'App accent colour',
       toolbar: {
-        title: "App Colour",
-        icon: "paintbrush",
+        title: 'App Colour',
+        icon: 'paintbrush',
         items: APP_COLOURS,
         dynamicTitle: true,
       },
     },
   },
   initialGlobals: {
-    theme: "light",
-    appColour: "app-emerald",
+    theme: 'light',
+    appColour: 'app-emerald',
   },
   parameters: {
     controls: {
@@ -48,19 +48,19 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const theme = context.globals.theme || "light";
-      const appColour = context.globals.appColour || "app-emerald";
+      const theme = context.globals.theme || 'light';
+      const appColour = context.globals.appColour || 'app-emerald';
       const classes = [appColour];
-      if (theme === "dark") classes.push("dark");
+      if (theme === 'dark') classes.push('dark');
 
       return (
         <div
-          className={classes.join(" ")}
+          className={classes.join(' ')}
           style={{
-            padding: "1rem",
-            backgroundColor: "var(--background)",
-            color: "var(--foreground)",
-            minHeight: "100%",
+            padding: '1rem',
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+            minHeight: '100%',
           }}
         >
           <Story />

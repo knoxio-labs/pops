@@ -1,10 +1,10 @@
 /**
  * Arr service — factory functions and in-memory status cache for Radarr/Sonarr.
  */
-import { eq } from "drizzle-orm";
-import { settings } from "@pops/db-types";
-import { RadarrClient } from "./radarr-client.js";
-import { SonarrClient } from "./sonarr-client.js";
+import { eq } from 'drizzle-orm';
+import { settings } from '@pops/db-types';
+import { RadarrClient } from './radarr-client.js';
+import { SonarrClient } from './sonarr-client.js';
 import type {
   ArrConfig,
   ArrStatusResult,
@@ -18,9 +18,9 @@ import type {
   SonarrQualityProfile,
   SonarrRootFolder,
   SonarrSeriesFull,
-} from "./types.js";
-import { getEnv } from "../../../env.js";
-import { getDrizzle } from "../../../db.js";
+} from './types.js';
+import { getEnv } from '../../../env.js';
+import { getDrizzle } from '../../../db.js';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -68,10 +68,10 @@ export function getArrSettings(): {
   sonarrApiKey: string | null;
 } {
   return {
-    radarrUrl: getArrSetting("radarr_url", "RADARR_URL"),
-    radarrApiKey: getArrSetting("radarr_api_key", "RADARR_API_KEY"),
-    sonarrUrl: getArrSetting("sonarr_url", "SONARR_URL"),
-    sonarrApiKey: getArrSetting("sonarr_api_key", "SONARR_API_KEY"),
+    radarrUrl: getArrSetting('radarr_url', 'RADARR_URL'),
+    radarrApiKey: getArrSetting('radarr_api_key', 'RADARR_API_KEY'),
+    sonarrUrl: getArrSetting('sonarr_url', 'SONARR_URL'),
+    sonarrApiKey: getArrSetting('sonarr_api_key', 'SONARR_API_KEY'),
   };
 }
 
@@ -83,35 +83,35 @@ export function saveArrSettings(config: {
   sonarrApiKey?: string;
 }): void {
   if (config.radarrUrl !== undefined) {
-    if (config.radarrUrl) saveSetting("radarr_url", config.radarrUrl);
-    else deleteSetting("radarr_url");
+    if (config.radarrUrl) saveSetting('radarr_url', config.radarrUrl);
+    else deleteSetting('radarr_url');
   }
   if (config.radarrApiKey !== undefined) {
-    if (config.radarrApiKey) saveSetting("radarr_api_key", config.radarrApiKey);
-    else deleteSetting("radarr_api_key");
+    if (config.radarrApiKey) saveSetting('radarr_api_key', config.radarrApiKey);
+    else deleteSetting('radarr_api_key');
   }
   if (config.sonarrUrl !== undefined) {
-    if (config.sonarrUrl) saveSetting("sonarr_url", config.sonarrUrl);
-    else deleteSetting("sonarr_url");
+    if (config.sonarrUrl) saveSetting('sonarr_url', config.sonarrUrl);
+    else deleteSetting('sonarr_url');
   }
   if (config.sonarrApiKey !== undefined) {
-    if (config.sonarrApiKey) saveSetting("sonarr_api_key", config.sonarrApiKey);
-    else deleteSetting("sonarr_api_key");
+    if (config.sonarrApiKey) saveSetting('sonarr_api_key', config.sonarrApiKey);
+    else deleteSetting('sonarr_api_key');
   }
 }
 
 /** Create a Radarr client if configured (settings table or env vars). */
 export function getRadarrClient(): RadarrClient | null {
-  const url = getArrSetting("radarr_url", "RADARR_URL");
-  const key = getArrSetting("radarr_api_key", "RADARR_API_KEY");
+  const url = getArrSetting('radarr_url', 'RADARR_URL');
+  const key = getArrSetting('radarr_api_key', 'RADARR_API_KEY');
   if (!url || !key) return null;
   return new RadarrClient(url, key);
 }
 
 /** Create a Sonarr client if configured (settings table or env vars). */
 export function getSonarrClient(): SonarrClient | null {
-  const url = getArrSetting("sonarr_url", "SONARR_URL");
-  const key = getArrSetting("sonarr_api_key", "SONARR_API_KEY");
+  const url = getArrSetting('sonarr_url', 'SONARR_URL');
+  const key = getArrSetting('sonarr_api_key', 'SONARR_API_KEY');
   if (!url || !key) return null;
   return new SonarrClient(url, key);
 }
@@ -134,7 +134,7 @@ export async function getMovieStatus(tmdbId: number): Promise<ArrStatusResult> {
 
   const client = getRadarrClient();
   if (!client) {
-    return { status: "not_found", label: "Radarr not configured" };
+    return { status: 'not_found', label: 'Radarr not configured' };
   }
 
   try {
@@ -150,7 +150,7 @@ export async function getMovieStatus(tmdbId: number): Promise<ArrStatusResult> {
       err instanceof Error ? err.message : err
     );
     if (cached) return cached.result;
-    return { status: "unavailable", label: "Radarr unavailable" };
+    return { status: 'unavailable', label: 'Radarr unavailable' };
   }
 }
 
@@ -163,7 +163,7 @@ export async function getShowStatus(tvdbId: number): Promise<ArrStatusResult> {
 
   const client = getSonarrClient();
   if (!client) {
-    return { status: "not_found", label: "Sonarr not configured" };
+    return { status: 'not_found', label: 'Sonarr not configured' };
   }
 
   try {
@@ -179,7 +179,7 @@ export async function getShowStatus(tvdbId: number): Promise<ArrStatusResult> {
       err instanceof Error ? err.message : err
     );
     if (cached) return cached.result;
-    return { status: "unavailable", label: "Sonarr unavailable" };
+    return { status: 'unavailable', label: 'Sonarr unavailable' };
   }
 }
 
@@ -215,9 +215,9 @@ export async function getDownloadQueue(): Promise<DownloadQueueItem[]> {
       items.push({
         id: `radarr-${record.id}`,
         title: record.title,
-        mediaType: "movie",
+        mediaType: 'movie',
         progress,
-        source: "radarr",
+        source: 'radarr',
       });
     }
   }
@@ -227,15 +227,15 @@ export async function getDownloadQueue(): Promise<DownloadQueueItem[]> {
       const progress =
         record.size > 0 ? Math.round(((record.size - record.sizeleft) / record.size) * 100) : 0;
       const episodeLabel = record.episode
-        ? `S${String(record.episode.seasonNumber).padStart(2, "0")}E${String(record.episode.episodeNumber).padStart(2, "0")}`
+        ? `S${String(record.episode.seasonNumber).padStart(2, '0')}E${String(record.episode.episodeNumber).padStart(2, '0')}`
         : undefined;
       items.push({
         id: `sonarr-${record.id}`,
         title: record.title,
-        mediaType: "episode",
+        mediaType: 'episode',
         episodeLabel,
         progress,
-        source: "sonarr",
+        source: 'sonarr',
       });
     }
   }
@@ -256,7 +256,7 @@ interface CalendarCacheEntry {
 const calendarCache = new Map<string, CalendarCacheEntry>();
 
 function mapCalendarEpisode(ep: SonarrCalendarEpisode): CalendarEpisode {
-  const poster = ep.series.images.find((img) => img.coverType === "poster");
+  const poster = ep.series.images.find((img) => img.coverType === 'poster');
   return {
     id: ep.id,
     seriesId: ep.seriesId,
@@ -288,7 +288,7 @@ export async function getSonarrCalendar(start: string, end: string): Promise<Cal
     calendarCache.set(cacheKey, { episodes, expiresAt: Date.now() + CACHE_TTL_MS });
     return episodes;
   } catch (err) {
-    console.warn("Sonarr calendar fetch failed:", err instanceof Error ? err.message : err);
+    console.warn('Sonarr calendar fetch failed:', err instanceof Error ? err.message : err);
     if (cached) return cached.episodes;
     return [];
   }
@@ -313,7 +313,7 @@ export async function updateSeasonMonitoring(
   monitored: boolean
 ): Promise<SonarrSeriesFull> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   const result = await client.updateSeasonMonitoring(sonarrId, seasonNumber, monitored);
   showStatusCache.clear();
   client.clearCache();
@@ -326,7 +326,7 @@ export async function updateEpisodeMonitoring(
   monitored: boolean
 ): Promise<void> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   await client.updateEpisodeMonitoring(episodeIds, monitored);
   showStatusCache.clear();
   client.clearCache();
@@ -338,7 +338,7 @@ export async function getSeriesEpisodes(
   seasonNumber?: number
 ): Promise<SonarrEpisode[]> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   return client.getEpisodes(sonarrId, seasonNumber);
 }
 
@@ -349,28 +349,28 @@ export async function getSeriesEpisodes(
 /** Get Sonarr quality profiles. */
 export async function getSonarrQualityProfiles(): Promise<SonarrQualityProfile[]> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   return client.getQualityProfiles();
 }
 
 /** Get Sonarr root folders. */
 export async function getSonarrRootFolders(): Promise<SonarrRootFolder[]> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   return client.getRootFolders();
 }
 
 /** Get Sonarr language profiles. */
 export async function getSonarrLanguageProfiles(): Promise<SonarrLanguageProfile[]> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   return client.getLanguageProfiles();
 }
 
 /** Add a series to Sonarr. */
 export async function addSeries(input: SonarrAddSeriesInput): Promise<SonarrSeriesFull> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   const result = await client.addSeries(input);
   showStatusCache.clear();
   client.clearCache();
@@ -383,7 +383,7 @@ export async function updateSeriesMonitoring(
   monitored: boolean
 ): Promise<SonarrSeriesFull> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   const result = await client.updateMonitoring(sonarrId, monitored);
   showStatusCache.clear();
   client.clearCache();
@@ -396,7 +396,7 @@ export async function triggerSeriesSearch(
   seasonNumber?: number
 ): Promise<SonarrCommandResponse> {
   const client = getSonarrClient();
-  if (!client) throw new Error("Sonarr not configured");
+  if (!client) throw new Error('Sonarr not configured');
   return client.triggerSearch(sonarrId, seasonNumber);
 }
 

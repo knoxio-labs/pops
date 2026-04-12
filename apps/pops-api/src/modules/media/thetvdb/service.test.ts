@@ -1,18 +1,18 @@
 /**
  * TheTVDB service unit tests — refreshTvShow with mocked TheTVDB client.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import type { Database } from "better-sqlite3";
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Database } from 'better-sqlite3';
 import {
   setupTestContext,
   seedTvShow,
   seedSeason,
   seedEpisode,
-} from "../../../shared/test-utils.js";
-import { refreshTvShow } from "./service.js";
-import type { TheTvdbClient } from "./client.js";
-import type { TvdbShowDetail, TvdbEpisode } from "./types.js";
-import type { ImageCacheService } from "../tmdb/image-cache.js";
+} from '../../../shared/test-utils.js';
+import { refreshTvShow } from './service.js';
+import type { TheTvdbClient } from './client.js';
+import type { TvdbShowDetail, TvdbEpisode } from './types.js';
+import type { ImageCacheService } from '../tmdb/image-cache.js';
 
 const ctx = setupTestContext();
 let db: Database;
@@ -45,19 +45,19 @@ function createMockClient(
 function makeShowDetail(overrides: Partial<TvdbShowDetail> = {}): TvdbShowDetail {
   return {
     tvdbId: 81189,
-    name: "Breaking Bad",
+    name: 'Breaking Bad',
     originalName: null,
-    overview: "A chemistry teacher turned meth cook.",
-    firstAirDate: "2008-01-20",
-    lastAirDate: "2013-09-29",
-    status: "Ended",
-    originalLanguage: "eng",
+    overview: 'A chemistry teacher turned meth cook.',
+    firstAirDate: '2008-01-20',
+    lastAirDate: '2013-09-29',
+    status: 'Ended',
+    originalLanguage: 'eng',
     averageRuntime: 47,
     genres: [
-      { id: 1, name: "Drama" },
-      { id: 2, name: "Thriller" },
+      { id: 1, name: 'Drama' },
+      { id: 2, name: 'Thriller' },
     ],
-    networks: [{ id: 1, name: "AMC" }],
+    networks: [{ id: 1, name: 'AMC' }],
     seasons: [],
     artworks: [],
     ...overrides,
@@ -70,9 +70,9 @@ function makeEpisode(overrides: Partial<TvdbEpisode> = {}): TvdbEpisode {
     tvdbId: 1000,
     episodeNumber: 1,
     seasonNumber: 1,
-    name: "Pilot",
-    overview: "A pilot episode.",
-    airDate: "2008-01-20",
+    name: 'Pilot',
+    overview: 'A pilot episode.',
+    airDate: '2008-01-20',
     runtime: 58,
     imageUrl: null,
     ...overrides,
@@ -81,18 +81,18 @@ function makeEpisode(overrides: Partial<TvdbEpisode> = {}): TvdbEpisode {
 
 // ── Tests ──
 
-describe("refreshTvShow", () => {
-  it("updates show metadata from TheTVDB", async () => {
+describe('refreshTvShow', () => {
+  it('updates show metadata from TheTVDB', async () => {
     const showId = seedTvShow(db, {
       tvdb_id: 81189,
-      name: "Breaking Bad (old)",
-      status: "Continuing",
+      name: 'Breaking Bad (old)',
+      status: 'Continuing',
       genres: '["Crime"]',
     });
 
     const detail = makeShowDetail({
-      name: "Breaking Bad",
-      status: "Ended",
+      name: 'Breaking Bad',
+      status: 'Ended',
     });
     const client = createMockClient(detail);
 
@@ -101,16 +101,16 @@ describe("refreshTvShow", () => {
       refreshEpisodes: false,
     });
 
-    expect(result.show.name).toBe("Breaking Bad");
-    expect(result.show.status).toBe("Ended");
+    expect(result.show.name).toBe('Breaking Bad');
+    expect(result.show.status).toBe('Ended');
     expect(result.show.episodeRunTime).toBe(47);
   });
 
-  it("preserves poster_override_path on refresh", async () => {
+  it('preserves poster_override_path on refresh', async () => {
     const showId = seedTvShow(db, {
       tvdb_id: 81189,
-      name: "Breaking Bad",
-      poster_override_path: "/custom/poster.jpg",
+      name: 'Breaking Bad',
+      poster_override_path: '/custom/poster.jpg',
     });
 
     const detail = makeShowDetail();
@@ -121,18 +121,18 @@ describe("refreshTvShow", () => {
       refreshEpisodes: false,
     });
 
-    expect(result.show.posterOverridePath).toBe("/custom/poster.jpg");
+    expect(result.show.posterOverridePath).toBe('/custom/poster.jpg');
   });
 
-  it("inserts new seasons and episodes on refresh", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+  it('inserts new seasons and episodes on refresh', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
 
     const detail = makeShowDetail({
       seasons: [
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1",
+          name: 'Season 1',
           overview: null,
           imageUrl: null,
           episodeCount: 2,
@@ -141,7 +141,7 @@ describe("refreshTvShow", () => {
     });
     const episodesBySeason: Record<number, TvdbEpisode[]> = {
       1: [
-        makeEpisode({ tvdbId: 6001, episodeNumber: 1, name: "Pilot" }),
+        makeEpisode({ tvdbId: 6001, episodeNumber: 1, name: 'Pilot' }),
         makeEpisode({
           tvdbId: 6002,
           episodeNumber: 2,
@@ -158,29 +158,29 @@ describe("refreshTvShow", () => {
     expect(result.seasonsUpdated).toBe(0);
     expect(result.episodesUpdated).toBe(0);
     expect(result.seasons).toHaveLength(1);
-    expect(result.seasons[0]!.name).toBe("Season 1");
+    expect(result.seasons[0]!.name).toBe('Season 1');
   });
 
-  it("updates existing episodes without deleting any", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+  it('updates existing episodes without deleting any', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
     const seasonId = seedSeason(db, {
       tv_show_id: showId,
       tvdb_id: 5001,
       season_number: 1,
-      name: "Season 1",
+      name: 'Season 1',
     });
     seedEpisode(db, {
       season_id: seasonId,
       tvdb_id: 6001,
       episode_number: 1,
-      name: "Old Pilot Name",
+      name: 'Old Pilot Name',
     });
     // Episode that won't be in TheTVDB response — should NOT be deleted
     seedEpisode(db, {
       season_id: seasonId,
       tvdb_id: 6099,
       episode_number: 99,
-      name: "Bonus Episode",
+      name: 'Bonus Episode',
     });
 
     const detail = makeShowDetail({
@@ -188,7 +188,7 @@ describe("refreshTvShow", () => {
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1 Updated",
+          name: 'Season 1 Updated',
           overview: null,
           imageUrl: null,
           episodeCount: 2,
@@ -200,9 +200,9 @@ describe("refreshTvShow", () => {
         makeEpisode({
           tvdbId: 6001,
           episodeNumber: 1,
-          name: "Pilot (Updated)",
+          name: 'Pilot (Updated)',
         }),
-        makeEpisode({ tvdbId: 6002, episodeNumber: 2, name: "New Episode" }),
+        makeEpisode({ tvdbId: 6002, episodeNumber: 2, name: 'New Episode' }),
       ],
     };
     const client = createMockClient(detail, episodesBySeason);
@@ -215,47 +215,47 @@ describe("refreshTvShow", () => {
     expect(result.episodesAdded).toBe(1);
 
     // Verify the bonus episode was NOT deleted
-    const allEpisodes = db.prepare("SELECT * FROM episodes WHERE season_id = ?").all(seasonId) as {
+    const allEpisodes = db.prepare('SELECT * FROM episodes WHERE season_id = ?').all(seasonId) as {
       tvdb_id: number;
       name: string;
     }[];
     expect(allEpisodes).toHaveLength(3);
     const bonusEp = allEpisodes.find((e) => e.tvdb_id === 6099);
     expect(bonusEp).toBeDefined();
-    expect(bonusEp?.name).toBe("Bonus Episode");
+    expect(bonusEp?.name).toBe('Bonus Episode');
 
     // Verify updated episode has new name
     const updatedEp = allEpisodes.find((e) => e.tvdb_id === 6001);
-    expect(updatedEp?.name).toBe("Pilot (Updated)");
+    expect(updatedEp?.name).toBe('Pilot (Updated)');
   });
 
-  it("handles show with no seasons", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Announced Show" });
+  it('handles show with no seasons', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Announced Show' });
 
     const detail = makeShowDetail({
-      name: "Announced Show",
+      name: 'Announced Show',
       seasons: [],
-      status: "Upcoming",
+      status: 'Upcoming',
     });
     const client = createMockClient(detail);
 
     const result = await refreshTvShow(client, { id: showId });
 
-    expect(result.show.status).toBe("Upcoming");
+    expect(result.show.status).toBe('Upcoming');
     expect(result.seasonsAdded).toBe(0);
     expect(result.episodesAdded).toBe(0);
     expect(result.seasons).toHaveLength(0);
   });
 
-  it("handles specials (season 0)", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+  it('handles specials (season 0)', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
 
     const detail = makeShowDetail({
       seasons: [
         {
           tvdbId: 5000,
           seasonNumber: 0,
-          name: "Specials",
+          name: 'Specials',
           overview: null,
           imageUrl: null,
           episodeCount: 1,
@@ -263,7 +263,7 @@ describe("refreshTvShow", () => {
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1",
+          name: 'Season 1',
           overview: null,
           imageUrl: null,
           episodeCount: 1,
@@ -276,7 +276,7 @@ describe("refreshTvShow", () => {
           tvdbId: 7001,
           episodeNumber: 1,
           seasonNumber: 0,
-          name: "Behind the Scenes",
+          name: 'Behind the Scenes',
         }),
       ],
       1: [
@@ -284,7 +284,7 @@ describe("refreshTvShow", () => {
           tvdbId: 6001,
           episodeNumber: 1,
           seasonNumber: 1,
-          name: "Pilot",
+          name: 'Pilot',
         }),
       ],
     };
@@ -297,19 +297,19 @@ describe("refreshTvShow", () => {
     // Verify season 0 was included
     const specialsSeason = result.seasons.find((s) => s.seasonNumber === 0);
     expect(specialsSeason).toBeDefined();
-    expect(specialsSeason?.name).toBe("Specials");
+    expect(specialsSeason?.name).toBe('Specials');
     // numberOfSeasons should exclude specials (season 0)
     expect(result.show.numberOfSeasons).toBe(1);
   });
 
-  it("updates season episodeCount from actual fetched episodes", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+  it('updates season episodeCount from actual fetched episodes', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
     // Seed a season with episodeCount: 0 (the bug state)
     seedSeason(db, {
       tv_show_id: showId,
       tvdb_id: 5001,
       season_number: 1,
-      name: "Season 1",
+      name: 'Season 1',
       episode_count: 0,
     });
 
@@ -318,7 +318,7 @@ describe("refreshTvShow", () => {
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1",
+          name: 'Season 1',
           overview: null,
           imageUrl: null,
           // TVDB summary also says 0 (the root cause of the bug)
@@ -328,7 +328,7 @@ describe("refreshTvShow", () => {
     });
     const episodesBySeason: Record<number, TvdbEpisode[]> = {
       1: [
-        makeEpisode({ tvdbId: 6001, episodeNumber: 1, name: "Pilot" }),
+        makeEpisode({ tvdbId: 6001, episodeNumber: 1, name: 'Pilot' }),
         makeEpisode({ tvdbId: 6002, episodeNumber: 2, name: "Cat's in the Bag..." }),
         makeEpisode({ tvdbId: 6003, episodeNumber: 3, name: "...And the Bag's in the River" }),
       ],
@@ -342,13 +342,13 @@ describe("refreshTvShow", () => {
     expect(result.seasons[0]!.episodeCount).toBe(3);
   });
 
-  it("preserves existing season episodeCount when TVDB summary is 0 and no episodes fetched", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+  it('preserves existing season episodeCount when TVDB summary is 0 and no episodes fetched', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
     seedSeason(db, {
       tv_show_id: showId,
       tvdb_id: 5001,
       season_number: 1,
-      name: "Season 1",
+      name: 'Season 1',
       episode_count: 7,
     });
 
@@ -357,7 +357,7 @@ describe("refreshTvShow", () => {
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1 (Updated)",
+          name: 'Season 1 (Updated)',
           overview: null,
           imageUrl: null,
           // TVDB summary returns 0 (unreliable)
@@ -376,22 +376,22 @@ describe("refreshTvShow", () => {
     expect(result.seasons[0]!.episodeCount).toBe(7);
   });
 
-  it("throws NotFoundError for invalid show id", async () => {
+  it('throws NotFoundError for invalid show id', async () => {
     const detail = makeShowDetail();
     const client = createMockClient(detail);
 
-    await expect(refreshTvShow(client, { id: 99999 })).rejects.toThrow("TvShow");
+    await expect(refreshTvShow(client, { id: 99999 })).rejects.toThrow('TvShow');
   });
 
-  it("skips episode refresh when refreshEpisodes is false", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+  it('skips episode refresh when refreshEpisodes is false', async () => {
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
 
     const detail = makeShowDetail({
       seasons: [
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1",
+          name: 'Season 1',
           overview: null,
           imageUrl: null,
           episodeCount: 7,
@@ -412,20 +412,20 @@ describe("refreshTvShow", () => {
     expect(client.getSeriesEpisodes).not.toHaveBeenCalled();
   });
 
-  it("updates genres and networks from fresh data", async () => {
+  it('updates genres and networks from fresh data', async () => {
     const showId = seedTvShow(db, {
       tvdb_id: 81189,
-      name: "Breaking Bad",
+      name: 'Breaking Bad',
       genres: '["Crime"]',
       networks: '["NBC"]',
     });
 
     const detail = makeShowDetail({
       genres: [
-        { id: 1, name: "Drama" },
-        { id: 2, name: "Thriller" },
+        { id: 1, name: 'Drama' },
+        { id: 2, name: 'Thriller' },
       ],
-      networks: [{ id: 1, name: "AMC" }],
+      networks: [{ id: 1, name: 'AMC' }],
     });
     const client = createMockClient(detail);
 
@@ -435,23 +435,23 @@ describe("refreshTvShow", () => {
     });
 
     // Check the raw DB row for genres/networks (stored as JSON strings)
-    const row = db.prepare("SELECT genres, networks FROM tv_shows WHERE id = ?").get(showId) as {
+    const row = db.prepare('SELECT genres, networks FROM tv_shows WHERE id = ?').get(showId) as {
       genres: string;
       networks: string;
     };
-    expect(JSON.parse(row.genres)).toEqual(["Drama", "Thriller"]);
-    expect(JSON.parse(row.networks)).toEqual(["AMC"]);
+    expect(JSON.parse(row.genres)).toEqual(['Drama', 'Thriller']);
+    expect(JSON.parse(row.networks)).toEqual(['AMC']);
   });
 
   it("continues refreshing other seasons when one season's episode fetch fails", async () => {
-    const showId = seedTvShow(db, { tvdb_id: 81189, name: "Breaking Bad" });
+    const showId = seedTvShow(db, { tvdb_id: 81189, name: 'Breaking Bad' });
 
     const detail = makeShowDetail({
       seasons: [
         {
           tvdbId: 5001,
           seasonNumber: 1,
-          name: "Season 1",
+          name: 'Season 1',
           overview: null,
           imageUrl: null,
           episodeCount: 1,
@@ -459,7 +459,7 @@ describe("refreshTvShow", () => {
         {
           tvdbId: 5002,
           seasonNumber: 2,
-          name: "Season 2",
+          name: 'Season 2',
           overview: null,
           imageUrl: null,
           episodeCount: 1,
@@ -471,14 +471,14 @@ describe("refreshTvShow", () => {
       getSeriesExtended: vi.fn().mockResolvedValue(detail),
       getSeriesEpisodes: vi.fn().mockImplementation((_tvdbId: number, seasonNumber: number) => {
         if (seasonNumber === 1) {
-          return Promise.reject(new Error("Season not available"));
+          return Promise.reject(new Error('Season not available'));
         }
         return Promise.resolve([
           makeEpisode({
             tvdbId: 6010,
             episodeNumber: 1,
             seasonNumber: 2,
-            name: "S2 Ep1",
+            name: 'S2 Ep1',
           }),
         ]);
       }),
@@ -492,7 +492,7 @@ describe("refreshTvShow", () => {
     expect(result.episodesAdded).toBe(1);
   });
 
-  it("re-downloads images when redownloadImages is true and imageCache provided", async () => {
+  it('re-downloads images when redownloadImages is true and imageCache provided', async () => {
     const showId = seedTvShow(db, { tvdb_id: 81189 });
     seedSeason(db, { tv_show_id: showId, tvdb_id: 30001, season_number: 1 });
 
@@ -501,9 +501,9 @@ describe("refreshTvShow", () => {
         {
           tvdbId: 30001,
           seasonNumber: 1,
-          name: "Season 1",
+          name: 'Season 1',
           overview: null,
-          imageUrl: "https://artworks.thetvdb.com/s1.jpg",
+          imageUrl: 'https://artworks.thetvdb.com/s1.jpg',
           episodeCount: 7,
         },
       ],
@@ -511,15 +511,15 @@ describe("refreshTvShow", () => {
         {
           id: 1,
           type: 2,
-          imageUrl: "https://artworks.thetvdb.com/poster.jpg",
-          language: "eng",
+          imageUrl: 'https://artworks.thetvdb.com/poster.jpg',
+          language: 'eng',
           score: 100,
         },
         {
           id: 2,
           type: 3,
-          imageUrl: "https://artworks.thetvdb.com/backdrop.jpg",
-          language: "eng",
+          imageUrl: 'https://artworks.thetvdb.com/backdrop.jpg',
+          language: 'eng',
           score: 90,
         },
       ],
@@ -540,13 +540,13 @@ describe("refreshTvShow", () => {
     expect(mockImageCache.deleteTvShowImages).toHaveBeenCalledWith(81189);
     expect(mockImageCache.downloadTvShowImages).toHaveBeenCalledWith(
       81189,
-      "https://artworks.thetvdb.com/poster.jpg",
-      "https://artworks.thetvdb.com/backdrop.jpg",
-      [{ seasonNumber: 1, posterUrl: "https://artworks.thetvdb.com/s1.jpg" }]
+      'https://artworks.thetvdb.com/poster.jpg',
+      'https://artworks.thetvdb.com/backdrop.jpg',
+      [{ seasonNumber: 1, posterUrl: 'https://artworks.thetvdb.com/s1.jpg' }]
     );
   });
 
-  it("does not download images when redownloadImages is false", async () => {
+  it('does not download images when redownloadImages is false', async () => {
     const showId = seedTvShow(db, { tvdb_id: 81189 });
     seedSeason(db, { tv_show_id: showId, tvdb_id: 30001, season_number: 1 });
 

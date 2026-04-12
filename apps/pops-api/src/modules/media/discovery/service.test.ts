@@ -1,15 +1,15 @@
-import { describe, it, expect } from "vitest";
-import { scoreDiscoverResults } from "./service.js";
-import type { DiscoverResult, PreferenceProfile } from "./types.js";
-import { TMDB_GENRE_MAP } from "./types.js";
+import { describe, it, expect } from 'vitest';
+import { scoreDiscoverResults } from './service.js';
+import type { DiscoverResult, PreferenceProfile } from './types.js';
+import { TMDB_GENRE_MAP } from './types.js';
 
 /** Helper to build a minimal DiscoverResult. */
 function makeResult(overrides: Partial<DiscoverResult> = {}): DiscoverResult {
   return {
     tmdbId: 1,
-    title: "Test Movie",
-    overview: "",
-    releaseDate: "2025-01-01",
+    title: 'Test Movie',
+    overview: '',
+    releaseDate: '2025-01-01',
     posterPath: null,
     posterUrl: null,
     backdropPath: null,
@@ -36,34 +36,34 @@ function makeProfile(overrides: Partial<PreferenceProfile> = {}): PreferenceProf
   };
 }
 
-describe("scoreDiscoverResults", () => {
-  it("returns 0% match when profile has no data", () => {
+describe('scoreDiscoverResults', () => {
+  it('returns 0% match when profile has no data', () => {
     const results = [makeResult()];
     const scored = scoreDiscoverResults(results, makeProfile());
 
     expect(scored).toHaveLength(1);
     expect(scored[0]!.matchPercentage).toBe(0);
-    expect(scored[0]!.matchReason).toBe("");
+    expect(scored[0]!.matchReason).toBe('');
   });
 
-  it("scores based on genre affinities", () => {
+  it('scores based on genre affinities', () => {
     const results = [
-      makeResult({ tmdbId: 1, genreIds: [28, 878], title: "Action Sci-Fi" }), // Action + Science Fiction
-      makeResult({ tmdbId: 2, genreIds: [35, 10749], title: "Rom Com" }), // Comedy + Romance
+      makeResult({ tmdbId: 1, genreIds: [28, 878], title: 'Action Sci-Fi' }), // Action + Science Fiction
+      makeResult({ tmdbId: 2, genreIds: [35, 10749], title: 'Rom Com' }), // Comedy + Romance
     ];
     const profile = makeProfile({
       genreAffinities: [
-        { genre: "Action", avgScore: 1500, movieCount: 10, totalComparisons: 50 },
-        { genre: "Science Fiction", avgScore: 1400, movieCount: 8, totalComparisons: 40 },
-        { genre: "Comedy", avgScore: 1100, movieCount: 5, totalComparisons: 20 },
-        { genre: "Romance", avgScore: 1000, movieCount: 3, totalComparisons: 10 },
+        { genre: 'Action', avgScore: 1500, movieCount: 10, totalComparisons: 50 },
+        { genre: 'Science Fiction', avgScore: 1400, movieCount: 8, totalComparisons: 40 },
+        { genre: 'Comedy', avgScore: 1100, movieCount: 5, totalComparisons: 20 },
+        { genre: 'Romance', avgScore: 1000, movieCount: 3, totalComparisons: 10 },
       ],
     });
 
     const scored = scoreDiscoverResults(results, profile);
 
     // Action/Sci-Fi should score higher than Comedy/Romance
-    expect(scored[0]!.title).toBe("Action Sci-Fi");
+    expect(scored[0]!.title).toBe('Action Sci-Fi');
     expect(scored[0]!.matchPercentage).toBeGreaterThan(scored[1]!.matchPercentage);
     // Both should be in the 50-98 range
     expect(scored[0]!.matchPercentage).toBeGreaterThanOrEqual(50);
@@ -71,28 +71,28 @@ describe("scoreDiscoverResults", () => {
     expect(scored[1]!.matchPercentage).toBeGreaterThanOrEqual(50);
   });
 
-  it("includes matching genre names in matchReason", () => {
+  it('includes matching genre names in matchReason', () => {
     const results = [makeResult({ genreIds: [28, 878, 53] })]; // Action, Sci-Fi, Thriller
     const profile = makeProfile({
       genreAffinities: [
-        { genre: "Action", avgScore: 1500, movieCount: 10, totalComparisons: 50 },
-        { genre: "Science Fiction", avgScore: 1400, movieCount: 8, totalComparisons: 40 },
-        { genre: "Thriller", avgScore: 1300, movieCount: 6, totalComparisons: 30 },
+        { genre: 'Action', avgScore: 1500, movieCount: 10, totalComparisons: 50 },
+        { genre: 'Science Fiction', avgScore: 1400, movieCount: 8, totalComparisons: 40 },
+        { genre: 'Thriller', avgScore: 1300, movieCount: 6, totalComparisons: 30 },
       ],
     });
 
     const scored = scoreDiscoverResults(results, profile);
 
-    expect(scored[0]!.matchReason).toContain("Action");
-    expect(scored[0]!.matchReason).toContain("Science Fiction");
+    expect(scored[0]!.matchReason).toContain('Action');
+    expect(scored[0]!.matchReason).toContain('Science Fiction');
   });
 
-  it("falls back to genre distribution when no affinities exist", () => {
+  it('falls back to genre distribution when no affinities exist', () => {
     const results = [makeResult({ genreIds: [28] })]; // Action
     const profile = makeProfile({
       genreDistribution: [
-        { genre: "Action", watchCount: 10, percentage: 80 },
-        { genre: "Drama", watchCount: 3, percentage: 24 },
+        { genre: 'Action', watchCount: 10, percentage: 80 },
+        { genre: 'Drama', watchCount: 3, percentage: 24 },
       ],
       totalMoviesWatched: 13,
     });
@@ -100,41 +100,41 @@ describe("scoreDiscoverResults", () => {
     const scored = scoreDiscoverResults(results, profile);
 
     expect(scored[0]!.matchPercentage).toBeGreaterThan(50);
-    expect(scored[0]!.matchReason).toContain("Action");
+    expect(scored[0]!.matchReason).toContain('Action');
   });
 
-  it("sorts results by matchPercentage descending", () => {
+  it('sorts results by matchPercentage descending', () => {
     const results = [
-      makeResult({ tmdbId: 1, genreIds: [35], title: "Low Match" }), // Comedy only
-      makeResult({ tmdbId: 2, genreIds: [28], title: "High Match" }), // Action only
+      makeResult({ tmdbId: 1, genreIds: [35], title: 'Low Match' }), // Comedy only
+      makeResult({ tmdbId: 2, genreIds: [28], title: 'High Match' }), // Action only
     ];
     const profile = makeProfile({
       genreAffinities: [
-        { genre: "Action", avgScore: 1500, movieCount: 10, totalComparisons: 50 },
-        { genre: "Comedy", avgScore: 1000, movieCount: 2, totalComparisons: 5 },
+        { genre: 'Action', avgScore: 1500, movieCount: 10, totalComparisons: 50 },
+        { genre: 'Comedy', avgScore: 1000, movieCount: 2, totalComparisons: 5 },
       ],
     });
 
     const scored = scoreDiscoverResults(results, profile);
 
-    expect(scored[0]!.title).toBe("High Match");
-    expect(scored[1]!.title).toBe("Low Match");
+    expect(scored[0]!.title).toBe('High Match');
+    expect(scored[1]!.title).toBe('Low Match');
   });
 
-  it("handles results with unknown genre IDs gracefully", () => {
+  it('handles results with unknown genre IDs gracefully', () => {
     const results = [makeResult({ genreIds: [99999] })]; // Unknown genre
     const profile = makeProfile({
-      genreAffinities: [{ genre: "Action", avgScore: 1500, movieCount: 10, totalComparisons: 50 }],
+      genreAffinities: [{ genre: 'Action', avgScore: 1500, movieCount: 10, totalComparisons: 50 }],
     });
 
     const scored = scoreDiscoverResults(results, profile);
 
     expect(scored[0]!.matchPercentage).toBe(0);
-    expect(scored[0]!.matchReason).toBe("");
+    expect(scored[0]!.matchReason).toBe('');
   });
 });
 
-describe("fromYourServer genre mapping and scoring", () => {
+describe('fromYourServer genre mapping and scoring', () => {
   /** Reverse map used by getUnwatchedLibraryMovies to convert genre names → IDs. */
   const GENRE_NAME_TO_ID = Object.fromEntries(
     Object.entries(TMDB_GENRE_MAP).map(([id, name]) => [name, Number(id)])
@@ -155,8 +155,8 @@ describe("fromYourServer genre mapping and scoring", () => {
     return {
       tmdbId: movie.tmdbId,
       title: movie.title,
-      overview: "",
-      releaseDate: "",
+      overview: '',
+      releaseDate: '',
       posterPath: null,
       posterUrl: null,
       backdropPath: null,
@@ -170,11 +170,11 @@ describe("fromYourServer genre mapping and scoring", () => {
     };
   }
 
-  it("maps library genre names to TMDB genre IDs for scoring", () => {
+  it('maps library genre names to TMDB genre IDs for scoring', () => {
     const movie = libraryMovieToDiscoverResult({
       tmdbId: 100,
-      title: "Test Movie",
-      genres: JSON.stringify(["Action", "Science Fiction"]),
+      title: 'Test Movie',
+      genres: JSON.stringify(['Action', 'Science Fiction']),
       voteAverage: 8.0,
     });
 
@@ -182,60 +182,60 @@ describe("fromYourServer genre mapping and scoring", () => {
     expect(movie.inLibrary).toBe(true);
   });
 
-  it("scores unwatched library movies against profile", () => {
+  it('scores unwatched library movies against profile', () => {
     const libraryMovies = [
       libraryMovieToDiscoverResult({
         tmdbId: 1,
-        title: "Action Hit",
-        genres: JSON.stringify(["Action", "Thriller"]),
+        title: 'Action Hit',
+        genres: JSON.stringify(['Action', 'Thriller']),
         voteAverage: 8.5,
       }),
       libraryMovieToDiscoverResult({
         tmdbId: 2,
-        title: "Rom Com",
-        genres: JSON.stringify(["Comedy", "Romance"]),
+        title: 'Rom Com',
+        genres: JSON.stringify(['Comedy', 'Romance']),
         voteAverage: 6.5,
       }),
     ];
 
     const profile = makeProfile({
       genreAffinities: [
-        { genre: "Action", avgScore: 1500, movieCount: 10, totalComparisons: 50 },
-        { genre: "Thriller", avgScore: 1400, movieCount: 8, totalComparisons: 40 },
-        { genre: "Comedy", avgScore: 1000, movieCount: 3, totalComparisons: 10 },
-        { genre: "Romance", avgScore: 900, movieCount: 2, totalComparisons: 5 },
+        { genre: 'Action', avgScore: 1500, movieCount: 10, totalComparisons: 50 },
+        { genre: 'Thriller', avgScore: 1400, movieCount: 8, totalComparisons: 40 },
+        { genre: 'Comedy', avgScore: 1000, movieCount: 3, totalComparisons: 10 },
+        { genre: 'Romance', avgScore: 900, movieCount: 2, totalComparisons: 5 },
       ],
     });
 
     const scored = scoreDiscoverResults(libraryMovies, profile);
 
-    expect(scored[0]!.title).toBe("Action Hit");
+    expect(scored[0]!.title).toBe('Action Hit');
     expect(scored[0]!.matchPercentage).toBeGreaterThan(scored[1]!.matchPercentage);
     expect(scored[0]!.matchPercentage).toBeGreaterThanOrEqual(50);
     expect(scored[0]!.matchPercentage).toBeLessThanOrEqual(98);
   });
 
-  it("returns empty scored array when no movies provided", () => {
+  it('returns empty scored array when no movies provided', () => {
     const scored = scoreDiscoverResults([], makeProfile());
     expect(scored).toEqual([]);
   });
 
-  it("handles malformed genres JSON gracefully", () => {
+  it('handles malformed genres JSON gracefully', () => {
     // Simulate the try/catch logic in getUnwatchedLibraryMovies
     let genreNames: string[] = [];
     try {
-      genreNames = JSON.parse("not valid json") as string[];
+      genreNames = JSON.parse('not valid json') as string[];
     } catch {
       // Falls back to empty — same as production code
     }
     expect(genreNames).toEqual([]);
   });
 
-  it("ignores unknown genre names from library data", () => {
+  it('ignores unknown genre names from library data', () => {
     const movie = libraryMovieToDiscoverResult({
       tmdbId: 1,
-      title: "Weird Genre",
-      genres: JSON.stringify(["NonexistentGenre", "Action"]),
+      title: 'Weird Genre',
+      genres: JSON.stringify(['NonexistentGenre', 'Action']),
       voteAverage: 7.0,
     });
 

@@ -43,32 +43,32 @@ Build bidirectional item connections and connection chain tracing. One row in th
 
 ## API Surface
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `inventory.connections.create` | itemAId, itemBId | `{ data: Connection }` | Enforces A<B, prevents self-connect, unique constraint |
-| `inventory.connections.delete` | itemAId, itemBId | `{ message }` | Accepts either direction, normalises to A<B before delete |
-| `inventory.connections.listForItem` | itemId | `{ data: Connection[] }` | All connections where item is A or B |
-| `inventory.connections.traceChain` | itemId, maxDepth? (default 10) | `{ data: ChainNode[] }` | Recursive CTE, returns tree with depth levels |
+| Procedure                           | Input                          | Output                   | Notes                                                     |
+| ----------------------------------- | ------------------------------ | ------------------------ | --------------------------------------------------------- |
+| `inventory.connections.create`      | itemAId, itemBId               | `{ data: Connection }`   | Enforces A<B, prevents self-connect, unique constraint    |
+| `inventory.connections.delete`      | itemAId, itemBId               | `{ message }`            | Accepts either direction, normalises to A<B before delete |
+| `inventory.connections.listForItem` | itemId                         | `{ data: Connection[] }` | All connections where item is A or B                      |
+| `inventory.connections.traceChain`  | itemId, maxDepth? (default 10) | `{ data: ChainNode[] }`  | Recursive CTE, returns tree with depth levels             |
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Connect item to itself | Rejected with validation error |
-| Duplicate connection | Rejected with unique constraint error (409) |
-| Disconnect non-existent connection | 404 |
-| Chain trace on item with no connections | Returns single-node chain (just the item) |
-| Chain trace hits maxDepth | Stops traversal, returns what it has — no error |
-| Cyclic graph (A>B>C>A) | Cycle detected via visited set, stops at cycle point |
-| Item deleted that has connections | Connections cascade-deleted (FK ON DELETE CASCADE) |
+| Case                                    | Behaviour                                            |
+| --------------------------------------- | ---------------------------------------------------- |
+| Connect item to itself                  | Rejected with validation error                       |
+| Duplicate connection                    | Rejected with unique constraint error (409)          |
+| Disconnect non-existent connection      | 404                                                  |
+| Chain trace on item with no connections | Returns single-node chain (just the item)            |
+| Chain trace hits maxDepth               | Stops traversal, returns what it has — no error      |
+| Cyclic graph (A>B>C>A)                  | Cycle detected via visited set, stops at cycle point |
+| Item deleted that has connections       | Connections cascade-deleted (FK ON DELETE CASCADE)   |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-connect-dialog](us-01-connect-dialog.md) | Connect dialog with item search, connection list on detail page, disconnect action | Partial | No (first) |
-| 02 | [us-02-chain-tracing](us-02-chain-tracing.md) | Chain trace with recursive CTE, indented list display, depth indicators, cycle handling | Done | Blocked by us-01 |
-| 03 | [us-03-graph-visualisation](us-03-graph-visualisation.md) | Interactive graph visualisation (stretch goal) with nodes/edges, click navigation | Done | Blocked by us-01 |
+| #   | Story                                                     | Summary                                                                                 | Status  | Parallelisable   |
+| --- | --------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------- | ---------------- |
+| 01  | [us-01-connect-dialog](us-01-connect-dialog.md)           | Connect dialog with item search, connection list on detail page, disconnect action      | Partial | No (first)       |
+| 02  | [us-02-chain-tracing](us-02-chain-tracing.md)             | Chain trace with recursive CTE, indented list display, depth indicators, cycle handling | Done    | Blocked by us-01 |
+| 03  | [us-03-graph-visualisation](us-03-graph-visualisation.md) | Interactive graph visualisation (stretch goal) with nodes/edges, click navigation       | Done    | Blocked by us-01 |
 
 US-02 and US-03 can parallelise after US-01.
 

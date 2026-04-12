@@ -2,41 +2,41 @@
  * TextInput component stories
  * Demonstrates all variants, sizes, shapes, and features
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { TextInput } from "./TextInput";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { TextInput } from './TextInput';
 
 const meta: Meta<typeof TextInput> = {
   component: TextInput,
-  title: "Inputs/Text",
-  tags: ["autodocs"],
+  title: 'Inputs/Text',
+  tags: ['autodocs'],
   argTypes: {
     variant: {
-      control: "select",
-      options: ["default", "ghost", "underline"],
-      description: "Visual style variant",
+      control: 'select',
+      options: ['default', 'ghost', 'underline'],
+      description: 'Visual style variant',
     },
     size: {
-      control: "select",
-      options: ["sm", "default", "lg"],
-      description: "Size of the input",
+      control: 'select',
+      options: ['sm', 'default', 'lg'],
+      description: 'Size of the input',
     },
     shape: {
-      control: "select",
-      options: ["default", "pill"],
-      description: "Shape of the input",
+      control: 'select',
+      options: ['default', 'pill'],
+      description: 'Shape of the input',
     },
     clearable: {
-      control: "boolean",
-      description: "Shows clear button when input has value",
+      control: 'boolean',
+      description: 'Shows clear button when input has value',
     },
     disabled: {
-      control: "boolean",
-      description: "Disables the input",
+      control: 'boolean',
+      description: 'Disables the input',
     },
     placeholder: {
-      control: "text",
-      description: "Placeholder text",
+      control: 'text',
+      description: 'Placeholder text',
     },
   },
 };
@@ -47,73 +47,73 @@ type Story = StoryObj<typeof TextInput>;
 // Basic variants
 export const Default: Story = {
   args: {
-    placeholder: "Enter text...",
+    placeholder: 'Enter text...',
   },
 };
 
 export const Ghost: Story = {
   args: {
-    placeholder: "Ghost variant",
-    variant: "ghost",
+    placeholder: 'Ghost variant',
+    variant: 'ghost',
   },
 };
 
 export const Underline: Story = {
   args: {
-    placeholder: "Underline variant",
-    variant: "underline",
+    placeholder: 'Underline variant',
+    variant: 'underline',
   },
 };
 
 // Shapes
 export const Pill: Story = {
   args: {
-    placeholder: "Pill shape",
-    shape: "pill",
+    placeholder: 'Pill shape',
+    shape: 'pill',
   },
 };
 
 export const PillGhost: Story = {
   args: {
-    placeholder: "Pill ghost",
-    variant: "ghost",
-    shape: "pill",
+    placeholder: 'Pill ghost',
+    variant: 'ghost',
+    shape: 'pill',
   },
 };
 
 // Sizes
 export const Small: Story = {
   args: {
-    placeholder: "Small input",
-    size: "sm",
+    placeholder: 'Small input',
+    size: 'sm',
   },
 };
 
 export const Large: Story = {
   args: {
-    placeholder: "Large input",
-    size: "lg",
+    placeholder: 'Large input',
+    size: 'lg',
   },
 };
 
 // Clearable
 export const Clearable: Story = {
   args: {
-    placeholder: "Type something...",
+    placeholder: 'Type something...',
     clearable: true,
-    defaultValue: "Clear me!",
+    defaultValue: 'Clear me!',
   },
 };
 
 export const ClearableControlled: Story = {
   render: (args) => {
-    const [value, setValue] = useState("Clear me!");
+    const [value, setValue] = useState('Clear me!');
     return (
       <TextInput
         {...args}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onClear={() => setValue("")}
+        onClear={() => setValue('')}
         clearable
         placeholder="Type something..."
       />
@@ -194,24 +194,24 @@ const CalendarIcon = () => (
 
 export const WithPrefixIcon: Story = {
   args: {
-    placeholder: "Search...",
+    placeholder: 'Search...',
     prefix: <SearchIcon />,
   },
 };
 
 export const WithSuffixIcon: Story = {
   args: {
-    placeholder: "Select date",
+    placeholder: 'Select date',
     suffix: <CalendarIcon />,
   },
 };
 
 export const WithPrefixAndClearable: Story = {
   args: {
-    placeholder: "Search...",
+    placeholder: 'Search...',
     prefix: <SearchIcon />,
     clearable: true,
-    defaultValue: "Search query",
+    defaultValue: 'Search query',
   },
 };
 
@@ -294,7 +294,7 @@ export const FormFields: Story = {
 
 export const FilterBar: Story = {
   render: () => {
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState('');
     return (
       <div className="flex gap-3">
         <TextInput
@@ -303,7 +303,7 @@ export const FilterBar: Story = {
           clearable
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onClear={() => setSearch("")}
+          onClear={() => setSearch('')}
           className="flex-1"
         />
         <TextInput type="date" placeholder="Start date" />
@@ -380,10 +380,10 @@ export const VariantComparison: Story = {
 // Interactive playground
 export const Playground: Story = {
   args: {
-    placeholder: "Playground input",
-    variant: "default",
-    size: "default",
-    shape: "default",
+    placeholder: 'Playground input',
+    variant: 'default',
+    size: 'default',
+    shape: 'default',
     clearable: false,
     disabled: false,
   },

@@ -4,9 +4,9 @@
  * Renders poster thumbnail, name (highlighted), year, status badge, and season count.
  * Registered for domain "tv-shows" in the search result component registry.
  */
-import { Tv } from "lucide-react";
-import { cn, Badge } from "@pops/ui";
-import type { ResultComponentProps } from "@pops/navigation";
+import { Tv } from 'lucide-react';
+import { cn, Badge } from '@pops/ui';
+import type { ResultComponentProps } from '@pops/navigation';
 
 interface TvShowHitData {
   name: string;
@@ -28,9 +28,9 @@ export function highlightMatch(text: string, query: string, matchType: string): 
   const lowerQuery = query.toLowerCase();
   let start = -1;
 
-  if (matchType === "exact") {
+  if (matchType === 'exact') {
     start = 0;
-  } else if (matchType === "prefix") {
+  } else if (matchType === 'prefix') {
     start = 0;
   } else {
     start = lowerText.indexOf(lowerQuery);
@@ -53,11 +53,11 @@ export function highlightMatch(text: string, query: string, matchType: string): 
 function StatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
 
-  const isContinuing = status.toLowerCase() === "continuing";
+  const isContinuing = status.toLowerCase() === 'continuing';
   return (
     <Badge
-      variant={isContinuing ? "default" : "secondary"}
-      className={cn("text-2xs", isContinuing && "bg-blue-600 text-white hover:bg-blue-600")}
+      variant={isContinuing ? 'default' : 'secondary'}
+      className={cn('text-2xs', isContinuing && 'bg-blue-600 text-white hover:bg-blue-600')}
       data-testid="status-badge"
     >
       {status}
@@ -71,8 +71,8 @@ export function TvShowSearchResult({ data }: ResultComponentProps) {
     _matchType?: string;
   };
   const { name, year, posterUrl, status, numberOfSeasons } = hit;
-  const query = hit._query ?? "";
-  const matchType = hit._matchType ?? "contains";
+  const query = hit._query ?? '';
+  const matchType = hit._matchType ?? 'contains';
 
   return (
     <div className="flex items-center gap-3 py-1" data-testid="tv-show-search-result">
@@ -103,7 +103,7 @@ export function TvShowSearchResult({ data }: ResultComponentProps) {
             <>
               {year && <span>·</span>}
               <span>
-                {numberOfSeasons} {numberOfSeasons === 1 ? "season" : "seasons"}
+                {numberOfSeasons} {numberOfSeasons === 1 ? 'season' : 'seasons'}
               </span>
             </>
           )}

@@ -48,12 +48,12 @@ All widgets powered by a single aggregation API call (no N+1 queries):
 
 ## API Surface
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `inventory.report.dashboard` | (none) | `{ totalReplacementValue, totalResaleValue, itemCount, expiringWarranties, recentItems }` | Single aggregation query |
-| `inventory.report.breakdownByLocation` | (none) | `{ data: { locationId, locationName, totalValue, itemCount }[] }` | Grouped by location |
-| `inventory.report.breakdownByType` | (none) | `{ data: { type, totalValue, itemCount }[] }` | Grouped by type |
-| `inventory.report.generate` | locationId?, includeChildren?, sortBy? | `{ data: ReportItem[], summary }` | Fully hydrated items with photos and document links |
+| Procedure                              | Input                                  | Output                                                                                    | Notes                                               |
+| -------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `inventory.report.dashboard`           | (none)                                 | `{ totalReplacementValue, totalResaleValue, itemCount, expiringWarranties, recentItems }` | Single aggregation query                            |
+| `inventory.report.breakdownByLocation` | (none)                                 | `{ data: { locationId, locationName, totalValue, itemCount }[] }`                         | Grouped by location                                 |
+| `inventory.report.breakdownByType`     | (none)                                 | `{ data: { type, totalValue, itemCount }[] }`                                             | Grouped by type                                     |
+| `inventory.report.generate`            | locationId?, includeChildren?, sortBy? | `{ data: ReportItem[], summary }`                                                         | Fully hydrated items with photos and document links |
 
 ## Business Rules
 
@@ -66,23 +66,23 @@ All widgets powered by a single aggregation API call (no N+1 queries):
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| No items in inventory | Dashboard shows all zeros; report shows empty state |
-| Items with no replacement value | Included in counts, excluded from value sums — value shows "—" |
-| Items with no photos | Photo column blank in report |
-| No receipts linked | Receipt column blank in report |
+| Case                                             | Behaviour                                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| No items in inventory                            | Dashboard shows all zeros; report shows empty state                                      |
+| Items with no replacement value                  | Included in counts, excluded from value sums — value shows "—"                           |
+| Items with no photos                             | Photo column blank in report                                                             |
+| No receipts linked                               | Receipt column blank in report                                                           |
 | Location with no items (but children have items) | Location row in breakdown shows 0 direct items; include sub-locations shows child totals |
-| Print with very large inventory | CSS page-breaks per location section prevent single-page overflow |
+| Print with very large inventory                  | CSS page-breaks per location section prevent single-page overflow                        |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-dashboard-widgets](us-01-dashboard-widgets.md) | Dashboard with total replacement/resale values, item count, expiring warranties, recent items (single API call) | Partial | No (first) |
-| 02 | [us-02-value-breakdowns](us-02-value-breakdowns.md) | Value breakdowns by location and type, click to navigate to filtered list | Partial | Yes (parallel with us-01) |
-| 03 | [us-03-insurance-report](us-03-insurance-report.md) | Report generator with location selector, include sub-locations, per-item details, summary | Partial | Blocked by us-01 |
-| 04 | [us-04-print-layout](us-04-print-layout.md) | @media print CSS, browser print-to-PDF, location sections, print-friendly photo sizing | Partial | Blocked by us-03 |
+| #   | Story                                                 | Summary                                                                                                         | Status  | Parallelisable            |
+| --- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------- | ------------------------- |
+| 01  | [us-01-dashboard-widgets](us-01-dashboard-widgets.md) | Dashboard with total replacement/resale values, item count, expiring warranties, recent items (single API call) | Partial | No (first)                |
+| 02  | [us-02-value-breakdowns](us-02-value-breakdowns.md)   | Value breakdowns by location and type, click to navigate to filtered list                                       | Partial | Yes (parallel with us-01) |
+| 03  | [us-03-insurance-report](us-03-insurance-report.md)   | Report generator with location selector, include sub-locations, per-item details, summary                       | Partial | Blocked by us-01          |
+| 04  | [us-04-print-layout](us-04-print-layout.md)           | @media print CSS, browser print-to-PDF, location sections, print-friendly photo sizing                          | Partial | Blocked by us-03          |
 
 US-01 and US-02 can parallelise. US-03 blocked by us-01. US-04 blocked by us-03.
 

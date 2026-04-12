@@ -8,20 +8,20 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@pops/ui": "workspace:*",
     "@pops/app-finance": "workspace:*",
-    "@pops/app-media": "workspace:*",
     "@pops/app-inventory": "workspace:*",
+    "@pops/app-media": "workspace:*",
+    "@pops/ui": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.1.1",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "@storybook/addon-a11y": "^10.3.5",
     "@storybook/react-vite": "^10.3.5",
     "@tailwindcss/vite": "4.2.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "eslint-plugin-storybook": "^10.3.5",
     "storybook": "^10.3.5",
     "typescript": "^6.0.0",

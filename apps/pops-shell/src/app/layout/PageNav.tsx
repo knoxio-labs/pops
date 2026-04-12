@@ -7,10 +7,10 @@
  *
  * Colour is inherited from --app-accent CSS variable set on the shell root.
  */
-import { Link, useLocation } from "react-router";
-import { registeredApps } from "@/app/nav/registry";
-import { iconMap } from "@/app/nav/icon-map";
-import { findActiveApp, isPageActive } from "@/app/nav/path-utils";
+import { Link, useLocation } from 'react-router';
+import { registeredApps } from '@/app/nav/registry';
+import { iconMap } from '@/app/nav/icon-map';
+import { findActiveApp, isPageActive } from '@/app/nav/path-utils';
 
 export function PageNav() {
   const location = useLocation();
@@ -41,16 +41,16 @@ export function PageNav() {
               to={fullPath}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 active
-                  ? "bg-app-accent text-app-accent-foreground shadow-sm"
-                  : "text-foreground/80 hover:bg-muted hover:text-foreground"
+                  ? 'bg-app-accent text-app-accent-foreground shadow-sm'
+                  : 'text-foreground/80 hover:bg-muted hover:text-foreground'
               }`}
             >
               {Icon && (
                 <Icon
                   className={`h-4 w-4 shrink-0 transition-colors ${
                     active
-                      ? "text-app-accent-foreground"
-                      : "text-app-accent/70 group-hover:text-foreground"
+                      ? 'text-app-accent-foreground'
+                      : 'text-app-accent/70 group-hover:text-foreground'
                   }`}
                 />
               )}

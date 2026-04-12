@@ -1,21 +1,21 @@
 /**
  * Watchlist tRPC router — CRUD procedures for media watchlist.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   AddToWatchlistSchema,
   UpdateWatchlistSchema,
   WatchlistQuerySchema,
   toWatchlistEntry,
   type WatchlistFilters,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import { getPlexClient } from "../plex/service.js";
-import { pushToPlexWatchlist } from "./plex-push.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
+import { getPlexClient } from '../plex/service.js';
+import { pushToPlexWatchlist } from './plex-push.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -42,7 +42,7 @@ export const watchlistRouter = router({
   status: protectedProcedure
     .input(
       z.object({
-        mediaType: z.enum(["movie", "tv_show"]),
+        mediaType: z.enum(['movie', 'tv_show']),
         mediaId: z.number().int().positive(),
       })
     )
@@ -57,7 +57,7 @@ export const watchlistRouter = router({
       return { data: toWatchlistEntry({ ...row, title: null, posterUrl: null }) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -92,7 +92,7 @@ export const watchlistRouter = router({
     return {
       data: toWatchlistEntry({ ...row, title: null, posterUrl: null }),
       created,
-      message: created ? "Added to watchlist" : "Already on watchlist",
+      message: created ? 'Added to watchlist' : 'Already on watchlist',
     };
   }),
 
@@ -109,11 +109,11 @@ export const watchlistRouter = router({
         const row = service.updateWatchlistEntry(input.id, input.data);
         return {
           data: toWatchlistEntry({ ...row, title: null, posterUrl: null }),
-          message: "Watchlist entry updated",
+          message: 'Watchlist entry updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -134,13 +134,13 @@ export const watchlistRouter = router({
     .mutation(({ input }) => {
       try {
         service.reorderWatchlist(input.items);
-        return { message: "Watchlist reordered" };
+        return { message: 'Watchlist reordered' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof ConflictError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
+          throw new TRPCError({ code: 'CONFLICT', message: err.message });
         }
         throw err;
       }
@@ -155,7 +155,7 @@ export const watchlistRouter = router({
       plexRatingKey = (entry as Record<string, unknown>).plexRatingKey as string | null;
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -164,7 +164,7 @@ export const watchlistRouter = router({
       service.removeFromWatchlist(input.id);
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -185,6 +185,6 @@ export const watchlistRouter = router({
       }
     }
 
-    return { message: "Removed from watchlist" };
+    return { message: 'Removed from watchlist' };
   }),
 });

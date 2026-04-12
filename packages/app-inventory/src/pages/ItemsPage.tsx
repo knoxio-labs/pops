@@ -2,9 +2,9 @@
  * ItemsPage — inventory item list with search, filters, table/grid toggle,
  * and summary statistics. PRD-019/US-2.
  */
-import { useState, useMemo, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { useSetPageContext } from "@pops/navigation";
+import { useState, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { useSetPageContext } from '@pops/navigation';
 import {
   Package,
   LayoutGrid,
@@ -14,7 +14,7 @@ import {
   Shield,
   Clock,
   Plus,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Skeleton,
   Select,
@@ -26,50 +26,50 @@ import {
   TypeBadge,
   ViewToggleGroup,
   PageHeader,
-} from "@pops/ui";
-import type { Condition } from "@pops/ui";
-import { trpc } from "../lib/trpc";
-import { InventoryTable } from "../components/InventoryTable";
-import { InventoryCard } from "../components/InventoryCard";
-import { ValueByTypeCard } from "../components/ValueBreakdown";
-import { formatCurrency } from "../lib/utils";
-type ViewMode = "table" | "grid";
+} from '@pops/ui';
+import type { Condition } from '@pops/ui';
+import { trpc } from '../lib/trpc';
+import { InventoryTable } from '../components/InventoryTable';
+import { InventoryCard } from '../components/InventoryCard';
+import { ValueByTypeCard } from '../components/ValueBreakdown';
+import { formatCurrency } from '../lib/utils';
+type ViewMode = 'table' | 'grid';
 
-const VIEW_STORAGE_KEY = "inventory-view-mode";
+const VIEW_STORAGE_KEY = 'inventory-view-mode';
 
 const VIEW_OPTIONS = [
-  { value: "table" as const, label: "Table view", icon: <LayoutList className="h-4 w-4" /> },
-  { value: "grid" as const, label: "Grid view", icon: <LayoutGrid className="h-4 w-4" /> },
+  { value: 'table' as const, label: 'Table view', icon: <LayoutList className="h-4 w-4" /> },
+  { value: 'grid' as const, label: 'Grid view', icon: <LayoutGrid className="h-4 w-4" /> },
 ];
 
 function getInitialView(): ViewMode {
   try {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
-    if (stored === "grid" || stored === "table") return stored;
+    if (stored === 'grid' || stored === 'table') return stored;
   } catch {
     // SSR or no localStorage
   }
-  return "table";
+  return 'table';
 }
 
 const CONDITION_OPTIONS: SelectOption[] = [
-  { value: "", label: "All Conditions" },
-  { value: "Excellent", label: "Excellent" },
-  { value: "Good", label: "Good" },
-  { value: "Fair", label: "Fair" },
-  { value: "Poor", label: "Poor" },
+  { value: '', label: 'All Conditions' },
+  { value: 'Excellent', label: 'Excellent' },
+  { value: 'Good', label: 'Good' },
+  { value: 'Fair', label: 'Fair' },
+  { value: 'Poor', label: 'Poor' },
 ];
 
 const IN_USE_OPTIONS: SelectOption[] = [
-  { value: "", label: "All" },
-  { value: "true", label: "In Use" },
-  { value: "false", label: "Not In Use" },
+  { value: '', label: 'All' },
+  { value: 'true', label: 'In Use' },
+  { value: 'false', label: 'Not In Use' },
 ];
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "just now";
+  if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
@@ -146,11 +146,11 @@ function DashboardWidgets() {
         role="button"
         tabIndex={0}
         className="cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => navigate("/inventory/warranties")}
+        onClick={() => navigate('/inventory/warranties')}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            navigate("/inventory/warranties");
+            navigate('/inventory/warranties');
           }
         }}
       >
@@ -182,7 +182,7 @@ function DashboardWidgets() {
                   className="flex items-center gap-2 text-sm rounded-md px-2 py-1.5 -mx-2 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate(`/inventory/items/${item.id}`)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
+                    if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       navigate(`/inventory/items/${item.id}`);
                     }
@@ -232,11 +232,11 @@ export function ItemsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialView);
 
-  const search = searchParams.get("q") ?? "";
-  const typeFilter = searchParams.get("type") ?? "";
-  const conditionFilter = searchParams.get("condition") ?? "";
-  const inUseFilter = searchParams.get("inUse") ?? "";
-  const locationFilter = searchParams.get("locationId") ?? "";
+  const search = searchParams.get('q') ?? '';
+  const typeFilter = searchParams.get('type') ?? '';
+  const conditionFilter = searchParams.get('condition') ?? '';
+  const inUseFilter = searchParams.get('inUse') ?? '';
+  const locationFilter = searchParams.get('locationId') ?? '';
 
   const itemsFilters = useMemo(
     () => ({
@@ -247,7 +247,7 @@ export function ItemsPage() {
     }),
     [search, typeFilter, conditionFilter, locationFilter]
   );
-  useSetPageContext({ page: "items", filters: itemsFilters });
+  useSetPageContext({ page: 'items', filters: itemsFilters });
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -267,10 +267,10 @@ export function ItemsPage() {
   const clearFilters = useCallback(() => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      next.delete("type");
-      next.delete("condition");
-      next.delete("inUse");
-      next.delete("locationId");
+      next.delete('type');
+      next.delete('condition');
+      next.delete('inUse');
+      next.delete('locationId');
       return next;
     });
   }, [setSearchParams]);
@@ -278,7 +278,7 @@ export function ItemsPage() {
   /** Dynamic type options from the database. */
   const { data: typesData } = trpc.inventory.items.distinctTypes.useQuery();
   const typeOptions = useMemo<SelectOption[]>(() => {
-    const opts: SelectOption[] = [{ value: "", label: "All Types" }];
+    const opts: SelectOption[] = [{ value: '', label: 'All Types' }];
     for (const t of typesData?.data ?? []) {
       opts.push({ value: t, label: t });
     }
@@ -288,13 +288,13 @@ export function ItemsPage() {
   /** Location options from the tree endpoint — indented to show hierarchy. */
   const { data: locationsData } = trpc.inventory.locations.tree.useQuery();
   const locationOptions = useMemo<SelectOption[]>(() => {
-    const opts: SelectOption[] = [{ value: "", label: "All Locations" }];
+    const opts: SelectOption[] = [{ value: '', label: 'All Locations' }];
     function flatten(
       nodes: Array<{ id: string; name: string; children: Array<unknown> }>,
       depth: number
     ) {
       for (const node of nodes) {
-        const indent = depth > 0 ? "\u00A0\u00A0".repeat(depth) + "└ " : "";
+        const indent = depth > 0 ? '\u00A0\u00A0'.repeat(depth) + '└ ' : '';
         opts.push({ value: node.id, label: `${indent}${node.name}` });
         flatten(node.children as typeof nodes, depth + 1);
       }
@@ -308,7 +308,7 @@ export function ItemsPage() {
   const [_assetIdSearching, setAssetIdSearching] = useState(false);
   const handleSearchKeyDown = useCallback(
     async (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== "Enter" || !search.trim()) return;
+      if (e.key !== 'Enter' || !search.trim()) return;
       setAssetIdSearching(true);
       try {
         const result = await utils.inventory.items.searchByAssetId.fetch({
@@ -329,7 +329,7 @@ export function ItemsPage() {
       search: search || undefined,
       type: typeFilter || undefined,
       condition: conditionFilter || undefined,
-      inUse: (inUseFilter || undefined) as "true" | "false" | undefined,
+      inUse: (inUseFilter || undefined) as 'true' | 'false' | undefined,
       locationId: locationFilter || undefined,
       limit: 200,
     }),
@@ -359,36 +359,36 @@ export function ItemsPage() {
           placeholder="Search items or asset IDs..."
           prefix={<Search className="h-4 w-4" />}
           value={search}
-          onChange={(e) => setParam("q", e.target.value)}
+          onChange={(e) => setParam('q', e.target.value)}
           onKeyDown={handleSearchKeyDown}
           clearable
-          onClear={() => setParam("q", "")}
+          onClear={() => setParam('q', '')}
           className="w-full sm:max-w-xs"
         />
         <Select
           value={typeFilter}
-          onChange={(e) => setParam("type", e.target.value)}
+          onChange={(e) => setParam('type', e.target.value)}
           options={typeOptions}
           placeholder="All Types"
           className="w-36"
         />
         <Select
           value={conditionFilter}
-          onChange={(e) => setParam("condition", e.target.value)}
+          onChange={(e) => setParam('condition', e.target.value)}
           options={CONDITION_OPTIONS}
           placeholder="All Conditions"
           className="w-40"
         />
         <Select
           value={inUseFilter}
-          onChange={(e) => setParam("inUse", e.target.value)}
+          onChange={(e) => setParam('inUse', e.target.value)}
           options={IN_USE_OPTIONS}
           placeholder="All"
           className="w-28"
         />
         <Select
           value={locationFilter}
-          onChange={(e) => setParam("locationId", e.target.value)}
+          onChange={(e) => setParam('locationId', e.target.value)}
           options={locationOptions}
           placeholder="All Locations"
           className="w-40"
@@ -406,7 +406,7 @@ export function ItemsPage() {
           <div className="flex items-center gap-2 rounded-full bg-app-accent/10 px-3 py-1.5">
             <Package className="h-4 w-4 text-app-accent" />
             <p className="text-xs font-semibold text-foreground uppercase tracking-wider">
-              {totalCount} {totalCount === 1 ? "item" : "items"}
+              {totalCount} {totalCount === 1 ? 'item' : 'items'}
               {totalReplacementValue > 0 && (
                 <span> — {formatCurrency(totalReplacementValue)} replacement</span>
               )}
@@ -436,14 +436,14 @@ export function ItemsPage() {
               <p>No inventory items yet.</p>
               <Button
                 prefix={<Plus className="h-4 w-4" />}
-                onClick={() => navigate("/inventory/items/new")}
+                onClick={() => navigate('/inventory/items/new')}
               >
                 Add your first item
               </Button>
             </>
           )}
         </div>
-      ) : viewMode === "table" ? (
+      ) : viewMode === 'table' ? (
         <InventoryTable items={items} />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">

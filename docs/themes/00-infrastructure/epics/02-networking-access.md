@@ -8,9 +8,9 @@ Configure Cloudflare Tunnel for ingress and Cloudflare Access for zero-trust aut
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
-| 014 | [Networking & Access](../prds/014-networking-access/README.md) | Cloudflare Tunnel setup, Access policies per service, DNS configuration, cloudflared container | Done |
+| #   | PRD                                                            | Summary                                                                                        | Status |
+| --- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ |
+| 014 | [Networking & Access](../prds/014-networking-access/README.md) | Cloudflare Tunnel setup, Access policies per service, DNS configuration, cloudflared container | Done   |
 
 ## Dependencies
 

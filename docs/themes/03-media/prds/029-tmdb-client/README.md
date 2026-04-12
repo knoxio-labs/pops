@@ -13,11 +13,11 @@ No new tables — uses the `movies` table from PRD-028. Image paths written to `
 
 ## API Surface
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `media.search.movies` | query (string), page? (int, default 1) | `{ results: TmdbSearchResult[], totalResults, totalPages }` | Proxied TMDB search — not stored locally |
-| `media.library.addMovie` | tmdbId (int) | `{ data: Movie }` | Fetch metadata from TMDB, create movie in DB, download and cache poster + backdrop. Idempotent — returns existing movie if tmdbId already in library |
-| `media.library.refreshMovie` | id (int), redownloadImages? (boolean, default false) | `{ data: Movie }` | Re-fetch metadata from TMDB, update DB record. Optionally re-download images |
+| Procedure                    | Input                                                | Output                                                      | Notes                                                                                                                                                |
+| ---------------------------- | ---------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `media.search.movies`        | query (string), page? (int, default 1)               | `{ results: TmdbSearchResult[], totalResults, totalPages }` | Proxied TMDB search — not stored locally                                                                                                             |
+| `media.library.addMovie`     | tmdbId (int)                                         | `{ data: Movie }`                                           | Fetch metadata from TMDB, create movie in DB, download and cache poster + backdrop. Idempotent — returns existing movie if tmdbId already in library |
+| `media.library.refreshMovie` | id (int), redownloadImages? (boolean, default false) | `{ data: Movie }`                                           | Re-fetch metadata from TMDB, update DB record. Optionally re-download images                                                                         |
 
 ### TmdbSearchResult shape
 
@@ -71,24 +71,24 @@ No new tables — uses the `movies` table from PRD-028. Image paths written to `
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| tmdbId already in library (addMovie) | Return existing movie record, skip fetch and download |
-| TMDB API returns 404 for tmdbId | Return error — movie not found on TMDB |
-| TMDB API rate limit hit (429) | Token bucket prevents this; if it somehow occurs, retry after TMDB's Retry-After header |
-| Image download fails (network error, 404) | Movie record created with null image path; fallback chain handles display |
-| TMDB API key missing/invalid | Startup validation fails with clear error message |
-| Search returns zero results | Return empty results array with totalResults: 0 |
-| TMDB returns movie with no poster | posterPath stored as null; fallback chain renders placeholder |
-| refreshMovie with redownloadImages=true but image URL unchanged | Re-download anyway — URL may point to updated content |
+| Case                                                            | Behaviour                                                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| tmdbId already in library (addMovie)                            | Return existing movie record, skip fetch and download                                   |
+| TMDB API returns 404 for tmdbId                                 | Return error — movie not found on TMDB                                                  |
+| TMDB API rate limit hit (429)                                   | Token bucket prevents this; if it somehow occurs, retry after TMDB's Retry-After header |
+| Image download fails (network error, 404)                       | Movie record created with null image path; fallback chain handles display               |
+| TMDB API key missing/invalid                                    | Startup validation fails with clear error message                                       |
+| Search returns zero results                                     | Return empty results array with totalResults: 0                                         |
+| TMDB returns movie with no poster                               | posterPath stored as null; fallback chain renders placeholder                           |
+| refreshMovie with redownloadImages=true but image URL unchanged | Re-download anyway — URL may point to updated content                                   |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-tmdb-http-client](us-01-tmdb-http-client.md) | HTTP client with token bucket rate limiter, search endpoint, metadata fetch | Done | Yes |
-| 02 | [us-02-image-cache](us-02-image-cache.md) | Poster/backdrop download, local storage, serving endpoint, fallback chain | Done | Yes |
-| 03 | [us-03-add-to-library](us-03-add-to-library.md) | addMovie flow (fetch + create + download), refreshMovie, idempotency | Done | Blocked by us-01, us-02 |
+| #   | Story                                               | Summary                                                                     | Status | Parallelisable          |
+| --- | --------------------------------------------------- | --------------------------------------------------------------------------- | ------ | ----------------------- |
+| 01  | [us-01-tmdb-http-client](us-01-tmdb-http-client.md) | HTTP client with token bucket rate limiter, search endpoint, metadata fetch | Done   | Yes                     |
+| 02  | [us-02-image-cache](us-02-image-cache.md)           | Poster/backdrop download, local storage, serving endpoint, fallback chain   | Done   | Yes                     |
+| 03  | [us-03-add-to-library](us-03-add-to-library.md)     | addMovie flow (fetch + create + download), refreshMovie, idempotency        | Done   | Blocked by us-01, us-02 |
 
 US-01 and US-02 can run in parallel. US-03 composes them into the add-to-library flow.
 

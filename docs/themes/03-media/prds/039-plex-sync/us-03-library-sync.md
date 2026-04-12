@@ -32,6 +32,7 @@ As a user, I want to sync my Plex movie and TV show libraries into POPS so that 
 ## Notes
 
 Plex stores external IDs in multiple formats depending on the metadata agent:
+
 - **Legacy agents:** `com.plexapp.agents.themoviedb://12345`, `com.plexapp.agents.thetvdb://67890`
 - **New Plex agent (default since ~2020):** Primary GUID is `plex://show/5d776...` with external IDs in a separate `Guid` array as `tvdb://67890`, `tmdb://12345`
 

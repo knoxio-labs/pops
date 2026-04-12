@@ -1,12 +1,12 @@
-import { Button } from "@pops/ui";
-import { Bookmark, BookmarkCheck } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { Button } from '@pops/ui';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 
-type DisplayMediaType = "movie" | "tv";
-type ApiMediaType = "movie" | "tv_show";
+type DisplayMediaType = 'movie' | 'tv';
+type ApiMediaType = 'movie' | 'tv_show';
 
-const toApiMediaType = (type: DisplayMediaType): ApiMediaType => (type === "tv" ? "tv_show" : type);
+const toApiMediaType = (type: DisplayMediaType): ApiMediaType => (type === 'tv' ? 'tv_show' : type);
 
 export interface WatchlistToggleProps {
   mediaType: DisplayMediaType;
@@ -37,7 +37,7 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
       return { previous };
     },
     onSuccess: () => {
-      toast.success("Added to watchlist");
+      toast.success('Added to watchlist');
     },
     onError: (err: { message: string; data?: { code?: string } | null }, _vars, context) => {
       if (context?.previous !== undefined) {
@@ -46,8 +46,8 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
           context.previous
         );
       }
-      if (err.data?.code === "CONFLICT") {
-        toast.info("Already on watchlist");
+      if (err.data?.code === 'CONFLICT') {
+        toast.info('Already on watchlist');
       } else {
         toast.error(`Failed to add: ${err.message}`);
       }
@@ -68,7 +68,7 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
       return { previous };
     },
     onSuccess: () => {
-      toast.success("Removed from watchlist");
+      toast.success('Removed from watchlist');
     },
     onError: (err: { message: string }, _vars, context) => {
       if (context?.previous !== undefined) {
@@ -113,18 +113,18 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
 
   return (
     <Button
-      variant={isOnWatchlist ? "default" : "outline"}
+      variant={isOnWatchlist ? 'default' : 'outline'}
       size="sm"
       onClick={handleToggle}
       loading={isMutating}
-      loadingText={isOnWatchlist ? "Removing" : "Adding"}
+      loadingText={isOnWatchlist ? 'Removing' : 'Adding'}
       prefix={
         isOnWatchlist ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />
       }
-      aria-label={isOnWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+      aria-label={isOnWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
       className={className}
     >
-      {isOnWatchlist ? "On Watchlist" : "Add to Watchlist"}
+      {isOnWatchlist ? 'On Watchlist' : 'Add to Watchlist'}
     </Button>
   );
 }

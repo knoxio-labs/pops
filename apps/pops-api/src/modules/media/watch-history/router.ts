@@ -1,10 +1,10 @@
 /**
  * Watch history tRPC router — procedures for tracking watch events.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   LogWatchSchema,
   BatchLogWatchSchema,
@@ -15,9 +15,9 @@ import {
   toWatchHistoryEntry,
   type WatchHistoryFilters,
   type RecentWatchHistoryFilters,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -67,7 +67,7 @@ export const watchHistoryRouter = router({
       return { data: toWatchHistoryEntry(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -79,7 +79,7 @@ export const watchHistoryRouter = router({
     return {
       data: toWatchHistoryEntry(entry),
       watchlistRemoved,
-      message: "Watch logged",
+      message: 'Watch logged',
     };
   }),
 
@@ -89,7 +89,7 @@ export const watchHistoryRouter = router({
       return { data: service.getProgress(input.tvShowId) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -113,10 +113,10 @@ export const watchHistoryRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => {
     try {
       service.deleteWatchHistoryEntry(input.id);
-      return { message: "Watch history entry deleted" };
+      return { message: 'Watch history entry deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

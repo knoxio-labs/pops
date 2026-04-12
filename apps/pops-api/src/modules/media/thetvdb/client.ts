@@ -4,8 +4,8 @@
  * Handles request construction, response parsing, error mapping,
  * and automatic 401 re-authentication retry.
  */
-import { TheTvdbAuth } from "./auth.js";
-import { fetchWithRetry } from "./rate-limiter.js";
+import { TheTvdbAuth } from './auth.js';
+import { fetchWithRetry } from './rate-limiter.js';
 import {
   TvdbApiError,
   type TvdbSearchResult,
@@ -18,9 +18,9 @@ import {
   type RawTvdbEpisodesResponse,
   type RawTvdbSeasonSummary,
   type RawTvdbArtwork,
-} from "./types.js";
+} from './types.js';
 
-const BASE_URL = "https://api4.thetvdb.com/v4";
+const BASE_URL = 'https://api4.thetvdb.com/v4';
 
 export class TheTvdbClient {
   private readonly auth: TheTvdbAuth;
@@ -31,7 +31,7 @@ export class TheTvdbClient {
 
   /** Search for TV series by query string. */
   async searchSeries(query: string): Promise<TvdbSearchResult[]> {
-    const params = new URLSearchParams({ q: query, type: "series" });
+    const params = new URLSearchParams({ q: query, type: 'series' });
     const raw = await this.get<RawTvdbSearchResponse>(`/search?${params.toString()}`);
 
     return raw.data.map((r) => ({
@@ -72,7 +72,7 @@ export class TheTvdbClient {
 
     // Filter seasons to only "default" type (broadcast order)
     const seasons = (d.seasons ?? []).filter(
-      (s) => !s.type || s.type.type === "default" || s.type.type === "official"
+      (s) => !s.type || s.type.type === 'default' || s.type.type === 'official'
     );
 
     return {
@@ -118,10 +118,10 @@ export class TheTvdbClient {
     try {
       response = await fetchWithRetry(() =>
         fetch(`${BASE_URL}${path}`, {
-          method: "GET",
+          method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
-            Accept: "application/json",
+            Accept: 'application/json',
           },
         })
       );

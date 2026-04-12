@@ -10,12 +10,12 @@ The media app needs a preference capture mechanism so the recommendation engine 
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Star ratings (1-5 or 1-10) | Familiar, fast | Inconsistent over time, central tendency bias, no relative ranking, multi-dimensional ratings become tedious |
-| Thumbs up/down | Fastest input, zero cognitive load | Loses all nuance, no relative ranking, multi-dimensional binary is meaningless |
-| Pairwise comparison with ELO | Binary decision is fast (two taps), relative ranking is more natural, self-calibrating scores, multi-dimensional stays lightweight, richer data per interaction | Cold start with small library, scores are relative not absolute, more comparisons needed for full ranking |
-| Ranked lists (drag to reorder) | Complete ranking, no ambiguity | Doesn't scale past 100 items on mobile, multi-dimensional lists are unusable |
+| Option                         | Pros                                                                                                                                                            | Cons                                                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Star ratings (1-5 or 1-10)     | Familiar, fast                                                                                                                                                  | Inconsistent over time, central tendency bias, no relative ranking, multi-dimensional ratings become tedious |
+| Thumbs up/down                 | Fastest input, zero cognitive load                                                                                                                              | Loses all nuance, no relative ranking, multi-dimensional binary is meaningless                               |
+| Pairwise comparison with ELO   | Binary decision is fast (two taps), relative ranking is more natural, self-calibrating scores, multi-dimensional stays lightweight, richer data per interaction | Cold start with small library, scores are relative not absolute, more comparisons needed for full ranking    |
+| Ranked lists (drag to reorder) | Complete ranking, no ambiguity                                                                                                                                  | Doesn't scale past 100 items on mobile, multi-dimensional lists are unusable                                 |
 
 ## Decision
 

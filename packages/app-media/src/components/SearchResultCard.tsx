@@ -3,15 +3,15 @@
  * Shows poster from external CDN, title, year, overview, genres, rating,
  * and an "Add to Library" / "In Library" action.
  */
-import { useState } from "react";
-import { Link } from "react-router";
-import { cn, Badge, Button, Skeleton } from "@pops/ui";
-import { Film, Tv, Loader2, Check, Plus } from "lucide-react";
-import { RequestMovieButton } from "./RequestMovieButton";
+import { useState } from 'react';
+import { Link } from 'react-router';
+import { cn, Badge, Button, Skeleton } from '@pops/ui';
+import { Film, Tv, Loader2, Check, Plus } from 'lucide-react';
+import { RequestMovieButton } from './RequestMovieButton';
 
-const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342";
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w342';
 
-export type SearchResultType = "movie" | "tv";
+export type SearchResultType = 'movie' | 'tv';
 
 export interface SearchResultCardProps {
   type: SearchResultType;
@@ -42,7 +42,7 @@ export function buildPosterUrl(
   type: SearchResultType
 ): string | null {
   if (!posterPath) return null;
-  if (type === "movie" && posterPath.startsWith("/")) {
+  if (type === 'movie' && posterPath.startsWith('/')) {
     return `${TMDB_IMAGE_BASE}${posterPath}`;
   }
   return posterPath;
@@ -69,7 +69,7 @@ export function SearchResultCard({
   const [imageError, setImageError] = useState(false);
 
   const showPlaceholder = !posterUrl || imageError;
-  const Icon = type === "movie" ? Film : Tv;
+  const Icon = type === 'movie' ? Film : Tv;
 
   const cardContent = (
     <>
@@ -80,7 +80,7 @@ export function SearchResultCard({
             src={posterUrl}
             alt={`${title} poster`}
             loading="lazy"
-            className={cn("h-full w-full object-cover", imageLoaded ? "opacity-100" : "opacity-0")}
+            className={cn('h-full w-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
           />
@@ -111,8 +111,8 @@ export function SearchResultCard({
             </div>
           </div>
 
-          <Badge variant={type === "movie" ? "default" : "secondary"} className="shrink-0">
-            {type === "movie" ? "Movie" : "TV"}
+          <Badge variant={type === 'movie' ? 'default' : 'secondary'} className="shrink-0">
+            {type === 'movie' ? 'Movie' : 'TV'}
           </Badge>
         </div>
 
@@ -151,10 +151,10 @@ export function SearchResultCard({
               ) : (
                 <Plus className="h-3 w-3" />
               )}
-              {isAdding ? "Adding…" : "Add to Library"}
+              {isAdding ? 'Adding…' : 'Add to Library'}
             </Button>
           )}
-          {type === "movie" && tmdbId != null && (
+          {type === 'movie' && tmdbId != null && (
             <RequestMovieButton
               tmdbId={tmdbId}
               title={title}
@@ -167,8 +167,8 @@ export function SearchResultCard({
   );
 
   const baseClasses = cn(
-    "flex gap-4 rounded-lg border bg-card p-3 text-card-foreground",
-    href && "transition-colors hover:bg-accent/50",
+    'flex gap-4 rounded-lg border bg-card p-3 text-card-foreground',
+    href && 'transition-colors hover:bg-accent/50',
     className
   );
 
@@ -177,7 +177,7 @@ export function SearchResultCard({
       <Link
         to={href}
         className={baseClasses}
-        aria-label={`${title} (${type === "movie" ? "Movie" : "TV"})`}
+        aria-label={`${title} (${type === 'movie' ? 'Movie' : 'TV'})`}
       >
         {cardContent}
       </Link>

@@ -1,16 +1,16 @@
 /**
  * Transactions page - list and manage transactions
  */
-import type { ColumnDef } from "@tanstack/react-table";
-import { useCallback } from "react";
-import { useSetPageContext } from "@pops/navigation";
-import { trpc } from "../lib/trpc";
-import { DataTable, SortableHeader } from "@pops/ui";
-import { Badge } from "@pops/ui";
-import { Alert, Button, PageHeader } from "@pops/ui";
-import { Skeleton } from "@pops/ui";
-import { TagEditor } from "../components/TagEditor";
-import type { ColumnFilter } from "@pops/ui";
+import type { ColumnDef } from '@tanstack/react-table';
+import { useCallback } from 'react';
+import { useSetPageContext } from '@pops/navigation';
+import { trpc } from '../lib/trpc';
+import { DataTable, SortableHeader } from '@pops/ui';
+import { Badge } from '@pops/ui';
+import { Alert, Button, PageHeader } from '@pops/ui';
+import { Skeleton } from '@pops/ui';
+import { TagEditor } from '../components/TagEditor';
+import type { ColumnFilter } from '@pops/ui';
 
 interface Transaction {
   id: string;
@@ -26,7 +26,7 @@ interface Transaction {
 }
 
 export function TransactionsPage() {
-  useSetPageContext({ page: "transactions" });
+  useSetPageContext({ page: 'transactions' });
 
   const utils = trpc.useUtils();
 
@@ -65,20 +65,20 @@ export function TransactionsPage() {
   // Define table columns
   const columns: ColumnDef<Transaction>[] = [
     {
-      accessorKey: "date",
+      accessorKey: 'date',
       header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
       cell: ({ row }) => {
         const date = new Date(row.original.date);
-        return date.toLocaleDateString("en-AU", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
+        return date.toLocaleDateString('en-AU', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
         });
       },
     },
     {
-      accessorKey: "description",
-      header: "Description",
+      accessorKey: 'description',
+      header: 'Description',
       cell: ({ row }) => (
         <div className="max-w-md">
           <div className="font-medium truncate">{row.original.description}</div>
@@ -89,12 +89,12 @@ export function TransactionsPage() {
       ),
     },
     {
-      accessorKey: "account",
-      header: "Account",
+      accessorKey: 'account',
+      header: 'Account',
       cell: ({ row }) => <span className="text-sm font-mono">{row.original.account}</span>,
     },
     {
-      accessorKey: "amount",
+      accessorKey: 'amount',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Amount</SortableHeader>
@@ -107,18 +107,18 @@ export function TransactionsPage() {
           <div className="text-right font-mono font-medium tabular-nums">
             <span
               className={
-                isNegative ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
+                isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
               }
             >
-              {isNegative ? "-" : "+"}${Math.abs(amount).toFixed(2)}
+              {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}
             </span>
           </div>
         );
       },
     },
     {
-      accessorKey: "type",
-      header: "Type",
+      accessorKey: 'type',
+      header: 'Type',
       cell: ({ row }) => (
         <Badge variant="outline" className="text-xs">
           {row.original.type}
@@ -126,8 +126,8 @@ export function TransactionsPage() {
       ),
     },
     {
-      accessorKey: "tags",
-      header: "Tags",
+      accessorKey: 'tags',
+      header: 'Tags',
       cell: ({ row }) => {
         const { id, tags, entityId, description } = row.original;
         return (
@@ -140,7 +140,7 @@ export function TransactionsPage() {
         );
       },
       filterFn: (row, columnId, filterValue) => {
-        const searchTerm = String(filterValue ?? "")
+        const searchTerm = String(filterValue ?? '')
           .toLowerCase()
           .trim();
         if (!searchTerm) return true;
@@ -154,34 +154,34 @@ export function TransactionsPage() {
   // Define filters for the table
   const tableFilters: ColumnFilter[] = [
     {
-      id: "account",
-      type: "select",
-      label: "Account",
+      id: 'account',
+      type: 'select',
+      label: 'Account',
       options: [
-        { label: "All Accounts", value: "" },
-        { label: "ANZ Everyday", value: "ANZ Everyday" },
-        { label: "ANZ Savings", value: "ANZ Savings" },
-        { label: "Amex", value: "Amex" },
-        { label: "ING Savings", value: "ING Savings" },
-        { label: "Up Everyday", value: "Up Everyday" },
+        { label: 'All Accounts', value: '' },
+        { label: 'ANZ Everyday', value: 'ANZ Everyday' },
+        { label: 'ANZ Savings', value: 'ANZ Savings' },
+        { label: 'Amex', value: 'Amex' },
+        { label: 'ING Savings', value: 'ING Savings' },
+        { label: 'Up Everyday', value: 'Up Everyday' },
       ],
     },
     {
-      id: "type",
-      type: "select",
-      label: "Type",
+      id: 'type',
+      type: 'select',
+      label: 'Type',
       options: [
-        { label: "All Types", value: "" },
-        { label: "Income", value: "Income" },
-        { label: "Expense", value: "Expense" },
-        { label: "Transfer", value: "Transfer" },
+        { label: 'All Types', value: '' },
+        { label: 'Income', value: 'Income' },
+        { label: 'Expense', value: 'Expense' },
+        { label: 'Transfer', value: 'Transfer' },
       ],
     },
     {
-      id: "tags",
-      type: "text",
-      label: "Tag",
-      placeholder: "Filter by tag...",
+      id: 'tags',
+      type: 'text',
+      label: 'Tag',
+      placeholder: 'Filter by tag...',
     },
   ];
 

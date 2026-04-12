@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { BudgetRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { BudgetRow } from '@pops/db-types';
 
 export type { BudgetRow };
 
@@ -32,7 +32,7 @@ export function toBudget(row: BudgetRow): Budget {
 
 /** Zod schema for creating a budget. */
 export const CreateBudgetSchema = z.object({
-  category: z.string().min(1, "Category is required"),
+  category: z.string().min(1, 'Category is required'),
   period: z.string().nullable().optional(),
   amount: z.number().nullable().optional(),
   active: z.boolean().optional().default(false),
@@ -42,7 +42,7 @@ export type CreateBudgetInput = z.infer<typeof CreateBudgetSchema>;
 
 /** Zod schema for updating a budget (all fields optional). */
 export const UpdateBudgetSchema = z.object({
-  category: z.string().min(1, "Category cannot be empty").optional(),
+  category: z.string().min(1, 'Category cannot be empty').optional(),
   period: z.string().nullable().optional(),
   amount: z.number().nullable().optional(),
   active: z.boolean().optional(),
@@ -54,7 +54,7 @@ export type UpdateBudgetInput = z.infer<typeof UpdateBudgetSchema>;
 export const BudgetQuerySchema = z.object({
   search: z.string().optional(),
   period: z.string().optional(),
-  active: z.enum(["true", "false"]).optional(),
+  active: z.enum(['true', 'false']).optional(),
   limit: z.coerce.number().positive().optional(),
   offset: z.coerce.number().nonnegative().optional(),
 });

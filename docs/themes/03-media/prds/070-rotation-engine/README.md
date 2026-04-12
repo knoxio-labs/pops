@@ -10,38 +10,38 @@ The rotation engine is a daily automated job that manages the movie library life
 
 ### `rotation_config` (settings table keys)
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `rotation_enabled` | boolean | `false` | Master switch |
-| `rotation_cron_expression` | string | `0 3 * * *` | When the daily job runs (cron syntax) |
-| `rotation_leaving_days` | integer | `10` | Days in "leaving" state before removal |
-| `rotation_target_free_gb` | integer | `200` | Target minimum free disk space in GB — the primary driver for removals |
-| `rotation_daily_additions` | integer | `2` | Max movies to add per cycle (gated by disk space) |
-| `rotation_avg_movie_gb` | real | `15` | Estimated average movie size in GB (used to calculate how many to mark leaving when Radarr `sizeOnDisk` unavailable) |
-| `rotation_protected_days` | integer | `30` | Days a manually-downloaded movie is protected from rotation |
+| Key                        | Type    | Default     | Description                                                                                                          |
+| -------------------------- | ------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `rotation_enabled`         | boolean | `false`     | Master switch                                                                                                        |
+| `rotation_cron_expression` | string  | `0 3 * * *` | When the daily job runs (cron syntax)                                                                                |
+| `rotation_leaving_days`    | integer | `10`        | Days in "leaving" state before removal                                                                               |
+| `rotation_target_free_gb`  | integer | `200`       | Target minimum free disk space in GB — the primary driver for removals                                               |
+| `rotation_daily_additions` | integer | `2`         | Max movies to add per cycle (gated by disk space)                                                                    |
+| `rotation_avg_movie_gb`    | real    | `15`        | Estimated average movie size in GB (used to calculate how many to mark leaving when Radarr `sizeOnDisk` unavailable) |
+| `rotation_protected_days`  | integer | `30`        | Days a manually-downloaded movie is protected from rotation                                                          |
 
 ### `movies` table additions
 
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `rotation_status` | text (enum) | `null` | `null` = normal/eligible, `'leaving'` = marked for removal, `'protected'` = manually added, temporarily shielded |
-| `rotation_expires_at` | text (ISO datetime) | `null` | When `leaving` → eligible for removal, or when `protected` → enters rotation pool |
-| `rotation_marked_at` | text (ISO datetime) | `null` | When the movie was marked as leaving (for UI countdown) |
+| Column                | Type                | Default | Description                                                                                                      |
+| --------------------- | ------------------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `rotation_status`     | text (enum)         | `null`  | `null` = normal/eligible, `'leaving'` = marked for removal, `'protected'` = manually added, temporarily shielded |
+| `rotation_expires_at` | text (ISO datetime) | `null`  | When `leaving` → eligible for removal, or when `protected` → enters rotation pool                                |
+| `rotation_marked_at`  | text (ISO datetime) | `null`  | When the movie was marked as leaving (for UI countdown)                                                          |
 
 ### `rotation_log`
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | integer PK | Auto-increment |
-| `executed_at` | text | ISO datetime of job execution |
-| `movies_marked_leaving` | integer | Count marked leaving this cycle |
-| `movies_removed` | integer | Count actually removed (expired + deleted) |
-| `movies_added` | integer | Count added from candidate queue |
-| `removals_failed` | integer | Count of failed Radarr deletions |
-| `free_space_gb` | real | Disk space at time of execution |
-| `target_free_gb` | real | Configured target at time of execution |
-| `skipped_reason` | text | `null` if ran, otherwise reason for skip (e.g., `'radarr_unreachable'`) |
-| `details` | text (JSON) | Movie titles/IDs for each action |
+| Column                  | Type        | Description                                                             |
+| ----------------------- | ----------- | ----------------------------------------------------------------------- |
+| `id`                    | integer PK  | Auto-increment                                                          |
+| `executed_at`           | text        | ISO datetime of job execution                                           |
+| `movies_marked_leaving` | integer     | Count marked leaving this cycle                                         |
+| `movies_removed`        | integer     | Count actually removed (expired + deleted)                              |
+| `movies_added`          | integer     | Count added from candidate queue                                        |
+| `removals_failed`       | integer     | Count of failed Radarr deletions                                        |
+| `free_space_gb`         | real        | Disk space at time of execution                                         |
+| `target_free_gb`        | real        | Configured target at time of execution                                  |
+| `skipped_reason`        | text        | `null` if ran, otherwise reason for skip (e.g., `'radarr_unreachable'`) |
+| `details`               | text (JSON) | Movie titles/IDs for each action                                        |
 
 ## API Surface
 
@@ -82,30 +82,30 @@ The rotation engine is a daily automated job that manages the movie library life
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Deficit requires more removals than eligible movies | Mark all eligible as leaving, log the shortfall. Remaining deficit carries naturally to next cycle (free space will still be below target) |
-| Deficit is 0 or negative (plenty of space) | Skip marking, no new leaving movies this cycle |
-| No candidates in queue for addition | Skip additions, log "queue empty" |
-| Radarr unreachable at cycle start | Log `skipped_reason = 'radarr_unreachable'`, skip entire cycle |
-| Movie deleted from Radarr externally | Removal succeeds (no-op on Radarr side), clear from POPS |
-| Movie marked leaving but re-added to watchlist | Clear leaving status immediately (watchlist router calls rotation service) |
-| Disk space endpoint returns multiple disks | Use the disk where the Radarr root folder lives |
-| Rotation disabled mid-cycle | Complete current cycle, don't schedule next |
-| All movies are watchlisted or protected | 0 eligible for removal, log and skip. Additions still proceed if space permits |
-| Single large movie (e.g., 80GB 4K) covers entire deficit | Mark just that one movie — removal count is driven by bytes, not count |
-| Radarr `sizeOnDisk` is 0 for a movie (not yet downloaded) | Skip it — no space to reclaim. It will be picked up once it has files |
+| Case                                                      | Behaviour                                                                                                                                  |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Deficit requires more removals than eligible movies       | Mark all eligible as leaving, log the shortfall. Remaining deficit carries naturally to next cycle (free space will still be below target) |
+| Deficit is 0 or negative (plenty of space)                | Skip marking, no new leaving movies this cycle                                                                                             |
+| No candidates in queue for addition                       | Skip additions, log "queue empty"                                                                                                          |
+| Radarr unreachable at cycle start                         | Log `skipped_reason = 'radarr_unreachable'`, skip entire cycle                                                                             |
+| Movie deleted from Radarr externally                      | Removal succeeds (no-op on Radarr side), clear from POPS                                                                                   |
+| Movie marked leaving but re-added to watchlist            | Clear leaving status immediately (watchlist router calls rotation service)                                                                 |
+| Disk space endpoint returns multiple disks                | Use the disk where the Radarr root folder lives                                                                                            |
+| Rotation disabled mid-cycle                               | Complete current cycle, don't schedule next                                                                                                |
+| All movies are watchlisted or protected                   | 0 eligible for removal, log and skip. Additions still proceed if space permits                                                             |
+| Single large movie (e.g., 80GB 4K) covers entire deficit  | Mark just that one movie — removal count is driven by bytes, not count                                                                     |
+| Radarr `sizeOnDisk` is 0 for a movie (not yet downloaded) | Skip it — no space to reclaim. It will be picked up once it has files                                                                      |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-rotation-schema](us-01-rotation-schema.md) | Schema migration: new columns on `movies`, `rotation_log` table | Not started | Yes |
-| 02 | [us-02-removal-selection](us-02-removal-selection.md) | Disk-space-driven removal: deficit calculation, oldest-first selection, Radarr delete | Not started | Blocked by US-01 |
-| 03 | [us-03-leaving-lifecycle](us-03-leaving-lifecycle.md) | Leaving state machine: mark, expire, watchlist interaction | Not started | Blocked by US-01 |
-| 04 | [us-04-addition-execution](us-04-addition-execution.md) | Add movies from queue to Radarr with search trigger | Not started | Blocked by US-01, PRD-071 US-01 |
-| 05 | [us-05-disk-space-gating](us-05-disk-space-gating.md) | Addition gating: only add movies when free space is above target | Not started | Blocked by US-02, US-04 |
-| 06 | [us-06-daily-cron](us-06-daily-cron.md) | Scheduler: cron-based job orchestrating the full cycle | Not started | Blocked by US-02, US-03, US-04 |
+| #   | Story                                                   | Summary                                                                               | Status      | Parallelisable                  |
+| --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------- | ------------------------------- |
+| 01  | [us-01-rotation-schema](us-01-rotation-schema.md)       | Schema migration: new columns on `movies`, `rotation_log` table                       | Not started | Yes                             |
+| 02  | [us-02-removal-selection](us-02-removal-selection.md)   | Disk-space-driven removal: deficit calculation, oldest-first selection, Radarr delete | Not started | Blocked by US-01                |
+| 03  | [us-03-leaving-lifecycle](us-03-leaving-lifecycle.md)   | Leaving state machine: mark, expire, watchlist interaction                            | Not started | Blocked by US-01                |
+| 04  | [us-04-addition-execution](us-04-addition-execution.md) | Add movies from queue to Radarr with search trigger                                   | Not started | Blocked by US-01, PRD-071 US-01 |
+| 05  | [us-05-disk-space-gating](us-05-disk-space-gating.md)   | Addition gating: only add movies when free space is above target                      | Not started | Blocked by US-02, US-04         |
+| 06  | [us-06-daily-cron](us-06-daily-cron.md)                 | Scheduler: cron-based job orchestrating the full cycle                                | Not started | Blocked by US-02, US-03, US-04  |
 
 ## Out of Scope
 

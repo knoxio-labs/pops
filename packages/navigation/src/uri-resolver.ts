@@ -8,12 +8,12 @@
 
 /** Map of {app}/{type} → route prefix. */
 const URI_ROUTE_MAP: Record<string, string> = {
-  "media/movie": "/media/movies",
-  "media/tv-show": "/media/tv",
-  "finance/transaction": "/finance/transactions",
-  "finance/entity": "/finance/entities",
-  "finance/budget": "/finance/budgets",
-  "inventory/item": "/inventory/items",
+  'media/movie': '/media/movies',
+  'media/tv-show': '/media/tv',
+  'finance/transaction': '/finance/transactions',
+  'finance/entity': '/finance/entities',
+  'finance/budget': '/finance/budgets',
+  'inventory/item': '/inventory/items',
 };
 
 /**
@@ -23,10 +23,10 @@ const URI_ROUTE_MAP: Record<string, string> = {
  * @returns The frontend route (e.g. "/media/movies/42"), or null if unresolvable.
  */
 export function resolveUri(uri: string): string | null {
-  if (!uri.startsWith("pops:")) return null;
+  if (!uri.startsWith('pops:')) return null;
 
   const rest = uri.slice(5); // Remove "pops:" prefix
-  const lastSlash = rest.lastIndexOf("/");
+  const lastSlash = rest.lastIndexOf('/');
   if (lastSlash === -1) return null;
 
   const prefix = rest.slice(0, lastSlash); // e.g. "media/movie"

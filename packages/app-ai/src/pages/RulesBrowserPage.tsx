@@ -2,9 +2,9 @@
  * RulesBrowserPage — browse, filter, adjust, and delete AI categorisation rules.
  * PRD-053/US-02 (tb-542).
  */
-import { useState, useCallback, useRef, useEffect } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Trash2, BookOpen } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Trash2, BookOpen } from 'lucide-react';
 import {
   DataTable,
   SortableHeader,
@@ -25,10 +25,10 @@ import {
   DialogClose,
   PageHeader,
   Slider,
-} from "@pops/ui";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { trpc } from '../lib/trpc';
 
-type MatchType = "exact" | "contains" | "regex";
+type MatchType = 'exact' | 'contains' | 'regex';
 
 interface Correction {
   id: string;
@@ -38,7 +38,7 @@ interface Correction {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: "purchase" | "transfer" | "income" | null;
+  transactionType: 'purchase' | 'transfer' | 'income' | null;
   confidence: number;
   timesApplied: number;
   createdAt: string;
@@ -46,19 +46,19 @@ interface Correction {
 }
 
 const MATCH_TYPE_OPTIONS: SelectOption[] = [
-  { value: "", label: "All Match Types" },
-  { value: "exact", label: "Exact" },
-  { value: "contains", label: "Contains" },
-  { value: "regex", label: "Regex" },
+  { value: '', label: 'All Match Types' },
+  { value: 'exact', label: 'Exact' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'regex', label: 'Regex' },
 ];
 
 const PAGE_SIZE = 50;
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+  return new Date(dateStr).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
@@ -136,15 +136,15 @@ function ConfidenceSlider({
 }
 
 export function RulesBrowserPage(): React.ReactElement {
-  const [matchType, setMatchType] = useState("");
-  const [minConfidence, setMinConfidence] = useState("");
+  const [matchType, setMatchType] = useState('');
+  const [minConfidence, setMinConfidence] = useState('');
   const [offset, setOffset] = useState(0);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   const parsedMinConfidence = minConfidence ? parseFloat(minConfidence) : undefined;
   const parsedMatchType: MatchType | undefined =
-    matchType === "exact" || matchType === "contains" || matchType === "regex"
+    matchType === 'exact' || matchType === 'contains' || matchType === 'regex'
       ? matchType
       : undefined;
   const queryInput = {
@@ -181,25 +181,25 @@ export function RulesBrowserPage(): React.ReactElement {
 
   const columns: ColumnDef<Correction>[] = [
     {
-      accessorKey: "descriptionPattern",
+      accessorKey: 'descriptionPattern',
       header: ({ column }) => <SortableHeader column={column}>Pattern</SortableHeader>,
       cell: ({ row }) => (
         <span className="font-mono text-sm">{row.original.descriptionPattern}</span>
       ),
     },
     {
-      accessorKey: "matchType",
-      header: "Match Type",
+      accessorKey: 'matchType',
+      header: 'Match Type',
       cell: ({ row }) => <Badge variant="outline">{row.original.matchType}</Badge>,
     },
     {
-      accessorKey: "entityName",
+      accessorKey: 'entityName',
       header: ({ column }) => <SortableHeader column={column}>Entity</SortableHeader>,
       cell: ({ row }) =>
         row.original.entityName ?? <span className="text-muted-foreground">—</span>,
     },
     {
-      accessorKey: "confidence",
+      accessorKey: 'confidence',
       header: ({ column }) => <SortableHeader column={column}>Confidence</SortableHeader>,
       cell: ({ row }) => (
         <ConfidenceSlider
@@ -211,7 +211,7 @@ export function RulesBrowserPage(): React.ReactElement {
       ),
     },
     {
-      accessorKey: "timesApplied",
+      accessorKey: 'timesApplied',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Times Applied</SortableHeader>
@@ -220,7 +220,7 @@ export function RulesBrowserPage(): React.ReactElement {
       cell: ({ row }) => <div className="text-right tabular-nums">{row.original.timesApplied}</div>,
     },
     {
-      accessorKey: "lastUsedAt",
+      accessorKey: 'lastUsedAt',
       header: ({ column }) => <SortableHeader column={column}>Last Used</SortableHeader>,
       cell: ({ row }) =>
         row.original.lastUsedAt ? (
@@ -230,8 +230,8 @@ export function RulesBrowserPage(): React.ReactElement {
         ),
     },
     {
-      id: "actions",
-      header: "",
+      id: 'actions',
+      header: '',
       cell: ({ row }) => (
         <Button
           variant="ghost"
@@ -322,8 +322,8 @@ export function RulesBrowserPage(): React.ReactElement {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setMatchType("");
-              setMinConfidence("");
+              setMatchType('');
+              setMinConfidence('');
               setOffset(0);
             }}
           >
@@ -349,7 +349,7 @@ export function RulesBrowserPage(): React.ReactElement {
       {pagination && pagination.total > PAGE_SIZE && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, pagination.total)} of{" "}
+            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, pagination.total)} of{' '}
             {pagination.total} rules
           </p>
           <div className="flex gap-2">
@@ -395,7 +395,7 @@ export function RulesBrowserPage(): React.ReactElement {
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,51 +9,51 @@ Build a search page that queries TMDB for movies and TheTVDB for TV shows. Displ
 
 ## Routes
 
-| Route | Page |
-|-------|------|
+| Route           | Page        |
+| --------------- | ----------- |
 | `/media/search` | Search page |
 
 ## UI Components
 
 ### Search Input
 
-| Element | Detail |
-|---------|--------|
-| Text input | Full-width, prominent, auto-focused on mount |
-| Debounce | 300ms after last keystroke before firing queries |
+| Element      | Detail                                                |
+| ------------ | ----------------------------------------------------- |
+| Text input   | Full-width, prominent, auto-focused on mount          |
+| Debounce     | 300ms after last keystroke before firing queries      |
 | Clear button | Appears when input has text; clears input and results |
-| Query param | `?q=` — persisted in URL for shareability |
+| Query param  | `?q=` — persisted in URL for shareability             |
 
 ### Result Sections
 
-| Element | Detail |
-|---------|--------|
-| Layout | Tab or section layout: "Movies (TMDB)" / "TV Shows (TheTVDB)" |
-| Result card | Poster thumbnail, title, year, overview snippet (2-3 lines, truncated) |
-| "Add to Library" button | Per-result action — triggers the add flow |
-| "In Library" badge | Shown if tmdbId (movies) or tvdbId (TV shows) already exists in the local database |
-| Loading state | Per-section spinner/skeleton (one API may respond before the other) |
-| Empty state | Per-section "No results" message when API returns zero matches |
+| Element                 | Detail                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| Layout                  | Tab or section layout: "Movies (TMDB)" / "TV Shows (TheTVDB)"                      |
+| Result card             | Poster thumbnail, title, year, overview snippet (2-3 lines, truncated)             |
+| "Add to Library" button | Per-result action — triggers the add flow                                          |
+| "In Library" badge      | Shown if tmdbId (movies) or tvdbId (TV shows) already exists in the local database |
+| Loading state           | Per-section spinner/skeleton (one API may respond before the other)                |
+| Empty state             | Per-section "No results" message when API returns zero matches                     |
 
 ### Add to Library Flow
 
-| Step | Detail |
-|------|--------|
-| Click "Add" | Button shows spinner, disables to prevent double-click |
-| API call | `media.library.addMovie` (TMDB result) or `media.library.addTvShow` (TheTVDB result) |
-| Success | Button changes to "In Library" badge, toast confirmation appears |
-| Already exists | Button pre-renders as "In Library" badge (idempotent — no error if added again) |
-| Failure | Button reverts to "Add", error toast with message |
+| Step           | Detail                                                                               |
+| -------------- | ------------------------------------------------------------------------------------ |
+| Click "Add"    | Button shows spinner, disables to prevent double-click                               |
+| API call       | `media.library.addMovie` (TMDB result) or `media.library.addTvShow` (TheTVDB result) |
+| Success        | Button changes to "In Library" badge, toast confirmation appears                     |
+| Already exists | Button pre-renders as "In Library" badge (idempotent — no error if added again)      |
+| Failure        | Button reverts to "Add", error toast with message                                    |
 
 ## API Dependencies
 
-| Procedure | Usage |
-|-----------|-------|
-| `media.tmdb.searchMovies` | Search TMDB by query string |
-| `media.thetvdb.searchShows` | Search TheTVDB by query string |
-| `media.library.addMovie` | Add a movie to the library by TMDB ID (fetches full metadata) |
-| `media.library.addTvShow` | Add a TV show to the library by TheTVDB ID (fetches full metadata) |
-| `media.library.list` | Check which tmdbIds/tvdbIds are already in the library |
+| Procedure                   | Usage                                                              |
+| --------------------------- | ------------------------------------------------------------------ |
+| `media.tmdb.searchMovies`   | Search TMDB by query string                                        |
+| `media.thetvdb.searchShows` | Search TheTVDB by query string                                     |
+| `media.library.addMovie`    | Add a movie to the library by TMDB ID (fetches full metadata)      |
+| `media.library.addTvShow`   | Add a TV show to the library by TheTVDB ID (fetches full metadata) |
+| `media.library.list`        | Check which tmdbIds/tvdbIds are already in the library             |
 
 ## Business Rules
 
@@ -66,23 +66,23 @@ Build a search page that queries TMDB for movies and TheTVDB for TV shows. Displ
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Empty query | No API calls fired; both sections show placeholder text ("Search for movies and TV shows") |
-| One API fails | Failed section shows error message with retry; other section renders normally |
-| Both APIs fail | Both sections show error messages independently |
-| Query returns results in one section only | The section with results renders; the other shows "No [movies/shows] found for [query]" |
-| Rapid typing | Debounce (300ms) cancels in-flight requests; only the latest query executes |
-| Network timeout | Loading spinner times out after 10s; error message with retry |
-| Item added while search results still visible | Button transitions to "In Library" badge without page reload |
+| Case                                          | Behaviour                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Empty query                                   | No API calls fired; both sections show placeholder text ("Search for movies and TV shows") |
+| One API fails                                 | Failed section shows error message with retry; other section renders normally              |
+| Both APIs fail                                | Both sections show error messages independently                                            |
+| Query returns results in one section only     | The section with results renders; the other shows "No [movies/shows] found for [query]"    |
+| Rapid typing                                  | Debounce (300ms) cancels in-flight requests; only the latest query executes                |
+| Network timeout                               | Loading spinner times out after 10s; error message with retry                              |
+| Item added while search results still visible | Button transitions to "In Library" badge without page reload                               |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-search-input](us-01-search-input.md) | Debounced search input querying TMDB and TheTVDB in parallel | Done | No (first) |
-| 02 | [us-02-search-results](us-02-search-results.md) | Result cards with poster/title/year/overview, "In Library" badge, tab/section layout | Done | Blocked by us-01 |
-| 03 | [us-03-add-to-library-flow](us-03-add-to-library-flow.md) | Add button with spinner, addMovie/addTvShow call, success toast, badge update | Done | Blocked by us-02 |
+| #   | Story                                                     | Summary                                                                              | Status | Parallelisable   |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------ | ---------------- |
+| 01  | [us-01-search-input](us-01-search-input.md)               | Debounced search input querying TMDB and TheTVDB in parallel                         | Done   | No (first)       |
+| 02  | [us-02-search-results](us-02-search-results.md)           | Result cards with poster/title/year/overview, "In Library" badge, tab/section layout | Done   | Blocked by us-01 |
+| 03  | [us-03-add-to-library-flow](us-03-add-to-library-flow.md) | Add button with spinner, addMovie/addTvShow call, success toast, badge update        | Done   | Blocked by us-02 |
 
 US-02 depends on US-01 (needs search state). US-03 depends on US-02 (needs result cards to attach the button to).
 

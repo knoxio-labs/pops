@@ -4,9 +4,9 @@
  * Exports route definitions and navigation config for the shell
  * to lazily load finance pages under /finance/*.
  */
-export { routes, navConfig } from "./routes";
+export { routes, navConfig } from './routes';
 
 // Side-effect: register search result components
-import "./components/search/EntitiesResultComponent";
-import "./components/search/TransactionsResultComponent";
-import "./components/search/BudgetResult";
+import './components/search/EntitiesResultComponent';
+import './components/search/TransactionsResultComponent';
+import './components/search/BudgetResult';

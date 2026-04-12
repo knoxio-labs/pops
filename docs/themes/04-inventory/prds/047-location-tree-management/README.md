@@ -52,22 +52,22 @@ Build the location tree management UI. Hierarchical browser for creating, editin
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
+| Case                          | Behaviour                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Delete location with children | Confirmation shows child count and item count; all descendants cascade-deleted, their items orphaned |
-| Drag node onto itself | No-op |
-| Drag parent into own subtree | Rejected — circular reference prevention |
-| Location with no items | Empty state: "No items at this location" |
-| No locations exist | Empty state: "No locations — create your first location to organise items" |
+| Drag node onto itself         | No-op                                                                                                |
+| Drag parent into own subtree  | Rejected — circular reference prevention                                                             |
+| Location with no items        | Empty state: "No items at this location"                                                             |
+| No locations exist            | Empty state: "No locations — create your first location to organise items"                           |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-tree-browser](us-01-tree-browser.md) | Collapsible tree view with expand/collapse, item count badges, multiple root support | Done | No (first) |
-| 02 | [us-02-location-crud](us-02-location-crud.md) | Add root/child locations, inline rename, delete with cascade confirmation and item orphaning | Done | Blocked by us-01 |
-| 03 | [us-03-drag-and-drop](us-03-drag-and-drop.md) | Drag-and-drop reorder and reparent with circular reference prevention, mobile arrow fallback | Partial | Blocked by us-01 |
-| 04 | [us-04-items-at-location](us-04-items-at-location.md) | Items panel for selected location, include sub-locations toggle, item list with navigation | Done | Blocked by us-01 |
+| #   | Story                                                 | Summary                                                                                      | Status  | Parallelisable   |
+| --- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------- | ---------------- |
+| 01  | [us-01-tree-browser](us-01-tree-browser.md)           | Collapsible tree view with expand/collapse, item count badges, multiple root support         | Done    | No (first)       |
+| 02  | [us-02-location-crud](us-02-location-crud.md)         | Add root/child locations, inline rename, delete with cascade confirmation and item orphaning | Done    | Blocked by us-01 |
+| 03  | [us-03-drag-and-drop](us-03-drag-and-drop.md)         | Drag-and-drop reorder and reparent with circular reference prevention, mobile arrow fallback | Partial | Blocked by us-01 |
+| 04  | [us-04-items-at-location](us-04-items-at-location.md) | Items panel for selected location, include sub-locations toggle, item list with navigation   | Done    | Blocked by us-01 |
 
 US-02, US-03, and US-04 can parallelise after US-01.
 

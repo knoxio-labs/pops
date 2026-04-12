@@ -11,7 +11,7 @@
  *       In local/test environments this is intentional — the service is not externally
  *       reachable.
  */
-import { type Router as ExpressRouter, Router } from "express";
+import { type Router as ExpressRouter, Router } from 'express';
 import {
   validateEnvName,
   createEnv,
@@ -20,8 +20,8 @@ import {
   updateEnvTtl,
   deleteEnv,
   ttlRemaining,
-} from "./registry.js";
-import type { EnvRecord } from "./registry.js";
+} from './registry.js';
+import type { EnvRecord } from './registry.js';
 
 interface EnvRequestBody {
   seed?: unknown;
@@ -39,12 +39,12 @@ interface FormattedEnvRecord {
 
 const envRouter: ExpressRouter = Router();
 envRouter.use((_req, res, next) => {
-  res.setHeader("Content-Type", "application/json");
+  res.setHeader('Content-Type', 'application/json');
   next();
 });
 
 /** POST /env/:name — create a new environment */
-envRouter.post("/env/:name", (req, res) => {
+envRouter.post('/env/:name', (req, res) => {
   const { name } = req.params;
 
   const validationError = validateEnvName(name);
@@ -59,27 +59,27 @@ envRouter.post("/env/:name", (req, res) => {
   }
 
   const body: EnvRequestBody =
-    typeof req.body === "object" && req.body !== null ? (req.body as EnvRequestBody) : {};
-  const seedType = body.seed === "test" ? "test" : "none";
-  const ttlSeconds: number | null = typeof body.ttl === "number" && body.ttl > 0 ? body.ttl : null;
+    typeof req.body === 'object' && req.body !== null ? (req.body as EnvRequestBody) : {};
+  const seedType = body.seed === 'test' ? 'test' : 'none';
+  const ttlSeconds: number | null = typeof body.ttl === 'number' && body.ttl > 0 ? body.ttl : null;
 
   try {
     const record = createEnv(name, seedType, ttlSeconds);
     res.status(201).json(formatRecord(record));
   } catch (err) {
-    console.error("[env] Failed to create environment:", err);
-    res.status(500).json({ error: "Failed to create environment" });
+    console.error('[env] Failed to create environment:', err);
+    res.status(500).json({ error: 'Failed to create environment' });
   }
 });
 
 /** GET /env — list all environments */
-envRouter.get("/env", (_req, res) => {
+envRouter.get('/env', (_req, res) => {
   const envs = listEnvs().map(formatRecord);
   res.status(200).json(envs);
 });
 
 /** GET /env/:name — get environment status */
-envRouter.get("/env/:name", (req, res) => {
+envRouter.get('/env/:name', (req, res) => {
   const record = getEnvRecord(req.params.name);
   if (!record) {
     res.status(410).json({ error: `Environment '${req.params.name}' not found or expired` });
@@ -89,7 +89,7 @@ envRouter.get("/env/:name", (req, res) => {
 });
 
 /** PATCH /env/:name — update TTL */
-envRouter.patch("/env/:name", (req, res) => {
+envRouter.patch('/env/:name', (req, res) => {
   const record = getEnvRecord(req.params.name);
   if (!record) {
     res.status(410).json({ error: `Environment '${req.params.name}' not found or expired` });
@@ -97,16 +97,16 @@ envRouter.patch("/env/:name", (req, res) => {
   }
 
   const patchBody: EnvRequestBody =
-    typeof req.body === "object" && req.body !== null ? (req.body as EnvRequestBody) : {};
+    typeof req.body === 'object' && req.body !== null ? (req.body as EnvRequestBody) : {};
   const ttlSeconds: number | null =
-    typeof patchBody.ttl === "number" && patchBody.ttl > 0 ? patchBody.ttl : null;
+    typeof patchBody.ttl === 'number' && patchBody.ttl > 0 ? patchBody.ttl : null;
 
   const updated = updateEnvTtl(req.params.name, ttlSeconds);
   res.status(200).json(updated ? formatRecord(updated) : null);
 });
 
 /** DELETE /env/:name — delete environment */
-envRouter.delete("/env/:name", (req, res) => {
+envRouter.delete('/env/:name', (req, res) => {
   const deleted = deleteEnv(req.params.name);
   if (!deleted) {
     res.status(410).json({ error: `Environment '${req.params.name}' not found or expired` });

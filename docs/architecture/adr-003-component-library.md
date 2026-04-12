@@ -10,11 +10,11 @@ POPS has a shared UI component library (`@pops/ui`) consumed by multiple app pac
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Workspace package (source consumption) | No build step, Vite resolves natively, simple setup | All consumers must use the same bundler |
-| Published npm package | True isolation, versioned releases | Build pipeline, version management overhead, overkill for one repo |
-| Path aliases only (no package) | Zero config | No clear boundary, no independent testing, no package.json |
+| Option                                 | Pros                                                | Cons                                                               |
+| -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| Workspace package (source consumption) | No build step, Vite resolves natively, simple setup | All consumers must use the same bundler                            |
+| Published npm package                  | True isolation, versioned releases                  | Build pipeline, version management overhead, overkill for one repo |
+| Path aliases only (no package)         | Zero config                                         | No clear boundary, no independent testing, no package.json         |
 
 ## Decision
 

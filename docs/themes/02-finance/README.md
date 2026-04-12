@@ -16,27 +16,27 @@ Build a finance app that tracks every transaction across multiple bank accounts,
 
 ## Epics
 
-| # | Epic | Summary | Status |
-|---|------|---------|--------|
-| 0 | [Transactions](epics/00-transactions.md) | Transaction ledger — CRUD, filtering, sorting, inline tag editing | Done |
-| 1 | [Import Pipeline](epics/01-import-pipeline.md) | Multi-step wizard for bank CSV imports with entity matching, deduplication, review flow | Partial |
-| 2 | [Entities](epics/02-entities.md) | Merchant/payee registry — names, types, aliases, default tags | Partial |
-| 3 | [Corrections](epics/03-corrections.md) | Learned tagging rules — pattern matching with confidence scoring | Done |
-| 4 | [Budgets](epics/04-budgets.md) | Spending categories with period limits (monthly/yearly) | Partial |
-| 5 | [Wishlist](epics/05-wishlist.md) | Savings goals with target amounts and progress tracking | Done |
-| 6 | [AI Rule Creation](epics/06-ai-categorisation.md) | AI observes user corrections during import, creates matching rules that apply immediately to remaining rows | Partial |
+| #   | Epic                                              | Summary                                                                                                     | Status  |
+| --- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------- |
+| 0   | [Transactions](epics/00-transactions.md)          | Transaction ledger — CRUD, filtering, sorting, inline tag editing                                           | Done    |
+| 1   | [Import Pipeline](epics/01-import-pipeline.md)    | Multi-step wizard for bank CSV imports with entity matching, deduplication, review flow                     | Partial |
+| 2   | [Entities](epics/02-entities.md)                  | Merchant/payee registry — names, types, aliases, default tags                                               | Partial |
+| 3   | [Corrections](epics/03-corrections.md)            | Learned tagging rules — pattern matching with confidence scoring                                            | Done    |
+| 4   | [Budgets](epics/04-budgets.md)                    | Spending categories with period limits (monthly/yearly)                                                     | Partial |
+| 5   | [Wishlist](epics/05-wishlist.md)                  | Savings goals with target amounts and progress tracking                                                     | Done    |
+| 6   | [AI Rule Creation](epics/06-ai-categorisation.md) | AI observes user corrections during import, creates matching rules that apply immediately to remaining rows | Partial |
 
 Epics 0-2 form the core (transactions need entities, imports need both). Epics 3 and 6 layer intelligence on top. Epics 4-5 are independent.
 
 ## Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Entity matching | Aliases > exact > prefix > contains > AI fallback | Layered strategy, ~95-100% hit rate before AI |
-| AI provider | Claude Haiku | Cheap, good enough for categorisation |
-| AI caching | Disk cache (`ai_entity_cache.json`) | Avoid repeat API calls |
-| Deduplication | Date + amount count-based | Handles duplicate CSVs without unique transaction IDs |
-| Import format | Per-bank parsers | Each bank has different CSV formats |
+| Decision        | Choice                                            | Rationale                                             |
+| --------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| Entity matching | Aliases > exact > prefix > contains > AI fallback | Layered strategy, ~95-100% hit rate before AI         |
+| AI provider     | Claude Haiku                                      | Cheap, good enough for categorisation                 |
+| AI caching      | Disk cache (`ai_entity_cache.json`)               | Avoid repeat API calls                                |
+| Deduplication   | Date + amount count-based                         | Handles duplicate CSVs without unique transaction IDs |
+| Import format   | Per-bank parsers                                  | Each bank has different CSV formats                   |
 
 ## Risks
 

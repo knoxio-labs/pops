@@ -1,21 +1,21 @@
 /**
  * Transaction tRPC router — CRUD procedures for transactions.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   CreateTransactionSchema,
   UpdateTransactionSchema,
   TransactionQuerySchema,
   toTransaction,
   type TransactionFilters,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
-import { suggestTags } from "../../../shared/tag-suggester.js";
-import { getDb } from "../../../db.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError } from '../../../shared/errors.js';
+import { suggestTags } from '../../../shared/tag-suggester.js';
+import { getDb } from '../../../db.js';
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -52,7 +52,7 @@ export const transactionsRouter = router({
       return { data: toTransaction(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -63,7 +63,7 @@ export const transactionsRouter = router({
     const row = service.createTransaction(input);
     return {
       data: toTransaction(row),
-      message: "Transaction created",
+      message: 'Transaction created',
     };
   }),
 
@@ -80,11 +80,11 @@ export const transactionsRouter = router({
         const row = service.updateTransaction(input.id, input.data);
         return {
           data: toTransaction(row),
-          message: "Transaction updated",
+          message: 'Transaction updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -94,10 +94,10 @@ export const transactionsRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     try {
       service.deleteTransaction(input.id);
-      return { message: "Transaction deleted" };
+      return { message: 'Transaction deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -139,7 +139,7 @@ export const transactionsRouter = router({
         const parsed = JSON.parse(row.tags) as unknown;
         if (Array.isArray(parsed)) {
           for (const t of parsed) {
-            if (typeof t === "string" && t.trim()) tagSet.add(t.trim());
+            if (typeof t === 'string' && t.trim()) tagSet.add(t.trim());
           }
         }
       } catch {

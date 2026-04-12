@@ -1,10 +1,10 @@
 /**
  * TV Shows tRPC router — CRUD procedures for shows, seasons, and episodes.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   CreateTvShowSchema,
   UpdateTvShowSchema,
@@ -14,9 +14,9 @@ import {
   toTvShow,
   toSeason,
   toEpisode,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -44,7 +44,7 @@ export const tvShowsRouter = router({
         return { data: toTvShow(row) };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -53,10 +53,10 @@ export const tvShowsRouter = router({
   create: protectedProcedure.input(CreateTvShowSchema).mutation(({ input }) => {
     try {
       const row = service.createTvShow(input);
-      return { data: toTvShow(row), message: "TV show created" };
+      return { data: toTvShow(row), message: 'TV show created' };
     } catch (err) {
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -67,10 +67,10 @@ export const tvShowsRouter = router({
     .mutation(({ input }) => {
       try {
         const row = service.updateTvShow(input.id, input.data);
-        return { data: toTvShow(row), message: "TV show updated" };
+        return { data: toTvShow(row), message: 'TV show updated' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -81,10 +81,10 @@ export const tvShowsRouter = router({
     .mutation(({ input }) => {
       try {
         service.deleteTvShow(input.id);
-        return { message: "TV show deleted" };
+        return { message: 'TV show deleted' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -100,7 +100,7 @@ export const tvShowsRouter = router({
         return { data: rows.map(toSeason), total };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -109,13 +109,13 @@ export const tvShowsRouter = router({
   createSeason: protectedProcedure.input(CreateSeasonSchema).mutation(({ input }) => {
     try {
       const row = service.createSeason(input);
-      return { data: toSeason(row), message: "Season created" };
+      return { data: toSeason(row), message: 'Season created' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -126,10 +126,10 @@ export const tvShowsRouter = router({
     .mutation(({ input }) => {
       try {
         service.deleteSeason(input.id);
-        return { message: "Season deleted" };
+        return { message: 'Season deleted' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -145,7 +145,7 @@ export const tvShowsRouter = router({
         return { data: rows.map(toEpisode), total };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -154,13 +154,13 @@ export const tvShowsRouter = router({
   createEpisode: protectedProcedure.input(CreateEpisodeSchema).mutation(({ input }) => {
     try {
       const row = service.createEpisode(input);
-      return { data: toEpisode(row), message: "Episode created" };
+      return { data: toEpisode(row), message: 'Episode created' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -171,10 +171,10 @@ export const tvShowsRouter = router({
     .mutation(({ input }) => {
       try {
         service.deleteEpisode(input.id);
-        return { message: "Episode deleted" };
+        return { message: 'Episode deleted' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }

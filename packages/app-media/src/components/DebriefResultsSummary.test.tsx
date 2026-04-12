@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 
 const mockGetDebrief = vi.fn();
 const mockScores = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       comparisons: {
@@ -20,38 +20,38 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { DebriefResultsSummary } from "./DebriefResultsSummary";
+import { DebriefResultsSummary } from './DebriefResultsSummary';
 
 const debriefResponse = {
   data: {
     sessionId: 1,
-    status: "complete",
+    status: 'complete',
     movie: {
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: 42,
-      title: "The Matrix",
+      title: 'The Matrix',
       posterPath: null,
       posterUrl: null,
     },
     dimensions: [
       {
         dimensionId: 1,
-        name: "Cinematography",
-        status: "complete",
+        name: 'Cinematography',
+        status: 'complete',
         comparisonId: 10,
         opponent: null,
       },
       {
         dimensionId: 2,
-        name: "Entertainment",
-        status: "complete",
+        name: 'Entertainment',
+        status: 'complete',
         comparisonId: null,
         opponent: null,
       },
       {
         dimensionId: 3,
-        name: "Rewatchability",
-        status: "pending",
+        name: 'Rewatchability',
+        status: 'pending',
         comparisonId: null,
         opponent: null,
       },
@@ -75,7 +75,7 @@ function renderComponent(mediaId = 42) {
   );
 }
 
-describe("DebriefResultsSummary", () => {
+describe('DebriefResultsSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetDebrief.mockReturnValue({
@@ -86,53 +86,53 @@ describe("DebriefResultsSummary", () => {
     mockScores.mockReturnValue({ data: scoresResponse });
   });
 
-  it("renders dimension results with correct badges", () => {
+  it('renders dimension results with correct badges', () => {
     renderComponent();
 
-    expect(screen.getByTestId("debrief-results-summary")).toBeInTheDocument();
-    expect(screen.getByText("The Matrix")).toBeInTheDocument();
+    expect(screen.getByTestId('debrief-results-summary')).toBeInTheDocument();
+    expect(screen.getByText('The Matrix')).toBeInTheDocument();
     // Dimension names appear twice (results + scores sections)
-    expect(screen.getAllByText("Cinematography")).toHaveLength(2);
-    expect(screen.getByText("Compared")).toBeInTheDocument();
-    expect(screen.getByText("Skipped")).toBeInTheDocument();
-    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.getAllByText('Cinematography')).toHaveLength(2);
+    expect(screen.getByText('Compared')).toBeInTheDocument();
+    expect(screen.getByText('Skipped')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
   });
 
-  it("shows compared and skipped counts", () => {
+  it('shows compared and skipped counts', () => {
     renderComponent();
-    expect(screen.getByText("1 compared, 1 skipped, 1 pending")).toBeInTheDocument();
+    expect(screen.getByText('1 compared, 1 skipped, 1 pending')).toBeInTheDocument();
   });
 
-  it("renders score deltas with correct colors", () => {
+  it('renders score deltas with correct colors', () => {
     renderComponent();
 
-    const positiveDelta = screen.getByTestId("score-delta-1");
-    expect(positiveDelta).toHaveTextContent("+45");
-    expect(positiveDelta.className).toContain("green");
+    const positiveDelta = screen.getByTestId('score-delta-1');
+    expect(positiveDelta).toHaveTextContent('+45');
+    expect(positiveDelta.className).toContain('green');
 
-    const neutralDelta = screen.getByTestId("score-delta-2");
-    expect(neutralDelta).toHaveTextContent("0");
-    expect(neutralDelta.className).toContain("muted");
+    const neutralDelta = screen.getByTestId('score-delta-2');
+    expect(neutralDelta).toHaveTextContent('0');
+    expect(neutralDelta.className).toContain('muted');
 
-    const negativeDelta = screen.getByTestId("score-delta-3");
-    expect(negativeDelta).toHaveTextContent("-25");
-    expect(negativeDelta.className).toContain("red");
+    const negativeDelta = screen.getByTestId('score-delta-3');
+    expect(negativeDelta).toHaveTextContent('-25');
+    expect(negativeDelta.className).toContain('red');
   });
 
-  it("back to movie button links to movie detail", () => {
+  it('back to movie button links to movie detail', () => {
     renderComponent();
 
-    const btn = screen.getByTestId("back-to-movie-btn");
+    const btn = screen.getByTestId('back-to-movie-btn');
     expect(btn).toBeInTheDocument();
-    expect(btn).toHaveTextContent("Back to Movie");
+    expect(btn).toHaveTextContent('Back to Movie');
   });
 
-  it("done button is rendered", () => {
+  it('done button is rendered', () => {
     renderComponent();
-    expect(screen.getByTestId("done-btn")).toBeInTheDocument();
+    expect(screen.getByTestId('done-btn')).toBeInTheDocument();
   });
 
-  it("shows loading skeleton while fetching", () => {
+  it('shows loading skeleton while fetching', () => {
     mockGetDebrief.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -141,19 +141,19 @@ describe("DebriefResultsSummary", () => {
     mockScores.mockReturnValue({ data: undefined });
 
     renderComponent();
-    expect(screen.getByTestId("results-loading")).toBeInTheDocument();
+    expect(screen.getByTestId('results-loading')).toBeInTheDocument();
   });
 
-  it("shows error state when fetch fails", () => {
+  it('shows error state when fetch fails', () => {
     mockGetDebrief.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: { message: "Session not found" },
+      error: { message: 'Session not found' },
     });
     mockScores.mockReturnValue({ data: undefined });
 
     renderComponent();
-    expect(screen.getByTestId("results-error")).toBeInTheDocument();
-    expect(screen.getByText("Session not found")).toBeInTheDocument();
+    expect(screen.getByTestId('results-error')).toBeInTheDocument();
+    expect(screen.getByText('Session not found')).toBeInTheDocument();
   });
 });

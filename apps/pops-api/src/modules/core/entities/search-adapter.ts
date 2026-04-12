@@ -1,8 +1,8 @@
-import { like } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { entities } from "@pops/db-types";
-import { registerSearchAdapter } from "../search/registry.js";
-import type { SearchAdapter, SearchHit, Query, SearchContext } from "../search/types.js";
+import { like } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { entities } from '@pops/db-types';
+import { registerSearchAdapter } from '../search/registry.js';
+import type { SearchAdapter, SearchHit, Query, SearchContext } from '../search/types.js';
 
 export interface EntityHitData {
   name: string;
@@ -13,28 +13,28 @@ export interface EntityHitData {
 function scoreAndClassify(
   name: string,
   queryText: string
-): { score: number; matchType: "exact" | "prefix" | "contains" } | null {
+): { score: number; matchType: 'exact' | 'prefix' | 'contains' } | null {
   const lower = name.toLowerCase();
   const q = queryText.toLowerCase();
 
-  if (lower === q) return { score: 1.0, matchType: "exact" };
-  if (lower.startsWith(q)) return { score: 0.8, matchType: "prefix" };
-  if (lower.includes(q)) return { score: 0.5, matchType: "contains" };
+  if (lower === q) return { score: 1.0, matchType: 'exact' };
+  if (lower.startsWith(q)) return { score: 0.8, matchType: 'prefix' };
+  if (lower.includes(q)) return { score: 0.5, matchType: 'contains' };
   return null;
 }
 
 function parseAliases(raw: string | null): string[] {
   if (!raw) return [];
   return raw
-    .split(",")
+    .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
 export const entitiesSearchAdapter: SearchAdapter<EntityHitData> = {
-  domain: "entities",
-  icon: "Building2",
-  color: "green",
+  domain: 'entities',
+  icon: 'Building2',
+  color: 'green',
 
   search(
     query: Query,
@@ -61,7 +61,7 @@ export const entitiesSearchAdapter: SearchAdapter<EntityHitData> = {
       hits.push({
         uri: `pops:finance/entity/${row.id}`,
         score: match.score,
-        matchField: "name",
+        matchField: 'name',
         matchType: match.matchType,
         data: {
           name: row.name,

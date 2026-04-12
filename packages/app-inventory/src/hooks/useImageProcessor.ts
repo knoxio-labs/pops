@@ -4,18 +4,18 @@
  * Processes selected files before upload: converts HEIC/HEIF to JPEG,
  * compresses images to fit within a 1920x1920 bounding box, and strips EXIF.
  */
-import { useCallback, useState } from "react";
-import imageCompression from "browser-image-compression";
+import { useCallback, useState } from 'react';
+import imageCompression from 'browser-image-compression';
 
 const MAX_DIMENSION = 1920;
 const QUALITY = 0.8;
 
-const HEIC_TYPES = ["image/heic", "image/heif"];
+const HEIC_TYPES = ['image/heic', 'image/heif'];
 
 function isHeic(file: File): boolean {
   if (HEIC_TYPES.includes(file.type)) return true;
   const ext = file.name.toLowerCase();
-  return ext.endsWith(".heic") || ext.endsWith(".heif");
+  return ext.endsWith('.heic') || ext.endsWith('.heif');
 }
 
 export interface ProcessedFile {
@@ -39,14 +39,14 @@ export function useImageProcessor() {
 
         // Convert HEIC/HEIF to JPEG
         if (isHeic(file)) {
-          const heic2any = (await import("heic2any")).default;
-          const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: QUALITY });
+          const heic2any = (await import('heic2any')).default;
+          const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: QUALITY });
           const converted: Blob = Array.isArray(blob) ? blob[0]! : blob;
           input = new File(
             [converted],
-            file.name.replace(/\.heic$/i, ".jpg").replace(/\.heif$/i, ".jpg"),
+            file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
             {
-              type: "image/jpeg",
+              type: 'image/jpeg',
             }
           );
         }

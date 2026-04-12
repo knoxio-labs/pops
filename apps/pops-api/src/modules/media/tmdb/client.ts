@@ -17,10 +17,10 @@ import {
   type RawTmdbImageResponse,
   type RawTmdbTrendingResponse,
   type RawTmdbRecommendationsResponse,
-} from "./types.js";
-import type { TokenBucketRateLimiter } from "./rate-limiter.js";
+} from './types.js';
+import type { TokenBucketRateLimiter } from './rate-limiter.js';
 
-const BASE_URL = "https://api.themoviedb.org";
+const BASE_URL = 'https://api.themoviedb.org';
 
 export class TmdbClient {
   private readonly apiKey: string;
@@ -28,7 +28,7 @@ export class TmdbClient {
 
   constructor(apiKey: string, rateLimiter?: TokenBucketRateLimiter) {
     if (!apiKey) {
-      throw new Error("TMDB API key is required");
+      throw new Error('TMDB API key is required');
     }
     this.apiKey = apiKey;
     this.rateLimiter = rateLimiter ?? null;
@@ -39,7 +39,7 @@ export class TmdbClient {
     const params = new URLSearchParams({
       query,
       page: String(page),
-      language: "en-US",
+      language: 'en-US',
     });
 
     const raw = await this.get<RawTmdbSearchResponse>(`/3/search/movie?${params.toString()}`);
@@ -96,7 +96,7 @@ export class TmdbClient {
   async getMovieImages(tmdbId: number): Promise<TmdbImageResponse> {
     const raw = await this.get<RawTmdbImageResponse>(`/3/movie/${tmdbId}/images`);
 
-    const mapImage = (img: RawTmdbImageResponse["backdrops"][number]): TmdbImage => ({
+    const mapImage = (img: RawTmdbImageResponse['backdrops'][number]): TmdbImage => ({
       filePath: img.file_path,
       width: img.width,
       height: img.height,
@@ -116,12 +116,12 @@ export class TmdbClient {
 
   /** Get trending movies (daily or weekly). */
   async getTrendingMovies(
-    timeWindow: "day" | "week" = "week",
+    timeWindow: 'day' | 'week' = 'week',
     page = 1
   ): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       page: String(page),
-      language: "en-US",
+      language: 'en-US',
     });
 
     const raw = await this.get<RawTmdbTrendingResponse>(
@@ -153,7 +153,7 @@ export class TmdbClient {
   async getMovieRecommendations(tmdbId: number, page = 1): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       page: String(page),
-      language: "en-US",
+      language: 'en-US',
     });
 
     const raw = await this.get<RawTmdbRecommendationsResponse>(
@@ -185,7 +185,7 @@ export class TmdbClient {
   async getMovieSimilar(tmdbId: number, page = 1): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       page: String(page),
-      language: "en-US",
+      language: 'en-US',
     });
 
     const raw = await this.get<RawTmdbRecommendationsResponse>(
@@ -222,9 +222,9 @@ export class TmdbClient {
   async discoverMoviesByCrew(personId: number, page = 1): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       with_crew: String(personId),
-      sort_by: "vote_average.desc",
-      "vote_count.gte": "50",
-      language: "en-US",
+      sort_by: 'vote_average.desc',
+      'vote_count.gte': '50',
+      language: 'en-US',
       page: String(page),
     });
     const raw = await this.get<RawTmdbSearchResponse>(`/3/discover/movie?${params.toString()}`);
@@ -253,9 +253,9 @@ export class TmdbClient {
   async discoverMoviesByCast(personId: number, page = 1): Promise<TmdbSearchResponse> {
     const params = new URLSearchParams({
       with_cast: String(personId),
-      sort_by: "vote_average.desc",
-      "vote_count.gte": "50",
-      language: "en-US",
+      sort_by: 'vote_average.desc',
+      'vote_count.gte': '50',
+      language: 'en-US',
       page: String(page),
     });
     const raw = await this.get<RawTmdbSearchResponse>(`/3/discover/movie?${params.toString()}`);
@@ -292,33 +292,33 @@ export class TmdbClient {
     releaseDateLte?: string;
     page?: number;
   }): Promise<TmdbSearchResponse> {
-    const params = new URLSearchParams({ language: "en-US" });
+    const params = new URLSearchParams({ language: 'en-US' });
 
     if (opts.genreIds?.length) {
-      params.set("with_genres", opts.genreIds.join(","));
+      params.set('with_genres', opts.genreIds.join(','));
     }
     if (opts.keywordIds?.length) {
-      params.set("with_keywords", opts.keywordIds.join("|"));
+      params.set('with_keywords', opts.keywordIds.join('|'));
     }
     if (opts.sortBy) {
-      params.set("sort_by", opts.sortBy);
+      params.set('sort_by', opts.sortBy);
     }
     if (opts.voteCountGte != null) {
-      params.set("vote_count.gte", String(opts.voteCountGte));
+      params.set('vote_count.gte', String(opts.voteCountGte));
     }
     if (opts.voteCountLte != null) {
-      params.set("vote_count.lte", String(opts.voteCountLte));
+      params.set('vote_count.lte', String(opts.voteCountLte));
     }
     if (opts.voteAverageGte != null) {
-      params.set("vote_average.gte", String(opts.voteAverageGte));
+      params.set('vote_average.gte', String(opts.voteAverageGte));
     }
     if (opts.releaseDateGte) {
-      params.set("primary_release_date.gte", opts.releaseDateGte);
+      params.set('primary_release_date.gte', opts.releaseDateGte);
     }
     if (opts.releaseDateLte) {
-      params.set("primary_release_date.lte", opts.releaseDateLte);
+      params.set('primary_release_date.lte', opts.releaseDateLte);
     }
-    params.set("page", String(opts.page ?? 1));
+    params.set('page', String(opts.page ?? 1));
 
     const raw = await this.get<RawTmdbSearchResponse>(`/3/discover/movie?${params.toString()}`);
 
@@ -345,7 +345,7 @@ export class TmdbClient {
 
   /** Get the full list of TMDB movie genres. */
   async getGenreList(): Promise<TmdbGenreListResponse> {
-    return this.get<TmdbGenreListResponse>("/3/genre/movie/list?language=en-US");
+    return this.get<TmdbGenreListResponse>('/3/genre/movie/list?language=en-US');
   }
 
   /** Generic GET with Bearer auth, rate limiting, and error handling. */
@@ -358,10 +358,10 @@ export class TmdbClient {
 
     try {
       response = await fetch(`${BASE_URL}${path}`, {
-        method: "GET",
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
     } catch (err) {

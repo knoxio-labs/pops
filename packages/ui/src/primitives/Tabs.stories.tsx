@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 
 const meta: Meta = {
-  title: "Navigation/Tabs",
+  title: 'Navigation/Tabs',
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;

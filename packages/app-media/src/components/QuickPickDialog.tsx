@@ -4,8 +4,8 @@
  * Shows a single random recommendation at a time.
  * "Not this one" cycles to next, "Watch this!" adds to watchlist.
  */
-import { useState, useCallback } from "react";
-import { toast } from "sonner";
+import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import {
   Badge,
   Dialog,
@@ -15,9 +15,9 @@ import {
   DialogTrigger,
   Button,
   Skeleton,
-} from "@pops/ui";
-import { Sparkles, SkipForward, Play } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { Sparkles, SkipForward, Play } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 export function QuickPickDialog() {
   const [open, setOpen] = useState(false);
@@ -31,13 +31,13 @@ export function QuickPickDialog() {
 
   const addToWatchlist = trpc.media.watchlist.add.useMutation({
     onSuccess: () => {
-      toast.success("Added to watchlist!");
+      toast.success('Added to watchlist!');
       void utils.media.watchlist.list.invalidate();
       setOpen(false);
     },
     onError: (err: { message: string; data?: { code?: string } | null }) => {
-      if (err.data?.code === "CONFLICT") {
-        toast.info("Already on watchlist");
+      if (err.data?.code === 'CONFLICT') {
+        toast.info('Already on watchlist');
         setOpen(false);
       } else {
         toast.error(`Failed to add: ${err.message}`);
@@ -64,7 +64,7 @@ export function QuickPickDialog() {
 
   const handleWatch = () => {
     if (!currentMovie) return;
-    addToWatchlist.mutate({ mediaType: "movie", mediaId: currentMovie.id });
+    addToWatchlist.mutate({ mediaType: 'movie', mediaId: currentMovie.id });
   };
 
   const handleRefresh = () => {

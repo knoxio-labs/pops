@@ -11,27 +11,27 @@ Build the entity registry — the merchant/payee database that transactions and 
 
 ### entities
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PK, UUID | `crypto.randomUUID()` |
-| name | TEXT | NOT NULL, unique (case-sensitive) | Entity display name |
-| type | TEXT | NOT NULL, DEFAULT 'company' | "company", "person", "government", "bank" |
-| abn | TEXT | nullable | Australian Business Number |
-| aliases | TEXT | nullable | Comma-separated alternate names for matching |
-| default_transaction_type | TEXT | nullable | Suggested type when matched (purchase/transfer/income) |
-| default_tags | TEXT | DEFAULT '[]' | JSON array of tags to apply by default |
-| notes | TEXT | nullable | Free-form notes |
-| last_edited_time | TEXT | NOT NULL | ISO 8601 |
+| Column                   | Type | Constraints                       | Description                                            |
+| ------------------------ | ---- | --------------------------------- | ------------------------------------------------------ |
+| id                       | TEXT | PK, UUID                          | `crypto.randomUUID()`                                  |
+| name                     | TEXT | NOT NULL, unique (case-sensitive) | Entity display name                                    |
+| type                     | TEXT | NOT NULL, DEFAULT 'company'       | "company", "person", "government", "bank"              |
+| abn                      | TEXT | nullable                          | Australian Business Number                             |
+| aliases                  | TEXT | nullable                          | Comma-separated alternate names for matching           |
+| default_transaction_type | TEXT | nullable                          | Suggested type when matched (purchase/transfer/income) |
+| default_tags             | TEXT | DEFAULT '[]'                      | JSON array of tags to apply by default                 |
+| notes                    | TEXT | nullable                          | Free-form notes                                        |
+| last_edited_time         | TEXT | NOT NULL                          | ISO 8601                                               |
 
 ## API Surface
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `core.entities.list` | search?, type?, limit (50), offset (0) | `{ data: Entity[], pagination }` | Ordered by name ASC. Converts aliases string→array, default_tags JSON→array |
-| `core.entities.get` | id | `{ data: Entity }` | 404 if not found |
-| `core.entities.create` | name, type?, abn?, aliases (array)?, defaultTransactionType?, defaultTags (array)?, notes? | `{ data: Entity }` | Unique name enforced. Aliases array→comma string. Tags array→JSON |
-| `core.entities.update` | id, data (partial) | `{ data: Entity }` | Partial update |
-| `core.entities.delete` | id | `{ message }` | FK SET NULL on related transactions |
+| Procedure              | Input                                                                                      | Output                           | Notes                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
+| `core.entities.list`   | search?, type?, limit (50), offset (0)                                                     | `{ data: Entity[], pagination }` | Ordered by name ASC. Converts aliases string→array, default_tags JSON→array |
+| `core.entities.get`    | id                                                                                         | `{ data: Entity }`               | 404 if not found                                                            |
+| `core.entities.create` | name, type?, abn?, aliases (array)?, defaultTransactionType?, defaultTags (array)?, notes? | `{ data: Entity }`               | Unique name enforced. Aliases array→comma string. Tags array→JSON           |
+| `core.entities.update` | id, data (partial)                                                                         | `{ data: Entity }`               | Partial update                                                              |
+| `core.entities.delete` | id                                                                                         | `{ message }`                    | FK SET NULL on related transactions                                         |
 
 ## Business Rules
 
@@ -52,21 +52,21 @@ Build the entity registry — the merchant/payee database that transactions and 
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Duplicate entity name | Create returns 409 CONFLICT |
-| Entity with aliases containing only whitespace | Whitespace-only aliases stripped during parsing |
-| Entity deleted while import is running | Import uses cached entity lookup — deletion won't affect in-flight imports |
-| Entity with zero transactions | Marked as "Orphaned" on the entities page (PRD-032 US-08) |
-| Entity referenced by inventory item | `entity_id` on inventory item becomes null (FK SET NULL) |
+| Case                                           | Behaviour                                                                  |
+| ---------------------------------------------- | -------------------------------------------------------------------------- |
+| Duplicate entity name                          | Create returns 409 CONFLICT                                                |
+| Entity with aliases containing only whitespace | Whitespace-only aliases stripped during parsing                            |
+| Entity deleted while import is running         | Import uses cached entity lookup — deletion won't affect in-flight imports |
+| Entity with zero transactions                  | Marked as "Orphaned" on the entities page (PRD-032 US-08)                  |
+| Entity referenced by inventory item            | `entity_id` on inventory item becomes null (FK SET NULL)                   |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-schema-api](us-01-schema-api.md) | Entity table, CRUD procedures, alias/tag serialization | Done | No (first) |
-| 02 | [us-02-entities-page](us-02-entities-page.md) | DataTable with search, type filter, alias/tag display | Done | Blocked by us-01 |
-| 03 | [us-03-entity-crud-ui](us-03-entity-crud-ui.md) | Create/edit/delete dialogs on the entities page | Done | Blocked by us-02 |
+| #   | Story                                           | Summary                                                | Status | Parallelisable   |
+| --- | ----------------------------------------------- | ------------------------------------------------------ | ------ | ---------------- |
+| 01  | [us-01-schema-api](us-01-schema-api.md)         | Entity table, CRUD procedures, alias/tag serialization | Done   | No (first)       |
+| 02  | [us-02-entities-page](us-02-entities-page.md)   | DataTable with search, type filter, alias/tag display  | Done   | Blocked by us-01 |
+| 03  | [us-03-entity-crud-ui](us-03-entity-crud-ui.md) | Create/edit/delete dialogs on the entities page        | Done   | Blocked by us-02 |
 
 ## Verification
 

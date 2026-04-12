@@ -4,8 +4,8 @@
  * Uses d3-force for layout physics and renders to HTML5 Canvas for performance.
  * Nodes are colored by item type. Click navigates to item detail. Zoom/pan supported.
  */
-import { useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import {
   forceSimulation,
   forceLink,
@@ -14,9 +14,9 @@ import {
   forceCollide,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
-} from "d3-force";
-import { Skeleton } from "@pops/ui";
-import { trpc } from "../lib/trpc";
+} from 'd3-force';
+import { Skeleton } from '@pops/ui';
+import { trpc } from '../lib/trpc';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,28 +44,28 @@ interface GraphLink extends SimulationLinkDatum<GraphNode> {
  * Structural colors use getComputedStyle at render time for dark-mode support.
  */
 const TYPE_COLORS: Record<string, string> = {
-  electronics: "#6366f1", // indigo-500
-  furniture: "#f59e0b", // amber-500
-  appliance: "#10b981", // emerald-500
-  tool: "#ef4444", // red-500
-  clothing: "#8b5cf6", // violet-500
-  kitchenware: "#ec4899", // pink-500
-  sport: "#14b8a6", // teal-500
-  vehicle: "#f97316", // orange-500
-  other: "#64748b", // slate-500
+  electronics: '#6366f1', // indigo-500
+  furniture: '#f59e0b', // amber-500
+  appliance: '#10b981', // emerald-500
+  tool: '#ef4444', // red-500
+  clothing: '#8b5cf6', // violet-500
+  kitchenware: '#ec4899', // pink-500
+  sport: '#14b8a6', // teal-500
+  vehicle: '#f97316', // orange-500
+  other: '#64748b', // slate-500
 };
 
-const DEFAULT_COLOR = "#94a3b8"; // slate-400
-const CURRENT_COLOR = "#3b82f6"; // blue-500
+const DEFAULT_COLOR = '#94a3b8'; // slate-400
+const CURRENT_COLOR = '#3b82f6'; // blue-500
 
 function getStructuralColors() {
   const s = getComputedStyle(document.documentElement);
   return {
-    edge: s.getPropertyValue("--color-border").trim() || "#cbd5e1",
-    currentBorder: "#1d4ed8", // blue-700 — always high-contrast
-    iconText: "#ffffff", // always white on filled node
-    label: s.getPropertyValue("--color-muted-foreground").trim() || "#334155",
-    legendText: s.getPropertyValue("--color-muted-foreground").trim() || "#475569",
+    edge: s.getPropertyValue('--color-border').trim() || '#cbd5e1',
+    currentBorder: '#1d4ed8', // blue-700 — always high-contrast
+    iconText: '#ffffff', // always white on filled node
+    label: s.getPropertyValue('--color-muted-foreground').trim() || '#334155',
+    legendText: s.getPropertyValue('--color-muted-foreground').trim() || '#475569',
   };
 }
 const NODE_RADIUS = 24;
@@ -128,7 +128,7 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
   const draw = useCallback((): void => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -180,17 +180,17 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
       // Icon text (first letter of type or item name)
       ctx.fillStyle = colors.iconText;
       ctx.font = `bold ${14 / t.k}px system-ui, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       const initial = (node.type ?? node.itemName).charAt(0).toUpperCase();
       ctx.fillText(initial, nx, ny);
 
       // Label below
       ctx.fillStyle = colors.label;
       ctx.font = `${11 / t.k}px system-ui, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      const label = node.itemName.length > 20 ? node.itemName.slice(0, 18) + "..." : node.itemName;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const label = node.itemName.length > 20 ? node.itemName.slice(0, 18) + '...' : node.itemName;
       ctx.fillText(label, nx, ny + LABEL_OFFSET / t.k);
     }
 
@@ -202,7 +202,7 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
       ctx.save();
       ctx.scale(dpr, dpr);
       let ly = 12;
-      ctx.font = "11px system-ui, sans-serif";
+      ctx.font = '11px system-ui, sans-serif';
       for (const type of types) {
         if (!type) continue;
         const color = getNodeColor(type);
@@ -211,8 +211,8 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
         ctx.arc(16, ly + 5, 5, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = colors.legendText;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         ctx.fillText(type, 26, ly + 5);
         ly += 18;
       }
@@ -263,15 +263,15 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
 
     const sim = forceSimulation(nodes)
       .force(
-        "link",
+        'link',
         forceLink<GraphNode, GraphLink>(links)
           .id((d) => d.id)
           .distance(120)
       )
-      .force("charge", forceManyBody().strength(-400))
-      .force("center", forceCenter(0, 0))
-      .force("collide", forceCollide(NODE_RADIUS + 8))
-      .on("tick", () => {
+      .force('charge', forceManyBody().strength(-400))
+      .force('center', forceCenter(0, 0))
+      .force('collide', forceCollide(NODE_RADIUS + 8))
+      .on('tick', () => {
         draw();
       });
 
@@ -368,18 +368,18 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
       draw();
     }
 
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("mouseup", handleMouseUp);
-    canvas.addEventListener("mouseleave", handleMouseUp);
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseUp);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
 
     return (): void => {
-      canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mousemove", handleMouseMove);
-      canvas.removeEventListener("mouseup", handleMouseUp);
-      canvas.removeEventListener("mouseleave", handleMouseUp);
-      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('mouseleave', handleMouseUp);
+      canvas.removeEventListener('wheel', handleWheel);
     };
   }, [draw, findNodeAt, itemId, navigate]);
 

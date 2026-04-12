@@ -8,9 +8,9 @@
  * and recordDebriefComparison mutation. Advances through pending
  * dimensions; shows CompletionSummary when all are done.
  */
-import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router";
-import { Badge, Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger } from "@pops/ui";
+import { useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router';
+import { Badge, Button, Skeleton, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 import {
   ImageOff,
   CheckCircle,
@@ -19,10 +19,10 @@ import {
   Minus,
   ChevronDown,
   ArrowLeft,
-} from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { DebriefActionBar } from "../components/DebriefControls";
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { DebriefActionBar } from '../components/DebriefControls';
 
 export function DebriefPage() {
   const { movieId: rawId } = useParams<{ movieId: string }>();
@@ -36,7 +36,7 @@ export function DebriefPage() {
     error,
     refetch,
   } = trpc.media.comparisons.getDebrief.useQuery(
-    { mediaType: "movie", mediaId: movieId },
+    { mediaType: 'movie', mediaId: movieId },
     { enabled: !Number.isNaN(movieId) && movieId > 0 }
   );
 
@@ -44,7 +44,7 @@ export function DebriefPage() {
   const sessionId = debrief?.sessionId;
 
   // Track which pending dimension the user is currently on
-  const pendingDimensions = debrief?.dimensions.filter((d) => d.status === "pending") ?? [];
+  const pendingDimensions = debrief?.dimensions.filter((d) => d.status === 'pending') ?? [];
   const allComplete = debrief ? pendingDimensions.length === 0 : false;
 
   // Always show first pending dimension
@@ -54,11 +54,11 @@ export function DebriefPage() {
   const recordMutation = trpc.media.comparisons.recordDebriefComparison.useMutation({
     onSuccess: (result) => {
       if (result.data.sessionComplete) {
-        toast.success("Debrief complete!");
+        toast.success('Debrief complete!');
       } else {
-        toast.success("Comparison recorded");
+        toast.success('Comparison recorded');
       }
-      void utils.media.comparisons.getDebrief.invalidate({ mediaType: "movie", mediaId: movieId });
+      void utils.media.comparisons.getDebrief.invalidate({ mediaType: 'movie', mediaId: movieId });
       void utils.media.comparisons.getPendingDebriefs.invalidate();
     },
     onError: (err) => {
@@ -72,19 +72,19 @@ export function DebriefPage() {
     recordMutation.mutate({
       sessionId,
       dimensionId: currentDimension.dimensionId,
-      opponentType: "movie" as const,
+      opponentType: 'movie' as const,
       opponentId: currentDimension.opponent!.id,
       winnerId,
     });
   };
 
-  const handleDraw = (tier: "high" | "mid" | "low") => {
+  const handleDraw = (tier: 'high' | 'mid' | 'low') => {
     if (!currentDimension || !debrief || !sessionId || recordMutation.isPending) return;
 
     recordMutation.mutate({
       sessionId,
       dimensionId: currentDimension.dimensionId,
-      opponentType: "movie" as const,
+      opponentType: 'movie' as const,
       opponentId: currentDimension.opponent!.id,
       winnerId: 0,
       drawTier: tier,
@@ -92,11 +92,11 @@ export function DebriefPage() {
   };
 
   const handleDimensionSkipped = () => {
-    void utils.media.comparisons.getDebrief.invalidate({ mediaType: "movie", mediaId: movieId });
+    void utils.media.comparisons.getDebrief.invalidate({ mediaType: 'movie', mediaId: movieId });
   };
 
   const handleDoAnother = () => {
-    navigate("/media/history");
+    navigate('/media/history');
   };
 
   // ── Loading / Error states ──
@@ -141,7 +141,7 @@ export function DebriefPage() {
       <div className="p-6 text-center text-muted-foreground" data-testid="debrief-error">
         <p className="mb-2 text-lg">Could not load debrief</p>
         <p className="text-sm">
-          {error?.message ?? "Session not found"}{" "}
+          {error?.message ?? 'Session not found'}{' '}
           <button onClick={() => refetch()} className="text-primary underline">
             Try again
           </button>
@@ -158,7 +158,7 @@ export function DebriefPage() {
         dimensions: debrief.dimensions.map((d) => ({
           dimensionId: d.dimensionId,
           name: d.name,
-          status: d.status as "complete" | "pending",
+          status: d.status as 'complete' | 'pending',
           comparisonId: d.comparisonId,
         })),
       }
@@ -185,10 +185,10 @@ export function DebriefPage() {
         <div>
           <h1 className="text-2xl font-bold">{debrief.movie.title}</h1>
           <p className="text-muted-foreground text-sm">
-            Debrief —{" "}
+            Debrief —{' '}
             {allComplete
-              ? "Complete"
-              : `${pendingDimensions.length} dimension${pendingDimensions.length !== 1 ? "s" : ""} remaining`}
+              ? 'Complete'
+              : `${pendingDimensions.length} dimension${pendingDimensions.length !== 1 ? 's' : ''} remaining`}
           </p>
         </div>
       </div>
@@ -199,15 +199,15 @@ export function DebriefPage() {
           <Badge
             key={dim.dimensionId}
             variant={
-              dim.status === "complete"
-                ? "default"
+              dim.status === 'complete'
+                ? 'default'
                 : currentDimension?.dimensionId === dim.dimensionId
-                  ? "outline"
-                  : "secondary"
+                  ? 'outline'
+                  : 'secondary'
             }
             className="gap-1"
           >
-            {dim.status === "complete" ? (
+            {dim.status === 'complete' ? (
               <CheckCircle className="h-3 w-3" />
             ) : (
               <Circle className="h-3 w-3" />
@@ -223,7 +223,7 @@ export function DebriefPage() {
           {currentDimension.opponent ? (
             <>
               <p className="text-muted-foreground text-center text-sm">
-                Which has better{" "}
+                Which has better{' '}
                 <span className="text-foreground font-medium">{currentDimension.name}</span>?
               </p>
 
@@ -244,22 +244,22 @@ export function DebriefPage() {
                 <div className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-1.5">
                   {[
                     {
-                      tier: "high" as const,
+                      tier: 'high' as const,
                       icon: ChevronUp,
-                      label: "Equally great",
-                      color: "hover:border-green-500 hover:text-green-500",
+                      label: 'Equally great',
+                      color: 'hover:border-green-500 hover:text-green-500',
                     },
                     {
-                      tier: "mid" as const,
+                      tier: 'mid' as const,
                       icon: Minus,
-                      label: "Equally average",
-                      color: "hover:border-muted-foreground",
+                      label: 'Equally average',
+                      color: 'hover:border-muted-foreground',
                     },
                     {
-                      tier: "low" as const,
+                      tier: 'low' as const,
                       icon: ChevronDown,
-                      label: "Equally poor",
-                      color: "hover:border-red-500 hover:text-red-500",
+                      label: 'Equally poor',
+                      color: 'hover:border-red-500 hover:text-red-500',
                     },
                   ].map(({ tier, icon: Icon, label, color }) => (
                     <Tooltip key={tier}>
@@ -337,7 +337,7 @@ function PosterImage({
 
   if (!src || imgError) {
     return (
-      <div className={`bg-muted flex items-center justify-center ${className ?? ""}`}>
+      <div className={`bg-muted flex items-center justify-center ${className ?? ''}`}>
         <ImageOff className="text-muted-foreground h-8 w-8" />
       </div>
     );
@@ -363,8 +363,8 @@ function ComparisonCard({
       disabled={disabled}
       className={`flex flex-col items-center rounded-lg border p-4 text-center transition-all ${
         disabled
-          ? "cursor-default"
-          : "hover:border-primary hover:shadow-lg hover:scale-[1.02] cursor-pointer active:scale-[0.98]"
+          ? 'cursor-default'
+          : 'hover:border-primary hover:shadow-lg hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
       }`}
       data-testid={testId}
     >

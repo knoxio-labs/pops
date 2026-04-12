@@ -1,17 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DropdownMenu } from "./DropdownMenu";
-import { Button } from "./Button";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { DropdownMenu } from './DropdownMenu';
+import { Button } from './Button';
 
 const meta: Meta<typeof DropdownMenu> = {
-  title: "Navigation/DropdownMenu",
+  title: 'Navigation/DropdownMenu',
   component: DropdownMenu,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ padding: "4rem" }}>
+      <div style={{ padding: '4rem' }}>
         <Story />
       </div>
     ),
@@ -78,23 +78,23 @@ export const Default: Story = {
     trigger: <Button variant="outline">Open Menu</Button>,
     items: [
       {
-        label: "Edit",
-        value: "edit",
+        label: 'Edit',
+        value: 'edit',
         icon: <EditIcon />,
-        onSelect: () => alert("Edit clicked"),
+        onSelect: () => alert('Edit clicked'),
       },
       {
-        label: "Duplicate",
-        value: "duplicate",
+        label: 'Duplicate',
+        value: 'duplicate',
         icon: <CopyIcon />,
-        onSelect: () => alert("Duplicate clicked"),
+        onSelect: () => alert('Duplicate clicked'),
       },
       {
-        label: "Delete",
-        value: "delete",
+        label: 'Delete',
+        value: 'delete',
         icon: <TrashIcon />,
-        variant: "destructive",
-        onSelect: () => alert("Delete clicked"),
+        variant: 'destructive',
+        onSelect: () => alert('Delete clicked'),
       },
     ],
   },
@@ -107,11 +107,11 @@ export const AlignEnd: Story = {
         Align End (Wide Button)
       </Button>
     ),
-    align: "end",
+    align: 'end',
     items: [
-      { label: "Profile", value: "profile" },
-      { label: "Settings", value: "settings" },
-      { label: "Sign out", value: "signout", variant: "destructive" },
+      { label: 'Profile', value: 'profile' },
+      { label: 'Settings', value: 'settings' },
+      { label: 'Sign out', value: 'signout', variant: 'destructive' },
     ],
   },
 };
@@ -123,10 +123,10 @@ export const AlignCenter: Story = {
         Align Center (Wide Button)
       </Button>
     ),
-    align: "center",
+    align: 'center',
     items: [
-      { label: "Profile", value: "profile" },
-      { label: "Settings", value: "settings" },
+      { label: 'Profile', value: 'profile' },
+      { label: 'Settings', value: 'settings' },
     ],
   },
 };
@@ -135,9 +135,9 @@ export const WithDisabledItems: Story = {
   args: {
     trigger: <Button variant="outline">Menu with Disabled</Button>,
     items: [
-      { label: "Available", value: "available" },
-      { label: "Disabled", value: "disabled", disabled: true },
-      { label: "Also Available", value: "also-available" },
+      { label: 'Available', value: 'available' },
+      { label: 'Disabled', value: 'disabled', disabled: true },
+      { label: 'Also Available', value: 'also-available' },
     ],
   },
 };
@@ -145,18 +145,18 @@ export const WithDisabledItems: Story = {
 export const SideTop: Story = {
   args: {
     trigger: <Button variant="outline">Open Upward</Button>,
-    side: "top",
+    side: 'top',
     items: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-      { label: "Option 4", value: "4" },
-      { label: "Option 5", value: "5" },
+      { label: 'Option 1', value: '1' },
+      { label: 'Option 2', value: '2' },
+      { label: 'Option 3', value: '3' },
+      { label: 'Option 4', value: '4' },
+      { label: 'Option 5', value: '5' },
     ],
   },
   decorators: [
     (Story) => (
-      <div style={{ paddingTop: "12rem", paddingBottom: "2rem" }}>
+      <div style={{ paddingTop: '12rem', paddingBottom: '2rem' }}>
         <Story />
       </div>
     ),

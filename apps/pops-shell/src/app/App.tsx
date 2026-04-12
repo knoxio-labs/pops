@@ -1,14 +1,14 @@
 /**
  * Root App component with all providers
  */
-import { useEffect } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { trpc, trpcClient } from "@/lib/trpc";
-import { router } from "./router";
-import { RouterProvider } from "react-router";
-import { useThemeStore } from "@/store/themeStore";
-import { Toaster, TooltipProvider } from "@pops/ui";
+import { useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { trpc, trpcClient } from '@/lib/trpc';
+import { router } from './router';
+import { RouterProvider } from 'react-router';
+import { useThemeStore } from '@/store/themeStore';
+import { Toaster, TooltipProvider } from '@pops/ui';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +23,7 @@ export function App() {
 
   // Apply theme class to root element
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   return (

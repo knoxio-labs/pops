@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
-import type { CorrectionRow } from "@pops/api/modules/core/corrections/types";
-import type { Entity } from "@pops/api/modules/core/entities/types";
-import type { PendingChangeSet, PendingEntity, ChangeSet } from "../store/importStore";
-import { computeMergedRules, computeMergedEntities } from "./merged-state";
+import { describe, it, expect } from 'vitest';
+import type { CorrectionRow } from '@pops/api/modules/core/corrections/types';
+import type { Entity } from '@pops/api/modules/core/entities/types';
+import type { PendingChangeSet, PendingEntity, ChangeSet } from '../store/importStore';
+import { computeMergedRules, computeMergedEntities } from './merged-state';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -10,20 +10,20 @@ import { computeMergedRules, computeMergedEntities } from "./merged-state";
 
 function makeRule(overrides: Partial<CorrectionRow> = {}): CorrectionRow {
   return {
-    id: "rule-1",
-    descriptionPattern: "WOOLWORTHS",
-    matchType: "exact",
-    entityId: "entity-1",
-    entityName: "Woolworths",
+    id: 'rule-1',
+    descriptionPattern: 'WOOLWORTHS',
+    matchType: 'exact',
+    entityId: 'entity-1',
+    entityName: 'Woolworths',
     location: null,
-    tags: "[]",
-    transactionType: "purchase",
+    tags: '[]',
+    transactionType: 'purchase',
     isActive: true,
     confidence: 0.95,
     timesApplied: 10,
     priority: 0,
-    createdAt: "2026-01-01T00:00:00Z",
-    lastUsedAt: "2026-03-01T00:00:00Z",
+    createdAt: '2026-01-01T00:00:00Z',
+    lastUsedAt: '2026-03-01T00:00:00Z',
     ...overrides,
   } as CorrectionRow;
 }
@@ -35,23 +35,23 @@ function makePendingChangeSet(
   return {
     tempId: `temp:changeset:${crypto.randomUUID()}`,
     changeSet,
-    appliedAt: "2026-04-12T00:00:00Z",
-    source: "test",
+    appliedAt: '2026-04-12T00:00:00Z',
+    source: 'test',
     ...overrides,
   };
 }
 
 function makeEntity(overrides: Partial<Entity> = {}): Entity {
   return {
-    id: "entity-1",
-    name: "Woolworths",
-    type: "company",
+    id: 'entity-1',
+    name: 'Woolworths',
+    type: 'company',
     abn: null,
     aliases: [],
     defaultTransactionType: null,
     defaultTags: [],
     notes: null,
-    lastEditedTime: "2026-01-01T00:00:00Z",
+    lastEditedTime: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -59,8 +59,8 @@ function makeEntity(overrides: Partial<Entity> = {}): Entity {
 function makePendingEntity(overrides: Partial<PendingEntity> = {}): PendingEntity {
   return {
     tempId: `temp:entity:${crypto.randomUUID()}`,
-    name: "New Merchant",
-    type: "company",
+    name: 'New Merchant',
+    type: 'company',
     ...overrides,
   };
 }
@@ -69,24 +69,24 @@ function makePendingEntity(overrides: Partial<PendingEntity> = {}): PendingEntit
 // computeMergedRules — PRD-030 US-03
 // ---------------------------------------------------------------------------
 
-describe("computeMergedRules", () => {
-  it("returns dbRules unchanged (referential equality) when no pending ChangeSets", () => {
+describe('computeMergedRules', () => {
+  it('returns dbRules unchanged (referential equality) when no pending ChangeSets', () => {
     const dbRules = [makeRule()];
     const result = computeMergedRules(dbRules, []);
     expect(result).toBe(dbRules);
   });
 
-  it("applies a single add operation", () => {
+  it('applies a single add operation', () => {
     const dbRules = [makeRule()];
     const cs = makePendingChangeSet({
       ops: [
         {
-          op: "add",
+          op: 'add',
           data: {
-            descriptionPattern: "coles",
-            matchType: "exact",
-            entityId: "entity-2",
-            entityName: "Coles",
+            descriptionPattern: 'coles',
+            matchType: 'exact',
+            entityId: 'entity-2',
+            entityName: 'Coles',
             confidence: 0.9,
           },
         },
@@ -95,14 +95,14 @@ describe("computeMergedRules", () => {
 
     const result = computeMergedRules(dbRules, [cs]);
     expect(result).toHaveLength(2);
-    expect(result[1].descriptionPattern).toBe("COLES");
+    expect(result[1].descriptionPattern).toBe('COLES');
     expect(result[1].id).toMatch(/^temp:/);
   });
 
-  it("applies a single edit operation", () => {
-    const dbRules = [makeRule({ id: "rule-1", confidence: 0.5 })];
+  it('applies a single edit operation', () => {
+    const dbRules = [makeRule({ id: 'rule-1', confidence: 0.5 })];
     const cs = makePendingChangeSet({
-      ops: [{ op: "edit", id: "rule-1", data: { confidence: 0.99 } }],
+      ops: [{ op: 'edit', id: 'rule-1', data: { confidence: 0.99 } }],
     });
 
     const result = computeMergedRules(dbRules, [cs]);
@@ -110,18 +110,18 @@ describe("computeMergedRules", () => {
     expect(result[0].confidence).toBe(0.99);
   });
 
-  it("applies multiple sequential ChangeSets (add then edit same rule)", () => {
+  it('applies multiple sequential ChangeSets (add then edit same rule)', () => {
     const dbRules: CorrectionRow[] = [];
 
     const cs1 = makePendingChangeSet({
       ops: [
         {
-          op: "add",
+          op: 'add',
           data: {
-            descriptionPattern: "aldi",
-            matchType: "exact",
-            entityId: "entity-3",
-            entityName: "Aldi",
+            descriptionPattern: 'aldi',
+            matchType: 'exact',
+            entityId: 'entity-3',
+            entityName: 'Aldi',
             confidence: 0.8,
           },
         },
@@ -133,7 +133,7 @@ describe("computeMergedRules", () => {
     const addedRuleId = intermediateResult[0].id;
 
     const cs2 = makePendingChangeSet({
-      ops: [{ op: "edit", id: addedRuleId, data: { confidence: 0.95 } }],
+      ops: [{ op: 'edit', id: addedRuleId, data: { confidence: 0.95 } }],
     });
 
     const result = computeMergedRules(dbRules, [cs1, cs2]);
@@ -141,61 +141,61 @@ describe("computeMergedRules", () => {
     expect(result[0].confidence).toBe(0.95);
   });
 
-  it("throws when a ChangeSet references a removed rule", () => {
-    const dbRules = [makeRule({ id: "rule-1" })];
+  it('throws when a ChangeSet references a removed rule', () => {
+    const dbRules = [makeRule({ id: 'rule-1' })];
 
     const cs1 = makePendingChangeSet({
-      ops: [{ op: "remove", id: "rule-1" }],
+      ops: [{ op: 'remove', id: 'rule-1' }],
     });
 
     const cs2 = makePendingChangeSet({
-      ops: [{ op: "edit", id: "rule-1", data: { confidence: 0.5 } }],
+      ops: [{ op: 'edit', id: 'rule-1', data: { confidence: 0.5 } }],
     });
 
     expect(() => computeMergedRules(dbRules, [cs1, cs2])).toThrow();
   });
 
-  it("handles mixed operations across ChangeSets", () => {
+  it('handles mixed operations across ChangeSets', () => {
     const dbRules = [
-      makeRule({ id: "rule-1", descriptionPattern: "WOOLWORTHS" }),
-      makeRule({ id: "rule-2", descriptionPattern: "COLES" }),
+      makeRule({ id: 'rule-1', descriptionPattern: 'WOOLWORTHS' }),
+      makeRule({ id: 'rule-2', descriptionPattern: 'COLES' }),
     ];
 
     const cs = makePendingChangeSet({
       ops: [
         {
-          op: "add",
+          op: 'add',
           data: {
-            descriptionPattern: "aldi",
-            matchType: "exact",
-            entityId: "entity-3",
-            entityName: "Aldi",
+            descriptionPattern: 'aldi',
+            matchType: 'exact',
+            entityId: 'entity-3',
+            entityName: 'Aldi',
             confidence: 0.8,
           },
         },
-        { op: "disable", id: "rule-2" },
-        { op: "edit", id: "rule-1", data: { confidence: 0.99 } },
+        { op: 'disable', id: 'rule-2' },
+        { op: 'edit', id: 'rule-1', data: { confidence: 0.99 } },
       ],
     });
 
     const result = computeMergedRules(dbRules, [cs]);
     expect(result).toHaveLength(3);
 
-    const rule1 = result.find((r) => r.id === "rule-1");
+    const rule1 = result.find((r) => r.id === 'rule-1');
     expect(rule1?.confidence).toBe(0.99);
 
-    const rule2 = result.find((r) => r.id === "rule-2");
+    const rule2 = result.find((r) => r.id === 'rule-2');
     expect(rule2?.isActive).toBe(false);
 
-    const addedRule = result.find((r) => r.id.startsWith("temp:"));
-    expect(addedRule?.descriptionPattern).toBe("ALDI");
+    const addedRule = result.find((r) => r.id.startsWith('temp:'));
+    expect(addedRule?.descriptionPattern).toBe('ALDI');
   });
 
-  it("is memoized — same input refs return same output ref", () => {
+  it('is memoized — same input refs return same output ref', () => {
     const dbRules = [makeRule()];
     const pending = [
       makePendingChangeSet({
-        ops: [{ op: "edit", id: "rule-1", data: { confidence: 0.8 } }],
+        ops: [{ op: 'edit', id: 'rule-1', data: { confidence: 0.8 } }],
       }),
     ];
 
@@ -204,16 +204,16 @@ describe("computeMergedRules", () => {
     expect(result1).toBe(result2);
   });
 
-  it("recomputes when input refs change", () => {
+  it('recomputes when input refs change', () => {
     const dbRules = [makeRule()];
     const pending1 = [
       makePendingChangeSet({
-        ops: [{ op: "edit", id: "rule-1", data: { confidence: 0.8 } }],
+        ops: [{ op: 'edit', id: 'rule-1', data: { confidence: 0.8 } }],
       }),
     ];
     const pending2 = [
       makePendingChangeSet({
-        ops: [{ op: "edit", id: "rule-1", data: { confidence: 0.9 } }],
+        ops: [{ op: 'edit', id: 'rule-1', data: { confidence: 0.9 } }],
       }),
     ];
 
@@ -229,75 +229,75 @@ describe("computeMergedRules", () => {
 // computeMergedEntities — PRD-030 US-04
 // ---------------------------------------------------------------------------
 
-describe("computeMergedEntities", () => {
-  it("returns dbEntities unchanged when no pending entities", () => {
+describe('computeMergedEntities', () => {
+  it('returns dbEntities unchanged when no pending entities', () => {
     const dbEntities = [makeEntity()];
     const result = computeMergedEntities(dbEntities, []);
     expect(result).toBe(dbEntities);
   });
 
-  it("adds pending entities after DB entities when no collision", () => {
-    const dbEntities = [makeEntity({ id: "e1", name: "Woolworths" })];
-    const pending = [makePendingEntity({ name: "Coles" })];
+  it('adds pending entities after DB entities when no collision', () => {
+    const dbEntities = [makeEntity({ id: 'e1', name: 'Woolworths' })];
+    const pending = [makePendingEntity({ name: 'Coles' })];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(2);
-    expect(result[0].name).toBe("Woolworths");
-    expect(result[1].name).toBe("Coles");
+    expect(result[0].name).toBe('Woolworths');
+    expect(result[1].name).toBe('Coles');
     expect(result[1].id).toMatch(/^temp:entity:/);
   });
 
-  it("replaces DB entity when pending entity has same name", () => {
-    const dbEntities = [makeEntity({ id: "e1", name: "Woolworths", type: "company" })];
-    const pending = [makePendingEntity({ name: "Woolworths", type: "supermarket" })];
+  it('replaces DB entity when pending entity has same name', () => {
+    const dbEntities = [makeEntity({ id: 'e1', name: 'Woolworths', type: 'company' })];
+    const pending = [makePendingEntity({ name: 'Woolworths', type: 'supermarket' })];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(1);
     expect(result[0].id).toMatch(/^temp:entity:/);
-    expect(result[0].type).toBe("supermarket");
+    expect(result[0].type).toBe('supermarket');
   });
 
-  it("handles multiple collisions", () => {
+  it('handles multiple collisions', () => {
     const dbEntities = [
-      makeEntity({ id: "e1", name: "Woolworths" }),
-      makeEntity({ id: "e2", name: "Coles" }),
-      makeEntity({ id: "e3", name: "Aldi" }),
+      makeEntity({ id: 'e1', name: 'Woolworths' }),
+      makeEntity({ id: 'e2', name: 'Coles' }),
+      makeEntity({ id: 'e3', name: 'Aldi' }),
     ];
     const pending = [
-      makePendingEntity({ name: "Woolworths", type: "updated" }),
-      makePendingEntity({ name: "Coles", type: "updated" }),
+      makePendingEntity({ name: 'Woolworths', type: 'updated' }),
+      makePendingEntity({ name: 'Coles', type: 'updated' }),
     ];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(3);
     // Aldi (non-colliding DB) comes first
-    expect(result[0].name).toBe("Aldi");
-    expect(result[0].id).toBe("e3");
+    expect(result[0].name).toBe('Aldi');
+    expect(result[0].id).toBe('e3');
     // Then pending entities
-    expect(result[1].type).toBe("updated");
-    expect(result[2].type).toBe("updated");
+    expect(result[1].type).toBe('updated');
+    expect(result[2].type).toBe('updated');
   });
 
-  it("handles case-insensitive collision", () => {
-    const dbEntities = [makeEntity({ id: "e1", name: "Woolworths" })];
-    const pending = [makePendingEntity({ name: "woolworths", type: "updated" })];
+  it('handles case-insensitive collision', () => {
+    const dbEntities = [makeEntity({ id: 'e1', name: 'Woolworths' })];
+    const pending = [makePendingEntity({ name: 'woolworths', type: 'updated' })];
 
     const result = computeMergedEntities(dbEntities, pending);
     expect(result).toHaveLength(1);
-    expect(result[0].name).toBe("woolworths");
+    expect(result[0].name).toBe('woolworths');
     expect(result[0].id).toMatch(/^temp:entity:/);
   });
 
-  it("handles empty DB list with pending entities", () => {
+  it('handles empty DB list with pending entities', () => {
     const pending = [
-      makePendingEntity({ name: "New Corp" }),
-      makePendingEntity({ name: "Another Corp" }),
+      makePendingEntity({ name: 'New Corp' }),
+      makePendingEntity({ name: 'Another Corp' }),
     ];
 
     const result = computeMergedEntities([], pending);
     expect(result).toHaveLength(2);
-    expect(result[0].name).toBe("New Corp");
-    expect(result[1].name).toBe("Another Corp");
+    expect(result[0].name).toBe('New Corp');
+    expect(result[1].name).toBe('Another Corp');
     expect(result[0].aliases).toEqual([]);
     expect(result[0].abn).toBeNull();
     expect(result[0].defaultTransactionType).toBeNull();
@@ -305,7 +305,7 @@ describe("computeMergedEntities", () => {
     expect(result[0].notes).toBeNull();
   });
 
-  it("is memoized — same input refs return same output ref", () => {
+  it('is memoized — same input refs return same output ref', () => {
     const dbEntities = [makeEntity()];
     const pending = [makePendingEntity()];
 
@@ -314,10 +314,10 @@ describe("computeMergedEntities", () => {
     expect(result1).toBe(result2);
   });
 
-  it("recomputes when input refs change", () => {
+  it('recomputes when input refs change', () => {
     const dbEntities = [makeEntity()];
-    const pending1 = [makePendingEntity({ name: "A" })];
-    const pending2 = [makePendingEntity({ name: "B" })];
+    const pending1 = [makePendingEntity({ name: 'A' })];
+    const pending2 = [makePendingEntity({ name: 'B' })];
 
     const result1 = computeMergedEntities(dbEntities, pending1);
     const result2 = computeMergedEntities(dbEntities, pending2);

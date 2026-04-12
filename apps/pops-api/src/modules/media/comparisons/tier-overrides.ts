@@ -4,7 +4,7 @@
  * Tier overrides take precedence over ELO-derived tiers in tier list display.
  * Each (mediaType, mediaId, dimensionId) tuple can have at most one override.
  */
-import { getDb } from "../../../db.js";
+import { getDb } from '../../../db.js';
 
 export interface TierOverride {
   id: number;

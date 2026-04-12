@@ -1,26 +1,26 @@
 /**
  * Sonarr client tests — uses mocked fetch.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { SonarrClient } from "./sonarr-client.js";
-import { ArrApiError } from "./types.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { SonarrClient } from './sonarr-client.js';
+import { ArrApiError } from './types.js';
 
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+vi.stubGlobal('fetch', mockFetch);
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    statusText: status === 200 ? "OK" : "Error",
-    headers: { "Content-Type": "application/json" },
+    statusText: status === 200 ? 'OK' : 'Error',
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
-describe("SonarrClient", () => {
+describe('SonarrClient', () => {
   let client: SonarrClient;
 
   beforeEach(() => {
-    client = new SonarrClient("http://localhost:8989", "test-api-key");
+    client = new SonarrClient('http://localhost:8989', 'test-api-key');
     mockFetch.mockReset();
   });
 
@@ -28,11 +28,11 @@ describe("SonarrClient", () => {
     vi.restoreAllMocks();
   });
 
-  describe("getQualityProfiles", () => {
-    it("returns typed quality profiles", async () => {
+  describe('getQualityProfiles', () => {
+    it('returns typed quality profiles', async () => {
       const profiles = [
-        { id: 1, name: "HD-1080p" },
-        { id: 2, name: "Ultra-HD" },
+        { id: 1, name: 'HD-1080p' },
+        { id: 2, name: 'Ultra-HD' },
       ];
       mockFetch.mockResolvedValueOnce(jsonResponse(profiles));
 
@@ -40,25 +40,25 @@ describe("SonarrClient", () => {
 
       expect(result).toEqual(profiles);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/qualityprofile",
-        expect.objectContaining({ method: "GET" })
+        'http://localhost:8989/api/v3/qualityprofile',
+        expect.objectContaining({ method: 'GET' })
       );
     });
 
-    it("throws ArrApiError on 401", async () => {
+    it('throws ArrApiError on 401', async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response("Unauthorized", { status: 401, statusText: "Unauthorized" })
+        new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' })
       );
 
       await expect(client.getQualityProfiles()).rejects.toThrow(ArrApiError);
     });
   });
 
-  describe("getRootFolders", () => {
-    it("returns typed root folders with free space", async () => {
+  describe('getRootFolders', () => {
+    it('returns typed root folders with free space', async () => {
       const folders = [
-        { id: 1, path: "/tv", freeSpace: 500000000000 },
-        { id: 2, path: "/tv-4k", freeSpace: 200000000000 },
+        { id: 1, path: '/tv', freeSpace: 500000000000 },
+        { id: 2, path: '/tv-4k', freeSpace: 200000000000 },
       ];
       mockFetch.mockResolvedValueOnce(jsonResponse(folders));
 
@@ -67,17 +67,17 @@ describe("SonarrClient", () => {
       expect(result).toEqual(folders);
       expect(result[0]?.freeSpace).toBe(500000000000);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/rootfolder",
-        expect.objectContaining({ method: "GET" })
+        'http://localhost:8989/api/v3/rootfolder',
+        expect.objectContaining({ method: 'GET' })
       );
     });
   });
 
-  describe("getLanguageProfiles", () => {
-    it("returns typed language profiles", async () => {
+  describe('getLanguageProfiles', () => {
+    it('returns typed language profiles', async () => {
       const profiles = [
-        { id: 1, name: "English" },
-        { id: 2, name: "Japanese" },
+        { id: 1, name: 'English' },
+        { id: 2, name: 'Japanese' },
       ];
       mockFetch.mockResolvedValueOnce(jsonResponse(profiles));
 
@@ -85,26 +85,26 @@ describe("SonarrClient", () => {
 
       expect(result).toEqual(profiles);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/languageprofile",
-        expect.objectContaining({ method: "GET" })
+        'http://localhost:8989/api/v3/languageprofile',
+        expect.objectContaining({ method: 'GET' })
       );
     });
 
-    it("throws ArrApiError on 401", async () => {
+    it('throws ArrApiError on 401', async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response("Unauthorized", { status: 401, statusText: "Unauthorized" })
+        new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' })
       );
 
       await expect(client.getLanguageProfiles()).rejects.toThrow(ArrApiError);
     });
   });
 
-  describe("checkSeries", () => {
-    it("returns exists: true with sonarrId, monitored, and seasons when found", async () => {
+  describe('checkSeries', () => {
+    it('returns exists: true with sonarrId, monitored, and seasons when found', async () => {
       const allSeries = [
         {
           id: 10,
-          title: "Breaking Bad",
+          title: 'Breaking Bad',
           tvdbId: 81189,
           monitored: true,
           statistics: {
@@ -140,7 +140,7 @@ describe("SonarrClient", () => {
       });
     });
 
-    it("returns exists: false when series not found", async () => {
+    it('returns exists: false when series not found', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
       const result = await client.checkSeries(99999);
@@ -149,11 +149,11 @@ describe("SonarrClient", () => {
     });
   });
 
-  describe("addSeries", () => {
-    it("sends correct payload including season monitoring array", async () => {
+  describe('addSeries', () => {
+    it('sends correct payload including season monitoring array', async () => {
       const createdSeries = {
         id: 10,
-        title: "Breaking Bad",
+        title: 'Breaking Bad',
         tvdbId: 81189,
         monitored: true,
         statistics: {
@@ -171,9 +171,9 @@ describe("SonarrClient", () => {
 
       const result = await client.addSeries({
         tvdbId: 81189,
-        title: "Breaking Bad",
+        title: 'Breaking Bad',
         qualityProfileId: 1,
-        rootFolderPath: "/tv",
+        rootFolderPath: '/tv',
         languageProfileId: 1,
         seasons: [
           { seasonNumber: 1, monitored: true },
@@ -183,14 +183,14 @@ describe("SonarrClient", () => {
 
       expect(result).toEqual(createdSeries);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/series",
+        'http://localhost:8989/api/v3/series',
         expect.objectContaining({
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({
             tvdbId: 81189,
-            title: "Breaking Bad",
+            title: 'Breaking Bad',
             qualityProfileId: 1,
-            rootFolderPath: "/tv",
+            rootFolderPath: '/tv',
             languageProfileId: 1,
             seasons: [
               { seasonNumber: 1, monitored: true },
@@ -203,17 +203,17 @@ describe("SonarrClient", () => {
       );
     });
 
-    it("throws ArrApiError on 401", async () => {
+    it('throws ArrApiError on 401', async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response("Unauthorized", { status: 401, statusText: "Unauthorized" })
+        new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' })
       );
 
       await expect(
         client.addSeries({
           tvdbId: 1,
-          title: "X",
+          title: 'X',
           qualityProfileId: 1,
-          rootFolderPath: "/tv",
+          rootFolderPath: '/tv',
           languageProfileId: 1,
           seasons: [],
         })
@@ -221,11 +221,11 @@ describe("SonarrClient", () => {
     });
   });
 
-  describe("updateMonitoring", () => {
-    it("fetches series, merges monitored flag, and PUTs full object", async () => {
+  describe('updateMonitoring', () => {
+    it('fetches series, merges monitored flag, and PUTs full object', async () => {
       const existingSeries = {
         id: 10,
-        title: "Breaking Bad",
+        title: 'Breaking Bad',
         tvdbId: 81189,
         monitored: true,
         statistics: {
@@ -249,25 +249,25 @@ describe("SonarrClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockFetch).toHaveBeenNthCalledWith(
         1,
-        "http://localhost:8989/api/v3/series/10",
-        expect.objectContaining({ method: "GET" })
+        'http://localhost:8989/api/v3/series/10',
+        expect.objectContaining({ method: 'GET' })
       );
       expect(mockFetch).toHaveBeenNthCalledWith(
         2,
-        "http://localhost:8989/api/v3/series/10",
+        'http://localhost:8989/api/v3/series/10',
         expect.objectContaining({
-          method: "PUT",
+          method: 'PUT',
           body: JSON.stringify({ ...existingSeries, monitored: false }),
         })
       );
     });
   });
 
-  describe("updateSeasonMonitoring", () => {
-    it("fetches series, updates target season, and PUTs back", async () => {
+  describe('updateSeasonMonitoring', () => {
+    it('fetches series, updates target season, and PUTs back', async () => {
       const existingSeries = {
         id: 10,
-        title: "Breaking Bad",
+        title: 'Breaking Bad',
         tvdbId: 81189,
         monitored: true,
         statistics: {
@@ -297,10 +297,10 @@ describe("SonarrClient", () => {
       expect(result.seasons[1]?.monitored).toBe(true);
     });
 
-    it("throws when season not found", async () => {
+    it('throws when season not found', async () => {
       const series = {
         id: 10,
-        title: "Breaking Bad",
+        title: 'Breaking Bad',
         tvdbId: 81189,
         monitored: true,
         statistics: {
@@ -314,49 +314,49 @@ describe("SonarrClient", () => {
       mockFetch.mockResolvedValueOnce(jsonResponse(series));
 
       await expect(client.updateSeasonMonitoring(10, 99, true)).rejects.toThrow(
-        "Season 99 not found"
+        'Season 99 not found'
       );
     });
   });
 
-  describe("triggerSearch", () => {
-    it("sends SeriesSearch command when no seasonNumber", async () => {
-      const commandResult = { id: 1, name: "SeriesSearch", status: "started" };
+  describe('triggerSearch', () => {
+    it('sends SeriesSearch command when no seasonNumber', async () => {
+      const commandResult = { id: 1, name: 'SeriesSearch', status: 'started' };
       mockFetch.mockResolvedValueOnce(jsonResponse(commandResult));
 
       const result = await client.triggerSearch(10);
 
       expect(result).toEqual(commandResult);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/command",
+        'http://localhost:8989/api/v3/command',
         expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({ name: "SeriesSearch", seriesId: 10 }),
+          method: 'POST',
+          body: JSON.stringify({ name: 'SeriesSearch', seriesId: 10 }),
         })
       );
     });
 
-    it("sends SeasonSearch command when seasonNumber provided", async () => {
-      const commandResult = { id: 2, name: "SeasonSearch", status: "started" };
+    it('sends SeasonSearch command when seasonNumber provided', async () => {
+      const commandResult = { id: 2, name: 'SeasonSearch', status: 'started' };
       mockFetch.mockResolvedValueOnce(jsonResponse(commandResult));
 
       const result = await client.triggerSearch(10, 3);
 
       expect(result).toEqual(commandResult);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/command",
+        'http://localhost:8989/api/v3/command',
         expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({ name: "SeasonSearch", seriesId: 10, seasonNumber: 3 }),
+          method: 'POST',
+          body: JSON.stringify({ name: 'SeasonSearch', seriesId: 10, seasonNumber: 3 }),
         })
       );
     });
   });
 
-  describe("getShowStatus", () => {
+  describe('getShowStatus', () => {
     const baseSeries = {
       id: 10,
-      title: "Breaking Bad",
+      title: 'Breaking Bad',
       tvdbId: 81189,
       monitored: true,
       statistics: {
@@ -367,25 +367,25 @@ describe("SonarrClient", () => {
       },
     };
 
-    it("uses filtered endpoint /series?tvdbId=N", async () => {
+    it('uses filtered endpoint /series?tvdbId=N', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
       await client.getShowStatus(81189);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/series?tvdbId=81189",
-        expect.objectContaining({ method: "GET" })
+        'http://localhost:8989/api/v3/series?tvdbId=81189',
+        expect.objectContaining({ method: 'GET' })
       );
     });
 
-    it("returns not_found when series not in Sonarr", async () => {
+    it('returns not_found when series not in Sonarr', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
       const result = await client.getShowStatus(99999);
-      expect(result).toEqual({ status: "not_found", label: "Not in Sonarr" });
+      expect(result).toEqual({ status: 'not_found', label: 'Not in Sonarr' });
     });
 
-    it("does not fetch queue when series not found", async () => {
+    it('does not fetch queue when series not found', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
       await client.getShowStatus(99999);
@@ -393,15 +393,15 @@ describe("SonarrClient", () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it("returns complete when all episodes available", async () => {
+    it('returns complete when all episodes available', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([baseSeries]));
       mockFetch.mockResolvedValueOnce(jsonResponse({ totalRecords: 0, records: [] }));
 
       const result = await client.getShowStatus(81189);
-      expect(result).toEqual({ status: "complete", label: "Complete" });
+      expect(result).toEqual({ status: 'complete', label: 'Complete' });
     });
 
-    it("returns partial when some episodes available", async () => {
+    it('returns partial when some episodes available', async () => {
       const partialSeries = {
         ...baseSeries,
         statistics: {
@@ -415,11 +415,11 @@ describe("SonarrClient", () => {
       mockFetch.mockResolvedValueOnce(jsonResponse({ totalRecords: 0, records: [] }));
 
       const result = await client.getShowStatus(81189);
-      expect(result.status).toBe("partial");
-      expect(result.episodeStats).toBe("30/62 episodes");
+      expect(result.status).toBe('partial');
+      expect(result.episodeStats).toBe('30/62 episodes');
     });
 
-    it("returns monitored when no episode files exist", async () => {
+    it('returns monitored when no episode files exist', async () => {
       const monitoredSeries = {
         ...baseSeries,
         statistics: {
@@ -433,19 +433,19 @@ describe("SonarrClient", () => {
       mockFetch.mockResolvedValueOnce(jsonResponse({ totalRecords: 0, records: [] }));
 
       const result = await client.getShowStatus(81189);
-      expect(result).toEqual({ status: "monitored", label: "Monitored" });
+      expect(result).toEqual({ status: 'monitored', label: 'Monitored' });
     });
 
-    it("returns unmonitored when series is not monitored", async () => {
+    it('returns unmonitored when series is not monitored', async () => {
       const unmonitoredSeries = { ...baseSeries, monitored: false };
       mockFetch.mockResolvedValueOnce(jsonResponse([unmonitoredSeries]));
       mockFetch.mockResolvedValueOnce(jsonResponse({ totalRecords: 0, records: [] }));
 
       const result = await client.getShowStatus(81189);
-      expect(result).toEqual({ status: "unmonitored", label: "Unmonitored" });
+      expect(result).toEqual({ status: 'unmonitored', label: 'Unmonitored' });
     });
 
-    it("returns downloading with episode label when in queue", async () => {
+    it('returns downloading with episode label when in queue', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([baseSeries]));
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
@@ -454,22 +454,22 @@ describe("SonarrClient", () => {
             {
               id: 1,
               seriesId: 10,
-              title: "Breaking Bad",
-              status: "downloading",
+              title: 'Breaking Bad',
+              status: 'downloading',
               sizeleft: 500,
               size: 1000,
-              episode: { title: "Pilot", seasonNumber: 1, episodeNumber: 1 },
+              episode: { title: 'Pilot', seasonNumber: 1, episodeNumber: 1 },
             },
           ],
         })
       );
 
       const result = await client.getShowStatus(81189);
-      expect(result.status).toBe("downloading");
-      expect(result.label).toContain("S01E01");
+      expect(result.status).toBe('downloading');
+      expect(result.label).toContain('S01E01');
     });
 
-    it("returns downloading without episode label when queue has no episode info", async () => {
+    it('returns downloading without episode label when queue has no episode info', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([baseSeries]));
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
@@ -478,8 +478,8 @@ describe("SonarrClient", () => {
             {
               id: 1,
               seriesId: 10,
-              title: "Breaking Bad",
-              status: "downloading",
+              title: 'Breaking Bad',
+              status: 'downloading',
               sizeleft: 500,
               size: 1000,
             },
@@ -488,32 +488,32 @@ describe("SonarrClient", () => {
       );
 
       const result = await client.getShowStatus(81189);
-      expect(result).toEqual({ status: "downloading", label: "Downloading" });
+      expect(result).toEqual({ status: 'downloading', label: 'Downloading' });
     });
   });
 
-  describe("updateEpisodeMonitoring", () => {
-    it("sends batch episode monitoring payload to PUT /episode/monitor", async () => {
+  describe('updateEpisodeMonitoring', () => {
+    it('sends batch episode monitoring payload to PUT /episode/monitor', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
       await client.updateEpisodeMonitoring([1, 2, 3], true);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/episode/monitor",
+        'http://localhost:8989/api/v3/episode/monitor',
         expect.objectContaining({
-          method: "PUT",
+          method: 'PUT',
           body: JSON.stringify({ episodeIds: [1, 2, 3], monitored: true }),
         })
       );
     });
 
-    it("sends monitored: false for unmonitoring episodes", async () => {
+    it('sends monitored: false for unmonitoring episodes', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
       await client.updateEpisodeMonitoring([5], false);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/episode/monitor",
+        'http://localhost:8989/api/v3/episode/monitor',
         expect.objectContaining({
           body: JSON.stringify({ episodeIds: [5], monitored: false }),
         })
@@ -521,44 +521,44 @@ describe("SonarrClient", () => {
     });
   });
 
-  describe("getCalendar", () => {
-    it("queries calendar endpoint with start and end dates", async () => {
+  describe('getCalendar', () => {
+    it('queries calendar endpoint with start and end dates', async () => {
       const episodes = [
         {
           seriesId: 10,
-          seriesTitle: "Breaking Bad",
-          title: "Pilot",
+          seriesTitle: 'Breaking Bad',
+          title: 'Pilot',
           seasonNumber: 1,
           episodeNumber: 1,
-          airDateUtc: "2008-01-20T03:00:00Z",
+          airDateUtc: '2008-01-20T03:00:00Z',
           hasFile: true,
         },
       ];
       mockFetch.mockResolvedValueOnce(jsonResponse(episodes));
 
-      const result = await client.getCalendar("2026-04-01", "2026-04-07");
+      const result = await client.getCalendar('2026-04-01', '2026-04-07');
 
       expect(result).toEqual(episodes);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8989/api/v3/calendar?start=2026-04-01&end=2026-04-07&includeSeries=true",
-        expect.objectContaining({ method: "GET" })
+        'http://localhost:8989/api/v3/calendar?start=2026-04-01&end=2026-04-07&includeSeries=true',
+        expect.objectContaining({ method: 'GET' })
       );
     });
 
-    it("returns empty array when no episodes in range", async () => {
+    it('returns empty array when no episodes in range', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
-      const result = await client.getCalendar("2026-04-01", "2026-04-07");
+      const result = await client.getCalendar('2026-04-01', '2026-04-07');
 
       expect(result).toEqual([]);
     });
   });
 
-  describe("network failure", () => {
-    it("throws on network error", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+  describe('network failure', () => {
+    it('throws on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(client.getQualityProfiles()).rejects.toThrow("Network error");
+      await expect(client.getQualityProfiles()).rejects.toThrow('Network error');
     });
   });
 });

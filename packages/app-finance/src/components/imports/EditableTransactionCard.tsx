@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { Save, X, ChevronRight } from "lucide-react";
-import { Button } from "@pops/ui";
-import { Input } from "@pops/ui";
-import { Label } from "@pops/ui";
-import { Select as UiSelect } from "@pops/ui";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@pops/ui";
-import { EntitySelect } from "./EntitySelect";
-import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
+import { useState } from 'react';
+import { Save, X, ChevronRight } from 'lucide-react';
+import { Button } from '@pops/ui';
+import { Input } from '@pops/ui';
+import { Label } from '@pops/ui';
+import { Select as UiSelect } from '@pops/ui';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
+import { EntitySelect } from './EntitySelect';
+import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
 
 interface EditableTransactionCardProps {
   transaction: ProcessedTransaction;
@@ -33,19 +33,19 @@ export function EditableTransactionCard({
     description: transaction.description,
     amount: transaction.amount,
     date: transaction.date,
-    location: transaction.location || "",
+    location: transaction.location || '',
     account: transaction.account,
-    transactionType: transaction.transactionType ?? "purchase",
+    transactionType: transaction.transactionType ?? 'purchase',
   });
 
-  const transactionType = editedFields.transactionType ?? "purchase";
+  const transactionType = editedFields.transactionType ?? 'purchase';
 
   // Parse raw row for reference
   let rawData: Record<string, string> = {};
   try {
     rawData = JSON.parse(transaction.rawRow);
   } catch {
-    rawData = { error: "Failed to parse raw data" };
+    rawData = { error: 'Failed to parse raw data' };
   }
 
   const handleSave = (shouldLearn: boolean = false) => {
@@ -53,7 +53,7 @@ export function EditableTransactionCard({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       onCancel();
     }
   };
@@ -99,20 +99,20 @@ export function EditableTransactionCard({
           onChange={(e) =>
             setEditedFields({
               ...editedFields,
-              transactionType: e.target.value as "purchase" | "transfer" | "income",
+              transactionType: e.target.value as 'purchase' | 'transfer' | 'income',
             })
           }
           options={[
-            { label: "Purchase (requires entity)", value: "purchase" },
-            { label: "Transfer (between accounts, no entity)", value: "transfer" },
-            { label: "Income (salary, refund, etc.)", value: "income" },
+            { label: 'Purchase (requires entity)', value: 'purchase' },
+            { label: 'Transfer (between accounts, no entity)', value: 'transfer' },
+            { label: 'Income (salary, refund, etc.)', value: 'income' },
           ]}
         />
         <p className="text-xs mt-1 text-blue-700 dark:text-blue-300">
-          {transactionType === "transfer" &&
+          {transactionType === 'transfer' &&
             "Transfers don't need an entity - they move money between accounts"}
-          {transactionType === "income" && "Income transactions: salary, interest, refunds, etc."}
-          {transactionType === "purchase" && "Purchases require an entity (merchant/payee)"}
+          {transactionType === 'income' && 'Income transactions: salary, interest, refunds, etc.'}
+          {transactionType === 'purchase' && 'Purchases require an entity (merchant/payee)'}
         </p>
       </div>
 
@@ -123,7 +123,7 @@ export function EditableTransactionCard({
           <Input
             id="description"
             autoFocus
-            value={editedFields.description || ""}
+            value={editedFields.description || ''}
             onChange={(e) => setEditedFields({ ...editedFields, description: e.target.value })}
             className="bg-white dark:bg-gray-800"
           />
@@ -151,7 +151,7 @@ export function EditableTransactionCard({
           <Input
             id="date"
             type="date"
-            value={editedFields.date || ""}
+            value={editedFields.date || ''}
             onChange={(e) => setEditedFields({ ...editedFields, date: e.target.value })}
             className="bg-white dark:bg-gray-800"
           />
@@ -161,7 +161,7 @@ export function EditableTransactionCard({
           <Label htmlFor="account">Account</Label>
           <Input
             id="account"
-            value={editedFields.account || ""}
+            value={editedFields.account || ''}
             onChange={(e) => setEditedFields({ ...editedFields, account: e.target.value })}
             className="bg-white dark:bg-gray-800"
           />
@@ -171,7 +171,7 @@ export function EditableTransactionCard({
           <Label htmlFor="location">Location</Label>
           <Input
             id="location"
-            value={editedFields.location || ""}
+            value={editedFields.location || ''}
             onChange={(e) => setEditedFields({ ...editedFields, location: e.target.value })}
             placeholder="Optional"
             className="bg-white dark:bg-gray-800"
@@ -180,18 +180,18 @@ export function EditableTransactionCard({
       </div>
 
       {/* Entity selector - only show for purchases */}
-      {transactionType === "purchase" && entities && entities.length > 0 && (
+      {transactionType === 'purchase' && entities && entities.length > 0 && (
         <div className="space-y-2 mb-4">
           <Label htmlFor="entity">Entity (Merchant/Payee)</Label>
           <EntitySelect
             entities={entities}
-            value={transaction.entity?.entityId || ""}
+            value={transaction.entity?.entityId || ''}
             placeholder="Select entity..."
           />
         </div>
       )}
 
-      {transactionType === "transfer" && (
+      {transactionType === 'transfer' && (
         <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4 text-sm">
           <p className="text-gray-700 dark:text-gray-300">
             💡 <strong>Transfer transactions</strong> don't require an entity. They represent money
@@ -204,7 +204,7 @@ export function EditableTransactionCard({
       <Collapsible open={isRawDataExpanded} onOpenChange={setIsRawDataExpanded}>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
           <ChevronRight
-            className={`w-4 h-4 transition-transform ${isRawDataExpanded ? "rotate-90" : ""}`}
+            className={`w-4 h-4 transition-transform ${isRawDataExpanded ? 'rotate-90' : ''}`}
           />
           <span>View source CSV data</span>
         </CollapsibleTrigger>

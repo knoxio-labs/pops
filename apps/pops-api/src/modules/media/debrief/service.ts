@@ -1,8 +1,8 @@
 /**
  * Debrief service — auto-queue and manage post-watch debrief sessions.
  */
-import { eq, and, inArray, asc } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
+import { eq, and, inArray, asc } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
 import {
   debriefSessions,
   debriefResults,
@@ -10,9 +10,9 @@ import {
   watchHistory,
   comparisonDimensions,
   movies,
-} from "@pops/db-types";
-import { getDebriefOpponent } from "../comparisons/service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+} from '@pops/db-types';
+import { getDebriefOpponent } from '../comparisons/service.js';
+import { NotFoundError } from '../../../shared/errors.js';
 
 /**
  * Create a pending debrief session for a watch history entry.
@@ -46,14 +46,14 @@ export function createDebriefSession(watchHistoryId: number): number {
       .where(
         and(
           inArray(debriefSessions.watchHistoryId, existingWatchIds),
-          inArray(debriefSessions.status, ["pending", "active"])
+          inArray(debriefSessions.status, ['pending', 'active'])
         )
       )
       .run();
   }
 
   // Create new pending session
-  const result = db.insert(debriefSessions).values({ watchHistoryId, status: "pending" }).run();
+  const result = db.insert(debriefSessions).values({ watchHistoryId, status: 'pending' }).run();
 
   return Number(result.lastInsertRowid);
 }
@@ -62,7 +62,7 @@ export function createDebriefSession(watchHistoryId: number): number {
 export interface DebriefDimension {
   dimensionId: number;
   name: string;
-  status: "pending" | "complete";
+  status: 'pending' | 'complete';
   comparisonId: number | null;
   opponent: {
     id: number;
@@ -75,7 +75,7 @@ export interface DebriefDimension {
 /** Response shape for the getDebrief endpoint. */
 export interface DebriefResponse {
   sessionId: number;
-  status: "pending" | "active" | "complete";
+  status: 'pending' | 'active' | 'complete';
   movie: {
     mediaType: string;
     mediaId: number;
@@ -101,7 +101,7 @@ export function getDebrief(sessionId: number): DebriefResponse {
   // Fetch session
   const session = db.select().from(debriefSessions).where(eq(debriefSessions.id, sessionId)).get();
   if (!session) {
-    throw new NotFoundError("Debrief session", String(sessionId));
+    throw new NotFoundError('Debrief session', String(sessionId));
   }
 
   // Fetch watch history entry
@@ -111,7 +111,7 @@ export function getDebrief(sessionId: number): DebriefResponse {
     .where(eq(watchHistory.id, session.watchHistoryId))
     .get();
   if (!watchEntry) {
-    throw new NotFoundError("Watch history entry", String(session.watchHistoryId));
+    throw new NotFoundError('Watch history entry', String(session.watchHistoryId));
   }
 
   // Fetch movie metadata
@@ -127,7 +127,7 @@ export function getDebrief(sessionId: number): DebriefResponse {
     .where(eq(movies.id, watchEntry.mediaId))
     .get();
   if (!movieRow) {
-    throw new NotFoundError("Movie", String(watchEntry.mediaId));
+    throw new NotFoundError('Movie', String(watchEntry.mediaId));
   }
 
   const posterUrl = movieRow.posterOverridePath
@@ -159,7 +159,7 @@ export function getDebrief(sessionId: number): DebriefResponse {
       return {
         dimensionId: dim.id,
         name: dim.name,
-        status: "complete" as const,
+        status: 'complete' as const,
         comparisonId: completedByDimension.get(dim.id) ?? null,
         opponent: null,
       };
@@ -170,7 +170,7 @@ export function getDebrief(sessionId: number): DebriefResponse {
     return {
       dimensionId: dim.id,
       name: dim.name,
-      status: "pending" as const,
+      status: 'pending' as const,
       comparisonId: null,
       opponent,
     };
@@ -178,12 +178,12 @@ export function getDebrief(sessionId: number): DebriefResponse {
 
   // Transition pending → active on first read
   let currentStatus = session.status;
-  if (currentStatus === "pending") {
+  if (currentStatus === 'pending') {
     db.update(debriefSessions)
-      .set({ status: "active" })
+      .set({ status: 'active' })
       .where(eq(debriefSessions.id, sessionId))
       .run();
-    currentStatus = "active";
+    currentStatus = 'active';
   }
 
   return {
@@ -207,7 +207,7 @@ export function getDebrief(sessionId: number): DebriefResponse {
  * Throws NotFoundError if no pending/active session exists for this media.
  */
 export function getDebriefByMedia(
-  mediaType: "movie" | "episode",
+  mediaType: 'movie' | 'episode',
   mediaId: number
 ): DebriefResponse {
   const db = getDrizzle();
@@ -222,14 +222,14 @@ export function getDebriefByMedia(
       and(
         eq(watchHistory.mediaType, mediaType),
         eq(watchHistory.mediaId, mediaId),
-        inArray(debriefSessions.status, ["pending", "active", "complete"])
+        inArray(debriefSessions.status, ['pending', 'active', 'complete'])
       )
     )
     .orderBy(asc(debriefSessions.id))
     .get();
 
   if (!session) {
-    throw new NotFoundError("Debrief session", `${mediaType}:${mediaId}`);
+    throw new NotFoundError('Debrief session', `${mediaType}:${mediaId}`);
   }
 
   return getDebrief(session.id);

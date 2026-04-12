@@ -2,25 +2,25 @@
  * DataTableFilters - Filter components for DataTable
  * Supports text, select, multi-select, date range, and number range filters
  */
-import { useState } from "react";
-import type { Column, Row, Table } from "@tanstack/react-table";
-import { X, SlidersHorizontal } from "lucide-react";
-import { TextInput } from "./TextInput";
-import { Select, type SelectOption } from "./Select";
-import { Button } from "./Button";
-import { NumberInput } from "./NumberInput";
-import { ComboboxSelect } from "./ComboboxSelect";
+import { useState } from 'react';
+import type { Column, Row, Table } from '@tanstack/react-table';
+import { X, SlidersHorizontal } from 'lucide-react';
+import { TextInput } from './TextInput';
+import { Select, type SelectOption } from './Select';
+import { Button } from './Button';
+import { NumberInput } from './NumberInput';
+import { ComboboxSelect } from './ComboboxSelect';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "../primitives/dialog";
+} from '../primitives/dialog';
 
 export interface ColumnFilter {
   id: string;
-  type: "text" | "select" | "multiselect" | "daterange" | "numberrange";
+  type: 'text' | 'select' | 'multiselect' | 'daterange' | 'numberrange';
   label: string;
   options?: SelectOption[];
   placeholder?: string;
@@ -34,11 +34,11 @@ interface TextFilterProps {
 export function TextFilter({ column, placeholder }: TextFilterProps) {
   return (
     <TextInput
-      placeholder={placeholder || "Filter..."}
-      value={(column.getFilterValue() as string) ?? ""}
+      placeholder={placeholder || 'Filter...'}
+      value={(column.getFilterValue() as string) ?? ''}
       onChange={(e) => column.setFilterValue(e.target.value)}
       clearable
-      onClear={() => column.setFilterValue("")}
+      onClear={() => column.setFilterValue('')}
       className="w-full sm:max-w-sm"
     />
   );
@@ -53,10 +53,10 @@ interface SelectFilterProps {
 export function SelectFilter({ column, options, placeholder }: SelectFilterProps) {
   return (
     <Select
-      value={(column.getFilterValue() as string) ?? ""}
+      value={(column.getFilterValue() as string) ?? ''}
       onChange={(e) => column.setFilterValue(e.target.value || undefined)}
       options={options}
-      placeholder={placeholder || "Select..."}
+      placeholder={placeholder || 'Select...'}
       className="w-full sm:w-45"
     />
   );
@@ -79,7 +79,7 @@ export function MultiSelectFilter({ column, options, placeholder }: MultiSelectF
         column.setFilterValue(Array.isArray(value) && value.length > 0 ? value : undefined)
       }
       multiple
-      placeholder={placeholder || "Select..."}
+      placeholder={placeholder || 'Select...'}
       className="w-full sm:min-w-50"
     />
   );
@@ -90,7 +90,7 @@ interface DateRangeFilterProps {
 }
 
 export function DateRangeFilter({ column }: DateRangeFilterProps) {
-  const filterValue = (column.getFilterValue() as [string, string]) ?? ["", ""];
+  const filterValue = (column.getFilterValue() as [string, string]) ?? ['', ''];
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -121,8 +121,8 @@ interface NumberRangeFilterProps {
 
 export function NumberRangeFilter({
   column,
-  minPlaceholder = "Min",
-  maxPlaceholder = "Max",
+  minPlaceholder = 'Min',
+  maxPlaceholder = 'Max',
 }: NumberRangeFilterProps) {
   const filterValue = (column.getFilterValue() as [number, number]) ?? [undefined, undefined];
 
@@ -163,25 +163,25 @@ function FilterGrid({ filters, table }: { filters: ColumnFilter[]; table: Table<
             <label className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground px-0.5">
               {filter.label}
             </label>
-            {filter.type === "text" && (
+            {filter.type === 'text' && (
               <TextFilter column={column} placeholder={filter.placeholder} />
             )}
-            {filter.type === "select" && filter.options && (
+            {filter.type === 'select' && filter.options && (
               <SelectFilter
                 column={column}
                 options={filter.options}
                 placeholder={filter.placeholder}
               />
             )}
-            {filter.type === "multiselect" && filter.options && (
+            {filter.type === 'multiselect' && filter.options && (
               <MultiSelectFilter
                 column={column}
                 options={filter.options}
                 placeholder={filter.placeholder}
               />
             )}
-            {filter.type === "daterange" && <DateRangeFilter column={column} />}
-            {filter.type === "numberrange" && <NumberRangeFilter column={column} />}
+            {filter.type === 'daterange' && <DateRangeFilter column={column} />}
+            {filter.type === 'numberrange' && <NumberRangeFilter column={column} />}
           </div>
         );
       })}
@@ -194,9 +194,9 @@ export function FilterBar({ filters, table, onClearAll }: FilterBarProps) {
   const activeFiltersCount = table.getState().columnFilters.filter((f) => {
     const value = f.value;
     if (Array.isArray(value)) {
-      return value.length > 0 && value.some((v) => v !== "" && v !== undefined);
+      return value.length > 0 && value.some((v) => v !== '' && v !== undefined);
     }
-    return value !== "" && value !== undefined;
+    return value !== '' && value !== undefined;
   }).length;
 
   const handleClearAll = () => {
@@ -265,7 +265,7 @@ export function FilterBar({ filters, table, onClearAll }: FilterBarProps) {
 
       {activeFiltersCount > 0 && (
         <div className="text-sm text-muted-foreground">
-          {activeFiltersCount} filter{activeFiltersCount !== 1 ? "s" : ""} active
+          {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
         </div>
       )}
     </div>

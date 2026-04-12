@@ -1,16 +1,16 @@
-import BetterSqlite3 from "better-sqlite3";
-import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, unlinkSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { initializeSchema } from "./db/schema.js";
+import BetterSqlite3 from 'better-sqlite3';
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { initializeSchema } from './db/schema.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_DIR = join(__dirname, "db", "migrations");
-const DRIZZLE_MIGRATIONS_DIR = join(__dirname, "db", "drizzle-migrations");
+const MIGRATIONS_DIR = join(__dirname, 'db', 'migrations');
+const DRIZZLE_MIGRATIONS_DIR = join(__dirname, 'db', 'drizzle-migrations');
 
 /** Singleton prod database connection. */
 let prodDb: BetterSqlite3.Database | null = null;
@@ -38,7 +38,7 @@ function runMigrations(database: BetterSqlite3.Database): void {
 
   const applied = new Set(
     (
-      database.prepare("SELECT version FROM schema_migrations ORDER BY version").all() as {
+      database.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as {
         version: string;
       }[]
     ).map((r) => r.version)
@@ -47,20 +47,20 @@ function runMigrations(database: BetterSqlite3.Database): void {
   let files: string[];
   try {
     files = readdirSync(MIGRATIONS_DIR)
-      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => f.endsWith('.sql'))
       .sort();
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return; // No migrations directory
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return; // No migrations directory
     throw err;
   }
 
   for (const file of files) {
     if (applied.has(file)) continue;
 
-    const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
+    const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
     database.transaction(() => {
       database.exec(sql);
-      database.prepare("INSERT INTO schema_migrations (version) VALUES (?)").run(file);
+      database.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(file);
     })();
 
     console.log(`[db] Applied migration: ${file}`);
@@ -82,7 +82,7 @@ function getPendingMigrations(database: BetterSqlite3.Database): string[] {
 
   const applied = new Set(
     (
-      database.prepare("SELECT version FROM schema_migrations ORDER BY version").all() as {
+      database.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as {
         version: string;
       }[]
     ).map((r) => r.version)
@@ -91,10 +91,10 @@ function getPendingMigrations(database: BetterSqlite3.Database): string[] {
   let files: string[];
   try {
     files = readdirSync(MIGRATIONS_DIR)
-      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => f.endsWith('.sql'))
       .sort();
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw err;
   }
 
@@ -104,7 +104,7 @@ function getPendingMigrations(database: BetterSqlite3.Database): string[] {
 /** Check if the database has any data (not a fresh install). */
 function hasData(database: BetterSqlite3.Database): boolean {
   try {
-    const row = database.prepare("SELECT COUNT(*) AS cnt FROM transactions").get() as
+    const row = database.prepare('SELECT COUNT(*) AS cnt FROM transactions').get() as
       | { cnt: number }
       | undefined;
     return (row?.cnt ?? 0) > 0;
@@ -127,7 +127,7 @@ function createPreMigrationBackup(
     return null;
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupPath = `${dbPath}.pre-migration-${timestamp}.bak`;
 
   console.log(`[db] Backing up database before applying ${pendingCount} migration(s)...`);
@@ -144,8 +144,8 @@ function markDrizzleMigrationsFromJournal(
   filter?: (entry: { idx: number; tag: string }) => boolean
 ): void {
   try {
-    const journalPath = join(DRIZZLE_MIGRATIONS_DIR, "meta", "_journal.json");
-    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
+    const journalPath = join(DRIZZLE_MIGRATIONS_DIR, 'meta', '_journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
       entries: { idx: number; tag: string }[];
     };
 
@@ -158,14 +158,14 @@ function markDrizzleMigrationsFromJournal(
     `);
 
     const insert = database.prepare(
-      "INSERT OR IGNORE INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)"
+      'INSERT OR IGNORE INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)'
     );
 
     const entries = filter ? journal.entries.filter(filter) : journal.entries;
     for (const entry of entries) {
       const sqlPath = join(DRIZZLE_MIGRATIONS_DIR, `${entry.tag}.sql`);
-      const sql = readFileSync(sqlPath, "utf8");
-      const hash = createHash("sha256").update(sql).digest("hex");
+      const sql = readFileSync(sqlPath, 'utf8');
+      const hash = createHash('sha256').update(sql).digest('hex');
       insert.run(hash, Date.now());
     }
   } catch {
@@ -200,17 +200,17 @@ function isFreshDatabase(database: BetterSqlite3.Database): boolean {
 /** Open and configure a SQLite database. Runs migrations on first open. */
 function openDatabase(path: string): BetterSqlite3.Database {
   const db = new BetterSqlite3(path);
-  db.pragma("journal_mode = WAL");
-  db.pragma("busy_timeout = 5000");
-  db.pragma("foreign_keys = ON");
+  db.pragma('journal_mode = WAL');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('foreign_keys = ON');
 
   // Fresh database: initialize full schema (creates all tables + marks migrations as applied)
   if (isFreshDatabase(db)) {
-    console.log("[db] Fresh database detected — initializing schema...");
+    console.log('[db] Fresh database detected — initializing schema...');
     initializeSchema(db);
     // Mark all Drizzle migrations as applied (schema already includes their changes)
     markDrizzleMigrationsApplied(db);
-    console.log("[db] Schema initialized successfully.");
+    console.log('[db] Schema initialized successfully.');
     return db;
   }
 
@@ -258,7 +258,7 @@ function openDatabase(path: string): BetterSqlite3.Database {
     const drizzleDb = drizzle(db);
     migrate(drizzleDb, { migrationsFolder: DRIZZLE_MIGRATIONS_DIR });
   } catch (err) {
-    console.error("[db] Drizzle migration failed:", err);
+    console.error('[db] Drizzle migration failed:', err);
     throw err;
   }
 
@@ -293,7 +293,7 @@ export function isNamedEnvContext(): boolean {
 /** Get or create the prod singleton connection. */
 function getProdDb(): BetterSqlite3.Database {
   if (!prodDb) {
-    const sqlitePath = process.env["SQLITE_PATH"] ?? "./data/pops.db";
+    const sqlitePath = process.env['SQLITE_PATH'] ?? './data/pops.db';
     prodDb = openDatabase(sqlitePath);
   }
   return prodDb;
@@ -317,9 +317,9 @@ export function withEnvDb<T>(db: BetterSqlite3.Database, fn: () => T): T {
  */
 export function openEnvDatabase(path: string): BetterSqlite3.Database {
   const db = new BetterSqlite3(path);
-  db.pragma("journal_mode = WAL");
-  db.pragma("busy_timeout = 5000");
-  db.pragma("foreign_keys = ON");
+  db.pragma('journal_mode = WAL');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('foreign_keys = ON');
   initializeSchema(db);
   return db;
 }

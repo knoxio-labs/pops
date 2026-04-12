@@ -5,9 +5,9 @@
  * warranty status, value, and photo thumbnail. Summary totals at bottom.
  * PRD-023/US-4 (tb-133).
  */
-import { useMemo, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router";
-import { FileText, Printer, Download } from "lucide-react";
+import { useMemo, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router';
+import { FileText, Printer, Download } from 'lucide-react';
 import {
   Skeleton,
   AssetIdBadge,
@@ -19,41 +19,41 @@ import {
   CheckboxInput,
   Label,
   type Condition,
-} from "@pops/ui";
-import { trpc } from "../lib/trpc";
-import { LocationPicker } from "../components/LocationPicker";
+} from '@pops/ui';
+import { trpc } from '../lib/trpc';
+import { LocationPicker } from '../components/LocationPicker';
 
-type SortBy = "value" | "name" | "type";
+type SortBy = 'value' | 'name' | 'type';
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+  return new Date(dateStr).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
 function warrantyStatus(expiryStr: string | null): {
   label: string;
-  variant: "default" | "destructive" | "secondary";
+  variant: 'default' | 'destructive' | 'secondary';
 } {
-  if (!expiryStr) return { label: "None", variant: "secondary" };
+  if (!expiryStr) return { label: 'None', variant: 'secondary' };
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const expiry = new Date(expiryStr);
   const days = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (days < 0) return { label: "Expired", variant: "destructive" };
-  if (days <= 90) return { label: `${days}d left`, variant: "default" };
-  return { label: formatDate(expiryStr), variant: "secondary" };
+  if (days < 0) return { label: 'Expired', variant: 'destructive' };
+  if (days <= 90) return { label: `${days}d left`, variant: 'default' };
+  return { label: formatDate(expiryStr), variant: 'secondary' };
 }
 
 interface ReportItem {
@@ -78,15 +78,15 @@ interface ReportGroup {
 
 function buildCsvContent(groups: ReportGroup[]): string {
   const headers = [
-    "Location",
-    "Name",
-    "Asset ID",
-    "Brand",
-    "Condition",
-    "Warranty Expires",
-    "Replacement Value",
-    "Photo",
-    "Receipts",
+    'Location',
+    'Name',
+    'Asset ID',
+    'Brand',
+    'Condition',
+    'Warranty Expires',
+    'Replacement Value',
+    'Photo',
+    'Receipts',
   ];
   const rows: string[][] = [headers];
 
@@ -95,26 +95,26 @@ function buildCsvContent(groups: ReportGroup[]): string {
       rows.push([
         group.locationName,
         item.itemName,
-        item.assetId ?? "",
-        item.brand ?? "",
-        item.condition ?? "",
-        item.warrantyExpires ?? "",
-        item.replacementValue != null ? String(item.replacementValue) : "",
-        item.photoPath ? "Yes" : "No",
-        item.receiptDocumentIds.map((id) => `#${id}`).join(", "),
+        item.assetId ?? '',
+        item.brand ?? '',
+        item.condition ?? '',
+        item.warrantyExpires ?? '',
+        item.replacementValue != null ? String(item.replacementValue) : '',
+        item.photoPath ? 'Yes' : 'No',
+        item.receiptDocumentIds.map((id) => `#${id}`).join(', '),
       ]);
     }
   }
 
-  return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+  return rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
 }
 
 export function InsuranceReportPage(): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const locationId = searchParams.get("locationId") ?? undefined;
-  const includeChildren = searchParams.get("includeChildren") !== "false";
-  const sortBy = (searchParams.get("sortBy") as SortBy) || "value";
+  const locationId = searchParams.get('locationId') ?? undefined;
+  const includeChildren = searchParams.get('includeChildren') !== 'false';
+  const sortBy = (searchParams.get('sortBy') as SortBy) || 'value';
 
   const { data, isLoading } = trpc.inventory.reports.insuranceReport.useQuery({
     locationId,
@@ -128,10 +128,10 @@ export function InsuranceReportPage(): React.ReactElement {
   const report = data?.data;
 
   const today = useMemo(() => {
-    return new Date().toLocaleDateString("en-AU", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+    return new Date().toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
     });
   }, []);
 
@@ -159,10 +159,10 @@ export function InsuranceReportPage(): React.ReactElement {
         (prev) => {
           const next = new URLSearchParams(prev);
           if (id) {
-            next.set("locationId", id);
+            next.set('locationId', id);
           } else {
-            next.delete("locationId");
-            next.delete("includeChildren");
+            next.delete('locationId');
+            next.delete('includeChildren');
           }
           return next;
         },
@@ -175,9 +175,9 @@ export function InsuranceReportPage(): React.ReactElement {
   const handleExportCsv = useCallback(() => {
     if (!report) return;
     const csv = buildCsvContent(report.groups);
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `insurance-report-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
@@ -251,7 +251,7 @@ export function InsuranceReportPage(): React.ReactElement {
           <CheckboxInput
             label="Include sub-locations"
             checked={includeChildren}
-            onCheckedChange={(checked) => updateParam("includeChildren", checked ? null : "false")}
+            onCheckedChange={(checked) => updateParam('includeChildren', checked ? null : 'false')}
           />
         )}
         <Select
@@ -259,12 +259,12 @@ export function InsuranceReportPage(): React.ReactElement {
           size="sm"
           value={sortBy}
           onChange={(e) =>
-            updateParam("sortBy", e.target.value === "value" ? null : e.target.value)
+            updateParam('sortBy', e.target.value === 'value' ? null : e.target.value)
           }
           options={[
-            { value: "value", label: "Value (high first)" },
-            { value: "name", label: "Name" },
-            { value: "type", label: "Type" },
+            { value: 'value', label: 'Value (high first)' },
+            { value: 'name', label: 'Name' },
+            { value: 'type', label: 'Type' },
           ]}
         />
       </div>
@@ -290,13 +290,13 @@ export function InsuranceReportPage(): React.ReactElement {
       {/* Location Groups */}
       {report.groups.map((group, groupIndex) => (
         <div
-          key={group.locationId ?? "unlocated"}
-          className={`mb-8 print:mb-4 ${groupIndex > 0 ? "print:break-before-page" : ""}`}
+          key={group.locationId ?? 'unlocated'}
+          className={`mb-8 print:mb-4 ${groupIndex > 0 ? 'print:break-before-page' : ''}`}
         >
           <h2 className="text-lg font-semibold mb-3 pb-1 border-b print:text-[14pt]">
             {group.locationName}
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({group.items.length} {group.items.length === 1 ? "item" : "items"})
+              ({group.items.length} {group.items.length === 1 ? 'item' : 'items'})
             </span>
           </h2>
 
@@ -361,7 +361,7 @@ export function InsuranceReportPage(): React.ReactElement {
                         )}
                       </td>
                       <td className="py-2 pr-3 print:border print:border-gray-300 print:p-1">
-                        {item.brand ?? "—"}
+                        {item.brand ?? '—'}
                       </td>
                       <td className="py-2 pr-3 print:border print:border-gray-300 print:p-1 [&_span]:print:bg-transparent [&_span]:print:text-black">
                         {item.condition ? (
@@ -381,12 +381,12 @@ export function InsuranceReportPage(): React.ReactElement {
                       <td className="py-2 pr-3 text-right tabular-nums print:border print:border-gray-300 print:p-1">
                         {item.replacementValue != null
                           ? formatCurrency(item.replacementValue)
-                          : "—"}
+                          : '—'}
                       </td>
                       <td className="py-2 pr-3 text-sm text-muted-foreground print:border print:border-gray-300 print:p-1">
                         {item.receiptDocumentIds.length > 0
-                          ? item.receiptDocumentIds.map((id) => `#${id}`).join(", ")
-                          : "—"}
+                          ? item.receiptDocumentIds.map((id) => `#${id}`).join(', ')
+                          : '—'}
                       </td>
                     </tr>
                   );

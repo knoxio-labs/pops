@@ -9,54 +9,54 @@ Build a recommendation engine and discovery page. Surface trending content from 
 
 ## Routes
 
-| Route | Page |
-|-------|------|
+| Route             | Page           |
+| ----------------- | -------------- |
 | `/media/discover` | Discovery Page |
 
 ## UI Components
 
 ### Discovery Page Sections
 
-| Section | Content |
-|---------|---------|
-| Trending | TMDB trending movies with day/week toggle |
+| Section             | Content                                             |
+| ------------------- | --------------------------------------------------- |
+| Trending            | TMDB trending movies with day/week toggle           |
 | Recommended for You | Personalised suggestions (hidden if <5 comparisons) |
-| Preference Profile | Genre affinities and dimension weight visualisation |
+| Preference Profile  | Genre affinities and dimension weight visualisation |
 
 ### Trending Section
 
-| Element | Detail |
-|---------|--------|
-| Movie cards | Poster grid of trending TMDB movies |
-| Time window toggle | "Today" / "This Week" buttons |
+| Element               | Detail                                                   |
+| --------------------- | -------------------------------------------------------- |
+| Movie cards           | Poster grid of trending TMDB movies                      |
+| Time window toggle    | "Today" / "This Week" buttons                            |
 | Add to library action | Button on each card to add the movie to the POPS library |
-| Pagination | Load more / infinite scroll for additional results |
+| Pagination            | Load more / infinite scroll for additional results       |
 
 ### Recommended for You Section
 
-| Element | Detail |
-|---------|--------|
-| Movie cards | Poster grid with composite score badge |
-| Source indicator | "Because you liked {Movie}" label per recommendation |
+| Element             | Detail                                                                       |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Movie cards         | Poster grid with composite score badge                                       |
+| Source indicator    | "Because you liked {Movie}" label per recommendation                         |
 | Cold start fallback | "Compare more movies to unlock recommendations" with CTA to `/media/compare` |
-| Minimum threshold | Hidden entirely when fewer than 5 comparisons exist |
+| Minimum threshold   | Hidden entirely when fewer than 5 comparisons exist                          |
 
 ### Preference Profile Section
 
-| Element | Detail |
-|---------|--------|
-| Genre distribution | Bar chart or tag cloud of genres by library count |
-| Genre affinity scores | Ranked list of genres weighted by comparison Elo scores |
-| Dimension weights | Relative weight of each dimension from comparison patterns |
-| Visual style | Charts or data visualisation — not a plain table |
+| Element               | Detail                                                     |
+| --------------------- | ---------------------------------------------------------- |
+| Genre distribution    | Bar chart or tag cloud of genres by library count          |
+| Genre affinity scores | Ranked list of genres weighted by comparison Elo scores    |
+| Dimension weights     | Relative weight of each dimension from comparison patterns |
+| Visual style          | Charts or data visualisation — not a plain table           |
 
 ## API Dependencies
 
-| Procedure | Usage |
-|-----------|-------|
-| `media.discovery.trending` | Fetch TMDB trending movies (day or week time window, paginated) |
-| `media.discovery.recommendations` | Fetch personalised recommendations with source movie attribution |
-| `media.discovery.profile` | Fetch computed preference profile (genre affinities, dimension weights) |
+| Procedure                         | Usage                                                                   |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| `media.discovery.trending`        | Fetch TMDB trending movies (day or week time window, paginated)         |
+| `media.discovery.recommendations` | Fetch personalised recommendations with source movie attribution        |
+| `media.discovery.profile`         | Fetch computed preference profile (genre affinities, dimension weights) |
 
 ## Recommendation Algorithm
 
@@ -70,11 +70,11 @@ Fetch the top-rated movies from the user's library (highest overall Elo scores).
 score = (genre_affinity * 0.5) + (tmdb_vote_average_normalised * 0.3) + (source_boost * 0.2)
 ```
 
-| Factor | Weight | Calculation |
-|--------|--------|-------------|
-| Genre affinity | 0.5 | Average genre affinity score of the movie's genres (from preference profile) |
-| TMDB vote average | 0.3 | Normalised to 0-1 range: `vote_average / 10` |
-| Source boost | 0.2 | Normalised Elo score of the source movie that surfaced this recommendation |
+| Factor            | Weight | Calculation                                                                  |
+| ----------------- | ------ | ---------------------------------------------------------------------------- |
+| Genre affinity    | 0.5    | Average genre affinity score of the movie's genres (from preference profile) |
+| TMDB vote average | 0.3    | Normalised to 0-1 range: `vote_average / 10`                                 |
+| Source boost      | 0.2    | Normalised Elo score of the source movie that surfaced this recommendation   |
 
 ### Filtering
 
@@ -102,11 +102,11 @@ Based on comparison patterns — dimensions with more comparisons and wider scor
 
 ## Cold Start Handling
 
-| Condition | Behaviour |
-|-----------|-----------|
-| <5 comparisons | Hide "Recommended for You" section, show CTA to compare arena |
-| No library items | Hide "Recommended for You" and "Preference Profile", show only Trending |
-| Trending API failure | Show error message with retry button, other sections unaffected |
+| Condition            | Behaviour                                                               |
+| -------------------- | ----------------------------------------------------------------------- |
+| <5 comparisons       | Hide "Recommended for You" section, show CTA to compare arena           |
+| No library items     | Hide "Recommended for You" and "Preference Profile", show only Trending |
+| Trending API failure | Show error message with retry button, other sections unaffected         |
 
 ## Business Rules
 
@@ -119,22 +119,22 @@ Based on comparison patterns — dimensions with more comparisons and wider scor
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| TMDB API unavailable | Trending section shows error with retry; recommendations fall back to library-only scoring if possible |
-| User has only 1 genre in library | Genre distribution shows single genre; recommendations may be narrow |
-| All similar movies already in library | "No new recommendations — keep comparing" message |
-| Movie from trending already in library | "In Library" badge replaces "Add to Library" button |
-| Preference profile with no comparisons | Hidden entirely (cold start) |
-| Very new user (empty library) | Only Trending section visible |
+| Case                                   | Behaviour                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| TMDB API unavailable                   | Trending section shows error with retry; recommendations fall back to library-only scoring if possible |
+| User has only 1 genre in library       | Genre distribution shows single genre; recommendations may be narrow                                   |
+| All similar movies already in library  | "No new recommendations — keep comparing" message                                                      |
+| Movie from trending already in library | "In Library" badge replaces "Add to Library" button                                                    |
+| Preference profile with no comparisons | Hidden entirely (cold start)                                                                           |
+| Very new user (empty library)          | Only Trending section visible                                                                          |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-trending](us-01-trending.md) | Trending section with TMDB trending movies, day/week toggle, add-to-library action, Load More | Done | Yes |
-| 02 | [us-02-recommendations](us-02-recommendations.md) | Personalised recommendations based on preference profile, cold start handling with arena CTA | Done | Yes |
-| 03 | [us-03-preference-profile](us-03-preference-profile.md) | Visual preference profile display (genre affinities, dimension weights) | Done | Yes |
+| #   | Story                                                   | Summary                                                                                       | Status | Parallelisable |
+| --- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------ | -------------- |
+| 01  | [us-01-trending](us-01-trending.md)                     | Trending section with TMDB trending movies, day/week toggle, add-to-library action, Load More | Done   | Yes            |
+| 02  | [us-02-recommendations](us-02-recommendations.md)       | Personalised recommendations based on preference profile, cold start handling with arena CTA  | Done   | Yes            |
+| 03  | [us-03-preference-profile](us-03-preference-profile.md) | Visual preference profile display (genre affinities, dimension weights)                       | Done   | Yes            |
 
 All three stories can be built in parallel — they are independent sections of the discovery page.
 

@@ -10,11 +10,11 @@ POPS needs an API layer between the React frontend and the Express backend. With
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| REST (Express routes) | Simple, universally understood, no tooling | No type safety across the boundary, manual request/response typing, versioning overhead, boilerplate for CRUD |
-| GraphQL | Flexible queries, typed schema, introspection | Schema definition language adds overhead, resolver boilerplate, overkill for single-user with one frontend, over-fetching isn't a real problem here |
-| tRPC | End-to-end type safety (change a return type and the frontend knows immediately), zero codegen, zero schema definition, RPC model maps naturally to service functions | Coupled to TypeScript — only works when client and server share a type system. Not suitable for public APIs |
+| Option                | Pros                                                                                                                                                                  | Cons                                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REST (Express routes) | Simple, universally understood, no tooling                                                                                                                            | No type safety across the boundary, manual request/response typing, versioning overhead, boilerplate for CRUD                                       |
+| GraphQL               | Flexible queries, typed schema, introspection                                                                                                                         | Schema definition language adds overhead, resolver boilerplate, overkill for single-user with one frontend, over-fetching isn't a real problem here |
+| tRPC                  | End-to-end type safety (change a return type and the frontend knows immediately), zero codegen, zero schema definition, RPC model maps naturally to service functions | Coupled to TypeScript — only works when client and server share a type system. Not suitable for public APIs                                         |
 
 ## Decision
 

@@ -1,16 +1,16 @@
-import crypto from "crypto";
-import type { ParsedTransaction } from "../types.js";
+import crypto from 'crypto';
+import type { ParsedTransaction } from '../types.js';
 
 /**
  * Normalize date from DD/MM/YYYY to YYYY-MM-DD
  */
 function normaliseDate(dateStr: string): string {
-  const parts = dateStr.split("/");
+  const parts = dateStr.split('/');
   if (parts.length !== 3) {
     throw new Error(`Invalid date format: ${dateStr}`);
   }
   const [day, month, year] = parts;
-  return `${year}-${(month ?? "").padStart(2, "0")}-${(day ?? "").padStart(2, "0")}`;
+  return `${year}-${(month ?? '').padStart(2, '0')}-${(day ?? '').padStart(2, '0')}`;
 }
 
 /**
@@ -34,17 +34,17 @@ function extractLocation(townCity: string): string | undefined {
   if (!townCity) return undefined;
 
   // Take first line and clean up
-  const lines = townCity.split("\n");
-  const town = (lines[0] ?? "").trim();
+  const lines = townCity.split('\n');
+  const town = (lines[0] ?? '').trim();
 
   if (!town) return undefined;
 
   // Title case the town name
   return town
     .toLowerCase()
-    .split(" ")
+    .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .join(' ');
 }
 
 /**
@@ -52,7 +52,7 @@ function extractLocation(townCity: string): string | undefined {
  * Removes excessive whitespace
  */
 function cleanDescription(description: string): string {
-  return description.replace(/\s{2,}/g, " ").trim();
+  return description.replace(/\s{2,}/g, ' ').trim();
 }
 
 /**
@@ -72,14 +72,14 @@ export function transformAmex(row: Record<string, string>): ParsedTransaction {
   const rawRow = JSON.stringify(row);
 
   // Generate checksum for reliable deduplication
-  const checksum = crypto.createHash("sha256").update(rawRow).digest("hex");
+  const checksum = crypto.createHash('sha256').update(rawRow).digest('hex');
 
   return {
-    date: normaliseDate(row["Date"] ?? ""),
-    description: cleanDescription(row["Description"] ?? ""),
-    amount: normaliseAmount(row["Amount"] ?? ""),
-    account: "Amex",
-    location: extractLocation(row["Town/City"] ?? ""),
+    date: normaliseDate(row['Date'] ?? ''),
+    description: cleanDescription(row['Description'] ?? ''),
+    amount: normaliseAmount(row['Amount'] ?? ''),
+    account: 'Amex',
+    location: extractLocation(row['Town/City'] ?? ''),
     rawRow,
     checksum,
   };

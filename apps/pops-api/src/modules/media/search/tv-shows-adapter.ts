@@ -4,11 +4,11 @@
  * Registered domain: "tv-shows"
  * Scoring: exact=1.0, prefix=0.8, contains=0.5
  */
-import { like } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { tvShows } from "@pops/db-types";
-import type { SearchAdapter, SearchHit, Query, SearchContext } from "../../core/search/types.js";
-import { registerSearchAdapter } from "../../core/search/index.js";
+import { like } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { tvShows } from '@pops/db-types';
+import type { SearchAdapter, SearchHit, Query, SearchContext } from '../../core/search/types.js';
+import { registerSearchAdapter } from '../../core/search/index.js';
 
 export interface TvShowHitData {
   name: string;
@@ -22,13 +22,13 @@ export interface TvShowHitData {
 function scoreHit(
   name: string,
   queryText: string
-): { score: number; matchType: "exact" | "prefix" | "contains" } {
+): { score: number; matchType: 'exact' | 'prefix' | 'contains' } {
   const lower = name.toLowerCase();
   const q = queryText.toLowerCase();
 
-  if (lower === q) return { score: 1.0, matchType: "exact" };
-  if (lower.startsWith(q)) return { score: 0.8, matchType: "prefix" };
-  return { score: 0.5, matchType: "contains" };
+  if (lower === q) return { score: 1.0, matchType: 'exact' };
+  if (lower.startsWith(q)) return { score: 0.8, matchType: 'prefix' };
+  return { score: 0.5, matchType: 'contains' };
 }
 
 function buildPosterUrl(tvdbId: number): string {
@@ -41,9 +41,9 @@ function extractYear(firstAirDate: string | null): string | null {
 }
 
 export const tvShowsSearchAdapter: SearchAdapter<TvShowHitData> = {
-  domain: "tv-shows",
-  icon: "Tv",
-  color: "purple",
+  domain: 'tv-shows',
+  icon: 'Tv',
+  color: 'purple',
 
   search(
     query: Query,
@@ -69,7 +69,7 @@ export const tvShowsSearchAdapter: SearchAdapter<TvShowHitData> = {
         return {
           uri: `pops:media/tv-show/${row.id}`,
           score,
-          matchField: "name" as const,
+          matchField: 'name' as const,
           matchType,
           data: {
             name: row.name,

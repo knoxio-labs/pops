@@ -2,19 +2,19 @@
  * Value breakdown cards — horizontal bar charts showing replacement value
  * grouped by item type or location.
  */
-import { Alert, AlertDescription, Button, Card, CardContent, Skeleton } from "@pops/ui";
-import { AlertCircle, RefreshCw, Tag } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { useNavigate } from "react-router";
-import { trpc } from "../lib/trpc";
-import { formatCurrency } from "../lib/utils";
+import { Alert, AlertDescription, Button, Card, CardContent, Skeleton } from '@pops/ui';
+import { AlertCircle, RefreshCw, Tag } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useNavigate } from 'react-router';
+import { trpc } from '../lib/trpc';
+import { formatCurrency } from '../lib/utils';
 
 const BAR_COLORS = [
-  "var(--primary)",
-  "color-mix(in oklch, var(--primary) 80%, transparent)",
-  "color-mix(in oklch, var(--primary) 60%, transparent)",
-  "color-mix(in oklch, var(--primary) 45%, transparent)",
-  "color-mix(in oklch, var(--primary) 30%, transparent)",
+  'var(--primary)',
+  'color-mix(in oklch, var(--primary) 80%, transparent)',
+  'color-mix(in oklch, var(--primary) 60%, transparent)',
+  'color-mix(in oklch, var(--primary) 45%, transparent)',
+  'color-mix(in oklch, var(--primary) 30%, transparent)',
 ];
 
 export interface BreakdownEntry {
@@ -46,7 +46,7 @@ export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
         <XAxis
           type="number"
           tickFormatter={(v: number) => formatCurrency(v)}
-          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+          tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
           axisLine={false}
           tickLine={false}
         />
@@ -54,7 +54,7 @@ export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
           type="category"
           dataKey="name"
           width={100}
-          tick={{ fill: "var(--foreground)", fontSize: 12 }}
+          tick={{ fill: 'var(--foreground)', fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
@@ -64,7 +64,7 @@ export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
             const first = payload[0];
             if (!first) return null;
             const entry = first.payload as BreakdownEntry;
-            const valueDisplay = entry.totalValue > 0 ? formatCurrency(entry.totalValue) : "—";
+            const valueDisplay = entry.totalValue > 0 ? formatCurrency(entry.totalValue) : '—';
             return (
               <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
                 <p className="font-medium">{entry.name}</p>
@@ -78,7 +78,7 @@ export function BreakdownChart({ data, onBarClick }: BreakdownChartProps) {
         <Bar
           dataKey="totalValue"
           radius={[0, 4, 4, 0]}
-          cursor={onBarClick ? "pointer" : undefined}
+          cursor={onBarClick ? 'pointer' : undefined}
           onClick={(entry) => {
             if (onBarClick && entry) {
               onBarClick(entry as unknown as BreakdownEntry);

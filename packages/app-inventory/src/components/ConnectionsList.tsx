@@ -3,8 +3,8 @@
  * Shows connection count header, list of connected items with badges,
  * and a "Connect to…" button placeholder.
  */
-import { cn, AssetIdBadge, TypeBadge, Button } from "@pops/ui";
-import { Link2, Plus } from "lucide-react";
+import { cn, AssetIdBadge, TypeBadge, Button } from '@pops/ui';
+import { Link2, Plus } from 'lucide-react';
 
 export interface ConnectedItem {
   id: string;
@@ -27,7 +27,7 @@ export function ConnectionsList({
   className,
 }: ConnectionsListProps) {
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -47,9 +47,9 @@ export function ConnectionsList({
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-                  "transition-colors hover:bg-accent/50",
-                  onItemClick && "cursor-pointer"
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
+                  'transition-colors hover:bg-accent/50',
+                  onItemClick && 'cursor-pointer'
                 )}
                 onClick={() => onItemClick?.(item.id)}
                 disabled={!onItemClick}
@@ -81,4 +81,4 @@ export function ConnectionsList({
   );
 }
 
-ConnectionsList.displayName = "ConnectionsList";
+ConnectionsList.displayName = 'ConnectionsList';

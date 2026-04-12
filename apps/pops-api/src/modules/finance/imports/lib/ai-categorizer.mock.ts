@@ -3,8 +3,8 @@
  * Uses a lookup table for deterministic, predictable results.
  * Allows testing various AI response scenarios (good, bad, edge cases).
  */
-import type { AiCacheEntry, AiUsageStats } from "./ai-categorizer.js";
-import { AiCategorizationError } from "./ai-categorizer-error.js";
+import type { AiCacheEntry, AiUsageStats } from './ai-categorizer.js';
+import { AiCategorizationError } from './ai-categorizer-error.js';
 
 /**
  * Lookup table for known descriptions.
@@ -12,92 +12,92 @@ import { AiCategorizationError } from "./ai-categorizer-error.js";
  */
 const CATEGORIZATION_LOOKUP: Record<string, AiCacheEntry> = {
   // Groceries
-  "WOOLWORTHS 1234": {
-    description: "WOOLWORTHS 1234",
-    entityName: "Woolworths",
-    category: "Groceries",
+  'WOOLWORTHS 1234': {
+    description: 'WOOLWORTHS 1234',
+    entityName: 'Woolworths',
+    category: 'Groceries',
     cachedAt: new Date().toISOString(),
   },
   WOOLWORTHS: {
-    description: "WOOLWORTHS",
-    entityName: "Woolworths",
-    category: "Groceries",
+    description: 'WOOLWORTHS',
+    entityName: 'Woolworths',
+    category: 'Groceries',
     cachedAt: new Date().toISOString(),
   },
-  "COLES 5678": {
-    description: "COLES 5678",
-    entityName: "Coles",
-    category: "Groceries",
+  'COLES 5678': {
+    description: 'COLES 5678',
+    entityName: 'Coles',
+    category: 'Groceries',
     cachedAt: new Date().toISOString(),
   },
-  "ALDI STORES": {
-    description: "ALDI STORES",
-    entityName: "Aldi",
-    category: "Groceries",
+  'ALDI STORES': {
+    description: 'ALDI STORES',
+    entityName: 'Aldi',
+    category: 'Groceries',
     cachedAt: new Date().toISOString(),
   },
 
   // Dining
   MCDONALDS: {
-    description: "MCDONALDS",
+    description: 'MCDONALDS',
     entityName: "McDonald's",
-    category: "Dining",
+    category: 'Dining',
     cachedAt: new Date().toISOString(),
   },
-  "ROASTVILLE CAFE": {
-    description: "ROASTVILLE CAFE",
-    entityName: "Roastville Cafe",
-    category: "Dining",
+  'ROASTVILLE CAFE': {
+    description: 'ROASTVILLE CAFE',
+    entityName: 'Roastville Cafe',
+    category: 'Dining',
     cachedAt: new Date().toISOString(),
   },
 
   // Subscriptions
-  "netflix.com": {
-    description: "netflix.com",
-    entityName: "Netflix",
-    category: "Subscriptions",
+  'netflix.com': {
+    description: 'netflix.com',
+    entityName: 'Netflix',
+    category: 'Subscriptions',
     cachedAt: new Date().toISOString(),
   },
   SPOTIFY: {
-    description: "SPOTIFY",
-    entityName: "Spotify",
-    category: "Subscriptions",
+    description: 'SPOTIFY',
+    entityName: 'Spotify',
+    category: 'Subscriptions',
     cachedAt: new Date().toISOString(),
   },
 
   // Transport
-  "SHELL COLES EXPRESS": {
-    description: "SHELL COLES EXPRESS",
-    entityName: "Shell",
-    category: "Transport",
+  'SHELL COLES EXPRESS': {
+    description: 'SHELL COLES EXPRESS',
+    entityName: 'Shell',
+    category: 'Transport',
     cachedAt: new Date().toISOString(),
   },
 
   // Shopping
-  "AMAZON AU": {
-    description: "AMAZON AU",
-    entityName: "Amazon AU",
-    category: "Shopping",
+  'AMAZON AU': {
+    description: 'AMAZON AU',
+    entityName: 'Amazon AU',
+    category: 'Shopping',
     cachedAt: new Date().toISOString(),
   },
-  "JB HI-FI": {
-    description: "JB HI-FI",
-    entityName: "JB Hi-Fi",
-    category: "Shopping",
+  'JB HI-FI': {
+    description: 'JB HI-FI',
+    entityName: 'JB Hi-Fi',
+    category: 'Shopping',
     cachedAt: new Date().toISOString(),
   },
 
   // Edge cases - these test UI handling of poor AI responses
-  "TEST AMBIGUOUS MERCHANT": {
-    description: "TEST AMBIGUOUS MERCHANT",
-    entityName: "Test", // Vague entity name
-    category: "Other",
+  'TEST AMBIGUOUS MERCHANT': {
+    description: 'TEST AMBIGUOUS MERCHANT',
+    entityName: 'Test', // Vague entity name
+    category: 'Other',
     cachedAt: new Date().toISOString(),
   },
-  "UNKNOWN MERCHANT XYZ": {
-    description: "UNKNOWN MERCHANT XYZ",
-    entityName: "Unknown", // AI couldn't determine
-    category: "Other",
+  'UNKNOWN MERCHANT XYZ': {
+    description: 'UNKNOWN MERCHANT XYZ',
+    entityName: 'Unknown', // AI couldn't determine
+    category: 'Other',
     cachedAt: new Date().toISOString(),
   },
 };
@@ -112,7 +112,7 @@ export const mockConfig = {
   /** Throw API error */
   throwError: false,
   /** Error type to throw */
-  errorType: "API_ERROR" as "NO_API_KEY" | "API_ERROR" | "INSUFFICIENT_CREDITS",
+  errorType: 'API_ERROR' as 'NO_API_KEY' | 'API_ERROR' | 'INSUFFICIENT_CREDITS',
   /** Return bad JSON (malformed response) */
   returnBadJson: false,
   /** Return result with missing fields */
@@ -128,7 +128,7 @@ export const mockConfig = {
 export function resetMockAi(): void {
   mockConfig.alwaysReturnNull = false;
   mockConfig.throwError = false;
-  mockConfig.errorType = "API_ERROR";
+  mockConfig.errorType = 'API_ERROR';
   mockConfig.returnBadJson = false;
   mockConfig.returnIncompleteData = false;
   mockConfig.customLookup = null;
@@ -142,36 +142,36 @@ function categorizeByPattern(description: string): AiCacheEntry {
   const upper = description.toUpperCase();
 
   // Groceries
-  if (upper.includes("WOOLWORTHS") || upper.includes("COLES") || upper.includes("ALDI")) {
+  if (upper.includes('WOOLWORTHS') || upper.includes('COLES') || upper.includes('ALDI')) {
     return {
       description,
-      entityName: "Grocery Store",
-      category: "Groceries",
+      entityName: 'Grocery Store',
+      category: 'Groceries',
       cachedAt: new Date().toISOString(),
     };
   }
 
   // Dining
-  if (upper.includes("CAFE") || upper.includes("RESTAURANT") || upper.includes("MCDONALD")) {
+  if (upper.includes('CAFE') || upper.includes('RESTAURANT') || upper.includes('MCDONALD')) {
     return {
       description,
-      entityName: "Restaurant",
-      category: "Dining",
+      entityName: 'Restaurant',
+      category: 'Dining',
       cachedAt: new Date().toISOString(),
     };
   }
 
   // Transport
   if (
-    upper.includes("SHELL") ||
-    upper.includes("BP") ||
-    upper.includes("FUEL") ||
-    upper.includes("PETROL")
+    upper.includes('SHELL') ||
+    upper.includes('BP') ||
+    upper.includes('FUEL') ||
+    upper.includes('PETROL')
   ) {
     return {
       description,
-      entityName: "Fuel Station",
-      category: "Transport",
+      entityName: 'Fuel Station',
+      category: 'Transport',
       cachedAt: new Date().toISOString(),
     };
   }
@@ -179,8 +179,8 @@ function categorizeByPattern(description: string): AiCacheEntry {
   // Default fallback
   return {
     description,
-    entityName: "Unknown Merchant",
-    category: "Other",
+    entityName: 'Unknown Merchant',
+    category: 'Other',
     cachedAt: new Date().toISOString(),
   };
 }
@@ -198,7 +198,7 @@ export async function mockCategorizeWithAi(
 
   // Simulate error scenarios
   if (mockConfig.throwError) {
-    throw new AiCategorizationError("Mock AI error", mockConfig.errorType);
+    throw new AiCategorizationError('Mock AI error', mockConfig.errorType);
   }
 
   // Simulate null response (AI unavailable)
@@ -208,7 +208,7 @@ export async function mockCategorizeWithAi(
 
   // Simulate bad JSON response
   if (mockConfig.returnBadJson) {
-    throw new Error("Unexpected token 'T', \"This is not JSON\" is not valid JSON");
+    throw new Error('Unexpected token \'T\', "This is not JSON" is not valid JSON');
   }
 
   const key = rawRow.toUpperCase().trim();
@@ -231,7 +231,7 @@ export async function mockCategorizeWithAi(
       return {
         result: {
           description: result.description,
-          entityName: "", // Missing!
+          entityName: '', // Missing!
           category: result.category,
           cachedAt: result.cachedAt,
         },

@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType } from 'react';
 
 /** Props passed to every result component by the search panel. */
 export interface ResultComponentProps {
@@ -17,7 +17,7 @@ export type ResultComponent = ComponentType<ResultComponentProps>;
 /** Generic fallback — renders the first string field found in `data`. */
 export function GenericResultComponent({ data }: ResultComponentProps) {
   const title =
-    (Object.values(data).find((v) => typeof v === "string") as string | undefined) ?? "";
+    (Object.values(data).find((v) => typeof v === 'string') as string | undefined) ?? '';
   return <span>{title}</span>;
 }
 

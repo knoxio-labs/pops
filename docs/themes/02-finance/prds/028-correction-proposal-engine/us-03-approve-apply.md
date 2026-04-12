@@ -18,4 +18,3 @@ As a user, I want approving a proposal to immediately reduce my remaining manual
 - [x] The system communicates what happened:
   - ChangeSet applied
   - number of transactions affected in this import
-

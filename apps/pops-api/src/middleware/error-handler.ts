@@ -1,5 +1,5 @@
-import type { Request, Response, NextFunction } from "express";
-import { HttpError } from "../shared/errors.js";
+import type { Request, Response, NextFunction } from 'express';
+import { HttpError } from '../shared/errors.js';
 
 /**
  * Global error handler.
@@ -15,12 +15,12 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     return;
   }
 
-  console.error("[pops-api] Unhandled error:", err.message);
+  console.error('[pops-api] Unhandled error:', err.message);
 
-  const isDev = process.env["NODE_ENV"] !== "production";
+  const isDev = process.env['NODE_ENV'] !== 'production';
 
   res.status(500).json({
-    error: "Internal server error",
+    error: 'Internal server error',
     ...(isDev ? { message: err.message } : {}),
   });
 }

@@ -1,7 +1,7 @@
 /**
  * Sonarr API client — extends base *arr client with TV show-specific endpoints.
  */
-import { ArrBaseClient } from "./base-client.js";
+import { ArrBaseClient } from './base-client.js';
 import type {
   SonarrSeries,
   SonarrSeriesFull,
@@ -15,12 +15,12 @@ import type {
   SonarrLanguageProfile,
   SonarrAddSeriesInput,
   SonarrCommandResponse,
-} from "./types.js";
+} from './types.js';
 
 export class SonarrClient extends ArrBaseClient {
   /** Fetch all monitored series from Sonarr. */
   async getSeries(): Promise<SonarrSeries[]> {
-    return this.get<SonarrSeries[]>("/series");
+    return this.get<SonarrSeries[]>('/series');
   }
 
   /** Fetch a single series by Sonarr ID. */
@@ -30,7 +30,7 @@ export class SonarrClient extends ArrBaseClient {
 
   /** Fetch the download queue. */
   async getQueue(): Promise<SonarrQueueResponse> {
-    return this.get<SonarrQueueResponse>("/queue?includeSeries=true&includeEpisode=true");
+    return this.get<SonarrQueueResponse>('/queue?includeSeries=true&includeEpisode=true');
   }
 
   /** Fetch upcoming episodes from the Sonarr calendar. */
@@ -49,7 +49,7 @@ export class SonarrClient extends ArrBaseClient {
     const show = series[0];
 
     if (!show) {
-      return { status: "not_found", label: "Not in Sonarr" };
+      return { status: 'not_found', label: 'Not in Sonarr' };
     }
 
     // Check download queue only if the show exists in Sonarr
@@ -57,34 +57,34 @@ export class SonarrClient extends ArrBaseClient {
     const queueItem = queue.records.find((r) => r.seriesId === show.id);
     if (queueItem) {
       const episodeLabel = queueItem.episode
-        ? `S${String(queueItem.episode.seasonNumber).padStart(2, "0")}E${String(queueItem.episode.episodeNumber).padStart(2, "0")}`
-        : "";
+        ? `S${String(queueItem.episode.seasonNumber).padStart(2, '0')}E${String(queueItem.episode.episodeNumber).padStart(2, '0')}`
+        : '';
       return {
-        status: "downloading",
-        label: `Downloading${episodeLabel ? ` — ${episodeLabel}` : ""}`,
+        status: 'downloading',
+        label: `Downloading${episodeLabel ? ` — ${episodeLabel}` : ''}`,
       };
     }
 
     if (!show.monitored) {
-      return { status: "unmonitored", label: "Unmonitored" };
+      return { status: 'unmonitored', label: 'Unmonitored' };
     }
 
     const { episodeFileCount, episodeCount } = show.statistics;
 
     if (episodeCount > 0 && episodeFileCount >= episodeCount) {
-      return { status: "complete", label: "Complete" };
+      return { status: 'complete', label: 'Complete' };
     }
 
     if (episodeFileCount > 0) {
       const stats = `${episodeFileCount}/${episodeCount} episodes`;
       return {
-        status: "partial",
+        status: 'partial',
         label: `Partial (${stats})`,
         episodeStats: stats,
       };
     }
 
-    return { status: "monitored", label: "Monitored" };
+    return { status: 'monitored', label: 'Monitored' };
   }
 
   /**
@@ -135,7 +135,7 @@ export class SonarrClient extends ArrBaseClient {
    */
   async updateEpisodeMonitoring(episodeIds: number[], monitored: boolean): Promise<void> {
     const body: SonarrEpisodeMonitorInput = { episodeIds, monitored };
-    await this.put<unknown>("/episode/monitor", body);
+    await this.put<unknown>('/episode/monitor', body);
   }
 
   /** Fetch episodes for a series, optionally filtered by season. */
@@ -149,22 +149,22 @@ export class SonarrClient extends ArrBaseClient {
 
   /** Fetch quality profiles from Sonarr. */
   async getQualityProfiles(): Promise<SonarrQualityProfile[]> {
-    return this.get<SonarrQualityProfile[]>("/qualityprofile");
+    return this.get<SonarrQualityProfile[]>('/qualityprofile');
   }
 
   /** Fetch root folders from Sonarr. */
   async getRootFolders(): Promise<SonarrRootFolder[]> {
-    return this.get<SonarrRootFolder[]>("/rootfolder");
+    return this.get<SonarrRootFolder[]>('/rootfolder');
   }
 
   /** Fetch language profiles from Sonarr. */
   async getLanguageProfiles(): Promise<SonarrLanguageProfile[]> {
-    return this.get<SonarrLanguageProfile[]>("/languageprofile");
+    return this.get<SonarrLanguageProfile[]>('/languageprofile');
   }
 
   /** Add a series to Sonarr. */
   async addSeries(input: SonarrAddSeriesInput): Promise<SonarrSeriesFull> {
-    return this.post<SonarrSeriesFull>("/series", {
+    return this.post<SonarrSeriesFull>('/series', {
       tvdbId: input.tvdbId,
       title: input.title,
       qualityProfileId: input.qualityProfileId,
@@ -188,14 +188,14 @@ export class SonarrClient extends ArrBaseClient {
   /** Trigger a search for a series or a specific season. */
   async triggerSearch(sonarrId: number, seasonNumber?: number): Promise<SonarrCommandResponse> {
     if (seasonNumber !== undefined) {
-      return this.post<SonarrCommandResponse>("/command", {
-        name: "SeasonSearch",
+      return this.post<SonarrCommandResponse>('/command', {
+        name: 'SeasonSearch',
         seriesId: sonarrId,
         seasonNumber,
       });
     }
-    return this.post<SonarrCommandResponse>("/command", {
-      name: "SeriesSearch",
+    return this.post<SonarrCommandResponse>('/command', {
+      name: 'SeriesSearch',
       seriesId: sonarrId,
     });
   }

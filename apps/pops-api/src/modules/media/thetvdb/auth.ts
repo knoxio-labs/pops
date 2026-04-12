@@ -3,9 +3,9 @@
  *
  * Handles login via POST /login, token caching, and auto-refresh.
  */
-import { TvdbApiError, type RawTvdbLoginResponse } from "./types.js";
+import { TvdbApiError, type RawTvdbLoginResponse } from './types.js';
 
-const LOGIN_URL = "https://api4.thetvdb.com/v4/login";
+const LOGIN_URL = 'https://api4.thetvdb.com/v4/login';
 
 /** Token lifetime buffer — re-authenticate if token expires within 24 hours. */
 const EXPIRY_BUFFER_MS = 24 * 60 * 60 * 1000;
@@ -20,7 +20,7 @@ export class TheTvdbAuth {
 
   constructor(apiKey: string) {
     if (!apiKey) {
-      throw new Error("TheTVDB API key is required");
+      throw new Error('TheTVDB API key is required');
     }
     this.apiKey = apiKey;
   }
@@ -39,8 +39,8 @@ export class TheTvdbAuth {
 
     try {
       response = await fetch(LOGIN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apikey: this.apiKey }),
       });
     } catch (err) {

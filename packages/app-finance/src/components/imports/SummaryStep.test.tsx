@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // --- Mocks ---
 
@@ -8,16 +8,16 @@ const mockNavigate = vi.fn();
 
 let storeState: Record<string, unknown> = {};
 
-vi.mock("../../store/importStore", () => ({
+vi.mock('../../store/importStore', () => ({
   useImportStore: (selector?: (s: Record<string, unknown>) => unknown) =>
     selector ? selector(storeState) : storeState,
 }));
 
-vi.mock("react-router", () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-import { SummaryStep } from "./SummaryStep";
+import { SummaryStep } from './SummaryStep';
 
 // --- Helpers ---
 
@@ -27,7 +27,7 @@ function makeCommitResult(overrides: Record<string, unknown> = {}) {
     rulesApplied: { add: 2, edit: 1, disable: 0, remove: 0 },
     transactionsImported: 10,
     transactionsFailed: 1,
-    failedDetails: [{ checksum: "abc123def456", error: "Duplicate checksum" }],
+    failedDetails: [{ checksum: 'abc123def456', error: 'Duplicate checksum' }],
     retroactiveReclassifications: 4,
     ...overrides,
   };
@@ -40,93 +40,93 @@ beforeEach(() => {
 
 // --- Tests ---
 
-describe("SummaryStep", () => {
-  it("shows guard message when commitResult is null", () => {
+describe('SummaryStep', () => {
+  it('shows guard message when commitResult is null', () => {
     storeState = { commitResult: null, reset: mockReset };
     render(<SummaryStep />);
-    expect(screen.getByText("No commit results available.")).toBeDefined();
+    expect(screen.getByText('No commit results available.')).toBeDefined();
   });
 
-  it("renders Import Complete heading", () => {
+  it('renders Import Complete heading', () => {
     render(<SummaryStep />);
-    expect(screen.getByText("Import Complete")).toBeDefined();
+    expect(screen.getByText('Import Complete')).toBeDefined();
   });
 
-  it("displays entities created count", () => {
+  it('displays entities created count', () => {
     render(<SummaryStep />);
-    const label = screen.getByText("Entities Created");
-    const card = label.closest(".rounded-lg")!;
-    expect(card.querySelector(".text-2xl")!.textContent).toBe("3");
+    const label = screen.getByText('Entities Created');
+    const card = label.closest('.rounded-lg')!;
+    expect(card.querySelector('.text-2xl')!.textContent).toBe('3');
   });
 
-  it("displays total rules applied", () => {
+  it('displays total rules applied', () => {
     render(<SummaryStep />);
     // 2 add + 1 edit = 3 total
-    expect(screen.getByText("Rules Applied")).toBeDefined();
+    expect(screen.getByText('Rules Applied')).toBeDefined();
   });
 
-  it("displays transactions imported count", () => {
+  it('displays transactions imported count', () => {
     render(<SummaryStep />);
-    expect(screen.getByText("10")).toBeDefined();
-    expect(screen.getByText("Transactions Imported")).toBeDefined();
+    expect(screen.getByText('10')).toBeDefined();
+    expect(screen.getByText('Transactions Imported')).toBeDefined();
   });
 
-  it("displays transactions failed with red styling when > 0", () => {
+  it('displays transactions failed with red styling when > 0', () => {
     render(<SummaryStep />);
-    expect(screen.getByText("Transactions Failed")).toBeDefined();
+    expect(screen.getByText('Transactions Failed')).toBeDefined();
     // Verify the failed count is rendered (1 failed in default fixture)
-    const failedLabel = screen.getByText("Transactions Failed");
-    const card = failedLabel.closest(".rounded-lg")!;
-    expect(card.querySelector(".text-2xl")!.textContent).toBe("1");
+    const failedLabel = screen.getByText('Transactions Failed');
+    const card = failedLabel.closest('.rounded-lg')!;
+    expect(card.querySelector('.text-2xl')!.textContent).toBe('1');
   });
 
-  it("shows failure details section with checksum and error", () => {
+  it('shows failure details section with checksum and error', () => {
     storeState = {
       commitResult: makeCommitResult({
         transactionsFailed: 2,
         failedDetails: [
-          { checksum: "abc123def456", error: "Duplicate checksum" },
-          { checksum: "xyz789012345", error: "Invalid amount" },
+          { checksum: 'abc123def456', error: 'Duplicate checksum' },
+          { checksum: 'xyz789012345', error: 'Invalid amount' },
         ],
       }),
       reset: mockReset,
     };
     render(<SummaryStep />);
-    expect(screen.getByText("Failed Transactions")).toBeDefined();
-    expect(screen.getByText("abc123def456")).toBeDefined();
-    expect(screen.getByText("Duplicate checksum")).toBeDefined();
-    expect(screen.getByText("xyz789012345")).toBeDefined();
-    expect(screen.getByText("Invalid amount")).toBeDefined();
+    expect(screen.getByText('Failed Transactions')).toBeDefined();
+    expect(screen.getByText('abc123def456')).toBeDefined();
+    expect(screen.getByText('Duplicate checksum')).toBeDefined();
+    expect(screen.getByText('xyz789012345')).toBeDefined();
+    expect(screen.getByText('Invalid amount')).toBeDefined();
   });
 
-  it("hides failure details section when no failures", () => {
+  it('hides failure details section when no failures', () => {
     storeState = {
       commitResult: makeCommitResult({ transactionsFailed: 0, failedDetails: [] }),
       reset: mockReset,
     };
     render(<SummaryStep />);
-    expect(screen.queryByText("Failed Transactions")).toBeNull();
+    expect(screen.queryByText('Failed Transactions')).toBeNull();
   });
 
-  it("displays 0 failed in neutral style when no failures", () => {
+  it('displays 0 failed in neutral style when no failures', () => {
     storeState = {
       commitResult: makeCommitResult({ transactionsFailed: 0, failedDetails: [] }),
       reset: mockReset,
     };
     render(<SummaryStep />);
-    const failedLabel = screen.getByText("Transactions Failed");
-    const card = failedLabel.closest(".rounded-lg")!;
-    expect(card.querySelector(".text-2xl")!.textContent).toBe("0");
+    const failedLabel = screen.getByText('Transactions Failed');
+    const card = failedLabel.closest('.rounded-lg')!;
+    expect(card.querySelector('.text-2xl')!.textContent).toBe('0');
   });
 
-  it("shows rule breakdown section when rules applied", () => {
+  it('shows rule breakdown section when rules applied', () => {
     render(<SummaryStep />);
-    expect(screen.getByText("Rule Breakdown")).toBeDefined();
-    expect(screen.getByText("Added")).toBeDefined();
-    expect(screen.getByText("Edited")).toBeDefined();
+    expect(screen.getByText('Rule Breakdown')).toBeDefined();
+    expect(screen.getByText('Added')).toBeDefined();
+    expect(screen.getByText('Edited')).toBeDefined();
   });
 
-  it("hides rule breakdown when no rules", () => {
+  it('hides rule breakdown when no rules', () => {
     storeState = {
       commitResult: makeCommitResult({
         rulesApplied: { add: 0, edit: 0, disable: 0, remove: 0 },
@@ -134,14 +134,14 @@ describe("SummaryStep", () => {
       reset: mockReset,
     };
     render(<SummaryStep />);
-    expect(screen.queryByText("Rule Breakdown")).toBeNull();
+    expect(screen.queryByText('Rule Breakdown')).toBeNull();
   });
 
-  it("shows retroactive reclassification count", () => {
+  it('shows retroactive reclassification count', () => {
     render(<SummaryStep />);
-    expect(screen.getByText("Retroactive Reclassifications")).toBeDefined();
+    expect(screen.getByText('Retroactive Reclassifications')).toBeDefined();
     expect(
-      screen.getByText("4 existing transactions were reclassified based on updated rules.")
+      screen.getByText('4 existing transactions were reclassified based on updated rules.')
     ).toBeDefined();
   });
 
@@ -151,30 +151,30 @@ describe("SummaryStep", () => {
       reset: mockReset,
     };
     render(<SummaryStep />);
-    expect(screen.getByText("No existing transactions affected.")).toBeDefined();
+    expect(screen.getByText('No existing transactions affected.')).toBeDefined();
   });
 
-  it("shows singular form for 1 reclassification", () => {
+  it('shows singular form for 1 reclassification', () => {
     storeState = {
       commitResult: makeCommitResult({ retroactiveReclassifications: 1 }),
       reset: mockReset,
     };
     render(<SummaryStep />);
     expect(
-      screen.getByText("1 existing transaction was reclassified based on updated rules.")
+      screen.getByText('1 existing transaction was reclassified based on updated rules.')
     ).toBeDefined();
   });
 
-  it("resets store and navigates on New Import click", () => {
+  it('resets store and navigates on New Import click', () => {
     render(<SummaryStep />);
-    fireEvent.click(screen.getByText("New Import"));
+    fireEvent.click(screen.getByText('New Import'));
     expect(mockReset).toHaveBeenCalledOnce();
-    expect(mockNavigate).toHaveBeenCalledWith("/import");
+    expect(mockNavigate).toHaveBeenCalledWith('/import');
   });
 
-  it("navigates to transactions on View Transactions click", () => {
+  it('navigates to transactions on View Transactions click', () => {
     render(<SummaryStep />);
-    fireEvent.click(screen.getByText("View Transactions"));
-    expect(mockNavigate).toHaveBeenCalledWith("/transactions");
+    fireEvent.click(screen.getByText('View Transactions'));
+    expect(mockNavigate).toHaveBeenCalledWith('/transactions');
   });
 });

@@ -74,4 +74,3 @@
 
 - **Title**: `feat(tags): tag rule proposals (bundled approve/reject + preview)`
 - **Scope**: Implement PRD-029 user stories as a separate ruleset from classification corrections.
-

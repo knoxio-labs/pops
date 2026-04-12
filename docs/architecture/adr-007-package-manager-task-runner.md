@@ -10,14 +10,14 @@ POPS is a monorepo with 10+ workspace packages. It needs a package manager that 
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| pnpm | Strict dependency resolution (no phantom deps), fast installs, content-addressable store, native workspaces | Different CLI from npm |
-| npm workspaces | Built-in, zero install | Slower, no strict resolution, weaker workspace support |
-| Yarn v4 (Berry) | Plug'n'Play, zero-installs | Complex config, PnP compatibility issues |
-| Turbo (build orchestration) | Caches builds across packages, parallelises tasks, understands workspace deps | Another tool in the chain |
-| mise (task runner + version manager) | Polyglot, auto Node pinning, simple config | More complex than a plain Makefile |
-| just (task runner) | Simple, transparent | Doesn't manage tool versions — would need a second tool |
+| Option                               | Pros                                                                                                        | Cons                                                    |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| pnpm                                 | Strict dependency resolution (no phantom deps), fast installs, content-addressable store, native workspaces | Different CLI from npm                                  |
+| npm workspaces                       | Built-in, zero install                                                                                      | Slower, no strict resolution, weaker workspace support  |
+| Yarn v4 (Berry)                      | Plug'n'Play, zero-installs                                                                                  | Complex config, PnP compatibility issues                |
+| Turbo (build orchestration)          | Caches builds across packages, parallelises tasks, understands workspace deps                               | Another tool in the chain                               |
+| mise (task runner + version manager) | Polyglot, auto Node pinning, simple config                                                                  | More complex than a plain Makefile                      |
+| just (task runner)                   | Simple, transparent                                                                                         | Doesn't manage tool versions — would need a second tool |
 
 ## Decision
 

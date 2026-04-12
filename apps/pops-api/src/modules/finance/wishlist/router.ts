@@ -1,18 +1,18 @@
 /**
  * Wish list tRPC router — CRUD procedures for wish list items.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   CreateWishListItemSchema,
   UpdateWishListItemSchema,
   WishListQuerySchema,
   toWishListItem,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError } from '../../../shared/errors.js';
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -39,7 +39,7 @@ export const wishlistRouter = router({
       return { data: toWishListItem(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -50,7 +50,7 @@ export const wishlistRouter = router({
     const row = service.createWishListItem(input);
     return {
       data: toWishListItem(row),
-      message: "Wish list item created",
+      message: 'Wish list item created',
     };
   }),
 
@@ -67,11 +67,11 @@ export const wishlistRouter = router({
         const row = service.updateWishListItem(input.id, input.data);
         return {
           data: toWishListItem(row),
-          message: "Wish list item updated",
+          message: 'Wish list item updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -81,10 +81,10 @@ export const wishlistRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     try {
       service.deleteWishListItem(input.id);
-      return { message: "Wish list item deleted" };
+      return { message: 'Wish list item deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

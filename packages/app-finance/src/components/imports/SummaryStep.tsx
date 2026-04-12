@@ -1,7 +1,7 @@
-import { CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
-import { useImportStore } from "../../store/importStore";
-import { Button } from "@pops/ui";
-import { useNavigate } from "react-router";
+import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { useImportStore } from '../../store/importStore';
+import { Button } from '@pops/ui';
+import { useNavigate } from 'react-router';
 
 /**
  * Step 7: Import summary — reads CommitResult from store (PRD-031 US-06).
@@ -163,8 +163,8 @@ export function SummaryStep() {
         </div>
         <p className="text-sm text-muted-foreground">
           {commitResult.retroactiveReclassifications > 0
-            ? `${commitResult.retroactiveReclassifications} existing transaction${commitResult.retroactiveReclassifications === 1 ? " was" : "s were"} reclassified based on updated rules.`
-            : "No existing transactions affected."}
+            ? `${commitResult.retroactiveReclassifications} existing transaction${commitResult.retroactiveReclassifications === 1 ? ' was' : 's were'} reclassified based on updated rules.`
+            : 'No existing transactions affected.'}
         </p>
       </div>
 
@@ -173,12 +173,12 @@ export function SummaryStep() {
           variant="outline"
           onClick={() => {
             reset();
-            navigate("/import");
+            navigate('/import');
           }}
         >
           New Import
         </Button>
-        <Button onClick={() => navigate("/transactions")}>View Transactions</Button>
+        <Button onClick={() => navigate('/transactions')}>View Transactions</Button>
       </div>
     </div>
   );

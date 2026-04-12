@@ -7,28 +7,28 @@
  * progress via getJob(). Completed results survive page navigation via
  * the sync_job_results SQLite table.
  */
-import { randomUUID } from "node:crypto";
-import { eq, desc, sql } from "drizzle-orm";
-import { syncJobResults } from "@pops/db-types";
-import type { PlexClient } from "./client.js";
-import { getPlexClient, getPlexToken } from "./service.js";
-import { importMoviesFromPlex } from "./sync-movies.js";
-import { importTvShowsFromPlex } from "./sync-tv.js";
-import { syncWatchlistFromPlex } from "./sync-watchlist.js";
-import { syncWatchHistoryFromPlex } from "./sync-watch-history.js";
-import { syncDiscoverWatches } from "./sync-discover-watches.js";
-import { getDrizzle } from "../../../db.js";
+import { randomUUID } from 'node:crypto';
+import { eq, desc, sql } from 'drizzle-orm';
+import { syncJobResults } from '@pops/db-types';
+import type { PlexClient } from './client.js';
+import { getPlexClient, getPlexToken } from './service.js';
+import { importMoviesFromPlex } from './sync-movies.js';
+import { importTvShowsFromPlex } from './sync-tv.js';
+import { syncWatchlistFromPlex } from './sync-watchlist.js';
+import { syncWatchHistoryFromPlex } from './sync-watch-history.js';
+import { syncDiscoverWatches } from './sync-discover-watches.js';
+import { getDrizzle } from '../../../db.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export const SYNC_JOB_TYPES = [
-  "syncMovies",
-  "syncTvShows",
-  "syncWatchlist",
-  "syncWatchHistory",
-  "syncDiscoverWatches",
+  'syncMovies',
+  'syncTvShows',
+  'syncWatchlist',
+  'syncWatchHistory',
+  'syncDiscoverWatches',
 ] as const;
 
 export type SyncJobType = (typeof SYNC_JOB_TYPES)[number];
@@ -41,7 +41,7 @@ export interface SyncJobProgress {
 export interface SyncJob {
   id: string;
   jobType: SyncJobType;
-  status: "running" | "completed" | "failed";
+  status: 'running' | 'completed' | 'failed';
   startedAt: string;
   completedAt: string | null;
   durationMs: number | null;
@@ -76,7 +76,7 @@ const CLEANUP_DELAY_MS = 5 * 60 * 1000;
 export function startJob(jobType: SyncJobType, params: SyncJobParams): string {
   // Check for duplicate
   for (const job of activeJobs.values()) {
-    if (job.jobType === jobType && job.status === "running") {
+    if (job.jobType === jobType && job.status === 'running') {
       throw new Error(`A ${jobType} sync is already running (job ${job.id})`);
     }
   }
@@ -85,7 +85,7 @@ export function startJob(jobType: SyncJobType, params: SyncJobParams): string {
   const job: SyncJob = {
     id,
     jobType,
-    status: "running",
+    status: 'running',
     startedAt: new Date().toISOString(),
     completedAt: null,
     durationMs: null,
@@ -123,7 +123,7 @@ export function getActiveJobs(): SyncJob[] {
 /** Check if a job of the given type is currently running. */
 export function isJobRunning(jobType: SyncJobType): boolean {
   for (const job of activeJobs.values()) {
-    if (job.jobType === jobType && job.status === "running") return true;
+    if (job.jobType === jobType && job.status === 'running') return true;
   }
   return false;
 }
@@ -166,14 +166,14 @@ async function runJob(jobId: string, jobType: SyncJobType, params: SyncJobParams
       job.progress = progress;
     });
 
-    job.status = "completed";
+    job.status = 'completed';
     job.result = result;
     job.completedAt = new Date().toISOString();
     job.durationMs = Date.now() - startTime;
 
     persistJobResult(job);
   } catch (err) {
-    job.status = "failed";
+    job.status = 'failed';
     job.error = err instanceof Error ? err.message : String(err);
     job.completedAt = new Date().toISOString();
     job.durationMs = Date.now() - startTime;
@@ -194,26 +194,26 @@ async function executeSyncByType(
   const client = requirePlexClient();
 
   switch (jobType) {
-    case "syncMovies": {
-      if (!params.sectionId) throw new Error("sectionId is required for movie sync");
+    case 'syncMovies': {
+      if (!params.sectionId) throw new Error('sectionId is required for movie sync');
       return importMoviesFromPlex(client, params.sectionId, {
         onProgress: (p) => onProgress({ processed: p.processed, total: p.total }),
       });
     }
-    case "syncTvShows": {
-      if (!params.sectionId) throw new Error("sectionId is required for TV sync");
+    case 'syncTvShows': {
+      if (!params.sectionId) throw new Error('sectionId is required for TV sync');
       return importTvShowsFromPlex(client, params.sectionId, {
         onProgress: (p) => onProgress({ processed: p.processed, total: p.total }),
       });
     }
-    case "syncWatchlist": {
+    case 'syncWatchlist': {
       const token = getPlexToken();
-      if (!token) throw new Error("Plex token not available");
+      if (!token) throw new Error('Plex token not available');
       return syncWatchlistFromPlex(token, {
         onProgress: (p) => onProgress({ processed: p.processed, total: p.total }),
       });
     }
-    case "syncWatchHistory": {
+    case 'syncWatchHistory': {
       return syncWatchHistoryFromPlex(
         client,
         params.movieSectionId,
@@ -221,7 +221,7 @@ async function executeSyncByType(
         (processed, total) => onProgress({ processed, total })
       );
     }
-    case "syncDiscoverWatches": {
+    case 'syncDiscoverWatches': {
       const job = activeJobs.get(jobId);
       return syncDiscoverWatches(
         client,
@@ -236,7 +236,7 @@ async function executeSyncByType(
 
 function requirePlexClient(): PlexClient {
   const client = getPlexClient();
-  if (!client) throw new Error("Plex is not configured");
+  if (!client) throw new Error('Plex is not configured');
   return client;
 }
 
@@ -269,7 +269,7 @@ function persistJobResult(job: SyncJob): void {
       )
     `);
   } catch (err) {
-    console.error("[SyncJobManager] Failed to persist job result:", err);
+    console.error('[SyncJobManager] Failed to persist job result:', err);
   }
 }
 
@@ -277,7 +277,7 @@ function rowToSyncJob(row: typeof syncJobResults.$inferSelect): SyncJob {
   return {
     id: row.id,
     jobType: row.jobType as SyncJobType,
-    status: row.status as "completed" | "failed",
+    status: row.status as 'completed' | 'failed',
     startedAt: row.startedAt,
     completedAt: row.completedAt ?? null,
     durationMs: row.durationMs ?? null,

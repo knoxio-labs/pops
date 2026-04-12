@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -7,15 +7,15 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
-} from "./breadcrumb";
-import { HomeIcon, SlashIcon } from "lucide-react";
+} from './breadcrumb';
+import { HomeIcon, SlashIcon } from 'lucide-react';
 
 const meta: Meta = {
-  title: "Navigation/Breadcrumb",
+  title: 'Navigation/Breadcrumb',
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;

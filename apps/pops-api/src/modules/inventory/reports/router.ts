@@ -1,11 +1,11 @@
 /**
  * Inventory reports tRPC router — warranty tracking and insurance reports.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { toInventoryItem } from "../items/types.js";
-import * as service from "./service.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { toInventoryItem } from '../items/types.js';
+import * as service from './service.js';
 
 export const reportsRouter = router({
   /** Get dashboard summary (item count, total values, warranty alerts, recent items). */
@@ -31,7 +31,7 @@ export const reportsRouter = router({
         .object({
           locationId: z.string().optional(),
           includeChildren: z.boolean().optional(),
-          sortBy: z.enum(["value", "name", "type"]).optional(),
+          sortBy: z.enum(['value', 'name', 'type']).optional(),
         })
         .optional()
     )
@@ -40,14 +40,14 @@ export const reportsRouter = router({
         const result = service.getInsuranceReport({
           locationId: input?.locationId,
           includeChildren: input?.includeChildren ?? true,
-          sortBy: input?.sortBy ?? "value",
+          sortBy: input?.sortBy ?? 'value',
         });
         return { data: result };
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
-        console.error("[insurance-report] Failed:", detail, err);
+        console.error('[insurance-report] Failed:', detail, err);
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to generate insurance report: ${detail}`,
           cause: err,
         });
@@ -60,9 +60,9 @@ export const reportsRouter = router({
       return { data: service.getValueByLocation() };
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      console.error("[value-by-location] Failed:", detail, err);
+      console.error('[value-by-location] Failed:', detail, err);
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
+        code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to load value by location breakdown: ${detail}`,
         cause: err,
       });
@@ -75,9 +75,9 @@ export const reportsRouter = router({
       return { data: service.getValueByType() };
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      console.error("[value-by-type] Failed:", detail, err);
+      console.error('[value-by-type] Failed:', detail, err);
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
+        code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to load value by type breakdown: ${detail}`,
         cause: err,
       });

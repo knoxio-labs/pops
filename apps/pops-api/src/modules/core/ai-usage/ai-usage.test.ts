@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { Database } from "better-sqlite3";
-import { setupTestContext, seedAiUsage, createCaller } from "../../../shared/test-utils.js";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Database } from 'better-sqlite3';
+import { setupTestContext, seedAiUsage, createCaller } from '../../../shared/test-utils.js';
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
@@ -14,8 +14,8 @@ afterEach(() => {
   ctx.teardown();
 });
 
-describe("aiUsage.getStats", () => {
-  it("returns zeros when no usage data exists", async () => {
+describe('aiUsage.getStats', () => {
+  it('returns zeros when no usage data exists', async () => {
     const result = await caller.core.aiUsage.getStats();
     expect(result.totalCost).toBe(0);
     expect(result.totalApiCalls).toBe(0);
@@ -27,9 +27,9 @@ describe("aiUsage.getStats", () => {
     expect(result.last30Days).toBeUndefined();
   });
 
-  it("returns correct stats for a single entry", async () => {
+  it('returns correct stats for a single entry', async () => {
     seedAiUsage(db, {
-      description: "Categorise Woolworths",
+      description: 'Categorise Woolworths',
       input_tokens: 150,
       output_tokens: 25,
       cost_usd: 0.003,
@@ -49,7 +49,7 @@ describe("aiUsage.getStats", () => {
     expect(result.last30Days!.apiCalls).toBe(1);
   });
 
-  it("calculates cache hit rate correctly", async () => {
+  it('calculates cache hit rate correctly', async () => {
     // 2 API calls + 1 cache hit = 1/3 cache hit rate
     seedAiUsage(db, { cached: 0, cost_usd: 0.002, created_at: new Date().toISOString() });
     seedAiUsage(db, { cached: 0, cost_usd: 0.003, created_at: new Date().toISOString() });
@@ -65,8 +65,8 @@ describe("aiUsage.getStats", () => {
   });
 });
 
-describe("aiUsage.getHistory", () => {
-  it("returns empty records when no data exists", async () => {
+describe('aiUsage.getHistory', () => {
+  it('returns empty records when no data exists', async () => {
     const result = await caller.core.aiUsage.getHistory({});
     expect(result.records).toEqual([]);
     expect(result.summary.totalCost).toBe(0);
@@ -74,19 +74,19 @@ describe("aiUsage.getHistory", () => {
     expect(result.summary.totalCacheHits).toBe(0);
   });
 
-  it("returns correct shape for a single entry", async () => {
+  it('returns correct shape for a single entry', async () => {
     seedAiUsage(db, {
       input_tokens: 200,
       output_tokens: 30,
       cost_usd: 0.005,
       cached: 0,
-      created_at: "2026-03-15T10:00:00.000Z",
+      created_at: '2026-03-15T10:00:00.000Z',
     });
 
     const result = await caller.core.aiUsage.getHistory({});
     expect(result.records).toHaveLength(1);
     expect(result.records[0]).toMatchObject({
-      date: "2026-03-15",
+      date: '2026-03-15',
       apiCalls: 1,
       cacheHits: 0,
       inputTokens: 200,
@@ -97,18 +97,18 @@ describe("aiUsage.getHistory", () => {
     expect(result.summary.totalApiCalls).toBe(1);
   });
 
-  it("filters by date range", async () => {
-    seedAiUsage(db, { cost_usd: 0.001, created_at: "2026-03-01T10:00:00.000Z" });
-    seedAiUsage(db, { cost_usd: 0.002, created_at: "2026-03-10T10:00:00.000Z" });
-    seedAiUsage(db, { cost_usd: 0.003, created_at: "2026-03-20T10:00:00.000Z" });
+  it('filters by date range', async () => {
+    seedAiUsage(db, { cost_usd: 0.001, created_at: '2026-03-01T10:00:00.000Z' });
+    seedAiUsage(db, { cost_usd: 0.002, created_at: '2026-03-10T10:00:00.000Z' });
+    seedAiUsage(db, { cost_usd: 0.003, created_at: '2026-03-20T10:00:00.000Z' });
 
     // Filter to only March 5-15
     const result = await caller.core.aiUsage.getHistory({
-      startDate: "2026-03-05",
-      endDate: "2026-03-15",
+      startDate: '2026-03-05',
+      endDate: '2026-03-15',
     });
     expect(result.records).toHaveLength(1);
-    expect(result.records[0]!.date).toBe("2026-03-10");
+    expect(result.records[0]!.date).toBe('2026-03-10');
     expect(result.summary.totalApiCalls).toBe(1);
     expect(result.summary.totalCost).toBeCloseTo(0.002);
   });

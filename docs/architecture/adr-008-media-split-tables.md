@@ -10,10 +10,10 @@ The media domain stores movies and TV shows. TV shows have a hierarchical struct
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Unified `media_items` table with type discriminator | One table, simpler joins for cross-type features | Many nullable columns, no FK-enforced hierarchy, queries need `WHERE type = ...` everywhere, complex partial indexes for TV constraints |
-| Separate tables: `movies`, `tv_shows`, `seasons`, `episodes` | Clean FK-enforced TV hierarchy, no nullable type-specific columns, natural indexes, focused tables | Cross-type features (watchlist, comparisons) need polymorphic reference pattern (`media_type + media_id`), more tables |
+| Option                                                       | Pros                                                                                               | Cons                                                                                                                                    |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Unified `media_items` table with type discriminator          | One table, simpler joins for cross-type features                                                   | Many nullable columns, no FK-enforced hierarchy, queries need `WHERE type = ...` everywhere, complex partial indexes for TV constraints |
+| Separate tables: `movies`, `tv_shows`, `seasons`, `episodes` | Clean FK-enforced TV hierarchy, no nullable type-specific columns, natural indexes, focused tables | Cross-type features (watchlist, comparisons) need polymorphic reference pattern (`media_type + media_id`), more tables                  |
 
 ## Decision
 

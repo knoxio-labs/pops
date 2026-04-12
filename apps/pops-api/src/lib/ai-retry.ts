@@ -1,4 +1,4 @@
-import type { Logger } from "pino";
+import type { Logger } from 'pino';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -13,14 +13,14 @@ export async function withRateLimitRetry<T>(
   args?: { logger?: Logger; logPrefix?: string }
 ): Promise<T> {
   const logger = args?.logger;
-  const logPrefix = args?.logPrefix ?? "[AI]";
+  const logPrefix = args?.logPrefix ?? '[AI]';
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await fn();
     } catch (error) {
       const isRateLimit =
-        error instanceof Error && "status" in error && (error as { status: number }).status === 429;
+        error instanceof Error && 'status' in error && (error as { status: number }).status === 429;
 
       if (!isRateLimit || attempt === MAX_RETRIES) {
         throw error;
@@ -35,5 +35,5 @@ export async function withRateLimitRetry<T>(
     }
   }
 
-  throw new Error("Max retries exceeded");
+  throw new Error('Max retries exceeded');
 }

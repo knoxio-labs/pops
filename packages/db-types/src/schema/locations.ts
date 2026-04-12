@@ -1,19 +1,19 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const locations = sqliteTable(
-  "locations",
+  'locations',
   {
-    id: text("id")
+    id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    name: text("name").notNull(),
-    parentId: text("parent_id"),
-    sortOrder: integer("sort_order").notNull().default(0),
-    lastEditedTime: text("last_edited_time").notNull(),
+    name: text('name').notNull(),
+    parentId: text('parent_id'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    lastEditedTime: text('last_edited_time').notNull(),
   },
   (table) => [
-    index("idx_locations_parent").on(table.parentId),
-    index("idx_locations_name").on(table.name),
-    index("idx_locations_parent_sort").on(table.parentId, table.sortOrder),
+    index('idx_locations_parent').on(table.parentId),
+    index('idx_locations_name').on(table.name),
+    index('idx_locations_parent_sort').on(table.parentId, table.sortOrder),
   ]
 );

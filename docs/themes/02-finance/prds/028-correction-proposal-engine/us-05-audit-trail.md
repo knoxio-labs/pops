@@ -16,4 +16,3 @@ As a user, I want traceability for rule changes made through proposals, so that 
   - outcome: approved / rejected
   - if rejected: feedback message
 - [x] The audit trail is queryable for debugging and support (minimum: server-side logs; a persistent store may be added later).
-

@@ -1,26 +1,26 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useSearchParams, Link } from "react-router";
-import { useSetPageContext } from "@pops/navigation";
-import { Button, Select, Skeleton, TextInput } from "@pops/ui";
-import { Sparkles, Settings, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
-import { MediaGrid } from "../components/MediaGrid";
-import { MediaCard } from "../components/MediaCard";
-import { DebriefBanner } from "../components/DebriefBanner";
-import { DownloadQueue } from "../components/DownloadQueue";
-import { QuickPickDialog } from "../components/QuickPickDialog";
-import { useMediaLibrary, type MediaType, type SortOption } from "../hooks/useMediaLibrary";
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router';
+import { useSetPageContext } from '@pops/navigation';
+import { Button, Select, Skeleton, TextInput } from '@pops/ui';
+import { Sparkles, Settings, Search, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { MediaGrid } from '../components/MediaGrid';
+import { MediaCard } from '../components/MediaCard';
+import { DebriefBanner } from '../components/DebriefBanner';
+import { DownloadQueue } from '../components/DownloadQueue';
+import { QuickPickDialog } from '../components/QuickPickDialog';
+import { useMediaLibrary, type MediaType, type SortOption } from '../hooks/useMediaLibrary';
 
 const TYPE_OPTIONS: { value: MediaType; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "movie", label: "Movies" },
-  { value: "tv", label: "TV Shows" },
+  { value: 'all', label: 'All' },
+  { value: 'movie', label: 'Movies' },
+  { value: 'tv', label: 'TV Shows' },
 ];
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "title", label: "Title (A-Z)" },
-  { value: "dateAdded", label: "Date Added" },
-  { value: "releaseDate", label: "Release Date" },
-  { value: "rating", label: "Rating" },
+  { value: 'title', label: 'Title (A-Z)' },
+  { value: 'dateAdded', label: 'Date Added' },
+  { value: 'releaseDate', label: 'Release Date' },
+  { value: 'rating', label: 'Rating' },
 ];
 
 const PAGE_SIZE_OPTIONS = [24, 48, 96] as const;
@@ -70,7 +70,7 @@ function PaginationControls({
     <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>
-          {totalItems} {totalItems === 1 ? "item" : "items"}
+          {totalItems} {totalItems === 1 ? 'item' : 'items'}
         </span>
         <span className="text-border">|</span>
         <span>
@@ -112,25 +112,25 @@ function PaginationControls({
 }
 
 function isValidMediaType(v: string | null): v is MediaType {
-  return v === "all" || v === "movie" || v === "tv";
+  return v === 'all' || v === 'movie' || v === 'tv';
 }
 
 function isValidSort(v: string | null): v is SortOption {
-  return v === "title" || v === "dateAdded" || v === "releaseDate" || v === "rating";
+  return v === 'title' || v === 'dateAdded' || v === 'releaseDate' || v === 'rating';
 }
 
 export function LibraryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Derive state from URL params
-  const rawType = searchParams.get("type");
-  const rawSort = searchParams.get("sort");
-  const typeFilter: MediaType = isValidMediaType(rawType) ? rawType : "all";
-  const sortBy: SortOption = isValidSort(rawSort) ? rawSort : "title";
-  const genreFilter = searchParams.get("genre") || null;
-  const searchQuery = searchParams.get("q") ?? "";
-  const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const pageSize = PAGE_SIZE_OPTIONS.find((s) => s === Number(searchParams.get("pageSize"))) ?? 24;
+  const rawType = searchParams.get('type');
+  const rawSort = searchParams.get('sort');
+  const typeFilter: MediaType = isValidMediaType(rawType) ? rawType : 'all';
+  const sortBy: SortOption = isValidSort(rawSort) ? rawSort : 'title';
+  const genreFilter = searchParams.get('genre') || null;
+  const searchQuery = searchParams.get('q') ?? '';
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+  const pageSize = PAGE_SIZE_OPTIONS.find((s) => s === Number(searchParams.get('pageSize'))) ?? 24;
 
   // Local search input state (synced to URL on debounce)
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -150,11 +150,11 @@ export function LibraryPage() {
       (prev) => {
         const next = new URLSearchParams(prev);
         if (debouncedSearch) {
-          next.set("q", debouncedSearch);
+          next.set('q', debouncedSearch);
         } else {
-          next.delete("q");
+          next.delete('q');
         }
-        next.set("page", "1"); // Reset to page 1 on search change
+        next.set('page', '1'); // Reset to page 1 on search change
         return next;
       },
       { replace: true }
@@ -176,8 +176,8 @@ export function LibraryPage() {
           next.delete(key);
         }
         // Reset page on filter changes (except page/pageSize changes)
-        if (key !== "page" && key !== "pageSize") {
-          next.set("page", "1");
+        if (key !== 'page' && key !== 'pageSize') {
+          next.set('page', '1');
         }
         return next;
       },
@@ -196,23 +196,23 @@ export function LibraryPage() {
 
   const libraryFilters = useMemo(() => {
     const f: Record<string, string> = {};
-    if (typeFilter !== "all") f.type = typeFilter;
-    if (sortBy !== "title") f.sort = sortBy;
+    if (typeFilter !== 'all') f.type = typeFilter;
+    if (sortBy !== 'title') f.sort = sortBy;
     if (searchQuery) f.search = searchQuery;
     if (genreFilter) f.genre = genreFilter;
     return f;
   }, [typeFilter, sortBy, searchQuery, genreFilter]);
 
-  useSetPageContext({ page: "library", pageType: "top-level", filters: libraryFilters });
+  useSetPageContext({ page: 'library', pageType: 'top-level', filters: libraryFilters });
 
   const totalItems = pagination.total;
   const totalPages = pagination.totalPages;
   const clampedPage = Math.min(page, Math.max(1, totalPages));
 
   // Only treat as truly empty library when no search/filters are active
-  const isLibraryEmpty = isEmpty && !debouncedSearch && typeFilter === "all" && !genreFilter;
+  const isLibraryEmpty = isEmpty && !debouncedSearch && typeFilter === 'all' && !genreFilter;
 
-  const showTypeBadge = typeFilter === "all";
+  const showTypeBadge = typeFilter === 'all';
 
   return (
     <div className="space-y-6">
@@ -265,14 +265,14 @@ export function LibraryPage() {
           {TYPE_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
-              variant={typeFilter === opt.value ? "default" : "ghost"}
+              variant={typeFilter === opt.value ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setParam("type", opt.value === "all" ? "" : opt.value)}
+              onClick={() => setParam('type', opt.value === 'all' ? '' : opt.value)}
               aria-pressed={typeFilter === opt.value}
               className={`text-xs font-semibold uppercase tracking-wider ${
                 typeFilter === opt.value
-                  ? "bg-app-accent text-white shadow-sm hover:bg-app-accent/90"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? 'bg-app-accent text-white shadow-sm hover:bg-app-accent/90'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {opt.label}
@@ -283,12 +283,12 @@ export function LibraryPage() {
         {/* Genre dropdown */}
         {allGenres.length > 0 && (
           <Select
-            value={genreFilter ?? ""}
-            onChange={(e) => setParam("genre", e.target.value)}
+            value={genreFilter ?? ''}
+            onChange={(e) => setParam('genre', e.target.value)}
             aria-label="Filter by genre"
             size="sm"
             options={[
-              { value: "", label: "All Genres" },
+              { value: '', label: 'All Genres' },
               ...allGenres.map((genre) => ({ value: genre, label: genre })),
             ]}
           />
@@ -297,7 +297,7 @@ export function LibraryPage() {
         {/* Sort dropdown */}
         <Select
           value={sortBy}
-          onChange={(e) => setParam("sort", e.target.value)}
+          onChange={(e) => setParam('sort', e.target.value)}
           aria-label="Sort by"
           size="sm"
           options={SORT_OPTIONS.map((opt) => ({
@@ -313,7 +313,7 @@ export function LibraryPage() {
           onChange={(e) => setLocalSearch(e.target.value)}
           prefix={<Search className="h-4 w-4" />}
           clearable
-          onClear={() => setLocalSearch("")}
+          onClear={() => setLocalSearch('')}
           className="w-full sm:max-w-xs"
           size="sm"
         />
@@ -350,7 +350,7 @@ export function LibraryPage() {
                 variant="outline"
                 size="sm"
                 className="mt-4"
-                onClick={() => setLocalSearch("")}
+                onClick={() => setLocalSearch('')}
               >
                 Clear search
               </Button>
@@ -380,13 +380,13 @@ export function LibraryPage() {
             totalPages={totalPages}
             pageSize={pageSize}
             totalItems={totalItems}
-            onPageChange={(p) => setParam("page", String(p))}
+            onPageChange={(p) => setParam('page', String(p))}
             onPageSizeChange={(s) => {
               setSearchParams(
                 (prev) => {
                   const next = new URLSearchParams(prev);
-                  next.set("pageSize", String(s));
-                  next.set("page", "1");
+                  next.set('pageSize', String(s));
+                  next.set('page', '1');
                   return next;
                 },
                 { replace: true }

@@ -14,8 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
-    "format:fix": "prettier --write \"src/**/*.{ts,tsx}\""
+    "format:check": "oxfmt -c ../../.oxfmtrc.json --check \"src/**/*.{ts,tsx}\"",
+    "format:fix": "oxfmt -c ../../.oxfmtrc.json --write \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "react": "^19.0.0",

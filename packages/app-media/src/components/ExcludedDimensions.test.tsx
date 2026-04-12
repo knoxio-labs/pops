@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock tRPC hooks
 const mockScoresQuery = vi.fn();
 const mockDimensionsQuery = vi.fn();
 const mockIncludeMutate = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     useUtils: () => ({
       media: {
@@ -29,12 +29,12 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { ExcludedDimensions } from "./ExcludedDimensions";
+import { ExcludedDimensions } from './ExcludedDimensions';
 
 const baseDimensions = [
-  { id: 1, name: "Cinematography" },
-  { id: 2, name: "Entertainment" },
-  { id: 3, name: "Emotional Impact" },
+  { id: 1, name: 'Cinematography' },
+  { id: 2, name: 'Entertainment' },
+  { id: 3, name: 'Emotional Impact' },
 ];
 
 beforeEach(() => {
@@ -45,8 +45,8 @@ beforeEach(() => {
   });
 });
 
-describe("ExcludedDimensions", () => {
-  it("renders nothing when no dimensions are excluded", () => {
+describe('ExcludedDimensions', () => {
+  it('renders nothing when no dimensions are excluded', () => {
     mockScoresQuery.mockReturnValue({
       data: {
         data: [
@@ -58,10 +58,10 @@ describe("ExcludedDimensions", () => {
     });
 
     const { container } = render(<ExcludedDimensions mediaType="movie" mediaId={42} />);
-    expect(container.innerHTML).toBe("");
+    expect(container.innerHTML).toBe('');
   });
 
-  it("shows excluded dimensions with Include buttons", () => {
+  it('shows excluded dimensions with Include buttons', () => {
     mockScoresQuery.mockReturnValue({
       data: {
         data: [
@@ -75,16 +75,16 @@ describe("ExcludedDimensions", () => {
 
     render(<ExcludedDimensions mediaType="movie" mediaId={42} />);
 
-    expect(screen.getByText("Excluded Dimensions")).toBeInTheDocument();
-    expect(screen.getByText("Cinematography")).toBeInTheDocument();
-    expect(screen.getByText("Emotional Impact")).toBeInTheDocument();
-    expect(screen.queryByText("Entertainment")).not.toBeInTheDocument();
+    expect(screen.getByText('Excluded Dimensions')).toBeInTheDocument();
+    expect(screen.getByText('Cinematography')).toBeInTheDocument();
+    expect(screen.getByText('Emotional Impact')).toBeInTheDocument();
+    expect(screen.queryByText('Entertainment')).not.toBeInTheDocument();
 
-    const includeButtons = screen.getAllByRole("button", { name: "Include" });
+    const includeButtons = screen.getAllByRole('button', { name: 'Include' });
     expect(includeButtons).toHaveLength(2);
   });
 
-  it("calls includeInDimension mutation when Include is clicked", () => {
+  it('calls includeInDimension mutation when Include is clicked', () => {
     mockScoresQuery.mockReturnValue({
       data: {
         data: [{ dimensionId: 1, score: 1500, comparisonCount: 5, excluded: true }],
@@ -94,32 +94,32 @@ describe("ExcludedDimensions", () => {
 
     render(<ExcludedDimensions mediaType="movie" mediaId={42} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Include" }));
+    fireEvent.click(screen.getByRole('button', { name: 'Include' }));
 
     expect(mockIncludeMutate).toHaveBeenCalledWith({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: 42,
       dimensionId: 1,
     });
   });
 
-  it("renders nothing when scores are empty", () => {
+  it('renders nothing when scores are empty', () => {
     mockScoresQuery.mockReturnValue({
       data: { data: [] },
       isLoading: false,
     });
 
     const { container } = render(<ExcludedDimensions mediaType="movie" mediaId={42} />);
-    expect(container.innerHTML).toBe("");
+    expect(container.innerHTML).toBe('');
   });
 
-  it("renders nothing when scores data is null", () => {
+  it('renders nothing when scores data is null', () => {
     mockScoresQuery.mockReturnValue({
       data: null,
       isLoading: false,
     });
 
     const { container } = render(<ExcludedDimensions mediaType="movie" mediaId={42} />);
-    expect(container.innerHTML).toBe("");
+    expect(container.innerHTML).toBe('');
   });
 });

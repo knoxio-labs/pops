@@ -2,60 +2,60 @@
  * Select component - styled dropdown for choosing from options
  * Native select with custom styling to match design system
  */
-import { forwardRef, useState, type SelectHTMLAttributes, type ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../lib/utils";
+import { forwardRef, useState, type SelectHTMLAttributes, type ReactNode } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../lib/utils';
 
 const containerVariants = cva(
-  "flex items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 relative",
+  'flex items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 relative',
   {
     variants: {
       variant: {
-        default: "border border-border",
-        ghost: "border-0 hover:bg-accent",
-        underline: "border-0 border-b border-border",
+        default: 'border border-border',
+        ghost: 'border-0 hover:bg-accent',
+        underline: 'border-0 border-b border-border',
       },
       size: {
-        sm: "h-9 px-3 py-1 text-xs",
-        default: "h-11 px-3 py-2 text-sm",
-        lg: "h-12 px-4 py-2 text-base",
+        sm: 'h-9 px-3 py-1 text-xs',
+        default: 'h-11 px-3 py-2 text-sm',
+        lg: 'h-12 px-4 py-2 text-base',
       },
       shape: {
-        default: "rounded-md",
-        pill: "rounded-full",
+        default: 'rounded-md',
+        pill: 'rounded-full',
       },
     },
     compoundVariants: [
       {
-        variant: "underline",
-        shape: ["default", "pill"],
-        class: "rounded-none",
+        variant: 'underline',
+        shape: ['default', 'pill'],
+        class: 'rounded-none',
       },
     ],
     defaultVariants: {
-      variant: "default",
-      size: "default",
-      shape: "default",
+      variant: 'default',
+      size: 'default',
+      shape: 'default',
     },
   }
 );
 
 const selectVariants = cva(
-  "flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 disabled:cursor-not-allowed appearance-none pr-8 cursor-pointer",
+  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 disabled:cursor-not-allowed appearance-none pr-8 cursor-pointer',
   {
     variants: {
       size: {
-        sm: "text-xs",
-        default: "text-sm",
-        lg: "text-base",
+        sm: 'text-xs',
+        default: 'text-sm',
+        lg: 'text-base',
       },
       centered: {
-        true: "text-center",
-        false: "",
+        true: 'text-center',
+        false: '',
       },
     },
     defaultVariants: {
-      size: "default",
+      size: 'default',
       centered: false,
     },
   }
@@ -69,7 +69,7 @@ export interface SelectOption {
 
 export interface SelectProps
   extends
-    Omit<SelectHTMLAttributes<HTMLSelectElement>, "size" | "prefix">,
+    Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'prefix'>,
     VariantProps<typeof containerVariants> {
   /**
    * Label for the select
@@ -157,17 +157,17 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               size,
               shape,
             }),
-            disabled && "opacity-50 cursor-not-allowed",
-            error && "border-destructive ring-destructive/20",
+            disabled && 'opacity-50 cursor-not-allowed',
+            error && 'border-destructive ring-destructive/20',
             containerClassName
           )}
-          style={isFocused && !error ? { borderColor: "var(--ring)" } : undefined}
+          style={isFocused && !error ? { borderColor: 'var(--ring)' } : undefined}
         >
           {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
           <select
             ref={ref}
             className={cn(selectVariants({ size, centered, className }))}
-            style={{ outline: "none", boxShadow: "none" }}
+            style={{ outline: 'none', boxShadow: 'none' }}
             onFocus={handleFocus}
             onBlur={handleBlur}
             disabled={disabled}
@@ -193,7 +193,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   }
 );
 
-Select.displayName = "Select";
+Select.displayName = 'Select';
 
 function ChevronDownIcon() {
   return (

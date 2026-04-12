@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
 // Tag rule ChangeSet contract (PRD-029) — tag suggestions only (never forced edits)
@@ -6,7 +6,7 @@ import { z } from "zod";
 
 export const TagRuleDataSchema = z.object({
   descriptionPattern: z.string().min(1),
-  matchType: z.enum(["exact", "contains", "regex"]).default("exact"),
+  matchType: z.enum(['exact', 'contains', 'regex']).default('exact'),
   entityId: z.string().nullable().optional(),
   tags: z.array(z.string()).min(1),
   confidence: z.number().min(0).max(1).optional(),
@@ -25,27 +25,27 @@ export const TagRuleUpdateSchema = z.object({
 export type TagRuleUpdate = z.infer<typeof TagRuleUpdateSchema>;
 
 export const TagRuleChangeSetAddOpSchema = z.object({
-  op: z.literal("add"),
+  op: z.literal('add'),
   data: TagRuleDataSchema,
 });
 
 export const TagRuleChangeSetEditOpSchema = z.object({
-  op: z.literal("edit"),
+  op: z.literal('edit'),
   id: z.string().min(1),
   data: TagRuleUpdateSchema,
 });
 
 export const TagRuleChangeSetDisableOpSchema = z.object({
-  op: z.literal("disable"),
+  op: z.literal('disable'),
   id: z.string().min(1),
 });
 
 export const TagRuleChangeSetRemoveOpSchema = z.object({
-  op: z.literal("remove"),
+  op: z.literal('remove'),
   id: z.string().min(1),
 });
 
-export const TagRuleChangeSetOpSchema = z.discriminatedUnion("op", [
+export const TagRuleChangeSetOpSchema = z.discriminatedUnion('op', [
   TagRuleChangeSetAddOpSchema,
   TagRuleChangeSetEditOpSchema,
   TagRuleChangeSetDisableOpSchema,
@@ -64,7 +64,7 @@ export type TagRuleChangeSet = z.infer<typeof TagRuleChangeSetSchema>;
 // Deterministic impact preview (suggestion-only diffs)
 // ---------------------------------------------------------------------------
 
-export type TagSuggestionSource = "tag_rule" | "rule" | "ai" | "entity";
+export type TagSuggestionSource = 'tag_rule' | 'rule' | 'ai' | 'entity';
 
 export interface TagSuggestion {
   tag: string;

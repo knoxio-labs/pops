@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Link } from "react-router";
+import { useState, useCallback } from 'react';
+import { Link } from 'react-router';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +16,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@pops/ui";
+} from '@pops/ui';
 import {
   ImageOff,
   Bookmark,
@@ -28,10 +28,10 @@ import {
   SkipForward,
   Ban,
   History,
-} from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { DimensionManager } from "../components/DimensionManager";
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { DimensionManager } from '../components/DimensionManager';
 
 interface ScoreDelta {
   winnerId: number;
@@ -82,7 +82,7 @@ export function CompareArenaPage() {
         mediaAId: number;
         mediaBId: number;
         winnerId: number;
-        drawTier?: "high" | "mid" | "low" | null;
+        drawTier?: 'high' | 'mid' | 'low' | null;
       }
     ) => {
       const isDraw = variables.winnerId === 0;
@@ -92,12 +92,12 @@ export function CompareArenaPage() {
       try {
         const [scoresA, scoresB] = await Promise.all([
           utils.media.comparisons.scores.fetch({
-            mediaType: "movie",
+            mediaType: 'movie',
             mediaId: winnerId,
             dimensionId: dimensionId ?? undefined,
           }),
           utils.media.comparisons.scores.fetch({
-            mediaType: "movie",
+            mediaType: 'movie',
             mediaId: loserId,
             dimensionId: dimensionId ?? undefined,
           }),
@@ -112,7 +112,7 @@ export function CompareArenaPage() {
 
         if (isDraw) {
           const drawOutcome =
-            variables.drawTier === "high" ? 0.7 : variables.drawTier === "low" ? 0.3 : 0.5;
+            variables.drawTier === 'high' ? 0.7 : variables.drawTier === 'low' ? 0.3 : 0.5;
           const expectedA = 1 / (1 + Math.pow(10, (scoreB - scoreA) / 400));
           const delta = Math.round(32 * (drawOutcome - expectedA));
           setScoreDelta({ winnerId, loserId, winnerDelta: delta, loserDelta: delta, isDraw: true });
@@ -145,14 +145,14 @@ export function CompareArenaPage() {
   const movieAId = pairData?.data?.movieA?.id;
 
   const { data: watchlistData } = trpc.media.watchlist.list.useQuery(
-    { mediaType: "movie" },
+    { mediaType: 'movie' },
     { enabled: !!pairData?.data }
   );
 
   // Map from mediaId → watchlist entry id for toggle support
   const watchlistedMovies = new Map(
     (watchlistData?.data ?? [])
-      .filter((e: { mediaType: string }) => e.mediaType === "movie")
+      .filter((e: { mediaType: string }) => e.mediaType === 'movie')
       .map((e: { mediaId: number; id: number }) => [e.mediaId, e.id])
   );
 
@@ -161,7 +161,7 @@ export function CompareArenaPage() {
       utils.media.watchlist.list.invalidate();
       const movie =
         variables.mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
-      toast.success(`${movie?.title ?? "Movie"} added to watchlist`);
+      toast.success(`${movie?.title ?? 'Movie'} added to watchlist`);
     },
   });
 
@@ -172,7 +172,7 @@ export function CompareArenaPage() {
         ([, entryId]) => entryId === variables.id
       )?.[0];
       const movie = mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
-      toast.success(`${movie?.title ?? "Movie"} removed from watchlist`);
+      toast.success(`${movie?.title ?? 'Movie'} removed from watchlist`);
     },
   });
 
@@ -186,7 +186,7 @@ export function CompareArenaPage() {
         variables.mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
       const staleness = data.data.staleness;
       const timesMarked = Math.round(Math.log(staleness) / Math.log(0.5));
-      toast.success(`${movie?.title ?? "Movie"} marked stale (×${timesMarked})`);
+      toast.success(`${movie?.title ?? 'Movie'} marked stale (×${timesMarked})`);
       setManualDimensionId(null);
       utils.media.comparisons.getSmartPair.invalidate();
     },
@@ -195,7 +195,7 @@ export function CompareArenaPage() {
   const handleMarkStale = useCallback(
     (movieId: number) => {
       if (markStaleMutation.isPending) return;
-      markStaleMutation.mutate({ mediaType: "movie", mediaId: movieId });
+      markStaleMutation.mutate({ mediaType: 'movie', mediaId: movieId });
     },
     [markStaleMutation]
   );
@@ -211,7 +211,7 @@ export function CompareArenaPage() {
       const { movieA, movieB } = pairData.data;
       const movie = movieId === movieA.id ? movieA : movieB;
       excludeMutation.mutate(
-        { mediaType: "movie", mediaId: movieId, dimensionId },
+        { mediaType: 'movie', mediaId: movieId, dimensionId },
         {
           onSuccess: () => {
             toast.success(`${movie.title} excluded from this dimension`);
@@ -230,7 +230,7 @@ export function CompareArenaPage() {
   } | null>(null);
 
   const { data: blacklistComparisonData } = trpc.media.comparisons.listForMedia.useQuery(
-    { mediaType: "movie", mediaId: blacklistTarget?.id ?? 0, limit: 1 },
+    { mediaType: 'movie', mediaId: blacklistTarget?.id ?? 0, limit: 1 },
     { enabled: blacklistTarget !== null }
   );
   const comparisonsToPurge = blacklistComparisonData?.pagination?.total ?? null;
@@ -239,7 +239,7 @@ export function CompareArenaPage() {
     onSuccess: (_data: unknown, variables: { mediaType: string; mediaId: number }) => {
       const movie =
         variables.mediaId === movieAId ? pairData?.data?.movieA : pairData?.data?.movieB;
-      toast.success(`${movie?.title ?? "Movie"} marked as not watched`);
+      toast.success(`${movie?.title ?? 'Movie'} marked as not watched`);
       setBlacklistTarget(null);
       utils.media.comparisons.getSmartPair.invalidate();
     },
@@ -251,7 +251,7 @@ export function CompareArenaPage() {
 
   const confirmBlacklist = useCallback(() => {
     if (!blacklistTarget) return;
-    blacklistMutation.mutate({ mediaType: "movie", mediaId: blacklistTarget.id });
+    blacklistMutation.mutate({ mediaType: 'movie', mediaId: blacklistTarget.id });
   }, [blacklistTarget, blacklistMutation]);
 
   const handleToggleWatchlist = useCallback(
@@ -260,7 +260,7 @@ export function CompareArenaPage() {
       if (entryId !== undefined) {
         removeFromWatchlistMutation.mutate({ id: entryId });
       } else {
-        addToWatchlistMutation.mutate({ mediaType: "movie", mediaId: movieId });
+        addToWatchlistMutation.mutate({ mediaType: 'movie', mediaId: movieId });
       }
     },
     [watchlistedMovies, addToWatchlistMutation, removeFromWatchlistMutation]
@@ -273,11 +273,11 @@ export function CompareArenaPage() {
       const { movieA, movieB } = pairData.data;
       recordMutation.mutate({
         dimensionId,
-        mediaAType: "movie" as const,
+        mediaAType: 'movie' as const,
         mediaAId: movieA.id,
-        mediaBType: "movie" as const,
+        mediaBType: 'movie' as const,
         mediaBId: movieB.id,
-        winnerType: "movie" as const,
+        winnerType: 'movie' as const,
         winnerId,
       });
     },
@@ -287,7 +287,7 @@ export function CompareArenaPage() {
   // Skip pair
   const skipMutation = trpc.media.comparisons.recordSkip.useMutation({
     onSuccess: () => {
-      toast.success("Pair skipped");
+      toast.success('Pair skipped');
       setManualDimensionId(null);
       utils.media.comparisons.getSmartPair.invalidate();
     },
@@ -299,25 +299,25 @@ export function CompareArenaPage() {
     const { movieA, movieB } = pairData.data;
     skipMutation.mutate({
       dimensionId,
-      mediaAType: "movie" as const,
+      mediaAType: 'movie' as const,
       mediaAId: movieA.id,
-      mediaBType: "movie" as const,
+      mediaBType: 'movie' as const,
       mediaBId: movieB.id,
     });
   }, [pairData, dimensionId, skipMutation]);
 
   const handleDraw = useCallback(
-    (tier: "high" | "mid" | "low") => {
+    (tier: 'high' | 'mid' | 'low') => {
       if (!pairData?.data || !dimensionId || recordMutation.isPending) return;
 
       const { movieA, movieB } = pairData.data;
       recordMutation.mutate({
         dimensionId,
-        mediaAType: "movie" as const,
+        mediaAType: 'movie' as const,
         mediaAId: movieA.id,
-        mediaBType: "movie" as const,
+        mediaBType: 'movie' as const,
         mediaBId: movieB.id,
-        winnerType: "movie" as const,
+        winnerType: 'movie' as const,
         winnerId: 0,
         drawTier: tier,
       });
@@ -329,7 +329,7 @@ export function CompareArenaPage() {
   const activeDim = activeDimensions.find(
     (d: { id: number; name: string; description?: string | null }) => d.id === dimensionId
   );
-  const activeDimName = activeDim?.name ?? "Overall";
+  const activeDimName = activeDim?.name ?? 'Overall';
   const activeDimDesc = activeDim?.description ?? null;
 
   return (
@@ -366,7 +366,7 @@ export function CompareArenaPage() {
         <p className="text-muted-foreground text-sm">No dimensions configured yet.</p>
       ) : (
         <Select
-          value={String(dimensionId ?? "")}
+          value={String(dimensionId ?? '')}
           onChange={(e) => {
             const id = Number(e.target.value);
             setManualDimensionId(id);
@@ -394,7 +394,7 @@ export function CompareArenaPage() {
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-lg mb-2">Something went wrong</p>
           <p className="text-sm">
-            {pairError.message}{" "}
+            {pairError.message}{' '}
             <button onClick={() => refetchPair()} className="text-primary underline">
               Try again
             </button>
@@ -406,7 +406,7 @@ export function CompareArenaPage() {
             <>
               <p className="text-lg mb-2">Not enough movies</p>
               <p className="text-sm">
-                Some are on your watchlist.{" "}
+                Some are on your watchlist.{' '}
                 <Link to="/media/watchlist" className="text-primary underline">
                   View watchlist
                 </Link>
@@ -416,7 +416,7 @@ export function CompareArenaPage() {
             <>
               <p className="text-lg mb-2">Not enough watched movies</p>
               <p className="text-sm">
-                Watch at least 2 movies to start comparing.{" "}
+                Watch at least 2 movies to start comparing.{' '}
                 <Link to="/media" className="text-primary underline">
                   Browse library
                 </Link>
@@ -427,7 +427,7 @@ export function CompareArenaPage() {
       ) : pairData?.data ? (
         <>
           <p className="text-center text-muted-foreground text-sm">
-            Which movie has better{" "}
+            Which movie has better{' '}
             {activeDimDesc ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -477,22 +477,22 @@ export function CompareArenaPage() {
               {(
                 [
                   {
-                    tier: "high" as const,
+                    tier: 'high' as const,
                     icon: ChevronUp,
-                    label: "Equally great",
-                    hoverColor: "hover:border-green-500 hover:text-green-500",
+                    label: 'Equally great',
+                    hoverColor: 'hover:border-green-500 hover:text-green-500',
                   },
                   {
-                    tier: "mid" as const,
+                    tier: 'mid' as const,
                     icon: Minus,
-                    label: "Equally average",
-                    hoverColor: "hover:border-muted-foreground",
+                    label: 'Equally average',
+                    hoverColor: 'hover:border-muted-foreground',
                   },
                   {
-                    tier: "low" as const,
+                    tier: 'low' as const,
                     icon: ChevronDown,
-                    label: "Equally poor",
-                    hoverColor: "hover:border-red-500 hover:text-red-500",
+                    label: 'Equally poor',
+                    hoverColor: 'hover:border-red-500 hover:text-red-500',
                   },
                 ] as const
               ).map(({ tier, icon: Icon, label, hoverColor }) => (
@@ -578,14 +578,14 @@ export function CompareArenaPage() {
             <AlertDialogDescription>
               {comparisonsToPurge !== null ? (
                 <>
-                  <span className="font-medium text-foreground">{comparisonsToPurge}</span>{" "}
-                  comparison{comparisonsToPurge !== 1 ? "s" : ""} involving{" "}
+                  <span className="font-medium text-foreground">{comparisonsToPurge}</span>{' '}
+                  comparison{comparisonsToPurge !== 1 ? 's' : ''} involving{' '}
                   <span className="font-medium text-foreground">{blacklistTarget?.title}</span> will
                   be deleted and scores recalculated.
                 </>
               ) : (
                 <>
-                  All comparisons involving{" "}
+                  All comparisons involving{' '}
                   <span className="font-medium text-foreground">{blacklistTarget?.title}</span> will
                   be deleted and scores recalculated.
                 </>
@@ -599,7 +599,7 @@ export function CompareArenaPage() {
               onClick={confirmBlacklist}
               disabled={blacklistMutation.isPending}
             >
-              {blacklistMutation.isPending ? "Removing\u2026" : "Not watched"}
+              {blacklistMutation.isPending ? 'Removing\u2026' : 'Not watched'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -648,17 +648,17 @@ function MovieCard({
       <div
         className={`group relative rounded-lg overflow-hidden transition-all ${
           isWinner
-            ? "ring-2 ring-green-500 shadow-lg scale-[1.02]"
+            ? 'ring-2 ring-green-500 shadow-lg scale-[1.02]'
             : isWinner === false && scoreDelta != null
-              ? "ring-2 ring-red-500/50 opacity-75"
-              : ""
+              ? 'ring-2 ring-red-500/50 opacity-75'
+              : ''
         }`}
       >
         {/* Main clickable poster area */}
         <button
           onClick={onPick}
           disabled={disabled}
-          className={`w-full block ${disabled ? "cursor-default" : "cursor-pointer active:scale-[0.98]"} transition-transform`}
+          className={`w-full block ${disabled ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'} transition-transform`}
         >
           {imgError ? (
             <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
@@ -686,8 +686,8 @@ function MovieCard({
                 disabled={watchlistPending}
                 className={`absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-sm transition-colors ${
                   isOnWatchlist
-                    ? "bg-app-accent/90 text-app-accent-foreground hover:bg-red-500/90 hover:text-white"
-                    : "bg-black/50 text-white/80 hover:text-white hover:bg-black/70"
+                    ? 'bg-app-accent/90 text-app-accent-foreground hover:bg-red-500/90 hover:text-white'
+                    : 'bg-black/50 text-white/80 hover:text-white hover:bg-black/70'
                 }`}
                 aria-label={
                   isOnWatchlist
@@ -695,11 +695,11 @@ function MovieCard({
                     : `Add ${movie.title} to watchlist`
                 }
               >
-                <Bookmark className={`h-4 w-4 ${isOnWatchlist ? "fill-current" : ""}`} />
+                <Bookmark className={`h-4 w-4 ${isOnWatchlist ? 'fill-current' : ''}`} />
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              {isOnWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+              {isOnWatchlist ? 'Remove from watchlist' : 'Add to watchlist'}
             </TooltipContent>
           </Tooltip>
         )}
@@ -708,10 +708,10 @@ function MovieCard({
         {scoreDelta != null && (
           <div
             className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold tabular-nums animate-bounce ${
-              scoreDelta > 0 ? "bg-green-500/90 text-white" : "bg-red-500/90 text-white"
+              scoreDelta > 0 ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'
             }`}
           >
-            {scoreDelta > 0 ? "+" : ""}
+            {scoreDelta > 0 ? '+' : ''}
             {scoreDelta}
           </div>
         )}
@@ -780,7 +780,7 @@ function MovieCard({
       <button
         onClick={onPick}
         disabled={disabled}
-        className={`font-semibold text-sm text-center truncate px-1 transition-colors hover:text-primary ${disabled ? "cursor-default" : "cursor-pointer"}`}
+        className={`font-semibold text-sm text-center truncate px-1 transition-colors hover:text-primary ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
       >
         {movie.title}
       </button>

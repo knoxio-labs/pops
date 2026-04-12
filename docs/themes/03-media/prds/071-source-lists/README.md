@@ -10,43 +10,43 @@ Source lists define where candidate movies come from. Each source is a plugin th
 
 ### `rotation_sources`
 
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | integer PK | Auto-increment | |
-| `type` | text (enum) | — | `'plex_watchlist'`, `'plex_friends'`, `'imdb_top_100'`, `'manual'`, `'letterboxd'` (extensible) |
-| `name` | text | — | Display name (e.g., "João's Plex Watchlist", "IMDB Top 250") |
-| `priority` | integer | `1` | Higher = more likely to be selected. Scale: 1-10 |
-| `enabled` | boolean | `true` | |
-| `config` | text (JSON) | `'{}'` | Source-specific config (e.g., friend username, list URL) |
-| `last_synced_at` | text | `null` | ISO datetime of last successful sync |
-| `sync_interval_hours` | integer | `24` | How often to re-fetch candidates from this source |
-| `created_at` | text | `datetime('now')` | |
+| Column                | Type        | Default           | Description                                                                                     |
+| --------------------- | ----------- | ----------------- | ----------------------------------------------------------------------------------------------- |
+| `id`                  | integer PK  | Auto-increment    |                                                                                                 |
+| `type`                | text (enum) | —                 | `'plex_watchlist'`, `'plex_friends'`, `'imdb_top_100'`, `'manual'`, `'letterboxd'` (extensible) |
+| `name`                | text        | —                 | Display name (e.g., "João's Plex Watchlist", "IMDB Top 250")                                    |
+| `priority`            | integer     | `1`               | Higher = more likely to be selected. Scale: 1-10                                                |
+| `enabled`             | boolean     | `true`            |                                                                                                 |
+| `config`              | text (JSON) | `'{}'`            | Source-specific config (e.g., friend username, list URL)                                        |
+| `last_synced_at`      | text        | `null`            | ISO datetime of last successful sync                                                            |
+| `sync_interval_hours` | integer     | `24`              | How often to re-fetch candidates from this source                                               |
+| `created_at`          | text        | `datetime('now')` |                                                                                                 |
 
 ### `rotation_candidates`
 
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | integer PK | Auto-increment | |
-| `source_id` | integer FK | — | References `rotation_sources.id` |
-| `tmdb_id` | integer | — | TMDB movie ID |
-| `title` | text | — | For display without TMDB lookup |
-| `year` | integer | `null` | Release year |
-| `rating` | real | `null` | TMDB/IMDB rating (0-10 scale) |
-| `poster_path` | text | `null` | TMDB poster path |
-| `status` | text (enum) | `'pending'` | `'pending'`, `'added'`, `'skipped'`, `'excluded'` |
-| `discovered_at` | text | `datetime('now')` | When the source first returned this movie |
+| Column          | Type        | Default           | Description                                       |
+| --------------- | ----------- | ----------------- | ------------------------------------------------- |
+| `id`            | integer PK  | Auto-increment    |                                                   |
+| `source_id`     | integer FK  | —                 | References `rotation_sources.id`                  |
+| `tmdb_id`       | integer     | —                 | TMDB movie ID                                     |
+| `title`         | text        | —                 | For display without TMDB lookup                   |
+| `year`          | integer     | `null`            | Release year                                      |
+| `rating`        | real        | `null`            | TMDB/IMDB rating (0-10 scale)                     |
+| `poster_path`   | text        | `null`            | TMDB poster path                                  |
+| `status`        | text (enum) | `'pending'`       | `'pending'`, `'added'`, `'skipped'`, `'excluded'` |
+| `discovered_at` | text        | `datetime('now')` | When the source first returned this movie         |
 
 Unique constraint: `(tmdb_id)` — a movie appears once in the queue regardless of how many sources return it. If multiple sources return the same movie, it inherits the highest source priority.
 
 ### `rotation_exclusions`
 
-| Column | Type | Default | Description |
-|--------|------|---------|-------------|
-| `id` | integer PK | Auto-increment | |
-| `tmdb_id` | integer | — | TMDB movie ID (unique) |
-| `title` | text | — | For display |
-| `reason` | text | `null` | Optional user note |
-| `excluded_at` | text | `datetime('now')` | |
+| Column        | Type       | Default           | Description            |
+| ------------- | ---------- | ----------------- | ---------------------- |
+| `id`          | integer PK | Auto-increment    |                        |
+| `tmdb_id`     | integer    | —                 | TMDB movie ID (unique) |
+| `title`       | text       | —                 | For display            |
+| `reason`      | text       | `null`            | Optional user note     |
+| `excluded_at` | text       | `datetime('now')` |                        |
 
 ## API Surface
 
@@ -103,27 +103,27 @@ interface CandidateMovie {
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Source returns 0 candidates | Log, mark `last_synced_at`, no candidates added |
-| All candidates already in library | Selection returns empty, no additions this cycle |
-| Source deleted while candidates pending | Cascade delete candidates from that source |
-| Same movie excluded then un-excluded | Remove from exclusions, candidate re-enters pool if still present |
-| Candidate added to library, then movie removed from library | Candidate status resets to `pending` on next source sync |
-| TMDB ID changes for a movie | Extremely rare; handled by re-sync matching by title+year as fallback |
-| Friend removes movie from their watchlist | Candidate stays for 30 days (staleness rule), then deprioritised |
+| Case                                                        | Behaviour                                                             |
+| ----------------------------------------------------------- | --------------------------------------------------------------------- |
+| Source returns 0 candidates                                 | Log, mark `last_synced_at`, no candidates added                       |
+| All candidates already in library                           | Selection returns empty, no additions this cycle                      |
+| Source deleted while candidates pending                     | Cascade delete candidates from that source                            |
+| Same movie excluded then un-excluded                        | Remove from exclusions, candidate re-enters pool if still present     |
+| Candidate added to library, then movie removed from library | Candidate status resets to `pending` on next source sync              |
+| TMDB ID changes for a movie                                 | Extremely rare; handled by re-sync matching by title+year as fallback |
+| Friend removes movie from their watchlist                   | Candidate stays for 30 days (staleness rule), then deprioritised      |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-source-schema](us-01-source-schema.md) | Schema: `rotation_sources`, `rotation_candidates`, `rotation_exclusions` tables | Not started | Yes (parallel with PRD-070 US-01) |
-| 02 | [us-02-source-plugin-interface](us-02-source-plugin-interface.md) | Plugin interface + Plex watchlist adapter | Not started | Blocked by US-01 |
-| 03 | [us-03-plex-friends-source](us-03-plex-friends-source.md) | Plex friends watchlist source adapter | Not started | Blocked by US-02 |
-| 04 | [us-04-external-list-source](us-04-external-list-source.md) | IMDB/external list source adapter (web scraping or API) | Not started | Blocked by US-02 |
-| 05 | [us-05-selection-policy](us-05-selection-policy.md) | Weighted random selection from candidate pool | Not started | Blocked by US-01 |
-| 06 | [us-06-exclusion-list](us-06-exclusion-list.md) | Exclusion list CRUD + filtering during selection | Not started | Blocked by US-01 |
-| 07 | [us-07-source-sync-scheduler](us-07-source-sync-scheduler.md) | Scheduled source syncing based on per-source intervals | Not started | Blocked by US-02 |
+| #   | Story                                                             | Summary                                                                         | Status      | Parallelisable                    |
+| --- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------- | --------------------------------- |
+| 01  | [us-01-source-schema](us-01-source-schema.md)                     | Schema: `rotation_sources`, `rotation_candidates`, `rotation_exclusions` tables | Not started | Yes (parallel with PRD-070 US-01) |
+| 02  | [us-02-source-plugin-interface](us-02-source-plugin-interface.md) | Plugin interface + Plex watchlist adapter                                       | Not started | Blocked by US-01                  |
+| 03  | [us-03-plex-friends-source](us-03-plex-friends-source.md)         | Plex friends watchlist source adapter                                           | Not started | Blocked by US-02                  |
+| 04  | [us-04-external-list-source](us-04-external-list-source.md)       | IMDB/external list source adapter (web scraping or API)                         | Not started | Blocked by US-02                  |
+| 05  | [us-05-selection-policy](us-05-selection-policy.md)               | Weighted random selection from candidate pool                                   | Not started | Blocked by US-01                  |
+| 06  | [us-06-exclusion-list](us-06-exclusion-list.md)                   | Exclusion list CRUD + filtering during selection                                | Not started | Blocked by US-01                  |
+| 07  | [us-07-source-sync-scheduler](us-07-source-sync-scheduler.md)     | Scheduled source syncing based on per-source intervals                          | Not started | Blocked by US-02                  |
 
 ## Out of Scope
 

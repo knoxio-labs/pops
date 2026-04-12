@@ -4,7 +4,7 @@
  * Presents quality profile, root folder, and language profile dropdowns,
  * season monitoring checkboxes with smart defaults, then submits to Sonarr.
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,10 @@ import {
   DialogDescription,
   Select,
   Label,
-} from "@pops/ui";
-import { Button } from "@pops/ui";
-import { RefreshCw, CheckCircle2 } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { Button } from '@pops/ui';
+import { RefreshCw, CheckCircle2 } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 export interface SeasonInfo {
   seasonNumber: number;
@@ -53,7 +53,7 @@ export function RequestSeriesModal({
   seasons,
 }: RequestSeriesModalProps) {
   const [qualityProfileId, setQualityProfileId] = useState<number | null>(null);
-  const [rootFolderPath, setRootFolderPath] = useState<string>("");
+  const [rootFolderPath, setRootFolderPath] = useState<string>('');
   const [languageProfileId, setLanguageProfileId] = useState<number | null>(null);
   const [seasonMonitored, setSeasonMonitored] = useState<Record<number, boolean>>({});
   const [success, setSuccess] = useState(false);
@@ -119,7 +119,7 @@ export function RequestSeriesModal({
   function resetState() {
     setSuccess(false);
     setQualityProfileId(null);
-    setRootFolderPath("");
+    setRootFolderPath('');
     setLanguageProfileId(null);
     setSeasonMonitored({});
     setError(null);
@@ -175,10 +175,10 @@ export function RequestSeriesModal({
             <div className="text-center py-4 space-y-2">
               <p className="text-sm text-red-400">
                 {profileList.length === 0
-                  ? "No quality profiles found"
+                  ? 'No quality profiles found'
                   : folderList.length === 0
-                    ? "No root folders found"
-                    : "No language profiles found"}
+                    ? 'No root folders found'
+                    : 'No language profiles found'}
                 .
               </p>
               <Button
@@ -199,7 +199,7 @@ export function RequestSeriesModal({
               <Select
                 label="Quality Profile"
                 id="quality-profile"
-                value={String(qualityProfileId ?? "")}
+                value={String(qualityProfileId ?? '')}
                 onChange={(e) => setQualityProfileId(Number(e.target.value))}
                 disabled={addSeries.isPending || success}
                 options={profileList.map((p) => ({
@@ -225,7 +225,7 @@ export function RequestSeriesModal({
               <Select
                 label="Language Profile"
                 id="language-profile"
-                value={String(languageProfileId ?? "")}
+                value={String(languageProfileId ?? '')}
                 onChange={(e) => setLanguageProfileId(Number(e.target.value))}
                 disabled={addSeries.isPending || success}
                 options={languageList.map((l) => ({
@@ -287,7 +287,7 @@ export function RequestSeriesModal({
                           }
                           disabled={addSeries.isPending || success}
                         />
-                        {s.seasonNumber === 0 ? "Specials" : `Season ${s.seasonNumber}`}
+                        {s.seasonNumber === 0 ? 'Specials' : `Season ${s.seasonNumber}`}
                         {s.firstAirDate && (
                           <span className="text-muted-foreground">
                             — {s.firstAirDate.slice(0, 4)}
@@ -339,7 +339,7 @@ export function RequestSeriesModal({
                   Adding...
                 </>
               ) : (
-                "Request"
+                'Request'
               )}
             </Button>
           </div>

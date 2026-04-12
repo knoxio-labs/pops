@@ -11,28 +11,28 @@ Build the wishlist — savings goals with target amounts, progress tracking, and
 
 ### wish_list
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT | PK, UUID | |
-| item | TEXT | NOT NULL | Item description |
-| target_amount | REAL | nullable | Total cost target |
-| saved | REAL | nullable | Amount saved so far |
-| priority | TEXT | nullable | Enum: "Needing", "Soon", "One Day", "Dreaming" |
-| url | TEXT | nullable | Link to item (URL validated) |
-| notes | TEXT | nullable | |
-| last_edited_time | TEXT | NOT NULL | ISO 8601 |
+| Column           | Type | Constraints | Description                                    |
+| ---------------- | ---- | ----------- | ---------------------------------------------- |
+| id               | TEXT | PK, UUID    |                                                |
+| item             | TEXT | NOT NULL    | Item description                               |
+| target_amount    | REAL | nullable    | Total cost target                              |
+| saved            | REAL | nullable    | Amount saved so far                            |
+| priority         | TEXT | nullable    | Enum: "Needing", "Soon", "One Day", "Dreaming" |
+| url              | TEXT | nullable    | Link to item (URL validated)                   |
+| notes            | TEXT | nullable    |                                                |
+| last_edited_time | TEXT | NOT NULL    | ISO 8601                                       |
 
 **Computed:** `remainingAmount = targetAmount - saved` (null if either is null)
 
 ## API Surface
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `finance.wishlist.list` | search?, priority?, limit, offset | `{ data, pagination }` | Ordered by item ASC. Includes computed remainingAmount |
-| `finance.wishlist.get` | id | `{ data }` | |
-| `finance.wishlist.create` | item, targetAmount?, saved?, priority?, url?, notes? | `{ data }` | URL validated if provided |
-| `finance.wishlist.update` | id, data (partial) | `{ data }` | |
-| `finance.wishlist.delete` | id | `{ message }` | |
+| Procedure                 | Input                                                | Output                 | Notes                                                  |
+| ------------------------- | ---------------------------------------------------- | ---------------------- | ------------------------------------------------------ |
+| `finance.wishlist.list`   | search?, priority?, limit, offset                    | `{ data, pagination }` | Ordered by item ASC. Includes computed remainingAmount |
+| `finance.wishlist.get`    | id                                                   | `{ data }`             |                                                        |
+| `finance.wishlist.create` | item, targetAmount?, saved?, priority?, url?, notes? | `{ data }`             | URL validated if provided                              |
+| `finance.wishlist.update` | id, data (partial)                                   | `{ data }`             |                                                        |
+| `finance.wishlist.delete` | id                                                   | `{ message }`          |                                                        |
 
 ## Business Rules
 
@@ -43,11 +43,11 @@ Build the wishlist — savings goals with target amounts, progress tracking, and
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-schema-api](us-01-schema-api.md) | Wishlist table, CRUD procedures, URL validation, remaining calculation | Done | No (first) |
-| 02 | [us-02-wishlist-page](us-02-wishlist-page.md) | DataTable with progress bars, priority badges, external links | Done | Blocked by us-01 |
-| 03 | [us-03-wishlist-crud-ui](us-03-wishlist-crud-ui.md) | Create/edit/delete dialogs with form validation | Done | Blocked by us-01 |
+| #   | Story                                               | Summary                                                                | Status | Parallelisable   |
+| --- | --------------------------------------------------- | ---------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-schema-api](us-01-schema-api.md)             | Wishlist table, CRUD procedures, URL validation, remaining calculation | Done   | No (first)       |
+| 02  | [us-02-wishlist-page](us-02-wishlist-page.md)       | DataTable with progress bars, priority badges, external links          | Done   | Blocked by us-01 |
+| 03  | [us-03-wishlist-crud-ui](us-03-wishlist-crud-ui.md) | Create/edit/delete dialogs with form validation                        | Done   | Blocked by us-01 |
 
 ## Out of Scope
 

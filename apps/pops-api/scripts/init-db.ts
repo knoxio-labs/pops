@@ -2,15 +2,15 @@
  * Initialize empty database for local development
  * Run with: tsx scripts/init-db.ts
  */
-import BetterSqlite3 from "better-sqlite3";
-import { existsSync, mkdirSync, unlinkSync } from "node:fs";
-import { dirname } from "node:path";
-import { initializeSchema } from "../src/db/schema.js";
-import { assertNotProduction, assertLowRecordCount } from "./lib/guard.js";
+import BetterSqlite3 from 'better-sqlite3';
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { initializeSchema } from '../src/db/schema.js';
+import { assertNotProduction, assertLowRecordCount } from './lib/guard.js';
 
 assertNotProduction();
 
-const DB_PATH = process.env.SQLITE_PATH ?? "./data/pops.db";
+const DB_PATH = process.env.SQLITE_PATH ?? './data/pops.db';
 
 // Create data directory if it doesn't exist
 mkdirSync(dirname(DB_PATH), { recursive: true });
@@ -29,8 +29,8 @@ if (existsSync(DB_PATH)) {
 }
 
 const db = new BetterSqlite3(DB_PATH);
-db.pragma("journal_mode = WAL");
-db.pragma("busy_timeout = 5000");
+db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 5000');
 
 initializeSchema(db);
 

@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,20 +8,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./dialog";
-import { Button } from "../components/Button";
-import { TextInput } from "../components/TextInput";
-import { NumberInput } from "../components/NumberInput";
-import { DateTimeInput } from "../components/DateTimeInput";
-import { Select } from "../components/Select";
+} from './dialog';
+import { Button } from '../components/Button';
+import { TextInput } from '../components/TextInput';
+import { NumberInput } from '../components/NumberInput';
+import { DateTimeInput } from '../components/DateTimeInput';
+import { Select } from '../components/Select';
 
 const meta: Meta<typeof Dialog> = {
-  title: "Feedback/Dialog",
+  title: 'Feedback/Dialog',
   component: Dialog,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -100,11 +100,11 @@ export const Form: Story = {
   render: () => {
     const [isOpen, setIsOpen] = useState(false);
     const [formData, setFormData] = useState({
-      description: "",
+      description: '',
       amount: undefined as number | undefined,
-      date: "",
-      category: "",
-      account: "",
+      date: '',
+      category: '',
+      account: '',
     });
 
     return (
@@ -148,11 +148,11 @@ export const Form: Story = {
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 options={[
-                  { label: "Food", value: "food" },
-                  { label: "Shopping", value: "shopping" },
-                  { label: "Entertainment", value: "entertainment" },
-                  { label: "Transport", value: "transport" },
-                  { label: "Bills", value: "bills" },
+                  { label: 'Food', value: 'food' },
+                  { label: 'Shopping', value: 'shopping' },
+                  { label: 'Entertainment', value: 'entertainment' },
+                  { label: 'Transport', value: 'transport' },
+                  { label: 'Bills', value: 'bills' },
                 ]}
                 placeholder="Select category"
               />
@@ -163,9 +163,9 @@ export const Form: Story = {
                 value={formData.account}
                 onChange={(e) => setFormData({ ...formData, account: e.target.value })}
                 options={[
-                  { label: "Checking", value: "checking" },
-                  { label: "Savings", value: "savings" },
-                  { label: "Credit Card", value: "credit" },
+                  { label: 'Checking', value: 'checking' },
+                  { label: 'Savings', value: 'savings' },
+                  { label: 'Credit Card', value: 'credit' },
                 ]}
                 placeholder="Select account"
               />

@@ -24,16 +24,15 @@ apps/pops-storybook/
 ### Story Discovery
 
 Storybook config globs:
+
 ```typescript
-stories: [
-  '../../packages/ui/src/**/*.stories.tsx',
-  '../../packages/app-*/src/**/*.stories.tsx',
-]
+stories: ['../../packages/ui/src/**/*.stories.tsx', '../../packages/app-*/src/**/*.stories.tsx'];
 ```
 
 ### Story Co-location
 
 Stories live next to their component:
+
 ```
 packages/ui/src/components/
   DataTable.tsx
@@ -51,19 +50,19 @@ packages/ui/src/components/
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Component has no story | Not a blocker for PRD-003, but tracked as tech debt |
-| Story needs API data | Use MSW or static mock data — no real API calls in stories |
+| Case                               | Behaviour                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| Component has no story             | Not a blocker for PRD-003, but tracked as tech debt                             |
+| Story needs API data               | Use MSW or static mock data — no real API calls in stories                      |
 | Multiple story files per component | Supported — use descriptive filenames (e.g., `DataTable.filtering.stories.tsx`) |
-| App-specific component stories | Discovered from `packages/app-*/src/**/*.stories.tsx` — same Storybook instance |
+| App-specific component stories     | Discovered from `packages/app-*/src/**/*.stories.tsx` — same Storybook instance |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-storybook-config](us-01-storybook-config.md) | Set up Storybook app with config, story discovery globs, global decorators | Done | No (first) |
-| 02 | [us-02-theme-decorator](us-02-theme-decorator.md) | Global decorator for light/dark mode toggle and app colour variable | Done | Blocked by us-01 |
+| #   | Story                                               | Summary                                                                    | Status | Parallelisable   |
+| --- | --------------------------------------------------- | -------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-storybook-config](us-01-storybook-config.md) | Set up Storybook app with config, story discovery globs, global decorators | Done   | No (first)       |
+| 02  | [us-02-theme-decorator](us-02-theme-decorator.md)   | Global decorator for light/dark mode toggle and app colour variable        | Done   | Blocked by us-01 |
 
 ## Verification
 

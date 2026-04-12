@@ -1,8 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { comparisons, mediaWatchlist, movies, watchHistory } from "@pops/db-types";
-import type { RandomPair } from "../types.js";
-import { getDimension } from "../dimensions.service.js";
+import { and, desc, eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { comparisons, mediaWatchlist, movies, watchHistory } from '@pops/db-types';
+import type { RandomPair } from '../types.js';
+import { getDimension } from '../dimensions.service.js';
 
 /**
  * Get a random pair of watched movies for comparison, avoiding recently
@@ -21,7 +21,7 @@ export function getRandomPair(dimensionId: number, avoidRecent: number = 50): Ra
   const allWatchedIds = db
     .select({ mediaId: watchHistory.mediaId })
     .from(watchHistory)
-    .where(and(eq(watchHistory.mediaType, "movie"), eq(watchHistory.completed, 1)))
+    .where(and(eq(watchHistory.mediaType, 'movie'), eq(watchHistory.completed, 1)))
     .groupBy(watchHistory.mediaId)
     .all()
     .map((r) => r.mediaId);
@@ -31,7 +31,7 @@ export function getRandomPair(dimensionId: number, avoidRecent: number = 50): Ra
     db
       .select({ mediaId: mediaWatchlist.mediaId })
       .from(mediaWatchlist)
-      .where(eq(mediaWatchlist.mediaType, "movie"))
+      .where(eq(mediaWatchlist.mediaType, 'movie'))
       .all()
       .map((r) => r.mediaId)
   );
@@ -52,8 +52,8 @@ export function getRandomPair(dimensionId: number, avoidRecent: number = 50): Ra
       .where(
         and(
           eq(comparisons.dimensionId, dimensionId),
-          eq(comparisons.mediaAType, "movie"),
-          eq(comparisons.mediaBType, "movie")
+          eq(comparisons.mediaAType, 'movie'),
+          eq(comparisons.mediaBType, 'movie')
         )
       )
       .orderBy(desc(comparisons.comparedAt))

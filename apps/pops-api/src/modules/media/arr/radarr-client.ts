@@ -1,7 +1,7 @@
 /**
  * Radarr API client — extends base *arr client with movie-specific endpoints.
  */
-import { ArrBaseClient } from "./base-client.js";
+import { ArrBaseClient } from './base-client.js';
 import type {
   RadarrMovie,
   RadarrQueueResponse,
@@ -11,12 +11,12 @@ import type {
   RadarrAddMovieInput,
   RadarrCheckResult,
   RadarrCommandResponse,
-} from "./types.js";
+} from './types.js';
 
 export class RadarrClient extends ArrBaseClient {
   /** Fetch all monitored movies from Radarr. */
   async getMovies(): Promise<RadarrMovie[]> {
-    return this.get<RadarrMovie[]>("/movie");
+    return this.get<RadarrMovie[]>('/movie');
   }
 
   /** Fetch a single movie by Radarr ID. */
@@ -26,17 +26,17 @@ export class RadarrClient extends ArrBaseClient {
 
   /** Fetch the download queue. */
   async getQueue(): Promise<RadarrQueueResponse> {
-    return this.get<RadarrQueueResponse>("/queue?includeMovie=true");
+    return this.get<RadarrQueueResponse>('/queue?includeMovie=true');
   }
 
   /** Fetch quality profiles from Radarr. */
   async getQualityProfiles(): Promise<RadarrQualityProfile[]> {
-    return this.get<RadarrQualityProfile[]>("/qualityprofile");
+    return this.get<RadarrQualityProfile[]>('/qualityprofile');
   }
 
   /** Fetch root folders from Radarr. */
   async getRootFolders(): Promise<RadarrRootFolder[]> {
-    return this.get<RadarrRootFolder[]>("/rootfolder");
+    return this.get<RadarrRootFolder[]>('/rootfolder');
   }
 
   /** Check if a movie exists in Radarr by TMDB ID. */
@@ -51,7 +51,7 @@ export class RadarrClient extends ArrBaseClient {
 
   /** Add a movie to Radarr. */
   async addMovie(input: RadarrAddMovieInput): Promise<RadarrMovie> {
-    return this.post<RadarrMovie>("/movie", {
+    return this.post<RadarrMovie>('/movie', {
       tmdbId: input.tmdbId,
       title: input.title,
       year: input.year,
@@ -70,8 +70,8 @@ export class RadarrClient extends ArrBaseClient {
 
   /** Trigger a search for a movie in Radarr. */
   async triggerSearch(radarrId: number): Promise<RadarrCommandResponse> {
-    return this.post<RadarrCommandResponse>("/command", {
-      name: "MoviesSearch",
+    return this.post<RadarrCommandResponse>('/command', {
+      name: 'MoviesSearch',
       movieIds: [radarrId],
     });
   }
@@ -85,7 +85,7 @@ export class RadarrClient extends ArrBaseClient {
     const movie = movies[0];
 
     if (!movie) {
-      return { status: "not_found", label: "Not in Radarr" };
+      return { status: 'not_found', label: 'Not in Radarr' };
     }
 
     // Check download queue only if the movie exists in Radarr
@@ -97,20 +97,20 @@ export class RadarrClient extends ArrBaseClient {
           ? Math.round(((queueItem.size - queueItem.sizeleft) / queueItem.size) * 100)
           : 0;
       return {
-        status: "downloading",
+        status: 'downloading',
         label: `Downloading ${progress}%`,
         progress,
       };
     }
 
     if (movie.hasFile) {
-      return { status: "available", label: "Available" };
+      return { status: 'available', label: 'Available' };
     }
 
     if (movie.monitored) {
-      return { status: "monitored", label: "Monitored" };
+      return { status: 'monitored', label: 'Monitored' };
     }
 
-    return { status: "unmonitored", label: "Unmonitored" };
+    return { status: 'unmonitored', label: 'Unmonitored' };
   }
 }

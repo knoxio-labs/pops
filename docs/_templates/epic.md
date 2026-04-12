@@ -8,8 +8,8 @@
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
+| #     | PRD                                      | Summary            | Status   |
+| ----- | ---------------------------------------- | ------------------ | -------- |
 | {NNN} | [{PRD name}](../prds/NNN-slug/README.md) | {One-line summary} | {Status} |
 
 {Parallelisation notes: which PRDs can be built concurrently, which block others.}

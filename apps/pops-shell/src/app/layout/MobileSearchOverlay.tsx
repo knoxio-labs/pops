@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
-import { Search, X, ArrowLeft } from "lucide-react";
-import { Input, Button } from "@pops/ui";
-import { useSearchStore } from "@/store/searchStore";
+import { useCallback, useEffect, useRef } from 'react';
+import { Search, X, ArrowLeft } from 'lucide-react';
+import { Input, Button } from '@pops/ui';
+import { useSearchStore } from '@/store/searchStore';
 
 const DEBOUNCE_MS = 300;
 
@@ -31,14 +31,14 @@ export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps)
   const handleClear = useCallback(() => {
     clear();
     if (inputRef.current) {
-      inputRef.current.value = "";
+      inputRef.current.value = '';
       inputRef.current.focus();
     }
   }, [clear]);
 
   const handleClose = useCallback(() => {
     clear();
-    if (inputRef.current) inputRef.current.value = "";
+    if (inputRef.current) inputRef.current.value = '';
     onClose();
   }, [clear, onClose]);
 
@@ -57,14 +57,14 @@ export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps)
     if (!open) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         e.preventDefault();
         handleClose();
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, handleClose]);
 
   // Clean up debounce timer

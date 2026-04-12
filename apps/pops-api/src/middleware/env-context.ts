@@ -8,15 +8,15 @@
  * Unknown or expired environments return 410 Gone.
  * Missing `?env` or `?env=prod` falls through to the prod DB (default behaviour).
  */
-import type { Request, Response, NextFunction } from "express";
-import { getEnvRecord, getOrOpenEnvDb } from "../modules/core/envs/registry.js";
-import { withEnvDb } from "../db.js";
+import type { Request, Response, NextFunction } from 'express';
+import { getEnvRecord, getOrOpenEnvDb } from '../modules/core/envs/registry.js';
+import { withEnvDb } from '../db.js';
 
 export function envContextMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const envName = req.query["env"] as string | undefined;
+  const envName = req.query['env'] as string | undefined;
 
   // No env param or explicitly prod → use default prod DB
-  if (!envName || envName === "prod") {
+  if (!envName || envName === 'prod') {
     next();
     return;
   }

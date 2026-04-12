@@ -21,6 +21,7 @@ As a developer, I want all inline `style={{}}` hardcoded values and JS/TS colour
 ## Notes
 
 Three distinct sub-problems:
+
 1. **UI primitives** (5 files): `rgb(55, 65, 81)` focus border — high priority since it affects all apps
 2. **Tree indentation** (LocationPicker, ConnectionTracePanel, LocationTreePage): dynamic padding based on depth — use CSS custom property `--tree-indent-size` multiplied by depth
 3. **Canvas colours** (ConnectionGraph): hex strings for node/edge rendering — extract to a typed constant object

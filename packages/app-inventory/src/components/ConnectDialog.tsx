@@ -3,8 +3,8 @@
  * Opens a dialog with a search input that queries inventory.items.list,
  * displays results, and connects the selected item.
  */
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogTrigger,
@@ -15,9 +15,9 @@ import {
   Button,
   TextInput,
   Skeleton,
-} from "@pops/ui";
-import { Link2, Search } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { Link2, Search } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 interface ConnectDialogProps {
   currentItemId: string;
@@ -26,7 +26,7 @@ interface ConnectDialogProps {
 
 export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = trpc.inventory.items.list.useQuery(
     { search, limit: 10 },
@@ -35,14 +35,14 @@ export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps
 
   const connectMutation = trpc.inventory.connections.connect.useMutation({
     onSuccess: () => {
-      toast.success("Items connected");
+      toast.success('Items connected');
       onConnected();
       setOpen(false);
-      setSearch("");
+      setSearch('');
     },
     onError: (err) => {
-      if (err.data?.code === "CONFLICT") {
-        toast.error("These items are already connected");
+      if (err.data?.code === 'CONFLICT') {
+        toast.error('These items are already connected');
       } else {
         toast.error(`Failed to connect: ${err.message}`);
       }
@@ -61,7 +61,7 @@ export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps
       open={open}
       onOpenChange={(v) => {
         setOpen(v);
-        if (!v) setSearch("");
+        if (!v) setSearch('');
       }}
     >
       <DialogTrigger asChild>
@@ -112,8 +112,8 @@ export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps
                 <div>
                   <div className="font-medium text-sm">{item.itemName}</div>
                   <div className="text-xs text-muted-foreground">
-                    {[item.brand, item.model, item.assetId].filter(Boolean).join(" · ") ||
-                      "No details"}
+                    {[item.brand, item.model, item.assetId].filter(Boolean).join(' · ') ||
+                      'No details'}
                   </div>
                 </div>
                 <Link2 className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />

@@ -7,8 +7,8 @@
  * Router-agnostic: pass `renderLink` to use your router's Link component
  * for client-side navigation. Defaults to `<a>`.
  */
-import { Fragment, type ReactNode, type ComponentType } from "react";
-import { ArrowLeft } from "lucide-react";
+import { Fragment, type ReactNode, type ComponentType } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -17,8 +17,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
-} from "../primitives/breadcrumb";
-import { cn } from "../lib/utils";
+} from '../primitives/breadcrumb';
+import { cn } from '../lib/utils';
 
 export interface BreadcrumbSegment {
   label: string;
@@ -163,7 +163,7 @@ export function PageHeader({
 
   if (isTopLevel) {
     return (
-      <header className={cn("space-y-1", className)}>
+      <header className={cn('space-y-1', className)}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -179,7 +179,7 @@ export function PageHeader({
   }
 
   return (
-    <header className={cn("space-y-2", className)}>
+    <header className={cn('space-y-2', className)}>
       <div className="flex items-center gap-3">
         {backHref && (
           <LinkComponent

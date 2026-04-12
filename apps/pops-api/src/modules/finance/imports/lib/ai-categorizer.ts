@@ -6,14 +6,14 @@
  * Only the merchant description is sent to the API — no account numbers,
  * card numbers, or personal identifiers.
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { getEnv } from "../../../../env.js";
-import { getDrizzle, isNamedEnvContext } from "../../../../db.js";
-import { aiUsage } from "@pops/db-types";
-import { logger } from "../../../../lib/logger.js";
-import { withRateLimitRetry } from "../../../../lib/ai-retry.js";
+import Anthropic from '@anthropic-ai/sdk';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { getEnv } from '../../../../env.js';
+import { getDrizzle, isNamedEnvContext } from '../../../../db.js';
+import { aiUsage } from '@pops/db-types';
+import { logger } from '../../../../lib/logger.js';
+import { withRateLimitRetry } from '../../../../lib/ai-retry.js';
 
 export interface AiCacheEntry {
   description: string;
@@ -34,8 +34,8 @@ let diskLoaded = false;
 
 function getCachePath(): string {
   return (
-    process.env["AI_CACHE_PATH"] ??
-    join(dirname(process.env["SQLITE_PATH"] ?? "./data/pops.db"), "ai_entity_cache.json")
+    process.env['AI_CACHE_PATH'] ??
+    join(dirname(process.env['SQLITE_PATH'] ?? './data/pops.db'), 'ai_entity_cache.json')
   );
 }
 
@@ -45,16 +45,16 @@ function loadCacheFromDisk(): void {
   const path = getCachePath();
   if (!existsSync(path)) return;
   try {
-    const raw = readFileSync(path, "utf-8");
+    const raw = readFileSync(path, 'utf-8');
     const entries = JSON.parse(raw) as AiCacheEntry[];
     for (const entry of entries) {
       cache.set(entry.description.toUpperCase().trim(), entry);
     }
-    logger.info({ path, entries: entries.length }, "[AI] Loaded cache from disk");
+    logger.info({ path, entries: entries.length }, '[AI] Loaded cache from disk');
   } catch (err) {
     logger.warn(
       { path, error: err instanceof Error ? err.message : String(err) },
-      "[AI] Failed to load cache from disk, starting fresh"
+      '[AI] Failed to load cache from disk, starting fresh'
     );
   }
 }
@@ -68,7 +68,7 @@ function saveCacheToDisk(): void {
   } catch (err) {
     logger.warn(
       { path, error: err instanceof Error ? err.message : String(err) },
-      "[AI] Failed to save cache to disk"
+      '[AI] Failed to save cache to disk'
     );
   }
 }
@@ -118,8 +118,8 @@ export function clearAllCache(): number {
   return count;
 }
 
-import { AiCategorizationError } from "./ai-categorizer-error.js";
-export { AiCategorizationError } from "./ai-categorizer-error.js";
+import { AiCategorizationError } from './ai-categorizer-error.js';
+export { AiCategorizationError } from './ai-categorizer-error.js';
 
 // Shared AI retry helper lives in src/lib/ai-retry.ts
 
@@ -147,7 +147,7 @@ export async function categorizeWithAi(
         entityName: cached.entityName,
         category: cached.category,
       },
-      "[AI] Cache hit"
+      '[AI] Cache hit'
     );
 
     // Track cache hit
@@ -169,25 +169,25 @@ export async function categorizeWithAi(
     return { result: cached };
   }
 
-  const apiKey = getEnv("CLAUDE_API_KEY");
+  const apiKey = getEnv('CLAUDE_API_KEY');
   if (!apiKey) {
-    throw new AiCategorizationError("CLAUDE_API_KEY not configured", "NO_API_KEY");
+    throw new AiCategorizationError('CLAUDE_API_KEY not configured', 'NO_API_KEY');
   }
 
   // maxRetries=0: SDK-level retries disabled — we handle retries ourselves via withRateLimitRetry
   const client = new Anthropic({ apiKey, maxRetries: 0 });
 
-  logger.debug({ description: sanitizedDescription }, "[AI] Calling API (cache miss)");
+  logger.debug({ description: sanitizedDescription }, '[AI] Calling API (cache miss)');
 
   try {
     const response = await withRateLimitRetry(
       () =>
         client.messages.create({
-          model: "claude-haiku-4-5-20251001",
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 200,
           messages: [
             {
-              role: "user",
+              role: 'user',
               content: `Given this bank transaction data, identify the merchant/entity name and a spending category.
 
 Transaction data: ${rawRow}
@@ -198,17 +198,17 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
           ],
         }),
       sanitizedDescription,
-      { logger, logPrefix: "[AI]" }
+      { logger, logPrefix: '[AI]' }
     );
 
-    const text = response.content[0]?.type === "text" ? response.content[0].text : null;
+    const text = response.content[0]?.type === 'text' ? response.content[0].text : null;
     if (!text) return { result: null };
 
     // Strip markdown code fences if present (Claude sometimes wraps JSON in ```json...```)
     const cleanedText = text
       .trim()
-      .replace(/^```(?:json)?\s*\n?/gm, "")
-      .replace(/\n?```\s*$/gm, "");
+      .replace(/^```(?:json)?\s*\n?/gm, '')
+      .replace(/\n?```\s*$/gm, '');
     const parsed = JSON.parse(cleanedText) as { entityName: string; category: string };
     const entry: AiCacheEntry = {
       description: rawRow.trim(),
@@ -249,7 +249,7 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
         outputTokens,
         costUsd: costUsd.toFixed(6),
       },
-      "[AI] API call successful"
+      '[AI] API call successful'
     );
 
     return {
@@ -262,11 +262,11 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
         description: sanitizedDescription,
         error: error instanceof Error ? error.message : String(error),
       },
-      "[AI] API call failed"
+      '[AI] API call failed'
     );
 
     // Check if it's an Anthropic API error
-    if (error && typeof error === "object" && "status" in error) {
+    if (error && typeof error === 'object' && 'status' in error) {
       const apiError = error as {
         status: number;
         message?: string;
@@ -278,27 +278,27 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
         const errorMessage =
           apiError.error?.error?.message ||
           (apiError as { message?: string }).message ||
-          "Unknown API error";
+          'Unknown API error';
 
-        if (errorMessage.toLowerCase().includes("credit balance")) {
+        if (errorMessage.toLowerCase().includes('credit balance')) {
           throw new AiCategorizationError(
-            "Anthropic API credit balance too low. Please add credits at https://console.anthropic.com/settings/plans",
-            "INSUFFICIENT_CREDITS"
+            'Anthropic API credit balance too low. Please add credits at https://console.anthropic.com/settings/plans',
+            'INSUFFICIENT_CREDITS'
           );
         }
       }
 
       // Other API errors
       throw new AiCategorizationError(
-        `Anthropic API error: ${apiError.message || "Unknown error"}`,
-        "API_ERROR"
+        `Anthropic API error: ${apiError.message || 'Unknown error'}`,
+        'API_ERROR'
       );
     }
 
     // Generic error
     throw new AiCategorizationError(
-      `Failed to categorize: ${error instanceof Error ? error.message : "Unknown error"}`,
-      "API_ERROR"
+      `Failed to categorize: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'API_ERROR'
     );
   }
 }

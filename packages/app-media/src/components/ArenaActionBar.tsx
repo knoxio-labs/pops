@@ -1,5 +1,5 @@
-import { Clock, MoreHorizontal, Ban, EyeOff } from "lucide-react";
-import { Button, Tooltip, TooltipContent, TooltipTrigger, DropdownMenu } from "@pops/ui";
+import { Clock, MoreHorizontal, Ban, EyeOff } from 'lucide-react';
+import { Button, Tooltip, TooltipContent, TooltipTrigger, DropdownMenu } from '@pops/ui';
 
 export interface ArenaMovie {
   id: number;
@@ -44,7 +44,7 @@ export function ArenaActionBar({
           disabled={skipPending}
           data-testid="skip-button"
         >
-          {skipPending ? "Skipping…" : "Skip this pair"}
+          {skipPending ? 'Skipping…' : 'Skip this pair'}
         </Button>
 
         <Tooltip>
@@ -103,8 +103,8 @@ export function ArenaActionBar({
               {
                 items: [
                   {
-                    label: "N/A (exclude both)",
-                    value: "na",
+                    label: 'N/A (exclude both)',
+                    value: 'na',
                     icon: <Ban className="h-4 w-4" />,
                     disabled: naPending,
                     onSelect: onNA,
@@ -112,20 +112,20 @@ export function ArenaActionBar({
                 ],
               },
               {
-                label: "Destructive",
+                label: 'Destructive',
                 items: [
                   {
                     label: `Not Watched: ${movieA.title}`,
-                    value: "blacklist-a",
-                    variant: "destructive" as const,
+                    value: 'blacklist-a',
+                    variant: 'destructive' as const,
                     icon: <EyeOff className="h-4 w-4" />,
                     disabled: blacklistPending,
                     onSelect: () => onBlacklist(movieA),
                   },
                   {
                     label: `Not Watched: ${movieB.title}`,
-                    value: "blacklist-b",
-                    variant: "destructive" as const,
+                    value: 'blacklist-b',
+                    variant: 'destructive' as const,
                     icon: <EyeOff className="h-4 w-4" />,
                     disabled: blacklistPending,
                     onSelect: () => onBlacklist(movieB),
@@ -148,7 +148,7 @@ export function ArenaActionBar({
           data-testid="na-button"
         >
           <Ban className="h-3.5 w-3.5 mr-1.5" />
-          {naPending ? "Excluding…" : "N/A"}
+          {naPending ? 'Excluding…' : 'N/A'}
         </Button>
 
         <Button

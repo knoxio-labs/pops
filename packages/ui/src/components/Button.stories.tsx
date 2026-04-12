@@ -2,40 +2,40 @@
  * Button component stories
  * Demonstrates all variants, sizes, shapes, states, and icon support
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button } from "./Button";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Button } from './Button';
 
 const meta: Meta<typeof Button> = {
   component: Button,
-  title: "Actions/Button",
-  tags: ["autodocs"],
+  title: 'Actions/Button',
+  tags: ['autodocs'],
   argTypes: {
     variant: {
-      control: "select",
-      options: ["default", "destructive", "outline", "secondary", "ghost", "link"],
-      description: "Visual style variant of the button",
+      control: 'select',
+      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
+      description: 'Visual style variant of the button',
     },
     size: {
-      control: "select",
-      options: ["sm", "default", "lg", "icon"],
-      description: "Size of the button",
+      control: 'select',
+      options: ['sm', 'default', 'lg', 'icon'],
+      description: 'Size of the button',
     },
     shape: {
-      control: "select",
-      options: ["default", "pill", "square", "circle"],
-      description: "Shape of the button",
+      control: 'select',
+      options: ['default', 'pill', 'square', 'circle'],
+      description: 'Shape of the button',
     },
     loading: {
-      control: "boolean",
-      description: "Shows loading spinner and disables the button",
+      control: 'boolean',
+      description: 'Shows loading spinner and disables the button',
     },
     disabled: {
-      control: "boolean",
-      description: "Disables the button",
+      control: 'boolean',
+      description: 'Disables the button',
     },
     children: {
-      control: "text",
-      description: "Button text content",
+      control: 'text',
+      description: 'Button text content',
     },
   },
 };
@@ -46,87 +46,87 @@ type Story = StoryObj<typeof Button>;
 // Basic variants
 export const Default: Story = {
   args: {
-    children: "Button",
-    variant: "default",
+    children: 'Button',
+    variant: 'default',
   },
 };
 
 export const Destructive: Story = {
   args: {
-    children: "Delete",
-    variant: "destructive",
+    children: 'Delete',
+    variant: 'destructive',
   },
 };
 
 export const Outline: Story = {
   args: {
-    children: "Outline",
-    variant: "outline",
+    children: 'Outline',
+    variant: 'outline',
   },
 };
 
 export const Secondary: Story = {
   args: {
-    children: "Secondary",
-    variant: "secondary",
+    children: 'Secondary',
+    variant: 'secondary',
   },
 };
 
 export const Ghost: Story = {
   args: {
-    children: "Ghost",
-    variant: "ghost",
+    children: 'Ghost',
+    variant: 'ghost',
   },
 };
 
 export const Link: Story = {
   args: {
-    children: "Link",
-    variant: "link",
+    children: 'Link',
+    variant: 'link',
   },
 };
 
 // Sizes
 export const Small: Story = {
   args: {
-    children: "Small Button",
-    size: "sm",
+    children: 'Small Button',
+    size: 'sm',
   },
 };
 
 export const Large: Story = {
   args: {
-    children: "Large Button",
-    size: "lg",
+    children: 'Large Button',
+    size: 'lg',
   },
 };
 
 // Shapes
 export const Pill: Story = {
   args: {
-    children: "Pill Button",
-    shape: "pill",
+    children: 'Pill Button',
+    shape: 'pill',
   },
 };
 
 export const Square: Story = {
   args: {
-    children: "Square",
-    shape: "square",
+    children: 'Square',
+    shape: 'square',
   },
 };
 
 // States
 export const Disabled: Story = {
   args: {
-    children: "Disabled",
+    children: 'Disabled',
     disabled: true,
   },
 };
 
 export const Loading: Story = {
   args: {
-    children: "Loading",
+    children: 'Loading',
     loading: true,
   },
 };
@@ -134,7 +134,7 @@ export const Loading: Story = {
 export const LoadingWithoutText: Story = {
   args: {
     loading: true,
-    loadingText: "Processing",
+    loadingText: 'Processing',
   },
 };
 
@@ -209,21 +209,21 @@ const TrashIcon = () => (
 
 export const WithPrefixIcon: Story = {
   args: {
-    children: "Save",
+    children: 'Save',
     prefix: <SaveIcon />,
   },
 };
 
 export const WithSuffixIcon: Story = {
   args: {
-    children: "Next",
+    children: 'Next',
     suffix: <ChevronIcon />,
   },
 };
 
 export const WithBothIcons: Story = {
   args: {
-    children: "Continue",
+    children: 'Continue',
     prefix: <SaveIcon />,
     suffix: <ChevronIcon />,
   },
@@ -232,36 +232,36 @@ export const WithBothIcons: Story = {
 // Icon-only buttons
 export const IconOnly: Story = {
   args: {
-    size: "icon",
-    "aria-label": "Add item",
+    size: 'icon',
+    'aria-label': 'Add item',
     children: <PlusIcon />,
   },
 };
 
 export const IconOnlyCircle: Story = {
   args: {
-    size: "icon",
-    shape: "circle",
-    "aria-label": "Add item",
+    size: 'icon',
+    shape: 'circle',
+    'aria-label': 'Add item',
     children: <PlusIcon />,
   },
 };
 
 export const IconOnlyOutline: Story = {
   args: {
-    size: "icon",
-    variant: "outline",
-    "aria-label": "Delete item",
+    size: 'icon',
+    variant: 'outline',
+    'aria-label': 'Delete item',
     children: <TrashIcon />,
   },
 };
 
 export const IconOnlyGhost: Story = {
   args: {
-    size: "icon",
-    variant: "ghost",
-    shape: "circle",
-    "aria-label": "Add item",
+    size: 'icon',
+    variant: 'ghost',
+    shape: 'circle',
+    'aria-label': 'Add item',
     children: <PlusIcon />,
   },
 };
@@ -269,15 +269,15 @@ export const IconOnlyGhost: Story = {
 // Complex examples
 export const DestructiveWithIcon: Story = {
   args: {
-    children: "Delete Account",
-    variant: "destructive",
+    children: 'Delete Account',
+    variant: 'destructive',
     prefix: <TrashIcon />,
   },
 };
 
 export const LoadingWithIcon: Story = {
   args: {
-    children: "Saving",
+    children: 'Saving',
     loading: true,
     prefix: <SaveIcon />,
   },
@@ -285,8 +285,8 @@ export const LoadingWithIcon: Story = {
 
 export const PillWithIcon: Story = {
   args: {
-    children: "Add New",
-    shape: "pill",
+    children: 'Add New',
+    shape: 'pill',
     prefix: <PlusIcon />,
   },
 };
@@ -447,10 +447,10 @@ export const LoadingStates: Story = {
 // Interactive playground (default export allows control panel)
 export const Playground: Story = {
   args: {
-    children: "Playground Button",
-    variant: "default",
-    size: "default",
-    shape: "default",
+    children: 'Playground Button',
+    variant: 'default',
+    size: 'default',
+    shape: 'default',
     disabled: false,
     loading: false,
   },

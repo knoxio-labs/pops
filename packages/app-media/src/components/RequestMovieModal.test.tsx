@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -8,7 +8,7 @@ const mockFoldersQuery = vi.fn();
 const mockAddMovieMutate = vi.fn();
 let addMovieOpts: Record<string, unknown> = {};
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       arr: {
@@ -39,18 +39,18 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { RequestMovieModal } from "./RequestMovieModal";
+import { RequestMovieModal } from './RequestMovieModal';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const profiles = [
-  { id: 1, name: "HD - 720p/1080p" },
-  { id: 2, name: "Ultra-HD" },
+  { id: 1, name: 'HD - 720p/1080p' },
+  { id: 2, name: 'Ultra-HD' },
 ];
 
 const folders = [
-  { id: 1, path: "/movies", freeSpace: 500 * 1024 * 1024 * 1024 },
-  { id: 2, path: "/movies2", freeSpace: 100 * 1024 * 1024 * 1024 },
+  { id: 1, path: '/movies', freeSpace: 500 * 1024 * 1024 * 1024 },
+  { id: 2, path: '/movies2', freeSpace: 100 * 1024 * 1024 * 1024 },
 ];
 
 function setupDefaults(
@@ -84,7 +84,7 @@ const defaultProps = {
   open: true,
   onClose: vi.fn(),
   tmdbId: 550,
-  title: "Fight Club",
+  title: 'Fight Club',
   year: 1999,
 };
 
@@ -99,70 +99,70 @@ beforeEach(() => {
   addMovieOpts = {};
 });
 
-describe("RequestMovieModal", () => {
-  it("shows movie title and year in header", () => {
+describe('RequestMovieModal', () => {
+  it('shows movie title and year in header', () => {
     setupDefaults();
     renderModal();
 
-    expect(screen.getByText("Request Movie")).toBeInTheDocument();
-    expect(screen.getByText("Fight Club (1999)")).toBeInTheDocument();
+    expect(screen.getByText('Request Movie')).toBeInTheDocument();
+    expect(screen.getByText('Fight Club (1999)')).toBeInTheDocument();
   });
 
-  it("populates quality profile dropdown from API", () => {
+  it('populates quality profile dropdown from API', () => {
     setupDefaults();
     renderModal();
 
-    const select = document.getElementById("quality-profile") as HTMLSelectElement;
+    const select = document.getElementById('quality-profile') as HTMLSelectElement;
     expect(select).toBeTruthy();
 
-    const options = select.querySelectorAll("option");
+    const options = select.querySelectorAll('option');
     expect(options).toHaveLength(2);
-    expect(options[0]!.textContent).toBe("HD - 720p/1080p");
-    expect(options[1]!.textContent).toBe("Ultra-HD");
+    expect(options[0]!.textContent).toBe('HD - 720p/1080p');
+    expect(options[1]!.textContent).toBe('Ultra-HD');
   });
 
-  it("populates root folder dropdown with free space", () => {
+  it('populates root folder dropdown with free space', () => {
     setupDefaults();
     renderModal();
 
-    const select = document.getElementById("root-folder") as HTMLSelectElement;
+    const select = document.getElementById('root-folder') as HTMLSelectElement;
     expect(select).toBeTruthy();
 
-    const options = select.querySelectorAll("option");
+    const options = select.querySelectorAll('option');
     expect(options).toHaveLength(2);
-    expect(options[0]!.textContent).toContain("/movies");
-    expect(options[0]!.textContent).toContain("GB free");
+    expect(options[0]!.textContent).toContain('/movies');
+    expect(options[0]!.textContent).toContain('GB free');
   });
 
-  it("sends correct addMovie payload on confirm", () => {
+  it('sends correct addMovie payload on confirm', () => {
     setupDefaults();
     renderModal();
 
-    fireEvent.click(screen.getByText("Request"));
+    fireEvent.click(screen.getByText('Request'));
 
     expect(mockAddMovieMutate).toHaveBeenCalledWith({
       tmdbId: 550,
-      title: "Fight Club",
+      title: 'Fight Club',
       year: 1999,
       qualityProfileId: 1,
-      rootFolderPath: "/movies",
+      rootFolderPath: '/movies',
     });
   });
 
-  it("calls onClose after successful add", () => {
+  it('calls onClose after successful add', () => {
     vi.useFakeTimers();
     setupDefaults();
     const onClose = vi.fn();
     renderModal({ onClose });
 
     // Click request
-    fireEvent.click(screen.getByText("Request"));
+    fireEvent.click(screen.getByText('Request'));
 
     // Simulate success callback
     const onSuccess = addMovieOpts.onSuccess as () => void;
     act(() => onSuccess());
 
-    expect(screen.getByText("Movie Added")).toBeInTheDocument();
+    expect(screen.getByText('Movie Added')).toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(1500));
     expect(onClose).toHaveBeenCalled();
@@ -170,58 +170,58 @@ describe("RequestMovieModal", () => {
     vi.useRealTimers();
   });
 
-  it("shows inline error on failure", () => {
+  it('shows inline error on failure', () => {
     setupDefaults();
     renderModal();
 
-    fireEvent.click(screen.getByText("Request"));
+    fireEvent.click(screen.getByText('Request'));
 
     const onError = addMovieOpts.onError as (err: { message: string }) => void;
-    act(() => onError({ message: "Movie already exists in Radarr" }));
+    act(() => onError({ message: 'Movie already exists in Radarr' }));
 
-    expect(screen.getByText("Movie already exists in Radarr")).toBeInTheDocument();
+    expect(screen.getByText('Movie already exists in Radarr')).toBeInTheDocument();
   });
 
-  it("calls onClose on cancel without API call", () => {
+  it('calls onClose on cancel without API call', () => {
     setupDefaults();
     const onClose = vi.fn();
     renderModal({ onClose });
 
-    fireEvent.click(screen.getByText("Cancel"));
+    fireEvent.click(screen.getByText('Cancel'));
     expect(onClose).toHaveBeenCalled();
     expect(mockAddMovieMutate).not.toHaveBeenCalled();
   });
 
-  it("shows loading state while fetching options", () => {
+  it('shows loading state while fetching options', () => {
     setupDefaults({ profilesLoading: true });
     renderModal();
 
-    expect(screen.getByText("Loading options...")).toBeInTheDocument();
+    expect(screen.getByText('Loading options...')).toBeInTheDocument();
   });
 
-  it("shows retry when no profiles available", () => {
+  it('shows retry when no profiles available', () => {
     setupDefaults({ profileList: [] });
     renderModal();
 
     expect(screen.getByText(/No quality profiles found/)).toBeInTheDocument();
-    expect(screen.getByText("Retry")).toBeInTheDocument();
+    expect(screen.getByText('Retry')).toBeInTheDocument();
   });
 
-  it("shows retry when no root folders available", () => {
+  it('shows retry when no root folders available', () => {
     setupDefaults({ folderList: [] });
     renderModal();
 
     expect(screen.getByText(/No root folders found/)).toBeInTheDocument();
   });
 
-  it("defaults to first quality profile and root folder", () => {
+  it('defaults to first quality profile and root folder', () => {
     setupDefaults();
     renderModal();
 
-    const profileSelect = document.getElementById("quality-profile") as HTMLSelectElement;
-    expect(profileSelect.value).toBe("1");
+    const profileSelect = document.getElementById('quality-profile') as HTMLSelectElement;
+    expect(profileSelect.value).toBe('1');
 
-    const folderSelect = document.getElementById("root-folder") as HTMLSelectElement;
-    expect(folderSelect.value).toBe("/movies");
+    const folderSelect = document.getElementById('root-folder') as HTMLSelectElement;
+    expect(folderSelect.value).toBe('/movies');
   });
 });

@@ -2,17 +2,17 @@
  * Transaction service — CRUD operations against SQLite via Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
  */
-import crypto from "crypto";
-import { count, desc, eq, like, gte, lte, and, sql, type SQL } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { transactions } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
+import crypto from 'crypto';
+import { count, desc, eq, like, gte, lte, and, sql, type SQL } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { transactions } from '@pops/db-types';
+import { NotFoundError } from '../../../shared/errors.js';
 import type {
   TransactionRow,
   CreateTransactionInput,
   UpdateTransactionInput,
   TransactionFilters,
-} from "./types.js";
+} from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface TransactionListResult {
@@ -73,7 +73,7 @@ export function getTransaction(id: string): TransactionRow {
   const db = getDrizzle();
   const row = db.select().from(transactions).where(eq(transactions.id, id)).get();
 
-  if (!row) throw new NotFoundError("Transaction", id);
+  if (!row) throw new NotFoundError('Transaction', id);
   return row;
 }
 
@@ -93,7 +93,7 @@ export function createTransaction(input: CreateTransactionInput): TransactionRow
       account: input.account,
       amount: input.amount,
       date: input.date,
-      type: input.type || "",
+      type: input.type || '',
       tags: JSON.stringify(input.tags ?? []),
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
@@ -133,7 +133,7 @@ export function updateTransaction(id: string, input: UpdateTransactionInput): Tr
     updates.date = input.date;
   }
   if (input.type !== undefined) {
-    updates.type = input.type ?? "";
+    updates.type = input.type ?? '';
   }
   if (input.tags !== undefined) {
     updates.tags = JSON.stringify(input.tags);
@@ -175,5 +175,5 @@ export function deleteTransaction(id: string): void {
   getTransaction(id);
 
   const result = getDrizzle().delete(transactions).where(eq(transactions.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Transaction", id);
+  if (result.changes === 0) throw new NotFoundError('Transaction', id);
 }

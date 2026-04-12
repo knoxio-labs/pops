@@ -2,27 +2,27 @@
  * DateTime input component stories
  * Demonstrates DateInput, TimeInput, and DateTimeInput
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { DateInput, TimeInput, DateTimeInput } from "./DateTimeInput";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { DateInput, TimeInput, DateTimeInput } from './DateTimeInput';
 
 // DateInput stories
 const dateInputMeta: Meta<typeof DateInput> = {
   component: DateInput,
-  title: "Inputs/DateTime",
-  tags: ["autodocs"],
+  title: 'Inputs/DateTime',
+  tags: ['autodocs'],
   argTypes: {
     variant: {
-      control: "select",
-      options: ["default", "ghost", "underline"],
+      control: 'select',
+      options: ['default', 'ghost', 'underline'],
     },
     size: {
-      control: "select",
-      options: ["sm", "default", "lg"],
+      control: 'select',
+      options: ['sm', 'default', 'lg'],
     },
     shape: {
-      control: "select",
-      options: ["default", "pill"],
+      control: 'select',
+      options: ['default', 'pill'],
     },
   },
 };
@@ -79,49 +79,49 @@ export const DateWithIcon: DateInputStory = {
 
 export const DateGhost: DateInputStory = {
   args: {
-    variant: "ghost",
+    variant: 'ghost',
     prefix: <CalendarIcon />,
   },
 };
 
 export const DateUnderline: DateInputStory = {
   args: {
-    variant: "underline",
+    variant: 'underline',
   },
 };
 
 export const DatePill: DateInputStory = {
   args: {
-    shape: "pill",
+    shape: 'pill',
     prefix: <CalendarIcon />,
   },
 };
 
 export const DateSmall: DateInputStory = {
   args: {
-    size: "sm",
+    size: 'sm',
     prefix: <CalendarIcon />,
   },
 };
 
 export const DateLarge: DateInputStory = {
   args: {
-    size: "lg",
+    size: 'lg',
     prefix: <CalendarIcon />,
   },
 };
 
 export const DateWithMinMax: DateInputStory = {
   args: {
-    min: "2024-01-01",
-    max: "2024-12-31",
+    min: '2024-01-01',
+    max: '2024-12-31',
     prefix: <CalendarIcon />,
   },
 };
 
 export const DateControlled: DateInputStory = {
   render: (args) => {
-    const [date, setDate] = useState("2024-06-15");
+    const [date, setDate] = useState('2024-06-15');
     return (
       <div className="space-y-4">
         <DateInput
@@ -167,7 +167,7 @@ export const TimeLarge: StoryObj<typeof TimeInput> = {
 
 export const TimeControlled: StoryObj<typeof TimeInput> = {
   render: () => {
-    const [time, setTime] = useState("14:30");
+    const [time, setTime] = useState('14:30');
     return (
       <div className="space-y-4">
         <TimeInput value={time} onChange={(e) => setTime(e.target.value)} prefix={<ClockIcon />} />
@@ -208,7 +208,7 @@ export const DateTimeLarge: StoryObj<typeof DateTimeInput> = {
 
 export const DateTimeControlled: StoryObj<typeof DateTimeInput> = {
   render: () => {
-    const [dateTime, setDateTime] = useState("2024-06-15T14:30");
+    const [dateTime, setDateTime] = useState('2024-06-15T14:30');
     return (
       <div className="space-y-4">
         <DateTimeInput
@@ -225,9 +225,9 @@ export const DateTimeControlled: StoryObj<typeof DateTimeInput> = {
 // Real-world examples
 export const FormExample: StoryObj = {
   render: () => {
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [time, setTime] = useState("");
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [time, setTime] = useState('');
 
     return (
       <div className="space-y-4 max-w-md p-6 border border-border rounded-lg">
@@ -267,8 +267,8 @@ export const FormExample: StoryObj = {
 
 export const DateRangeFilter: StoryObj = {
   render: () => {
-    const [startDate, setStartDate] = useState("2024-01-01");
-    const [endDate, setEndDate] = useState("2024-12-31");
+    const [startDate, setStartDate] = useState('2024-01-01');
+    const [endDate, setEndDate] = useState('2024-12-31');
 
     return (
       <div className="space-y-4 max-w-2xl">
@@ -299,7 +299,7 @@ export const DateRangeFilter: StoryObj = {
 
 export const AppointmentScheduler: StoryObj = {
   render: () => {
-    const [dateTime, setDateTime] = useState("");
+    const [dateTime, setDateTime] = useState('');
 
     return (
       <div className="space-y-4 max-w-md p-6 border border-border rounded-lg">
@@ -329,10 +329,10 @@ export const AppointmentScheduler: StoryObj = {
 
 export const TransactionFilter: StoryObj = {
   render: () => {
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
 
     return (
       <div className="space-y-4 max-w-2xl p-6 border border-border rounded-lg">

@@ -10,8 +10,8 @@
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
+| Option     | Pros   | Cons   |
+| ---------- | ------ | ------ |
 | {Option A} | {Pros} | {Cons} |
 | {Option B} | {Pros} | {Cons} |
 

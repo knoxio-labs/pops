@@ -8,8 +8,8 @@ Set up encrypted offsite backups of the SQLite database, Paperless-ngx data, and
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
+| #   | PRD                                      | Summary                                                                                       | Status  |
+| --- | ---------------------------------------- | --------------------------------------------------------------------------------------------- | ------- |
 | 017 | [Backups](../prds/017-backups/README.md) | rclone configuration, B2 bucket setup, encryption, systemd timer schedule, recovery procedure | Partial |
 
 ## Dependencies

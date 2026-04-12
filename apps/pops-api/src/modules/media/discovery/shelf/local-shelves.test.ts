@@ -6,54 +6,54 @@
  * flexible chain helper that accepts any method sequence and calls `.all()` at
  * the end.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock("../../../../db.js", () => ({
+vi.mock('../../../../db.js', () => ({
   getDrizzle: vi.fn(),
 }));
 
-vi.mock("@pops/db-types", () => ({
+vi.mock('@pops/db-types', () => ({
   movies: {
-    id: "id",
-    tmdbId: "tmdb_id",
-    title: "title",
-    overview: "overview",
-    releaseDate: "release_date",
-    posterPath: "poster_path",
-    backdropPath: "backdrop_path",
-    voteAverage: "vote_average",
-    voteCount: "vote_count",
-    genres: "genres",
-    runtime: "runtime",
-    createdAt: "created_at",
+    id: 'id',
+    tmdbId: 'tmdb_id',
+    title: 'title',
+    overview: 'overview',
+    releaseDate: 'release_date',
+    posterPath: 'poster_path',
+    backdropPath: 'backdrop_path',
+    voteAverage: 'vote_average',
+    voteCount: 'vote_count',
+    genres: 'genres',
+    runtime: 'runtime',
+    createdAt: 'created_at',
   },
   watchHistory: {
-    id: "id",
-    mediaId: "media_id",
-    mediaType: "media_type",
-    completed: "completed",
-    watchedAt: "watched_at",
+    id: 'id',
+    mediaId: 'media_id',
+    mediaType: 'media_type',
+    completed: 'completed',
+    watchedAt: 'watched_at',
   },
   mediaScores: {
-    id: "id",
-    mediaId: "media_id",
-    mediaType: "media_type",
-    score: "score",
-    dimensionId: "dimension_id",
+    id: 'id',
+    mediaId: 'media_id',
+    mediaType: 'media_type',
+    score: 'score',
+    dimensionId: 'dimension_id',
   },
   comparisonDimensions: {
-    id: "id",
-    name: "name",
+    id: 'id',
+    name: 'name',
   },
 }));
 
-vi.mock("./registry.js", () => ({
+vi.mock('./registry.js', () => ({
   registerShelf: vi.fn(),
   getRegisteredShelves: vi.fn(() => []),
   _clearRegistry: vi.fn(),
 }));
 
-import { getDrizzle } from "../../../../db.js";
+import { getDrizzle } from '../../../../db.js';
 import {
   shortWatchShelf,
   longEpicShelf,
@@ -63,7 +63,7 @@ import {
   friendProofShelf,
   recentlyAddedShelf,
   franchiseCompletionsShelf,
-} from "./local-shelves.js";
+} from './local-shelves.js';
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
 
@@ -78,15 +78,15 @@ function makeChainMock(allReturn: unknown[] = []) {
 
   const chain: Record<string, unknown> = { all: allFn };
   for (const m of [
-    "from",
-    "where",
-    "innerJoin",
-    "leftJoin",
-    "groupBy",
-    "having",
-    "orderBy",
-    "limit",
-    "offset",
+    'from',
+    'where',
+    'innerJoin',
+    'leftJoin',
+    'groupBy',
+    'having',
+    'orderBy',
+    'limit',
+    'offset',
   ]) {
     chain[m] = vi.fn().mockReturnValue(chain);
   }
@@ -103,16 +103,16 @@ function makeMovieRow(overrides: Record<string, unknown> = {}): Record<string, u
   return {
     id: 1,
     tmdbId: 100,
-    title: "Test Movie",
-    overview: "A movie",
-    releaseDate: "2024-01-01",
-    posterPath: "/poster.jpg",
+    title: 'Test Movie',
+    overview: 'A movie',
+    releaseDate: '2024-01-01',
+    posterPath: '/poster.jpg',
     backdropPath: null,
     voteAverage: 7.5,
     voteCount: 1000,
     genres: '["Action"]',
     runtime: 120,
-    createdAt: "2024-01-01T00:00:00Z",
+    createdAt: '2024-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -130,10 +130,10 @@ const profile = {
 // short-watch
 // ---------------------------------------------------------------------------
 
-describe("shortWatchShelf", () => {
+describe('shortWatchShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no short unwatched movies", async () => {
+  it('returns empty when no short unwatched movies', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -142,7 +142,7 @@ describe("shortWatchShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns mapped DiscoverResults for short movies", async () => {
+  it('returns mapped DiscoverResults for short movies', async () => {
     const row = makeMovieRow({ runtime: 85 });
     const { db } = makeChainMock([row]);
     mockGetDrizzle.mockReturnValue(db);
@@ -154,10 +154,10 @@ describe("shortWatchShelf", () => {
     expect(results[0]!.inLibrary).toBe(true);
   });
 
-  it("has category=local and template=false", () => {
-    expect(shortWatchShelf.category).toBe("local");
+  it('has category=local and template=false', () => {
+    expect(shortWatchShelf.category).toBe('local');
     expect(shortWatchShelf.template).toBe(false);
-    expect(shortWatchShelf.id).toBe("short-watch");
+    expect(shortWatchShelf.id).toBe('short-watch');
   });
 });
 
@@ -165,10 +165,10 @@ describe("shortWatchShelf", () => {
 // long-epic
 // ---------------------------------------------------------------------------
 
-describe("longEpicShelf", () => {
+describe('longEpicShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no long unwatched movies", async () => {
+  it('returns empty when no long unwatched movies', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -177,7 +177,7 @@ describe("longEpicShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns mapped DiscoverResults for long movies", async () => {
+  it('returns mapped DiscoverResults for long movies', async () => {
     const row = makeMovieRow({ runtime: 180 });
     const { db } = makeChainMock([row]);
     mockGetDrizzle.mockReturnValue(db);
@@ -188,8 +188,8 @@ describe("longEpicShelf", () => {
     expect(results[0]!.inLibrary).toBe(true);
   });
 
-  it("has id=long-epic", () => {
-    expect(longEpicShelf.id).toBe("long-epic");
+  it('has id=long-epic', () => {
+    expect(longEpicShelf.id).toBe('long-epic');
   });
 });
 
@@ -197,10 +197,10 @@ describe("longEpicShelf", () => {
 // comfort-picks
 // ---------------------------------------------------------------------------
 
-describe("comfortPicksShelf", () => {
+describe('comfortPicksShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no movies watched 2+ times", async () => {
+  it('returns empty when no movies watched 2+ times', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -209,7 +209,7 @@ describe("comfortPicksShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("marks results as watched", async () => {
+  it('marks results as watched', async () => {
     const row = { ...makeMovieRow(), watchCount: 3 };
     const { db } = makeChainMock([row]);
     mockGetDrizzle.mockReturnValue(db);
@@ -219,8 +219,8 @@ describe("comfortPicksShelf", () => {
     expect(results[0]!.isWatched).toBe(true);
   });
 
-  it("has id=comfort-picks", () => {
-    expect(comfortPicksShelf.id).toBe("comfort-picks");
+  it('has id=comfort-picks', () => {
+    expect(comfortPicksShelf.id).toBe('comfort-picks');
   });
 });
 
@@ -228,10 +228,10 @@ describe("comfortPicksShelf", () => {
 // undiscovered
 // ---------------------------------------------------------------------------
 
-describe("undiscoveredShelf", () => {
+describe('undiscoveredShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when all movies are watched or compared", async () => {
+  it('returns empty when all movies are watched or compared', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -240,7 +240,7 @@ describe("undiscoveredShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns library movies with no watch/comparison history", async () => {
+  it('returns library movies with no watch/comparison history', async () => {
     const row = makeMovieRow();
     const { db } = makeChainMock([row]);
     mockGetDrizzle.mockReturnValue(db);
@@ -252,8 +252,8 @@ describe("undiscoveredShelf", () => {
     expect(results[0]!.isWatched).toBe(false);
   });
 
-  it("has id=undiscovered", () => {
-    expect(undiscoveredShelf.id).toBe("undiscovered");
+  it('has id=undiscovered', () => {
+    expect(undiscoveredShelf.id).toBe('undiscovered');
   });
 });
 
@@ -261,10 +261,10 @@ describe("undiscoveredShelf", () => {
 // polarizing
 // ---------------------------------------------------------------------------
 
-describe("polarizingShelf", () => {
+describe('polarizingShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no movies have score spread > 200", async () => {
+  it('returns empty when no movies have score spread > 200', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -273,7 +273,7 @@ describe("polarizingShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns movies with large ELO spread", async () => {
+  it('returns movies with large ELO spread', async () => {
     const row = { ...makeMovieRow(), scoreRange: 350 };
     const { db } = makeChainMock([row]);
     mockGetDrizzle.mockReturnValue(db);
@@ -284,8 +284,8 @@ describe("polarizingShelf", () => {
     expect(results[0]!.isWatched).toBe(true);
   });
 
-  it("has id=polarizing", () => {
-    expect(polarizingShelf.id).toBe("polarizing");
+  it('has id=polarizing', () => {
+    expect(polarizingShelf.id).toBe('polarizing');
   });
 });
 
@@ -293,10 +293,10 @@ describe("polarizingShelf", () => {
 // friend-proof
 // ---------------------------------------------------------------------------
 
-describe("friendProofShelf", () => {
+describe('friendProofShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no movies have both dimension scores", async () => {
+  it('returns empty when no movies have both dimension scores', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -305,7 +305,7 @@ describe("friendProofShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns movies above 75th percentile of Entertainment+Rewatchability", async () => {
+  it('returns movies above 75th percentile of Entertainment+Rewatchability', async () => {
     // 4 movies with avg scores: 1400, 1500, 1600, 1800
     // 75th percentile index = floor(4 * 0.75) = 3 → threshold = 1800
     // Only the movie with score 1800 qualifies
@@ -325,8 +325,8 @@ describe("friendProofShelf", () => {
     expect(results.every((r) => r.isWatched)).toBe(true);
   });
 
-  it("has id=friend-proof", () => {
-    expect(friendProofShelf.id).toBe("friend-proof");
+  it('has id=friend-proof', () => {
+    expect(friendProofShelf.id).toBe('friend-proof');
   });
 });
 
@@ -334,10 +334,10 @@ describe("friendProofShelf", () => {
 // recently-added
 // ---------------------------------------------------------------------------
 
-describe("recentlyAddedShelf", () => {
+describe('recentlyAddedShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no unwatched movies", async () => {
+  it('returns empty when no unwatched movies', async () => {
     const { db } = makeChainMock([]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -346,8 +346,8 @@ describe("recentlyAddedShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns recently added unwatched movies", async () => {
-    const row = makeMovieRow({ createdAt: "2024-12-01T00:00:00Z" });
+  it('returns recently added unwatched movies', async () => {
+    const row = makeMovieRow({ createdAt: '2024-12-01T00:00:00Z' });
     const { db } = makeChainMock([row]);
     mockGetDrizzle.mockReturnValue(db);
 
@@ -357,8 +357,8 @@ describe("recentlyAddedShelf", () => {
     expect(results[0]!.isWatched).toBe(false);
   });
 
-  it("has id=recently-added", () => {
-    expect(recentlyAddedShelf.id).toBe("recently-added");
+  it('has id=recently-added', () => {
+    expect(recentlyAddedShelf.id).toBe('recently-added');
   });
 });
 
@@ -366,10 +366,10 @@ describe("recentlyAddedShelf", () => {
 // franchise-completions
 // ---------------------------------------------------------------------------
 
-describe("franchiseCompletionsShelf", () => {
+describe('franchiseCompletionsShelf', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns empty when no watched movies", async () => {
+  it('returns empty when no watched movies', async () => {
     // Both queries return empty
     const allFn = vi.fn().mockImplementation(() => {
       return []; // both watched-genres query and unwatched query return []
@@ -377,14 +377,14 @@ describe("franchiseCompletionsShelf", () => {
 
     const chain: Record<string, unknown> = { all: allFn };
     for (const m of [
-      "from",
-      "where",
-      "innerJoin",
-      "groupBy",
-      "having",
-      "orderBy",
-      "limit",
-      "offset",
+      'from',
+      'where',
+      'innerJoin',
+      'groupBy',
+      'having',
+      'orderBy',
+      'limit',
+      'offset',
     ]) {
       chain[m] = vi.fn().mockReturnValue(chain);
     }
@@ -398,7 +398,7 @@ describe("franchiseCompletionsShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("returns unwatched movies that share genres with watched movies", async () => {
+  it('returns unwatched movies that share genres with watched movies', async () => {
     // Setup: watched query returns a movie with genres ["Action"]
     //        unwatched query returns a movie with genres ["Action", "Drama"]
     const watchedRow = { genres: '["Action"]' };
@@ -412,14 +412,14 @@ describe("franchiseCompletionsShelf", () => {
     const unwatchedChain: Record<string, unknown> = { all: unwatchedAllFn };
 
     for (const m of [
-      "from",
-      "where",
-      "innerJoin",
-      "groupBy",
-      "having",
-      "orderBy",
-      "limit",
-      "offset",
+      'from',
+      'where',
+      'innerJoin',
+      'groupBy',
+      'having',
+      'orderBy',
+      'limit',
+      'offset',
     ]) {
       watchedChain[m] = vi.fn().mockReturnValue(watchedChain);
       unwatchedChain[m] = vi.fn().mockReturnValue(unwatchedChain);
@@ -439,7 +439,7 @@ describe("franchiseCompletionsShelf", () => {
     expect(results[0]!.tmdbId).toBe(100);
   });
 
-  it("excludes movies with no genre overlap with watched movies", async () => {
+  it('excludes movies with no genre overlap with watched movies', async () => {
     const watchedRow = { genres: '["Horror"]' };
     const unwatchedRow = makeMovieRow({ genres: '["Action","Drama"]' }); // no Horror
 
@@ -450,14 +450,14 @@ describe("franchiseCompletionsShelf", () => {
     };
 
     for (const m of [
-      "from",
-      "where",
-      "innerJoin",
-      "groupBy",
-      "having",
-      "orderBy",
-      "limit",
-      "offset",
+      'from',
+      'where',
+      'innerJoin',
+      'groupBy',
+      'having',
+      'orderBy',
+      'limit',
+      'offset',
     ]) {
       watchedChain[m] = vi.fn().mockReturnValue(watchedChain);
       unwatchedChain[m] = vi.fn().mockReturnValue(unwatchedChain);
@@ -476,8 +476,8 @@ describe("franchiseCompletionsShelf", () => {
     expect(results).toHaveLength(0);
   });
 
-  it("has id=franchise-completions", () => {
-    expect(franchiseCompletionsShelf.id).toBe("franchise-completions");
+  it('has id=franchise-completions', () => {
+    expect(franchiseCompletionsShelf.id).toBe('franchise-completions');
   });
 });
 
@@ -485,7 +485,7 @@ describe("franchiseCompletionsShelf", () => {
 // All shelves: category and template checks
 // ---------------------------------------------------------------------------
 
-describe("all local shelves", () => {
+describe('all local shelves', () => {
   const allShelves = [
     shortWatchShelf,
     longEpicShelf,
@@ -497,19 +497,19 @@ describe("all local shelves", () => {
     franchiseCompletionsShelf,
   ];
 
-  it("all have category=local", () => {
+  it('all have category=local', () => {
     for (const shelf of allShelves) {
-      expect(shelf.category).toBe("local");
+      expect(shelf.category).toBe('local');
     }
   });
 
-  it("all have template=false", () => {
+  it('all have template=false', () => {
     for (const shelf of allShelves) {
       expect(shelf.template).toBe(false);
     }
   });
 
-  it("all generate exactly one instance", () => {
+  it('all generate exactly one instance', () => {
     for (const shelf of allShelves) {
       const instances = shelf.generate(profile);
       expect(instances).toHaveLength(1);

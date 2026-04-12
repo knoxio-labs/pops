@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit from 'express-rate-limit';
 
 /**
  * Rate limiter for public/unauthenticated endpoints (health, webhooks).
@@ -13,8 +13,8 @@ import rateLimit from "express-rate-limit";
 export const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 100,
-  standardHeaders: "draft-7",
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: "Too many requests, try again later" },
-  skip: (req) => req.path.startsWith("/trpc") || req.path.startsWith("/media/images"),
+  message: { error: 'Too many requests, try again later' },
+  skip: (req) => req.path.startsWith('/trpc') || req.path.startsWith('/media/images'),
 });

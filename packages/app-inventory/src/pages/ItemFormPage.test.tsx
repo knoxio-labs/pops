@@ -1,65 +1,65 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
-import { extractPrefix } from "./ItemFormPage";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { extractPrefix } from './ItemFormPage';
 
 // ---------- prefix extraction tests (pure function) ----------
 
-describe("extractPrefix", () => {
-  it("extracts prefix from single-word type", () => {
-    expect(extractPrefix("Electronics")).toBe("ELECTRONICS".slice(0, 4));
+describe('extractPrefix', () => {
+  it('extracts prefix from single-word type', () => {
+    expect(extractPrefix('Electronics')).toBe('ELECTRONICS'.slice(0, 4));
   });
 
-  it("handles short types (≤6 chars)", () => {
-    expect(extractPrefix("Tools")).toBe("TOOLS");
-    expect(extractPrefix("Office")).toBe("OFFICE");
+  it('handles short types (≤6 chars)', () => {
+    expect(extractPrefix('Tools')).toBe('TOOLS');
+    expect(extractPrefix('Office')).toBe('OFFICE');
   });
 
-  it("takes first word of multi-word type", () => {
-    expect(extractPrefix("HDMI Cable")).toBe("HDMI");
+  it('takes first word of multi-word type', () => {
+    expect(extractPrefix('HDMI Cable')).toBe('HDMI');
   });
 
-  it("truncates long first words to 4 characters", () => {
-    expect(extractPrefix("Electronics")).toBe("ELEC");
-    expect(extractPrefix("Furniture")).toBe("FURN");
-    expect(extractPrefix("Appliance")).toBe("APPL");
+  it('truncates long first words to 4 characters', () => {
+    expect(extractPrefix('Electronics')).toBe('ELEC');
+    expect(extractPrefix('Furniture')).toBe('FURN');
+    expect(extractPrefix('Appliance')).toBe('APPL');
   });
 
-  it("uppercases the prefix", () => {
-    expect(extractPrefix("kitchen")).toBe("KITC");
+  it('uppercases the prefix', () => {
+    expect(extractPrefix('kitchen')).toBe('KITC');
   });
 
-  it("keeps 5-6 char words intact", () => {
-    expect(extractPrefix("Sport")).toBe("SPORT");
-    expect(extractPrefix("Camera")).toBe("CAMERA");
+  it('keeps 5-6 char words intact', () => {
+    expect(extractPrefix('Sport')).toBe('SPORT');
+    expect(extractPrefix('Camera')).toBe('CAMERA');
   });
 });
 
 // ---------- zero-padding format tests ----------
 
-describe("zero-padding format", () => {
-  it("pads single digit to 2 digits", () => {
+describe('zero-padding format', () => {
+  it('pads single digit to 2 digits', () => {
     const num = 1;
-    const padded = num >= 100 ? String(num) : String(num).padStart(2, "0");
-    expect(padded).toBe("01");
+    const padded = num >= 100 ? String(num) : String(num).padStart(2, '0');
+    expect(padded).toBe('01');
   });
 
-  it("pads double digit to 2 digits", () => {
+  it('pads double digit to 2 digits', () => {
     const num = 42;
-    const padded = num >= 100 ? String(num) : String(num).padStart(2, "0");
-    expect(padded).toBe("42");
+    const padded = num >= 100 ? String(num) : String(num).padStart(2, '0');
+    expect(padded).toBe('42');
   });
 
-  it("uses 3 digits for 100+", () => {
+  it('uses 3 digits for 100+', () => {
     const num = 100;
-    const padded = num >= 100 ? String(num) : String(num).padStart(2, "0");
-    expect(padded).toBe("100");
+    const padded = num >= 100 ? String(num) : String(num).padStart(2, '0');
+    expect(padded).toBe('100');
   });
 
-  it("uses 3 digits for larger numbers", () => {
+  it('uses 3 digits for larger numbers', () => {
     const num = 256;
-    const padded = num >= 100 ? String(num) : String(num).padStart(2, "0");
-    expect(padded).toBe("256");
+    const padded = num >= 100 ? String(num) : String(num).padStart(2, '0');
+    expect(padded).toBe('256');
   });
 });
 
@@ -78,7 +78,7 @@ const mockRemoveMutate = vi.fn();
 const mockReorderMutate = vi.fn();
 const mockRefetchPhotos = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     inventory: {
       items: {
@@ -88,8 +88,8 @@ vi.mock("../lib/trpc", () => ({
           useMutation: (opts: Record<string, unknown>) => ({
             mutate: (...args: unknown[]) => {
               mockCreateMutate(...args);
-              if (typeof opts.onSuccess === "function")
-                (opts.onSuccess as (...args: unknown[]) => void)({ data: { id: "new-id" } });
+              if (typeof opts.onSuccess === 'function')
+                (opts.onSuccess as (...args: unknown[]) => void)({ data: { id: 'new-id' } });
             },
             isPending: false,
           }),
@@ -98,7 +98,7 @@ vi.mock("../lib/trpc", () => ({
           useMutation: (opts: Record<string, unknown>) => ({
             mutate: (...args: unknown[]) => {
               mockUpdateMutate(...args);
-              if (typeof opts.onSuccess === "function")
+              if (typeof opts.onSuccess === 'function')
                 (opts.onSuccess as (...args: unknown[]) => void)();
             },
             isPending: false,
@@ -138,7 +138,7 @@ vi.mock("../lib/trpc", () => ({
           useMutation: (opts?: Record<string, unknown>) => ({
             mutate: (...args: unknown[]) => {
               mockRemoveMutate(...args);
-              if (typeof opts?.onSuccess === "function")
+              if (typeof opts?.onSuccess === 'function')
                 (opts.onSuccess as (...args: unknown[]) => void)();
             },
             isPending: false,
@@ -166,24 +166,24 @@ vi.mock("../lib/trpc", () => ({
 }));
 
 // Mock react-markdown
-vi.mock("react-markdown", () => ({
+vi.mock('react-markdown', () => ({
   default: ({ children }: { children: string }) => (
     <div data-testid="markdown-preview">{children}</div>
   ),
 }));
 
-vi.mock("rehype-sanitize", () => ({
+vi.mock('rehype-sanitize', () => ({
   default: {},
 }));
 
 // Mock useImageProcessor
-vi.mock("../hooks/useImageProcessor", () => ({
+vi.mock('../hooks/useImageProcessor', () => ({
   useImageProcessor: () => ({
     processFiles: vi.fn(async (files: File[]) =>
       files.map((f) => ({
         original: f,
-        processed: new Blob([new Uint8Array(100)], { type: "image/jpeg" }),
-        previewUrl: "blob:mock-preview",
+        processed: new Blob([new Uint8Array(100)], { type: 'image/jpeg' }),
+        previewUrl: 'blob:mock-preview',
         originalSize: f.size,
         processedSize: 100,
       }))
@@ -192,11 +192,11 @@ vi.mock("../hooks/useImageProcessor", () => ({
   }),
 }));
 
-import { ItemFormPage } from "./ItemFormPage";
+import { ItemFormPage } from './ItemFormPage';
 
 function renderCreate() {
   return render(
-    <MemoryRouter initialEntries={["/inventory/items/new"]}>
+    <MemoryRouter initialEntries={['/inventory/items/new']}>
       <Routes>
         <Route path="/inventory/items/new" element={<ItemFormPage />} />
       </Routes>
@@ -237,36 +237,36 @@ beforeEach(() => {
   });
 });
 
-describe("ItemFormPage — Asset ID generation", () => {
-  it("renders auto-generate button", () => {
+describe('ItemFormPage — Asset ID generation', () => {
+  it('renders auto-generate button', () => {
     renderCreate();
-    expect(screen.getByRole("button", { name: /auto-generate/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /auto-generate/i })).toBeInTheDocument();
   });
 
-  it("disables auto-generate when type is empty", () => {
+  it('disables auto-generate when type is empty', () => {
     renderCreate();
-    const btn = screen.getByRole("button", { name: /auto-generate/i });
+    const btn = screen.getByRole('button', { name: /auto-generate/i });
     expect(btn).toBeDisabled();
   });
 
-  it("enables auto-generate when type is selected", () => {
+  it('enables auto-generate when type is selected', () => {
     renderCreate();
     const typeSelect = document.querySelector('select[name="type"]') as HTMLSelectElement;
     expect(typeSelect).toBeInTheDocument();
-    fireEvent.change(typeSelect, { target: { value: "Electronics" } });
-    const btn = screen.getByRole("button", { name: /auto-generate/i });
+    fireEvent.change(typeSelect, { target: { value: 'Electronics' } });
+    const btn = screen.getByRole('button', { name: /auto-generate/i });
     expect(btn).not.toBeDisabled();
   });
 
-  it("shows asset ID uniqueness error on blur when taken", async () => {
+  it('shows asset ID uniqueness error on blur when taken', async () => {
     mockSearchByAssetIdFetch.mockResolvedValue({
-      data: { id: "other-item", itemName: "Existing Item" },
+      data: { id: 'other-item', itemName: 'Existing Item' },
     });
 
     renderCreate();
     const assetInput = document.querySelector('input[name="assetId"]') as HTMLInputElement;
     expect(assetInput).toBeInTheDocument();
-    fireEvent.change(assetInput, { target: { value: "ELEC01" } });
+    fireEvent.change(assetInput, { target: { value: 'ELEC01' } });
     fireEvent.blur(assetInput);
 
     // Wait for async validation
@@ -275,17 +275,17 @@ describe("ItemFormPage — Asset ID generation", () => {
     });
   });
 
-  it("skips uniqueness error for own asset ID in edit mode", async () => {
+  it('skips uniqueness error for own asset ID in edit mode', async () => {
     mockItemQuery.mockReturnValue({
       data: {
         data: {
-          id: "item-1",
-          itemName: "MacBook",
+          id: 'item-1',
+          itemName: 'MacBook',
           brand: null,
           model: null,
           itemId: null,
-          type: "Electronics",
-          condition: "Good",
+          type: 'Electronics',
+          condition: 'Good',
           room: null,
           inUse: false,
           deductible: false,
@@ -294,10 +294,10 @@ describe("ItemFormPage — Asset ID generation", () => {
           replacementValue: null,
           resaleValue: null,
           purchasePrice: null,
-          assetId: "ELEC01",
+          assetId: 'ELEC01',
           notes: null,
           locationId: null,
-          lastEditedTime: "2026-01-01",
+          lastEditedTime: '2026-01-01',
           purchaseTransactionId: null,
           purchasedFromId: null,
           purchasedFromName: null,
@@ -308,21 +308,21 @@ describe("ItemFormPage — Asset ID generation", () => {
     });
 
     mockSearchByAssetIdFetch.mockResolvedValue({
-      data: { id: "item-1", itemName: "MacBook" },
+      data: { id: 'item-1', itemName: 'MacBook' },
     });
 
-    renderEdit("item-1");
+    renderEdit('item-1');
 
-    const assetInput = screen.getByDisplayValue("ELEC01");
+    const assetInput = screen.getByDisplayValue('ELEC01');
     fireEvent.blur(assetInput);
 
     await vi.waitFor(() => {
-      expect(mockSearchByAssetIdFetch).toHaveBeenCalledWith({ assetId: "ELEC01" });
+      expect(mockSearchByAssetIdFetch).toHaveBeenCalledWith({ assetId: 'ELEC01' });
     });
     expect(screen.queryByText(/Asset ID already in use/)).not.toBeInTheDocument();
   });
 
-  it("skips uniqueness check when asset ID is empty", () => {
+  it('skips uniqueness check when asset ID is empty', () => {
     renderCreate();
     const assetInput = document.querySelector('input[name="assetId"]') as HTMLInputElement;
     expect(assetInput).toBeInTheDocument();
@@ -331,23 +331,23 @@ describe("ItemFormPage — Asset ID generation", () => {
   });
 });
 
-describe("ItemFormPage — Photos section", () => {
-  it("renders Photos section heading", () => {
+describe('ItemFormPage — Photos section', () => {
+  it('renders Photos section heading', () => {
     renderCreate();
-    expect(screen.getByText("Photos")).toBeInTheDocument();
+    expect(screen.getByText('Photos')).toBeInTheDocument();
   });
 
-  it("renders PhotoUpload component with upload zone", () => {
+  it('renders PhotoUpload component with upload zone', () => {
     renderCreate();
-    expect(screen.getByRole("button", { name: /upload photos/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /upload photos/i })).toBeInTheDocument();
   });
 
-  it("renders existing photos in edit mode", () => {
+  it('renders existing photos in edit mode', () => {
     mockItemQuery.mockReturnValue({
       data: {
         data: {
-          id: "item-1",
-          itemName: "Camera",
+          id: 'item-1',
+          itemName: 'Camera',
           brand: null,
           model: null,
           itemId: null,
@@ -364,7 +364,7 @@ describe("ItemFormPage — Photos section", () => {
           assetId: null,
           notes: null,
           locationId: null,
-          lastEditedTime: "2026-01-01",
+          lastEditedTime: '2026-01-01',
           purchasedFromId: null,
           purchasedFromName: null,
           purchaseTransactionId: null,
@@ -377,25 +377,25 @@ describe("ItemFormPage — Photos section", () => {
     mockPhotosListQuery.mockReturnValue({
       data: {
         data: [
-          { id: 1, filePath: "photo1.jpg", caption: "Front view", sortOrder: 0 },
-          { id: 2, filePath: "photo2.jpg", caption: "Back view", sortOrder: 1 },
+          { id: 1, filePath: 'photo1.jpg', caption: 'Front view', sortOrder: 0 },
+          { id: 2, filePath: 'photo2.jpg', caption: 'Back view', sortOrder: 1 },
         ],
       },
       isLoading: false,
     });
 
-    renderEdit("item-1");
+    renderEdit('item-1');
 
-    expect(screen.getByAltText("Front view")).toBeInTheDocument();
-    expect(screen.getByAltText("Back view")).toBeInTheDocument();
+    expect(screen.getByAltText('Front view')).toBeInTheDocument();
+    expect(screen.getByAltText('Back view')).toBeInTheDocument();
   });
 
-  it("shows delete confirmation when delete button is clicked", () => {
+  it('shows delete confirmation when delete button is clicked', () => {
     mockItemQuery.mockReturnValue({
       data: {
         data: {
-          id: "item-1",
-          itemName: "Camera",
+          id: 'item-1',
+          itemName: 'Camera',
           brand: null,
           model: null,
           itemId: null,
@@ -412,7 +412,7 @@ describe("ItemFormPage — Photos section", () => {
           assetId: null,
           notes: null,
           locationId: null,
-          lastEditedTime: "2026-01-01",
+          lastEditedTime: '2026-01-01',
           purchasedFromId: null,
           purchasedFromName: null,
           purchaseTransactionId: null,
@@ -424,29 +424,29 @@ describe("ItemFormPage — Photos section", () => {
 
     mockPhotosListQuery.mockReturnValue({
       data: {
-        data: [{ id: 1, filePath: "photo1.jpg", caption: "Front", sortOrder: 0 }],
+        data: [{ id: 1, filePath: 'photo1.jpg', caption: 'Front', sortOrder: 0 }],
       },
       isLoading: false,
     });
 
-    renderEdit("item-1");
+    renderEdit('item-1');
 
     fireEvent.click(screen.getByLabelText(/delete photo front/i));
     const confirmText = screen.getByText(/delete this photo/i);
     expect(confirmText).toBeInTheDocument();
     // Scope to the confirmation bar to avoid matching the form-level Cancel button
-    const confirmBar = confirmText.closest("div")!;
+    const confirmBar = confirmText.closest('div')!;
     const confirmScope = within(confirmBar);
-    expect(confirmScope.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
-    expect(confirmScope.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+    expect(confirmScope.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(confirmScope.getByRole('button', { name: /^delete$/i })).toBeInTheDocument();
   });
 
-  it("dismisses delete confirmation on cancel", () => {
+  it('dismisses delete confirmation on cancel', () => {
     mockItemQuery.mockReturnValue({
       data: {
         data: {
-          id: "item-1",
-          itemName: "Camera",
+          id: 'item-1',
+          itemName: 'Camera',
           brand: null,
           model: null,
           itemId: null,
@@ -463,7 +463,7 @@ describe("ItemFormPage — Photos section", () => {
           assetId: null,
           notes: null,
           locationId: null,
-          lastEditedTime: "2026-01-01",
+          lastEditedTime: '2026-01-01',
           purchasedFromId: null,
           purchasedFromName: null,
           purchaseTransactionId: null,
@@ -475,31 +475,31 @@ describe("ItemFormPage — Photos section", () => {
 
     mockPhotosListQuery.mockReturnValue({
       data: {
-        data: [{ id: 1, filePath: "photo1.jpg", caption: "Front", sortOrder: 0 }],
+        data: [{ id: 1, filePath: 'photo1.jpg', caption: 'Front', sortOrder: 0 }],
       },
       isLoading: false,
     });
 
-    renderEdit("item-1");
+    renderEdit('item-1');
 
     fireEvent.click(screen.getByLabelText(/delete photo front/i));
     const confirmText = screen.getByText(/delete this photo/i);
     expect(confirmText).toBeInTheDocument();
 
     // Scope to the confirmation bar to avoid matching the form-level Cancel button
-    const confirmBar = confirmText.closest("div")!;
-    fireEvent.click(within(confirmBar).getByRole("button", { name: /cancel/i }));
+    const confirmBar = confirmText.closest('div')!;
+    fireEvent.click(within(confirmBar).getByRole('button', { name: /cancel/i }));
     expect(screen.queryByText(/delete this photo/i)).not.toBeInTheDocument();
   });
 
-  it("renders camera button for mobile photo capture", () => {
+  it('renders camera button for mobile photo capture', () => {
     renderCreate();
-    expect(screen.getByRole("button", { name: /take photo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /take photo/i })).toBeInTheDocument();
   });
 });
 
-describe("ItemFormPage — Form gaps (tb-581)", () => {
-  it("renders Purchase Price field in Dates & Values section", () => {
+describe('ItemFormPage — Form gaps (tb-581)', () => {
+  it('renders Purchase Price field in Dates & Values section', () => {
     renderCreate();
     expect(screen.getByText(/purchase price/i)).toBeInTheDocument();
     // The input is rendered via TextInput with register("purchasePrice")
@@ -511,37 +511,37 @@ describe("ItemFormPage — Form gaps (tb-581)", () => {
     renderCreate();
     const conditionSelect = document.querySelector('select[name="condition"]') as HTMLSelectElement;
     expect(conditionSelect).toBeInTheDocument();
-    expect(conditionSelect.value).toBe("good");
+    expect(conditionSelect.value).toBe('good');
   });
 
-  it("renders correct condition options (new/good/fair/poor/broken)", () => {
+  it('renders correct condition options (new/good/fair/poor/broken)', () => {
     renderCreate();
     const conditionSelect = document.querySelector('select[name="condition"]') as HTMLSelectElement;
     const options = Array.from(conditionSelect.options).map((o) => o.value);
-    expect(options).toContain("new");
-    expect(options).toContain("good");
-    expect(options).toContain("fair");
-    expect(options).toContain("poor");
-    expect(options).toContain("broken");
+    expect(options).toContain('new');
+    expect(options).toContain('good');
+    expect(options).toContain('fair');
+    expect(options).toContain('poor');
+    expect(options).toContain('broken');
     // Old values should not be present
-    expect(options).not.toContain("Excellent");
+    expect(options).not.toContain('Excellent');
   });
 
-  it("marks Type as required", () => {
+  it('marks Type as required', () => {
     renderCreate();
-    expect(screen.getByText("Type *")).toBeInTheDocument();
+    expect(screen.getByText('Type *')).toBeInTheDocument();
   });
 
-  it("shows notes preview toggle button", () => {
+  it('shows notes preview toggle button', () => {
     renderCreate();
-    expect(screen.getByRole("button", { name: /preview/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
   });
 
-  it("toggles notes between edit and preview mode", () => {
+  it('toggles notes between edit and preview mode', () => {
     renderCreate();
-    const previewBtn = screen.getByRole("button", { name: /preview/i });
+    const previewBtn = screen.getByRole('button', { name: /preview/i });
     fireEvent.click(previewBtn);
     expect(screen.getByText(/nothing to preview/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
   });
 });

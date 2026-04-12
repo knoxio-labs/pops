@@ -2,14 +2,14 @@
  * DataTable component - Comprehensive table with sorting, filtering, pagination, and editing
  * Built on TanStack Table and shadcn primitives
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react';
 import type {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
   Table as TanStackTable,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table';
 import {
   flexRender,
   getCoreRowModel,
@@ -17,19 +17,19 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, Search } from "lucide-react";
-import { cn } from "../lib/utils";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../primitives/table";
-import { Button } from "./Button";
-import { TextInput } from "./TextInput";
+} from '@tanstack/react-table';
+import { ArrowUpDown, ChevronDown, Search } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../primitives/table';
+import { Button } from './Button';
+import { TextInput } from './TextInput';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
-} from "../primitives/dropdown-menu";
-import { FilterBar, type ColumnFilter } from "./DataTableFilters";
+} from '../primitives/dropdown-menu';
+import { FilterBar, type ColumnFilter } from './DataTableFilters';
 
 export interface DataTableProps<TData, TValue = unknown> {
   /**
@@ -134,7 +134,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchable = false,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = 'Search...',
   searchColumn,
   paginated = true,
   pageSizeOptions = [10, 20, 50, 100],
@@ -189,7 +189,7 @@ export function DataTable<TData, TValue>({
   }, [rowSelection, onSelectionChange, enableRowSelection, table]);
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Filters */}
       {filters && filters.length > 0 && (
         <FilterBar filters={filters} table={table as unknown as TanStackTable<unknown>} />
@@ -202,11 +202,11 @@ export function DataTable<TData, TValue>({
             <TextInput
               placeholder={searchPlaceholder}
               prefix={<Search className="h-4 w-4" />}
-              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
+              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}
               onChange={(e) => table.getColumn(searchColumn)?.setFilterValue(e.target.value)}
               className="w-full sm:max-w-sm"
               clearable
-              onClear={() => table.getColumn(searchColumn)?.setFilterValue("")}
+              onClear={() => table.getColumn(searchColumn)?.setFilterValue('')}
             />
           )}
           {columnVisibility && (
@@ -266,9 +266,9 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() && 'selected'}
                   onClick={() => onRowClick?.(row.original)}
-                  className={cn(onRowClick && "cursor-pointer")}
+                  className={cn(onRowClick && 'cursor-pointer')}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -280,7 +280,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  {emptyState || "No results."}
+                  {emptyState || 'No results.'}
                 </TableCell>
               </TableRow>
             )}
@@ -294,7 +294,7 @@ export function DataTable<TData, TValue>({
           <div className="text-sm text-muted-foreground">
             {enableRowSelection && (
               <>
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
               </>
             )}
@@ -355,7 +355,7 @@ export function SortableHeader({
 }: {
   column: {
     toggleSorting: (desc?: boolean) => void;
-    getIsSorted: () => false | "asc" | "desc";
+    getIsSorted: () => false | 'asc' | 'desc';
   };
   children: React.ReactNode;
 }) {
@@ -363,7 +363,7 @@ export function SortableHeader({
     <Button
       variant="ghost"
       size="sm"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       className="-ml-3 h-8 text-2xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
     >
       {children}

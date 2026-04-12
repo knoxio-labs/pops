@@ -40,13 +40,13 @@ docs/
 
 ## Doc Types
 
-| Type | What it is | Where it lives |
-|------|-----------|----------------|
-| **Theme** | Strategic domain overview, lists epics | `themes/<name>/README.md` |
-| **Epic** | Scope and coordination for a chunk of work | `themes/<name>/epics/NN-slug.md` |
-| **PRD** | Detailed spec — data model, API, edge cases | `themes/<name>/prds/NNN-slug/README.md` |
-| **User Story** | Single implementable unit, bite-sized | `themes/<name>/prds/NNN-slug/us-NN-slug.md` |
-| **ADR** | Architecture decision and its rationale | `architecture/adr-NNN-slug.md` |
+| Type           | What it is                                  | Where it lives                              |
+| -------------- | ------------------------------------------- | ------------------------------------------- |
+| **Theme**      | Strategic domain overview, lists epics      | `themes/<name>/README.md`                   |
+| **Epic**       | Scope and coordination for a chunk of work  | `themes/<name>/epics/NN-slug.md`            |
+| **PRD**        | Detailed spec — data model, API, edge cases | `themes/<name>/prds/NNN-slug/README.md`     |
+| **User Story** | Single implementable unit, bite-sized       | `themes/<name>/prds/NNN-slug/us-NN-slug.md` |
+| **ADR**        | Architecture decision and its rationale     | `architecture/adr-NNN-slug.md`              |
 
 See [CLAUDE.md](CLAUDE.md) for templates and standards.
 

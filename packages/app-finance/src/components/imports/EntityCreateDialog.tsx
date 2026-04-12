@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -6,11 +6,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@pops/ui";
-import { Input } from "@pops/ui";
-import { Label } from "@pops/ui";
-import { Button } from "@pops/ui";
-import { useImportStore } from "../../store/importStore";
+} from '@pops/ui';
+import { Input } from '@pops/ui';
+import { Label } from '@pops/ui';
+import { Button } from '@pops/ui';
+import { useImportStore } from '../../store/importStore';
 
 interface EntityCreateDialogProps {
   open: boolean;
@@ -29,7 +29,7 @@ export function EntityCreateDialog({
   open,
   onOpenChange,
   onEntityCreated,
-  suggestedName = "",
+  suggestedName = '',
   dbEntities = [],
 }: EntityCreateDialogProps) {
   const [name, setName] = useState(suggestedName);
@@ -56,12 +56,12 @@ export function EntityCreateDialog({
       if (!trimmed) return;
 
       try {
-        const entity = addPendingEntity({ name: trimmed, type: "company" }, dbEntities);
+        const entity = addPendingEntity({ name: trimmed, type: 'company' }, dbEntities);
         onEntityCreated({ entityId: entity.tempId, entityName: entity.name });
         onOpenChange(false);
-        setName("");
+        setName('');
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create entity");
+        setError(err instanceof Error ? err.message : 'Failed to create entity');
       }
     },
     [name, addPendingEntity, dbEntities, onEntityCreated, onOpenChange]
@@ -71,7 +71,7 @@ export function EntityCreateDialog({
     (newOpen: boolean) => {
       onOpenChange(newOpen);
       if (!newOpen) {
-        setName("");
+        setName('');
         setTouched(false);
         setError(null);
       }
