@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { ParsedTransaction } from "@pops/api/modules/finance/imports";
-import { useImportStore, type ProcessedTransaction } from "./importStore";
+import {
+  useImportStore,
+  type ProcessedTransaction,
+  type PendingEntity,
+  type PendingChangeset,
+} from "./importStore";
 
 // ---------------------------------------------------------------------------
 // importStore — parsedTransactionsFingerprint / processedForFingerprint tests
@@ -130,5 +135,175 @@ describe("importStore — parsed/processed fingerprint", () => {
     expect(state.parsedTransactionsFingerprint).toBe("");
     expect(state.processedForFingerprint).toBeNull();
     expect(state.processedTransactions.matched).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Step range — currentStep supports 1..7 (PRD-031 adds step 7)
+// ---------------------------------------------------------------------------
+
+describe("importStore — step range", () => {
+  beforeEach(() => {
+    useImportStore.getState().reset();
+  });
+
+  it("nextStep caps at 7", () => {
+    useImportStore.getState().goToStep(6);
+    useImportStore.getState().nextStep();
+    expect(useImportStore.getState().currentStep).toBe(7);
+    useImportStore.getState().nextStep();
+    expect(useImportStore.getState().currentStep).toBe(7);
+  });
+
+  it("prevStep floors at 1", () => {
+    useImportStore.getState().goToStep(1);
+    useImportStore.getState().prevStep();
+    expect(useImportStore.getState().currentStep).toBe(1);
+  });
+
+  it("goToStep sets arbitrary step", () => {
+    useImportStore.getState().goToStep(5);
+    expect(useImportStore.getState().currentStep).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pending entities (PRD-030 US-01)
+// ---------------------------------------------------------------------------
+
+function makePendingEntity(overrides: Partial<PendingEntity> = {}): PendingEntity {
+  return {
+    tempId: "temp-1",
+    name: "Test Entity",
+    type: "merchant",
+    aliases: ["alias-1"],
+    defaultTransactionType: "expense",
+    defaultTags: ["food"],
+    createdAt: "2026-04-12T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("importStore — pendingEntities", () => {
+  beforeEach(() => {
+    useImportStore.getState().reset();
+  });
+
+  it("starts with an empty array", () => {
+    expect(useImportStore.getState().pendingEntities).toEqual([]);
+  });
+
+  it("addPendingEntity appends to the list", () => {
+    const e1 = makePendingEntity({ tempId: "t1" });
+    const e2 = makePendingEntity({ tempId: "t2", name: "Second" });
+    useImportStore.getState().addPendingEntity(e1);
+    useImportStore.getState().addPendingEntity(e2);
+    expect(useImportStore.getState().pendingEntities).toHaveLength(2);
+    expect(useImportStore.getState().pendingEntities[0].tempId).toBe("t1");
+    expect(useImportStore.getState().pendingEntities[1].tempId).toBe("t2");
+  });
+
+  it("removePendingEntity removes by tempId", () => {
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t2" }));
+    useImportStore.getState().removePendingEntity("t1");
+    const entities = useImportStore.getState().pendingEntities;
+    expect(entities).toHaveLength(1);
+    expect(entities[0].tempId).toBe("t2");
+  });
+
+  it("removePendingEntity with unknown id is a no-op", () => {
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    useImportStore.getState().removePendingEntity("nonexistent");
+    expect(useImportStore.getState().pendingEntities).toHaveLength(1);
+  });
+
+  it("clearPendingEntities empties the list", () => {
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t2" }));
+    useImportStore.getState().clearPendingEntities();
+    expect(useImportStore.getState().pendingEntities).toEqual([]);
+  });
+
+  it("reset clears pending entities", () => {
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    useImportStore.getState().reset();
+    expect(useImportStore.getState().pendingEntities).toEqual([]);
+  });
+
+  it("setFile with a different file clears pending entities", () => {
+    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    const fakeFile = { name: "new.csv", size: 10, lastModified: 1 } as unknown as File;
+    useImportStore.getState().setFile(fakeFile);
+    expect(useImportStore.getState().pendingEntities).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pending changesets (PRD-030 US-02)
+// ---------------------------------------------------------------------------
+
+function makePendingChangeset(overrides: Partial<PendingChangeset> = {}): PendingChangeset {
+  return {
+    id: "cs-1",
+    changeSet: { source: "ai", reason: "test", ops: [{ op: "add", data: {} }] },
+    approvedAt: "2026-04-12T01:00:00Z",
+    description: "Fix entity mapping",
+    ...overrides,
+  };
+}
+
+describe("importStore — pendingChangesets", () => {
+  beforeEach(() => {
+    useImportStore.getState().reset();
+  });
+
+  it("starts with an empty array", () => {
+    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+  });
+
+  it("addPendingChangeset appends to the list", () => {
+    const cs1 = makePendingChangeset({ id: "cs-1" });
+    const cs2 = makePendingChangeset({ id: "cs-2", description: "Second" });
+    useImportStore.getState().addPendingChangeset(cs1);
+    useImportStore.getState().addPendingChangeset(cs2);
+    expect(useImportStore.getState().pendingChangesets).toHaveLength(2);
+    expect(useImportStore.getState().pendingChangesets[0].id).toBe("cs-1");
+    expect(useImportStore.getState().pendingChangesets[1].id).toBe("cs-2");
+  });
+
+  it("removePendingChangeset removes by id", () => {
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-2" }));
+    useImportStore.getState().removePendingChangeset("cs-1");
+    const changesets = useImportStore.getState().pendingChangesets;
+    expect(changesets).toHaveLength(1);
+    expect(changesets[0].id).toBe("cs-2");
+  });
+
+  it("removePendingChangeset with unknown id is a no-op", () => {
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+    useImportStore.getState().removePendingChangeset("nonexistent");
+    expect(useImportStore.getState().pendingChangesets).toHaveLength(1);
+  });
+
+  it("clearPendingChangesets empties the list", () => {
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-2" }));
+    useImportStore.getState().clearPendingChangesets();
+    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+  });
+
+  it("reset clears pending changesets", () => {
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+    useImportStore.getState().reset();
+    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+  });
+
+  it("setFile with a different file clears pending changesets", () => {
+    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+    const fakeFile = { name: "new.csv", size: 10, lastModified: 1 } as unknown as File;
+    useImportStore.getState().setFile(fakeFile);
+    expect(useImportStore.getState().pendingChangesets).toEqual([]);
   });
 });

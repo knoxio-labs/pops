@@ -10,6 +10,33 @@ import { findSimilarTransactions } from "../lib/transaction-utils";
 
 export type BankType = "Amex";
 
+// ---------------------------------------------------------------------------
+// Pending entity — created during import, stored locally until step 7 commit.
+// ---------------------------------------------------------------------------
+
+export interface PendingEntity {
+  tempId: string;
+  name: string;
+  type: string;
+  aliases: string[];
+  defaultTransactionType: string;
+  defaultTags: string[];
+  createdAt: string; // ISO-8601
+}
+
+// ---------------------------------------------------------------------------
+// Pending changeset — rule ChangeSet approved during import, not yet committed.
+// The `changeSet` field mirrors the server ChangeSet shape (source, reason, ops)
+// but is stored as an opaque record so the store stays decoupled from zod schemas.
+// ---------------------------------------------------------------------------
+
+export interface PendingChangeset {
+  id: string;
+  changeSet: Record<string, unknown>;
+  approvedAt: string; // ISO-8601
+  description: string;
+}
+
 /**
  * Extended ProcessedTransaction with frontend-only fields
  */
@@ -18,7 +45,7 @@ export interface ProcessedTransaction extends BaseProcessedTransaction {
 }
 
 interface ImportStore {
-  // Current wizard step (1-6)
+  // Current wizard step (1-7)
   currentStep: number;
 
   // Step 1: Upload
@@ -76,6 +103,10 @@ interface ImportStore {
     skipped: number;
   } | null;
 
+  // Local-first pending state (PRD-030)
+  pendingEntities: PendingEntity[];
+  pendingChangesets: PendingChangeset[];
+
   // Actions
   setFile: (file: File | null) => void;
   setBankType: (bankType: BankType) => void;
@@ -93,6 +124,16 @@ interface ImportStore {
   prevStep: () => void;
   goToStep: (step: number) => void;
   reset: () => void;
+
+  // Pending entity management (PRD-030 US-01)
+  addPendingEntity: (entity: PendingEntity) => void;
+  removePendingEntity: (tempId: string) => void;
+  clearPendingEntities: () => void;
+
+  // Pending changeset management (PRD-030 US-02)
+  addPendingChangeset: (cs: PendingChangeset) => void;
+  removePendingChangeset: (id: string) => void;
+  clearPendingChangesets: () => void;
 
   // Transaction management
   updateTransaction: (
@@ -130,6 +171,8 @@ const initialState = {
   confirmedTransactions: [],
   executeSessionId: null,
   importResult: null,
+  pendingEntities: [],
+  pendingChangesets: [],
 };
 
 /**
@@ -162,6 +205,8 @@ const downstreamReset: Pick<
   | "confirmedTransactions"
   | "executeSessionId"
   | "importResult"
+  | "pendingEntities"
+  | "pendingChangesets"
 > = {
   headers: initialState.headers,
   rows: initialState.rows,
@@ -173,6 +218,8 @@ const downstreamReset: Pick<
   confirmedTransactions: initialState.confirmedTransactions,
   executeSessionId: initialState.executeSessionId,
   importResult: initialState.importResult,
+  pendingEntities: initialState.pendingEntities,
+  pendingChangesets: initialState.pendingChangesets,
 };
 
 function isSameFile(a: File | null, b: File | null): boolean {
@@ -232,10 +279,28 @@ export const useImportStore = create<ImportStore>((set) => ({
   setExecuteSessionId: (executeSessionId) => set({ executeSessionId }),
   setImportResult: (importResult) => set({ importResult }),
 
-  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 6) })),
+  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 7) })),
   prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
   goToStep: (step) => set({ currentStep: step }),
   reset: () => set(initialState),
+
+  // Pending entity management (PRD-030 US-01)
+  addPendingEntity: (entity) =>
+    set((state) => ({ pendingEntities: [...state.pendingEntities, entity] })),
+  removePendingEntity: (tempId) =>
+    set((state) => ({
+      pendingEntities: state.pendingEntities.filter((e) => e.tempId !== tempId),
+    })),
+  clearPendingEntities: () => set({ pendingEntities: [] }),
+
+  // Pending changeset management (PRD-030 US-02)
+  addPendingChangeset: (cs) =>
+    set((state) => ({ pendingChangesets: [...state.pendingChangesets, cs] })),
+  removePendingChangeset: (id) =>
+    set((state) => ({
+      pendingChangesets: state.pendingChangesets.filter((c) => c.id !== id),
+    })),
+  clearPendingChangesets: () => set({ pendingChangesets: [] }),
 
   updateTransaction: (transaction, updates) =>
     set((state) => {
