@@ -35,7 +35,7 @@ let rejectOnSuccess: (() => void) | undefined;
 
 vi.mock("../../store/importStore", () => ({
   useImportStore: (selector: (s: Record<string, unknown>) => unknown) => {
-    const state = { addPendingChangeSet: mockAddPendingChangeSet };
+    const state = { addPendingChangeSet: mockAddPendingChangeSet, pendingChangeSets: [] };
     return selector(state);
   },
 }));
