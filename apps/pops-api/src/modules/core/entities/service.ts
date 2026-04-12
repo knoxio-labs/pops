@@ -20,12 +20,13 @@ export interface EntityListResult {
   total: number;
 }
 
-/** List entities with optional search and type filters, including transaction count. */
+/** List entities with optional search, type, and orphaned filters, including transaction count. */
 export function listEntities(
   search: string | undefined,
   type: string | undefined,
   limit: number,
-  offset: number
+  offset: number,
+  orphanedOnly?: boolean
 ): EntityListResult {
   const db = getDrizzle();
 
@@ -40,7 +41,7 @@ export function listEntities(
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   // LEFT JOIN to get transaction count per entity
-  const rows = db
+  let query = db
     .select({
       id: entities.id,
       notionId: entities.notionId,
@@ -59,9 +60,30 @@ export function listEntities(
     .where(whereClause)
     .groupBy(entities.id)
     .orderBy(entities.name)
-    .limit(limit)
-    .offset(offset)
-    .all();
+    .$dynamic();
+
+  // Server-side orphaned filter: only entities with zero transactions
+  if (orphanedOnly) {
+    query = query.having(sql`COUNT(${transactions.id}) = 0`);
+  }
+
+  const rows = query.limit(limit).offset(offset).all();
+
+  // Count query must match the same filter conditions
+  if (orphanedOnly) {
+    const countRows = db
+      .select({
+        id: entities.id,
+        txnCount: sql<number>`CAST(COUNT(${transactions.id}) AS INTEGER)`,
+      })
+      .from(entities)
+      .leftJoin(transactions, eq(entities.id, transactions.entityId))
+      .where(whereClause)
+      .groupBy(entities.id)
+      .having(sql`COUNT(${transactions.id}) = 0`)
+      .all();
+    return { rows, total: countRows.length };
+  }
 
   let countQuery = db.select({ total: count() }).from(entities).$dynamic();
   if (whereClause) {

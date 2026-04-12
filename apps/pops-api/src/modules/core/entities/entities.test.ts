@@ -385,4 +385,35 @@ describe("entities.list transactionCount", () => {
     expect(result.data[1]!.name).toBe("Woolworths");
     expect(result.data[1]!.transactionCount).toBe(1);
   });
+
+  it("counts transactions regardless of type (status-agnostic)", async () => {
+    const entityId = seedEntity(db, { name: "Multi-Type Corp" });
+    seedTransaction(db, { entity_id: entityId, type: "purchase" });
+    seedTransaction(db, { entity_id: entityId, type: "transfer" });
+    seedTransaction(db, { entity_id: entityId, type: "income" });
+
+    const result = await caller.core.entities.list({});
+    expect(result.data[0]!.transactionCount).toBe(3);
+  });
+
+  it("orphanedOnly filter returns only zero-count entities", async () => {
+    const woolId = seedEntity(db, { name: "Woolworths" });
+    seedEntity(db, { name: "Orphaned Co" });
+    seedEntity(db, { name: "Also Orphaned" });
+    seedTransaction(db, { entity_id: woolId, description: "WOOLWORTHS" });
+
+    const result = await caller.core.entities.list({ orphanedOnly: true });
+    expect(result.data).toHaveLength(2);
+    expect(result.pagination.total).toBe(2);
+    expect(result.data.every((e) => e.transactionCount === 0)).toBe(true);
+  });
+
+  it("orphanedOnly filter excludes entities with transactions", async () => {
+    const woolId = seedEntity(db, { name: "Woolworths" });
+    seedTransaction(db, { entity_id: woolId, description: "WOOLWORTHS" });
+
+    const result = await caller.core.entities.list({ orphanedOnly: true });
+    expect(result.data).toHaveLength(0);
+    expect(result.pagination.total).toBe(0);
+  });
 });
