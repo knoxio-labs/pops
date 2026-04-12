@@ -19,7 +19,13 @@ export const entitiesRouter = router({
     const limit = input.limit ?? DEFAULT_LIMIT;
     const offset = input.offset ?? DEFAULT_OFFSET;
 
-    const { rows, total } = service.listEntities(input.search, input.type, limit, offset, input.orphanedOnly);
+    const { rows, total } = service.listEntities(
+      input.search,
+      input.type,
+      limit,
+      offset,
+      input.orphanedOnly
+    );
 
     return {
       data: rows.map(toEntity),

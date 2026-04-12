@@ -72,7 +72,10 @@ export function listEntities(
   // Count query must match the same filter conditions
   if (orphanedOnly) {
     const countRows = db
-      .select({ id: entities.id, txnCount: sql<number>`CAST(COUNT(${transactions.id}) AS INTEGER)` })
+      .select({
+        id: entities.id,
+        txnCount: sql<number>`CAST(COUNT(${transactions.id}) AS INTEGER)`,
+      })
       .from(entities)
       .leftJoin(transactions, eq(entities.id, transactions.entityId))
       .where(whereClause)
