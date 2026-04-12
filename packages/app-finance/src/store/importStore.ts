@@ -10,6 +10,46 @@ import { findSimilarTransactions } from "../lib/transaction-utils";
 
 export type BankType = "Amex";
 
+// ---------------------------------------------------------------------------
+// Pending entity — created during import, stored locally until step 7 commit.
+// ---------------------------------------------------------------------------
+
+export interface PendingEntity {
+  tempId: string; // Format: temp:entity:{uuid}
+  name: string;
+  type: string;
+}
+
+/** Input for creating a pending entity (tempId is generated internally). */
+export interface AddPendingEntityInput {
+  name: string;
+  type: string;
+}
+
+// ---------------------------------------------------------------------------
+// Pending changeset — rule ChangeSet approved during import, not yet committed.
+// ---------------------------------------------------------------------------
+
+/** Mirrors the server ChangeSet shape (source, reason, ops). */
+export interface ChangeSetData {
+  source?: string;
+  reason?: string;
+  ops: Record<string, unknown>[];
+}
+
+export interface PendingChangeSet {
+  tempId: string; // Format: temp:changeset:{uuid}
+  changeSet: ChangeSetData;
+  appliedAt: string; // ISO-8601
+  source: string;
+}
+
+/** Input for creating a pending changeset (tempId and appliedAt are generated internally). */
+export interface AddPendingChangeSetInput {
+  changeSet: ChangeSetData;
+  source: string;
+}
+
 /**
  * Extended ProcessedTransaction with frontend-only fields
  */
@@ -18,7 +58,7 @@ export interface ProcessedTransaction extends BaseProcessedTransaction {
 }
 
 interface ImportStore {
-  // Current wizard step (1-6)
+  // Current wizard step (1-7)
   currentStep: number;
 
   // Step 1: Upload
@@ -76,6 +116,10 @@ interface ImportStore {
     skipped: number;
   } | null;
 
+  // Local-first pending state (PRD-030)
+  pendingEntities: PendingEntity[];
+  pendingChangeSets: PendingChangeSet[];
+
   // Actions
   setFile: (file: File | null) => void;
   setBankType: (bankType: BankType) => void;
@@ -93,6 +137,19 @@ interface ImportStore {
   prevStep: () => void;
   goToStep: (step: number) => void;
   reset: () => void;
+
+  // Pending entity management (PRD-030 US-01)
+  addPendingEntity: (
+    input: AddPendingEntityInput,
+    dbEntities?: Array<{ name: string }>
+  ) => PendingEntity;
+  listPendingEntities: () => PendingEntity[];
+  removePendingEntity: (tempId: string) => void;
+
+  // Pending changeset management (PRD-030 US-02)
+  addPendingChangeSet: (input: AddPendingChangeSetInput) => PendingChangeSet;
+  listPendingChangeSets: () => PendingChangeSet[];
+  removePendingChangeSet: (tempId: string) => void;
 
   // Transaction management
   updateTransaction: (
@@ -130,6 +187,8 @@ const initialState = {
   confirmedTransactions: [],
   executeSessionId: null,
   importResult: null,
+  pendingEntities: [],
+  pendingChangeSets: [],
 };
 
 /**
@@ -162,6 +221,8 @@ const downstreamReset: Pick<
   | "confirmedTransactions"
   | "executeSessionId"
   | "importResult"
+  | "pendingEntities"
+  | "pendingChangeSets"
 > = {
   headers: initialState.headers,
   rows: initialState.rows,
@@ -173,6 +234,8 @@ const downstreamReset: Pick<
   confirmedTransactions: initialState.confirmedTransactions,
   executeSessionId: initialState.executeSessionId,
   importResult: initialState.importResult,
+  pendingEntities: initialState.pendingEntities,
+  pendingChangeSets: initialState.pendingChangeSets,
 };
 
 function isSameFile(a: File | null, b: File | null): boolean {
@@ -232,10 +295,63 @@ export const useImportStore = create<ImportStore>((set) => ({
   setExecuteSessionId: (executeSessionId) => set({ executeSessionId }),
   setImportResult: (importResult) => set({ importResult }),
 
-  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 6) })),
+  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 7) })),
   prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
   goToStep: (step) => set({ currentStep: step }),
   reset: () => set(initialState),
+
+  // Pending entity management (PRD-030 US-01)
+  addPendingEntity: (
+    input: AddPendingEntityInput,
+    dbEntities: Array<{ name: string }> = []
+  ): PendingEntity => {
+    const nameLower = input.name.toLowerCase();
+
+    // Check uniqueness against pending list
+    const state = useImportStore.getState();
+    if (state.pendingEntities.some((e: PendingEntity) => e.name.toLowerCase() === nameLower)) {
+      throw new Error(`Entity with name "${input.name}" already exists in pending list`);
+    }
+
+    // Check uniqueness against DB entity list
+    if (dbEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      throw new Error(`Entity with name "${input.name}" already exists in the database`);
+    }
+
+    const entity: PendingEntity = {
+      tempId: `temp:entity:${crypto.randomUUID()}`,
+      name: input.name,
+      type: input.type,
+    };
+
+    set((prev) => ({ pendingEntities: [...prev.pendingEntities, entity] }));
+    return entity;
+  },
+  listPendingEntities: (): PendingEntity[] => useImportStore.getState().pendingEntities,
+  removePendingEntity: (tempId: string) =>
+    set((state) => ({
+      pendingEntities: state.pendingEntities.filter((e: PendingEntity) => e.tempId !== tempId),
+    })),
+
+  // Pending changeset management (PRD-030 US-02)
+  addPendingChangeSet: (input: AddPendingChangeSetInput): PendingChangeSet => {
+    const entry: PendingChangeSet = {
+      tempId: `temp:changeset:${crypto.randomUUID()}`,
+      changeSet: input.changeSet,
+      appliedAt: new Date().toISOString(),
+      source: input.source,
+    };
+
+    set((prev) => ({ pendingChangeSets: [...prev.pendingChangeSets, entry] }));
+    return entry;
+  },
+  listPendingChangeSets: (): PendingChangeSet[] => useImportStore.getState().pendingChangeSets,
+  removePendingChangeSet: (tempId: string) =>
+    set((state) => ({
+      pendingChangeSets: state.pendingChangeSets.filter(
+        (c: PendingChangeSet) => c.tempId !== tempId
+      ),
+    })),
 
   updateTransaction: (transaction, updates) =>
     set((state) => {
