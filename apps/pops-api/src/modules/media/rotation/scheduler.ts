@@ -21,6 +21,12 @@ import {
   getLeavingMovieSizeGb,
   processExpiredMovies,
 } from './removal-selection.js';
+import {
+  getAdditionBudget,
+  addMoviesFromQueue,
+  getDailyAdditions,
+  getAvgMovieGb,
+} from './addition-gating.js';
 
 // ---------------------------------------------------------------------------
 // Settings keys
@@ -241,8 +247,26 @@ export async function runRotationCycle(): Promise<RotationCycleResult> {
       }
     }
 
-    // Step 4: Add movies from candidate queue (stub — implemented by tb-348)
-    const moviesAdded = 0;
+    // Step 4: Re-check free space and add movies from candidate queue
+    let postFreeSpaceGb: number;
+    try {
+      postFreeSpaceGb = await getRadarrDiskSpace();
+    } catch {
+      postFreeSpaceGb = freeSpaceGb; // fall back to earlier measurement
+    }
+
+    const budget = getAdditionBudget(
+      postFreeSpaceGb,
+      targetFreeGb,
+      getAvgMovieGb(),
+      getDailyAdditions()
+    );
+    const additionResult = await addMoviesFromQueue(budget);
+    const moviesAdded = additionResult.added;
+
+    if (budget === 0) {
+      console.log('[Rotation] Additions skipped — below target free space');
+    }
 
     const result: RotationCycleResult = {
       moviesMarkedLeaving,
