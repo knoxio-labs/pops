@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { CorrectionRow } from "@pops/api/modules/core/corrections/types";
 import type { Entity } from "@pops/api/modules/core/entities/types";
-import type { PendingChangeSet, PendingEntity, ChangeSetData } from "../store/importStore";
+import type { PendingChangeSet, PendingEntity, ChangeSet } from "../store/importStore";
 import { computeMergedRules, computeMergedEntities } from "./merged-state";
 
 // ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ function makeRule(overrides: Partial<CorrectionRow> = {}): CorrectionRow {
 }
 
 function makePendingChangeSet(
-  changeSet: ChangeSetData,
+  changeSet: ChangeSet,
   overrides: Partial<PendingChangeSet> = {}
 ): PendingChangeSet {
   return {
