@@ -39,6 +39,9 @@ import type { tierOverrides } from './schema/tier-overrides.js';
 import type { debriefStatus } from './schema/debrief-status.js';
 import type { shelfImpressions } from './schema/shelf-impressions.js';
 import type { rotationLog } from './schema/rotation-log.js';
+import type { rotationSources } from './schema/rotation-sources.js';
+import type { rotationCandidates } from './schema/rotation-candidates.js';
+import type { rotationExclusions } from './schema/rotation-exclusions.js';
 import type { tagVocabulary } from './schema/tag-vocabulary.js';
 import type { transactionTagRules } from './schema/transaction-tag-rules.js';
 
@@ -79,6 +82,9 @@ export {
   debriefStatus,
   shelfImpressions,
   rotationLog,
+  rotationSources,
+  rotationCandidates,
+  rotationExclusions,
 } from './schema/index.js';
 
 // Select types (what you get back from a SELECT query)
@@ -152,6 +158,12 @@ export type ShelfImpressionRow = InferSelectModel<typeof shelfImpressions>;
 export type ShelfImpressionInsert = InferInsertModel<typeof shelfImpressions>;
 export type RotationLogRow = InferSelectModel<typeof rotationLog>;
 export type RotationLogInsert = InferInsertModel<typeof rotationLog>;
+export type RotationSourceRow = InferSelectModel<typeof rotationSources>;
+export type RotationSourceInsert = InferInsertModel<typeof rotationSources>;
+export type RotationCandidateRow = InferSelectModel<typeof rotationCandidates>;
+export type RotationCandidateInsert = InferInsertModel<typeof rotationCandidates>;
+export type RotationExclusionRow = InferSelectModel<typeof rotationExclusions>;
+export type RotationExclusionInsert = InferInsertModel<typeof rotationExclusions>;
 
 // Constants
 export const ENTITY_TYPES = ['company', 'person', 'place', 'brand', 'organisation'] as const;

@@ -33,3 +33,6 @@ export { tierOverrides } from './tier-overrides.js';
 export { debriefStatus } from './debrief-status.js';
 export { shelfImpressions } from './shelf-impressions.js';
 export { rotationLog } from './rotation-log.js';
+export { rotationSources } from './rotation-sources.js';
+export { rotationCandidates } from './rotation-candidates.js';
+export { rotationExclusions } from './rotation-exclusions.js';
