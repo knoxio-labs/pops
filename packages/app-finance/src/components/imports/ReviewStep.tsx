@@ -605,7 +605,10 @@ export function ReviewStep() {
           // re-derived mergedRules yet because React hasn't re-rendered).
           const freshPending = useImportStore.getState().pendingChangeSets;
           const freshRules = dbRulesData?.data
-            ? computeMergedRules(dbRulesData.data, freshPending)
+            ? computeMergedRules(
+                dbRulesData.data as Parameters<typeof computeMergedRules>[0],
+                freshPending
+              )
             : [];
           const reeval = reevaluateTransactions(
             localTransactions.uncertain,

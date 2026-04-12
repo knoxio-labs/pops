@@ -3,10 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 // --- Mock setup ---
 
-const mockCreateEntityMutateAsync = vi.fn();
 const mockAnalyzeCorrectionMutateAsync = vi.fn();
 const mockEntitiesQuery = vi.fn();
-const mockApplyChangeSetAndReevaluateMutateAsync = vi.fn();
 
 vi.mock("../../lib/trpc", () => ({
   trpc: {
@@ -15,16 +13,6 @@ vi.mock("../../lib/trpc", () => ({
         list: {
           useQuery: (...args: unknown[]) => mockEntitiesQuery(...args),
         },
-        create: {
-          useMutation: (opts: Record<string, unknown>) => ({
-            mutateAsync: (...args: unknown[]) => {
-              const result = mockCreateEntityMutateAsync(...args);
-              if (typeof opts.onSuccess === "function") (opts.onSuccess as () => void)();
-              return result;
-            },
-            isPending: false,
-          }),
-        },
       },
       corrections: {
         analyzeCorrection: {
@@ -32,6 +20,9 @@ vi.mock("../../lib/trpc", () => ({
             mutateAsync: mockAnalyzeCorrectionMutateAsync,
             isPending: false,
           }),
+        },
+        list: {
+          useQuery: () => ({ data: { data: [] }, isLoading: false, isError: false }),
         },
         proposeChangeSet: {
           useQuery: () => ({ data: null, isFetching: false }),
@@ -62,24 +53,6 @@ vi.mock("../../lib/trpc", () => ({
         },
       },
     },
-    finance: {
-      imports: {
-        applyChangeSetAndReevaluate: {
-          useMutation: () => ({
-            mutateAsync: (...args: unknown[]) =>
-              mockApplyChangeSetAndReevaluateMutateAsync(...args),
-            isPending: false,
-          }),
-        },
-      },
-    },
-    useUtils: () => ({
-      core: {
-        entities: {
-          list: { invalidate: vi.fn() },
-        },
-      },
-    }),
   },
 }));
 
@@ -99,6 +72,8 @@ const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
 const mockSetConfirmedTransactions = vi.fn();
 const mockFindSimilar = vi.fn(() => []);
+const mockAddPendingEntity = vi.fn();
+const mockAddPendingChangeSet = vi.fn();
 
 let mockProcessedTransactions: {
   matched: unknown[];
@@ -108,8 +83,11 @@ let mockProcessedTransactions: {
   warnings?: unknown[];
 };
 
-vi.mock("../../store/importStore", () => ({
-  useImportStore: () => ({
+let mockPendingEntities: unknown[] = [];
+let mockPendingChangeSets: unknown[] = [];
+
+vi.mock("../../store/importStore", () => {
+  const buildState = (): Record<string, unknown> => ({
     processedTransactions: mockProcessedTransactions,
     setConfirmedTransactions: mockSetConfirmedTransactions,
     processSessionId: "11111111-1111-1111-1111-111111111111",
@@ -117,7 +95,36 @@ vi.mock("../../store/importStore", () => ({
     nextStep: mockNextStep,
     prevStep: mockPrevStep,
     findSimilar: mockFindSimilar,
-  }),
+    pendingEntities: mockPendingEntities,
+    pendingChangeSets: mockPendingChangeSets,
+    addPendingEntity: mockAddPendingEntity,
+    addPendingChangeSet: mockAddPendingChangeSet,
+  });
+
+  const hook = (selectorOrUndefined?: (s: Record<string, unknown>) => unknown) => {
+    const state = buildState();
+    if (selectorOrUndefined) return selectorOrUndefined(state);
+    return state;
+  };
+
+  hook.getState = () => ({
+    pendingChangeSets: mockPendingChangeSets,
+    pendingEntities: mockPendingEntities,
+  });
+
+  return { useImportStore: hook };
+});
+
+const mockReevaluateTransactions = vi.fn();
+vi.mock("../../lib/local-re-evaluation", () => ({
+  reevaluateTransactions: (...args: unknown[]) => mockReevaluateTransactions(...args),
+}));
+
+const mockComputeMergedRules = vi.fn();
+const mockComputeMergedEntities = vi.fn();
+vi.mock("../../lib/merged-state", () => ({
+  computeMergedRules: (...args: unknown[]) => mockComputeMergedRules(...args),
+  computeMergedEntities: (...args: unknown[]) => mockComputeMergedEntities(...args),
 }));
 
 vi.mock("./EntityCreateDialog", () => ({
@@ -126,7 +133,6 @@ vi.mock("./EntityCreateDialog", () => ({
 
 let lastProposalDialogProps: unknown = null;
 let proposalDialogApproveMode: "success" | "error" = "success";
-let proposalDialogApprovePayload: { result: unknown; affectedCount: number } | null = null;
 vi.mock("./CorrectionProposalDialog", async () => {
   const React = await import("react");
   const { toast } = await import("sonner");
@@ -134,7 +140,7 @@ vi.mock("./CorrectionProposalDialog", async () => {
     CorrectionProposalDialog: (props: unknown) => {
       lastProposalDialogProps = props;
       const p = props as {
-        onApproved?: (result: unknown, affectedCount: number) => void;
+        onApproved?: () => void;
         sessionId?: string;
       };
       return React.createElement(
@@ -153,9 +159,7 @@ vi.mock("./CorrectionProposalDialog", async () => {
                 toast.error("boom");
                 return;
               }
-              const payload =
-                proposalDialogApprovePayload ?? ({ result: {}, affectedCount: 0 } as const);
-              p.onApproved?.(payload.result, payload.affectedCount);
+              p.onApproved?.();
             },
           },
           "Approve"
@@ -332,7 +336,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   lastProposalDialogProps = null;
   proposalDialogApproveMode = "success";
-  proposalDialogApprovePayload = null;
+  mockPendingEntities = [];
+  mockPendingChangeSets = [];
   mockEntitiesQuery.mockReturnValue({
     data: {
       data: [
@@ -343,43 +348,21 @@ beforeEach(() => {
   });
   // Default: AI analysis returns null (fallback to contains pattern)
   mockAnalyzeCorrectionMutateAsync.mockResolvedValue({ data: null });
-  mockApplyChangeSetAndReevaluateMutateAsync.mockImplementation(
-    async (input: { changeSet: { ops: Array<{ data: { descriptionPattern: string } }> } }) => {
-      const pattern = input.changeSet.ops[0]?.data.descriptionPattern ?? "";
-      const norm = pattern.toUpperCase();
-
-      const toMove = [
-        ...mockProcessedTransactions.uncertain.filter((t) =>
-          (t as { description: string }).description.toUpperCase().includes(norm)
-        ),
-        ...mockProcessedTransactions.failed.filter((t) =>
-          (t as { description: string }).description.toUpperCase().includes(norm)
-        ),
-      ];
-
-      const remainingUncertain = mockProcessedTransactions.uncertain.filter(
-        (t) => !toMove.includes(t)
-      );
-      const remainingFailed = mockProcessedTransactions.failed.filter((t) => !toMove.includes(t));
-
-      return {
-        result: {
-          ...mockProcessedTransactions,
-          matched: [
-            ...mockProcessedTransactions.matched,
-            ...toMove.map((t) => ({
-              ...(t as object),
-              status: "matched",
-              entity: { entityId: "ent-1", entityName: "Woolworths", matchType: "learned" },
-            })),
-          ],
-          uncertain: remainingUncertain,
-          failed: remainingFailed,
-        },
-        affectedCount: toMove.length,
-      };
-    }
-  );
+  // Default: merged-state helpers return the DB data as-is
+  mockComputeMergedEntities.mockImplementation((dbEntities: unknown[]) => dbEntities);
+  mockComputeMergedRules.mockReturnValue([]);
+  // Default: local re-evaluation returns no matches
+  mockReevaluateTransactions.mockReturnValue({
+    matched: [],
+    uncertain: [],
+    failed: [],
+    affectedCount: 0,
+  });
+  mockAddPendingEntity.mockImplementation((input: { name: string; type: string }) => ({
+    tempId: `temp:entity:mock-${input.name}`,
+    name: input.name,
+    type: input.type,
+  }));
   mockProcessedTransactions = {
     matched: [],
     uncertain: [],
@@ -512,23 +495,23 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
   });
 
   it("approval updates localTransactions with re-evaluated result and shows affected-count toast", async () => {
+    const tx = makeTx("WOOLWORTHS 1234 SYDNEY");
     mockProcessedTransactions = {
       matched: [],
-      uncertain: [makeTx("WOOLWORTHS 1234 SYDNEY")],
+      uncertain: [tx],
       failed: [],
       skipped: [],
     };
-    render(<ReviewStep />);
 
-    proposalDialogApprovePayload = {
-      result: {
-        matched: [makeTx("WOOLWORTHS 1234 SYDNEY", { status: "matched" })],
-        uncertain: [],
-        failed: [],
-        skipped: [],
-      },
+    // Configure local re-evaluation to move the uncertain tx to matched
+    mockReevaluateTransactions.mockReturnValue({
+      matched: [{ ...tx, status: "matched" }],
+      uncertain: [],
+      failed: [],
       affectedCount: 1,
-    };
+    });
+
+    render(<ReviewStep />);
 
     fireEvent.click(screen.getByTestId("proposal-approve"));
 
@@ -537,8 +520,9 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
       expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
     });
 
+    expect(mockReevaluateTransactions).toHaveBeenCalled();
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringContaining("Rules applied — 1 transaction re-evaluated")
+      expect.stringContaining("Rules saved — 1 transaction re-evaluated")
     );
   });
 
