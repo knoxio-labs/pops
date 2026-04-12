@@ -236,10 +236,14 @@ export function applyLearnedCorrection(args: {
   knownTags: string[];
   index: number;
   total: number;
+  /** When provided, matches against this rule set instead of reading from DB. */
+  rules?: CorrectionRow[];
 }): { processed: ProcessedTransaction; bucket: "matched" | "uncertain" } | null {
-  const { transaction, minConfidence, knownTags, index, total } = args;
+  const { transaction, minConfidence, knownTags, index, total, rules } = args;
 
-  const correctionResult = findMatchingCorrection(transaction.description, minConfidence);
+  const correctionResult = rules
+    ? findMatchingCorrectionFromRules(transaction.description, rules, minConfidence)
+    : findMatchingCorrection(transaction.description, minConfidence);
   if (!correctionResult) return null;
 
   const { correction, status } = correctionResult;
@@ -346,93 +350,6 @@ export function applyLearnedCorrection(args: {
 }
 
 /**
- * Like applyLearnedCorrection but uses a provided rule set instead of reading from DB.
- * Used for re-evaluation against merged rules (DB + pending ChangeSets).
- */
-function applyLearnedCorrectionFromRules(args: {
-  transaction: ParsedTransaction;
-  rules: CorrectionRow[];
-  minConfidence: number;
-  knownTags: string[];
-}): { processed: ProcessedTransaction; bucket: "matched" | "uncertain" } | null {
-  const { transaction, rules, minConfidence, knownTags } = args;
-
-  const correctionResult = findMatchingCorrectionFromRules(
-    transaction.description,
-    rules,
-    minConfidence
-  );
-  if (!correctionResult) return null;
-
-  const { correction, status } = correctionResult;
-  const entityId = correction.entityId;
-
-  if (!entityId) {
-    if (correction.transactionType) {
-      return {
-        processed: {
-          ...transaction,
-          location: correction.location ?? transaction.location,
-          transactionType: correction.transactionType,
-          entity: {
-            matchType: "learned",
-            confidence: correction.confidence,
-          },
-          ruleProvenance: {
-            source: "correction",
-            ruleId: correction.id,
-            pattern: correction.descriptionPattern,
-            matchType: correction.matchType,
-            confidence: correction.confidence,
-          },
-          status: "matched",
-          suggestedTags: buildSuggestedTags(
-            transaction.description,
-            null,
-            parseCorrectionTags(correction.tags),
-            null,
-            knownTags,
-            correction.descriptionPattern
-          ),
-        },
-        bucket: "matched",
-      };
-    }
-    return null;
-  }
-
-  return {
-    processed: {
-      ...transaction,
-      location: correction.location ?? transaction.location,
-      entity: {
-        entityId,
-        entityName: correction.entityName ?? "Unknown",
-        matchType: "learned",
-        confidence: correction.confidence,
-      },
-      ruleProvenance: {
-        source: "correction",
-        ruleId: correction.id,
-        pattern: correction.descriptionPattern,
-        matchType: correction.matchType,
-        confidence: correction.confidence,
-      },
-      status,
-      suggestedTags: buildSuggestedTags(
-        transaction.description,
-        entityId,
-        parseCorrectionTags(correction.tags),
-        null,
-        knownTags,
-        correction.descriptionPattern
-      ),
-    },
-    bucket: status === "matched" ? "matched" : "uncertain",
-  };
-}
-
-/**
  * Re-evaluate import session using merged rules (DB + pending ChangeSets).
  * Same logic as reevaluateImportSessionResult but uses the provided merged
  * rules for correction matching instead of reading from DB.
@@ -473,11 +390,13 @@ export function reevaluateImportSessionWithRules(args: {
     const prevBucket = item.bucket;
 
     // Stage 1: Corrections using merged rules
-    const correctionApplied = applyLearnedCorrectionFromRules({
+    const correctionApplied = applyLearnedCorrection({
       transaction: prevTx,
       rules: mergedRules,
       minConfidence,
       knownTags,
+      index: i + 1,
+      total: remaining.length,
     });
 
     if (correctionApplied) {
