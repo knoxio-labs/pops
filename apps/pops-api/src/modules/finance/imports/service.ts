@@ -34,7 +34,6 @@ import type {
   SuggestedTag,
   CommitPayload,
   CommitResult,
-  PendingEntity,
 } from "./types.js";
 
 export function reevaluateImportSessionResult(args: {
