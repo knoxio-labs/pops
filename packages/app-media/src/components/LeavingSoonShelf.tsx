@@ -48,7 +48,7 @@ export function LeavingSoonShelf() {
   return (
     <HorizontalScrollRow title="Leaving Soon" subtitle="Watch before they go">
       {movies.map((movie) => (
-        <div key={movie.id} className="relative w-36 shrink-0 sm:w-40">
+        <div key={movie.id} className="group relative w-36 shrink-0 sm:w-40">
           <MediaCard
             id={movie.id}
             type="movie"
