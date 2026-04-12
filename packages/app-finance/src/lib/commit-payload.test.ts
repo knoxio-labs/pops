@@ -206,6 +206,20 @@ describe("buildCommitPayload", () => {
     expect(payload.transactions[1].entityId).toBe("real-id");
   });
 
+  it("passes through transactions with dangling temp entity IDs (commit endpoint resolves them)", () => {
+    const danglingTempId = "temp:entity:not-in-pending-list";
+    const txn = makeConfirmedTransaction({
+      entityId: danglingTempId,
+      entityName: "Phantom Corp",
+    });
+
+    // Transactions are NOT validated — only ChangeSet ops are.
+    // Temp entity ID resolution in transactions is the commit endpoint's job.
+    const payload = buildCommitPayload([], [], [txn]);
+    expect(payload.transactions).toHaveLength(1);
+    expect(payload.transactions[0].entityId).toBe(danglingTempId);
+  });
+
   it("returns a snapshot, not a live reference", () => {
     const entities = [makePendingEntity()];
     const changeSets = [makePendingChangeSet(sampleChangeSet)];

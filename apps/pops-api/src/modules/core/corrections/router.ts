@@ -212,7 +212,10 @@ export const correctionsRouter = router({
         /** Optional pending ChangeSets to merge with DB rules before preview.
          *  When provided, the "before" baseline includes the cumulative effect
          *  of these ChangeSets applied in order on top of the DB rules. */
-        pendingChangeSets: z.array(z.object({ changeSet: ChangeSetSchema })).optional(),
+        pendingChangeSets: z
+          .array(z.object({ changeSet: ChangeSetSchema }))
+          .max(200)
+          .optional(),
       })
     )
     .mutation(({ input, ctx }) => {
