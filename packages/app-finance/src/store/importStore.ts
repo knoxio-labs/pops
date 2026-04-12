@@ -309,21 +309,13 @@ export const useImportStore = create<ImportStore>((set) => ({
 
     // Check uniqueness against pending list
     const state = useImportStore.getState();
-    if (
-      state.pendingEntities.some(
-        (e: PendingEntity) => e.name.toLowerCase() === nameLower
-      )
-    ) {
-      throw new Error(
-        `Entity with name "${input.name}" already exists in pending list`
-      );
+    if (state.pendingEntities.some((e: PendingEntity) => e.name.toLowerCase() === nameLower)) {
+      throw new Error(`Entity with name "${input.name}" already exists in pending list`);
     }
 
     // Check uniqueness against DB entity list
     if (dbEntities.some((e) => e.name.toLowerCase() === nameLower)) {
-      throw new Error(
-        `Entity with name "${input.name}" already exists in the database`
-      );
+      throw new Error(`Entity with name "${input.name}" already exists in the database`);
     }
 
     const entity: PendingEntity = {
@@ -335,13 +327,10 @@ export const useImportStore = create<ImportStore>((set) => ({
     set((prev) => ({ pendingEntities: [...prev.pendingEntities, entity] }));
     return entity;
   },
-  listPendingEntities: (): PendingEntity[] =>
-    useImportStore.getState().pendingEntities,
+  listPendingEntities: (): PendingEntity[] => useImportStore.getState().pendingEntities,
   removePendingEntity: (tempId: string) =>
     set((state) => ({
-      pendingEntities: state.pendingEntities.filter(
-        (e: PendingEntity) => e.tempId !== tempId
-      ),
+      pendingEntities: state.pendingEntities.filter((e: PendingEntity) => e.tempId !== tempId),
     })),
 
   // Pending changeset management (PRD-030 US-02)
@@ -356,8 +345,7 @@ export const useImportStore = create<ImportStore>((set) => ({
     set((prev) => ({ pendingChangeSets: [...prev.pendingChangeSets, entry] }));
     return entry;
   },
-  listPendingChangeSets: (): PendingChangeSet[] =>
-    useImportStore.getState().pendingChangeSets,
+  listPendingChangeSets: (): PendingChangeSet[] => useImportStore.getState().pendingChangeSets,
   removePendingChangeSet: (tempId: string) =>
     set((state) => ({
       pendingChangeSets: state.pendingChangeSets.filter(

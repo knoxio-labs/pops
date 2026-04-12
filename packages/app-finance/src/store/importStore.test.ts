@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { ParsedTransaction } from "@pops/api/modules/finance/imports";
-import {
-  useImportStore,
-  type ProcessedTransaction,
-  type ChangeSetData,
-} from "./importStore";
+import { useImportStore, type ProcessedTransaction, type ChangeSetData } from "./importStore";
 
 // ---------------------------------------------------------------------------
 // importStore — parsedTransactionsFingerprint / processedForFingerprint tests
@@ -200,18 +196,14 @@ describe("importStore — pendingEntities (PRD-030 US-01)", () => {
     const dbEntities = [{ name: "Coles" }, { name: "Woolworths" }];
 
     expect(() =>
-      useImportStore
-        .getState()
-        .addPendingEntity({ name: "coles", type: "merchant" }, dbEntities)
+      useImportStore.getState().addPendingEntity({ name: "coles", type: "merchant" }, dbEntities)
     ).toThrow(/already exists in the database/);
 
     expect(useImportStore.getState().pendingEntities).toHaveLength(0);
   });
 
   it("removePendingEntity removes by tempId", () => {
-    const e1 = useImportStore
-      .getState()
-      .addPendingEntity({ name: "First", type: "merchant" });
+    const e1 = useImportStore.getState().addPendingEntity({ name: "First", type: "merchant" });
     useImportStore.getState().addPendingEntity({ name: "Second", type: "merchant" });
 
     useImportStore.getState().removePendingEntity(e1.tempId);
