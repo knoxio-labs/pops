@@ -94,6 +94,7 @@ export function EntitiesPage() {
   const utils = trpc.useUtils();
   const { data, isLoading, error, refetch } = trpc.core.entities.list.useQuery({
     limit: 100,
+    orphanedOnly: showOrphanedOnly || undefined,
   });
 
   const createMutation = trpc.core.entities.create.useMutation({
@@ -340,7 +341,11 @@ export function EntitiesPage() {
       <PageHeader
         title="Entities"
         description={
-          data ? `${data.pagination.total} total entities` : "Manage merchants and payees"
+          data
+            ? showOrphanedOnly
+              ? `${data.pagination.total} orphaned entities`
+              : `${data.pagination.total} total entities`
+            : "Manage merchants and payees"
         }
         actions={
           <Button onClick={handleAdd}>
@@ -367,7 +372,7 @@ export function EntitiesPage() {
           </div>
           <DataTable
             columns={columns}
-            data={(data?.data ?? []).filter((e) => !showOrphanedOnly || e.transactionCount === 0)}
+            data={data?.data ?? []}
             searchable
             searchColumn="name"
             searchPlaceholder="Search entities..."

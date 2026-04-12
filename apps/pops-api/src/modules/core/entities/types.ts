@@ -5,7 +5,14 @@ import { ENTITY_TYPES } from "@pops/db-types";
 export type { EntityRow };
 export { ENTITY_TYPES };
 
-/** API response shape (camelCase). */
+/**
+ * API response shape (camelCase).
+ *
+ * `transactionCount` is only populated by the list endpoint (via LEFT JOIN).
+ * Non-list endpoints (get/create/update) return `undefined`. Use strict
+ * equality (`=== 0`) to identify orphaned entities — never a truthiness check,
+ * since `undefined` would be falsely treated as orphaned.
+ */
 export interface Entity {
   id: string;
   name: string;
@@ -80,6 +87,7 @@ export type UpdateEntityInput = z.infer<typeof UpdateEntitySchema>;
 export const EntityQuerySchema = z.object({
   search: z.string().optional(),
   type: z.enum(ENTITY_TYPES).optional(),
+  orphanedOnly: z.boolean().optional(),
   limit: z.coerce.number().positive().optional(),
   offset: z.coerce.number().nonnegative().optional(),
 });
