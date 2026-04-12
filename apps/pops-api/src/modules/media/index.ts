@@ -16,6 +16,7 @@ import { searchRouter } from './search/index.js';
 import { discoveryRouter } from './discovery/index.js';
 import { arrRouter } from './arr/index.js';
 import { plexRouter } from './plex/index.js';
+import { rotationRouter } from './rotation/router.js';
 
 export const mediaRouter = router({
   movies: moviesRouter,
@@ -28,4 +29,5 @@ export const mediaRouter = router({
   discovery: discoveryRouter,
   arr: arrRouter,
   plex: plexRouter,
+  rotation: rotationRouter,
 });
