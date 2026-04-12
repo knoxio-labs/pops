@@ -3,6 +3,12 @@ import { ChevronDown, ChevronRight, Plus, Pencil, Ban, Trash2 } from "lucide-rea
 import { Button } from "@pops/ui";
 import { useImportStore } from "../../store/importStore";
 
+type ChangeSetOp =
+  | { op: "add"; data: { descriptionPattern: string; [k: string]: unknown } }
+  | { op: "edit"; id: string; data: { entityName?: string | null; [k: string]: unknown } }
+  | { op: "disable"; id: string }
+  | { op: "remove"; id: string };
+
 // ---------------------------------------------------------------------------
 // Collapsible section wrapper
 // ---------------------------------------------------------------------------
@@ -67,32 +73,46 @@ const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; className
 // FinalReviewStep — PRD-031 US-01+02
 // ---------------------------------------------------------------------------
 
-/**
- * Step 6: Final Review & Commit — read-only summary of all pending changes.
- */
-export function FinalReviewStep() {
-  const {
-    pendingEntities,
-    pendingChangeSets,
-    confirmedTransactions,
-    processedTransactions,
-    prevStep,
-    nextStep,
-  } = useImportStore();
+/** Extract a human-readable label from a ChangeSet op. */
+function opDisplayLabel(op: ChangeSetOp): string {
+  switch (op.op) {
+    case "add":
+      return op.data.descriptionPattern;
+    case "edit":
+      return op.data.entityName ?? `Rule ${op.id.slice(0, 8)}`;
+    case "disable":
+    case "remove":
+      return `Rule ${op.id.slice(0, 8)}`;
+  }
+}
 
-  // Transaction breakdown
+export function FinalReviewStep() {
+  const pendingEntities = useImportStore((s) => s.pendingEntities);
+  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
+  const confirmedTransactions = useImportStore((s) => s.confirmedTransactions);
+  const processedTransactions = useImportStore((s) => s.processedTransactions);
+  const prevStep = useImportStore((s) => s.prevStep);
+  const nextStep = useImportStore((s) => s.nextStep);
+
+  // Transaction breakdown — labels match AC: matched / corrected / manual
   const txnBreakdown = useMemo(() => {
     const matched = processedTransactions.matched.length;
-    const uncertain = processedTransactions.uncertain.length;
-    const failed = processedTransactions.failed.length;
+    const corrected = processedTransactions.uncertain.length;
+    const manual = processedTransactions.failed.length;
     const skipped = processedTransactions.skipped.length;
-    return { matched, uncertain, failed, skipped, total: confirmedTransactions.length };
+    return { matched, corrected, manual, skipped, total: confirmedTransactions.length };
   }, [processedTransactions, confirmedTransactions]);
 
   // Tag assignment count
   const tagAssignmentCount = useMemo(() => {
     return confirmedTransactions.reduce((sum, txn) => sum + (txn.tags?.length ?? 0), 0);
   }, [confirmedTransactions]);
+
+  // Transactions with tags (used in tag section)
+  const taggedTxnCount = useMemo(
+    () => confirmedTransactions.filter((t) => (t.tags?.length ?? 0) > 0).length,
+    [confirmedTransactions]
+  );
 
   // Total op count across all ChangeSets
   const totalOps = useMemo(
@@ -141,14 +161,7 @@ export function FinalReviewStep() {
                   <ul className="space-y-1">
                     {pcs.changeSet.ops.map((op, idx) => {
                       const badge = OP_BADGE[op.op];
-                      const pattern =
-                        op.op === "add"
-                          ? op.data.descriptionPattern
-                          : op.op === "edit"
-                            ? op.id
-                            : "id" in op
-                              ? op.id
-                              : "";
+                      const label = opDisplayLabel(op as ChangeSetOp);
                       return (
                         <li key={idx} className="flex items-center gap-2 text-sm py-0.5">
                           {badge && (
@@ -159,7 +172,7 @@ export function FinalReviewStep() {
                               {badge.label}
                             </span>
                           )}
-                          <span className="font-mono text-xs truncate">{pattern}</span>
+                          <span className="font-mono text-xs truncate">{label}</span>
                         </li>
                       );
                     })}
@@ -178,16 +191,16 @@ export function FinalReviewStep() {
                 <span className="text-muted-foreground">Matched:</span>
                 <span className="font-medium">{txnBreakdown.matched}</span>
               </div>
-              {txnBreakdown.uncertain > 0 && (
+              {txnBreakdown.corrected > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Uncertain:</span>
-                  <span className="font-medium">{txnBreakdown.uncertain}</span>
+                  <span className="text-muted-foreground">Corrected:</span>
+                  <span className="font-medium">{txnBreakdown.corrected}</span>
                 </div>
               )}
-              {txnBreakdown.failed > 0 && (
+              {txnBreakdown.manual > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Failed:</span>
-                  <span className="font-medium">{txnBreakdown.failed}</span>
+                  <span className="text-muted-foreground">Manual:</span>
+                  <span className="font-medium">{txnBreakdown.manual}</span>
                 </div>
               )}
               {txnBreakdown.skipped > 0 && (
@@ -205,11 +218,7 @@ export function FinalReviewStep() {
           <Section title="Tag Assignments" count={tagAssignmentCount}>
             <p className="text-sm text-muted-foreground">
               {tagAssignmentCount} tag{tagAssignmentCount === 1 ? "" : "s"} will be applied across{" "}
-              {confirmedTransactions.filter((t) => (t.tags?.length ?? 0) > 0).length} transaction
-              {confirmedTransactions.filter((t) => (t.tags?.length ?? 0) > 0).length === 1
-                ? ""
-                : "s"}
-              .
+              {taggedTxnCount} transaction{taggedTxnCount === 1 ? "" : "s"}.
             </p>
           </Section>
         )}
