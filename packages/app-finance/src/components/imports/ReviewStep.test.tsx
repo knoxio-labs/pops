@@ -71,6 +71,13 @@ vi.mock("../../lib/trpc", () => ({
             isPending: false,
           }),
         },
+        reevaluateWithPendingRules: {
+          useMutation: () => ({
+            mutate: vi.fn(),
+            mutateAsync: vi.fn(),
+            isPending: false,
+          }),
+        },
       },
     },
     useUtils: () => ({
@@ -132,11 +139,16 @@ vi.mock("./CorrectionProposalDialog", async () => {
   const { toast } = await import("sonner");
   return {
     CorrectionProposalDialog: (props: unknown) => {
-      lastProposalDialogProps = props;
       const p = props as {
+        open?: boolean;
+        mode?: string;
         onApproved?: (result: unknown, affectedCount: number) => void;
         sessionId?: string;
       };
+      // Only track proposal dialog props (not browse mode)
+      if (p.mode !== "browse") lastProposalDialogProps = props;
+      // Browse dialog is always hidden in tests (not under test here)
+      if (p.mode === "browse") return null;
       return React.createElement(
         "div",
         { "data-testid": "proposal-dialog" },
