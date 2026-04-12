@@ -32,6 +32,10 @@ import type { movies } from './schema/movies.js';
 import type { seasons } from './schema/seasons.js';
 import type { settings } from './schema/settings.js';
 import type { shelfImpressions } from './schema/shelf-impressions.js';
+import type { rotationCandidates } from './schema/rotation-candidates.js';
+import type { rotationExclusions } from './schema/rotation-exclusions.js';
+import type { rotationLog } from './schema/rotation-log.js';
+import type { rotationSources } from './schema/rotation-sources.js';
 import type { syncJobResults } from './schema/sync-job-results.js';
 import type { syncLogs } from './schema/sync-logs.js';
 import type { tagVocabulary } from './schema/tag-vocabulary.js';
@@ -68,6 +72,10 @@ export {
   seasons,
   settings,
   shelfImpressions,
+  rotationCandidates,
+  rotationExclusions,
+  rotationLog,
+  rotationSources,
   syncJobResults,
   syncLogs,
   tagVocabulary,
@@ -149,6 +157,14 @@ export type DebriefStatusRow = InferSelectModel<typeof debriefStatus>;
 export type DebriefStatusInsert = InferInsertModel<typeof debriefStatus>;
 export type ShelfImpressionRow = InferSelectModel<typeof shelfImpressions>;
 export type ShelfImpressionInsert = InferInsertModel<typeof shelfImpressions>;
+export type RotationLogRow = InferSelectModel<typeof rotationLog>;
+export type RotationLogInsert = InferInsertModel<typeof rotationLog>;
+export type RotationSourceRow = InferSelectModel<typeof rotationSources>;
+export type RotationSourceInsert = InferInsertModel<typeof rotationSources>;
+export type RotationCandidateRow = InferSelectModel<typeof rotationCandidates>;
+export type RotationCandidateInsert = InferInsertModel<typeof rotationCandidates>;
+export type RotationExclusionRow = InferSelectModel<typeof rotationExclusions>;
+export type RotationExclusionInsert = InferInsertModel<typeof rotationExclusions>;
 
 // Constants
 export const ENTITY_TYPES = ['company', 'person', 'place', 'brand', 'organisation'] as const;

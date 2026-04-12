@@ -12,6 +12,7 @@ import { discoveryRouter } from './discovery/index.js';
 import { libraryRouter } from './library/index.js';
 import { moviesRouter } from './movies/router.js';
 import { plexRouter } from './plex/index.js';
+import { rotationRouter } from './rotation/router.js';
 import { searchRouter } from './search/index.js';
 import { tvShowsRouter } from './tv-shows/index.js';
 import { watchHistoryRouter } from './watch-history/router.js';
@@ -28,4 +29,5 @@ export const mediaRouter = router({
   discovery: discoveryRouter,
   arr: arrRouter,
   plex: plexRouter,
+  rotation: rotationRouter,
 });

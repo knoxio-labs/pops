@@ -309,11 +309,15 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
       vote_count           INTEGER,
       genres               TEXT,
       created_at           TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at           TEXT NOT NULL DEFAULT (datetime('now')),
+      rotation_status      TEXT,
+      rotation_expires_at  TEXT,
+      rotation_marked_at   TEXT
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_movies_tmdb_id ON movies(tmdb_id);
     CREATE INDEX IF NOT EXISTS idx_movies_title ON movies(title);
     CREATE INDEX IF NOT EXISTS idx_movies_release_date ON movies(release_date);
+    CREATE INDEX IF NOT EXISTS idx_movies_rotation_status ON movies(rotation_status);
 
     CREATE TABLE IF NOT EXISTS tv_shows (
       id                   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -548,6 +552,63 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
       shown_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_shelf_impressions_shelf_id ON shelf_impressions(shelf_id);
+
+    CREATE TABLE IF NOT EXISTS rotation_log (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      executed_at           TEXT NOT NULL,
+      movies_marked_leaving INTEGER NOT NULL,
+      movies_removed        INTEGER NOT NULL,
+      movies_added          INTEGER NOT NULL,
+      removals_failed       INTEGER NOT NULL,
+      free_space_gb         REAL NOT NULL,
+      target_free_gb        REAL NOT NULL,
+      skipped_reason        TEXT,
+      details               TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS rotation_sources (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      type                TEXT NOT NULL,
+      name                TEXT NOT NULL,
+      priority            INTEGER NOT NULL DEFAULT 5,
+      enabled             INTEGER NOT NULL DEFAULT 1,
+      config              TEXT,
+      last_synced_at      TEXT,
+      sync_interval_hours INTEGER NOT NULL DEFAULT 24,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_rotation_sources_type ON rotation_sources(type);
+
+    CREATE TABLE IF NOT EXISTS rotation_candidates (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_id     INTEGER NOT NULL REFERENCES rotation_sources(id) ON DELETE CASCADE,
+      tmdb_id       INTEGER NOT NULL,
+      title         TEXT NOT NULL,
+      year          INTEGER,
+      rating        REAL,
+      poster_path   TEXT,
+      status        TEXT NOT NULL DEFAULT 'pending',
+      discovered_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_rotation_candidates_tmdb_id ON rotation_candidates(tmdb_id);
+    CREATE INDEX IF NOT EXISTS idx_rotation_candidates_source_id ON rotation_candidates(source_id);
+    CREATE INDEX IF NOT EXISTS idx_rotation_candidates_status ON rotation_candidates(status);
+
+    CREATE TABLE IF NOT EXISTS rotation_exclusions (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      tmdb_id     INTEGER NOT NULL,
+      title       TEXT NOT NULL,
+      reason      TEXT,
+      excluded_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_rotation_exclusions_tmdb_id ON rotation_exclusions(tmdb_id);
+  `);
+
+  // Seed the system "Manual Queue" rotation source (PRD-071 US-01).
+  // INSERT OR IGNORE so repeated init is harmless.
+  db.exec(`
+    INSERT OR IGNORE INTO rotation_sources (id, type, name, priority, enabled)
+    VALUES (1, 'manual', 'Manual Queue', 8, 1)
   `);
 
   // Seed tag vocabulary (v1) for brand-new databases.
