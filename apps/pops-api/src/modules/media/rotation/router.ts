@@ -6,6 +6,12 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../../../trpc.js';
 import { cancelLeaving } from './leaving-lifecycle.js';
+import {
+  startRotationScheduler,
+  stopRotationScheduler,
+  getRotationSchedulerStatus,
+  runRotationCycleNow,
+} from './scheduler.js';
 
 export const rotationRouter = router({
   /** Cancel leaving status for a specific movie. */
@@ -18,4 +24,35 @@ export const rotationRouter = router({
         message: updated ? 'Leaving status cancelled' : 'Movie not found or not leaving',
       };
     }),
+
+  /** Get rotation scheduler status. */
+  status: protectedProcedure.query(() => {
+    return getRotationSchedulerStatus();
+  }),
+
+  /** Toggle the rotation scheduler on/off. */
+  toggle: protectedProcedure
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        cronExpression: z.string().optional(),
+      })
+    )
+    .mutation(({ input }) => {
+      if (input.enabled) {
+        return startRotationScheduler({
+          cronExpression: input.cronExpression,
+        });
+      }
+      return stopRotationScheduler();
+    }),
+
+  /** Trigger an immediate rotation cycle. */
+  runNow: protectedProcedure.mutation(async () => {
+    const result = await runRotationCycleNow();
+    if (!result) {
+      return { success: false, message: 'A rotation cycle is already in progress' };
+    }
+    return { success: true, result };
+  }),
 });
