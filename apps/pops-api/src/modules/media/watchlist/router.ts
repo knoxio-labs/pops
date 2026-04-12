@@ -8,8 +8,8 @@ import { ConflictError, NotFoundError } from '../../../shared/errors.js';
 import { paginationMeta } from '../../../shared/pagination.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { getPlexClient } from '../plex/service.js';
-import { pushToPlexWatchlist } from './plex-push.js';
 import { clearLeavingOnWatchlistAdd } from '../rotation/leaving-lifecycle.js';
+import { pushToPlexWatchlist } from './plex-push.js';
 import * as service from './service.js';
 import {
   AddToWatchlistSchema,

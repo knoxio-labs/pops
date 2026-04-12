@@ -29,13 +29,13 @@ import type { locations } from './schema/locations.js';
 import type { mediaScores } from './schema/media-scores.js';
 import type { mediaWatchlist } from './schema/media-watchlist.js';
 import type { movies } from './schema/movies.js';
-import type { seasons } from './schema/seasons.js';
-import type { settings } from './schema/settings.js';
-import type { shelfImpressions } from './schema/shelf-impressions.js';
 import type { rotationCandidates } from './schema/rotation-candidates.js';
 import type { rotationExclusions } from './schema/rotation-exclusions.js';
 import type { rotationLog } from './schema/rotation-log.js';
 import type { rotationSources } from './schema/rotation-sources.js';
+import type { seasons } from './schema/seasons.js';
+import type { settings } from './schema/settings.js';
+import type { shelfImpressions } from './schema/shelf-impressions.js';
 import type { syncJobResults } from './schema/sync-job-results.js';
 import type { syncLogs } from './schema/sync-logs.js';
 import type { tagVocabulary } from './schema/tag-vocabulary.js';
@@ -69,13 +69,13 @@ export {
   mediaScores,
   mediaWatchlist,
   movies,
-  seasons,
-  settings,
-  shelfImpressions,
   rotationCandidates,
   rotationExclusions,
   rotationLog,
   rotationSources,
+  seasons,
+  settings,
+  shelfImpressions,
   syncJobResults,
   syncLogs,
   tagVocabulary,
