@@ -1,7 +1,7 @@
 # US-02: Pending changeset store
 
 > PRD: [030 — Local-First Import State Layer](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -11,13 +11,13 @@ The slice manages an ordered list of `PendingChangeSet` objects. Insertion order
 
 ## Acceptance Criteria
 
-- [ ] A `pendingChangeSets` slice exists in the import store (or a companion store) with state `PendingChangeSet[]` and actions `addPendingChangeSet`, `listPendingChangeSets`, `removePendingChangeSet`.
-- [ ] `addPendingChangeSet` appends a new entry to the end of the ordered list with a temp ID in the format `temp:changeset:{uuid}`, the provided `ChangeSet`, an ISO `appliedAt` timestamp, and a `source` string.
-- [ ] `listPendingChangeSets()` returns all pending ChangeSets in insertion order.
-- [ ] `removePendingChangeSet(tempId)` removes the entry with the given temp ID. No-op if not found.
-- [ ] Removing a ChangeSet from the middle of the list preserves the relative order of remaining entries.
-- [ ] The `reset` action clears all pending ChangeSets.
-- [ ] Unit tests cover: add single, add multiple (order preserved), remove from middle, remove nonexistent, list ordering, reset.
+- [x] A `pendingChangeSets` slice exists in the import store (or a companion store) with state `PendingChangeSet[]` and actions `addPendingChangeSet`, `listPendingChangeSets`, `removePendingChangeSet`.
+- [x] `addPendingChangeSet` appends a new entry to the end of the ordered list with a temp ID in the format `temp:changeset:{uuid}`, the provided `ChangeSet`, an ISO `appliedAt` timestamp, and a `source` string.
+- [x] `listPendingChangeSets()` returns all pending ChangeSets in insertion order.
+- [x] `removePendingChangeSet(tempId)` removes the entry with the given temp ID. No-op if not found.
+- [x] Removing a ChangeSet from the middle of the list preserves the relative order of remaining entries.
+- [x] The `reset` action clears all pending ChangeSets.
+- [x] Unit tests cover: add single, add multiple (order preserved), remove from middle, remove nonexistent, list ordering, reset.
 
 ## Notes
 

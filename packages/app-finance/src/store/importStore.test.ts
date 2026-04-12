@@ -3,24 +3,11 @@ import type { ParsedTransaction } from "@pops/api/modules/finance/imports";
 import {
   useImportStore,
   type ProcessedTransaction,
-  type PendingEntity,
-  type PendingChangeset,
+  type ChangeSetData,
 } from "./importStore";
 
 // ---------------------------------------------------------------------------
 // importStore — parsedTransactionsFingerprint / processedForFingerprint tests
-//
-// The Step 3 "already processed" short-circuit is gated on
-// `processedForFingerprint === parsedTransactionsFingerprint`. These tests
-// exercise the store-level invariants that make that gate safe:
-//
-//   1. `setParsedTransactions` computes a content fingerprint from checksums.
-//   2. Passing an identical list is a no-op for downstream state (Back→
-//      Continue bounce without mutation).
-//   3. Passing a *different* list wipes downstream processed/confirmed state
-//      *and* clears `processedForFingerprint` so Step 3 cannot short-circuit
-//      with stale results.
-//   4. `setProcessedTransactions` pins results to the live fingerprint.
 // ---------------------------------------------------------------------------
 
 function makeTxn(checksum: string, description = "WOOLWORTHS"): ParsedTransaction {
@@ -59,8 +46,6 @@ describe("importStore — parsed/processed fingerprint", () => {
   it("computes a fingerprint from the concatenated checksums", () => {
     const txns = [makeTxn("a"), makeTxn("b"), makeTxn("c")];
     useImportStore.getState().setParsedTransactions(txns);
-    // Implementation detail: checksums joined by '|'. Deliberately asserted
-    // so a future refactor can't silently change the invalidation surface.
     expect(useImportStore.getState().parsedTransactionsFingerprint).toBe("a|b|c");
   });
 
@@ -74,7 +59,6 @@ describe("importStore — parsed/processed fingerprint", () => {
   it("re-setting an identical parsed list is a no-op for downstream processed state", () => {
     const txns = [makeTxn("a"), makeTxn("b")];
     useImportStore.getState().setParsedTransactions(txns);
-    // Pretend processing finished.
     useImportStore.getState().setProcessedTransactions({
       ...sampleProcessed(),
       warnings: undefined,
@@ -82,10 +66,8 @@ describe("importStore — parsed/processed fingerprint", () => {
     const fp = useImportStore.getState().parsedTransactionsFingerprint;
     expect(useImportStore.getState().processedForFingerprint).toBe(fp);
 
-    // Back→Continue bounce: re-set the same parsed list (same checksums).
     useImportStore.getState().setParsedTransactions([makeTxn("a"), makeTxn("b")]);
 
-    // Processed state must survive so Step 3 can short-circuit.
     expect(useImportStore.getState().processedTransactions.matched).toHaveLength(1);
     expect(useImportStore.getState().processedForFingerprint).toBe(fp);
     expect(useImportStore.getState().parsedTransactionsFingerprint).toBe(fp);
@@ -99,7 +81,6 @@ describe("importStore — parsed/processed fingerprint", () => {
     });
     expect(useImportStore.getState().processedForFingerprint).not.toBeNull();
 
-    // User went Back→Step 2, re-mapped columns, Continue — different checksums.
     useImportStore.getState().setParsedTransactions([makeTxn("x"), makeTxn("y")]);
 
     const state = useImportStore.getState();
@@ -127,7 +108,6 @@ describe("importStore — parsed/processed fingerprint", () => {
       warnings: undefined,
     });
 
-    // Simulate picking a new file — uses the File shape the setFile comparator expects.
     const fakeFile = { name: "new.csv", size: 10, lastModified: 1 } as unknown as File;
     useImportStore.getState().setFile(fakeFile);
 
@@ -171,20 +151,13 @@ describe("importStore — step range", () => {
 // Pending entities (PRD-030 US-01)
 // ---------------------------------------------------------------------------
 
-function makePendingEntity(overrides: Partial<PendingEntity> = {}): PendingEntity {
-  return {
-    tempId: "temp-1",
-    name: "Test Entity",
-    type: "merchant",
-    aliases: ["alias-1"],
-    defaultTransactionType: "expense",
-    defaultTags: ["food"],
-    createdAt: "2026-04-12T00:00:00Z",
-    ...overrides,
-  };
-}
+const sampleChangeSet: ChangeSetData = {
+  source: "ai",
+  reason: "test",
+  ops: [{ op: "add", data: {} }],
+};
 
-describe("importStore — pendingEntities", () => {
+describe("importStore — pendingEntities (PRD-030 US-01)", () => {
   beforeEach(() => {
     useImportStore.getState().reset();
   });
@@ -193,46 +166,84 @@ describe("importStore — pendingEntities", () => {
     expect(useImportStore.getState().pendingEntities).toEqual([]);
   });
 
-  it("addPendingEntity appends to the list", () => {
-    const e1 = makePendingEntity({ tempId: "t1" });
-    const e2 = makePendingEntity({ tempId: "t2", name: "Second" });
-    useImportStore.getState().addPendingEntity(e1);
-    useImportStore.getState().addPendingEntity(e2);
-    expect(useImportStore.getState().pendingEntities).toHaveLength(2);
-    expect(useImportStore.getState().pendingEntities[0].tempId).toBe("t1");
-    expect(useImportStore.getState().pendingEntities[1].tempId).toBe("t2");
+  it("addPendingEntity generates a temp ID in the format temp:entity:{uuid}", () => {
+    const entity = useImportStore.getState().addPendingEntity({
+      name: "Test Merchant",
+      type: "merchant",
+    });
+    expect(entity.tempId).toMatch(/^temp:entity:[0-9a-f-]{36}$/);
+    expect(entity.name).toBe("Test Merchant");
+    expect(entity.type).toBe("merchant");
+  });
+
+  it("addPendingEntity appends to the pending list in insertion order", () => {
+    useImportStore.getState().addPendingEntity({ name: "First", type: "merchant" });
+    useImportStore.getState().addPendingEntity({ name: "Second", type: "employer" });
+
+    const entities = useImportStore.getState().pendingEntities;
+    expect(entities).toHaveLength(2);
+    expect(entities[0].name).toBe("First");
+    expect(entities[1].name).toBe("Second");
+  });
+
+  it("addPendingEntity rejects duplicate name in pending list (case-insensitive)", () => {
+    useImportStore.getState().addPendingEntity({ name: "Woolworths", type: "merchant" });
+
+    expect(() =>
+      useImportStore.getState().addPendingEntity({ name: "woolworths", type: "merchant" })
+    ).toThrow(/already exists in pending list/);
+
+    expect(useImportStore.getState().pendingEntities).toHaveLength(1);
+  });
+
+  it("addPendingEntity rejects duplicate name in DB entity list (case-insensitive)", () => {
+    const dbEntities = [{ name: "Coles" }, { name: "Woolworths" }];
+
+    expect(() =>
+      useImportStore
+        .getState()
+        .addPendingEntity({ name: "coles", type: "merchant" }, dbEntities)
+    ).toThrow(/already exists in the database/);
+
+    expect(useImportStore.getState().pendingEntities).toHaveLength(0);
   });
 
   it("removePendingEntity removes by tempId", () => {
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t2" }));
-    useImportStore.getState().removePendingEntity("t1");
+    const e1 = useImportStore
+      .getState()
+      .addPendingEntity({ name: "First", type: "merchant" });
+    useImportStore.getState().addPendingEntity({ name: "Second", type: "merchant" });
+
+    useImportStore.getState().removePendingEntity(e1.tempId);
+
     const entities = useImportStore.getState().pendingEntities;
     expect(entities).toHaveLength(1);
-    expect(entities[0].tempId).toBe("t2");
+    expect(entities[0].name).toBe("Second");
   });
 
   it("removePendingEntity with unknown id is a no-op", () => {
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    useImportStore.getState().addPendingEntity({ name: "First", type: "merchant" });
     useImportStore.getState().removePendingEntity("nonexistent");
     expect(useImportStore.getState().pendingEntities).toHaveLength(1);
   });
 
-  it("clearPendingEntities empties the list", () => {
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t2" }));
-    useImportStore.getState().clearPendingEntities();
-    expect(useImportStore.getState().pendingEntities).toEqual([]);
+  it("listPendingEntities returns all pending entities in insertion order", () => {
+    useImportStore.getState().addPendingEntity({ name: "A", type: "merchant" });
+    useImportStore.getState().addPendingEntity({ name: "B", type: "employer" });
+    useImportStore.getState().addPendingEntity({ name: "C", type: "merchant" });
+
+    const list = useImportStore.getState().listPendingEntities();
+    expect(list.map((e) => e.name)).toEqual(["A", "B", "C"]);
   });
 
-  it("reset clears pending entities", () => {
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+  it("reset clears all pending entities", () => {
+    useImportStore.getState().addPendingEntity({ name: "Test", type: "merchant" });
     useImportStore.getState().reset();
     expect(useImportStore.getState().pendingEntities).toEqual([]);
   });
 
   it("setFile with a different file clears pending entities", () => {
-    useImportStore.getState().addPendingEntity(makePendingEntity({ tempId: "t1" }));
+    useImportStore.getState().addPendingEntity({ name: "Test", type: "merchant" });
     const fakeFile = { name: "new.csv", size: 10, lastModified: 1 } as unknown as File;
     useImportStore.getState().setFile(fakeFile);
     expect(useImportStore.getState().pendingEntities).toEqual([]);
@@ -240,70 +251,110 @@ describe("importStore — pendingEntities", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Pending changesets (PRD-030 US-02)
+// Pending changeSets (PRD-030 US-02)
 // ---------------------------------------------------------------------------
 
-function makePendingChangeset(overrides: Partial<PendingChangeset> = {}): PendingChangeset {
-  return {
-    id: "cs-1",
-    changeSet: { source: "ai", reason: "test", ops: [{ op: "add", data: {} }] },
-    approvedAt: "2026-04-12T01:00:00Z",
-    description: "Fix entity mapping",
-    ...overrides,
-  };
-}
-
-describe("importStore — pendingChangesets", () => {
+describe("importStore — pendingChangeSets (PRD-030 US-02)", () => {
   beforeEach(() => {
     useImportStore.getState().reset();
   });
 
   it("starts with an empty array", () => {
-    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+    expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
 
-  it("addPendingChangeset appends to the list", () => {
-    const cs1 = makePendingChangeset({ id: "cs-1" });
-    const cs2 = makePendingChangeset({ id: "cs-2", description: "Second" });
-    useImportStore.getState().addPendingChangeset(cs1);
-    useImportStore.getState().addPendingChangeset(cs2);
-    expect(useImportStore.getState().pendingChangesets).toHaveLength(2);
-    expect(useImportStore.getState().pendingChangesets[0].id).toBe("cs-1");
-    expect(useImportStore.getState().pendingChangesets[1].id).toBe("cs-2");
+  it("addPendingChangeSet generates a temp ID in the format temp:changeset:{uuid}", () => {
+    const entry = useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "correction-proposal",
+    });
+    expect(entry.tempId).toMatch(/^temp:changeset:[0-9a-f-]{36}$/);
+    expect(entry.changeSet).toEqual(sampleChangeSet);
+    expect(entry.source).toBe("correction-proposal");
+    expect(entry.appliedAt).toBeTruthy();
   });
 
-  it("removePendingChangeset removes by id", () => {
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-2" }));
-    useImportStore.getState().removePendingChangeset("cs-1");
-    const changesets = useImportStore.getState().pendingChangesets;
-    expect(changesets).toHaveLength(1);
-    expect(changesets[0].id).toBe("cs-2");
+  it("addPendingChangeSet appends in insertion order", () => {
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "first",
+    });
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "second",
+    });
+
+    const list = useImportStore.getState().pendingChangeSets;
+    expect(list).toHaveLength(2);
+    expect(list[0].source).toBe("first");
+    expect(list[1].source).toBe("second");
   });
 
-  it("removePendingChangeset with unknown id is a no-op", () => {
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
-    useImportStore.getState().removePendingChangeset("nonexistent");
-    expect(useImportStore.getState().pendingChangesets).toHaveLength(1);
+  it("listPendingChangeSets returns all in insertion order", () => {
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "a",
+    });
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "b",
+    });
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "c",
+    });
+
+    const list = useImportStore.getState().listPendingChangeSets();
+    expect(list.map((cs) => cs.source)).toEqual(["a", "b", "c"]);
   });
 
-  it("clearPendingChangesets empties the list", () => {
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-2" }));
-    useImportStore.getState().clearPendingChangesets();
-    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+  it("removePendingChangeSet removes from the middle preserving order", () => {
+    const cs1 = useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "first",
+    });
+    const cs2 = useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "second",
+    });
+    const cs3 = useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "third",
+    });
+
+    useImportStore.getState().removePendingChangeSet(cs2.tempId);
+
+    const list = useImportStore.getState().pendingChangeSets;
+    expect(list).toHaveLength(2);
+    expect(list[0].tempId).toBe(cs1.tempId);
+    expect(list[1].tempId).toBe(cs3.tempId);
   });
 
-  it("reset clears pending changesets", () => {
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+  it("removePendingChangeSet with unknown id is a no-op", () => {
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "test",
+    });
+    useImportStore.getState().removePendingChangeSet("nonexistent");
+    expect(useImportStore.getState().pendingChangeSets).toHaveLength(1);
+  });
+
+  it("reset clears all pending changeSets", () => {
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "test",
+    });
     useImportStore.getState().reset();
-    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+    expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
 
-  it("setFile with a different file clears pending changesets", () => {
-    useImportStore.getState().addPendingChangeset(makePendingChangeset({ id: "cs-1" }));
+  it("setFile with a different file clears pending changeSets", () => {
+    useImportStore.getState().addPendingChangeSet({
+      changeSet: sampleChangeSet,
+      source: "test",
+    });
     const fakeFile = { name: "new.csv", size: 10, lastModified: 1 } as unknown as File;
     useImportStore.getState().setFile(fakeFile);
-    expect(useImportStore.getState().pendingChangesets).toEqual([]);
+    expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
 });

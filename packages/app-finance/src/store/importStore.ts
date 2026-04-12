@@ -15,26 +15,39 @@ export type BankType = "Amex";
 // ---------------------------------------------------------------------------
 
 export interface PendingEntity {
-  tempId: string;
+  tempId: string; // Format: temp:entity:{uuid}
   name: string;
   type: string;
-  aliases: string[];
-  defaultTransactionType: string;
-  defaultTags: string[];
-  createdAt: string; // ISO-8601
+}
+
+/** Input for creating a pending entity (tempId is generated internally). */
+export interface AddPendingEntityInput {
+  name: string;
+  type: string;
 }
 
 // ---------------------------------------------------------------------------
 // Pending changeset — rule ChangeSet approved during import, not yet committed.
-// The `changeSet` field mirrors the server ChangeSet shape (source, reason, ops)
-// but is stored as an opaque record so the store stays decoupled from zod schemas.
 // ---------------------------------------------------------------------------
 
-export interface PendingChangeset {
-  id: string;
-  changeSet: Record<string, unknown>;
-  approvedAt: string; // ISO-8601
-  description: string;
+/** Mirrors the server ChangeSet shape (source, reason, ops). */
+export interface ChangeSetData {
+  source?: string;
+  reason?: string;
+  ops: Record<string, unknown>[];
+}
+
+export interface PendingChangeSet {
+  tempId: string; // Format: temp:changeset:{uuid}
+  changeSet: ChangeSetData;
+  appliedAt: string; // ISO-8601
+  source: string;
+}
+
+/** Input for creating a pending changeset (tempId and appliedAt are generated internally). */
+export interface AddPendingChangeSetInput {
+  changeSet: ChangeSetData;
+  source: string;
 }
 
 /**
@@ -105,7 +118,7 @@ interface ImportStore {
 
   // Local-first pending state (PRD-030)
   pendingEntities: PendingEntity[];
-  pendingChangesets: PendingChangeset[];
+  pendingChangeSets: PendingChangeSet[];
 
   // Actions
   setFile: (file: File | null) => void;
@@ -126,14 +139,17 @@ interface ImportStore {
   reset: () => void;
 
   // Pending entity management (PRD-030 US-01)
-  addPendingEntity: (entity: PendingEntity) => void;
+  addPendingEntity: (
+    input: AddPendingEntityInput,
+    dbEntities?: Array<{ name: string }>
+  ) => PendingEntity;
+  listPendingEntities: () => PendingEntity[];
   removePendingEntity: (tempId: string) => void;
-  clearPendingEntities: () => void;
 
   // Pending changeset management (PRD-030 US-02)
-  addPendingChangeset: (cs: PendingChangeset) => void;
-  removePendingChangeset: (id: string) => void;
-  clearPendingChangesets: () => void;
+  addPendingChangeSet: (input: AddPendingChangeSetInput) => PendingChangeSet;
+  listPendingChangeSets: () => PendingChangeSet[];
+  removePendingChangeSet: (tempId: string) => void;
 
   // Transaction management
   updateTransaction: (
@@ -172,7 +188,7 @@ const initialState = {
   executeSessionId: null,
   importResult: null,
   pendingEntities: [],
-  pendingChangesets: [],
+  pendingChangeSets: [],
 };
 
 /**
@@ -206,7 +222,7 @@ const downstreamReset: Pick<
   | "executeSessionId"
   | "importResult"
   | "pendingEntities"
-  | "pendingChangesets"
+  | "pendingChangeSets"
 > = {
   headers: initialState.headers,
   rows: initialState.rows,
@@ -219,7 +235,7 @@ const downstreamReset: Pick<
   executeSessionId: initialState.executeSessionId,
   importResult: initialState.importResult,
   pendingEntities: initialState.pendingEntities,
-  pendingChangesets: initialState.pendingChangesets,
+  pendingChangeSets: initialState.pendingChangeSets,
 };
 
 function isSameFile(a: File | null, b: File | null): boolean {
@@ -285,22 +301,58 @@ export const useImportStore = create<ImportStore>((set) => ({
   reset: () => set(initialState),
 
   // Pending entity management (PRD-030 US-01)
-  addPendingEntity: (entity) =>
-    set((state) => ({ pendingEntities: [...state.pendingEntities, entity] })),
+  addPendingEntity: (input, dbEntities = []) => {
+    const nameLower = input.name.toLowerCase();
+
+    // Check uniqueness against pending list
+    const state = useImportStore.getState();
+    if (state.pendingEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      throw new Error(
+        `Entity with name "${input.name}" already exists in pending list`
+      );
+    }
+
+    // Check uniqueness against DB entity list
+    if (dbEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      throw new Error(
+        `Entity with name "${input.name}" already exists in the database`
+      );
+    }
+
+    const entity: PendingEntity = {
+      tempId: `temp:entity:${crypto.randomUUID()}`,
+      name: input.name,
+      type: input.type,
+    };
+
+    set((prev) => ({ pendingEntities: [...prev.pendingEntities, entity] }));
+    return entity;
+  },
+  listPendingEntities: () => useImportStore.getState().pendingEntities,
   removePendingEntity: (tempId) =>
     set((state) => ({
       pendingEntities: state.pendingEntities.filter((e) => e.tempId !== tempId),
     })),
-  clearPendingEntities: () => set({ pendingEntities: [] }),
 
   // Pending changeset management (PRD-030 US-02)
-  addPendingChangeset: (cs) =>
-    set((state) => ({ pendingChangesets: [...state.pendingChangesets, cs] })),
-  removePendingChangeset: (id) =>
+  addPendingChangeSet: (input) => {
+    const entry: PendingChangeSet = {
+      tempId: `temp:changeset:${crypto.randomUUID()}`,
+      changeSet: input.changeSet,
+      appliedAt: new Date().toISOString(),
+      source: input.source,
+    };
+
+    set((prev) => ({ pendingChangeSets: [...prev.pendingChangeSets, entry] }));
+    return entry;
+  },
+  listPendingChangeSets: () => useImportStore.getState().pendingChangeSets,
+  removePendingChangeSet: (tempId) =>
     set((state) => ({
-      pendingChangesets: state.pendingChangesets.filter((c) => c.id !== id),
+      pendingChangeSets: state.pendingChangeSets.filter(
+        (c) => c.tempId !== tempId
+      ),
     })),
-  clearPendingChangesets: () => set({ pendingChangesets: [] }),
 
   updateTransaction: (transaction, updates) =>
     set((state) => {

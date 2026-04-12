@@ -81,8 +81,8 @@ No new backend endpoints. All operations are zustand store actions and pure func
 
 | # | Story | Summary | Status | Parallelisable |
 |---|-------|---------|--------|----------------|
-| 01 | [us-01-pending-entity-store](us-01-pending-entity-store.md) | Zustand slice buffering entity creations with temp IDs | Not started | Yes |
-| 02 | [us-02-pending-changeset-store](us-02-pending-changeset-store.md) | Zustand slice buffering approved ChangeSets in order | Not started | Yes |
+| 01 | [us-01-pending-entity-store](us-01-pending-entity-store.md) | Zustand slice buffering entity creations with temp IDs | Done | Yes |
+| 02 | [us-02-pending-changeset-store](us-02-pending-changeset-store.md) | Zustand slice buffering approved ChangeSets in order | Done | Yes |
 | 03 | [us-03-merged-rule-computation](us-03-merged-rule-computation.md) | Pure function computing merged rules from DB + pending ChangeSets | Not started | Blocked by US-02 |
 | 04 | [us-04-merged-entity-list](us-04-merged-entity-list.md) | Pure function computing merged entities from DB + pending | Not started | Blocked by US-01 |
 | 05 | [us-05-redirect-entity-creation](us-05-redirect-entity-creation.md) | EntityCreateDialog writes to local store instead of tRPC | Not started | Blocked by US-01, US-04 |
