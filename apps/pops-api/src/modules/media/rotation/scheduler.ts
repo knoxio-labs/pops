@@ -129,7 +129,7 @@ export function startRotationScheduler(options?: {
 /** Stop the rotation scheduler. No-op if not running. */
 export function stopRotationScheduler(): RotationSchedulerStatus {
   if (task) {
-    task.stop();
+    void task.stop();
     task = null;
   }
 
