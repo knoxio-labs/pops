@@ -5,15 +5,15 @@
  * Tracks sync timestamps and handles errors gracefully.
  * Persists scheduler config and sync logs to the settings table.
  */
-import { eq, desc } from "drizzle-orm";
-import { settings, syncLogs } from "@pops/db-types";
-import type { PlexClient } from "./client.js";
-import { importMoviesFromPlex } from "./sync-movies.js";
-import { importTvShowsFromPlex } from "./sync-tv.js";
-import { syncWatchlistFromPlex } from "./sync-watchlist.js";
-import { getPlexClient, getPlexSectionIds, getPlexToken } from "./service.js";
-import { isJobRunning } from "./sync-job-manager.js";
-import { getDrizzle } from "../../../db.js";
+import { eq, desc } from 'drizzle-orm';
+import { settings, syncLogs } from '@pops/db-types';
+import type { PlexClient } from './client.js';
+import { importMoviesFromPlex } from './sync-movies.js';
+import { importTvShowsFromPlex } from './sync-tv.js';
+import { syncWatchlistFromPlex } from './sync-watchlist.js';
+import { getPlexClient, getPlexSectionIds, getPlexToken } from './service.js';
+import { isJobRunning } from './sync-job-manager.js';
+import { getDrizzle } from '../../../db.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,10 +51,10 @@ const DEFAULT_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 // Settings keys for scheduler persistence
 const SETTINGS_KEYS = {
-  enabled: "plex_scheduler_enabled",
-  intervalMs: "plex_scheduler_interval_ms",
-  movieSectionId: "plex_movie_section_id",
-  tvSectionId: "plex_tv_section_id",
+  enabled: 'plex_scheduler_enabled',
+  intervalMs: 'plex_scheduler_interval_ms',
+  movieSectionId: 'plex_movie_section_id',
+  tvSectionId: 'plex_tv_section_id',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ function deleteSetting(key: string): void {
 }
 
 function persistSchedulerConfig(): void {
-  saveSetting(SETTINGS_KEYS.enabled, "true");
+  saveSetting(SETTINGS_KEYS.enabled, 'true');
   saveSetting(SETTINGS_KEYS.intervalMs, String(intervalMs));
 }
 
@@ -188,7 +188,7 @@ export function getPersistedSchedulerState(): {
   intervalMs: number;
 } | null {
   const enabled = getSetting(SETTINGS_KEYS.enabled);
-  if (enabled !== "true") return null;
+  if (enabled !== 'true') return null;
   const interval = getSetting(SETTINGS_KEYS.intervalMs);
   return {
     enabled: true,
@@ -230,7 +230,7 @@ export function getSyncLogs(limit = 20): SyncLogEntry[] {
 async function runSync(): Promise<void> {
   const client = getPlexClient();
   if (!client) {
-    lastSyncError = "Plex not configured (PLEX_URL or plex_token missing)";
+    lastSyncError = 'Plex not configured (PLEX_URL or plex_token missing)';
     lastSyncAt = new Date().toISOString();
     nextSyncAt = timer ? new Date(Date.now() + intervalMs).toISOString() : null;
     writeSyncLog(lastSyncAt, 0, 0, [lastSyncError], null);
@@ -269,8 +269,8 @@ async function executeSyncCycle(
   const errors: string[] = [];
 
   if (movieSectionId) {
-    if (isJobRunning("syncMovies")) {
-      console.log("[Plex Scheduler] Skipping movie sync — manual job in progress");
+    if (isJobRunning('syncMovies')) {
+      console.log('[Plex Scheduler] Skipping movie sync — manual job in progress');
     } else {
       const movieResult = await importMoviesFromPlex(client, movieSectionId);
       movieCount = movieResult.synced;
@@ -280,12 +280,12 @@ async function executeSyncCycle(
       }
     }
   } else {
-    console.warn("[Plex Scheduler] Movie section ID not configured — skipping movie sync");
+    console.warn('[Plex Scheduler] Movie section ID not configured — skipping movie sync');
   }
 
   if (tvSectionId) {
-    if (isJobRunning("syncTvShows")) {
-      console.log("[Plex Scheduler] Skipping TV sync — manual job in progress");
+    if (isJobRunning('syncTvShows')) {
+      console.log('[Plex Scheduler] Skipping TV sync — manual job in progress');
     } else {
       const tvResult = await importTvShowsFromPlex(client, tvSectionId);
       tvCount = tvResult.synced;
@@ -295,14 +295,14 @@ async function executeSyncCycle(
       }
     }
   } else {
-    console.warn("[Plex Scheduler] TV section ID not configured — skipping TV sync");
+    console.warn('[Plex Scheduler] TV section ID not configured — skipping TV sync');
   }
 
   // Watchlist sync runs after library sync (items may need to be added to library first)
   const token = getPlexToken();
   if (token) {
-    if (isJobRunning("syncWatchlist")) {
-      console.log("[Plex Scheduler] Skipping watchlist sync — manual job in progress");
+    if (isJobRunning('syncWatchlist')) {
+      console.log('[Plex Scheduler] Skipping watchlist sync — manual job in progress');
     } else {
       try {
         const watchlistResult = await syncWatchlistFromPlex(token);

@@ -2,12 +2,12 @@
  * Item detail page — shows item info and connected items.
  * Route: /inventory/items/:id
  */
-import { useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router";
-import { useSetPageContext } from "@pops/navigation";
-import { toast } from "sonner";
-import Markdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
+import { useMemo, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router';
+import { useSetPageContext } from '@pops/navigation';
+import { toast } from 'sonner';
+import Markdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import {
   Badge,
   Button,
@@ -29,7 +29,7 @@ import {
   WarrantyBadge,
   PageHeader,
   type Condition,
-} from "@pops/ui";
+} from '@pops/ui';
 import {
   Pencil,
   Link2,
@@ -44,22 +44,22 @@ import {
   ExternalLink,
   Store,
   Camera,
-} from "lucide-react";
-import { trpc } from "../lib/trpc";
-import { PhotoGallery } from "../components/PhotoGallery";
-import { SortablePhotoGrid } from "../components/SortablePhotoGrid";
+} from 'lucide-react';
+import { trpc } from '../lib/trpc';
+import { PhotoGallery } from '../components/PhotoGallery';
+import { SortablePhotoGrid } from '../components/SortablePhotoGrid';
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  receipt: "Receipts",
-  warranty: "Warranties",
-  manual: "Manuals",
-  invoice: "Invoices",
-  other: "Other",
+  receipt: 'Receipts',
+  warranty: 'Warranties',
+  manual: 'Manuals',
+  invoice: 'Invoices',
+  other: 'Other',
 };
-import { ConnectDialog } from "../components/ConnectDialog";
-import { ConnectionTracePanel } from "../components/ConnectionTracePanel";
-import { LinkDocumentDialog } from "../components/LinkDocumentDialog";
-import { ConnectionGraph } from "../components/ConnectionGraph";
+import { ConnectDialog } from '../components/ConnectDialog';
+import { ConnectionTracePanel } from '../components/ConnectionTracePanel';
+import { LinkDocumentDialog } from '../components/LinkDocumentDialog';
+import { ConnectionGraph } from '../components/ConnectionGraph';
 
 export function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -84,8 +84,8 @@ export function ItemDetailPage() {
 
   const deleteMutation = trpc.inventory.items.delete.useMutation({
     onSuccess: () => {
-      toast.success("Item deleted");
-      void navigate("/inventory");
+      toast.success('Item deleted');
+      void navigate('/inventory');
     },
     onError: (err) => {
       toast.error(`Failed to delete: ${err.message}`);
@@ -94,7 +94,7 @@ export function ItemDetailPage() {
 
   const disconnectMutation = trpc.inventory.connections.disconnect.useMutation({
     onSuccess: () => {
-      toast.success("Items disconnected");
+      toast.success('Items disconnected');
       void utils.inventory.connections.listForItem.invalidate({ itemId: id! });
     },
     onError: (err) => {
@@ -104,13 +104,13 @@ export function ItemDetailPage() {
 
   const itemEntity = useMemo(
     () => ({
-      uri: `pops:inventory/item/${id ?? ""}`,
-      type: "item" as const,
-      title: itemData?.data?.itemName ?? "",
+      uri: `pops:inventory/item/${id ?? ''}`,
+      type: 'item' as const,
+      title: itemData?.data?.itemName ?? '',
     }),
     [id, itemData?.data?.itemName]
   );
-  useSetPageContext({ page: "item-detail", pageType: "drill-down", entity: itemEntity });
+  useSetPageContext({ page: 'item-detail', pageType: 'drill-down', entity: itemEntity });
 
   if (isLoading) {
     return (
@@ -128,11 +128,11 @@ export function ItemDetailPage() {
   }
 
   if (error) {
-    const is404 = error.data?.code === "NOT_FOUND";
+    const is404 = error.data?.code === 'NOT_FOUND';
     return (
       <div>
         <Alert variant="destructive">
-          <AlertTitle>{is404 ? "Item not found" : "Error"}</AlertTitle>
+          <AlertTitle>{is404 ? 'Item not found' : 'Error'}</AlertTitle>
           <AlertDescription>{is404 ? "This item doesn't exist." : error.message}</AlertDescription>
         </Alert>
         <Link
@@ -159,13 +159,13 @@ export function ItemDetailPage() {
             </span>
             {(item.brand || item.model) && (
               <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest opacity-80 mt-1">
-                {[item.brand, item.model].filter(Boolean).join(" • ")}
+                {[item.brand, item.model].filter(Boolean).join(' • ')}
               </p>
             )}
           </div>
         }
         backHref="/inventory"
-        breadcrumbs={[{ label: "Inventory", href: "/inventory" }, { label: item.itemName }]}
+        breadcrumbs={[{ label: 'Inventory', href: '/inventory' }, { label: item.itemName }]}
         actions={
           <div className="flex items-center gap-2">
             <Link to={`/inventory/items/${id}/edit`}>
@@ -194,9 +194,9 @@ export function ItemDetailPage() {
                   <AlertDialogTitle>Delete {item.itemName}?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will also remove {connectionsData?.data.length ?? 0} connection
-                    {(connectionsData?.data.length ?? 0) !== 1 ? "s" : ""} and{" "}
+                    {(connectionsData?.data.length ?? 0) !== 1 ? 's' : ''} and{' '}
                     {photosData?.pagination?.total ?? 0} photo
-                    {(photosData?.pagination?.total ?? 0) !== 1 ? "s" : ""}.
+                    {(photosData?.pagination?.total ?? 0) !== 1 ? 's' : ''}.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -256,9 +256,9 @@ export function ItemDetailPage() {
           {item.purchaseDate && (
             <DetailField
               label="Purchased"
-              value={new Date(item.purchaseDate).toLocaleDateString("en-AU", {
-                year: "numeric",
-                month: "short",
+              value={new Date(item.purchaseDate).toLocaleDateString('en-AU', {
+                year: 'numeric',
+                month: 'short',
               })}
             />
           )}
@@ -343,7 +343,7 @@ export function ItemDetailPage() {
             </h2>
             <Button variant="outline" size="sm" onClick={() => setShowGraph((v) => !v)}>
               <Network className="h-4 w-4 mr-1.5" />
-              {showGraph ? "Hide Graph" : "View Graph"}
+              {showGraph ? 'Hide Graph' : 'View Graph'}
             </Button>
           </div>
           {showGraph ? <ConnectionGraph itemId={id!} /> : <ConnectionTracePanel itemId={id!} />}
@@ -480,7 +480,7 @@ function DocumentsList({
 
   const unlinkMutation = trpc.inventory.documents.unlink.useMutation({
     onSuccess: () => {
-      toast.success("Document unlinked");
+      toast.success('Document unlinked');
       void utils.inventory.documents.listForItem.invalidate({ itemId });
     },
     onError: (err: { message: string }) => {
@@ -498,7 +498,7 @@ function DocumentsList({
     grouped.set(type, list);
   }
 
-  const typeOrder = ["receipt", "warranty", "manual", "invoice", "other"];
+  const typeOrder = ['receipt', 'warranty', 'manual', 'invoice', 'other'];
   const sortedTypes = [...grouped.keys()].sort(
     (a, b) => (typeOrder.indexOf(a) ?? 99) - (typeOrder.indexOf(b) ?? 99)
   );
@@ -588,10 +588,10 @@ function DocumentsList({
 }
 
 function DocumentThumbnail({ documentId }: { documentId: number }) {
-  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const src = `/inventory/documents/${documentId}/thumbnail`;
 
-  if (status === "error") {
+  if (status === 'error') {
     return (
       <div
         className="h-12 w-10 rounded bg-muted flex items-center justify-center shrink-0"
@@ -604,13 +604,13 @@ function DocumentThumbnail({ documentId }: { documentId: number }) {
 
   return (
     <div className="h-12 w-10 shrink-0 relative">
-      {status === "loading" && <Skeleton className="absolute inset-0 rounded" />}
+      {status === 'loading' && <Skeleton className="absolute inset-0 rounded" />}
       <img
         src={src}
         alt="Document thumbnail"
         className="h-12 w-10 rounded object-cover"
-        onLoad={() => setStatus("loaded")}
-        onError={() => setStatus("error")}
+        onLoad={() => setStatus('loaded')}
+        onError={() => setStatus('error')}
       />
     </div>
   );
@@ -643,7 +643,7 @@ function PhotosSection({ itemId }: { itemId: string }) {
     );
   }
 
-  const baseUrl = "/api/inventory/photos";
+  const baseUrl = '/api/inventory/photos';
 
   return (
     <section className="mb-8">

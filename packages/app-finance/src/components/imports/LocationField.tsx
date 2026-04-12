@@ -1,8 +1,8 @@
-import { MapPin, Info } from "lucide-react";
-import { Badge } from "@pops/ui";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@pops/ui";
-import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
-import { extractLocationDetails } from "../../lib/transaction-utils";
+import { MapPin, Info } from 'lucide-react';
+import { Badge } from '@pops/ui';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@pops/ui';
+import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
+import { extractLocationDetails } from '../../lib/transaction-utils';
 
 interface LocationFieldProps {
   transaction: ProcessedTransaction;
@@ -29,8 +29,8 @@ export function LocationField({ transaction }: LocationFieldProps) {
       <span className="text-sm">{details.location}</span>
 
       {details.source && (
-        <Badge variant={details.source === "csv" ? "default" : "secondary"} className="text-xs">
-          {details.source === "csv" ? "From CSV" : "Matched"}
+        <Badge variant={details.source === 'csv' ? 'default' : 'secondary'} className="text-xs">
+          {details.source === 'csv' ? 'From CSV' : 'Matched'}
         </Badge>
       )}
 

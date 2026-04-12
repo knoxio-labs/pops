@@ -9,15 +9,15 @@ Set up GitHub Actions workflows for quality gates and deployment. Every PR runs 
 
 ## Workflows
 
-| Workflow | Trigger | Steps |
-|----------|---------|-------|
-| `pops-api-ci.yml` | PR / push (API changes) | Lint, test, build |
-| `shell-ci.yml` | PR / push (shell changes) | Lint, build |
-| `test.yml` | PR / push | Full test suite |
-| `e2e.yml` | PR / push | Playwright e2e tests |
-| `ansible-ci.yml` | PR / push (ansible changes) | Syntax validation |
-| `tools-ci.yml` | PR / push (import tools changes) | Lint, test |
-| `deploy.yml` | Manual (workflow_dispatch) | Typecheck, lint, test, build, deploy to server |
+| Workflow          | Trigger                          | Steps                                          |
+| ----------------- | -------------------------------- | ---------------------------------------------- |
+| `pops-api-ci.yml` | PR / push (API changes)          | Lint, test, build                              |
+| `shell-ci.yml`    | PR / push (shell changes)        | Lint, build                                    |
+| `test.yml`        | PR / push                        | Full test suite                                |
+| `e2e.yml`         | PR / push                        | Playwright e2e tests                           |
+| `ansible-ci.yml`  | PR / push (ansible changes)      | Syntax validation                              |
+| `tools-ci.yml`    | PR / push (import tools changes) | Lint, test                                     |
+| `deploy.yml`      | Manual (workflow_dispatch)       | Typecheck, lint, test, build, deploy to server |
 
 ## Business Rules
 
@@ -29,10 +29,10 @@ Set up GitHub Actions workflows for quality gates and deployment. Every PR runs 
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-pr-workflows](us-01-pr-workflows.md) | CI workflows for PRs: API, shell, test, e2e, ansible, tools | Done | No (first) |
-| 02 | [us-02-deploy-workflow](us-02-deploy-workflow.md) | Manual deploy workflow with quality gates and server deployment | Done | Blocked by us-01 |
+| #   | Story                                             | Summary                                                         | Status | Parallelisable   |
+| --- | ------------------------------------------------- | --------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-pr-workflows](us-01-pr-workflows.md)       | CI workflows for PRs: API, shell, test, e2e, ansible, tools     | Done   | No (first)       |
+| 02  | [us-02-deploy-workflow](us-02-deploy-workflow.md) | Manual deploy workflow with quality gates and server deployment | Done   | Blocked by us-01 |
 
 ## Verification
 

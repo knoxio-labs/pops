@@ -1,6 +1,6 @@
-import { createContext } from "react";
-import type { AppContext } from "./types.js";
-import { DEFAULT_APP_CONTEXT } from "./types.js";
+import { createContext } from 'react';
+import type { AppContext } from './types.js';
+import { DEFAULT_APP_CONTEXT } from './types.js';
 
 /**
  * Internal context value shape.
@@ -12,7 +12,7 @@ export interface AppContextValue {
   context: AppContext;
   /** Update page-level fields (page, pageType, entity, filters). Called by pages on mount. */
   setPageContext: (
-    partial: Partial<Pick<AppContext, "page" | "pageType" | "entity" | "filters">>
+    partial: Partial<Pick<AppContext, 'page' | 'pageType' | 'entity' | 'filters'>>
   ) => void;
 }
 
@@ -21,4 +21,4 @@ export const AppContextCtx = createContext<AppContextValue>({
   setPageContext: () => {},
 });
 
-AppContextCtx.displayName = "AppContext";
+AppContextCtx.displayName = 'AppContext';

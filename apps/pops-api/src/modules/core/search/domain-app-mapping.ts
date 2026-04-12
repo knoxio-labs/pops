@@ -7,12 +7,12 @@
  */
 
 const DOMAIN_APP_MAP: Record<string, string> = {
-  movies: "media",
-  "tv-shows": "media",
-  transactions: "finance",
-  entities: "finance",
-  budgets: "finance",
-  "inventory-items": "inventory",
+  movies: 'media',
+  'tv-shows': 'media',
+  transactions: 'finance',
+  entities: 'finance',
+  budgets: 'finance',
+  'inventory-items': 'inventory',
 };
 
 /**

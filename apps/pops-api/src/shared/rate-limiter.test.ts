@@ -1,7 +1,7 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { TokenBucketRateLimiter } from "./rate-limiter.js";
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { TokenBucketRateLimiter } from './rate-limiter.js';
 
-describe("TokenBucketRateLimiter", () => {
+describe('TokenBucketRateLimiter', () => {
   let limiter: TokenBucketRateLimiter;
 
   afterEach(() => {
@@ -9,7 +9,7 @@ describe("TokenBucketRateLimiter", () => {
     vi.useRealTimers();
   });
 
-  it("allows immediate acquire when tokens are available", async () => {
+  it('allows immediate acquire when tokens are available', async () => {
     limiter = new TokenBucketRateLimiter(5, 1);
 
     const start = Date.now();
@@ -19,7 +19,7 @@ describe("TokenBucketRateLimiter", () => {
     expect(elapsed).toBeLessThan(50);
   });
 
-  it("allows multiple acquires up to capacity", async () => {
+  it('allows multiple acquires up to capacity', async () => {
     limiter = new TokenBucketRateLimiter(3, 1);
 
     await limiter.acquire();
@@ -28,7 +28,7 @@ describe("TokenBucketRateLimiter", () => {
     // All three should resolve immediately (within capacity)
   });
 
-  it("waits when tokens are exhausted", async () => {
+  it('waits when tokens are exhausted', async () => {
     vi.useFakeTimers();
     limiter = new TokenBucketRateLimiter(1, 10); // 1 token, refills at 10/sec
 
@@ -50,7 +50,7 @@ describe("TokenBucketRateLimiter", () => {
     expect(resolved).toBe(true);
   });
 
-  it("refills tokens over time", async () => {
+  it('refills tokens over time', async () => {
     limiter = new TokenBucketRateLimiter(3, 100); // fast refill for testing
 
     // Exhaust all tokens
@@ -68,7 +68,7 @@ describe("TokenBucketRateLimiter", () => {
     expect(elapsed).toBeLessThan(50);
   });
 
-  it("does not exceed capacity on refill", async () => {
+  it('does not exceed capacity on refill', async () => {
     limiter = new TokenBucketRateLimiter(2, 100);
 
     // Wait to allow over-refill time
@@ -94,7 +94,7 @@ describe("TokenBucketRateLimiter", () => {
     expect(resolved).toBe(true);
   });
 
-  it("queues multiple waiters and drains in order", async () => {
+  it('queues multiple waiters and drains in order', async () => {
     vi.useFakeTimers();
     limiter = new TokenBucketRateLimiter(1, 10);
 
@@ -111,7 +111,7 @@ describe("TokenBucketRateLimiter", () => {
     expect(order).toEqual([1, 2]);
   });
 
-  it("destroy resolves pending waiters", async () => {
+  it('destroy resolves pending waiters', async () => {
     limiter = new TokenBucketRateLimiter(0, 1); // starts empty
 
     let resolved = false;
@@ -124,7 +124,7 @@ describe("TokenBucketRateLimiter", () => {
     expect(resolved).toBe(true);
   });
 
-  it("supports configurable capacity and refill rate", () => {
+  it('supports configurable capacity and refill rate', () => {
     // Just verify construction doesn't throw for various configs
     const l1 = new TokenBucketRateLimiter(40, 4); // TMDB: 40 capacity, 4/sec
     const l2 = new TokenBucketRateLimiter(20, 2); // TheTVDB: 20 capacity, 2/sec

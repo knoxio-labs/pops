@@ -11,8 +11,8 @@ Add a "Manage Rules" entry point on Step 4 (Review) that opens `CorrectionPropos
 
 ### `transaction_corrections` table changes
 
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|-------|
+| Column     | Type      | Constraints          | Notes                          |
+| ---------- | --------- | -------------------- | ------------------------------ |
 | `priority` | `INTEGER` | `NOT NULL DEFAULT 0` | Lower number = higher priority |
 
 ### Migration backfill
@@ -20,10 +20,10 @@ Add a "Manage Rules" entry point on Step 4 (Review) that opens `CorrectionPropos
 Existing rules receive priority based on current implicit ordering:
 
 | Match type | Priority band |
-|------------|---------------|
-| `exact` | 0 -- 999 |
-| `contains` | 1000 -- 1999 |
-| `regex` | 2000 -- 2999 |
+| ---------- | ------------- |
+| `exact`    | 0 -- 999      |
+| `contains` | 1000 -- 1999  |
+| `regex`    | 2000 -- 2999  |
 
 Within each band, rules are ordered by `confidence DESC`, `timesApplied DESC` and assigned sequential values with gaps of 10.
 
@@ -48,27 +48,27 @@ No new endpoints. Existing endpoints change:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Zero existing rules in DB | Browse mode shows empty sidebar with just "Add rule" button. |
-| User reorders then cancels dialog | Pending priority changes are discarded. |
-| Two rules at the same priority | Tie-break by `id` (stable sort). |
-| User disables the winning rule | Next-priority rule now wins; preview updates. |
-| Orphaned entity check with only "skipped" transactions | Entity still counts as having transactions — not orphaned. |
+| Case                                                    | Behaviour                                                                                                       |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Zero existing rules in DB                               | Browse mode shows empty sidebar with just "Add rule" button.                                                    |
+| User reorders then cancels dialog                       | Pending priority changes are discarded.                                                                         |
+| Two rules at the same priority                          | Tie-break by `id` (stable sort).                                                                                |
+| User disables the winning rule                          | Next-priority rule now wins; preview updates.                                                                   |
+| Orphaned entity check with only "skipped" transactions  | Entity still counts as having transactions — not orphaned.                                                      |
 | Existing DB transactions count for preview exceeds 2000 | Client caps at 2000, shows "preview truncated" hint (reuses existing `PREVIEW_CHANGESET_MAX_TRANSACTIONS` cap). |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-priority-column-migration](us-01-priority-column-migration.md) | Add `priority` column, backfill, update types and schemas | Done | Yes |
-| 02 | [us-02-priority-aware-matching](us-02-priority-aware-matching.md) | Update matching algorithm to sort by priority ASC | Done | Blocked by us-01 |
-| 03 | [us-03-browse-all-mode](us-03-browse-all-mode.md) | Browse-all mode for CorrectionProposalDialog | Done | Blocked by PRD-030 us-03 |
-| 04 | [us-04-manage-rules-button](us-04-manage-rules-button.md) | "Manage Rules" button in ReviewStep | Done | Blocked by us-03 |
-| 05 | [us-05-drag-to-reorder](us-05-drag-to-reorder.md) | Drag-to-reorder priority in browse-mode sidebar | Not started | Blocked by us-01, us-03 |
-| 06 | [us-06-impact-preview-db-transactions](us-06-impact-preview-db-transactions.md) | Impact preview includes existing DB transactions | Not started | Blocked by us-03 |
-| 07 | [us-07-override-indicators](us-07-override-indicators.md) | Override indicators when multiple rules match | Not started | Blocked by us-02 |
-| 08 | [us-08-orphaned-entity-indicators](us-08-orphaned-entity-indicators.md) | Orphaned entity badges on /finance/entities | Done | Yes |
+| #   | Story                                                                           | Summary                                                   | Status      | Parallelisable           |
+| --- | ------------------------------------------------------------------------------- | --------------------------------------------------------- | ----------- | ------------------------ |
+| 01  | [us-01-priority-column-migration](us-01-priority-column-migration.md)           | Add `priority` column, backfill, update types and schemas | Done        | Yes                      |
+| 02  | [us-02-priority-aware-matching](us-02-priority-aware-matching.md)               | Update matching algorithm to sort by priority ASC         | Done        | Blocked by us-01         |
+| 03  | [us-03-browse-all-mode](us-03-browse-all-mode.md)                               | Browse-all mode for CorrectionProposalDialog              | Done        | Blocked by PRD-030 us-03 |
+| 04  | [us-04-manage-rules-button](us-04-manage-rules-button.md)                       | "Manage Rules" button in ReviewStep                       | Done        | Blocked by us-03         |
+| 05  | [us-05-drag-to-reorder](us-05-drag-to-reorder.md)                               | Drag-to-reorder priority in browse-mode sidebar           | Not started | Blocked by us-01, us-03  |
+| 06  | [us-06-impact-preview-db-transactions](us-06-impact-preview-db-transactions.md) | Impact preview includes existing DB transactions          | Not started | Blocked by us-03         |
+| 07  | [us-07-override-indicators](us-07-override-indicators.md)                       | Override indicators when multiple rules match             | Not started | Blocked by us-02         |
+| 08  | [us-08-orphaned-entity-indicators](us-08-orphaned-entity-indicators.md)         | Orphaned entity badges on /finance/entities               | Done        | Yes                      |
 
 ## Out of Scope
 

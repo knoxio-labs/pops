@@ -1,8 +1,8 @@
-import { useState, useCallback } from "react";
-import Papa from "papaparse";
-import { FileUpload } from "./FileUpload";
-import { useImportStore } from "../../store/importStore";
-import { Button } from "@pops/ui";
+import { useState, useCallback } from 'react';
+import Papa from 'papaparse';
+import { FileUpload } from './FileUpload';
+import { useImportStore } from '../../store/importStore';
+import { Button } from '@pops/ui';
 
 /**
  * Step 1: Upload CSV file and parse it
@@ -22,7 +22,7 @@ export function UploadStep() {
 
   const handleNext = useCallback(() => {
     if (!file) {
-      setError("Please select a file");
+      setError('Please select a file');
       return;
     }
 
@@ -34,20 +34,20 @@ export function UploadStep() {
       skipEmptyLines: true,
       complete: (results) => {
         if (results.errors.length > 0) {
-          setError(`CSV parsing error: ${results.errors[0]?.message ?? "Unknown error"}`);
+          setError(`CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`);
           setIsProcessing(false);
           return;
         }
 
         if (results.data.length === 0) {
-          setError("CSV file is empty");
+          setError('CSV file is empty');
           setIsProcessing(false);
           return;
         }
 
         const headers = results.meta.fields ?? [];
         if (headers.length === 0) {
-          setError("CSV file has no headers");
+          setError('CSV file has no headers');
           setIsProcessing(false);
           return;
         }
@@ -97,7 +97,7 @@ export function UploadStep() {
 
       <div className="flex justify-end gap-3">
         <Button onClick={handleNext} disabled={!file || isProcessing}>
-          {isProcessing ? "Processing..." : "Next"}
+          {isProcessing ? 'Processing...' : 'Next'}
         </Button>
       </div>
     </div>

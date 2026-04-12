@@ -1,19 +1,19 @@
 /**
  * Movie tRPC router — CRUD procedures for movies.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   CreateMovieSchema,
   UpdateMovieSchema,
   MovieQuerySchema,
   toMovie,
   type MovieFilters,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -44,7 +44,7 @@ export const moviesRouter = router({
       return { data: toMovie(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -56,11 +56,11 @@ export const moviesRouter = router({
       const row = service.createMovie(input);
       return {
         data: toMovie(row),
-        message: "Movie created",
+        message: 'Movie created',
       };
     } catch (err) {
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -79,11 +79,11 @@ export const moviesRouter = router({
         const row = service.updateMovie(input.id, input.data);
         return {
           data: toMovie(row),
-          message: "Movie updated",
+          message: 'Movie updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -93,10 +93,10 @@ export const moviesRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => {
     try {
       service.deleteMovie(input.id);
-      return { message: "Movie deleted" };
+      return { message: 'Movie deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

@@ -33,17 +33,18 @@ On any movie card across the app (library, search results, detail page), if the 
 
 Located under Media settings. Controls:
 
-| Setting | Input | Description |
-|---------|-------|-------------|
-| Enabled | Toggle | Master on/off switch |
-| Schedule | Cron input or preset picker (daily at 3am, 6am, midnight) | When the job runs |
-| Leaving window | Number input (days) | How long movies stay in "leaving" state before deletion |
-| Daily additions | Number input | Max movies to add per cycle (gated by disk space) |
-| Target free space | Number input (GB) | Minimum free disk space — drives how many movies get marked for removal |
-| Average movie size | Number input (GB) | Fallback estimate when Radarr `sizeOnDisk` unavailable |
-| Protected days | Number input | How long manually-downloaded movies are shielded from rotation |
+| Setting            | Input                                                     | Description                                                             |
+| ------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Enabled            | Toggle                                                    | Master on/off switch                                                    |
+| Schedule           | Cron input or preset picker (daily at 3am, 6am, midnight) | When the job runs                                                       |
+| Leaving window     | Number input (days)                                       | How long movies stay in "leaving" state before deletion                 |
+| Daily additions    | Number input                                              | Max movies to add per cycle (gated by disk space)                       |
+| Target free space  | Number input (GB)                                         | Minimum free disk space — drives how many movies get marked for removal |
+| Average movie size | Number input (GB)                                         | Fallback estimate when Radarr `sizeOnDisk` unavailable                  |
+| Protected days     | Number input                                              | How long manually-downloaded movies are shielded from rotation          |
 
 Also displays:
+
 - Current disk space (live from Radarr)
 - Last rotation run summary (timestamp, counts, errors)
 - Next scheduled run time
@@ -61,13 +62,13 @@ CRUD interface for rotation sources.
 
 Type-specific config fields:
 
-| Source Type | Config Fields |
-|-------------|---------------|
-| `plex_watchlist` | None (uses connected Plex account) |
-| `plex_friends` | Friend username picker (from Plex friends list) |
-| `imdb_top_100` | None (hardcoded URL) |
-| `letterboxd` | List URL |
-| `manual` | None (system-managed, one per install) |
+| Source Type      | Config Fields                                   |
+| ---------------- | ----------------------------------------------- |
+| `plex_watchlist` | None (uses connected Plex account)              |
+| `plex_friends`   | Friend username picker (from Plex friends list) |
+| `imdb_top_100`   | None (hardcoded URL)                            |
+| `letterboxd`     | List URL                                        |
+| `manual`         | None (system-managed, one per install)          |
 
 ### Candidate Queue Page
 
@@ -110,24 +111,24 @@ Paginated history of rotation cycles. Each entry shows:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Rotation disabled | Settings page shows all controls greyed out except the toggle. Leaving Soon shelf hidden on both Library and Discover pages |
-| No sources configured | Source page shows empty state with setup prompt. Rotation can run but will have no candidates to add |
-| Radarr disconnected | Settings page shows warning. "Run Now" disabled. Disk space shows "unavailable" |
-| Movie in queue and in library simultaneously | Show "In Library" badge, hide queue actions. Candidate status = `skipped` |
-| User cancels leaving on a movie daily | No limit on "Keep" actions. The movie re-enters the eligible pool. Since removal is oldest-first and deterministic, it will be re-selected if it's still among the oldest. Add to watchlist for permanent protection |
+| Case                                         | Behaviour                                                                                                                                                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rotation disabled                            | Settings page shows all controls greyed out except the toggle. Leaving Soon shelf hidden on both Library and Discover pages                                                                                          |
+| No sources configured                        | Source page shows empty state with setup prompt. Rotation can run but will have no candidates to add                                                                                                                 |
+| Radarr disconnected                          | Settings page shows warning. "Run Now" disabled. Disk space shows "unavailable"                                                                                                                                      |
+| Movie in queue and in library simultaneously | Show "In Library" badge, hide queue actions. Candidate status = `skipped`                                                                                                                                            |
+| User cancels leaving on a movie daily        | No limit on "Keep" actions. The movie re-enters the eligible pool. Since removal is oldest-first and deterministic, it will be re-selected if it's still among the oldest. Add to watchlist for permanent protection |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-leaving-soon-shelf](us-01-leaving-soon-shelf.md) | Leaving Soon shelf on Library + Discover pages, countdown badges on cards | Not started | Blocked by PRD-070 US-03 |
-| 02 | [us-02-rotation-settings](us-02-rotation-settings.md) | Rotation settings page with all configuration controls | Not started | Blocked by PRD-070 US-01 |
-| 03 | [us-03-source-management](us-03-source-management.md) | Source list CRUD page with type-specific config | Not started | Blocked by PRD-071 US-01 |
-| 04 | [us-04-candidate-queue](us-04-candidate-queue.md) | Candidate queue page with tabs (pending, added, excluded) | Not started | Blocked by PRD-071 US-01 |
-| 05 | [us-05-queue-download-buttons](us-05-queue-download-buttons.md) | "Add to Queue" and "Download" buttons on discovery pages | Not started | Blocked by PRD-071 US-01, PRD-070 US-01 |
-| 06 | [us-06-rotation-log](us-06-rotation-log.md) | Rotation execution history page | Not started | Blocked by PRD-070 US-06 |
+| #   | Story                                                           | Summary                                                                   | Status      | Parallelisable                          |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------- | --------------------------------------- |
+| 01  | [us-01-leaving-soon-shelf](us-01-leaving-soon-shelf.md)         | Leaving Soon shelf on Library + Discover pages, countdown badges on cards | Not started | Blocked by PRD-070 US-03                |
+| 02  | [us-02-rotation-settings](us-02-rotation-settings.md)           | Rotation settings page with all configuration controls                    | Not started | Blocked by PRD-070 US-01                |
+| 03  | [us-03-source-management](us-03-source-management.md)           | Source list CRUD page with type-specific config                           | Not started | Blocked by PRD-071 US-01                |
+| 04  | [us-04-candidate-queue](us-04-candidate-queue.md)               | Candidate queue page with tabs (pending, added, excluded)                 | Not started | Blocked by PRD-071 US-01                |
+| 05  | [us-05-queue-download-buttons](us-05-queue-download-buttons.md) | "Add to Queue" and "Download" buttons on discovery pages                  | Not started | Blocked by PRD-071 US-01, PRD-070 US-01 |
+| 06  | [us-06-rotation-log](us-06-rotation-log.md)                     | Rotation execution history page                                           | Not started | Blocked by PRD-070 US-06                |
 
 ## Out of Scope
 

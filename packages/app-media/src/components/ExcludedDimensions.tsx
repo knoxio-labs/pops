@@ -2,12 +2,12 @@
  * ExcludedDimensions — shows which comparison dimensions a movie is excluded from
  * and provides an "Include" button to restore it.
  */
-import { Button } from "@pops/ui";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { Button } from '@pops/ui';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 
 export interface ExcludedDimensionsProps {
-  mediaType: "movie" | "tv_show";
+  mediaType: 'movie' | 'tv_show';
   mediaId: number;
 }
 
@@ -23,7 +23,7 @@ export function ExcludedDimensions({ mediaType, mediaId }: ExcludedDimensionsPro
 
   const includeMutation = trpc.media.comparisons.includeInDimension.useMutation({
     onSuccess: (_data, variables) => {
-      const dimName = dimensions.find((d) => d.id === variables.dimensionId)?.name ?? "dimension";
+      const dimName = dimensions.find((d) => d.id === variables.dimensionId)?.name ?? 'dimension';
       toast.success(`Included in ${dimName}`);
       void utils.media.comparisons.scores.invalidate({ mediaType, mediaId });
     },

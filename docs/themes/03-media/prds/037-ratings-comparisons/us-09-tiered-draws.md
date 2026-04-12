@@ -9,11 +9,11 @@ As a user, I want three draw tier buttons (High, Mid, Low) between the movie car
 
 The draw tier feeds directly into the ELO outcome value:
 
-| Tier | Outcome value | Effect |
-|------|--------------|--------|
-| High | 0.7 | Both gain score (they're equally good) |
-| Mid | 0.5 | Standard draw (neutral) |
-| Low | 0.3 | Both lose score (they're equally bad) |
+| Tier | Outcome value | Effect                                 |
+| ---- | ------------- | -------------------------------------- |
+| High | 0.7           | Both gain score (they're equally good) |
+| Mid  | 0.5           | Standard draw (neutral)                |
+| Low  | 0.3           | Both lose score (they're equally bad)  |
 
 ## Acceptance criteria
 

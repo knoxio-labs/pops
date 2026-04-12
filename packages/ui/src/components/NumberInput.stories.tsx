@@ -2,49 +2,49 @@
  * NumberInput component stories
  * Demonstrates stepper controls, drag functionality, and all variants
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { NumberInput } from "./NumberInput";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { NumberInput } from './NumberInput';
 
 const meta: Meta<typeof NumberInput> = {
   component: NumberInput,
-  title: "Inputs/Number",
-  tags: ["autodocs"],
+  title: 'Inputs/Number',
+  tags: ['autodocs'],
   argTypes: {
     variant: {
-      control: "select",
-      options: ["default", "ghost", "underline"],
-      description: "Visual style variant",
+      control: 'select',
+      options: ['default', 'ghost', 'underline'],
+      description: 'Visual style variant',
     },
     size: {
-      control: "select",
-      options: ["sm", "default", "lg"],
-      description: "Size of the input",
+      control: 'select',
+      options: ['sm', 'default', 'lg'],
+      description: 'Size of the input',
     },
     shape: {
-      control: "select",
-      options: ["default", "pill"],
-      description: "Shape of the input",
+      control: 'select',
+      options: ['default', 'pill'],
+      description: 'Shape of the input',
     },
     showSteppers: {
-      control: "boolean",
-      description: "Show up/down arrow buttons",
+      control: 'boolean',
+      description: 'Show up/down arrow buttons',
     },
     enableDrag: {
-      control: "boolean",
-      description: "Enable drag to change value",
+      control: 'boolean',
+      description: 'Enable drag to change value',
     },
     min: {
-      control: "number",
-      description: "Minimum value",
+      control: 'number',
+      description: 'Minimum value',
     },
     max: {
-      control: "number",
-      description: "Maximum value",
+      control: 'number',
+      description: 'Maximum value',
     },
     step: {
-      control: "number",
-      description: "Step for increment/decrement",
+      control: 'number',
+      description: 'Step for increment/decrement',
     },
   },
 };
@@ -92,21 +92,21 @@ export const NoDrag: Story = {
 export const Ghost: Story = {
   args: {
     defaultValue: 10,
-    variant: "ghost",
+    variant: 'ghost',
   },
 };
 
 export const Underline: Story = {
   args: {
     defaultValue: 10,
-    variant: "underline",
+    variant: 'underline',
   },
 };
 
 export const Pill: Story = {
   args: {
     defaultValue: 10,
-    shape: "pill",
+    shape: 'pill',
   },
 };
 
@@ -114,14 +114,14 @@ export const Pill: Story = {
 export const Small: Story = {
   args: {
     defaultValue: 5,
-    size: "sm",
+    size: 'sm',
   },
 };
 
 export const Large: Story = {
   args: {
     defaultValue: 5,
-    size: "lg",
+    size: 'lg',
   },
 };
 
@@ -383,8 +383,8 @@ export const Playground: Story = {
     step: 1,
     showSteppers: true,
     enableDrag: true,
-    variant: "default",
-    size: "default",
-    shape: "default",
+    variant: 'default',
+    size: 'default',
+    shape: 'default',
   },
 };

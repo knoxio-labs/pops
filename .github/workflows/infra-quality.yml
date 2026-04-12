@@ -5,10 +5,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "infra/ansible/**"
-      - ".ansible-lint"
-      - ".yamllint"
-      - ".github/workflows/infra-quality.yml"
+      - 'infra/ansible/**'
+      - '.ansible-lint'
+      - '.yamllint'
+      - '.github/workflows/infra-quality.yml'
   pull_request:
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
     needs: [changes]
     if: always()
     steps:
-      - name: "Skip — no relevant changes"
+      - name: 'Skip — no relevant changes'
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/setup-python@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         with:
-          python-version: "3.12"
+          python-version: '3.12'
           cache: pip
       - run: pip install yamllint
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
@@ -57,7 +57,7 @@ jobs:
     needs: [changes]
     if: always()
     steps:
-      - name: "Skip — no relevant changes"
+      - name: 'Skip — no relevant changes'
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/setup-python@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         with:
-          python-version: "3.12"
+          python-version: '3.12'
           cache: pip
       - run: pip install ansible-core ansible-lint
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
@@ -92,7 +92,7 @@ jobs:
           - infra/ansible/playbooks/deploy.yml
           - infra/ansible/playbooks/bootstrap.yml
     steps:
-      - name: "Skip — no relevant changes"
+      - name: 'Skip — no relevant changes'
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6
@@ -100,7 +100,7 @@ jobs:
       - uses: actions/setup-python@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         with:
-          python-version: "3.12"
+          python-version: '3.12'
           cache: pip
       - run: pip install ansible-core
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
@@ -127,7 +127,7 @@ jobs:
     needs: [changes]
     if: always()
     steps:
-      - name: "Skip — no relevant changes"
+      - name: 'Skip — no relevant changes'
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6
@@ -166,7 +166,7 @@ jobs:
     needs: [changes]
     if: always()
     steps:
-      - name: "Skip — no relevant changes"
+      - name: 'Skip — no relevant changes'
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6

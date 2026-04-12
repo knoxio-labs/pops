@@ -2,14 +2,14 @@
  * TheTVDB library service — orchestrates fetching from TheTVDB and
  * upserting into the local database.
  */
-import { eq } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { seasons, episodes } from "@pops/db-types";
-import * as tvShowsService from "../tv-shows/service.js";
-import type { TheTvdbClient } from "./client.js";
-import type { TvdbEpisode, TvdbSeasonSummary } from "./types.js";
-import type { ImageCacheService } from "../tmdb/image-cache.js";
-import { selectBestArtwork } from "../library/tv-show-service.js";
+import { eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { seasons, episodes } from '@pops/db-types';
+import * as tvShowsService from '../tv-shows/service.js';
+import type { TheTvdbClient } from './client.js';
+import type { TvdbEpisode, TvdbSeasonSummary } from './types.js';
+import type { ImageCacheService } from '../tmdb/image-cache.js';
+import { selectBestArtwork } from '../library/tv-show-service.js';
 
 export interface RefreshTvShowInput {
   id: number;
@@ -20,7 +20,7 @@ export interface RefreshTvShowInput {
 
 export interface RefreshTvShowResult {
   show: ReturnType<typeof tvShowsService.getTvShow>;
-  seasons: ReturnType<typeof tvShowsService.listSeasons>["rows"];
+  seasons: ReturnType<typeof tvShowsService.listSeasons>['rows'];
   episodesAdded: number;
   episodesUpdated: number;
   seasonsAdded: number;

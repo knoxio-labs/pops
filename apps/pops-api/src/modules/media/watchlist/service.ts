@@ -1,17 +1,17 @@
 /**
  * Watchlist service — CRUD operations against SQLite via Drizzle ORM.
  */
-import { asc, count, desc, eq, and, type SQL } from "drizzle-orm";
-import { getDb, getDrizzle } from "../../../db.js";
-import { mediaWatchlist } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { asc, count, desc, eq, and, type SQL } from 'drizzle-orm';
+import { getDb, getDrizzle } from '../../../db.js';
+import { mediaWatchlist } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 import type {
   MediaWatchlistRow,
   EnrichedWatchlistRow,
   AddToWatchlistInput,
   UpdateWatchlistInput,
   WatchlistFilters,
-} from "./types.js";
+} from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface WatchlistListResult {
@@ -29,7 +29,7 @@ export function listWatchlist(
   const conditions: SQL[] = [];
 
   if (filters.mediaType) {
-    conditions.push(eq(mediaWatchlist.mediaType, filters.mediaType as "movie" | "tv_show"));
+    conditions.push(eq(mediaWatchlist.mediaType, filters.mediaType as 'movie' | 'tv_show'));
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -49,9 +49,9 @@ export function listWatchlist(
     let title: string | null = null;
     let posterUrl: string | null = null;
 
-    if (row.mediaType === "movie") {
+    if (row.mediaType === 'movie') {
       const movie = rawDb
-        .prepare("SELECT title, tmdb_id, poster_path FROM movies WHERE id = ?")
+        .prepare('SELECT title, tmdb_id, poster_path FROM movies WHERE id = ?')
         .get(row.mediaId) as
         | { title: string; tmdb_id: number; poster_path: string | null }
         | undefined;
@@ -59,9 +59,9 @@ export function listWatchlist(
         title = movie.title;
         posterUrl = movie.poster_path ? `/media/images/movie/${movie.tmdb_id}/poster.jpg` : null;
       }
-    } else if (row.mediaType === "tv_show") {
+    } else if (row.mediaType === 'tv_show') {
       const show = rawDb
-        .prepare("SELECT name, tvdb_id, poster_path FROM tv_shows WHERE id = ?")
+        .prepare('SELECT name, tvdb_id, poster_path FROM tv_shows WHERE id = ?')
         .get(row.mediaId) as
         | { name: string; tvdb_id: number; poster_path: string | null }
         | undefined;
@@ -81,7 +81,7 @@ export function listWatchlist(
 
 /** Check whether a specific media item is on the watchlist. Returns entry ID if present. */
 export function getWatchlistStatus(
-  mediaType: "movie" | "tv_show",
+  mediaType: 'movie' | 'tv_show',
   mediaId: number
 ): { onWatchlist: boolean; entryId: number | null } {
   const db = getDrizzle();
@@ -98,7 +98,7 @@ export function getWatchlistEntry(id: number): MediaWatchlistRow {
   const db = getDrizzle();
   const row = db.select().from(mediaWatchlist).where(eq(mediaWatchlist.id, id)).get();
 
-  if (!row) throw new NotFoundError("WatchlistEntry", String(id));
+  if (!row) throw new NotFoundError('WatchlistEntry', String(id));
   return row;
 }
 
@@ -122,7 +122,7 @@ export function addToWatchlist(input: AddToWatchlistInput): {
 
     return { row: getWatchlistEntry(Number(result.lastInsertRowid)), created: true };
   } catch (err) {
-    if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
       const existing = db
         .select()
         .from(mediaWatchlist)
@@ -160,7 +160,7 @@ export function removeFromWatchlist(id: number): void {
   getWatchlistEntry(id);
 
   const result = getDrizzle().delete(mediaWatchlist).where(eq(mediaWatchlist.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("WatchlistEntry", String(id));
+  if (result.changes === 0) throw new NotFoundError('WatchlistEntry', String(id));
 }
 
 /** Batch-update priorities for reordering. */
@@ -172,13 +172,13 @@ export function reorderWatchlist(items: { id: number; priority: number }[]): voi
   // Validate all IDs exist
   for (const item of items) {
     const row = db.select().from(mediaWatchlist).where(eq(mediaWatchlist.id, item.id)).get();
-    if (!row) throw new NotFoundError("WatchlistEntry", String(item.id));
+    if (!row) throw new NotFoundError('WatchlistEntry', String(item.id));
   }
 
   // Check for duplicate priorities
   const priorities = items.map((i) => i.priority);
   if (new Set(priorities).size !== priorities.length) {
-    throw new ConflictError("Duplicate priorities in reorder request");
+    throw new ConflictError('Duplicate priorities in reorder request');
   }
 
   // Update all priorities in a transaction
@@ -196,7 +196,7 @@ export function reorderWatchlist(items: { id: number; priority: number }[]): voi
  * Remove a watchlist entry by media type and media ID.
  * Returns true if an entry was removed, false if none existed.
  */
-export function removeByMedia(mediaType: "movie" | "tv_show", mediaId: number): boolean {
+export function removeByMedia(mediaType: 'movie' | 'tv_show', mediaId: number): boolean {
   const result = getDrizzle()
     .delete(mediaWatchlist)
     .where(and(eq(mediaWatchlist.mediaType, mediaType), eq(mediaWatchlist.mediaId, mediaId)))

@@ -6,9 +6,9 @@
 export class AiCategorizationError extends Error {
   constructor(
     message: string,
-    public readonly code: "NO_API_KEY" | "API_ERROR" | "INSUFFICIENT_CREDITS"
+    public readonly code: 'NO_API_KEY' | 'API_ERROR' | 'INSUFFICIENT_CREDITS'
   ) {
     super(message);
-    this.name = "AiCategorizationError";
+    this.name = 'AiCategorizationError';
   }
 }

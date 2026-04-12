@@ -1,23 +1,23 @@
-import { asc, eq } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { comparisonDimensions } from "@pops/db-types";
-import { ConflictError, NotFoundError } from "../../../shared/errors.js";
+import { asc, eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { comparisonDimensions } from '@pops/db-types';
+import { ConflictError, NotFoundError } from '../../../shared/errors.js';
 import type {
   ComparisonDimensionRow,
   CreateDimensionInput,
   UpdateDimensionInput,
-} from "./types.js";
+} from './types.js';
 
 const DEFAULT_DIMENSIONS = [
-  { name: "Cinematography", description: "Visual quality, framing, and camera work", sortOrder: 0 },
-  { name: "Entertainment", description: "How engaging and enjoyable to watch", sortOrder: 1 },
+  { name: 'Cinematography', description: 'Visual quality, framing, and camera work', sortOrder: 0 },
+  { name: 'Entertainment', description: 'How engaging and enjoyable to watch', sortOrder: 1 },
   {
-    name: "Emotional Impact",
-    description: "Depth of feeling and emotional resonance",
+    name: 'Emotional Impact',
+    description: 'Depth of feeling and emotional resonance',
     sortOrder: 2,
   },
-  { name: "Rewatchability", description: "How well it holds up on repeat viewings", sortOrder: 3 },
-  { name: "Soundtrack", description: "Music, score, and sound design quality", sortOrder: 4 },
+  { name: 'Rewatchability', description: 'How well it holds up on repeat viewings', sortOrder: 3 },
+  { name: 'Soundtrack', description: 'Music, score, and sound design quality', sortOrder: 4 },
 ];
 
 /** Seed default dimensions if none exist. Returns true if seeded. */
@@ -55,7 +55,7 @@ export function listDimensions(): ComparisonDimensionRow[] {
 export function getDimension(id: number): ComparisonDimensionRow {
   const db = getDrizzle();
   const row = db.select().from(comparisonDimensions).where(eq(comparisonDimensions.id, id)).get();
-  if (!row) throw new NotFoundError("Dimension", String(id));
+  if (!row) throw new NotFoundError('Dimension', String(id));
   return row;
 }
 

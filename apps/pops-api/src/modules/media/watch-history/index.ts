@@ -1,1 +1,1 @@
-export { watchHistoryRouter } from "./router.js";
+export { watchHistoryRouter } from './router.js';

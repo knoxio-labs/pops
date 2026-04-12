@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { ReactNode } from "react";
-import { getResultComponent } from "./result-component-registry";
+import { useCallback, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { getResultComponent } from './result-component-registry';
 
 /** A single search hit within a section. */
 export interface SearchResultHit {
@@ -33,14 +33,14 @@ export interface SearchResultsPanelProps {
 }
 
 const COLOR_CLASSES: Record<string, string> = {
-  purple: "text-purple-600 dark:text-purple-400",
-  green: "text-green-600 dark:text-green-400",
-  blue: "text-blue-600 dark:text-blue-400",
-  red: "text-red-600 dark:text-red-400",
-  orange: "text-orange-600 dark:text-orange-400",
-  yellow: "text-yellow-600 dark:text-yellow-400",
-  pink: "text-pink-600 dark:text-pink-400",
-  cyan: "text-cyan-600 dark:text-cyan-400",
+  purple: 'text-purple-600 dark:text-purple-400',
+  green: 'text-green-600 dark:text-green-400',
+  blue: 'text-blue-600 dark:text-blue-400',
+  red: 'text-red-600 dark:text-red-400',
+  orange: 'text-orange-600 dark:text-orange-400',
+  yellow: 'text-yellow-600 dark:text-yellow-400',
+  pink: 'text-pink-600 dark:text-pink-400',
+  cyan: 'text-cyan-600 dark:text-cyan-400',
 };
 
 function SectionHeader({
@@ -54,12 +54,12 @@ function SectionHeader({
   count: number;
   color: string;
 }) {
-  const colorClass = COLOR_CLASSES[color] ?? "text-foreground";
+  const colorClass = COLOR_CLASSES[color] ?? 'text-foreground';
 
   return (
     <div
       className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${colorClass}`}
-      data-testid={`section-header-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      data-testid={`section-header-${label.toLowerCase().replace(/\s+/g, '-')}`}
     >
       {icon}
       <span>{label}</span>
@@ -91,7 +91,7 @@ export function SearchResultsPanel({
   // Close on Escape
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
       }
     },
@@ -99,11 +99,11 @@ export function SearchResultsPanel({
   );
 
   useEffect(() => {
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [handleOutsideClick, handleKeyDown]);
 
@@ -145,7 +145,7 @@ export function SearchResultsPanel({
         return (
           <div
             key={section.domain}
-            className={section.isContext ? "border-l-2 border-l-primary bg-accent/30" : ""}
+            className={section.isContext ? 'border-l-2 border-l-primary bg-accent/30' : ''}
             data-testid={`section-${section.domain}`}
           >
             <SectionHeader
@@ -162,7 +162,7 @@ export function SearchResultsPanel({
                   <li key={hit.uri}>
                     <button
                       type="button"
-                      className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none${isSelected ? " bg-accent" : ""}`}
+                      className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none${isSelected ? ' bg-accent' : ''}`}
                       onClick={() => onResultClick?.(hit.uri)}
                       data-uri={hit.uri}
                       data-result-index={itemIndex}

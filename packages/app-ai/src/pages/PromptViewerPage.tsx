@@ -4,14 +4,14 @@
  * Shows the current prompt templates used for transaction categorisation
  * and rule generation, with model attribution. PRD-053/US-04.
  */
-import { PageHeader } from "@pops/ui";
+import { PageHeader } from '@pops/ui';
 
 const PROMPTS = [
   {
-    title: "Transaction Categorisation",
-    model: "claude-haiku-4-5-20251001",
+    title: 'Transaction Categorisation',
+    model: 'claude-haiku-4-5-20251001',
     description:
-      "Used when a bank transaction cannot be matched to a known entity. Extracts merchant name and spending category from the raw transaction description.",
+      'Used when a bank transaction cannot be matched to a known entity. Extracts merchant name and spending category from the raw transaction description.',
     template: `Given this bank transaction data, identify the merchant/entity name and a spending category.
 
 Transaction data: {rawRow}
@@ -20,10 +20,10 @@ Reply in JSON only: {"entityName": "...", "category": "..."}
 Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopping, Health, Insurance, Subscriptions, Income, Transfer, Government, Education, Travel, Rent, Other.`,
   },
   {
-    title: "Rule Generation",
-    model: "claude-haiku-4-5-20251001",
+    title: 'Rule Generation',
+    model: 'claude-haiku-4-5-20251001',
     description:
-      "Proposes reusable tagging rules from a batch of transactions. Rules are stored and applied automatically to future imports.",
+      'Proposes reusable tagging rules from a batch of transactions. Rules are stored and applied automatically to future imports.',
     template: `You are a transaction categorization assistant. Given these bank transactions, propose reusable tagging rules that could apply to similar transactions in the future.
 
 Available tags: {tagList}

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { useState } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -12,7 +12,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@pops/ui";
+} from '@pops/ui';
 
 export interface EntityOption {
   id: string;
@@ -31,7 +31,7 @@ export function EntitySelect({
   entities,
   value,
   onChange,
-  placeholder = "Choose existing entity...",
+  placeholder = 'Choose existing entity...',
 }: EntitySelectProps) {
   const [open, setOpen] = useState(false);
 
@@ -75,14 +75,14 @@ export function EntitySelect({
                   }}
                 >
                   <Check
-                    className={`mr-2 h-4 w-4 ${value === entity.id ? "opacity-100" : "opacity-0"}`}
+                    className={`mr-2 h-4 w-4 ${value === entity.id ? 'opacity-100' : 'opacity-0'}`}
                   />
                   <span
-                    className={`truncate ${entity.id.startsWith("temp:entity:") ? "italic" : ""}`}
+                    className={`truncate ${entity.id.startsWith('temp:entity:') ? 'italic' : ''}`}
                   >
                     {entity.name}
                   </span>
-                  {entity.id.startsWith("temp:entity:") && (
+                  {entity.id.startsWith('temp:entity:') && (
                     <Badge variant="secondary" className="ml-1 text-xs shrink-0">
                       Pending
                     </Badge>

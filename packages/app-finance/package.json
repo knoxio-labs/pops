@@ -10,8 +10,8 @@
     "lint:fix": "eslint src --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
-    "format:fix": "prettier --write \"src/**/*.{ts,tsx}\""
+    "format:check": "oxfmt -c ../../.oxfmtrc.json --check \"src/**/*.{ts,tsx}\"",
+    "format:fix": "oxfmt -c ../../.oxfmtrc.json --write \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -35,9 +35,9 @@
     "zustand": "5.0.12"
   },
   "devDependencies": {
-    "@trpc/server": "^11.16.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@trpc/server": "^11.16.0",
     "@types/crypto-js": "^4.2.2",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.0.0",

@@ -3,11 +3,11 @@
  *
  * Dismissible (session-scoped via useState). Hidden when no pending debriefs.
  */
-import { useState } from "react";
-import { Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription } from "@pops/ui";
-import { ClipboardList, X } from "lucide-react";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import { Link } from 'react-router';
+import { Alert, AlertTitle, AlertDescription } from '@pops/ui';
+import { ClipboardList, X } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 export function DebriefBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -22,10 +22,10 @@ export function DebriefBanner() {
   return (
     <Alert data-testid="debrief-banner">
       <ClipboardList />
-      <AlertTitle>{count === 1 ? "1 movie to debrief" : `${count} movies to debrief`}</AlertTitle>
+      <AlertTitle>{count === 1 ? '1 movie to debrief' : `${count} movies to debrief`}</AlertTitle>
       <AlertDescription>
         <span>
-          Rate your recently watched {count === 1 ? "movie" : "movies"} across dimensions.{" "}
+          Rate your recently watched {count === 1 ? 'movie' : 'movies'} across dimensions.{' '}
           <Link
             to={`/media/debrief/${firstSession.movieId}`}
             className="font-medium underline underline-offset-4 hover:text-foreground"

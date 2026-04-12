@@ -11,7 +11,7 @@ export function parseJsonStringArray(json: string | null | undefined): string[] 
   try {
     const parsed = JSON.parse(json) as unknown;
     if (Array.isArray(parsed)) {
-      return parsed.filter((t): t is string => typeof t === "string");
+      return parsed.filter((t): t is string => typeof t === 'string');
     }
   } catch {
     // ignore malformed JSON

@@ -1,13 +1,13 @@
 /**
  * Item documents tRPC router — link/unlink Paperless-ngx documents to inventory items.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
-import { LinkDocumentSchema, DocumentQuerySchema, toItemDocument } from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
+import { LinkDocumentSchema, DocumentQuerySchema, toItemDocument } from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -24,14 +24,14 @@ export const documentsRouter = router({
       );
       return {
         data: toItemDocument(row),
-        message: "Document linked",
+        message: 'Document linked',
       };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -43,10 +43,10 @@ export const documentsRouter = router({
     .mutation(({ input }) => {
       try {
         service.unlinkDocument(input.id);
-        return { message: "Document unlinked" };
+        return { message: 'Document unlinked' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }

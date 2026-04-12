@@ -79,23 +79,23 @@ modules/<domain>/<feature>/
 ```typescript
 // src/router.ts
 export const appRouter = router({
-  core: coreRouter,           // core.entities.list, core.aiUsage.list
-  finance: financeRouter,     // finance.transactions.list, finance.budgets.list
+  core: coreRouter, // core.entities.list, core.aiUsage.list
+  finance: financeRouter, // finance.transactions.list, finance.budgets.list
   inventory: inventoryRouter, // inventory.items.list, inventory.locations.tree
-  media: mediaRouter,         // media.movies.list, media.comparisons.submit
-})
+  media: mediaRouter, // media.movies.list, media.comparisons.submit
+});
 ```
 
 Each domain group exports a composed sub-router from its `index.ts`.
 
 ### tRPC Procedure Paths
 
-| Domain | Example procedures |
-|--------|-------------------|
-| `core` | `core.entities.list`, `core.aiUsage.list`, `core.corrections.list` |
-| `finance` | `finance.transactions.list`, `finance.budgets.create`, `finance.imports.upload` |
+| Domain      | Example procedures                                                                |
+| ----------- | --------------------------------------------------------------------------------- |
+| `core`      | `core.entities.list`, `core.aiUsage.list`, `core.corrections.list`                |
+| `finance`   | `finance.transactions.list`, `finance.budgets.create`, `finance.imports.upload`   |
 | `inventory` | `inventory.items.list`, `inventory.locations.tree`, `inventory.connections.trace` |
-| `media` | `media.movies.search`, `media.comparisons.submit`, `media.plex.sync` |
+| `media`     | `media.movies.search`, `media.comparisons.submit`, `media.plex.sync`              |
 
 ## Module Import Rules
 
@@ -106,16 +106,17 @@ Each domain group exports a composed sub-router from its `index.ts`.
 
 ## Middleware Stack
 
-| Middleware | Purpose |
-|-----------|---------|
-| `auth.ts` | Validates Cloudflare Access JWT tokens |
-| `rate-limit.ts` | Rate limiting per endpoint |
-| `error-handler.ts` | Consistent error responses, logging |
-| `env-context.ts` | Scopes requests to named environments (for testing) |
+| Middleware         | Purpose                                             |
+| ------------------ | --------------------------------------------------- |
+| `auth.ts`          | Validates Cloudflare Access JWT tokens              |
+| `rate-limit.ts`    | Rate limiting per endpoint                          |
+| `error-handler.ts` | Consistent error responses, logging                 |
+| `env-context.ts`   | Scopes requests to named environments (for testing) |
 
 ## Express Routes (non-tRPC)
 
 Some endpoints don't fit the tRPC model:
+
 - `/health` — health check (no auth)
 - `/webhooks/up` — Up Bank webhook receiver (validates `X-Up-Authenticity-Signature`)
 - `/media/images/:type/:id/:filename` — static image serving for cached posters
@@ -130,22 +131,22 @@ Some endpoints don't fit the tRPC model:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Health check | No auth required, returns `{ status: "ok" }` |
-| Up webhook | Validates signature header, re-fetches transaction from Up API |
-| New domain module | Create `modules/<domain>/`, add sub-router, register in `router.ts` |
-| Module needs data from another domain | Import from `core/` service, not from the other domain directly |
+| Case                                  | Behaviour                                                           |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| Health check                          | No auth required, returns `{ status: "ok" }`                        |
+| Up webhook                            | Validates signature header, re-fetches transaction from Up API      |
+| New domain module                     | Create `modules/<domain>/`, add sub-router, register in `router.ts` |
+| Module needs data from another domain | Import from `core/` service, not from the other domain directly     |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-express-trpc-setup](us-01-express-trpc-setup.md) | Set up Express app with tRPC adapter, health endpoint | Done | No (first) |
-| 02 | [us-02-module-pattern](us-02-module-pattern.md) | Establish the module pattern (router/service/types/tests) with core/entities as the reference implementation | Done | Blocked by us-01 |
-| 03 | [us-03-middleware](us-03-middleware.md) | Build middleware stack: auth, rate limiting, error handling, env context | Done | Blocked by us-01 |
-| 04 | [us-04-router-composition](us-04-router-composition.md) | Compose domain sub-routers into the top-level appRouter | Done | Blocked by us-02 |
-| 05 | [us-05-webhook-routes](us-05-webhook-routes.md) | Set up Express routes for webhooks and static file serving | Done | Blocked by us-01 |
+| #   | Story                                                   | Summary                                                                                                      | Status | Parallelisable   |
+| --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | ---------------- |
+| 01  | [us-01-express-trpc-setup](us-01-express-trpc-setup.md) | Set up Express app with tRPC adapter, health endpoint                                                        | Done   | No (first)       |
+| 02  | [us-02-module-pattern](us-02-module-pattern.md)         | Establish the module pattern (router/service/types/tests) with core/entities as the reference implementation | Done   | Blocked by us-01 |
+| 03  | [us-03-middleware](us-03-middleware.md)                 | Build middleware stack: auth, rate limiting, error handling, env context                                     | Done   | Blocked by us-01 |
+| 04  | [us-04-router-composition](us-04-router-composition.md) | Compose domain sub-routers into the top-level appRouter                                                      | Done   | Blocked by us-02 |
+| 05  | [us-05-webhook-routes](us-05-webhook-routes.md)         | Set up Express routes for webhooks and static file serving                                                   | Done   | Blocked by us-01 |
 
 US-02 and US-03 can parallelise after US-01. US-04 depends on US-02. US-05 can parallelise with US-02/US-03.
 

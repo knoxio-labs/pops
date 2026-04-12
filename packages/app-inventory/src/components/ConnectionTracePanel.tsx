@@ -5,8 +5,8 @@
  * as a recursive tree. Each node shows item name, AssetIdBadge, and TypeBadge.
  * Click navigates to the item detail page.
  */
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Skeleton,
   AssetIdBadge,
@@ -14,9 +14,9 @@ import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
-} from "@pops/ui";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 interface TraceNode {
   id: string;
@@ -43,8 +43,8 @@ function TraceNodeRow({ node, depth, currentItemId }: TraceNodeRowProps) {
       <div
         className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors ${
           isCurrent
-            ? "bg-app-accent/10 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]"
-            : "hover:bg-app-accent/5 cursor-pointer"
+            ? 'bg-app-accent/10 text-foreground font-bold border-l-2 border-app-accent rounded-l-none ml-[-2px]'
+            : 'hover:bg-app-accent/5 cursor-pointer'
         }`}
         style={{
           paddingLeft: `calc(${depth} * var(--tree-indent-step) + var(--tree-indent-base))`,
@@ -60,7 +60,7 @@ function TraceNodeRow({ node, depth, currentItemId }: TraceNodeRowProps) {
             <button
               type="button"
               className="p-0.5 rounded hover:bg-muted"
-              aria-label={open ? "Collapse" : "Expand"}
+              aria-label={open ? 'Collapse' : 'Expand'}
             >
               {open ? (
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -73,7 +73,7 @@ function TraceNodeRow({ node, depth, currentItemId }: TraceNodeRowProps) {
           <span className="w-[18px]" />
         )}
 
-        <span className={`text-sm truncate ${isCurrent ? "font-semibold" : "font-medium"}`}>
+        <span className={`text-sm truncate ${isCurrent ? 'font-semibold' : 'font-medium'}`}>
           {node.itemName}
           {isCurrent && <span className="text-xs ml-1">(current)</span>}
         </span>
@@ -151,7 +151,7 @@ export function ConnectionTracePanel({ itemId }: ConnectionTracePanelProps) {
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
-        {totalNodes} connected {totalNodes === 1 ? "item" : "items"} in chain
+        {totalNodes} connected {totalNodes === 1 ? 'item' : 'items'} in chain
       </p>
       <div className="border rounded-lg py-2" role="tree" aria-label="Connection chain">
         <TraceNodeRow node={tree} depth={0} currentItemId={itemId} />

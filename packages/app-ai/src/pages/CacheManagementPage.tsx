@@ -4,11 +4,11 @@
  * Shows cache stats (total entries, disk size, hit rate) and provides
  * controls to clear stale or all cache entries. PRD-053/US-03.
  */
-import { useState } from "react";
-import { Link } from "react-router";
-import { toast } from "sonner";
-import { Database, Trash2 } from "lucide-react";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import { Link } from 'react-router';
+import { toast } from 'sonner';
+import { Database, Trash2 } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 import {
   Button,
   Input,
@@ -33,10 +33,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@pops/ui";
+} from '@pops/ui';
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
+  if (bytes === 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -60,7 +60,7 @@ export function CacheManagementPage() {
       void utils.core.aiUsage.cacheStats.invalidate();
     },
     onError: () => {
-      toast.error("Failed to clear stale cache");
+      toast.error('Failed to clear stale cache');
     },
   });
 
@@ -70,12 +70,12 @@ export function CacheManagementPage() {
       void utils.core.aiUsage.cacheStats.invalidate();
     },
     onError: () => {
-      toast.error("Failed to clear cache");
+      toast.error('Failed to clear cache');
     },
   });
 
   const totalRequests = (usageStats?.totalApiCalls ?? 0) + (usageStats?.totalCacheHits ?? 0);
-  const hitRatePct = totalRequests > 0 ? ((usageStats?.cacheHitRate ?? 0) * 100).toFixed(1) : "0.0";
+  const hitRatePct = totalRequests > 0 ? ((usageStats?.cacheHitRate ?? 0) * 100).toFixed(1) : '0.0';
 
   const isEmpty = (cacheStats?.totalEntries ?? 0) === 0;
 

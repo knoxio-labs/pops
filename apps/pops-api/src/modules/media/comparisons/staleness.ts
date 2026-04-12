@@ -5,7 +5,7 @@
  * current preferences. Each mark compounds by ×0.5 (floor 0.01). Watching
  * the media resets staleness to 1.0 (fresh).
  */
-import { getDb } from "../../../db.js";
+import { getDb } from '../../../db.js';
 
 const STALENESS_DECAY = 0.5;
 const STALENESS_FLOOR = 0.01;

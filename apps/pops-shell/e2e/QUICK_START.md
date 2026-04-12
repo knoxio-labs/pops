@@ -10,6 +10,7 @@
 ## Why 26% Pass Rate is Good
 
 The 74% failure rate is **intentional and expected**:
+
 - ✅ Tests are correctly written
 - ✅ Infrastructure works perfectly
 - ❌ UI features haven't been implemented yet
@@ -71,6 +72,7 @@ test('should edit transaction with Save Once', async ({ page }) => {
 ### 3. Implement the Feature
 
 Based on test expectations:
+
 - Add Edit button to transaction card
 - Create edit form component
 - Add description/amount input fields
@@ -96,6 +98,7 @@ Move to next failing test and repeat the process.
 ### ✅ Passing Tests (12)
 
 **Basic functionality working:**
+
 - Upload validation
 - File upload errors
 - Column mapping
@@ -109,6 +112,7 @@ Move to next failing test and repeat the process.
 ### ❌ Failing Tests by Feature (34)
 
 **Transaction Editing (4 tests)**
+
 ```typescript
 // What to implement:
 - Edit button on transaction cards
@@ -118,6 +122,7 @@ Move to next failing test and repeat the process.
 ```
 
 **AI Suggestions (3 tests)**
+
 ```typescript
 // What to implement:
 - "Accept [EntityName]" buttons
@@ -127,6 +132,7 @@ Move to next failing test and repeat the process.
 ```
 
 **Bulk Operations (5 tests)**
+
 ```typescript
 // What to implement:
 - List/Grouped view toggle
@@ -138,6 +144,7 @@ Move to next failing test and repeat the process.
 ```
 
 **Progress Polling (2 tests)**
+
 ```typescript
 // What to implement:
 - Import progress overlay modal
@@ -147,6 +154,7 @@ Move to next failing test and repeat the process.
 ```
 
 **Entity Creation (3 tests)**
+
 ```typescript
 // What to implement:
 - "+ Create new entity" buttons
@@ -156,6 +164,7 @@ Move to next failing test and repeat the process.
 ```
 
 **Review Navigation (3 tests)**
+
 ```typescript
 // What to implement:
 - Tab count indicators (e.g., "Uncertain (6)")
@@ -164,6 +173,7 @@ Move to next failing test and repeat the process.
 ```
 
 **Other Features (18 tests)**
+
 - Complete end-to-end flows
 - Enhanced accessibility
 - Error recovery UI
@@ -172,23 +182,27 @@ Move to next failing test and repeat the process.
 ## Implementation Priority
 
 **Phase 1: Core Review (Get tests passing)**
+
 1. Transaction cards with `data-testid="transaction-card"`
 2. Entity selection dropdowns
 3. Tab count indicators
 4. Import button logic
 
 **Phase 2: Enhanced Features**
+
 1. Transaction editing UI
 2. AI suggestion acceptance
 3. Entity creation during review
 
 **Phase 3: Advanced Features**
+
 1. Grouped view
 2. Bulk operations
 3. Progress overlay
 4. Learning system
 
 **Phase 4: Polish**
+
 1. Enhanced accessibility
 2. Error recovery
 3. State preservation
@@ -214,6 +228,7 @@ npx playwright test -g "your test" --debug
 ```
 
 This opens a visual debugger where you can:
+
 - Step through test actions
 - Inspect elements
 - View screenshots
@@ -239,10 +254,10 @@ page.getByRole('button', { name: /edit/i })
 
 ```typescript
 // In your tests, use different scenarios:
-setupMockAPIs(page, { scenario: 'simple' });     // 1 matched, 1 uncertain
-setupMockAPIs(page, { scenario: 'realistic' });  // 3 matched, 6 uncertain, 2 failed
-setupMockAPIs(page, { scenario: 'bulk' });       // 6 similar transactions
-setupMockAPIs(page, { scenario: 'errors' });     // Critical errors
+setupMockAPIs(page, { scenario: 'simple' }); // 1 matched, 1 uncertain
+setupMockAPIs(page, { scenario: 'realistic' }); // 3 matched, 6 uncertain, 2 failed
+setupMockAPIs(page, { scenario: 'bulk' }); // 6 similar transactions
+setupMockAPIs(page, { scenario: 'errors' }); // Critical errors
 setupMockAPIs(page, { scenario: 'duplicates' }); // 2 new, 3 duplicates
 ```
 
@@ -258,18 +273,22 @@ await uploadCSVFile(page, realisticCSV);
 ## Common Issues
 
 ### Issue: "Element not found"
+
 **Cause:** UI element doesn't exist yet
 **Fix:** Implement the missing UI feature
 
 ### Issue: "Timeout after 30000ms"
+
 **Cause:** Test waiting for element that never appears
 **Fix:** Implement the expected UI element
 
 ### Issue: "Strict mode violation"
+
 **Cause:** Multiple elements match selector
 **Fix:** Use more specific selector (e.g., `getByRole` instead of `getByText`)
 
 ### Issue: "Test is flaky"
+
 **Cause:** Race condition or timing issue
 **Fix:** Add proper `waitFor` or increase timeout
 

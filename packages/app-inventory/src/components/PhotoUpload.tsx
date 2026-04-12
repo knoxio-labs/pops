@@ -4,10 +4,10 @@
  * Handles file selection, shows upload progress per file,
  * and allows deleting individual queued/uploaded photos.
  */
-import { useState, useCallback, useRef } from "react";
-import { Upload, X, ImageIcon, Camera } from "lucide-react";
-import { Button, Progress } from "@pops/ui";
-import { cn } from "../lib/utils";
+import { useState, useCallback, useRef } from 'react';
+import { Upload, X, ImageIcon, Camera } from 'lucide-react';
+import { Button, Progress } from '@pops/ui';
+import { cn } from '../lib/utils';
 
 export interface UploadedFile {
   /** Client-side identifier for tracking */
@@ -15,7 +15,7 @@ export interface UploadedFile {
   file: File;
   /** Preview URL created via URL.createObjectURL */
   previewUrl: string;
-  status: "pending" | "uploading" | "done" | "error";
+  status: 'pending' | 'uploading' | 'done' | 'error';
   /** Upload progress 0–100 */
   progress?: number;
   /** Error message if status is "error" */
@@ -43,7 +43,7 @@ interface PhotoUploadProps {
 }
 
 const DEFAULT_MAX_SIZE_MB = 10;
-const DEFAULT_ACCEPT = "image/*";
+const DEFAULT_ACCEPT = 'image/*';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
@@ -72,7 +72,7 @@ export function PhotoUpload({
       const errors: string[] = [];
 
       for (const file of fileList) {
-        const isImage = file.type.startsWith("image/");
+        const isImage = file.type.startsWith('image/');
         const isHeic = /\.heic$/i.test(file.name) || /\.heif$/i.test(file.name);
         if (!isImage && !isHeic) {
           errors.push(`${file.name}: not an image`);
@@ -86,7 +86,7 @@ export function PhotoUpload({
       }
 
       if (errors.length > 0) {
-        setValidationError(errors.join(", "));
+        setValidationError(errors.join(', '));
       } else {
         setValidationError(null);
       }
@@ -138,7 +138,7 @@ export function PhotoUpload({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       handleFiles(e.target.files);
       // Reset input so the same file can be re-selected
-      if (inputRef.current) inputRef.current.value = "";
+      if (inputRef.current) inputRef.current.value = '';
     },
     [handleFiles]
   );
@@ -146,13 +146,13 @@ export function PhotoUpload({
   const handleCameraChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       handleFiles(e.target.files);
-      if (cameraRef.current) cameraRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = '';
     },
     [handleFiles]
   );
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn('space-y-3', className)}>
       {/* Drop zone */}
       <div
         onDrop={handleDrop}
@@ -162,15 +162,15 @@ export function PhotoUpload({
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") handleClick();
+          if (e.key === 'Enter' || e.key === ' ') handleClick();
         }}
         aria-label="Upload photos"
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors",
+          'flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors',
           isDragOver
-            ? "border-app-accent bg-app-accent/10"
-            : "border-muted-foreground/25 hover:border-muted-foreground/50",
-          disabled && "opacity-50 cursor-not-allowed"
+            ? 'border-app-accent bg-app-accent/10'
+            : 'border-muted-foreground/25 hover:border-muted-foreground/50',
+          disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
         <Upload className="h-8 w-8 text-muted-foreground" />
@@ -241,21 +241,21 @@ export function PhotoUpload({
               {/* File info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">{f.file.name}</p>
-                {f.status === "uploading" && (
+                {f.status === 'uploading' && (
                   <div className="mt-1 space-y-1">
                     <Progress value={f.progress ?? 0} className="h-1.5" />
                     <span className="text-xs text-muted-foreground">{f.progress ?? 0}%</span>
                   </div>
                 )}
-                {f.status !== "uploading" && (
+                {f.status !== 'uploading' && (
                   <div className="flex items-center gap-2">
-                    {f.status === "done" && (
+                    {f.status === 'done' && (
                       <span className="text-xs text-green-600">Uploaded</span>
                     )}
-                    {f.status === "error" && (
-                      <span className="text-xs text-destructive">{f.error ?? "Upload failed"}</span>
+                    {f.status === 'error' && (
+                      <span className="text-xs text-destructive">{f.error ?? 'Upload failed'}</span>
                     )}
-                    {f.status === "pending" && (
+                    {f.status === 'pending' && (
                       <span className="text-xs text-muted-foreground">Ready</span>
                     )}
                     {f.originalSize != null && f.processedSize != null && (

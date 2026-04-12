@@ -5,9 +5,9 @@
  * imports from. The shell owns the Provider; app packages just
  * consume the hooks.
  */
-import { httpBatchLink } from "@trpc/client";
-import { createTRPCReact } from "@trpc/react-query";
-import type { AppRouter } from "@pops/api";
+import { httpBatchLink } from '@trpc/client';
+import { createTRPCReact } from '@trpc/react-query';
+import type { AppRouter } from '@pops/api';
 
 /** React Query hooks for tRPC — shared across all app packages. */
 export const trpc = createTRPCReact<AppRouter>();
@@ -20,7 +20,7 @@ export const trpc = createTRPCReact<AppRouter>();
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/trpc", // Proxied by Vite to localhost:3000 in dev
+      url: '/trpc', // Proxied by Vite to localhost:3000 in dev
       maxURLLength: 2083,
     }),
   ],

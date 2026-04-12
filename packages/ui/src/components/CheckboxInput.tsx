@@ -2,9 +2,9 @@
  * CheckboxInput component - Checkbox with label using shadcn primitives
  * Built on @radix-ui/react-checkbox
  */
-import { forwardRef, type ReactNode } from "react";
-import { cn } from "../lib/utils";
-import { Checkbox } from "../primitives/checkbox";
+import { forwardRef, type ReactNode } from 'react';
+import { cn } from '../lib/utils';
+import { Checkbox } from '../primitives/checkbox';
 
 export interface CheckboxInputProps {
   /**
@@ -54,7 +54,7 @@ export interface CheckboxInputProps {
   /**
    * Label position
    */
-  labelPosition?: "right" | "left";
+  labelPosition?: 'right' | 'left';
 }
 
 /**
@@ -88,7 +88,7 @@ export const CheckboxInput = forwardRef<HTMLButtonElement, CheckboxInputProps>(
       error = false,
       errorMessage,
       className,
-      labelPosition = "right",
+      labelPosition = 'right',
       ...props
     },
     ref
@@ -96,11 +96,11 @@ export const CheckboxInput = forwardRef<HTMLButtonElement, CheckboxInputProps>(
     const generatedId = id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-      <div className={cn("flex flex-col gap-2", className)}>
+      <div className={cn('flex flex-col gap-2', className)}>
         <div
           className={cn(
-            "flex items-start gap-2",
-            labelPosition === "left" && "flex-row-reverse justify-end"
+            'flex items-start gap-2',
+            labelPosition === 'left' && 'flex-row-reverse justify-end'
           )}
         >
           <Checkbox
@@ -120,8 +120,8 @@ export const CheckboxInput = forwardRef<HTMLButtonElement, CheckboxInputProps>(
               <label
                 htmlFor={generatedId}
                 className={cn(
-                  "text-sm font-medium leading-none cursor-pointer select-none",
-                  disabled && "opacity-50 cursor-not-allowed"
+                  'text-sm font-medium leading-none cursor-pointer select-none',
+                  disabled && 'opacity-50 cursor-not-allowed'
                 )}
               >
                 {label}
@@ -137,4 +137,4 @@ export const CheckboxInput = forwardRef<HTMLButtonElement, CheckboxInputProps>(
   }
 );
 
-CheckboxInput.displayName = "CheckboxInput";
+CheckboxInput.displayName = 'CheckboxInput';

@@ -8,17 +8,17 @@
  * Runs AFTER webServer(s) are started, so the API is guaranteed to be up.
  */
 
-const API_URL = process.env["FINANCE_API_URL"] ?? "http://localhost:3000";
-const ENV_NAME = "e2e";
+const API_URL = process.env['FINANCE_API_URL'] ?? 'http://localhost:3000';
+const ENV_NAME = 'e2e';
 
 export default async function globalSetup(): Promise<void> {
   const url = `${API_URL}/env/${ENV_NAME}`;
 
   try {
     const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seed: "test", ttl: 7200 }), // 2-hour TTL
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seed: 'test', ttl: 7200 }), // 2-hour TTL
     });
 
     if (res.status === 201) {
@@ -31,8 +31,8 @@ export default async function globalSetup(): Promise<void> {
       throw new Error(`Failed to create e2e environment: ${res.status} ${body}`);
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes("fetch failed")) {
-      if (process.env["CI"]) {
+    if (err instanceof Error && err.message.includes('fetch failed')) {
+      if (process.env['CI']) {
         // In CI the API server must be up — Playwright's webServer config waits for it.
         // If we still can't reach it, fail loudly so the root cause is obvious.
         throw new Error(
@@ -41,7 +41,7 @@ export default async function globalSetup(): Promise<void> {
       }
       // Locally the API might not be started; mocked tests will still run.
       console.warn(
-        "[global-setup] API not reachable — skipping env creation (mocked tests will still run)"
+        '[global-setup] API not reachable — skipping env creation (mocked tests will still run)'
       );
       return;
     }

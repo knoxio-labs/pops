@@ -43,7 +43,7 @@ export interface SearchContext {
 }
 
 /** How a search hit was matched against the query. */
-export type MatchType = "exact" | "prefix" | "contains";
+export type MatchType = 'exact' | 'prefix' | 'contains';
 
 /** A single search result from a domain adapter. */
 export interface SearchHit<T = unknown> {

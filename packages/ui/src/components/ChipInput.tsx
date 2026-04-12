@@ -2,58 +2,58 @@
  * ChipInput component for multi-value input like email tags
  * Similar to Gmail's "To" field where entries become chips
  */
-import { forwardRef, useState, useRef, type InputHTMLAttributes, type KeyboardEvent } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../lib/utils";
-import { Chip } from "./Chip";
+import { forwardRef, useState, useRef, type InputHTMLAttributes, type KeyboardEvent } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../lib/utils';
+import { Chip } from './Chip';
 
 const containerVariants = cva(
-  "flex flex-wrap items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 p-2 min-h-11",
+  'flex flex-wrap items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 p-2 min-h-11',
   {
     variants: {
       variant: {
-        default: "border border-border",
-        ghost: "border-0 hover:bg-accent",
-        underline: "border-0 border-b border-border rounded-none",
+        default: 'border border-border',
+        ghost: 'border-0 hover:bg-accent',
+        underline: 'border-0 border-b border-border rounded-none',
       },
       shape: {
-        default: "rounded-md",
-        pill: "rounded-full",
+        default: 'rounded-md',
+        pill: 'rounded-full',
       },
     },
     compoundVariants: [
       {
-        variant: "underline",
-        shape: "pill",
-        class: "rounded-none",
+        variant: 'underline',
+        shape: 'pill',
+        class: 'rounded-none',
       },
     ],
     defaultVariants: {
-      variant: "default",
-      shape: "default",
+      variant: 'default',
+      shape: 'default',
     },
   }
 );
 
 const inputVariants = cva(
-  "flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-30",
+  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-30',
   {
     variants: {
       size: {
-        sm: "text-xs",
-        default: "text-sm",
-        lg: "text-base",
+        sm: 'text-xs',
+        default: 'text-sm',
+        lg: 'text-base',
       },
     },
     defaultVariants: {
-      size: "default",
+      size: 'default',
     },
   }
 );
 
 export interface ChipInputProps
   extends
-    Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "value" | "onChange">,
+    Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'value' | 'onChange'>,
     VariantProps<typeof containerVariants> {
   /**
    * Array of chip values
@@ -82,7 +82,7 @@ export interface ChipInputProps
   /**
    * Chip variant
    */
-  chipVariant?: "default" | "primary" | "success";
+  chipVariant?: 'default' | 'primary' | 'success';
   /**
    * Container className
    */
@@ -109,9 +109,9 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
       defaultValue = [],
       onChange,
       onValidate,
-      delimiters = ["Enter", ",", "Tab"],
+      delimiters = ['Enter', ',', 'Tab'],
       allowDuplicates = false,
-      chipVariant = "default",
+      chipVariant = 'default',
       placeholder,
       disabled,
       ...props
@@ -119,7 +119,7 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
     ref
   ) => {
     const [internalValues, setInternalValues] = useState<string[]>(defaultValue);
-    const [inputValue, setInputValue] = useState("");
+    const [inputValue, setInputValue] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const isControlled = controlledValue !== undefined;
@@ -140,7 +140,7 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
         setInternalValues(newValues);
       }
       onChange?.(newValues);
-      setInputValue("");
+      setInputValue('');
     };
 
     const removeChip = (index: number) => {
@@ -164,15 +164,15 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
       }
 
       // Handle comma in value
-      if (key === "," && inputValue.includes(",")) {
+      if (key === ',' && inputValue.includes(',')) {
         e.preventDefault();
-        const parts = inputValue.split(",");
+        const parts = inputValue.split(',');
         parts.forEach((part) => addChip(part));
         return;
       }
 
       // Remove last chip on backspace
-      if (key === "Backspace" && !inputValue && values.length > 0) {
+      if (key === 'Backspace' && !inputValue && values.length > 0) {
         e.preventDefault();
         removeChip(values.length - 1);
       }
@@ -199,8 +199,8 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
     };
 
     const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-      const pastedText = e.clipboardData.getData("text");
-      if (pastedText.includes(",") || pastedText.includes("\n")) {
+      const pastedText = e.clipboardData.getData('text');
+      if (pastedText.includes(',') || pastedText.includes('\n')) {
         e.preventDefault();
         const parts = pastedText
           .split(/[,\n]/)
@@ -217,10 +217,10 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
             variant,
             shape,
           }),
-          disabled && "opacity-50 cursor-not-allowed",
+          disabled && 'opacity-50 cursor-not-allowed',
           containerClassName
         )}
-        style={isFocused ? { borderColor: "var(--ring)" } : undefined}
+        style={isFocused ? { borderColor: 'var(--ring)' } : undefined}
         onClick={handleContainerClick}
       >
         {values.map((value, index) => (
@@ -236,7 +236,7 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
         ))}
         <input
           ref={(node) => {
-            if (typeof ref === "function") {
+            if (typeof ref === 'function') {
               ref(node);
             } else if (ref) {
               ref.current = node;
@@ -245,7 +245,7 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
           }}
           type="text"
           className={cn(inputVariants({ className }))}
-          style={{ outline: "none", boxShadow: "none" }}
+          style={{ outline: 'none', boxShadow: 'none' }}
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
@@ -261,4 +261,4 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
   }
 );
 
-ChipInput.displayName = "ChipInput";
+ChipInput.displayName = 'ChipInput';

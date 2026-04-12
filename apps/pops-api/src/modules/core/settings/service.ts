@@ -1,11 +1,11 @@
 /**
  * Settings service — key-value store for application configuration
  */
-import { eq, like, count } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { settings } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
-import type { SettingRow, SetSettingInput } from "./types.js";
+import { eq, like, count } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { settings } from '@pops/db-types';
+import { NotFoundError } from '../../../shared/errors.js';
+import type { SettingRow, SetSettingInput } from './types.js';
 
 /** Get a single setting by key */
 export function getSetting(key: string): SettingRow {
@@ -13,7 +13,7 @@ export function getSetting(key: string): SettingRow {
   const [row] = db.select().from(settings).where(eq(settings.key, key)).all();
 
   if (!row) {
-    throw new NotFoundError("Setting", key);
+    throw new NotFoundError('Setting', key);
   }
 
   return row;
@@ -71,6 +71,6 @@ export function deleteSetting(key: string): void {
   const result = db.delete(settings).where(eq(settings.key, key)).run();
 
   if (result.changes === 0) {
-    throw new NotFoundError("Setting", key);
+    throw new NotFoundError('Setting', key);
   }
 }

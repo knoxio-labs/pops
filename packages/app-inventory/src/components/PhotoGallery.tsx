@@ -4,9 +4,9 @@
  * Shows the selected photo at full width, a thumbnail strip below (for 2+ photos),
  * and a lightbox overlay on primary click. Click a thumbnail to swap it into primary.
  */
-import { useState, useCallback, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Trash2, Package } from "lucide-react";
-import { Button } from "@pops/ui";
+import { useState, useCallback, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight, Trash2, Package } from 'lucide-react';
+import { Button } from '@pops/ui';
 
 export interface PhotoItem {
   id: number;
@@ -25,7 +25,7 @@ interface PhotoGalleryProps {
 export function PhotoGallery({
   photos,
   onDelete,
-  baseUrl = "/api/inventory/photos",
+  baseUrl = '/api/inventory/photos',
 }: PhotoGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -60,13 +60,13 @@ export function PhotoGallery({
     if (lightboxIndex === null) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") closeLightbox();
-      else if (e.key === "ArrowRight") goNext();
-      else if (e.key === "ArrowLeft") goPrev();
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowRight') goNext();
+      else if (e.key === 'ArrowLeft') goPrev();
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxIndex, closeLightbox, goNext, goPrev]);
 
   if (photos.length === 0) {
@@ -98,7 +98,7 @@ export function PhotoGallery({
       >
         <img
           src={photoSrc(primaryPhoto.filePath)}
-          alt={primaryPhoto.caption ?? "Primary photo"}
+          alt={primaryPhoto.caption ?? 'Primary photo'}
           className="w-full max-h-96 object-contain"
         />
       </button>
@@ -116,8 +116,8 @@ export function PhotoGallery({
                 onClick={() => setSelectedIndex(index)}
                 className={`w-16 h-16 rounded-md overflow-hidden border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   index === selectedIndex
-                    ? "border-app-accent ring-2 ring-app-accent"
-                    : "border-border hover:border-app-accent/50"
+                    ? 'border-app-accent ring-2 ring-app-accent'
+                    : 'border-border hover:border-app-accent/50'
                 }`}
                 aria-label={photo.caption ?? `Photo ${index + 1}`}
                 data-testid={`thumbnail-${index}`}
@@ -191,7 +191,7 @@ export function PhotoGallery({
           >
             <img
               src={photoSrc(currentPhoto.filePath)}
-              alt={currentPhoto.caption ?? "Photo"}
+              alt={currentPhoto.caption ?? 'Photo'}
               className="max-w-full max-h-[80vh] object-contain rounded-md"
             />
             {currentPhoto.caption && (

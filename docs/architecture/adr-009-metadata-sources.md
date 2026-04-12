@@ -10,11 +10,11 @@ The media app needs external metadata for movies and TV shows — titles, overvi
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| TMDB for everything | One API client, one key, simpler | TMDB's TV data isn't the industry standard. Plex, Sonarr, Kodi default to TheTVDB for TV — ID mismatches with the rest of the stack |
-| TheTVDB for everything | One API, aligns with Sonarr/Plex for TV | Weaker movie coverage. Radarr uses TMDB IDs — ID mismatches for movies |
-| TMDB for movies, TheTVDB for TV | Aligns with Plex, Radarr, and Sonarr native metadata agents. Direct ID matching | Two API clients, two keys, two rate limiting strategies |
+| Option                          | Pros                                                                            | Cons                                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| TMDB for everything             | One API client, one key, simpler                                                | TMDB's TV data isn't the industry standard. Plex, Sonarr, Kodi default to TheTVDB for TV — ID mismatches with the rest of the stack |
+| TheTVDB for everything          | One API, aligns with Sonarr/Plex for TV                                         | Weaker movie coverage. Radarr uses TMDB IDs — ID mismatches for movies                                                              |
+| TMDB for movies, TheTVDB for TV | Aligns with Plex, Radarr, and Sonarr native metadata agents. Direct ID matching | Two API clients, two keys, two rate limiting strategies                                                                             |
 
 ## Decision
 

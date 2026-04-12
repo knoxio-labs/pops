@@ -1,43 +1,43 @@
 /**
  * Tests for standalone Plex watch history sync.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { PlexMediaItem, PlexEpisode } from "./types.js";
-import type { PlexClient } from "./client.js";
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { PlexMediaItem, PlexEpisode } from './types.js';
+import type { PlexClient } from './client.js';
 
 // Mock dependencies
-vi.mock("../movies/service.js", () => ({
+vi.mock('../movies/service.js', () => ({
   getMovieByTmdbId: vi.fn(),
 }));
 
-vi.mock("../tv-shows/service.js", () => ({
+vi.mock('../tv-shows/service.js', () => ({
   getTvShowByTvdbId: vi.fn(),
 }));
 
-vi.mock("../watch-history/service.js", () => ({
+vi.mock('../watch-history/service.js', () => ({
   logWatch: vi.fn(),
 }));
 
-vi.mock("../../../db.js", () => ({
+vi.mock('../../../db.js', () => ({
   getDb: vi.fn(),
   getDrizzle: vi.fn(),
 }));
 
-vi.mock("@pops/db-types", () => ({
-  episodes: { seasonId: "seasonId", episodeNumber: "episodeNumber", id: "id" },
-  seasons: { tvShowId: "tvShowId", seasonNumber: "seasonNumber", id: "id" },
+vi.mock('@pops/db-types', () => ({
+  episodes: { seasonId: 'seasonId', episodeNumber: 'episodeNumber', id: 'id' },
+  seasons: { tvShowId: 'tvShowId', seasonNumber: 'seasonNumber', id: 'id' },
 }));
 
-vi.mock("drizzle-orm", () => ({
-  eq: vi.fn((a, b) => ({ type: "eq", a, b })),
-  and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn((a, b) => ({ type: 'eq', a, b })),
+  and: vi.fn((...args: unknown[]) => ({ type: 'and', args })),
 }));
 
-import { syncWatchHistoryFromPlex } from "./sync-watch-history.js";
-import { getMovieByTmdbId } from "../movies/service.js";
-import { getTvShowByTvdbId } from "../tv-shows/service.js";
-import { logWatch } from "../watch-history/service.js";
-import { getDb, getDrizzle } from "../../../db.js";
+import { syncWatchHistoryFromPlex } from './sync-watch-history.js';
+import { getMovieByTmdbId } from '../movies/service.js';
+import { getTvShowByTvdbId } from '../tv-shows/service.js';
+import { logWatch } from '../watch-history/service.js';
+import { getDb, getDrizzle } from '../../../db.js';
 
 const mockGetMovieByTmdbId = vi.mocked(getMovieByTmdbId);
 const mockGetTvShowByTvdbId = vi.mocked(getTvShowByTvdbId);
@@ -51,9 +51,9 @@ const mockGetDrizzle = vi.mocked(getDrizzle);
 
 function makePlexMovie(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
   return {
-    ratingKey: "1",
-    type: "movie",
-    title: "Test Movie",
+    ratingKey: '1',
+    type: 'movie',
+    title: 'Test Movie',
     originalTitle: null,
     summary: null,
     tagline: null,
@@ -68,7 +68,7 @@ function makePlexMovie(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
     rating: null,
     audienceRating: null,
     contentRating: null,
-    externalIds: [{ source: "tmdb", id: "550" }],
+    externalIds: [{ source: 'tmdb', id: '550' }],
     genres: [],
     directors: [],
     leafCount: null,
@@ -80,9 +80,9 @@ function makePlexMovie(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
 
 function makePlexShow(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
   return {
-    ratingKey: "10",
-    type: "show",
-    title: "Test Show",
+    ratingKey: '10',
+    type: 'show',
+    title: 'Test Show',
     originalTitle: null,
     summary: null,
     tagline: null,
@@ -97,7 +97,7 @@ function makePlexShow(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
     rating: null,
     audienceRating: null,
     contentRating: null,
-    externalIds: [{ source: "tvdb", id: "81189" }],
+    externalIds: [{ source: 'tvdb', id: '81189' }],
     genres: [],
     directors: [],
     leafCount: 100,
@@ -109,8 +109,8 @@ function makePlexShow(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
 
 function makePlexEpisode(overrides: Partial<PlexEpisode> = {}): PlexEpisode {
   return {
-    ratingKey: "300",
-    title: "Pilot",
+    ratingKey: '300',
+    title: 'Pilot',
     episodeIndex: 1,
     seasonIndex: 1,
     summary: null,
@@ -131,8 +131,8 @@ function makePlexClient(
 ): PlexClient {
   return {
     getAllItems: vi.fn().mockImplementation((sectionId: string) => {
-      if (sectionId === "movies") return Promise.resolve(movieItems);
-      if (sectionId === "tv") return Promise.resolve(tvItems);
+      if (sectionId === 'movies') return Promise.resolve(movieItems);
+      if (sectionId === 'tv') return Promise.resolve(tvItems);
       return Promise.resolve([]);
     }),
     getEpisodes: vi.fn().mockImplementation((ratingKey: string) => {
@@ -176,9 +176,9 @@ beforeEach(() => {
   setupTransactionMock();
 });
 
-describe("syncWatchHistoryFromPlex", () => {
-  describe("movies", () => {
-    it("logs watch for a watched movie that exists locally", async () => {
+describe('syncWatchHistoryFromPlex', () => {
+  describe('movies', () => {
+    it('logs watch for a watched movie that exists locally', async () => {
       mockGetMovieByTmdbId.mockReturnValue({ id: 42 } as ReturnType<typeof getMovieByTmdbId>);
       mockLogWatch.mockReturnValue({
         entry: { id: 1 },
@@ -187,7 +187,7 @@ describe("syncWatchHistoryFromPlex", () => {
       } as unknown as ReturnType<typeof logWatch>);
 
       const client = makePlexClient([makePlexMovie()]);
-      const result = await syncWatchHistoryFromPlex(client, "movies");
+      const result = await syncWatchHistoryFromPlex(client, 'movies');
 
       expect(result.movies).not.toBeNull();
       expect(result.movies!.watched).toBe(1);
@@ -195,34 +195,34 @@ describe("syncWatchHistoryFromPlex", () => {
       expect(result.summary.moviesLogged).toBe(1);
     });
 
-    it("counts movies with no local match", async () => {
+    it('counts movies with no local match', async () => {
       mockGetMovieByTmdbId.mockReturnValue(null);
 
       const client = makePlexClient([makePlexMovie()]);
-      const result = await syncWatchHistoryFromPlex(client, "movies");
+      const result = await syncWatchHistoryFromPlex(client, 'movies');
 
       expect(result.movies!.noLocalMatch).toBe(1);
       expect(result.movies!.logged).toBe(0);
     });
 
-    it("skips unwatched movies", async () => {
+    it('skips unwatched movies', async () => {
       const client = makePlexClient([makePlexMovie({ viewCount: 0, lastViewedAt: null })]);
-      const result = await syncWatchHistoryFromPlex(client, "movies");
+      const result = await syncWatchHistoryFromPlex(client, 'movies');
 
       expect(result.movies!.watched).toBe(0);
       expect(result.movies!.logged).toBe(0);
     });
 
-    it("returns null for movies when no movieSectionId provided", async () => {
+    it('returns null for movies when no movieSectionId provided', async () => {
       const client = makePlexClient();
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       expect(result.movies).toBeNull();
     });
   });
 
-  describe("TV shows", () => {
-    it("syncs episode watches for a show with TVDB ID", async () => {
+  describe('TV shows', () => {
+    it('syncs episode watches for a show with TVDB ID', async () => {
       mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
       setupDrizzleMock({ id: 10 }, { id: 100 });
       mockLogWatch.mockReturnValue({
@@ -232,51 +232,51 @@ describe("syncWatchHistoryFromPlex", () => {
       } as unknown as ReturnType<typeof logWatch>);
 
       const ep = makePlexEpisode({ viewCount: 1 });
-      const client = makePlexClient([], [makePlexShow()], { "10": [ep] });
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const client = makePlexClient([], [makePlexShow()], { '10': [ep] });
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       expect(result.shows).toHaveLength(1);
       const show = result.shows[0];
       expect(show).toBeDefined();
-      expect(show?.title).toBe("Test Show");
+      expect(show?.title).toBe('Test Show');
       expect(show?.diagnostics.matched).toBe(1);
       expect(result.summary.episodesLogged).toBe(1);
     });
 
-    it("skips shows without TVDB ID", async () => {
+    it('skips shows without TVDB ID', async () => {
       const show = makePlexShow({ externalIds: [] });
       const client = makePlexClient([], [show]);
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       expect(result.shows).toHaveLength(0);
     });
 
-    it("excludes shows with zero watched episodes from results", async () => {
+    it('excludes shows with zero watched episodes from results', async () => {
       mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
       setupDrizzleMock({ id: 10 }, { id: 100 });
 
       const ep = makePlexEpisode({ viewCount: 0 });
-      const client = makePlexClient([], [makePlexShow()], { "10": [ep] });
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const client = makePlexClient([], [makePlexShow()], { '10': [ep] });
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       // Show had no watched episodes, so it's excluded
       expect(result.shows).toHaveLength(0);
     });
 
-    it("detects shows with gaps (plexViewedLeafCount > tracked)", async () => {
+    it('detects shows with gaps (plexViewedLeafCount > tracked)', async () => {
       mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
       // Season found but episode not found → gap
       setupDrizzleMock({ id: 10 }, undefined);
 
       const ep = makePlexEpisode({ viewCount: 1 });
       const show = makePlexShow({ viewedLeafCount: 50 });
-      const client = makePlexClient([], [show], { "10": [ep] });
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const client = makePlexClient([], [show], { '10': [ep] });
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       expect(result.summary.showsWithGaps).toBe(1);
     });
 
-    it("does not flag gap when episodes are already logged", async () => {
+    it('does not flag gap when episodes are already logged', async () => {
       mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
       setupDrizzleMock({ id: 10 }, { id: 100 });
       // logWatch returns created: false → alreadyLogged
@@ -288,15 +288,15 @@ describe("syncWatchHistoryFromPlex", () => {
 
       const ep = makePlexEpisode({ viewCount: 1 });
       const show = makePlexShow({ viewedLeafCount: 1 });
-      const client = makePlexClient([], [show], { "10": [ep] });
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const client = makePlexClient([], [show], { '10': [ep] });
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       // 0 matched + 1 alreadyLogged >= 1 viewedLeafCount → no gap
       expect(result.summary.showsWithGaps).toBe(0);
       expect(result.summary.episodesAlreadyLogged).toBe(1);
     });
 
-    it("includes plexViewedLeafCount in show diagnostics", async () => {
+    it('includes plexViewedLeafCount in show diagnostics', async () => {
       mockGetTvShowByTvdbId.mockReturnValue({ id: 1 } as ReturnType<typeof getTvShowByTvdbId>);
       setupDrizzleMock({ id: 10 }, { id: 100 });
       mockLogWatch.mockReturnValue({
@@ -307,15 +307,15 @@ describe("syncWatchHistoryFromPlex", () => {
 
       const ep = makePlexEpisode({ viewCount: 1 });
       const show = makePlexShow({ viewedLeafCount: 42 });
-      const client = makePlexClient([], [show], { "10": [ep] });
-      const result = await syncWatchHistoryFromPlex(client, undefined, "tv");
+      const client = makePlexClient([], [show], { '10': [ep] });
+      const result = await syncWatchHistoryFromPlex(client, undefined, 'tv');
 
       expect(result.shows[0]?.plexViewedLeafCount).toBe(42);
     });
   });
 
-  describe("combined sync", () => {
-    it("syncs both movies and TV when both section IDs provided", async () => {
+  describe('combined sync', () => {
+    it('syncs both movies and TV when both section IDs provided', async () => {
       // Movie setup
       mockGetMovieByTmdbId.mockReturnValue({ id: 42 } as ReturnType<typeof getMovieByTmdbId>);
       mockLogWatch.mockReturnValue({
@@ -329,8 +329,8 @@ describe("syncWatchHistoryFromPlex", () => {
       setupDrizzleMock({ id: 10 }, { id: 100 });
 
       const ep = makePlexEpisode({ viewCount: 1 });
-      const client = makePlexClient([makePlexMovie()], [makePlexShow()], { "10": [ep] });
-      const result = await syncWatchHistoryFromPlex(client, "movies", "tv");
+      const client = makePlexClient([makePlexMovie()], [makePlexShow()], { '10': [ep] });
+      const result = await syncWatchHistoryFromPlex(client, 'movies', 'tv');
 
       expect(result.movies).not.toBeNull();
       expect(result.shows.length).toBeGreaterThanOrEqual(0);

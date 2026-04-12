@@ -10,17 +10,18 @@ POPS has 10+ app packages sharing a UI library. Styling consistency across apps 
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Tailwind utility classes only | Consistent, refactorable from one place, no CSS file sprawl | Requires comprehensive token system upfront |
-| CSS Modules per component | Scoped styles, familiar | Scattered across packages, hard to maintain consistency |
-| Styled-components / CSS-in-JS | Dynamic styling, colocation | Runtime overhead, bundle size, different paradigm from Tailwind |
+| Option                        | Pros                                                        | Cons                                                            |
+| ----------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
+| Tailwind utility classes only | Consistent, refactorable from one place, no CSS file sprawl | Requires comprehensive token system upfront                     |
+| CSS Modules per component     | Scoped styles, familiar                                     | Scattered across packages, hard to maintain consistency         |
+| Styled-components / CSS-in-JS | Dynamic styling, colocation                                 | Runtime overhead, bundle size, different paradigm from Tailwind |
 
 ## Decision
 
 All styling uses Tailwind utility classes with values from the design token system. No exceptions.
 
 Rules:
+
 - **No arbitrary values** — `w-[960px]`, `text-[#ff0000]` are forbidden. Use Tailwind's scale or custom tokens in `@pops/ui`
 - **No inline styles** — Everything goes through Tailwind classes
 - **No CSS modules or separate CSS files** — Except the global Tailwind entry point and token definitions in `@pops/ui`

@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Button, DateInput } from "@pops/ui";
-import { Eye, CircleCheck, CalendarDays } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import { Button, DateInput } from '@pops/ui';
+import { Eye, CircleCheck, CalendarDays } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 
 export interface MarkAsWatchedButtonProps {
   mediaId: number;
@@ -11,11 +11,11 @@ export interface MarkAsWatchedButtonProps {
 
 export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [customDate, setCustomDate] = useState("");
+  const [customDate, setCustomDate] = useState('');
   const utils = trpc.useUtils();
 
   const { data: historyData } = trpc.media.watchHistory.list.useQuery(
-    { mediaType: "movie", mediaId, limit: 100 },
+    { mediaType: 'movie', mediaId, limit: 100 },
     { staleTime: 30_000 }
   );
 
@@ -26,7 +26,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
 
   const deleteMutation = trpc.media.watchHistory.delete.useMutation({
     onSuccess: () => {
-      toast.success("Watch entry undone");
+      toast.success('Watch entry undone');
       void utils.media.watchHistory.list.invalidate();
       void utils.media.watchlist.list.invalidate();
     },
@@ -42,7 +42,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
         onSuccess: () => {
           if (watchlistRemoved) {
             addToWatchlistMutation.mutate(
-              { mediaType: "movie", mediaId },
+              { mediaType: 'movie', mediaId },
               {
                 onSuccess: () => {
                   void utils.media.watchlist.list.invalidate();
@@ -57,10 +57,10 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
 
   const logMutation = trpc.media.watchHistory.log.useMutation({
     onSuccess: (result: { data: { id: number }; watchlistRemoved: boolean }) => {
-      toast.success("Marked as watched", {
+      toast.success('Marked as watched', {
         duration: 5000,
         action: {
-          label: "Undo",
+          label: 'Undo',
           onClick: () => handleUndo(result.data.id, result.watchlistRemoved),
         },
       });
@@ -68,7 +68,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
       void utils.media.watchlist.list.invalidate();
       void utils.media.comparisons.getPendingDebriefs.invalidate();
       setShowDatePicker(false);
-      setCustomDate("");
+      setCustomDate('');
     },
     onError: (err: { message: string }) => {
       toast.error(`Failed to log watch: ${err.message}`);
@@ -77,7 +77,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
 
   const handleMarkWatched = () => {
     logMutation.mutate({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId,
       completed: 1,
     });
@@ -86,7 +86,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
   const handleMarkWatchedWithDate = () => {
     if (!customDate) return;
     logMutation.mutate({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId,
       watchedAt: new Date(customDate).toISOString(),
       completed: 1,
@@ -95,9 +95,9 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
 
   const formatDate = (iso: string) => {
     return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
@@ -115,7 +115,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
           }
           aria-label="Mark as watched"
         >
-          {watchCount > 0 ? `Watched (${watchCount})` : "Mark as Watched"}
+          {watchCount > 0 ? `Watched (${watchCount})` : 'Mark as Watched'}
         </Button>
 
         <Button
@@ -135,7 +135,7 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
             size="sm"
             value={customDate}
             onChange={(e) => setCustomDate(e.target.value)}
-            max={new Date().toISOString().split("T")[0]}
+            max={new Date().toISOString().split('T')[0]}
             aria-label="Watch date"
           />
           <Button

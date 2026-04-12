@@ -4,9 +4,9 @@
  * Uses native HTML5 drag-and-drop. On drop, calls onReorder with the
  * new ordered array of photo IDs.
  */
-import { useState, useCallback, useRef } from "react";
-import { GripVertical } from "lucide-react";
-import type { PhotoItem } from "./PhotoGallery";
+import { useState, useCallback, useRef } from 'react';
+import { GripVertical } from 'lucide-react';
+import type { PhotoItem } from './PhotoGallery';
 
 interface SortablePhotoGridProps {
   photos: PhotoItem[];
@@ -18,7 +18,7 @@ interface SortablePhotoGridProps {
 export function SortablePhotoGrid({
   photos,
   onReorder,
-  baseUrl = "/api/inventory/photos",
+  baseUrl = '/api/inventory/photos',
   isReordering = false,
 }: SortablePhotoGridProps) {
   const sorted = [...photos].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -37,7 +37,7 @@ export function SortablePhotoGrid({
     (e: React.DragEvent, index: number) => {
       e.preventDefault();
       if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "move";
+        e.dataTransfer.dropEffect = 'move';
       }
       if (index !== overIndex) {
         setOverIndex(index);
@@ -91,11 +91,11 @@ export function SortablePhotoGrid({
           onDrop={(e) => handleDrop(e, index)}
           onDragEnd={handleDragEnd}
           className={`relative group cursor-grab active:cursor-grabbing rounded-md overflow-hidden border transition-all ${
-            dragIndex === index ? "opacity-40 scale-95" : ""
-          } ${overIndex === index && dragIndex !== index ? "ring-2 ring-app-accent" : ""} ${
-            isReordering ? "pointer-events-none opacity-60" : ""
+            dragIndex === index ? 'opacity-40 scale-95' : ''
+          } ${overIndex === index && dragIndex !== index ? 'ring-2 ring-app-accent' : ''} ${
+            isReordering ? 'pointer-events-none opacity-60' : ''
           }`}
-          aria-label={`Photo ${index + 1}: ${photo.caption ?? "no caption"}`}
+          aria-label={`Photo ${index + 1}: ${photo.caption ?? 'no caption'}`}
         >
           <div className="aspect-square">
             <img

@@ -52,24 +52,24 @@ packages/ui/
 
 ### Shared (in @pops/ui)
 
-| Category | Components | Count |
-|----------|-----------|-------|
-| Primitives | Accordion, AlertDialog, Alert, Avatar, Badge, Breadcrumb, Button, Card, Checkbox, Collapsible, Command, Dialog, DropdownMenu, Input, Label, Popover, Progress, RadioGroup, Select, Separator, Skeleton, Slider, Sonner, Switch, Table, Tabs, Textarea, Tooltip | 28 |
-| Composites | Autocomplete, Button (wrapper), CheckboxInput, Chip, ChipInput, ComboboxSelect, DataTable, DataTableFilters, DateTimeInput, DropdownMenu (wrapper), EditableCell, ErrorBoundary, InfiniteScrollTable, NumberInput, RadioInput, Select (wrapper), TextInput, ViewToggleGroup | 18 |
-| Utilities | `cn()` from lib/utils.ts | 1 |
-| **Total** | | **47** |
+| Category   | Components                                                                                                                                                                                                                                                                  | Count  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Primitives | Accordion, AlertDialog, Alert, Avatar, Badge, Breadcrumb, Button, Card, Checkbox, Collapsible, Command, Dialog, DropdownMenu, Input, Label, Popover, Progress, RadioGroup, Select, Separator, Skeleton, Slider, Sonner, Switch, Table, Tabs, Textarea, Tooltip              | 28     |
+| Composites | Autocomplete, Button (wrapper), CheckboxInput, Chip, ChipInput, ComboboxSelect, DataTable, DataTableFilters, DateTimeInput, DropdownMenu (wrapper), EditableCell, ErrorBoundary, InfiniteScrollTable, NumberInput, RadioInput, Select (wrapper), TextInput, ViewToggleGroup | 18     |
+| Utilities  | `cn()` from lib/utils.ts                                                                                                                                                                                                                                                    | 1      |
+| **Total**  |                                                                                                                                                                                                                                                                             | **47** |
 
 ### Domain-specific (stay in app packages)
 
-| Component | Package | Why |
-|-----------|---------|-----|
-| ImportWizard + all wizard steps | `@pops/app-finance` | Finance-specific import flow |
-| TagEditor | `@pops/app-finance` | Uses tRPC finance procedures for tag suggestions |
-| EntityCreateDialog | `@pops/app-finance` | Finance entity creation |
-| TransactionCard, EditableTransactionCard | `@pops/app-finance` | Finance-specific display |
-| MediaCard, MediaGrid, DiscoverCard | `@pops/app-media` | Media-specific display |
-| InventoryCard, InventoryTable | `@pops/app-inventory` | Inventory-specific display |
-| ComparisonScores, RadarChart | `@pops/app-media` | Media comparisons |
+| Component                                | Package               | Why                                              |
+| ---------------------------------------- | --------------------- | ------------------------------------------------ |
+| ImportWizard + all wizard steps          | `@pops/app-finance`   | Finance-specific import flow                     |
+| TagEditor                                | `@pops/app-finance`   | Uses tRPC finance procedures for tag suggestions |
+| EntityCreateDialog                       | `@pops/app-finance`   | Finance entity creation                          |
+| TransactionCard, EditableTransactionCard | `@pops/app-finance`   | Finance-specific display                         |
+| MediaCard, MediaGrid, DiscoverCard       | `@pops/app-media`     | Media-specific display                           |
+| InventoryCard, InventoryTable            | `@pops/app-inventory` | Inventory-specific display                       |
+| ComparisonScores, RadarChart             | `@pops/app-media`     | Media comparisons                                |
 
 **Rule:** If a component is used by 2+ apps, it moves to `@pops/ui`. If it uses domain-specific tRPC procedures or stores, it stays in its app package.
 
@@ -77,35 +77,36 @@ packages/ui/
 
 ```typescript
 // Composite components
-import { DataTable, TextInput, Button, ViewToggleGroup } from '@pops/ui'
+import { DataTable, TextInput, Button, ViewToggleGroup } from '@pops/ui';
 
 // Primitives (if needed directly)
-import { Card, CardHeader, CardContent } from '@pops/ui'
+import { Card, CardHeader, CardContent } from '@pops/ui';
 
 // Utility
-import { cn } from '@pops/ui'
+import { cn } from '@pops/ui';
 ```
 
 ## Action Icon Standards
 
 All interactive actions use [Lucide React](https://lucide.dev) icons. Text-only action labels are not permitted — actions must use an icon (icon-only with `aria-label`, or icon + text).
 
-| Action | Icon | Notes |
-|--------|------|-------|
-| Add / Create | `Plus` | Add item, create new |
-| Edit | `Pencil` | Not `Edit2` or `PenLine` |
-| Delete / Remove | `Trash2` | Not `Trash` |
-| Close / Dismiss | `X` | Close dialog, cancel |
-| Save / Confirm | `Check` | Save changes |
-| Move up / down | `ArrowUp` / `ArrowDown` | Reorder |
-| Expand | `ChevronDown` or `ChevronRight` | Show details |
-| Search | `Search` | Search input |
-| Settings | `Settings` | Open settings |
-| External link | `ExternalLink` | Open in new tab |
+| Action          | Icon                            | Notes                    |
+| --------------- | ------------------------------- | ------------------------ |
+| Add / Create    | `Plus`                          | Add item, create new     |
+| Edit            | `Pencil`                        | Not `Edit2` or `PenLine` |
+| Delete / Remove | `Trash2`                        | Not `Trash`              |
+| Close / Dismiss | `X`                             | Close dialog, cancel     |
+| Save / Confirm  | `Check`                         | Save changes             |
+| Move up / down  | `ArrowUp` / `ArrowDown`         | Reorder                  |
+| Expand          | `ChevronDown` or `ChevronRight` | Show details             |
+| Search          | `Search`                        | Search input             |
+| Settings        | `Settings`                      | Open settings            |
+| External link   | `ExternalLink`                  | Open in new tab          |
 
 One icon per action, no aliases. Destructive actions use `variant="ghost"` with `text-destructive` styling.
 
 **Icon button pattern (compact actions):**
+
 ```tsx
 <Button variant="ghost" size="icon" aria-label="Remove from watchlist">
   <Trash2 className="h-4 w-4" />
@@ -113,6 +114,7 @@ One icon per action, no aliases. Destructive actions use `variant="ghost"` with 
 ```
 
 **Icon + text (prominent actions):**
+
 ```tsx
 <Button>
   <Plus className="h-4 w-4 mr-2" /> Add Item
@@ -150,30 +152,31 @@ interface ViewToggleGroupProps {
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Custom Button wraps primitive button | Both in `@pops/ui`. Primitive at `primitives/button.tsx`, wrapper at `components/Button.tsx`. Barrel exports the wrapper as `Button` |
-| Components without stories | Move to `@pops/ui` without stories. Missing stories are tech debt, not a blocker |
-| TagEditor uses tRPC finance procedures | Stays in `@pops/app-finance`. If other apps need tagging, extract a generic version later |
-| Component needs new design token | Add token to `@theme` in PRD-002's globals.css — don't use arbitrary values |
-| Path aliases | `@pops/ui` uses `@ui/*` internally. Cross-package imports always use package name `@pops/ui` |
+| Case                                   | Behaviour                                                                                                                            |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Custom Button wraps primitive button   | Both in `@pops/ui`. Primitive at `primitives/button.tsx`, wrapper at `components/Button.tsx`. Barrel exports the wrapper as `Button` |
+| Components without stories             | Move to `@pops/ui` without stories. Missing stories are tech debt, not a blocker                                                     |
+| TagEditor uses tRPC finance procedures | Stays in `@pops/app-finance`. If other apps need tagging, extract a generic version later                                            |
+| Component needs new design token       | Add token to `@theme` in PRD-002's globals.css — don't use arbitrary values                                                          |
+| Path aliases                           | `@pops/ui` uses `@ui/*` internally. Cross-package imports always use package name `@pops/ui`                                         |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-package-scaffold](us-01-package-scaffold.md) | Create @pops/ui workspace package with config, tsconfig, barrel export | Done | No (first) |
-| 02 | [us-02-primitives](us-02-primitives.md) | Build all 28 Shadcn/Radix primitive components with co-located stories | Done | Blocked by us-01 |
-| 03 | [us-03-form-inputs](us-03-form-inputs.md) | Build composite form inputs: TextInput, NumberInput, DateTimeInput, CheckboxInput, RadioInput, ChipInput, Autocomplete, ComboboxSelect | Done | Blocked by us-01 |
-| 04 | [us-04-data-display](us-04-data-display.md) | Build data display composites: DataTable, DataTableFilters, InfiniteScrollTable, EditableCell, ViewToggleGroup | Partial | Blocked by us-01 |
-| 05 | [us-05-utility-components](us-05-utility-components.md) | Build utility composites: Button wrapper, Chip, DropdownMenu wrapper, Select wrapper, ErrorBoundary, StatCard | Done | Blocked by us-01 |
-| 06 | [us-06-icon-standards](us-06-icon-standards.md) | Enforce action icon standards across all existing components and app packages | Partial | Blocked by us-02 through us-05 |
+| #   | Story                                                   | Summary                                                                                                                                | Status  | Parallelisable                 |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------ |
+| 01  | [us-01-package-scaffold](us-01-package-scaffold.md)     | Create @pops/ui workspace package with config, tsconfig, barrel export                                                                 | Done    | No (first)                     |
+| 02  | [us-02-primitives](us-02-primitives.md)                 | Build all 28 Shadcn/Radix primitive components with co-located stories                                                                 | Done    | Blocked by us-01               |
+| 03  | [us-03-form-inputs](us-03-form-inputs.md)               | Build composite form inputs: TextInput, NumberInput, DateTimeInput, CheckboxInput, RadioInput, ChipInput, Autocomplete, ComboboxSelect | Done    | Blocked by us-01               |
+| 04  | [us-04-data-display](us-04-data-display.md)             | Build data display composites: DataTable, DataTableFilters, InfiniteScrollTable, EditableCell, ViewToggleGroup                         | Partial | Blocked by us-01               |
+| 05  | [us-05-utility-components](us-05-utility-components.md) | Build utility composites: Button wrapper, Chip, DropdownMenu wrapper, Select wrapper, ErrorBoundary, StatCard                          | Done    | Blocked by us-01               |
+| 06  | [us-06-icon-standards](us-06-icon-standards.md)         | Enforce action icon standards across all existing components and app packages                                                          | Partial | Blocked by us-02 through us-05 |
 
 US-02 through US-05 can all be built in parallel after US-01. US-06 is a sweep after components exist.
 
 ## Verification
 
 Every US is only done when:
+
 - `pnpm typecheck` passes across all packages
 - `pnpm lint` passes
 - `pnpm build` succeeds

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { useMemo, useState } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -12,13 +12,13 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@pops/ui";
-import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@pops/api-client";
-import { trpc } from "../../lib/trpc";
+} from '@pops/ui';
+import type { inferRouterOutputs } from '@trpc/server';
+import type { AppRouter } from '@pops/api-client';
+import { trpc } from '../../lib/trpc';
 
-type CorrectionListOutput = inferRouterOutputs<AppRouter>["core"]["corrections"]["list"];
-export type CorrectionRule = CorrectionListOutput["data"][number];
+type CorrectionListOutput = inferRouterOutputs<AppRouter>['core']['corrections']['list'];
+export type CorrectionRule = CorrectionListOutput['data'][number];
 
 export interface RulePickerProps {
   /** Currently selected rule id, or null. */
@@ -42,7 +42,7 @@ export interface RulePickerProps {
  */
 export function RulePicker(props: RulePickerProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   const listQuery = trpc.core.corrections.list.useQuery(
     { limit: 200, offset: 0 },
@@ -66,7 +66,7 @@ export function RulePicker(props: RulePickerProps) {
       if (exclude?.has(r.id)) return false;
       if (!needle) return true;
       const haystack =
-        `${r.descriptionPattern} ${r.entityName ?? ""} ${r.location ?? ""}`.toLowerCase();
+        `${r.descriptionPattern} ${r.entityName ?? ''} ${r.location ?? ''}`.toLowerCase();
       return haystack.includes(needle);
     });
   }, [rules, search, props.excludeIds]);
@@ -99,7 +99,7 @@ export function RulePicker(props: RulePickerProps) {
             </span>
           ) : (
             <span className="text-muted-foreground">
-              {props.placeholder ?? "Pick an existing rule..."}
+              {props.placeholder ?? 'Pick an existing rule...'}
             </span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -128,12 +128,12 @@ export function RulePicker(props: RulePickerProps) {
                     onSelect={() => {
                       props.onChange(rule);
                       setOpen(false);
-                      setSearch("");
+                      setSearch('');
                     }}
                   >
                     <Check
                       className={`mr-2 h-4 w-4 ${
-                        props.value === rule.id ? "opacity-100" : "opacity-0"
+                        props.value === rule.id ? 'opacity-100' : 'opacity-0'
                       }`}
                     />
                     <div className="flex flex-col min-w-0 flex-1 gap-0.5">
@@ -154,7 +154,7 @@ export function RulePicker(props: RulePickerProps) {
                         <div className="text-[11px] text-muted-foreground truncate">
                           {[rule.entityName, rule.location, rule.transactionType]
                             .filter(Boolean)
-                            .join(" · ")}
+                            .join(' · ')}
                         </div>
                       )}
                     </div>

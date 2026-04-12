@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   Avatar,
   AvatarImage,
@@ -6,16 +6,16 @@ import {
   AvatarBadge,
   AvatarGroup,
   AvatarGroupCount,
-} from "./avatar";
-import { CheckIcon, UserIcon } from "lucide-react";
+} from './avatar';
+import { CheckIcon, UserIcon } from 'lucide-react';
 
 const meta: Meta<typeof Avatar> = {
-  title: "Data Display/Avatar",
+  title: 'Data Display/Avatar',
   component: Avatar,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;

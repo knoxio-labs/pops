@@ -17,18 +17,19 @@ POPS is a multi-app platform (finance, media, inventory, fitness, etc.) that nee
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Single SPA with lazy-loaded routes | One dev server, shared runtime, simple deployment | All code in one package.json, monolith creep as apps grow |
-| Module Federation (separate Vite builds) | Independent builds/deploys, true isolation | Runtime overhead, multiple dev servers, version skew, complex infra |
-| Single SPA with workspace packages per app | One dev server, logical separation, independent testing, one build | More workspace config, still one build graph |
-| Next.js | Built-in code splitting, file-based routing | SSR is pointless for single-user self-hosted PWA, adds complexity for no benefit |
+| Option                                     | Pros                                                               | Cons                                                                             |
+| ------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Single SPA with lazy-loaded routes         | One dev server, shared runtime, simple deployment                  | All code in one package.json, monolith creep as apps grow                        |
+| Module Federation (separate Vite builds)   | Independent builds/deploys, true isolation                         | Runtime overhead, multiple dev servers, version skew, complex infra              |
+| Single SPA with workspace packages per app | One dev server, logical separation, independent testing, one build | More workspace config, still one build graph                                     |
+| Next.js                                    | Built-in code splitting, file-based routing                        | SSR is pointless for single-user self-hosted PWA, adds complexity for no benefit |
 
 ## Decision
 
 Single SPA with workspace packages per app. Each app lives in its own workspace package (`packages/app-*`). The shell imports them as dependencies. Vite resolves workspace packages natively and code-splits per route.
 
 Key reasons:
+
 - One dev server, one build, one Docker image
 - Each app has clear boundaries (own package.json, tsconfig, tests) without Module Federation complexity
 - One Storybook discovers stories from all packages via globs

@@ -4,26 +4,26 @@
  * Fetches 30 days of episodes, groups by air date, renders date headers
  * with today highlighted, episode cards with poster/title/S##E##/status.
  */
-import { useMemo } from "react";
-import { Link } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from "@pops/ui";
-import { Calendar, CheckCircle, Clock, Film } from "lucide-react";
-import { trpc } from "../lib/trpc";
+import { useMemo } from 'react';
+import { Link } from 'react-router';
+import { Alert, AlertTitle, AlertDescription, Badge, Skeleton } from '@pops/ui';
+import { Calendar, CheckCircle, Clock, Film } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 function formatEpisodeCode(season: number, episode: number): string {
-  return `S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}`;
+  return `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
 }
 
 /** Parse a date-only string (YYYY-MM-DD) without UTC midnight rollover. */
 function parseLocalDate(dateStr: string): Date {
-  return new Date(dateStr + "T12:00:00");
+  return new Date(dateStr + 'T12:00:00');
 }
 
 function formatDate(dateStr: string): string {
   return parseLocalDate(dateStr).toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
   });
 }
 
@@ -39,7 +39,7 @@ function isToday(dateStr: string): boolean {
 
 function getDateKey(airDateUtc: string): string {
   const date = new Date(airDateUtc);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function CalendarSkeleton() {
@@ -64,8 +64,8 @@ export function CalendarPage() {
   const config = configData?.data;
 
   const now = new Date();
-  const start = now.toISOString().split("T")[0]!;
-  const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
+  const start = now.toISOString().split('T')[0]!;
+  const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]!;
 
   const {
     data: calendarData,
@@ -115,10 +115,10 @@ export function CalendarPage() {
         <Alert>
           <AlertTitle>Sonarr not configured</AlertTitle>
           <AlertDescription>
-            Configure Sonarr in{" "}
+            Configure Sonarr in{' '}
             <Link to="/media/arr" className="underline text-primary">
               Arr Settings
-            </Link>{" "}
+            </Link>{' '}
             to see upcoming episodes.
           </AlertDescription>
         </Alert>
@@ -158,7 +158,7 @@ export function CalendarPage() {
               <section key={dateKey}>
                 <h2
                   className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
-                    today ? "text-primary" : "text-muted-foreground"
+                    today ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
                   {formatDate(dateKey)}
@@ -223,8 +223,8 @@ export function CalendarPage() {
                       {/* Air time */}
                       <div className="text-xs text-muted-foreground shrink-0 self-center">
                         {new Date(ep.airDateUtc).toLocaleTimeString(undefined, {
-                          hour: "numeric",
-                          minute: "2-digit",
+                          hour: 'numeric',
+                          minute: '2-digit',
                         })}
                       </div>
                     </Link>

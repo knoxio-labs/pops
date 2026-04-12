@@ -8,15 +8,15 @@
  * - clearStaleCache: Remove cache entries older than N days
  * - clearAllCache: Clear entire AI cache
  */
-import { z } from "zod";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { getStats, getHistory } from "./service.js";
-import { getHistoryInputSchema } from "./types.js";
+import { z } from 'zod';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { getStats, getHistory } from './service.js';
+import { getHistoryInputSchema } from './types.js';
 import {
   getCacheStats,
   clearStaleCache,
   clearAllCache,
-} from "../../finance/imports/lib/ai-categorizer.js";
+} from '../../finance/imports/lib/ai-categorizer.js';
 
 export const aiUsageRouter = router({
   /**

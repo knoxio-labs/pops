@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 
 const mockGetConfigQuery = vi.fn();
 const mockGetCalendarQuery = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       arr: {
@@ -20,36 +20,36 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { CalendarPage } from "./CalendarPage";
+import { CalendarPage } from './CalendarPage';
 
 const makeEpisode = (overrides: Record<string, unknown> = {}) => ({
   id: 1,
   seriesId: 10,
-  seriesTitle: "Breaking Bad",
+  seriesTitle: 'Breaking Bad',
   tvdbId: 81189,
-  episodeTitle: "Pilot",
+  episodeTitle: 'Pilot',
   seasonNumber: 1,
   episodeNumber: 1,
   airDateUtc: new Date().toISOString(),
   hasFile: false,
-  posterUrl: "/poster.jpg",
+  posterUrl: '/poster.jpg',
   ...overrides,
 });
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={["/media/arr/calendar"]}>
+    <MemoryRouter initialEntries={['/media/arr/calendar']}>
       <CalendarPage />
     </MemoryRouter>
   );
 }
 
-describe("CalendarPage", () => {
+describe('CalendarPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("shows not configured message when Sonarr is not set up", () => {
+  it('shows not configured message when Sonarr is not set up', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: false } },
     });
@@ -60,11 +60,11 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Sonarr not configured")).toBeInTheDocument();
+    expect(screen.getByText('Sonarr not configured')).toBeInTheDocument();
     expect(screen.getByText(/Arr Settings/)).toBeInTheDocument();
   });
 
-  it("shows loading skeleton when fetching", () => {
+  it('shows loading skeleton when fetching', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -75,10 +75,10 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Upcoming Episodes")).toBeInTheDocument();
+    expect(screen.getByText('Upcoming Episodes')).toBeInTheDocument();
   });
 
-  it("shows empty state when no episodes", () => {
+  it('shows empty state when no episodes', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -89,24 +89,24 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("No upcoming episodes in the next 30 days")).toBeInTheDocument();
+    expect(screen.getByText('No upcoming episodes in the next 30 days')).toBeInTheDocument();
   });
 
-  it("shows error message on query failure", () => {
+  it('shows error message on query failure', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
     mockGetCalendarQuery.mockReturnValue({
       data: null,
       isLoading: false,
-      error: { message: "Connection refused" },
+      error: { message: 'Connection refused' },
     });
 
     renderPage();
-    expect(screen.getByText("Connection refused")).toBeInTheDocument();
+    expect(screen.getByText('Connection refused')).toBeInTheDocument();
   });
 
-  it("renders episodes grouped by date", () => {
+  it('renders episodes grouped by date', () => {
     const today = new Date();
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
@@ -116,8 +116,8 @@ describe("CalendarPage", () => {
     mockGetCalendarQuery.mockReturnValue({
       data: {
         data: [
-          makeEpisode({ id: 1, seriesTitle: "Show A", airDateUtc: today.toISOString() }),
-          makeEpisode({ id: 2, seriesTitle: "Show B", airDateUtc: tomorrow.toISOString() }),
+          makeEpisode({ id: 1, seriesTitle: 'Show A', airDateUtc: today.toISOString() }),
+          makeEpisode({ id: 2, seriesTitle: 'Show B', airDateUtc: tomorrow.toISOString() }),
         ],
       },
       isLoading: false,
@@ -125,11 +125,11 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Show A")).toBeInTheDocument();
-    expect(screen.getByText("Show B")).toBeInTheDocument();
+    expect(screen.getByText('Show A')).toBeInTheDocument();
+    expect(screen.getByText('Show B')).toBeInTheDocument();
   });
 
-  it("highlights today with badge", () => {
+  it('highlights today with badge', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -142,10 +142,10 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Today")).toBeInTheDocument();
+    expect(screen.getByText('Today')).toBeInTheDocument();
   });
 
-  it("shows Downloaded badge for episodes with files", () => {
+  it('shows Downloaded badge for episodes with files', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -158,10 +158,10 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Downloaded")).toBeInTheDocument();
+    expect(screen.getByText('Downloaded')).toBeInTheDocument();
   });
 
-  it("shows Missing badge for episodes without files", () => {
+  it('shows Missing badge for episodes without files', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -174,10 +174,10 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Missing")).toBeInTheDocument();
+    expect(screen.getByText('Missing')).toBeInTheDocument();
   });
 
-  it("renders episode code badge (S01E01)", () => {
+  it('renders episode code badge (S01E01)', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -190,10 +190,10 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("S03E07")).toBeInTheDocument();
+    expect(screen.getByText('S03E07')).toBeInTheDocument();
   });
 
-  it("links episodes to show detail page", () => {
+  it('links episodes to show detail page', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
@@ -206,21 +206,21 @@ describe("CalendarPage", () => {
     });
 
     renderPage();
-    const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/media/tv/42");
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/media/tv/42');
   });
 
-  it("sorts episodes within a date group by air time ascending", () => {
+  it('sorts episodes within a date group by air time ascending', () => {
     mockGetConfigQuery.mockReturnValue({
       data: { data: { radarrConfigured: false, sonarrConfigured: true } },
     });
-    const date = "2026-04-10";
+    const date = '2026-04-10';
     mockGetCalendarQuery.mockReturnValue({
       data: {
         data: [
-          makeEpisode({ id: 2, episodeTitle: "Late Show", airDateUtc: `${date}T22:00:00Z` }),
-          makeEpisode({ id: 1, episodeTitle: "Morning Show", airDateUtc: `${date}T08:00:00Z` }),
-          makeEpisode({ id: 3, episodeTitle: "Noon Show", airDateUtc: `${date}T12:00:00Z` }),
+          makeEpisode({ id: 2, episodeTitle: 'Late Show', airDateUtc: `${date}T22:00:00Z` }),
+          makeEpisode({ id: 1, episodeTitle: 'Morning Show', airDateUtc: `${date}T08:00:00Z` }),
+          makeEpisode({ id: 3, episodeTitle: 'Noon Show', airDateUtc: `${date}T12:00:00Z` }),
         ],
       },
       isLoading: false,
@@ -228,8 +228,8 @@ describe("CalendarPage", () => {
     });
 
     const { container } = renderPage();
-    const text = container.textContent ?? "";
-    expect(text.indexOf("Morning Show")).toBeLessThan(text.indexOf("Noon Show"));
-    expect(text.indexOf("Noon Show")).toBeLessThan(text.indexOf("Late Show"));
+    const text = container.textContent ?? '';
+    expect(text.indexOf('Morning Show')).toBeLessThan(text.indexOf('Noon Show'));
+    expect(text.indexOf('Noon Show')).toBeLessThan(text.indexOf('Late Show'));
   });
 });

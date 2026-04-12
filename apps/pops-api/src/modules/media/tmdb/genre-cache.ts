@@ -5,7 +5,7 @@
  * Maps genre IDs (integers) to human-readable names for search results.
  * Refreshes automatically after 24 hours.
  */
-import type { TmdbClient } from "./client.js";
+import type { TmdbClient } from './client.js';
 
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 

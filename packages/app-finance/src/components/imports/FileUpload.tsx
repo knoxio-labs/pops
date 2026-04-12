@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
-import { Upload, FileText, X } from "lucide-react";
-import { Button, Label } from "@pops/ui";
+import { useCallback, useState } from 'react';
+import { Upload, FileText, X } from 'lucide-react';
+import { Button, Label } from '@pops/ui';
 
 interface FileUploadProps {
   onFileSelect: (file: File | null) => void;
@@ -14,7 +14,7 @@ interface FileUploadProps {
  */
 export function FileUpload({
   onFileSelect,
-  acceptedTypes = ".csv",
+  acceptedTypes = '.csv',
   maxSizeMB = 25,
   initialFile = null,
 }: FileUploadProps) {
@@ -27,7 +27,7 @@ export function FileUpload({
   const validateFile = useCallback(
     (file: File): string | null => {
       // Check file type
-      if (!file.name.endsWith(".csv")) {
+      if (!file.name.endsWith('.csv')) {
         return `invalid file type. Please upload a CSV file.`;
       }
 
@@ -117,17 +117,17 @@ export function FileUpload({
             transition-colors duration-200 ease-in-out
             ${
               isDragging
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                : "border-gray-300 dark:border-gray-700"
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                : 'border-gray-300 dark:border-gray-700'
             }
-            ${error ? "border-red-500 bg-red-50 dark:bg-red-950" : ""}
+            ${error ? 'border-red-500 bg-red-50 dark:bg-red-950' : ''}
           `}
         >
           <Label
             htmlFor="file-upload"
             className="flex flex-col items-center justify-center cursor-pointer"
           >
-            <Upload className={`w-12 h-12 mb-4 ${error ? "text-red-500" : "text-gray-400"}`} />
+            <Upload className={`w-12 h-12 mb-4 ${error ? 'text-red-500' : 'text-gray-400'}`} />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Drop CSV file here or click to browse
             </span>

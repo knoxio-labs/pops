@@ -2,39 +2,39 @@
  * Chip component for tags, labels, and removable items
  * Supports multiple colors, sizes, and optional remove button
  */
-import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "../lib/utils";
+import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../lib/utils';
 
 const chipVariants = cva(
-  "inline-flex items-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full",
+  'inline-flex items-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full',
   {
     variants: {
       variant: {
-        default: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        success: "bg-success text-white hover:bg-success/80",
-        warning: "bg-warning text-white hover:bg-warning/80",
-        info: "bg-info text-white hover:bg-info/80",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        default: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        success: 'bg-success text-white hover:bg-success/80',
+        warning: 'bg-warning text-white hover:bg-warning/80',
+        info: 'bg-info text-white hover:bg-info/80',
+        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
       },
       size: {
-        sm: "gap-2 px-3 py-1.5 text-sm",
-        default: "gap-2 px-3 py-1 text-xs",
-        lg: "gap-2 px-4 py-2 text-base",
+        sm: 'gap-2 px-3 py-1.5 text-sm',
+        default: 'gap-2 px-3 py-1 text-xs',
+        lg: 'gap-2 px-4 py-2 text-base',
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: 'default',
+      size: 'default',
     },
   }
 );
 
 export interface ChipProps
-  extends Omit<HTMLAttributes<HTMLDivElement>, "prefix">, VariantProps<typeof chipVariants> {
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'prefix'>, VariantProps<typeof chipVariants> {
   /**
    * Content to display inside the chip
    */
@@ -78,7 +78,7 @@ export const Chip = forwardRef<HTMLDivElement, ChipProps>(
       prefix,
       removable = false,
       onRemove,
-      removeLabel = "Remove",
+      removeLabel = 'Remove',
       ...props
     },
     ref
@@ -105,7 +105,7 @@ export const Chip = forwardRef<HTMLDivElement, ChipProps>(
   }
 );
 
-Chip.displayName = "Chip";
+Chip.displayName = 'Chip';
 
 /**
  * X icon for remove button

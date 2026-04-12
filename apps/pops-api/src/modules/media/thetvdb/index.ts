@@ -1,25 +1,25 @@
-import { TheTvdbAuth } from "./auth.js";
-import { TheTvdbClient } from "./client.js";
-import { requireEnv } from "../../../env.js";
+import { TheTvdbAuth } from './auth.js';
+import { TheTvdbClient } from './client.js';
+import { requireEnv } from '../../../env.js';
 
 export { TheTvdbAuth, TheTvdbClient };
-export { TvdbApiError } from "./types.js";
-export { refreshTvShow } from "./service.js";
-export type { RefreshTvShowInput, RefreshTvShowResult } from "./service.js";
+export { TvdbApiError } from './types.js';
+export { refreshTvShow } from './service.js';
+export type { RefreshTvShowInput, RefreshTvShowResult } from './service.js';
 export type {
   TvdbSearchResult,
   TvdbShowDetail,
   TvdbSeasonSummary,
   TvdbArtwork,
   TvdbEpisode,
-} from "./types.js";
+} from './types.js';
 
 /**
  * Validate that THETVDB_API_KEY is configured.
  * Call at startup to fail fast with a clear error.
  */
 export function validateTvdbConfig(): void {
-  requireEnv("THETVDB_API_KEY");
+  requireEnv('THETVDB_API_KEY');
 }
 
 /**
@@ -30,7 +30,7 @@ let _tvdbClient: TheTvdbClient | null = null;
 
 export function getTvdbClient(): TheTvdbClient {
   if (_tvdbClient) return _tvdbClient;
-  const apiKey = requireEnv("THETVDB_API_KEY");
+  const apiKey = requireEnv('THETVDB_API_KEY');
   _tvdbClient = new TheTvdbClient(new TheTvdbAuth(apiKey));
   return _tvdbClient;
 }

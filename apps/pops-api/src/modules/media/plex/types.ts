@@ -15,7 +15,7 @@ export class PlexApiError extends Error {
     message: string
   ) {
     super(message);
-    this.name = "PlexApiError";
+    this.name = 'PlexApiError';
   }
 }
 

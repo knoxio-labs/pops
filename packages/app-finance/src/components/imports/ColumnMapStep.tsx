@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
-import crypto from "crypto-js";
-import { useImportStore } from "../../store/importStore";
-import { Button, Label, Select as UiSelect } from "@pops/ui";
-import { AlertCircle, CheckCircle } from "lucide-react";
-import type { ParsedTransaction } from "@pops/api/modules/finance/imports";
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import crypto from 'crypto-js';
+import { useImportStore } from '../../store/importStore';
+import { Button, Label, Select as UiSelect } from '@pops/ui';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import type { ParsedTransaction } from '@pops/api/modules/finance/imports';
 
 /**
  * Step 2: Map CSV columns to schema fields and validate parsing
@@ -43,7 +43,7 @@ export function ColumnMapStep() {
     const parsedTransactions: ParsedTransaction[] = [];
 
     if (!localColumnMap.date || !localColumnMap.description || !localColumnMap.amount) {
-      errors.push("Please map all required fields: Date, Description, Amount");
+      errors.push('Please map all required fields: Date, Description, Amount');
       return { valid: false, errors, parsedTransactions };
     }
 
@@ -70,7 +70,7 @@ export function ColumnMapStep() {
       }
 
       // Valid row - create ParsedTransaction
-      const description = row[localColumnMap.description] ?? "";
+      const description = row[localColumnMap.description] ?? '';
       const location = localColumnMap.location ? row[localColumnMap.location] : undefined;
       const rawRow = JSON.stringify(row);
       const checksum = crypto.SHA256(rawRow).toString();
@@ -79,7 +79,7 @@ export function ColumnMapStep() {
         date: parsedDate,
         description,
         amount: parsedAmount,
-        account: "Amex",
+        account: 'Amex',
         location: location ? extractLocation(location) : undefined,
         rawRow,
         checksum,
@@ -115,12 +115,12 @@ export function ColumnMapStep() {
   }, [validateAllRows, setParsedTransactions, nextStep]);
 
   const columnMapFields = [
-    { key: "date" as const, label: "Date", required: true },
-    { key: "description" as const, label: "Description", required: true },
-    { key: "amount" as const, label: "Amount", required: true },
+    { key: 'date' as const, label: 'Date', required: true },
+    { key: 'description' as const, label: 'Description', required: true },
+    { key: 'amount' as const, label: 'Amount', required: true },
     {
-      key: "location" as const,
-      label: "Location (Town/City)",
+      key: 'location' as const,
+      label: 'Location (Town/City)',
       required: false,
     },
   ];
@@ -145,7 +145,7 @@ export function ColumnMapStep() {
               </Label>
               <UiSelect
                 name={field.key}
-                value={localColumnMap[field.key] ?? ""}
+                value={localColumnMap[field.key] ?? ''}
                 onChange={(e) => handleColumnChange(field.key, e.target.value)}
                 aria-invalid={isInvalid}
                 placeholder="Select column..."
@@ -177,8 +177,8 @@ export function ColumnMapStep() {
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
               {previewRows.map((row, idx) => {
-                const dateStr = row[localColumnMap.date ?? ""];
-                const amountStr = row[localColumnMap.amount ?? ""];
+                const dateStr = row[localColumnMap.date ?? ''];
+                const amountStr = row[localColumnMap.amount ?? ''];
                 const parsedDate = parseDate(dateStr);
                 const parsedAmount = parseAmount(amountStr);
 
@@ -192,13 +192,13 @@ export function ColumnMapStep() {
                         ) : (
                           <AlertCircle className="w-4 h-4 text-red-500" />
                         )}
-                        <span className={parsedDate ? "" : "text-red-600"}>{dateStr}</span>
+                        <span className={parsedDate ? '' : 'text-red-600'}>{dateStr}</span>
                         {parsedDate && (
                           <span className="text-xs text-gray-500">→ {parsedDate}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2">{row[localColumnMap.description ?? ""]}</td>
+                    <td className="px-4 py-2">{row[localColumnMap.description ?? '']}</td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         {parsedAmount !== null ? (
@@ -206,7 +206,7 @@ export function ColumnMapStep() {
                         ) : (
                           <AlertCircle className="w-4 h-4 text-red-500" />
                         )}
-                        <span className={parsedAmount !== null ? "" : "text-red-600"}>
+                        <span className={parsedAmount !== null ? '' : 'text-red-600'}>
                           {amountStr}
                         </span>
                         {parsedAmount !== null && (
@@ -251,7 +251,7 @@ export function ColumnMapStep() {
             !localColumnMap.amount
           }
         >
-          {isValidating ? "Processing..." : "Next"}
+          {isValidating ? 'Processing...' : 'Next'}
         </Button>
       </div>
     </div>
@@ -267,17 +267,17 @@ function autoDetectColumns(headers: string[]): {
   amount: string;
   location?: string;
 } {
-  const datePatterns = ["date", "transaction date", "posting date"];
-  const descriptionPatterns = ["description", "merchant", "payee"];
-  const amountPatterns = ["amount", "debit", "credit", "value"];
-  const locationPatterns = ["town", "city", "town/city", "location"];
+  const datePatterns = ['date', 'transaction date', 'posting date'];
+  const descriptionPatterns = ['description', 'merchant', 'payee'];
+  const amountPatterns = ['amount', 'debit', 'credit', 'value'];
+  const locationPatterns = ['town', 'city', 'town/city', 'location'];
 
   const findMatch = (patterns: string[]): string => {
     for (const pattern of patterns) {
       const match = headers.find((h) => h.toLowerCase().includes(pattern));
       if (match) return match;
     }
-    return "";
+    return '';
   };
 
   return {
@@ -294,13 +294,13 @@ function autoDetectColumns(headers: string[]): {
 function parseDate(dateStr: string | undefined): string | null {
   if (!dateStr) return null;
 
-  const parts = dateStr.split("/");
+  const parts = dateStr.split('/');
   if (parts.length !== 3) return null;
 
   const [day, month, year] = parts;
   if (!day || !month || !year) return null;
 
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 /**
@@ -309,7 +309,7 @@ function parseDate(dateStr: string | undefined): string | null {
 function parseAmount(amountStr: string | undefined): number | null {
   if (!amountStr) return null;
 
-  const cleaned = amountStr.replace(/[^0-9.-]/g, "");
+  const cleaned = amountStr.replace(/[^0-9.-]/g, '');
   const amount = parseFloat(cleaned);
 
   if (isNaN(amount)) return null;
@@ -324,14 +324,14 @@ function parseAmount(amountStr: string | undefined): number | null {
 function extractLocation(townCity: string): string | undefined {
   if (!townCity) return undefined;
 
-  const lines = townCity.split("\n");
+  const lines = townCity.split('\n');
   const town = lines[0]?.trim();
 
   if (!town) return undefined;
 
   return town
     .toLowerCase()
-    .split(" ")
+    .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .join(' ');
 }

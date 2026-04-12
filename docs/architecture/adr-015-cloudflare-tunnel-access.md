@@ -10,12 +10,12 @@ POPS runs on a mini PC on a home network. Services need to be accessible from ou
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Port forwarding + self-hosted auth (Authelia, Authentik) | Full control, no external dependency | Exposed ports, DDoS risk, SSL management, self-hosted auth is another service to maintain and secure |
-| Tailscale (mesh VPN) | Encrypted tunnel, no exposed ports, simple setup | Requires Tailscale client on every device, doesn't work well for PWA bookmark on iPhone (VPN must be active), another dependency |
-| Cloudflare Tunnel + Cloudflare Access | Zero exposed ports, DDoS protection, managed auth (SSO, email OTP), free tier, no client software needed | Dependency on Cloudflare, traffic routes through their network |
-| No external access (LAN only) | Simplest, most secure | Defeats the purpose — can't use from phone outside home |
+| Option                                                   | Pros                                                                                                     | Cons                                                                                                                             |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Port forwarding + self-hosted auth (Authelia, Authentik) | Full control, no external dependency                                                                     | Exposed ports, DDoS risk, SSL management, self-hosted auth is another service to maintain and secure                             |
+| Tailscale (mesh VPN)                                     | Encrypted tunnel, no exposed ports, simple setup                                                         | Requires Tailscale client on every device, doesn't work well for PWA bookmark on iPhone (VPN must be active), another dependency |
+| Cloudflare Tunnel + Cloudflare Access                    | Zero exposed ports, DDoS protection, managed auth (SSO, email OTP), free tier, no client software needed | Dependency on Cloudflare, traffic routes through their network                                                                   |
+| No external access (LAN only)                            | Simplest, most secure                                                                                    | Defeats the purpose — can't use from phone outside home                                                                          |
 
 ## Decision
 

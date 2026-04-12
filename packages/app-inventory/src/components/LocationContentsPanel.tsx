@@ -5,11 +5,11 @@
  * Supports "Include sub-locations" toggle, shows item count + total value,
  * and provides navigation to item detail and item creation.
  */
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
-import { Package, Plus } from "lucide-react";
-import { Skeleton, Button, Switch, Label, AssetIdBadge, TypeBadge } from "@pops/ui";
-import { trpc } from "../lib/trpc";
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import { Package, Plus } from 'lucide-react';
+import { Skeleton, Button, Switch, Label, AssetIdBadge, TypeBadge } from '@pops/ui';
+import { trpc } from '../lib/trpc';
 
 interface LocationTreeNode {
   id: string;
@@ -30,9 +30,9 @@ function collectDescendantIds(node: LocationTreeNode): string[] {
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
@@ -94,7 +94,7 @@ export function LocationContentsPanel({
     <div className="border rounded-lg p-4 space-y-4">
       {/* Header */}
       <div>
-        <p className="text-xs text-muted-foreground">{breadcrumb.join(" / ")}</p>
+        <p className="text-xs text-muted-foreground">{breadcrumb.join(' / ')}</p>
         <h2 className="text-lg font-semibold mt-1">{locationName}</h2>
       </div>
 
@@ -118,7 +118,7 @@ export function LocationContentsPanel({
           <Skeleton className="h-4 w-36" />
         ) : (
           <>
-            {allItems.length} {allItems.length === 1 ? "item" : "items"}
+            {allItems.length} {allItems.length === 1 ? 'item' : 'items'}
             {totalValue > 0 && <span> · {formatCurrency(totalValue)}</span>}
           </>
         )}

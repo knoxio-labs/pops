@@ -6,14 +6,14 @@
  * Desktop: always-visible search input.
  * All interactive elements meet 44x44px minimum touch targets.
  */
-import { useState } from "react";
-import { useThemeStore } from "@/store/themeStore";
-import { useUIStore } from "@/store/uiStore";
-import { Menu, Sun, Moon, Search } from "lucide-react";
-import { Button } from "@pops/ui";
-import { BuildVersion } from "./BuildVersion";
-import { SearchInput } from "./SearchInput";
-import { MobileSearchOverlay } from "./MobileSearchOverlay";
+import { useState } from 'react';
+import { useThemeStore } from '@/store/themeStore';
+import { useUIStore } from '@/store/uiStore';
+import { Menu, Sun, Moon, Search } from 'lucide-react';
+import { Button } from '@pops/ui';
+import { BuildVersion } from './BuildVersion';
+import { SearchInput } from './SearchInput';
+import { MobileSearchOverlay } from './MobileSearchOverlay';
 
 export function TopBar() {
   const theme = useThemeStore((state) => state.theme);
@@ -63,7 +63,7 @@ export function TopBar() {
             className="min-w-[44px] min-h-[44px] transition-colors group"
             aria-label="Toggle theme"
           >
-            {theme === "dark" ? (
+            {theme === 'dark' ? (
               <Sun className="h-5 w-5 text-amber-400 group-hover:text-amber-300 transition-colors" />
             ) : (
               <Moon className="h-5 w-5 text-indigo-600 group-hover:text-indigo-500 transition-colors" />

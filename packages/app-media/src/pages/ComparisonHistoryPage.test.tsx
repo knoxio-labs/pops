@@ -1,15 +1,15 @@
-import type React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
-import { ComparisonHistoryPage } from "./ComparisonHistoryPage";
+import type React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import { ComparisonHistoryPage } from './ComparisonHistoryPage';
 
 // Mock sonner
-const mockToast = vi.fn().mockReturnValue("toast-id-1");
-const mockToastCustom = vi.fn().mockReturnValue("toast-custom-1");
+const mockToast = vi.fn().mockReturnValue('toast-id-1');
+const mockToastCustom = vi.fn().mockReturnValue('toast-custom-1');
 const mockToastDismiss = vi.fn();
 const mockToastError = vi.fn();
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: Object.assign((...args: unknown[]) => mockToast(...args), {
     custom: (...args: unknown[]) => mockToastCustom(...args),
     dismiss: (...args: unknown[]) => mockToastDismiss(...args),
@@ -28,7 +28,7 @@ const mockInvalidateRankings = vi.fn();
 const mockRefetch = vi.fn();
 let deleteMutationOpts: Record<string, (...args: unknown[]) => unknown> = {};
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       comparisons: {
@@ -63,34 +63,34 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-const DIMENSION = { id: 1, name: "Overall" };
+const DIMENSION = { id: 1, name: 'Overall' };
 const COMPARISON = {
   id: 10,
   dimensionId: 1,
-  mediaAType: "movie",
+  mediaAType: 'movie',
   mediaAId: 100,
-  mediaBType: "movie",
+  mediaBType: 'movie',
   mediaBId: 200,
-  winnerType: "movie",
+  winnerType: 'movie',
   winnerId: 100,
   deltaA: 12,
   deltaB: -12,
   drawTier: null as string | null,
-  comparedAt: "2026-01-15T12:00:00Z",
+  comparedAt: '2026-01-15T12:00:00Z',
 };
 const DRAW_COMPARISON = {
   id: 11,
   dimensionId: 1,
-  mediaAType: "movie",
+  mediaAType: 'movie',
   mediaAId: 100,
-  mediaBType: "movie",
+  mediaBType: 'movie',
   mediaBId: 200,
-  winnerType: "movie",
+  winnerType: 'movie',
   winnerId: 0,
   deltaA: 0,
   deltaB: 0,
-  drawTier: "high",
-  comparedAt: "2026-01-15T12:00:00Z",
+  drawTier: 'high',
+  comparedAt: '2026-01-15T12:00:00Z',
 };
 
 function setupLoaded(comparisons = [COMPARISON], total = comparisons.length) {
@@ -136,37 +136,37 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("ComparisonHistoryPage", () => {
-  it("shows history list with comparison rows", () => {
+describe('ComparisonHistoryPage', () => {
+  it('shows history list with comparison rows', () => {
     setupLoaded();
     renderPage();
 
-    expect(screen.getByText("Comparison History")).toBeInTheDocument();
-    expect(screen.getByText("Movie 100")).toBeInTheDocument();
-    expect(screen.getByText("beat")).toBeInTheDocument();
-    expect(screen.getByText("Movie 200")).toBeInTheDocument();
-    expect(screen.getAllByText("Overall").length).toBeGreaterThan(0);
+    expect(screen.getByText('Comparison History')).toBeInTheDocument();
+    expect(screen.getByText('Movie 100')).toBeInTheDocument();
+    expect(screen.getByText('beat')).toBeInTheDocument();
+    expect(screen.getByText('Movie 200')).toBeInTheDocument();
+    expect(screen.getAllByText('Overall').length).toBeGreaterThan(0);
   });
 
-  it("shows tied display for draw comparisons (winnerId=0)", () => {
+  it('shows tied display for draw comparisons (winnerId=0)', () => {
     setupLoaded([DRAW_COMPARISON]);
     renderPage();
 
-    expect(screen.getByText("tied")).toBeInTheDocument();
-    expect(screen.queryByText("beat")).not.toBeInTheDocument();
-    expect(screen.queryByText("Movie #0")).not.toBeInTheDocument();
-    expect(screen.getByText("high draw")).toBeInTheDocument();
+    expect(screen.getByText('tied')).toBeInTheDocument();
+    expect(screen.queryByText('beat')).not.toBeInTheDocument();
+    expect(screen.queryByText('Movie #0')).not.toBeInTheDocument();
+    expect(screen.getByText('high draw')).toBeInTheDocument();
   });
 
-  it("shows empty state when no comparisons", () => {
+  it('shows empty state when no comparisons', () => {
     setupEmpty();
     renderPage();
 
     expect(screen.getByText(/No comparisons yet/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Compare Arena" })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Compare Arena' })).toBeInTheDocument();
   });
 
-  it("shows skeletons while loading", () => {
+  it('shows skeletons while loading', () => {
     setupLoading();
     const { container } = renderPage();
 
@@ -174,28 +174,28 @@ describe("ComparisonHistoryPage", () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("optimistically hides row and shows undo toast on delete", () => {
+  it('optimistically hides row and shows undo toast on delete', () => {
     setupLoaded();
     renderPage();
 
-    expect(screen.getByText("Movie 100")).toBeInTheDocument();
+    expect(screen.getByText('Movie 100')).toBeInTheDocument();
 
-    const deleteBtn = screen.getByRole("button", { name: "" });
+    const deleteBtn = screen.getByRole('button', { name: '' });
     fireEvent.click(deleteBtn);
 
     // Row removed optimistically
-    expect(screen.queryByText("Movie 100")).not.toBeInTheDocument();
+    expect(screen.queryByText('Movie 100')).not.toBeInTheDocument();
     // Custom toast shown with undo
     expect(mockToastCustom).toHaveBeenCalled();
     // Mutation not fired yet
     expect(mockDeleteMutate).not.toHaveBeenCalled();
   });
 
-  it("executes delete after 5-second undo window", () => {
+  it('executes delete after 5-second undo window', () => {
     setupLoaded();
     renderPage();
 
-    const deleteBtn = screen.getByRole("button", { name: "" });
+    const deleteBtn = screen.getByRole('button', { name: '' });
     fireEvent.click(deleteBtn);
 
     expect(mockDeleteMutate).not.toHaveBeenCalled();
@@ -205,35 +205,35 @@ describe("ComparisonHistoryPage", () => {
     expect(mockDeleteMutate).toHaveBeenCalledWith({ id: COMPARISON.id });
   });
 
-  it("cancels delete and restores row when undo is clicked", () => {
+  it('cancels delete and restores row when undo is clicked', () => {
     setupLoaded();
     renderPage();
 
-    const deleteBtn = screen.getByRole("button", { name: "" });
+    const deleteBtn = screen.getByRole('button', { name: '' });
     fireEvent.click(deleteBtn);
 
     // Row gone
-    expect(screen.queryByText("Movie 100")).not.toBeInTheDocument();
+    expect(screen.queryByText('Movie 100')).not.toBeInTheDocument();
 
     // Extract the render function passed to toast.custom and render it to get the Undo button
     const renderFn = mockToastCustom.mock.calls[0]![0] as (
       id: string | number
     ) => React.ReactElement;
-    const toastElement = renderFn("toast-custom-1");
+    const toastElement = renderFn('toast-custom-1');
     const { getByText: getToastByText } = render(toastElement);
-    fireEvent.click(getToastByText("Undo"));
+    fireEvent.click(getToastByText('Undo'));
 
     // Row restored
-    expect(screen.getByText("Movie 100")).toBeInTheDocument();
+    expect(screen.getByText('Movie 100')).toBeInTheDocument();
     // Timer should not fire delete
     act(() => {
       vi.advanceTimersByTime(5000);
     });
     expect(mockDeleteMutate).not.toHaveBeenCalled();
-    expect(mockToastDismiss).toHaveBeenCalledWith("toast-custom-1");
+    expect(mockToastDismiss).toHaveBeenCalledWith('toast-custom-1');
   });
 
-  it("invalidates queries on successful delete", () => {
+  it('invalidates queries on successful delete', () => {
     setupLoaded();
     renderPage();
 
@@ -247,55 +247,55 @@ describe("ComparisonHistoryPage", () => {
     expect(mockInvalidateRankings).toHaveBeenCalled();
   });
 
-  it("filters by dimension", () => {
+  it('filters by dimension', () => {
     setupLoaded();
     renderPage();
 
-    const select = screen.getByRole("combobox");
-    fireEvent.change(select, { target: { value: "1" } });
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: '1' } });
 
     expect(mockListAllQuery).toHaveBeenLastCalledWith(expect.objectContaining({ dimensionId: 1 }));
   });
 
-  it("shows pagination when multiple pages exist", () => {
+  it('shows pagination when multiple pages exist', () => {
     setupLoaded([COMPARISON], 50);
     renderPage();
 
     expect(screen.getByText(/Page 1 of/)).toBeInTheDocument();
   });
 
-  it("renders search input", () => {
+  it('renders search input', () => {
     setupLoaded();
     renderPage();
 
-    expect(screen.getByPlaceholderText("Search by movie title…")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search by movie title…')).toBeInTheDocument();
   });
 
-  it("typing in search triggers filtered query after debounce", () => {
+  it('typing in search triggers filtered query after debounce', () => {
     setupLoaded();
     renderPage();
 
-    const searchInput = screen.getByPlaceholderText("Search by movie title…");
-    fireEvent.change(searchInput, { target: { value: "Dark" } });
+    const searchInput = screen.getByPlaceholderText('Search by movie title…');
+    fireEvent.change(searchInput, { target: { value: 'Dark' } });
 
     // Before debounce fires: no search param
     expect(mockListAllQuery).not.toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: "Dark" })
+      expect.objectContaining({ search: 'Dark' })
     );
 
     // Fire debounce timer and flush React state updates
     act(() => {
       vi.advanceTimersByTime(300);
     });
-    expect(mockListAllQuery).toHaveBeenLastCalledWith(expect.objectContaining({ search: "Dark" }));
+    expect(mockListAllQuery).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Dark' }));
   });
 
-  it("empty search does not pass search param to query", () => {
+  it('empty search does not pass search param to query', () => {
     setupLoaded();
     renderPage();
 
-    const searchInput = screen.getByPlaceholderText("Search by movie title…");
-    fireEvent.change(searchInput, { target: { value: "   " } });
+    const searchInput = screen.getByPlaceholderText('Search by movie title…');
+    fireEvent.change(searchInput, { target: { value: '   ' } });
     act(() => {
       vi.advanceTimersByTime(300);
     });

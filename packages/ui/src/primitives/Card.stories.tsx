@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   Card,
   CardHeader,
@@ -7,19 +7,19 @@ import {
   CardContent,
   CardFooter,
   CardAction,
-} from "./card";
-import { Button } from "../components/Button";
-import { Badge } from "./badge";
-import { Progress } from "./progress";
-import { MoreVerticalIcon, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
+} from './card';
+import { Button } from '../components/Button';
+import { Badge } from './badge';
+import { Progress } from './progress';
+import { MoreVerticalIcon, TrendingUpIcon, TrendingDownIcon } from 'lucide-react';
 
 const meta: Meta<typeof Card> = {
-  title: "Layout/Card",
+  title: 'Layout/Card',
   component: Card,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -359,15 +359,15 @@ export const DashboardGrid: Story = {
         <CardContent>
           <div className="space-y-3">
             {[
-              { desc: "Woolworths", amount: "-$87.45" },
-              { desc: "Netflix", amount: "-$22.99" },
-              { desc: "Salary", amount: "+$3,500.00" },
+              { desc: 'Woolworths', amount: '-$87.45' },
+              { desc: 'Netflix', amount: '-$22.99' },
+              { desc: 'Salary', amount: '+$3,500.00' },
             ].map((txn, i) => (
               <div key={i} className="flex justify-between text-sm">
                 <span>{txn.desc}</span>
                 <span
                   className={
-                    txn.amount.startsWith("+") ? "text-green-600 font-medium" : "text-red-600"
+                    txn.amount.startsWith('+') ? 'text-green-600 font-medium' : 'text-red-600'
                   }
                 >
                   {txn.amount}

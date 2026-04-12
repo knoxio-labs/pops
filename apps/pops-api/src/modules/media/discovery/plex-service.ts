@@ -2,12 +2,12 @@
  * Discovery Plex service — trending movies from the Plex Discover API,
  * enriched with library membership status and dismissed filtering.
  */
-import { getDrizzle } from "../../../db.js";
-import { movies } from "@pops/db-types";
-import { getPlexClient } from "../plex/service.js";
-import type { DiscoverResult } from "./types.js";
-import type { PlexMediaItem } from "../plex/types.js";
-import { getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
+import { getDrizzle } from '../../../db.js';
+import { movies } from '@pops/db-types';
+import { getPlexClient } from '../plex/service.js';
+import type { DiscoverResult } from './types.js';
+import type { PlexMediaItem } from '../plex/types.js';
+import { getWatchedTmdbIds, getWatchlistTmdbIds } from './flags.js';
 
 /** Get all TMDB IDs currently in the library for quick lookup. */
 function getLibraryTmdbIds(): Set<number> {
@@ -28,7 +28,7 @@ function buildPosterUrl(
 
 /** Extract TMDB ID from a Plex item's external IDs. */
 function extractTmdbId(item: PlexMediaItem): number | null {
-  const tmdbGuid = item.externalIds.find((id) => id.source === "tmdb");
+  const tmdbGuid = item.externalIds.find((id) => id.source === 'tmdb');
   if (!tmdbGuid) return null;
   const parsed = parseInt(tmdbGuid.id, 10);
   return isNaN(parsed) ? null : parsed;
@@ -48,8 +48,8 @@ function toDiscoverResult(
   return {
     tmdbId,
     title: item.title,
-    overview: item.summary ?? "",
-    releaseDate: item.year ? `${item.year}-01-01` : "",
+    overview: item.summary ?? '',
+    releaseDate: item.year ? `${item.year}-01-01` : '',
     posterPath: null,
     posterUrl: buildPosterUrl(item, tmdbId, inLibrary),
     backdropPath: null,

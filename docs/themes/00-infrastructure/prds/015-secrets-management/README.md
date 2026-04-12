@@ -18,17 +18,17 @@ Ansible Vault (encrypted at rest)
 
 ## Secrets Inventory
 
-| Secret | Used by | Description |
-|--------|---------|-------------|
-| `claude_api_key` | pops-api | Claude Haiku API for categorisation |
-| `up_bank_token` | pops-api | Up Bank API access |
-| `up_webhook_secret` | pops-api | Up Bank webhook signature validation |
-| `finance_api_key` | pops-api | API auth key |
-| `tmdb_api_key` | pops-api | TMDB movie metadata |
-| `thetvdb_api_key` | pops-api | TheTVDB TV metadata |
-| `paperless_secret_key` | paperless-ngx | Django secret key |
-| `paperless_admin_password` | paperless-ngx | Admin login |
-| `tunnel_credentials` | cloudflared | Cloudflare Tunnel auth |
+| Secret                     | Used by       | Description                          |
+| -------------------------- | ------------- | ------------------------------------ |
+| `claude_api_key`           | pops-api      | Claude Haiku API for categorisation  |
+| `up_bank_token`            | pops-api      | Up Bank API access                   |
+| `up_webhook_secret`        | pops-api      | Up Bank webhook signature validation |
+| `finance_api_key`          | pops-api      | API auth key                         |
+| `tmdb_api_key`             | pops-api      | TMDB movie metadata                  |
+| `thetvdb_api_key`          | pops-api      | TheTVDB TV metadata                  |
+| `paperless_secret_key`     | paperless-ngx | Django secret key                    |
+| `paperless_admin_password` | paperless-ngx | Admin login                          |
+| `tunnel_credentials`       | cloudflared   | Cloudflare Tunnel auth               |
 
 ## Business Rules
 
@@ -40,11 +40,11 @@ Ansible Vault (encrypted at rest)
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-vault-setup](us-01-vault-setup.md) | Set up Ansible Vault with encrypted secrets file | Done | No (first) |
-| 02 | [us-02-docker-secrets](us-02-docker-secrets.md) | Configure Docker Compose file-based secrets, update services to read from /run/secrets/ | Done | Blocked by us-01 |
-| 03 | [us-03-local-dev-env](us-03-local-dev-env.md) | Create .env.example and local dev secret loading pattern | Done | Yes |
+| #   | Story                                           | Summary                                                                                 | Status | Parallelisable   |
+| --- | ----------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-vault-setup](us-01-vault-setup.md)       | Set up Ansible Vault with encrypted secrets file                                        | Done   | No (first)       |
+| 02  | [us-02-docker-secrets](us-02-docker-secrets.md) | Configure Docker Compose file-based secrets, update services to read from /run/secrets/ | Done   | Blocked by us-01 |
+| 03  | [us-03-local-dev-env](us-03-local-dev-env.md)   | Create .env.example and local dev secret loading pattern                                | Done   | Yes              |
 
 ## Verification
 

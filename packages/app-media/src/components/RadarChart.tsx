@@ -45,7 +45,7 @@ export function RadarChart({
   // Build grid rings
   const gridRings = Array.from({ length: GRID_RINGS }, (_, i) => {
     const fraction = (i + 1) / GRID_RINGS;
-    const points = dimensions.map((_, idx) => polarToXY(idx, fraction).join(",")).join(" ");
+    const points = dimensions.map((_, idx) => polarToXY(idx, fraction).join(',')).join(' ');
     return points;
   });
 
@@ -57,8 +57,8 @@ export function RadarChart({
 
   // Build data polygon
   const dataPoints = dimensions
-    .map((d, idx) => polarToXY(idx, normalize(d.score)).join(","))
-    .join(" ");
+    .map((d, idx) => polarToXY(idx, normalize(d.score)).join(','))
+    .join(' ');
 
   // Label positions (slightly outside the chart)
   const labels = dimensions.map((d, idx) => {
@@ -121,9 +121,9 @@ export function RadarChart({
         // Determine text-anchor based on position
         const angle = idx * angleStep - Math.PI / 2;
         const cos = Math.cos(angle);
-        let textAnchor: "start" | "middle" | "end" = "middle";
-        if (cos > 0.1) textAnchor = "start";
-        else if (cos < -0.1) textAnchor = "end";
+        let textAnchor: 'start' | 'middle' | 'end' = 'middle';
+        if (cos > 0.1) textAnchor = 'start';
+        else if (cos < -0.1) textAnchor = 'end';
 
         return (
           <text

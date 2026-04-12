@@ -114,29 +114,28 @@ Rejection is reserved for the "this whole direction is wrong, start over" case �
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Proposal has zero impact in current import | Still allowed; UI must make that clear. |
-| Proposal is overly broad | User narrows it in place via the editor or AI helper ([US-06](us-06-editable-proposal.md)). Reject-with-feedback is reserved for "this whole direction is wrong, start over". |
-| Multiple rules already match | Proposal may include `disable`/`edit` operations alongside new `add` operations; the combined-effect preview must show the net outcome before Apply. |
-| User edits an AI suggestion, then asks AI to revise again | Revise call receives the current (user-edited) ChangeSet plus the new instruction; the AI may further edit, add, split, merge, or remove any operation. |
-| AI unavailable | The system can still offer a non-AI rule proposal flow, but must preserve the approval model and previews. |
+| Case                                                      | Behaviour                                                                                                                                                                     |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proposal has zero impact in current import                | Still allowed; UI must make that clear.                                                                                                                                       |
+| Proposal is overly broad                                  | User narrows it in place via the editor or AI helper ([US-06](us-06-editable-proposal.md)). Reject-with-feedback is reserved for "this whole direction is wrong, start over". |
+| Multiple rules already match                              | Proposal may include `disable`/`edit` operations alongside new `add` operations; the combined-effect preview must show the net outcome before Apply.                          |
+| User edits an AI suggestion, then asks AI to revise again | Revise call receives the current (user-edited) ChangeSet plus the new instruction; the AI may further edit, add, split, merge, or remove any operation.                       |
+| AI unavailable                                            | The system can still offer a non-AI rule proposal flow, but must preserve the approval model and previews.                                                                    |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-changeset-contract](us-01-changeset-contract.md) | Define ChangeSet schema, impact preview contract, and invariants | Done | No (first) |
-| 02 | [us-02-generate-proposal](us-02-generate-proposal.md) | Generate bundled ChangeSet proposal from a correction signal | Done | Blocked by us-01 |
-| 03 | [us-03-approve-apply](us-03-approve-apply.md) | Approve and apply ChangeSet atomically, then re-evaluate remaining transactions | Done | Blocked by us-01 |
-| 04 | [us-04-reject-feedback](us-04-reject-feedback.md) | Reject with required feedback, persist rejection for training/audit | Done | Blocked by us-01 |
-| 05 | [us-05-audit-trail](us-05-audit-trail.md) | Record proposal attempts and outcomes for traceability | Done | Blocked by us-01 |
-| 06 | [us-06-editable-proposal](us-06-editable-proposal.md) | Editable proposal dialog with live impact preview and AI helper for in-place refinement | Done | Blocked by us-01, us-02 |
-| 07 | [us-07-trigger-context-and-prompt](us-07-trigger-context-and-prompt.md) | Reframe proposal prompt around "how to match future txns" and surface the triggering transaction in the dialog | Done | Blocked by us-02, us-06 |
+| #   | Story                                                                   | Summary                                                                                                        | Status | Parallelisable          |
+| --- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ | ----------------------- |
+| 01  | [us-01-changeset-contract](us-01-changeset-contract.md)                 | Define ChangeSet schema, impact preview contract, and invariants                                               | Done   | No (first)              |
+| 02  | [us-02-generate-proposal](us-02-generate-proposal.md)                   | Generate bundled ChangeSet proposal from a correction signal                                                   | Done   | Blocked by us-01        |
+| 03  | [us-03-approve-apply](us-03-approve-apply.md)                           | Approve and apply ChangeSet atomically, then re-evaluate remaining transactions                                | Done   | Blocked by us-01        |
+| 04  | [us-04-reject-feedback](us-04-reject-feedback.md)                       | Reject with required feedback, persist rejection for training/audit                                            | Done   | Blocked by us-01        |
+| 05  | [us-05-audit-trail](us-05-audit-trail.md)                               | Record proposal attempts and outcomes for traceability                                                         | Done   | Blocked by us-01        |
+| 06  | [us-06-editable-proposal](us-06-editable-proposal.md)                   | Editable proposal dialog with live impact preview and AI helper for in-place refinement                        | Done   | Blocked by us-01, us-02 |
+| 07  | [us-07-trigger-context-and-prompt](us-07-trigger-context-and-prompt.md) | Reframe proposal prompt around "how to match future txns" and surface the triggering transaction in the dialog | Done   | Blocked by us-02, us-06 |
 
 ## Verification
 
 - A correction like “WOOLWORTHS 12837192” → “Woolworths” produces a proposal that generalises correctly and matches other Woolworths variants in the same import after approval.
 - A transfer correction (e.g. PayID) can produce a rule that classifies similar rows as transfer without an entity.
 - A wrong rule match can be corrected via edit, resulting in a ChangeSet proposal that fixes the rule system rather than silently overriding the one transaction.
-

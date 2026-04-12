@@ -3,10 +3,10 @@
  * Shows trigger button with breadcrumb path, opens popover with expandable
  * location tree, type-to-filter, and optional inline create.
  */
-import { useState, useMemo, useCallback } from "react";
-import { cn, Popover, PopoverContent, PopoverTrigger } from "@pops/ui";
-import { Button } from "@pops/ui";
-import { ChevronRight, ChevronDown, MapPin, X, Plus } from "lucide-react";
+import { useState, useMemo, useCallback } from 'react';
+import { cn, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+import { Button } from '@pops/ui';
+import { ChevronRight, ChevronDown, MapPin, X, Plus } from 'lucide-react';
 
 export interface LocationTreeNode {
   id: string;
@@ -87,9 +87,9 @@ function TreeNode({
       <button
         type="button"
         className={cn(
-          "flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm",
-          "hover:bg-accent/50 transition-colors",
-          isSelected && "bg-accent text-accent-foreground font-medium"
+          'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm',
+          'hover:bg-accent/50 transition-colors',
+          isSelected && 'bg-accent text-accent-foreground font-medium'
         )}
         style={{
           paddingLeft: `calc(${depth} * var(--tree-picker-step) + var(--tree-indent-base))`,
@@ -106,7 +106,7 @@ function TreeNode({
               onToggle(node.id);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
+              if (e.key === 'Enter' || e.key === ' ') {
                 e.stopPropagation();
                 onToggle(node.id);
               }
@@ -149,14 +149,14 @@ export function LocationPicker({
   onChange,
   locations,
   onCreateLocation,
-  placeholder = "Select location…",
+  placeholder = 'Select location…',
   disabled = false,
   className,
 }: LocationPickerProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationName, setNewLocationName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
   const selectedPath = useMemo(
@@ -188,7 +188,7 @@ export function LocationPicker({
     (id: string) => {
       onChange?.(id);
       setOpen(false);
-      setSearch("");
+      setSearch('');
     },
     [onChange]
   );
@@ -196,14 +196,14 @@ export function LocationPicker({
   const handleClear = useCallback(() => {
     onChange?.(null);
     setOpen(false);
-    setSearch("");
+    setSearch('');
   }, [onChange]);
 
   const handleAddLocation = useCallback(() => {
     const name = newLocationName.trim();
     if (!name || !onCreateLocation) return;
     onCreateLocation(name, value ?? null);
-    setNewLocationName("");
+    setNewLocationName('');
     setShowAddForm(false);
   }, [newLocationName, onCreateLocation, value]);
 
@@ -216,14 +216,14 @@ export function LocationPicker({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal h-9",
-            !value && "text-muted-foreground",
+            'w-full justify-start text-left font-normal h-9',
+            !value && 'text-muted-foreground',
             className
           )}
         >
           <MapPin className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           {selectedPath.length > 0 ? (
-            <span className="truncate text-sm">{selectedPath.map((n) => n.name).join(" › ")}</span>
+            <span className="truncate text-sm">{selectedPath.map((n) => n.name).join(' › ')}</span>
           ) : (
             <span className="text-sm">{placeholder}</span>
           )}
@@ -296,10 +296,10 @@ export function LocationPicker({
                 value={newLocationName}
                 onChange={(e) => setNewLocationName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddLocation();
-                  if (e.key === "Escape") {
+                  if (e.key === 'Enter') handleAddLocation();
+                  if (e.key === 'Escape') {
                     setShowAddForm(false);
-                    setNewLocationName("");
+                    setNewLocationName('');
                   }
                 }}
                 className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-ring"
@@ -322,4 +322,4 @@ export function LocationPicker({
   );
 }
 
-LocationPicker.displayName = "LocationPicker";
+LocationPicker.displayName = 'LocationPicker';

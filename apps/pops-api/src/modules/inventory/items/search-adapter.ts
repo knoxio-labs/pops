@@ -1,8 +1,8 @@
-import { sql } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { homeInventory } from "@pops/db-types";
-import { registerSearchAdapter } from "../../core/search/index.js";
-import type { SearchAdapter, SearchHit, Query, SearchContext } from "../../core/search/index.js";
+import { sql } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { homeInventory } from '@pops/db-types';
+import { registerSearchAdapter } from '../../core/search/index.js';
+import type { SearchAdapter, SearchHit, Query, SearchContext } from '../../core/search/index.js';
 
 export interface InventoryItemHitData {
   itemName: string;
@@ -15,9 +15,9 @@ export interface InventoryItemHitData {
 const DEFAULT_LIMIT = 20;
 
 export const inventoryItemsSearchAdapter: SearchAdapter<InventoryItemHitData> = {
-  domain: "inventory-items",
-  icon: "Box",
-  color: "amber",
+  domain: 'inventory-items',
+  icon: 'Box',
+  color: 'amber',
 
   search(
     query: Query,
@@ -43,8 +43,8 @@ export const inventoryItemsSearchAdapter: SearchAdapter<InventoryItemHitData> = 
       hits.push({
         uri: `/inventory/items/${row.id}`,
         score: 1.0,
-        matchField: "assetId",
-        matchType: "exact",
+        matchField: 'assetId',
+        matchType: 'exact',
         data: {
           itemName: row.itemName,
           assetId: row.assetId,
@@ -61,7 +61,7 @@ export const inventoryItemsSearchAdapter: SearchAdapter<InventoryItemHitData> = 
         .select()
         .from(homeInventory)
         .where(
-          sql`lower(${homeInventory.assetId}) like ${lowerText + "%"} and lower(${homeInventory.assetId}) != ${lowerText}`
+          sql`lower(${homeInventory.assetId}) like ${lowerText + '%'} and lower(${homeInventory.assetId}) != ${lowerText}`
         )
         .all();
 
@@ -70,8 +70,8 @@ export const inventoryItemsSearchAdapter: SearchAdapter<InventoryItemHitData> = 
         hits.push({
           uri: `/inventory/items/${row.id}`,
           score: 0.9,
-          matchField: "assetId",
-          matchType: "prefix",
+          matchField: 'assetId',
+          matchType: 'prefix',
           data: {
             itemName: row.itemName,
             assetId: row.assetId,
@@ -91,7 +91,7 @@ export const inventoryItemsSearchAdapter: SearchAdapter<InventoryItemHitData> = 
       const nameRows = db
         .select()
         .from(homeInventory)
-        .where(sql`lower(${homeInventory.itemName}) like ${"%" + lowerText + "%"}`)
+        .where(sql`lower(${homeInventory.itemName}) like ${'%' + lowerText + '%'}`)
         .all();
 
       for (const row of nameRows) {
@@ -101,23 +101,23 @@ export const inventoryItemsSearchAdapter: SearchAdapter<InventoryItemHitData> = 
 
         const lowerName = row.itemName.toLowerCase();
         let score: number;
-        let matchType: "exact" | "prefix" | "contains";
+        let matchType: 'exact' | 'prefix' | 'contains';
 
         if (lowerName === lowerText) {
           score = 0.85;
-          matchType = "exact";
+          matchType = 'exact';
         } else if (lowerName.startsWith(lowerText)) {
           score = 0.7;
-          matchType = "prefix";
+          matchType = 'prefix';
         } else {
           score = 0.5;
-          matchType = "contains";
+          matchType = 'contains';
         }
 
         hits.push({
           uri,
           score,
-          matchField: "itemName",
+          matchField: 'itemName',
           matchType,
           data: {
             itemName: row.itemName,

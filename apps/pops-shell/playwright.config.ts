@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright configuration for POPS Shell E2E tests
@@ -13,28 +13,28 @@ import { defineConfig, devices } from "@playwright/test";
  *     globalSetup creates the seeded env before tests; globalTeardown deletes it after.
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI ? [["list"], ["html"]] : "html",
+  reporter: process.env.CI ? [['list'], ['html']] : 'html',
 
-  globalSetup: "./e2e/global-setup.ts",
-  globalTeardown: "./e2e/global-teardown.ts",
+  globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
 
   use: {
     // E2E server runs on 5567 (separate from dev server on 5566) so VITE_E2E=true
     // is always active and ReactQueryDevtools never renders.
-    baseURL: "http://localhost:5567",
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
+    baseURL: 'http://localhost:5567',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
 
   projects: [
     {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
     },
   ],
 
@@ -44,18 +44,18 @@ export default defineConfig({
     // ReactQueryDevtools SVG logo renders at r=316.5px and intercepts pointer events,
     // so it must be disabled in E2E via VITE_E2E=true.
     {
-      command: "pnpm dev --port 5567",
-      url: "http://localhost:5567",
+      command: 'pnpm dev --port 5567',
+      url: 'http://localhost:5567',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
-      env: { VITE_E2E: "true" },
+      env: { VITE_E2E: 'true' },
     },
     // Finance API — required for integration tests; mocked tests don't use it but starting
     // it is harmless and ensures the proxy target is always available.
     {
-      command: "pnpm dev",
-      url: "http://localhost:3000/health",
-      cwd: "../pops-api",
+      command: 'pnpm dev',
+      url: 'http://localhost:3000/health',
+      cwd: '../pops-api',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
     },

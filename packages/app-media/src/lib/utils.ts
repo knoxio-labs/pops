@@ -1,4 +1,4 @@
-export { cn } from "@pops/ui";
+export { cn } from '@pops/ui';
 
 export function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);

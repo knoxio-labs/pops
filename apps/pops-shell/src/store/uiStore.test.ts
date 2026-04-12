@@ -1,20 +1,20 @@
 /**
  * Tests for UI store — sidebar and rail state
  */
-import { describe, it, expect, beforeEach } from "vitest";
-import { useUIStore } from "./uiStore";
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useUIStore } from './uiStore';
 
-describe("uiStore", () => {
+describe('uiStore', () => {
   beforeEach(() => {
     useUIStore.setState({ sidebarOpen: true, railOpen: true });
   });
 
-  describe("sidebarOpen", () => {
-    it("should default to true", () => {
+  describe('sidebarOpen', () => {
+    it('should default to true', () => {
       expect(useUIStore.getState().sidebarOpen).toBe(true);
     });
 
-    it("should toggle sidebar", () => {
+    it('should toggle sidebar', () => {
       useUIStore.getState().toggleSidebar();
       expect(useUIStore.getState().sidebarOpen).toBe(false);
 
@@ -22,7 +22,7 @@ describe("uiStore", () => {
       expect(useUIStore.getState().sidebarOpen).toBe(true);
     });
 
-    it("should set sidebar open directly", () => {
+    it('should set sidebar open directly', () => {
       useUIStore.getState().setSidebarOpen(false);
       expect(useUIStore.getState().sidebarOpen).toBe(false);
 
@@ -31,12 +31,12 @@ describe("uiStore", () => {
     });
   });
 
-  describe("railOpen", () => {
-    it("should default to true", () => {
+  describe('railOpen', () => {
+    it('should default to true', () => {
       expect(useUIStore.getState().railOpen).toBe(true);
     });
 
-    it("should toggle rail", () => {
+    it('should toggle rail', () => {
       useUIStore.getState().toggleRail();
       expect(useUIStore.getState().railOpen).toBe(false);
 
@@ -44,7 +44,7 @@ describe("uiStore", () => {
       expect(useUIStore.getState().railOpen).toBe(true);
     });
 
-    it("should set rail open directly", () => {
+    it('should set rail open directly', () => {
       useUIStore.getState().setRailOpen(false);
       expect(useUIStore.getState().railOpen).toBe(false);
 
@@ -53,7 +53,7 @@ describe("uiStore", () => {
     });
   });
 
-  it("sidebar and rail states are independent", () => {
+  it('sidebar and rail states are independent', () => {
     useUIStore.getState().setSidebarOpen(false);
     expect(useUIStore.getState().railOpen).toBe(true);
 

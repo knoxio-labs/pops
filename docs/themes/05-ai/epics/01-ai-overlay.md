@@ -8,8 +8,8 @@ Build a contextual AI assistant integrated into the shell. Knows which app the u
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
+| #   | PRD                                            | Summary                                                                                    | Status      |
+| --- | ---------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
 | 054 | [AI Overlay](../prds/054-ai-overlay/README.md) | Shell-integrated assistant, cross-domain queries, contextual suggestions, action execution | Not started |
 
 ## Dependencies

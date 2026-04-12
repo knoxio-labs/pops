@@ -4,16 +4,16 @@
  * Each environment is an isolated SQLite database with its own data.
  * The registry table lives in the prod DB; env DBs live under ./data/envs/.
  */
-import type BetterSqlite3 from "better-sqlite3";
-import { mkdirSync, readdirSync, unlinkSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
-import { getDb, openEnvDatabase } from "../../../db.js";
-import { seedDatabase } from "../../../db/seeder.js";
+import type BetterSqlite3 from 'better-sqlite3';
+import { mkdirSync, readdirSync, unlinkSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { getDb, openEnvDatabase } from '../../../db.js';
+import { seedDatabase } from '../../../db/seeder.js';
 
 export interface EnvRecord {
   name: string;
   db_path: string;
-  seed_type: "none" | "test";
+  seed_type: 'none' | 'test';
   ttl_seconds: number | null;
   created_at: string;
   expires_at: string | null;
@@ -37,22 +37,22 @@ const connections = new Map<string, BetterSqlite3.Database>();
 
 /** Env DB files live next to the prod DB under ./envs/ subdirectory. */
 function envDbPath(name: string): string {
-  const sqlitePath = process.env["SQLITE_PATH"] ?? "./data/pops.db";
-  return join(dirname(sqlitePath), "envs", `${name}.db`);
+  const sqlitePath = process.env['SQLITE_PATH'] ?? './data/pops.db';
+  return join(dirname(sqlitePath), 'envs', `${name}.db`);
 }
 
 /** Validate env name: alphanumeric + hyphens, 1–64 chars, not "prod". */
 export function validateEnvName(name: string): string | null {
-  if (name === "prod") return `"prod" is reserved`;
+  if (name === 'prod') return `"prod" is reserved`;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$/.test(name))
-    return "Name must start and end with alphanumeric characters, hyphens allowed in between";
-  if (name.length < 1 || name.length > 64) return "Name must be 1–64 characters";
+    return 'Name must start and end with alphanumeric characters, hyphens allowed in between';
+  if (name.length < 1 || name.length > 64) return 'Name must be 1–64 characters';
   return null;
 }
 
 /** Get a single env record from the prod DB. Returns null if not found. */
 export function getEnvRecord(name: string): EnvRecord | null {
-  const row = getDb().prepare("SELECT * FROM environments WHERE name = ?").get(name) as
+  const row = getDb().prepare('SELECT * FROM environments WHERE name = ?').get(name) as
     | EnvRecord
     | undefined;
   return row ?? null;
@@ -61,7 +61,7 @@ export function getEnvRecord(name: string): EnvRecord | null {
 /** List all env records. */
 export function listEnvs(): EnvRecord[] {
   return getDb()
-    .prepare("SELECT * FROM environments ORDER BY created_at DESC")
+    .prepare('SELECT * FROM environments ORDER BY created_at DESC')
     .all() as EnvRecord[];
 }
 
@@ -97,7 +97,7 @@ export function closeEnvDb(name: string): void {
  */
 export function createEnv(
   name: string,
-  seedType: "none" | "test",
+  seedType: 'none' | 'test',
   ttlSeconds: number | null
 ): EnvRecord {
   const dbPath = envDbPath(name);
@@ -110,7 +110,7 @@ export function createEnv(
   connections.set(name, db);
 
   // Optionally seed
-  if (seedType === "test") {
+  if (seedType === 'test') {
     seedDatabase(db);
   }
 
@@ -174,7 +174,7 @@ export function deleteEnv(name: string): boolean {
     // File may already be gone — not an error
   }
 
-  getDb().prepare("DELETE FROM environments WHERE name = ?").run(name);
+  getDb().prepare('DELETE FROM environments WHERE name = ?').run(name);
   return true;
 }
 
@@ -194,7 +194,7 @@ export function deleteExpiredEnvs(): string[] {
     } catch {
       // Already gone
     }
-    getDb().prepare("DELETE FROM environments WHERE name = ?").run(record.name);
+    getDb().prepare('DELETE FROM environments WHERE name = ?').run(record.name);
     deleted.push(record.name);
   }
 
@@ -223,14 +223,14 @@ export function startupCleanup(): { expired: string[]; orphaned: string[] } {
   const expired = deleteExpiredEnvs();
 
   // Scan the envs/ directory for .db files with no registry entry
-  const envsDir = join(dirname(process.env["SQLITE_PATH"] ?? "./data/pops.db"), "envs");
+  const envsDir = join(dirname(process.env['SQLITE_PATH'] ?? './data/pops.db'), 'envs');
   const orphaned: string[] = [];
 
   let files: string[];
   try {
-    files = readdirSync(envsDir).filter((f) => f.endsWith(".db"));
+    files = readdirSync(envsDir).filter((f) => f.endsWith('.db'));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { expired, orphaned };
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { expired, orphaned };
     throw err;
   }
 
@@ -240,7 +240,7 @@ export function startupCleanup(): { expired: string[]; orphaned: string[] } {
     if (!registeredPaths.has(filePath)) {
       try {
         unlinkSync(filePath);
-        orphaned.push(basename(file, ".db"));
+        orphaned.push(basename(file, '.db'));
       } catch {
         // Already gone — not an error
       }

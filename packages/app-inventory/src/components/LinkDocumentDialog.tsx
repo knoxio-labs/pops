@@ -3,8 +3,8 @@
  * Opens a dialog with search input, results with thumbnails, document type selector,
  * and link action per result.
  */
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogTrigger,
@@ -16,9 +16,9 @@ import {
   TextInput,
   Select,
   Skeleton,
-} from "@pops/ui";
-import { FileText, Search, Link2 } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { FileText, Search, Link2 } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 /** Shape of a document info result from the paperless search API. */
 interface PaperlessDocResult {
@@ -29,7 +29,7 @@ interface PaperlessDocResult {
   thumbnailUrl: string;
 }
 
-const DOCUMENT_TYPES = ["receipt", "warranty", "manual", "invoice", "other"] as const;
+const DOCUMENT_TYPES = ['receipt', 'warranty', 'manual', 'invoice', 'other'] as const;
 
 interface LinkDocumentDialogProps {
   itemId: string;
@@ -38,8 +38,8 @@ interface LinkDocumentDialogProps {
 
 export function LinkDocumentDialog({ itemId, onLinked }: LinkDocumentDialogProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [docType, setDocType] = useState<(typeof DOCUMENT_TYPES)[number]>("receipt");
+  const [search, setSearch] = useState('');
+  const [docType, setDocType] = useState<(typeof DOCUMENT_TYPES)[number]>('receipt');
   const [linkingId, setLinkingId] = useState<number | null>(null);
 
   const { data, isLoading } = trpc.inventory.paperless.search.useQuery(
@@ -49,16 +49,16 @@ export function LinkDocumentDialog({ itemId, onLinked }: LinkDocumentDialogProps
 
   const linkMutation = trpc.inventory.documents.link.useMutation({
     onSuccess: () => {
-      toast.success("Document linked");
+      toast.success('Document linked');
       onLinked();
       setLinkingId(null);
       setOpen(false);
-      setSearch("");
+      setSearch('');
     },
     onError: (err) => {
       setLinkingId(null);
-      if (err.data?.code === "CONFLICT") {
-        toast.error("This document is already linked to this item");
+      if (err.data?.code === 'CONFLICT') {
+        toast.error('This document is already linked to this item');
       } else {
         toast.error(`Failed to link: ${err.message}`);
       }
@@ -83,7 +83,7 @@ export function LinkDocumentDialog({ itemId, onLinked }: LinkDocumentDialogProps
       onOpenChange={(v) => {
         setOpen(v);
         if (!v) {
-          setSearch("");
+          setSearch('');
           setLinkingId(null);
         }
       }}
@@ -157,8 +157,8 @@ export function LinkDocumentDialog({ itemId, onLinked }: LinkDocumentDialogProps
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{doc.title}</div>
                   <div className="text-xs text-muted-foreground">
-                    {doc.created ? new Date(doc.created).toLocaleDateString() : "No date"}
-                    {doc.originalFileName ? ` · ${doc.originalFileName}` : ""}
+                    {doc.created ? new Date(doc.created).toLocaleDateString() : 'No date'}
+                    {doc.originalFileName ? ` · ${doc.originalFileName}` : ''}
                   </div>
                 </div>
                 <Button

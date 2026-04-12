@@ -1,29 +1,29 @@
 /**
  * Discovery tRPC router — preference profile, quick pick, trending, and recommendations.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { getTmdbClient } from "../tmdb/index.js";
-import { TrendingQuerySchema, RecommendationsQuerySchema } from "./types.js";
-import * as service from "./service.js";
-import * as tmdbService from "./tmdb-service.js";
-import * as contextPicksService from "./context-picks-service.js";
-import * as genreSpotlightService from "./genre-spotlight-service.js";
-import * as plexService from "./plex-service.js";
-import { getDrizzle } from "../../../db.js";
-import { movies } from "@pops/db-types";
-import { assembleSession } from "./shelf/session.service.js";
-import { getRecentImpressions, recordImpressions } from "./shelf/impressions.service.js";
-import { getRegisteredShelves } from "./shelf/registry.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { getTmdbClient } from '../tmdb/index.js';
+import { TrendingQuerySchema, RecommendationsQuerySchema } from './types.js';
+import * as service from './service.js';
+import * as tmdbService from './tmdb-service.js';
+import * as contextPicksService from './context-picks-service.js';
+import * as genreSpotlightService from './genre-spotlight-service.js';
+import * as plexService from './plex-service.js';
+import { getDrizzle } from '../../../db.js';
+import { movies } from '@pops/db-types';
+import { assembleSession } from './shelf/session.service.js';
+import { getRecentImpressions, recordImpressions } from './shelf/impressions.service.js';
+import { getRegisteredShelves } from './shelf/registry.js';
 // Side-effect imports — trigger self-registration of all shelf implementations
-import "./shelf/existing-shelves.js";
-import "./shelf/local-shelves.js";
-import "./shelf/tmdb-shelves.js";
-import "./shelf/credits-shelves.js";
-import "./shelf/because-you-watched.shelf.js";
-import "./shelf/genre-shelves.js";
-import "./shelf/context-shelves.js";
+import './shelf/existing-shelves.js';
+import './shelf/local-shelves.js';
+import './shelf/tmdb-shelves.js';
+import './shelf/credits-shelves.js';
+import './shelf/because-you-watched.shelf.js';
+import './shelf/genre-shelves.js';
+import './shelf/context-shelves.js';
 
 export const discoveryRouter = router({
   /** Dismiss a movie by tmdbId. Idempotent. */
@@ -67,8 +67,8 @@ export const discoveryRouter = router({
     } catch (err) {
       if (err instanceof TRPCError) throw err;
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Unknown error fetching trending",
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err instanceof Error ? err.message : 'Unknown error fetching trending',
       });
     }
   }),
@@ -81,9 +81,9 @@ export const discoveryRouter = router({
     } catch (err) {
       if (err instanceof TRPCError) throw err;
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
+        code: 'INTERNAL_SERVER_ERROR',
         message:
-          err instanceof Error ? err.message : "Unknown error fetching watchlist recommendations",
+          err instanceof Error ? err.message : 'Unknown error fetching watchlist recommendations',
       });
     }
   }),
@@ -95,8 +95,8 @@ export const discoveryRouter = router({
     } catch (err) {
       if (err instanceof TRPCError) throw err;
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Unknown error fetching rewatch suggestions",
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err instanceof Error ? err.message : 'Unknown error fetching rewatch suggestions',
       });
     }
   }),
@@ -122,7 +122,7 @@ export const discoveryRouter = router({
       } catch (err) {
         if (err instanceof TRPCError) throw err;
         // Graceful fallback: return null on Plex API failure (section hidden, not error)
-        console.warn("[Discovery] Plex trending failed:", err instanceof Error ? err.message : err);
+        console.warn('[Discovery] Plex trending failed:', err instanceof Error ? err.message : err);
         return { data: null };
       }
     }),
@@ -150,8 +150,8 @@ export const discoveryRouter = router({
     } catch (err) {
       if (err instanceof TRPCError) throw err;
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Unknown error fetching recommendations",
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err instanceof Error ? err.message : 'Unknown error fetching recommendations',
       });
     }
   }),
@@ -171,8 +171,8 @@ export const discoveryRouter = router({
       } catch (err) {
         if (err instanceof TRPCError) throw err;
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: err instanceof Error ? err.message : "Unknown error fetching context picks",
+          code: 'INTERNAL_SERVER_ERROR',
+          message: err instanceof Error ? err.message : 'Unknown error fetching context picks',
         });
       }
     }),
@@ -189,8 +189,8 @@ export const discoveryRouter = router({
     } catch (err) {
       if (err instanceof TRPCError) throw err;
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Unknown error fetching genre spotlight",
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err instanceof Error ? err.message : 'Unknown error fetching genre spotlight',
       });
     }
   }),
@@ -245,8 +245,8 @@ export const discoveryRouter = router({
     } catch (err) {
       if (err instanceof TRPCError) throw err;
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: err instanceof Error ? err.message : "Unknown error assembling discover session",
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err instanceof Error ? err.message : 'Unknown error assembling discover session',
       });
     }
   }),
@@ -276,9 +276,9 @@ export const discoveryRouter = router({
       } catch (err) {
         if (err instanceof TRPCError) throw err;
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message:
-            err instanceof Error ? err.message : "Unknown error fetching genre spotlight page",
+            err instanceof Error ? err.message : 'Unknown error fetching genre spotlight page',
         });
       }
     }),
@@ -305,13 +305,13 @@ export const discoveryRouter = router({
       const { shelfId, limit, offset } = input;
 
       // Parse definition ID: the part before the first colon (or the full ID).
-      const defId = shelfId.includes(":") ? (shelfId.split(":")[0] ?? shelfId) : shelfId;
+      const defId = shelfId.includes(':') ? (shelfId.split(':')[0] ?? shelfId) : shelfId;
       const definitions = getRegisteredShelves();
       const definition = definitions.find((d) => d.id === defId);
 
       if (!definition) {
         throw new TRPCError({
-          code: "NOT_FOUND",
+          code: 'NOT_FOUND',
           message: `Unknown shelf: ${defId}`,
         });
       }
@@ -322,7 +322,7 @@ export const discoveryRouter = router({
 
       if (!instance) {
         throw new TRPCError({
-          code: "NOT_FOUND",
+          code: 'NOT_FOUND',
           message: `Shelf instance not found: ${shelfId}`,
         });
       }
@@ -337,7 +337,7 @@ export const discoveryRouter = router({
       } catch (err) {
         if (err instanceof TRPCError) throw err;
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: err instanceof Error ? err.message : `Error fetching shelf: ${shelfId}`,
         });
       }

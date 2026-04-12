@@ -45,11 +45,13 @@ A ghost-variant `<Select>` dropdown (`size="sm"`, `containerClassName="w-auto"`)
 Each card is a vertical stack: poster container + title.
 
 **Poster container** — `group relative rounded-lg overflow-hidden`. Contains:
+
 - A `<button>` wrapping an `<img>` with `aspect-[2/3] object-cover`. Clicking picks this movie as winner
 - Winner/loser feedback via `ring-2`: green for winner with `scale-[1.02]`, red with `opacity-75` for loser
 - No visible border in default state
 
 **Top-left overlay** — Watchlist bookmark button:
+
 - `absolute top-2 left-2`, circular, `backdrop-blur-sm`
 - Dark glass style: `bg-black/50 text-white/80`
 - When on watchlist: filled icon, accent background, disabled
@@ -57,10 +59,12 @@ Each card is a vertical stack: poster container + title.
 - Does not dismiss the pair or record a comparison
 
 **Top-right overlay** — Score delta badge:
+
 - Shows ELO point change after a comparison is recorded (`+N` green, `-N` red)
 - `animate-bounce`, `tabular-nums`, visible for 1.5s then clears
 
 **Bottom overlay** — Dismissing actions:
+
 - `absolute bottom-0 inset-x-0`, gradient `bg-gradient-to-t from-black/60 to-transparent`, `backdrop-blur-sm`
 - Hidden by default (`opacity-0`), visible on `group-hover` and `group-focus-within`
 - Contains two circular icon buttons:
@@ -74,6 +78,7 @@ Each card is a vertical stack: poster container + title.
 Vertically stacked circular icon buttons (`rounded-full h-10 w-10 variant="outline"`) with tooltips (`side="right"`):
 
 **Draw tier group:**
+
 - ChevronUp — "Equally great" — `hover:border-green-500 hover:text-green-500`
 - Minus — "Equally average" — `hover:border-muted-foreground`
 - ChevronDown — "Equally poor" — `hover:border-red-500 hover:text-red-500`
@@ -81,6 +86,7 @@ Vertically stacked circular icon buttons (`rounded-full h-10 w-10 variant="outli
 **Separator:** `w-5 border-t border-border my-1`
 
 **Pair actions:**
+
 - SkipForward — "Skip pair" — `hover:border-muted-foreground`. `aria-label="Skip this pair"`
 - Ban — "N/A for {dimension}" — `hover:border-muted-foreground`. `aria-label="Exclude both from {dimension}"`
 
@@ -90,19 +96,19 @@ All center buttons disabled during pending mutation or score delta animation.
 
 All existing — no new endpoints:
 
-| Procedure | Usage |
-|-----------|-------|
-| `media.comparisons.listDimensions` | Populate dimension dropdown |
-| `media.comparisons.getSmartPair` | Fetch two movies for comparison |
-| `media.comparisons.record` | Record winner or draw with tier |
-| `media.comparisons.recordSkip` | Skip pair with cooloff |
-| `media.comparisons.markStale` | Mark one movie as stale |
-| `media.comparisons.excludeFromDimension` | Exclude both from current dimension |
-| `media.comparisons.blacklistMovie` | Mark as not watched, purge comparisons |
-| `media.comparisons.scores` | Fetch scores for delta animation |
-| `media.watchlist.list` | Check watchlist status |
-| `media.watchlist.add` | Add to watchlist |
-| `media.comparisons.listForMedia` | Show comparison count in blacklist dialog |
+| Procedure                                | Usage                                     |
+| ---------------------------------------- | ----------------------------------------- |
+| `media.comparisons.listDimensions`       | Populate dimension dropdown               |
+| `media.comparisons.getSmartPair`         | Fetch two movies for comparison           |
+| `media.comparisons.record`               | Record winner or draw with tier           |
+| `media.comparisons.recordSkip`           | Skip pair with cooloff                    |
+| `media.comparisons.markStale`            | Mark one movie as stale                   |
+| `media.comparisons.excludeFromDimension` | Exclude both from current dimension       |
+| `media.comparisons.blacklistMovie`       | Mark as not watched, purge comparisons    |
+| `media.comparisons.scores`               | Fetch scores for delta animation          |
+| `media.watchlist.list`                   | Check watchlist status                    |
+| `media.watchlist.add`                    | Add to watchlist                          |
+| `media.comparisons.listForMedia`         | Show comparison count in blacklist dialog |
 
 ## Business Rules
 
@@ -115,22 +121,22 @@ All existing — no new endpoints:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Fewer than 2 watched movies | "Not enough watched movies" with CTA to library |
-| All movies watchlisted | "Not enough movies" with CTA to watchlist |
-| No active dimensions | "No dimensions configured yet" message |
-| Touch devices (no hover) | Bottom overlay activates on first tap, action on second tap. `group-focus-within` covers keyboard |
-| Score delta active | All interactive buttons disabled for 1.5s |
-| Poster image fails to load | `ImageOff` icon in muted placeholder, same aspect ratio |
+| Case                        | Behaviour                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| Fewer than 2 watched movies | "Not enough watched movies" with CTA to library                                                   |
+| All movies watchlisted      | "Not enough movies" with CTA to watchlist                                                         |
+| No active dimensions        | "No dimensions configured yet" message                                                            |
+| Touch devices (no hover)    | Bottom overlay activates on first tap, action on second tap. `group-focus-within` covers keyboard |
+| Score delta active          | All interactive buttons disabled for 1.5s                                                         |
+| Poster image fails to load  | `ImageOff` icon in muted placeholder, same aspect ratio                                           |
 
 ## User Stories
 
-| # | Story | Summary | Status |
-|---|-------|---------|--------|
-| 01 | [us-01-zone-layout](us-01-zone-layout.md) | 3-column grid with poster cards, center action column, and bottom overlays | Done |
-| 02 | [us-02-dimension-dropdown](us-02-dimension-dropdown.md) | Ghost-variant Select dropdown for dimension switching | Done |
-| 03 | [us-03-tooltips](us-03-tooltips.md) | Tooltips on all icon-only buttons | Done |
+| #   | Story                                                   | Summary                                                                    | Status |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------------- | ------ |
+| 01  | [us-01-zone-layout](us-01-zone-layout.md)               | 3-column grid with poster cards, center action column, and bottom overlays | Done   |
+| 02  | [us-02-dimension-dropdown](us-02-dimension-dropdown.md) | Ghost-variant Select dropdown for dimension switching                      | Done   |
+| 03  | [us-03-tooltips](us-03-tooltips.md)                     | Tooltips on all icon-only buttons                                          | Done   |
 
 ## Out of Scope
 

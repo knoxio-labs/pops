@@ -12,6 +12,7 @@ Build the entity matching engine that powers the import pipeline. Given a raw tr
 ### Stage 0: Learned Corrections (Highest Priority)
 
 Before the entity matching pipeline, check the corrections table for a learned rule:
+
 - Query `v_active_corrections` (confidence >= 0.7) with fuzzy match on normalized description
 - If match found with confidence >= 0.9 → **matched**
 - If match found with confidence < 0.9 → **uncertain**
@@ -21,34 +22,40 @@ Before the entity matching pipeline, check the corrections table for a learned r
 ### Stage 1: Manual Aliases
 
 Per-entity alias map. Case-insensitive substring search in the description.
+
 - Example: alias "MCDs" → entity "McDonald's". Description "MCDS NORTH SYDNEY" matches.
 - Each entity can have multiple aliases (comma-separated in DB)
 
 ### Stage 2: Exact Match
 
 Full description equals entity name (case-insensitive).
+
 - "WOOLWORTHS" matches entity "Woolworths"
 
 ### Stage 3: Prefix Match
 
 Description starts with entity name (case-insensitive). Longest entity name wins if multiple match.
+
 - "WOOLWORTHS BONDI JCT" matches "Woolworths" via prefix
 - If both "Shell" and "Shell Energy" exist as entities, "SHELL ENERGY MONTHLY" matches "Shell Energy" (longest)
 
 ### Stage 4: Contains Match
 
 Entity name found anywhere in description (case-insensitive). Minimum 4 characters. Longest entity name wins.
+
 - "PAYMENT TO NETFLIX" matches "Netflix" via contains (7 chars, above 4 min)
 - Short entity names (< 4 chars) skipped to prevent false positives
 
 ### Stage 5: Punctuation Stripping
 
 Remove apostrophes from both description and entity names, retry stages 2-4.
+
 - "MCDONALDS NORTH SYDNEY" matches "McDonald's" after stripping apostrophe
 
 ### Stage 6: AI Fallback
 
 If no match from stages 0-5, call Claude Haiku API:
+
 - Send raw CSV row (JSON) — merchant description context only, no PII
 - Claude returns `{ entityName, category }`
 - If returned entity exists in lookup → **matched**
@@ -76,24 +83,24 @@ If no match from stages 0-5, call Claude Haiku API:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Entity name < 4 chars | Skipped in contains match (false positive prevention) |
-| Multiple prefix matches | Longest entity name wins |
-| AI returns entity that doesn't exist in DB | Routes to uncertain — user creates or selects manually |
-| AI unavailable (no key, rate limited, credits exhausted) | Non-fatal warning; transaction goes to uncertain |
-| AI cache corrupted | Recreated from scratch on next import |
-| Named environment (test DB) | AI calls skipped entirely |
+| Case                                                     | Behaviour                                              |
+| -------------------------------------------------------- | ------------------------------------------------------ |
+| Entity name < 4 chars                                    | Skipped in contains match (false positive prevention)  |
+| Multiple prefix matches                                  | Longest entity name wins                               |
+| AI returns entity that doesn't exist in DB               | Routes to uncertain — user creates or selects manually |
+| AI unavailable (no key, rate limited, credits exhausted) | Non-fatal warning; transaction goes to uncertain       |
+| AI cache corrupted                                       | Recreated from scratch on next import                  |
+| Named environment (test DB)                              | AI calls skipped entirely                              |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-entity-lookup](us-01-entity-lookup.md) | Load entity lookup and alias maps from database | Not started | No (first) |
-| 02 | [us-02-correction-match](us-02-correction-match.md) | Stage 0: match against learned corrections (fuzzy, confidence threshold) | Done | Blocked by us-01 |
-| 03 | [us-03-rule-matching](us-03-rule-matching.md) | Stages 1-5: alias, exact, prefix, contains, punctuation stripping | Done | Yes |
-| 04 | [us-04-ai-fallback](us-04-ai-fallback.md) | Stage 6: Claude Haiku API call with caching, rate limiting, cost tracking | Done | Yes |
-| 05 | [us-05-tag-suggestion](us-05-tag-suggestion.md) | Tag suggestion pipeline: correction tags → AI category → entity defaults | Partial | Blocked by us-01 |
+| #   | Story                                               | Summary                                                                   | Status      | Parallelisable   |
+| --- | --------------------------------------------------- | ------------------------------------------------------------------------- | ----------- | ---------------- |
+| 01  | [us-01-entity-lookup](us-01-entity-lookup.md)       | Load entity lookup and alias maps from database                           | Not started | No (first)       |
+| 02  | [us-02-correction-match](us-02-correction-match.md) | Stage 0: match against learned corrections (fuzzy, confidence threshold)  | Done        | Blocked by us-01 |
+| 03  | [us-03-rule-matching](us-03-rule-matching.md)       | Stages 1-5: alias, exact, prefix, contains, punctuation stripping         | Done        | Yes              |
+| 04  | [us-04-ai-fallback](us-04-ai-fallback.md)           | Stage 6: Claude Haiku API call with caching, rate limiting, cost tracking | Done        | Yes              |
+| 05  | [us-05-tag-suggestion](us-05-tag-suggestion.md)     | Tag suggestion pipeline: correction tags → AI category → entity defaults  | Partial     | Blocked by us-01 |
 
 US-02, US-03, US-04 can parallelise after US-01.
 

@@ -1,11 +1,11 @@
 /**
  * Item documents service — link/unlink Paperless-ngx documents to inventory items.
  */
-import { eq, and, count } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { itemDocuments, homeInventory } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { ItemDocumentRow } from "./types.js";
+import { eq, and, count } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { itemDocuments, homeInventory } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
+import type { ItemDocumentRow } from './types.js';
 
 export interface DocumentListResult {
   rows: ItemDocumentRow[];
@@ -31,7 +31,7 @@ export function linkDocument(
     .where(eq(homeInventory.id, itemId))
     .all();
 
-  if (!item) throw new NotFoundError("Inventory item", itemId);
+  if (!item) throw new NotFoundError('Inventory item', itemId);
 
   // Check for existing link
   const [existing] = db
@@ -67,7 +67,7 @@ export function linkDocument(
     )
     .all();
 
-  if (!created) throw new NotFoundError("Item document link", `${itemId}-${paperlessDocumentId}`);
+  if (!created) throw new NotFoundError('Item document link', `${itemId}-${paperlessDocumentId}`);
   return created;
 }
 
@@ -83,7 +83,7 @@ export function unlinkDocument(id: number): void {
     .where(eq(itemDocuments.id, id))
     .all();
 
-  if (!row) throw new NotFoundError("Item document link", String(id));
+  if (!row) throw new NotFoundError('Item document link', String(id));
 
   db.delete(itemDocuments).where(eq(itemDocuments.id, id)).run();
 }

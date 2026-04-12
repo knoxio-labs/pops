@@ -38,29 +38,30 @@ Each app package exports routes and a nav config. The shell imports and mounts t
 
 ```typescript
 // App package exports (e.g., @pops/app-finance/src/index.ts)
-export { routes } from './routes'
-export { navConfig } from './routes'
+export { routes } from './routes';
+export { navConfig } from './routes';
 
 // navConfig shape
 export const navConfig: AppNavConfig = {
   id: 'finance',
   label: 'Finance',
-  icon: 'DollarSign',       // Lucide icon name
-  color: 'emerald',          // App accent colour
+  icon: 'DollarSign', // Lucide icon name
+  color: 'emerald', // App accent colour
   basePath: '/finance',
   items: [
     { path: '', label: 'Dashboard', icon: 'LayoutDashboard' },
     { path: '/transactions', label: 'Transactions', icon: 'CreditCard' },
     // ...
   ],
-}
+};
 ```
 
 The shell lazily loads each app:
+
 ```typescript
 // apps/pops-shell/src/app/router.tsx
-const financeRoutes = lazy(() => import('@pops/app-finance'))
-const mediaRoutes = lazy(() => import('@pops/app-media'))
+const financeRoutes = lazy(() => import('@pops/app-finance'));
+const mediaRoutes = lazy(() => import('@pops/app-media'));
 ```
 
 Adding a new app means: create a workspace package, export routes + navConfig, register in the shell router. No shell code changes beyond the registration.
@@ -103,18 +104,20 @@ TopBar and sidebar remain **fixed on screen** while page content scrolls. The us
 
 Pages fall into two categories:
 
-| Category | Accessed via | Back button | Breadcrumb |
-|----------|-------------|-------------|------------|
-| **Top-level** | Sidebar/PageNav link | No | No |
-| **Drill-down** | Link from another page | Yes | Yes |
+| Category       | Accessed via           | Back button | Breadcrumb |
+| -------------- | ---------------------- | ----------- | ---------- |
+| **Top-level**  | Sidebar/PageNav link   | No          | No         |
+| **Drill-down** | Link from another page | Yes         | Yes        |
 
 **Back button (drill-down pages only):**
+
 - Position: top-left of page header, before breadcrumb and title
 - Icon: `ArrowLeft` from Lucide
 - Behaviour: navigates to the **logical parent** (not `history.back()`), so destination is predictable
 - Style: ghost button, consistent across all apps
 
 **Breadcrumbs (drill-down pages only):**
+
 - Each segment is a clickable link except the current page (plain text)
 - Separator: `›` or `/`, consistent across the app
 - Clickable segments: `text-muted-foreground hover:text-foreground`
@@ -123,12 +126,12 @@ Pages fall into two categories:
 
 **Examples:**
 
-| Page | Breadcrumb |
-|------|-----------|
-| Movie detail | Library › *Movie Title* |
-| Season detail | Library › *Show Title* › *Season N* |
-| Item detail | Items › *Item Name* |
-| Item form (edit) | Items › *Item Name* › *Edit* |
+| Page             | Breadcrumb                          |
+| ---------------- | ----------------------------------- |
+| Movie detail     | Library › _Movie Title_             |
+| Season detail    | Library › _Show Title_ › _Season N_ |
+| Item detail      | Items › _Item Name_                 |
+| Item form (edit) | Items › _Item Name_ › _Edit_        |
 
 **Never place back navigation at the bottom of the page.**
 
@@ -149,6 +152,7 @@ Top-level pages show neither back button nor breadcrumbs — sidebar is the navi
 ### tRPC Access for App Packages
 
 The shell provides tRPC context via React providers. App packages access tRPC hooks through the provider. Options for the import path:
+
 - Shell re-exports `trpc` from a known path, apps use peer dependency
 - Separate `@pops/trpc` or `@pops/api-client` package holds the client config
 
@@ -172,29 +176,30 @@ The key rule: app packages depend on `@pops/ui` and shared packages, never on ot
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Non-existent route | NotFoundPage within shell layout — nav visible, user can navigate away |
-| Lazy-load failure (network error) | errorElement catches it, shows error page within shell layout |
-| App has no colour declared | Falls back to `--primary` |
-| Very long nav list (10+ items) | Sidebar gets `overflow-y-auto` — scrolls independently |
-| Deep breadcrumb on mobile | Middle segments collapse to `…`, first and last always visible |
+| Case                              | Behaviour                                                              |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| Non-existent route                | NotFoundPage within shell layout — nav visible, user can navigate away |
+| Lazy-load failure (network error) | errorElement catches it, shows error page within shell layout          |
+| App has no colour declared        | Falls back to `--primary`                                              |
+| Very long nav list (10+ items)    | Sidebar gets `overflow-y-auto` — scrolls independently                 |
+| Deep breadcrumb on mobile         | Middle segments collapse to `…`, first and last always visible         |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-shell-scaffold](us-01-shell-scaffold.md) | Create pops-shell with entry point, Vite config, provider stack | Done | No (first) |
-| 02 | [us-02-layout](us-02-layout.md) | Build RootLayout, TopBar with fixed positioning, content area with independent scroll | Done | Blocked by us-01 |
-| 03 | [us-03-routing](us-03-routing.md) | Build router with lazy-loaded app registration, namespaced routes, error handling, NotFoundPage | Done | Blocked by us-01 |
-| 04 | [us-04-breadcrumbs](us-04-breadcrumbs.md) | Build page-level navigation pattern: back button + breadcrumbs for drill-down pages, mobile truncation | Partial | Blocked by us-02 |
-| 05 | [us-05-trpc-access](us-05-trpc-access.md) | Set up tRPC client in shell and establish the import pattern for app packages | Done | Blocked by us-01 |
+| #   | Story                                           | Summary                                                                                                | Status  | Parallelisable   |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------- | ---------------- |
+| 01  | [us-01-shell-scaffold](us-01-shell-scaffold.md) | Create pops-shell with entry point, Vite config, provider stack                                        | Done    | No (first)       |
+| 02  | [us-02-layout](us-02-layout.md)                 | Build RootLayout, TopBar with fixed positioning, content area with independent scroll                  | Done    | Blocked by us-01 |
+| 03  | [us-03-routing](us-03-routing.md)               | Build router with lazy-loaded app registration, namespaced routes, error handling, NotFoundPage        | Done    | Blocked by us-01 |
+| 04  | [us-04-breadcrumbs](us-04-breadcrumbs.md)       | Build page-level navigation pattern: back button + breadcrumbs for drill-down pages, mobile truncation | Partial | Blocked by us-02 |
+| 05  | [us-05-trpc-access](us-05-trpc-access.md)       | Set up tRPC client in shell and establish the import pattern for app packages                          | Done    | Blocked by us-01 |
 
 US-02 and US-03 can parallelise after US-01. US-04 depends on layout. US-05 can parallelise with US-02/US-03.
 
 ## Verification
 
 Every US is only done when:
+
 - `pnpm dev` starts the shell and serves app pages
 - `pnpm build` produces one output with code splitting visible
 - `pnpm typecheck`, `pnpm lint`, `pnpm test` pass

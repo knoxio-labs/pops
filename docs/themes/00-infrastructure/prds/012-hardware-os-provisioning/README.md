@@ -35,19 +35,19 @@ All Ansible commands run from the `infra/ansible/` directory due to relative `ro
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Fresh machine | Full `site.yml` playbook: OS hardening + Docker + services |
-| Existing machine, deploy only | `deploy.yml` playbook: skip OS hardening, update services |
-| Lost SSH key | Physical access to machine required — document recovery procedure |
+| Case                          | Behaviour                                                         |
+| ----------------------------- | ----------------------------------------------------------------- |
+| Fresh machine                 | Full `site.yml` playbook: OS hardening + Docker + services        |
+| Existing machine, deploy only | `deploy.yml` playbook: skip OS hardening, update services         |
+| Lost SSH key                  | Physical access to machine required — document recovery procedure |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-os-hardening](us-01-os-hardening.md) | Ansible role for OS hardening: SSH config, firewall, disable root, updates | Done | No (first) |
-| 02 | [us-02-docker-install](us-02-docker-install.md) | Ansible role for Docker + Docker Compose installation | Done | Blocked by us-01 |
-| 03 | [us-03-ansible-structure](us-03-ansible-structure.md) | Set up Ansible directory structure, inventory, vault, playbooks | Done | Yes (parallel with us-01) |
+| #   | Story                                                 | Summary                                                                    | Status | Parallelisable            |
+| --- | ----------------------------------------------------- | -------------------------------------------------------------------------- | ------ | ------------------------- |
+| 01  | [us-01-os-hardening](us-01-os-hardening.md)           | Ansible role for OS hardening: SSH config, firewall, disable root, updates | Done   | No (first)                |
+| 02  | [us-02-docker-install](us-02-docker-install.md)       | Ansible role for Docker + Docker Compose installation                      | Done   | Blocked by us-01          |
+| 03  | [us-03-ansible-structure](us-03-ansible-structure.md) | Set up Ansible directory structure, inventory, vault, playbooks            | Done   | Yes (parallel with us-01) |
 
 ## Verification
 

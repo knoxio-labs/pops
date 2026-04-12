@@ -11,25 +11,25 @@ Build the AI usage tracking page in `@pops/app-ai`. Displays token counts, costs
 
 Uses the existing `ai_usage` table (created in PRD-009):
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER | PK, auto-increment |
-| description | TEXT | Transaction description sent to API |
-| entity_name | TEXT | AI result |
-| category | TEXT | Category suggestion |
-| input_tokens | INTEGER | Prompt token count |
-| output_tokens | INTEGER | Response token count |
-| cost_usd | REAL | Computed cost |
-| cached | INTEGER | 0 = API call, 1 = cache hit |
-| import_batch_id | TEXT | Groups requests by import session |
-| created_at | TEXT | ISO 8601 |
+| Column          | Type    | Description                         |
+| --------------- | ------- | ----------------------------------- |
+| id              | INTEGER | PK, auto-increment                  |
+| description     | TEXT    | Transaction description sent to API |
+| entity_name     | TEXT    | AI result                           |
+| category        | TEXT    | Category suggestion                 |
+| input_tokens    | INTEGER | Prompt token count                  |
+| output_tokens   | INTEGER | Response token count                |
+| cost_usd        | REAL    | Computed cost                       |
+| cached          | INTEGER | 0 = API call, 1 = cache hit         |
+| import_batch_id | TEXT    | Groups requests by import session   |
+| created_at      | TEXT    | ISO 8601                            |
 
 ## API Surface
 
-| Procedure | Input | Output |
-|-----------|-------|--------|
-| `core.aiUsage.getStats` | (none) | totalCost, totalApiCalls, totalCacheHits, cacheHitRate, avgCostPerCall, totalInputTokens, totalOutputTokens, last30Days summary |
-| `core.aiUsage.getHistory` | startDate?, endDate? | Daily aggregation: date, apiCalls, cacheHits, inputTokens, outputTokens, cost. Plus summary totals |
+| Procedure                 | Input                | Output                                                                                                                          |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `core.aiUsage.getStats`   | (none)               | totalCost, totalApiCalls, totalCacheHits, cacheHitRate, avgCostPerCall, totalInputTokens, totalOutputTokens, last30Days summary |
+| `core.aiUsage.getHistory` | startDate?, endDate? | Daily aggregation: date, apiCalls, cacheHits, inputTokens, outputTokens, cost. Plus summary totals                              |
 
 ## UI: AI Usage Page
 
@@ -41,11 +41,11 @@ Uses the existing `ai_usage` table (created in PRD-009):
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-stats-api](us-01-stats-api.md) | getStats and getHistory procedures with aggregation | Done | No (first) |
-| 02 | [us-02-usage-page](us-02-usage-page.md) | Stats cards, daily chart, date range filter | Done | Blocked by us-01 |
-| 03 | [us-03-app-scaffold](us-03-app-scaffold.md) | `@pops/app-ai` workspace package, shell registration, route at /ai | Done | Yes (parallel with us-01) |
+| #   | Story                                       | Summary                                                            | Status | Parallelisable            |
+| --- | ------------------------------------------- | ------------------------------------------------------------------ | ------ | ------------------------- |
+| 01  | [us-01-stats-api](us-01-stats-api.md)       | getStats and getHistory procedures with aggregation                | Done   | No (first)                |
+| 02  | [us-02-usage-page](us-02-usage-page.md)     | Stats cards, daily chart, date range filter                        | Done   | Blocked by us-01          |
+| 03  | [us-03-app-scaffold](us-03-app-scaffold.md) | `@pops/app-ai` workspace package, shell registration, route at /ai | Done   | Yes (parallel with us-01) |
 
 ## Out of Scope
 

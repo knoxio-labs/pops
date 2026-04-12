@@ -48,8 +48,4 @@ gh_account = "knoxio"
 
 [environment]
 languages = ["node"]
-utilities = [
-    "glow",
-    "playwright",
-    "mise",
-]
+utilities = ["glow", "playwright", "mise"]

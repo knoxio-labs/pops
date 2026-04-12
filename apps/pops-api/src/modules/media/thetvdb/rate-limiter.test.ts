@@ -1,19 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { TokenBucketRateLimiter } from "../../../shared/rate-limiter.js";
-import { getTvdbRateLimiter, setTvdbRateLimiter, fetchWithRetry } from "./rate-limiter.js";
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { TokenBucketRateLimiter } from '../../../shared/rate-limiter.js';
+import { getTvdbRateLimiter, setTvdbRateLimiter, fetchWithRetry } from './rate-limiter.js';
 
-describe("getTvdbRateLimiter", () => {
+describe('getTvdbRateLimiter', () => {
   afterEach(() => {
     setTvdbRateLimiter(null);
   });
 
-  it("creates a singleton rate limiter", () => {
+  it('creates a singleton rate limiter', () => {
     const limiter = getTvdbRateLimiter();
     expect(limiter).toBeInstanceOf(TokenBucketRateLimiter);
     expect(getTvdbRateLimiter()).toBe(limiter);
   });
 
-  it("setTvdbRateLimiter replaces the singleton", () => {
+  it('setTvdbRateLimiter replaces the singleton', () => {
     const original = getTvdbRateLimiter();
     const custom = new TokenBucketRateLimiter(10, 1);
     setTvdbRateLimiter(custom);
@@ -24,7 +24,7 @@ describe("getTvdbRateLimiter", () => {
   });
 });
 
-describe("fetchWithRetry", () => {
+describe('fetchWithRetry', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     // Use a generous limiter so token acquisition doesn't interfere
@@ -38,8 +38,8 @@ describe("fetchWithRetry", () => {
     vi.useRealTimers();
   });
 
-  it("returns response on success without retry", async () => {
-    const response = new Response("ok", { status: 200 });
+  it('returns response on success without retry', async () => {
+    const response = new Response('ok', { status: 200 });
     const fn = vi.fn().mockResolvedValue(response);
 
     const result = await fetchWithRetry(fn);
@@ -47,8 +47,8 @@ describe("fetchWithRetry", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("returns non-429 error responses without retry", async () => {
-    const response = new Response("not found", { status: 404 });
+  it('returns non-429 error responses without retry', async () => {
+    const response = new Response('not found', { status: 404 });
     const fn = vi.fn().mockResolvedValue(response);
 
     const result = await fetchWithRetry(fn);
@@ -56,11 +56,11 @@ describe("fetchWithRetry", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("retries on 429 with exponential backoff", async () => {
+  it('retries on 429 with exponential backoff', async () => {
     const fn = vi
       .fn()
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
 
     const promise = fetchWithRetry(fn);
 
@@ -76,13 +76,13 @@ describe("fetchWithRetry", () => {
     expect(result.status).toBe(200);
   });
 
-  it("retries up to 3 times on 429", async () => {
+  it('retries up to 3 times on 429', async () => {
     const fn = vi
       .fn()
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
 
     const promise = fetchWithRetry(fn);
 
@@ -106,8 +106,8 @@ describe("fetchWithRetry", () => {
     expect(result.status).toBe(200);
   });
 
-  it("returns 429 response after max retries exhausted", async () => {
-    const fn = vi.fn().mockResolvedValue(new Response("", { status: 429 }));
+  it('returns 429 response after max retries exhausted', async () => {
+    const fn = vi.fn().mockResolvedValue(new Response('', { status: 429 }));
 
     const promise = fetchWithRetry(fn);
 
@@ -122,13 +122,13 @@ describe("fetchWithRetry", () => {
     expect(fn).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
   });
 
-  it("uses exponential backoff delays (1s, 2s, 4s)", async () => {
+  it('uses exponential backoff delays (1s, 2s, 4s)', async () => {
     const fn = vi
       .fn()
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
 
     const promise = fetchWithRetry(fn);
 
@@ -159,22 +159,22 @@ describe("fetchWithRetry", () => {
     expect(result.status).toBe(200);
   });
 
-  it("propagates fetch errors without retry", async () => {
-    const fn = vi.fn().mockRejectedValue(new Error("network error"));
+  it('propagates fetch errors without retry', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('network error'));
 
-    await expect(fetchWithRetry(fn)).rejects.toThrow("network error");
+    await expect(fetchWithRetry(fn)).rejects.toThrow('network error');
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("acquires rate limiter token before each attempt", async () => {
+  it('acquires rate limiter token before each attempt', async () => {
     const mockLimiter = new TokenBucketRateLimiter(100, 100);
-    const acquireSpy = vi.spyOn(mockLimiter, "acquire");
+    const acquireSpy = vi.spyOn(mockLimiter, 'acquire');
     setTvdbRateLimiter(mockLimiter);
 
     const fn = vi
       .fn()
-      .mockResolvedValueOnce(new Response("", { status: 429 }))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
 
     const promise = fetchWithRetry(fn);
     await vi.advanceTimersByTimeAsync(0);

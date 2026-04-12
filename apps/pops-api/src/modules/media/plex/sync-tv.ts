@@ -5,13 +5,13 @@
  * (via Plex Guid), adds to the local library, fetches episodes from Plex,
  * and logs watch history for watched episodes.
  */
-import type { PlexClient } from "./client.js";
-import type { PlexMediaItem } from "./types.js";
-import type { TheTvdbClient } from "../thetvdb/client.js";
-import { getTvdbClient } from "../thetvdb/index.js";
-import { getDb } from "../../../db.js";
-import * as tvShowService from "../library/tv-show-service.js";
-import { extractExternalIdAsNumber, syncEpisodeWatches } from "./sync-helpers.js";
+import type { PlexClient } from './client.js';
+import type { PlexMediaItem } from './types.js';
+import type { TheTvdbClient } from '../thetvdb/client.js';
+import { getTvdbClient } from '../thetvdb/index.js';
+import { getDb } from '../../../db.js';
+import * as tvShowService from '../library/tv-show-service.js';
+import { extractExternalIdAsNumber, syncEpisodeWatches } from './sync-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -105,15 +105,15 @@ async function syncSingleShow(
   progress: TvSyncProgress
 ): Promise<void> {
   // Step 1: Resolve TVDB ID
-  const tvdbId = extractExternalIdAsNumber(item, "tvdb");
+  const tvdbId = extractExternalIdAsNumber(item, 'tvdb');
 
   if (!tvdbId) {
-    const hasTvdbGuid = item.externalIds.some((id) => id.source === "tvdb");
+    const hasTvdbGuid = item.externalIds.some((id) => id.source === 'tvdb');
     progress.skipped++;
     progress.skipReasons.push({
       title: item.title,
       year: item.year,
-      reason: hasTvdbGuid ? "TVDB ID is not a valid number" : "No TVDB ID in Plex metadata",
+      reason: hasTvdbGuid ? 'TVDB ID is not a valid number' : 'No TVDB ID in Plex metadata',
     });
     return;
   }

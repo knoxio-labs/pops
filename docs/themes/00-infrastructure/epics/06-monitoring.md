@@ -8,9 +8,9 @@ Set up health checks, log aggregation, and alerting so service failures are dete
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
-| 018 | [Monitoring](../prds/018-monitoring/README.md) | Docker health checks on API and shell, log access, alerting on service failure | Done |
+| #   | PRD                                            | Summary                                                                        | Status |
+| --- | ---------------------------------------------- | ------------------------------------------------------------------------------ | ------ |
+| 018 | [Monitoring](../prds/018-monitoring/README.md) | Docker health checks on API and shell, log access, alerting on service failure | Done   |
 
 ## Dependencies
 

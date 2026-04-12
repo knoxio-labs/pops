@@ -5,15 +5,15 @@
  *
  * Run with: tsx scripts/sync-images.ts
  */
-import "dotenv/config";
-import { getDb } from "../src/db.js";
-import { ImageCacheService } from "../src/modules/media/tmdb/index.js";
-import { TokenBucketRateLimiter } from "../src/modules/media/tmdb/rate-limiter.js";
-import { join } from "node:path";
+import 'dotenv/config';
+import { getDb } from '../src/db.js';
+import { ImageCacheService } from '../src/modules/media/tmdb/index.js';
+import { TokenBucketRateLimiter } from '../src/modules/media/tmdb/rate-limiter.js';
+import { join } from 'node:path';
 
 async function main() {
   const db = getDb();
-  const imagesDir = process.env.MEDIA_IMAGES_DIR ?? "./data/media/images";
+  const imagesDir = process.env.MEDIA_IMAGES_DIR ?? './data/media/images';
   const rateLimiter = new TokenBucketRateLimiter(40, 4);
   const cacheService = new ImageCacheService(imagesDir, rateLimiter);
 
@@ -22,7 +22,7 @@ async function main() {
 
   // 1. Sync Movies
   const movies = db
-    .prepare("SELECT tmdb_id, title, poster_path, backdrop_path FROM movies")
+    .prepare('SELECT tmdb_id, title, poster_path, backdrop_path FROM movies')
     .all() as any[];
   console.log(`\n🎬 Syncing ${movies.length} movies...`);
 
@@ -35,16 +35,16 @@ async function main() {
         movie.backdrop_path,
         null // logo_path
       );
-      console.log("✅");
+      console.log('✅');
     } catch (err) {
-      console.log("❌");
+      console.log('❌');
       console.error(`    Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   // 2. Sync TV Shows
   const shows = db
-    .prepare("SELECT tvdb_id, name, poster_path, backdrop_path FROM tv_shows")
+    .prepare('SELECT tvdb_id, name, poster_path, backdrop_path FROM tv_shows')
     .all() as any[];
   console.log(`\n📺 Syncing ${shows.length} TV shows...`);
 
@@ -52,18 +52,18 @@ async function main() {
     process.stdout.write(`  → ${show.name}... `);
     try {
       await cacheService.downloadTvShowImages(show.tvdb_id, show.poster_path, show.backdrop_path);
-      console.log("✅");
+      console.log('✅');
     } catch (err) {
-      console.log("❌");
+      console.log('❌');
       console.error(`    Error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  console.log("\n✨ Image sync complete!\n");
+  console.log('\n✨ Image sync complete!\n');
   db.close();
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  console.error('Fatal error:', err);
   process.exit(1);
 });

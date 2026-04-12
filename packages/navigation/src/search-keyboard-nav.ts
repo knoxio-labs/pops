@@ -4,7 +4,7 @@
  * Handles ArrowUp/Down to move selection, Enter to select,
  * Escape to close, and auto-scrolls selected items into view.
  */
-import { useState, useCallback, useEffect, type RefObject } from "react";
+import { useState, useCallback, useEffect, type RefObject } from 'react';
 
 interface UseSearchKeyboardNavOptions {
   /** Total number of navigable results across all sections. */
@@ -24,7 +24,7 @@ export function useSearchKeyboardNav({
   onSelect,
   onClose,
   containerRef,
-  itemAttribute = "data-result-index",
+  itemAttribute = 'data-result-index',
 }: UseSearchKeyboardNavOptions) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
@@ -37,13 +37,13 @@ export function useSearchKeyboardNav({
   useEffect(() => {
     if (selectedIndex < 0 || !containerRef.current) return;
     const item = containerRef.current.querySelector(`[${itemAttribute}="${selectedIndex}"]`);
-    item?.scrollIntoView({ block: "nearest" });
+    item?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex, containerRef, itemAttribute]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (resultCount === 0) {
-        if (event.key === "Escape") {
+        if (event.key === 'Escape') {
           event.preventDefault();
           onClose();
         }
@@ -51,24 +51,24 @@ export function useSearchKeyboardNav({
       }
 
       switch (event.key) {
-        case "ArrowDown": {
+        case 'ArrowDown': {
           event.preventDefault();
           setSelectedIndex((prev) => (prev < resultCount - 1 ? prev + 1 : 0));
           break;
         }
-        case "ArrowUp": {
+        case 'ArrowUp': {
           event.preventDefault();
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : resultCount - 1));
           break;
         }
-        case "Enter": {
+        case 'Enter': {
           event.preventDefault();
           if (selectedIndex >= 0) {
             onSelect(selectedIndex);
           }
           break;
         }
-        case "Escape": {
+        case 'Escape': {
           event.preventDefault();
           onClose();
           break;
@@ -83,8 +83,8 @@ export function useSearchKeyboardNav({
     const container = containerRef.current;
     if (!container) return;
 
-    container.addEventListener("keydown", handleKeyDown);
-    return () => container.removeEventListener("keydown", handleKeyDown);
+    container.addEventListener('keydown', handleKeyDown);
+    return () => container.removeEventListener('keydown', handleKeyDown);
   }, [containerRef, handleKeyDown]);
 
   return { selectedIndex, setSelectedIndex } as const;

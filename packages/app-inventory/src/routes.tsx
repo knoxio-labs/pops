@@ -4,30 +4,30 @@
  * Routes are lazy-loaded for code splitting. The shell imports
  * these via @pops/app-inventory and mounts them under /inventory/*.
  */
-import { lazy } from "react";
-import type { RouteObject } from "react-router";
+import { lazy } from 'react';
+import type { RouteObject } from 'react-router';
 
-const ItemsPage = lazy(() => import("./pages/ItemsPage").then((m) => ({ default: m.ItemsPage })));
+const ItemsPage = lazy(() => import('./pages/ItemsPage').then((m) => ({ default: m.ItemsPage })));
 const ItemDetailPage = lazy(() =>
-  import("./pages/ItemDetailPage").then((m) => ({
+  import('./pages/ItemDetailPage').then((m) => ({
     default: m.ItemDetailPage,
   }))
 );
 const ItemFormPage = lazy(() =>
-  import("./pages/ItemFormPage").then((m) => ({ default: m.ItemFormPage }))
+  import('./pages/ItemFormPage').then((m) => ({ default: m.ItemFormPage }))
 );
 const WarrantiesPage = lazy(() =>
-  import("./pages/WarrantiesPage").then((m) => ({
+  import('./pages/WarrantiesPage').then((m) => ({
     default: m.WarrantiesPage,
   }))
 );
 const InsuranceReportPage = lazy(() =>
-  import("./pages/InsuranceReportPage").then((m) => ({
+  import('./pages/InsuranceReportPage').then((m) => ({
     default: m.InsuranceReportPage,
   }))
 );
 const LocationTreePage = lazy(() =>
-  import("./pages/LocationTreePage").then((m) => ({
+  import('./pages/LocationTreePage').then((m) => ({
     default: m.LocationTreePage,
   }))
 );
@@ -37,31 +37,31 @@ interface AppNavConfigShape {
   id: string;
   label: string;
   icon: string;
-  color?: "emerald" | "indigo" | "amber" | "rose" | "sky" | "violet";
+  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
   basePath: string;
   items: { path: string; label: string; icon: string }[];
 }
 
 export const navConfig = {
-  id: "inventory",
-  label: "Inventory",
-  icon: "Package",
-  color: "amber",
-  basePath: "/inventory",
+  id: 'inventory',
+  label: 'Inventory',
+  icon: 'Package',
+  color: 'amber',
+  basePath: '/inventory',
   items: [
-    { path: "", label: "Items", icon: "Package" },
-    { path: "/warranties", label: "Warranties", icon: "ShieldCheck" },
-    { path: "/locations", label: "Locations", icon: "MapPin" },
-    { path: "/report", label: "Insurance Report", icon: "FileText" },
+    { path: '', label: 'Items', icon: 'Package' },
+    { path: '/warranties', label: 'Warranties', icon: 'ShieldCheck' },
+    { path: '/locations', label: 'Locations', icon: 'MapPin' },
+    { path: '/report', label: 'Insurance Report', icon: 'FileText' },
   ],
 } satisfies AppNavConfigShape;
 
 export const routes: RouteObject[] = [
   { index: true, element: <ItemsPage /> },
-  { path: "items/new", element: <ItemFormPage /> },
-  { path: "items/:id", element: <ItemDetailPage /> },
-  { path: "items/:id/edit", element: <ItemFormPage /> },
-  { path: "warranties", element: <WarrantiesPage /> },
-  { path: "locations", element: <LocationTreePage /> },
-  { path: "report", element: <InsuranceReportPage /> },
+  { path: 'items/new', element: <ItemFormPage /> },
+  { path: 'items/:id', element: <ItemDetailPage /> },
+  { path: 'items/:id/edit', element: <ItemFormPage /> },
+  { path: 'warranties', element: <WarrantiesPage /> },
+  { path: 'locations', element: <LocationTreePage /> },
+  { path: 'report', element: <InsuranceReportPage /> },
 ];

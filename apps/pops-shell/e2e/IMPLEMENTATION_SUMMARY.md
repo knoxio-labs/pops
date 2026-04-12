@@ -10,6 +10,7 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 ## Files Created/Modified
 
 ### New Files
+
 1. **`e2e/fixtures/import-test-data.ts`** (543 lines)
    - Mock data factory for different test scenarios
    - Scenarios: simple, realistic, bulk, errors, duplicates, warnings
@@ -21,6 +22,7 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
    - Invalid CSV formats for error testing
 
 ### Modified Files
+
 1. **`e2e/import-wizard.spec.ts`** (1,285 lines, up from ~473 lines)
    - Enhanced mock API setup with configurable scenarios
    - 12 test suites with 46 individual test cases
@@ -31,6 +33,7 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 ### Test Suites Implemented (12 suites, 46 tests)
 
 #### 1. **Import Wizard - Complete Flow** (8 tests)
+
 - ✅ Full import flow successfully
 - ✅ Validate required fields in upload step
 - ✅ Handle file upload errors
@@ -41,17 +44,20 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 - ✅ Create new entity from review step (moved from plan)
 
 #### 2. **Import Wizard - Transaction Editing** (4 tests)
+
 - ✅ Edit transaction with Save Once
 - ✅ Edit transaction with Save & Learn
 - ✅ Prompt to learn correction after Save Once
 - ✅ Switch transaction type and update UI
 
 #### 3. **Import Wizard - AI Suggestions** (3 tests)
+
 - ✅ Accept AI suggestion for existing entity
 - ✅ Accept AI suggestion and create new entity
 - ✅ Apply accepted entity to similar transactions
 
 #### 4. **Import Wizard - Bulk Operations** (5 tests)
+
 - ✅ Toggle between List and Grouped view
 - ✅ Accept all transactions in group
 - ✅ Create entity for entire group
@@ -59,32 +65,38 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 - ✅ Expand/collapse transaction group
 
 #### 5. **Import Wizard - Progress Polling** (3 tests)
+
 - ✅ Poll for process progress with real-time updates
 - ✅ Poll for execute progress with write overlay
 - ✅ Handle process failure with error display
 
 #### 6. **Import Wizard - Entity Creation During Review** (3 tests)
+
 - ✅ Create entity from uncertain transaction
 - ✅ Create entity from failed transaction
 - ✅ Show validation error for empty entity name
 
 #### 7. **Import Wizard - Warnings and Errors** (4 tests)
+
 - ✅ Display deduplication warning (non-blocking)
 - ✅ Display AI categorization warning
 - ✅ Block on critical database error
 - ✅ Handle write failures in execute phase
 
 #### 8. **Import Wizard - Review Tab Navigation** (3 tests)
+
 - ✅ Show unresolved count in tab labels
 - ✅ Disable Import button when unresolved exist
 - ✅ Navigate between all 4 tabs
 
 #### 9. **Import Wizard - Complete Import Flows** (3 tests)
+
 - ✅ Complete realistic import with mixed results
 - ✅ Handle duplicate detection workflow
 - ✅ Handle large batch (100+ transactions)
 
 #### 10. **Import Wizard - Accessibility** (5 tests)
+
 - ✅ Be keyboard navigable
 - ✅ Have proper ARIA labels
 - ✅ Show validation errors with proper aria-invalid
@@ -92,11 +104,13 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 - ✅ Support keyboard navigation in review step (NEW)
 
 #### 11. **Import Wizard - Responsive Design** (3 tests)
+
 - ✅ Work on mobile viewport
 - ✅ Work on tablet viewport
 - ✅ Show mobile-optimized review layout (NEW)
 
 #### 12. **Import Wizard - Error Recovery** (3 tests)
+
 - ✅ Retry failed entity creation
 - ✅ Handle network timeout during import
 - ✅ Preserve state when navigating back
@@ -104,6 +118,7 @@ Implemented comprehensive Playwright E2E tests for the Import Wizard following t
 ## Key Features Implemented
 
 ### Enhanced Mock API Setup
+
 ```typescript
 interface SetupMockAPIsOptions {
   scenario?: MockScenario; // simple, realistic, bulk, errors, duplicates
@@ -115,12 +130,14 @@ interface SetupMockAPIsOptions {
 ```
 
 ### Reusable Helper Functions
+
 - `uploadCSVFile()` - Upload CSV with configurable content
 - `navigateToReviewStep()` - Fast-forward to Review step
 - `resolveUncertainTransaction()` - Resolve by selecting entity
 - `verifyTransactionInTab()` - Assert transaction location
 
 ### Mock Data Scenarios
+
 1. **Simple** - 1 matched, 1 uncertain (original)
 2. **Realistic** - 3 matched, 6 uncertain, 2 failed, 1 skipped
 3. **Bulk** - 1 matched, 6 similar uncertain (for bulk operations)
@@ -128,6 +145,7 @@ interface SetupMockAPIsOptions {
 5. **Duplicates** - 2 new, 3 duplicates
 
 ### CSV Test Data
+
 - Simple CSV (2 transactions)
 - Realistic CSV (12 transactions)
 - Bulk CSV (7 similar transactions)
@@ -138,17 +156,20 @@ interface SetupMockAPIsOptions {
 ## Test Quality Features
 
 ### Type Safety
+
 - Full TypeScript types for mock data
 - No `any` types used
 - Type inference from Playwright's `Page` type
 
 ### Maintainability
+
 - Well-organized test suites by feature area
 - Descriptive test names explaining user actions
 - Extracted helper functions reduce duplication
 - Comprehensive JSDoc comments
 
 ### Coverage
+
 - ✅ All 5 wizard steps tested
 - ✅ All 4 review tabs tested
 - ✅ Transaction editing (Save Once vs Save & Learn)
@@ -183,7 +204,9 @@ npx playwright test import-wizard --debug
 ## Known Limitations
 
 ### Tests Require UI Implementation
+
 Many tests are written against expected UI elements that may not exist yet:
+
 - Transaction cards with `data-testid="transaction-card"`
 - Transaction groups with `data-testid="transaction-group"`
 - Import progress overlay with `data-testid="import-progress-overlay"`
@@ -194,17 +217,22 @@ Many tests are written against expected UI elements that may not exist yet:
 **Action Required:** These tests will guide the UI implementation. As features are built, tests will start passing.
 
 ### Progressive Polling Tests
+
 Tests for progressive polling (`progressStages: 'progressive'`) are partially implemented. The mock returns staged responses, but actual UI updates depend on the frontend polling implementation.
 
 ### Grouped View Tests
+
 Tests assume a "Grouped" view mode exists with:
+
 - List/Grouped toggle buttons
 - TransactionGroup components
 - Bulk action buttons (Accept All, Create New for All, Choose Existing)
 - Expand/collapse functionality
 
 ### Learning System Tests
+
 Tests for "Save & Learn" assume:
+
 - `saveCorrection` API endpoint exists
 - Secondary toast prompts appear after "Save Once"
 - Pattern learning is implemented in the backend
@@ -222,7 +250,9 @@ Tests for "Save & Learn" assume:
 ## Next Steps
 
 ### 1. Implement Missing UI Features
+
 The tests are written for features that may not exist yet. Use the tests as a specification:
+
 - Transaction editing UI (inline editing)
 - Grouped view mode
 - Bulk operations buttons
@@ -231,20 +261,26 @@ The tests are written for features that may not exist yet. Use the tests as a sp
 - Toast notifications for corrections
 
 ### 2. Adjust Tests to Match Reality
+
 As you implement features, you may need to adjust:
+
 - Element selectors (data-testid values)
 - Button labels and text content
 - API endpoint names and response shapes
 - Timing expectations (timeouts)
 
 ### 3. Add Backend Support
+
 Some tests require backend endpoints:
+
 - `imports.saveCorrection` - Save learned patterns
 - `imports.getImportProgress` - Progressive polling
 - Enhanced error responses with warning codes
 
 ### 4. Run Tests Against Real UI
+
 Once the UI is implemented:
+
 ```bash
 # Start dev server
 pnpm dev
@@ -254,7 +290,9 @@ pnpm test:e2e
 ```
 
 ### 5. Set Up CI
+
 Add E2E tests to CI pipeline:
+
 ```yaml
 # .github/workflows/e2e.yml
 - name: Install Playwright

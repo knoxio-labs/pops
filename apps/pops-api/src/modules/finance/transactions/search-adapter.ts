@@ -1,40 +1,40 @@
-import { like, sql } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { transactions } from "@pops/db-types";
-import { registerSearchAdapter } from "../../core/search/index.js";
-import type { SearchAdapter, SearchHit, Query, SearchContext } from "../../core/search/index.js";
+import { like, sql } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { transactions } from '@pops/db-types';
+import { registerSearchAdapter } from '../../core/search/index.js';
+import type { SearchAdapter, SearchHit, Query, SearchContext } from '../../core/search/index.js';
 
 export interface TransactionHitData {
   description: string;
   amount: number;
   date: string;
   entityName: string | null;
-  type: "income" | "expense" | "transfer";
+  type: 'income' | 'expense' | 'transfer';
 }
 
 function scoreHit(
   description: string,
   queryText: string
-): { score: number; matchType: "exact" | "prefix" | "contains" } | null {
+): { score: number; matchType: 'exact' | 'prefix' | 'contains' } | null {
   const lower = description.toLowerCase();
   const query = queryText.toLowerCase();
 
   if (lower === query) {
-    return { score: 1.0, matchType: "exact" };
+    return { score: 1.0, matchType: 'exact' };
   }
   if (lower.startsWith(query)) {
-    return { score: 0.8, matchType: "prefix" };
+    return { score: 0.8, matchType: 'prefix' };
   }
   if (lower.includes(query)) {
-    return { score: 0.5, matchType: "contains" };
+    return { score: 0.5, matchType: 'contains' };
   }
   return null;
 }
 
 export const transactionsSearchAdapter: SearchAdapter<TransactionHitData> = {
-  domain: "transactions",
-  icon: "ArrowRightLeft",
-  color: "green",
+  domain: 'transactions',
+  icon: 'ArrowRightLeft',
+  color: 'green',
 
   search(
     query: Query,
@@ -66,14 +66,14 @@ export const transactionsSearchAdapter: SearchAdapter<TransactionHitData> = {
       hits.push({
         uri: `pops:finance/transaction/${row.id}`,
         score: match.score,
-        matchField: "description",
+        matchField: 'description',
         matchType: match.matchType,
         data: {
           description: row.description,
           amount: row.amount,
           date: row.date,
           entityName: row.entityName,
-          type: row.type as "income" | "expense" | "transfer",
+          type: row.type as 'income' | 'expense' | 'transfer',
         },
       });
     }

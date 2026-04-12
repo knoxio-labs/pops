@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 
 /* ------------------------------------------------------------------ */
 /*  Mock setup                                                        */
@@ -11,7 +11,7 @@ const mockUpdateMutate = vi.fn();
 const mockDeleteMutate = vi.fn();
 const mockInvalidate = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     inventory: {
       locations: {
@@ -48,11 +48,11 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("../components/LocationContentsPanel", () => ({
+vi.mock('../components/LocationContentsPanel', () => ({
   LocationContentsPanel: ({ locationName }: { locationName: string }) => (
     <div data-testid="contents-panel">{locationName}</div>
   ),
@@ -67,7 +67,7 @@ let capturedDragHandlers: {
   onDragEnd?: (event: { active: { id: string }; over: { id: string } | null }) => void;
 } = {};
 
-vi.mock("@dnd-kit/core", () => ({
+vi.mock('@dnd-kit/core', () => ({
   DndContext: ({
     children,
     onDragStart,
@@ -93,7 +93,7 @@ vi.mock("@dnd-kit/core", () => ({
   useSensors: vi.fn(() => []),
 }));
 
-vi.mock("@dnd-kit/sortable", () => ({
+vi.mock('@dnd-kit/sortable', () => ({
   SortableContext: ({
     children,
   }: {
@@ -102,7 +102,7 @@ vi.mock("@dnd-kit/sortable", () => ({
     strategy?: unknown;
   }) => <div data-testid="sortable-context">{children}</div>,
   useSortable: ({ id }: { id: string }) => ({
-    attributes: { "data-sortable-id": id },
+    attributes: { 'data-sortable-id': id },
     listeners: {},
     setNodeRef: vi.fn(),
     setActivatorNodeRef: vi.fn(),
@@ -120,48 +120,48 @@ vi.mock("@dnd-kit/sortable", () => ({
   },
 }));
 
-vi.mock("@dnd-kit/utilities", () => ({
+vi.mock('@dnd-kit/utilities', () => ({
   CSS: { Transform: { toString: () => undefined } },
 }));
 
-import { LocationTreePage } from "./LocationTreePage";
+import { LocationTreePage } from './LocationTreePage';
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                          */
 /* ------------------------------------------------------------------ */
 const treeData = [
   {
-    id: "home",
-    name: "Home",
+    id: 'home',
+    name: 'Home',
     parentId: null,
     sortOrder: 0,
     children: [
       {
-        id: "bedroom",
-        name: "Bedroom",
-        parentId: "home",
+        id: 'bedroom',
+        name: 'Bedroom',
+        parentId: 'home',
         sortOrder: 0,
         children: [],
       },
       {
-        id: "kitchen",
-        name: "Kitchen",
-        parentId: "home",
+        id: 'kitchen',
+        name: 'Kitchen',
+        parentId: 'home',
         sortOrder: 1,
         children: [],
       },
     ],
   },
   {
-    id: "office",
-    name: "Office",
+    id: 'office',
+    name: 'Office',
     parentId: null,
     sortOrder: 1,
     children: [
       {
-        id: "desk",
-        name: "Desk",
-        parentId: "office",
+        id: 'desk',
+        name: 'Desk',
+        parentId: 'office',
         sortOrder: 0,
         children: [],
       },
@@ -180,7 +180,7 @@ function renderPage() {
 /* ------------------------------------------------------------------ */
 /*  Tests                                                             */
 /* ------------------------------------------------------------------ */
-describe("LocationTreePage", () => {
+describe('LocationTreePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedDragHandlers = {};
@@ -193,25 +193,25 @@ describe("LocationTreePage", () => {
 
   /* --- Basic rendering --- */
 
-  it("renders location tree with all nodes", () => {
+  it('renders location tree with all nodes', () => {
     renderPage();
-    expect(screen.getByText("Home")).toBeInTheDocument();
-    expect(screen.getByText("Office")).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Office')).toBeInTheDocument();
   });
 
-  it("renders loading skeleton", () => {
+  it('renders loading skeleton', () => {
     mockTreeQuery.mockReturnValue({ data: undefined, isLoading: true, error: null });
     renderPage();
-    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
-  it("renders error state", () => {
-    mockTreeQuery.mockReturnValue({ data: undefined, isLoading: false, error: new Error("fail") });
+  it('renders error state', () => {
+    mockTreeQuery.mockReturnValue({ data: undefined, isLoading: false, error: new Error('fail') });
     renderPage();
-    expect(screen.getByText("Failed to load locations.")).toBeInTheDocument();
+    expect(screen.getByText('Failed to load locations.')).toBeInTheDocument();
   });
 
-  it("renders empty state when no locations", () => {
+  it('renders empty state when no locations', () => {
     mockTreeQuery.mockReturnValue({ data: { data: [] }, isLoading: false, error: null });
     renderPage();
     expect(screen.getByText(/No locations yet/)).toBeInTheDocument();
@@ -219,69 +219,69 @@ describe("LocationTreePage", () => {
 
   /* --- Drag-and-drop infrastructure --- */
 
-  it("wraps tree in DndContext", () => {
+  it('wraps tree in DndContext', () => {
     renderPage();
-    expect(screen.getByTestId("dnd-context")).toBeInTheDocument();
+    expect(screen.getByTestId('dnd-context')).toBeInTheDocument();
   });
 
-  it("wraps tree in SortableContext", () => {
+  it('wraps tree in SortableContext', () => {
     renderPage();
-    const contexts = screen.getAllByTestId("sortable-context");
+    const contexts = screen.getAllByTestId('sortable-context');
     expect(contexts.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders drag handles with correct aria-labels", () => {
+  it('renders drag handles with correct aria-labels', () => {
     renderPage();
-    expect(screen.getByLabelText("Drag Home")).toBeInTheDocument();
-    expect(screen.getByLabelText("Drag Office")).toBeInTheDocument();
+    expect(screen.getByLabelText('Drag Home')).toBeInTheDocument();
+    expect(screen.getByLabelText('Drag Office')).toBeInTheDocument();
   });
 
-  it("renders DragOverlay container", () => {
+  it('renders DragOverlay container', () => {
     renderPage();
-    expect(screen.getByTestId("drag-overlay")).toBeInTheDocument();
+    expect(screen.getByTestId('drag-overlay')).toBeInTheDocument();
   });
 
   /* --- Arrow buttons for coarse pointers (touch devices) --- */
 
-  it("arrow buttons use pointer:coarse media query", () => {
+  it('arrow buttons use pointer:coarse media query', () => {
     renderPage();
-    const moveUpButtons = screen.getAllByTitle("Move up");
+    const moveUpButtons = screen.getAllByTitle('Move up');
     moveUpButtons.forEach((btn) => {
-      expect(btn.className).toContain("[@media(pointer:coarse)]:inline-flex");
+      expect(btn.className).toContain('[@media(pointer:coarse)]:inline-flex');
     });
-    const moveDownButtons = screen.getAllByTitle("Move down");
+    const moveDownButtons = screen.getAllByTitle('Move down');
     moveDownButtons.forEach((btn) => {
-      expect(btn.className).toContain("[@media(pointer:coarse)]:inline-flex");
+      expect(btn.className).toContain('[@media(pointer:coarse)]:inline-flex');
     });
   });
 
   /* --- Drag handle styling --- */
 
-  it("drag handle has cursor-grab and touch-none classes", () => {
+  it('drag handle has cursor-grab and touch-none classes', () => {
     renderPage();
-    const handle = screen.getByLabelText("Drag Home");
-    expect(handle.className).toContain("cursor-grab");
-    expect(handle.className).toContain("touch-none");
+    const handle = screen.getByLabelText('Drag Home');
+    expect(handle.className).toContain('cursor-grab');
+    expect(handle.className).toContain('touch-none');
   });
 
-  it("drag handle uses pointer:fine media query", () => {
+  it('drag handle uses pointer:fine media query', () => {
     renderPage();
-    const handle = screen.getByLabelText("Drag Home");
-    expect(handle.className).toContain("hidden");
-    expect(handle.className).toContain("[@media(pointer:fine)]:flex");
+    const handle = screen.getByLabelText('Drag Home');
+    expect(handle.className).toContain('hidden');
+    expect(handle.className).toContain('[@media(pointer:fine)]:flex');
   });
 
   /* --- Drag-and-drop: reorder within siblings --- */
 
-  it("reorders siblings when dropped on same-parent node", () => {
+  it('reorders siblings when dropped on same-parent node', () => {
     renderPage();
     expect(capturedDragHandlers.onDragEnd).toBeDefined();
 
     // Simulate dragging "Office" (sortOrder=1) onto "Home" (sortOrder=0)
     // Both are root-level (parentId=null), so this is a reorder
     capturedDragHandlers.onDragEnd!({
-      active: { id: "office" },
-      over: { id: "home" },
+      active: { id: 'office' },
+      over: { id: 'home' },
     });
 
     // Should call updateMutation to reassign sort orders
@@ -289,41 +289,41 @@ describe("LocationTreePage", () => {
     // office: sortOrder was 1, now should be 0 → mutate
     // home: sortOrder was 0, now should be 1 → mutate
     expect(mockUpdateMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "office", data: { sortOrder: 0 } })
+      expect.objectContaining({ id: 'office', data: { sortOrder: 0 } })
     );
     expect(mockUpdateMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "home", data: { sortOrder: 1 } })
+      expect.objectContaining({ id: 'home', data: { sortOrder: 1 } })
     );
   });
 
   /* --- Drag-and-drop: reparent --- */
 
-  it("reparents when dropped on node with different parent", () => {
+  it('reparents when dropped on node with different parent', () => {
     renderPage();
     expect(capturedDragHandlers.onDragEnd).toBeDefined();
 
     // Simulate dragging "desk" (parentId=office) onto "home" (parentId=null)
     // Different parents → reparent: make desk a child of home
     capturedDragHandlers.onDragEnd!({
-      active: { id: "desk" },
-      over: { id: "home" },
+      active: { id: 'desk' },
+      over: { id: 'home' },
     });
 
     expect(mockUpdateMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "desk", data: { parentId: "home" } })
+      expect.objectContaining({ id: 'desk', data: { parentId: 'home' } })
     );
   });
 
   /* --- Drag-and-drop: prevent descendant drop --- */
 
-  it("prevents dropping on own descendant", () => {
+  it('prevents dropping on own descendant', () => {
     renderPage();
     expect(capturedDragHandlers.onDragEnd).toBeDefined();
 
     // Simulate dragging "home" onto "bedroom" (bedroom is a child of home)
     capturedDragHandlers.onDragEnd!({
-      active: { id: "home" },
-      over: { id: "bedroom" },
+      active: { id: 'home' },
+      over: { id: 'bedroom' },
     });
 
     // Should NOT call updateMutation
@@ -332,19 +332,19 @@ describe("LocationTreePage", () => {
 
   /* --- Drag-and-drop: no-op cases --- */
 
-  it("does nothing when dropped on self", () => {
+  it('does nothing when dropped on self', () => {
     renderPage();
     capturedDragHandlers.onDragEnd!({
-      active: { id: "home" },
-      over: { id: "home" },
+      active: { id: 'home' },
+      over: { id: 'home' },
     });
     expect(mockUpdateMutate).not.toHaveBeenCalled();
   });
 
-  it("does nothing when dropped on null (cancelled)", () => {
+  it('does nothing when dropped on null (cancelled)', () => {
     renderPage();
     capturedDragHandlers.onDragEnd!({
-      active: { id: "home" },
+      active: { id: 'home' },
       over: null,
     });
     expect(mockUpdateMutate).not.toHaveBeenCalled();
@@ -352,56 +352,56 @@ describe("LocationTreePage", () => {
 
   /* --- Drop indicator line --- */
 
-  it("shows drop indicator when dragging over a sibling", () => {
+  it('shows drop indicator when dragging over a sibling', () => {
     renderPage();
     act(() => {
-      capturedDragHandlers.onDragStart!({ active: { id: "office" } });
+      capturedDragHandlers.onDragStart!({ active: { id: 'office' } });
     });
     act(() => {
       capturedDragHandlers.onDragOver!({
-        active: { id: "office" },
-        over: { id: "home" },
+        active: { id: 'office' },
+        over: { id: 'home' },
       });
     });
-    expect(screen.getByTestId("drop-indicator")).toBeInTheDocument();
+    expect(screen.getByTestId('drop-indicator')).toBeInTheDocument();
   });
 
-  it("removes drop indicator on drag end", () => {
+  it('removes drop indicator on drag end', () => {
     renderPage();
     act(() => {
-      capturedDragHandlers.onDragStart!({ active: { id: "office" } });
+      capturedDragHandlers.onDragStart!({ active: { id: 'office' } });
     });
     act(() => {
       capturedDragHandlers.onDragOver!({
-        active: { id: "office" },
-        over: { id: "home" },
+        active: { id: 'office' },
+        over: { id: 'home' },
       });
     });
-    expect(screen.getByTestId("drop-indicator")).toBeInTheDocument();
+    expect(screen.getByTestId('drop-indicator')).toBeInTheDocument();
     act(() => {
       capturedDragHandlers.onDragEnd!({
-        active: { id: "office" },
-        over: { id: "home" },
+        active: { id: 'office' },
+        over: { id: 'home' },
       });
     });
-    expect(screen.queryByTestId("drop-indicator")).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drop-indicator')).not.toBeInTheDocument();
   });
 
   /* --- Selection --- */
 
-  it("selects a location on click", () => {
+  it('selects a location on click', () => {
     renderPage();
-    fireEvent.click(screen.getByText("Home"));
-    expect(screen.getByTestId("contents-panel")).toHaveTextContent("Home");
+    fireEvent.click(screen.getByText('Home'));
+    expect(screen.getByTestId('contents-panel')).toHaveTextContent('Home');
   });
 
-  it("deselects on second click", () => {
+  it('deselects on second click', () => {
     renderPage();
-    const treeItems = screen.getAllByRole("treeitem");
-    const homeItem = treeItems.find((el) => el.textContent?.includes("Home"))!;
+    const treeItems = screen.getAllByRole('treeitem');
+    const homeItem = treeItems.find((el) => el.textContent?.includes('Home'))!;
     fireEvent.click(homeItem);
-    expect(screen.getByTestId("contents-panel")).toBeInTheDocument();
+    expect(screen.getByTestId('contents-panel')).toBeInTheDocument();
     fireEvent.click(homeItem);
-    expect(screen.queryByTestId("contents-panel")).not.toBeInTheDocument();
+    expect(screen.queryByTestId('contents-panel')).not.toBeInTheDocument();
   });
 });

@@ -4,10 +4,10 @@
  * Columns: Asset ID, Name, Brand, Type, Condition, Location, Value, In Use.
  * Click row navigates to detail page.
  */
-import { useMemo } from "react";
-import { useNavigate } from "react-router";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Check, X } from "lucide-react";
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Check, X } from 'lucide-react';
 import {
   DataTable,
   SortableHeader,
@@ -15,7 +15,7 @@ import {
   ConditionBadge,
   TypeBadge,
   type Condition,
-} from "@pops/ui";
+} from '@pops/ui';
 
 export interface InventoryTableItem {
   id: string;
@@ -30,12 +30,12 @@ export interface InventoryTableItem {
   assetId: string | null;
 }
 
-const VALID_CONDITIONS = new Set<string>(["Excellent", "Good", "Fair", "Poor"]);
+const VALID_CONDITIONS = new Set<string>(['Excellent', 'Good', 'Fair', 'Poor']);
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
@@ -44,57 +44,57 @@ function formatCurrency(value: number): string {
 function createColumns(): ColumnDef<InventoryTableItem>[] {
   return [
     {
-      accessorKey: "assetId",
-      header: "Asset ID",
+      accessorKey: 'assetId',
+      header: 'Asset ID',
       cell: ({ row }) => {
         const assetId = row.original.assetId;
         return assetId ? <AssetIdBadge assetId={assetId} /> : null;
       },
     },
     {
-      accessorKey: "itemName",
+      accessorKey: 'itemName',
       header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
       cell: ({ row }) => <span className="font-medium">{row.original.itemName}</span>,
     },
     {
-      accessorKey: "brand",
+      accessorKey: 'brand',
       header: ({ column }) => <SortableHeader column={column}>Brand</SortableHeader>,
-      cell: ({ row }) => row.original.brand ?? "—",
+      cell: ({ row }) => row.original.brand ?? '—',
     },
     {
-      accessorKey: "type",
-      header: "Type",
+      accessorKey: 'type',
+      header: 'Type',
       cell: ({ row }) => {
         const type = row.original.type;
         return type ? <TypeBadge type={type} /> : null;
       },
     },
     {
-      accessorKey: "condition",
-      header: "Condition",
+      accessorKey: 'condition',
+      header: 'Condition',
       cell: ({ row }) => {
         const condition = row.original.condition;
-        if (!condition || !VALID_CONDITIONS.has(condition)) return condition ?? "—";
+        if (!condition || !VALID_CONDITIONS.has(condition)) return condition ?? '—';
         return <ConditionBadge condition={condition as Condition} />;
       },
     },
     {
-      accessorKey: "location",
+      accessorKey: 'location',
       header: ({ column }) => <SortableHeader column={column}>Location</SortableHeader>,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.original.location ?? "—"}</span>
+        <span className="text-muted-foreground">{row.original.location ?? '—'}</span>
       ),
     },
     {
-      accessorKey: "replacementValue",
+      accessorKey: 'replacementValue',
       header: ({ column }) => <SortableHeader column={column}>Value</SortableHeader>,
       cell: ({ row }) => {
         const value = row.original.replacementValue;
-        return value != null ? formatCurrency(value) : "—";
+        return value != null ? formatCurrency(value) : '—';
       },
     },
     {
-      accessorKey: "purchaseDate",
+      accessorKey: 'purchaseDate',
       header: ({ column }) => <SortableHeader column={column}>Purchased</SortableHeader>,
       cell: ({ row }) => {
         const date = row.original.purchaseDate;
@@ -103,8 +103,8 @@ function createColumns(): ColumnDef<InventoryTableItem>[] {
       },
     },
     {
-      accessorKey: "inUse",
-      header: "In Use",
+      accessorKey: 'inUse',
+      header: 'In Use',
       cell: ({ row }) =>
         row.original.inUse ? (
           <Check className="h-4 w-4 text-app-accent" />

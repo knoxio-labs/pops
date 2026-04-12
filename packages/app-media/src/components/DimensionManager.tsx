@@ -4,7 +4,7 @@
  * Accessed from CompareArenaPage via a gear icon. Lets users add,
  * edit, deactivate, and reorder comparison dimensions.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 import {
   Badge,
   Button,
@@ -18,10 +18,10 @@ import {
   Slider,
   Switch,
   Textarea,
-} from "@pops/ui";
-import { toast } from "sonner";
-import { Settings, Plus, ChevronUp, ChevronDown, Pencil, Check, X } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { toast } from 'sonner';
+import { Settings, Plus, ChevronUp, ChevronDown, Pencil, Check, X } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 interface Dimension {
   id: number;
@@ -41,8 +41,8 @@ interface EditState {
 
 export function DimensionManager() {
   const [open, setOpen] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addDescription, setAddDescription] = useState("");
+  const [addName, setAddName] = useState('');
+  const [addDescription, setAddDescription] = useState('');
   const [editing, setEditing] = useState<EditState | null>(null);
 
   const utils = trpc.useUtils();
@@ -72,9 +72,9 @@ export function DimensionManager() {
   const createMutation = trpc.media.comparisons.createDimension.useMutation({
     onSuccess: () => {
       utils.media.comparisons.listDimensions.invalidate();
-      setAddName("");
-      setAddDescription("");
-      toast.success("Dimension created");
+      setAddName('');
+      setAddDescription('');
+      toast.success('Dimension created');
     },
     onError: (err: { message: string }) => toast.error(err.message),
   });
@@ -83,7 +83,7 @@ export function DimensionManager() {
     onSuccess: () => {
       utils.media.comparisons.listDimensions.invalidate();
       setEditing(null);
-      toast.success("Dimension updated");
+      toast.success('Dimension updated');
     },
     onError: (err: { message: string }) => toast.error(err.message),
   });
@@ -112,7 +112,7 @@ export function DimensionManager() {
     setEditing({
       id: dim.id,
       name: dim.name,
-      description: dim.description ?? "",
+      description: dim.description ?? '',
     });
   }, []);
 
@@ -155,10 +155,10 @@ export function DimensionManager() {
   );
 
   const handleReorder = useCallback(
-    (dim: Dimension, direction: "up" | "down") => {
+    (dim: Dimension, direction: 'up' | 'down') => {
       const sorted = [...dimensions].sort((a, b) => a.sortOrder - b.sortOrder);
       const idx = sorted.findIndex((d) => d.id === dim.id);
-      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
       if (swapIdx < 0 || swapIdx >= sorted.length) return;
 
       const swapTarget = sorted[swapIdx];
@@ -200,7 +200,7 @@ export function DimensionManager() {
             value={addName}
             onChange={(e) => setAddName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleAdd();
+              if (e.key === 'Enter') handleAdd();
             }}
           />
           <Textarea
@@ -241,7 +241,7 @@ export function DimensionManager() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleReorder(dim, "up")}
+                    onClick={() => handleReorder(dim, 'up')}
                     disabled={idx === 0 || updateMutation.isPending}
                     className="p-0.5 h-auto w-auto text-muted-foreground hover:text-foreground"
                     aria-label={`Move ${dim.name} up`}
@@ -251,7 +251,7 @@ export function DimensionManager() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleReorder(dim, "down")}
+                    onClick={() => handleReorder(dim, 'down')}
                     disabled={idx === sorted.length - 1 || updateMutation.isPending}
                     className="p-0.5 h-auto w-auto text-muted-foreground hover:text-foreground"
                     aria-label={`Move ${dim.name} down`}
@@ -268,8 +268,8 @@ export function DimensionManager() {
                         value={editing.name}
                         onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveEdit();
-                          if (e.key === "Escape") setEditing(null);
+                          if (e.key === 'Enter') handleSaveEdit();
+                          if (e.key === 'Escape') setEditing(null);
                         }}
                         className="h-7 text-sm"
                         autoFocus
@@ -357,7 +357,7 @@ export function DimensionManager() {
                   checked={dim.active}
                   onCheckedChange={() => handleToggleActive(dim)}
                   disabled={updateMutation.isPending}
-                  aria-label={`${dim.active ? "Deactivate" : "Activate"} ${dim.name}`}
+                  aria-label={`${dim.active ? 'Deactivate' : 'Activate'} ${dim.name}`}
                 />
               </div>
             ))}

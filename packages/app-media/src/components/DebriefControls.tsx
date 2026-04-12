@@ -4,8 +4,8 @@
  *
  * Designed as composable components for integration into the DebriefPage.
  */
-import { useNavigate } from "react-router";
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from "@pops/ui";
+import { useNavigate } from 'react-router';
+import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '@pops/ui';
 import {
   SkipForward,
   DoorOpen,
@@ -14,16 +14,16 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-} from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 
 // ── Types ──
 
 interface DimensionResult {
   dimensionId: number;
   name: string;
-  status: "complete" | "pending";
+  status: 'complete' | 'pending';
   /** Non-null if a comparison was recorded (not skipped). */
   comparisonId: number | null;
 }
@@ -71,7 +71,7 @@ export function SkipDimensionButton({
       data-testid="skip-dimension-btn"
     >
       <SkipForward className="mr-1 h-4 w-4" />
-      {dismissMutation.isPending ? "Skipping…" : "Skip this dimension"}
+      {dismissMutation.isPending ? 'Skipping…' : 'Skip this dimension'}
     </Button>
   );
 }
@@ -89,7 +89,7 @@ export function DoneForNowButton({ onExit }: DoneForNowButtonProps) {
     if (onExit) {
       onExit();
     } else {
-      navigate("/media");
+      navigate('/media');
     }
   };
 
@@ -112,9 +112,9 @@ export function CompletionSummary({ data, onDoAnother }: CompletionSummaryProps)
   const navigate = useNavigate();
 
   const completed = data.dimensions.filter(
-    (d) => d.status === "complete" && d.comparisonId !== null
+    (d) => d.status === 'complete' && d.comparisonId !== null
   );
-  const skipped = data.dimensions.filter((d) => d.status === "complete" && d.comparisonId === null);
+  const skipped = data.dimensions.filter((d) => d.status === 'complete' && d.comparisonId === null);
 
   return (
     <Card data-testid="completion-summary">
@@ -132,12 +132,12 @@ export function CompletionSummary({ data, onDoAnother }: CompletionSummaryProps)
           {data.dimensions.map((dim) => (
             <div key={dim.dimensionId} className="flex items-center justify-between text-sm">
               <span>{dim.name}</span>
-              {dim.status === "complete" && dim.comparisonId !== null ? (
+              {dim.status === 'complete' && dim.comparisonId !== null ? (
                 <Badge variant="default" className="gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Compared
                 </Badge>
-              ) : dim.status === "complete" && dim.comparisonId === null ? (
+              ) : dim.status === 'complete' && dim.comparisonId === null ? (
                 <Badge variant="secondary" className="gap-1">
                   <XCircle className="h-3 w-3" />
                   Skipped
@@ -166,7 +166,7 @@ export function CompletionSummary({ data, onDoAnother }: CompletionSummaryProps)
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate("/media/compare/rankings")}
+            onClick={() => navigate('/media/compare/rankings')}
             data-testid="done-btn"
           >
             Done

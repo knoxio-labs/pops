@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
-import { useParams, Link } from "react-router";
-import { useSetPageContext } from "@pops/navigation";
+import { useMemo, useRef, useState } from 'react';
+import { useParams, Link } from 'react-router';
+import { useSetPageContext } from '@pops/navigation';
 import {
   Alert,
   AlertTitle,
@@ -15,12 +15,12 @@ import {
   BreadcrumbLink,
   BreadcrumbSeparator,
   BreadcrumbPage,
-} from "@pops/ui";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { formatYearRange } from "../lib/format";
-import { ProgressBar } from "../components/ProgressBar";
-import { ArrStatusBadge } from "../components/ArrStatusBadge";
+} from '@pops/ui';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { formatYearRange } from '../lib/format';
+import { ProgressBar } from '../components/ProgressBar';
+import { ArrStatusBadge } from '../components/ArrStatusBadge';
 
 function TvShowDetailSkeleton() {
   return (
@@ -137,7 +137,7 @@ export function TvShowDetailPage() {
     },
     onSuccess: (result: { data: { logged: number } }) => {
       toast.success(
-        `Marked ${result.data.logged} episode${result.data.logged !== 1 ? "s" : ""} as watched`
+        `Marked ${result.data.logged} episode${result.data.logged !== 1 ? 's' : ''} as watched`
       );
     },
     onError: (err: { message: string }) => {
@@ -167,12 +167,12 @@ export function TvShowDetailPage() {
   const tvShowEntity = useMemo(
     () => ({
       uri: `pops:media/tv/${showId}`,
-      type: "tvshow" as const,
-      title: data?.data?.name ?? "",
+      type: 'tvshow' as const,
+      title: data?.data?.name ?? '',
     }),
     [showId, data?.data?.name]
   );
-  useSetPageContext({ page: "tvshow-detail", pageType: "drill-down", entity: tvShowEntity });
+  useSetPageContext({ page: 'tvshow-detail', pageType: 'drill-down', entity: tvShowEntity });
 
   if (Number.isNaN(showId)) {
     return (
@@ -190,11 +190,11 @@ export function TvShowDetailPage() {
   }
 
   if (error) {
-    const is404 = error.data?.code === "NOT_FOUND";
+    const is404 = error.data?.code === 'NOT_FOUND';
     return (
       <div className="p-6">
         <Alert variant="destructive">
-          <AlertTitle>{is404 ? "Show not found" : "Error"}</AlertTitle>
+          <AlertTitle>{is404 ? 'Show not found' : 'Error'}</AlertTitle>
           <AlertDescription>
             {is404 ? "This TV show doesn't exist in your library." : error.message}
           </AlertDescription>
@@ -219,18 +219,18 @@ export function TvShowDetailPage() {
   const nextEpisode = progress?.nextEpisode ?? null;
 
   const metadataItems = [
-    { label: "Status", value: show.status },
-    { label: "Language", value: show.originalLanguage?.toUpperCase() },
+    { label: 'Status', value: show.status },
+    { label: 'Language', value: show.originalLanguage?.toUpperCase() },
     {
-      label: "Networks",
-      value: show.networks && show.networks.length > 0 ? show.networks.join(", ") : null,
+      label: 'Networks',
+      value: show.networks && show.networks.length > 0 ? show.networks.join(', ') : null,
     },
     {
-      label: "TMDB Rating",
+      label: 'TMDB Rating',
       value: show.voteAverage ? `${show.voteAverage.toFixed(1)} (${show.voteCount} votes)` : null,
     },
     {
-      label: "Seasons",
+      label: 'Seasons',
       value: seasons.length > 0 ? `${seasons.length}` : null,
     },
   ].filter((item) => item.value != null);
@@ -301,9 +301,9 @@ export function TvShowDetailPage() {
                 to={`/media/tv/${show.id}/season/${nextEpisode.seasonNumber}`}
                 className="inline-block mt-2 text-sm text-primary hover:underline"
               >
-                Continue watching: S{String(nextEpisode.seasonNumber).padStart(2, "0")}E
-                {String(nextEpisode.episodeNumber).padStart(2, "0")}
-                {nextEpisode.episodeName ? ` — ${nextEpisode.episodeName}` : ""}
+                Continue watching: S{String(nextEpisode.seasonNumber).padStart(2, '0')}E
+                {String(nextEpisode.episodeNumber).padStart(2, '0')}
+                {nextEpisode.episodeName ? ` — ${nextEpisode.episodeName}` : ''}
               </Link>
             )}
 
@@ -316,7 +316,7 @@ export function TvShowDetailPage() {
                     size="sm"
                     onClick={() =>
                       batchLogMutation.mutate({
-                        mediaType: "show",
+                        mediaType: 'show',
                         mediaId: showId,
                       })
                     }
@@ -400,7 +400,7 @@ export function TvShowDetailPage() {
                   );
                   const label =
                     season.seasonNumber === 0
-                      ? "Specials"
+                      ? 'Specials'
                       : (season.name ?? `Season ${season.seasonNumber}`);
 
                   const sonarrSeason = sonarrSeries?.seasons?.find(

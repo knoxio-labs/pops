@@ -4,8 +4,8 @@
  * Displays total comparisons recorded, per-movie score changes with
  * green/red delta badges, and action buttons.
  */
-import { Button } from "@pops/ui";
-import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { Button } from '@pops/ui';
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 
 export interface ScoreChange {
   movieId: number;
@@ -34,8 +34,8 @@ export function TierListSummary({
       <div className="text-center space-y-1">
         <h2 className="text-xl font-bold">Tier List Submitted</h2>
         <p className="text-muted-foreground">
-          {comparisonsRecorded} comparison{comparisonsRecorded !== 1 ? "s" : ""} from {movieCount}{" "}
-          movie{movieCount !== 1 ? "s" : ""}
+          {comparisonsRecorded} comparison{comparisonsRecorded !== 1 ? 's' : ''} from {movieCount}{' '}
+          movie{movieCount !== 1 ? 's' : ''}
         </p>
       </div>
 
@@ -58,10 +58,10 @@ export function TierListSummary({
                 <span
                   className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${
                     isPositive
-                      ? "bg-green-500/20 text-green-700 dark:text-green-400"
+                      ? 'bg-green-500/20 text-green-700 dark:text-green-400'
                       : isNegative
-                        ? "bg-red-500/20 text-red-700 dark:text-red-400"
-                        : "bg-muted text-muted-foreground"
+                        ? 'bg-red-500/20 text-red-700 dark:text-red-400'
+                        : 'bg-muted text-muted-foreground'
                   }`}
                   data-testid={`delta-${change.movieId}`}
                 >
@@ -72,7 +72,7 @@ export function TierListSummary({
                   ) : (
                     <Minus className="h-3 w-3" />
                   )}
-                  {isPositive ? "+" : ""}
+                  {isPositive ? '+' : ''}
                   {delta}
                 </span>
               </div>

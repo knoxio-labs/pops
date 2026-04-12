@@ -1,13 +1,13 @@
-import { z } from "zod";
-import type { TransactionCorrectionRow } from "@pops/db-types";
-import { parseJsonStringArray } from "../../../shared/json.js";
+import { z } from 'zod';
+import type { TransactionCorrectionRow } from '@pops/db-types';
+import { parseJsonStringArray } from '../../../shared/json.js';
 
 export type CorrectionRow = TransactionCorrectionRow;
 
 /** Confidence threshold above which a correction match is considered definitive */
 export const HIGH_CONFIDENCE_THRESHOLD = 0.9;
 
-export type CorrectionMatchStatus = "matched" | "uncertain";
+export type CorrectionMatchStatus = 'matched' | 'uncertain';
 
 /** Result of matching a description against correction rules */
 export interface CorrectionMatchResult {
@@ -19,7 +19,7 @@ export interface CorrectionMatchResult {
 export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMatchResult {
   return {
     correction,
-    status: correction.confidence >= HIGH_CONFIDENCE_THRESHOLD ? "matched" : "uncertain",
+    status: correction.confidence >= HIGH_CONFIDENCE_THRESHOLD ? 'matched' : 'uncertain',
   };
 }
 
@@ -29,12 +29,12 @@ export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMa
 export interface Correction {
   id: string;
   descriptionPattern: string;
-  matchType: "exact" | "contains" | "regex";
+  matchType: 'exact' | 'contains' | 'regex';
   entityId: string | null;
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: "purchase" | "transfer" | "income" | null;
+  transactionType: 'purchase' | 'transfer' | 'income' | null;
   isActive: boolean;
   priority: number;
   confidence: number;
@@ -71,8 +71,8 @@ export function toCorrection(row: CorrectionRow): Correction {
 export function normalizeDescription(description: string): string {
   return description
     .toUpperCase()
-    .replace(/\d+/g, "") // Remove numbers
-    .replace(/\s+/g, " ") // Normalize spaces
+    .replace(/\d+/g, '') // Remove numbers
+    .replace(/\s+/g, ' ') // Normalize spaces
     .trim();
 }
 
@@ -81,12 +81,12 @@ export function normalizeDescription(description: string): string {
  */
 export const CreateCorrectionSchema = z.object({
   descriptionPattern: z.string().min(1),
-  matchType: z.enum(["exact", "contains", "regex"]).default("exact"),
+  matchType: z.enum(['exact', 'contains', 'regex']).default('exact'),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
   tags: z.array(z.string()).optional().default([]),
-  transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
+  transactionType: z.enum(['purchase', 'transfer', 'income']).nullable().optional(),
   priority: z.number().int().nonnegative().optional(),
 });
 export type CreateCorrectionInput = z.infer<typeof CreateCorrectionSchema>;
@@ -97,12 +97,12 @@ export type CreateCorrectionInput = z.infer<typeof CreateCorrectionSchema>;
  */
 export const CorrectionSignalSchema = z.object({
   descriptionPattern: z.string().min(1),
-  matchType: z.enum(["exact", "contains", "regex"]),
+  matchType: z.enum(['exact', 'contains', 'regex']),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
-  transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
+  transactionType: z.enum(['purchase', 'transfer', 'income']).nullable().optional(),
 });
 export type CorrectionSignal = z.infer<typeof CorrectionSignalSchema>;
 
@@ -116,7 +116,7 @@ export const UpdateCorrectionSchema = z.object({
   entityName: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
-  transactionType: z.enum(["purchase", "transfer", "income"]).nullable().optional(),
+  transactionType: z.enum(['purchase', 'transfer', 'income']).nullable().optional(),
   isActive: z.boolean().optional(),
   confidence: z.number().min(0).max(1).optional(),
   priority: z.number().int().nonnegative().optional(),
@@ -134,27 +134,27 @@ export const CorrectionRuleDataSchema = CreateCorrectionSchema.extend({
 export type CorrectionRuleData = z.infer<typeof CorrectionRuleDataSchema>;
 
 export const ChangeSetAddOpSchema = z.object({
-  op: z.literal("add"),
+  op: z.literal('add'),
   data: CorrectionRuleDataSchema,
 });
 
 export const ChangeSetEditOpSchema = z.object({
-  op: z.literal("edit"),
+  op: z.literal('edit'),
   id: z.string().min(1),
   data: UpdateCorrectionSchema,
 });
 
 export const ChangeSetDisableOpSchema = z.object({
-  op: z.literal("disable"),
+  op: z.literal('disable'),
   id: z.string().min(1),
 });
 
 export const ChangeSetRemoveOpSchema = z.object({
-  op: z.literal("remove"),
+  op: z.literal('remove'),
   id: z.string().min(1),
 });
 
-export const ChangeSetOpSchema = z.discriminatedUnion("op", [
+export const ChangeSetOpSchema = z.discriminatedUnion('op', [
   ChangeSetAddOpSchema,
   ChangeSetEditOpSchema,
   ChangeSetDisableOpSchema,
@@ -211,7 +211,7 @@ export interface CorrectionClassificationOutcome {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: "purchase" | "transfer" | "income" | null;
+  transactionType: 'purchase' | 'transfer' | 'income' | null;
 }
 
 export interface ChangeSetImpactCounts {

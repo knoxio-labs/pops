@@ -8,17 +8,17 @@
  *  3. top-dimension      — One per active ELO dimension, shows local movies ranked highest
  *  4. dimension-inspired — High-scoring movie+dimension pair, queries TMDB recommendations
  */
-import { eq, and, desc } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { movies, mediaScores, comparisonDimensions } from "@pops/db-types";
-import { getTmdbClient } from "../../tmdb/index.js";
-import { TMDB_GENRE_MAP } from "../types.js";
-import { getLibraryTmdbIds, toDiscoverResults } from "../tmdb-service.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "../flags.js";
-import { scoreDiscoverResults } from "../service.js";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile } from "../types.js";
+import { eq, and, desc } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { movies, mediaScores, comparisonDimensions } from '@pops/db-types';
+import { getTmdbClient } from '../../tmdb/index.js';
+import { TMDB_GENRE_MAP } from '../types.js';
+import { getLibraryTmdbIds, toDiscoverResults } from '../tmdb-service.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from '../flags.js';
+import { scoreDiscoverResults } from '../service.js';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile } from '../types.js';
 
 const MAX_BEST_IN_GENRE = 5;
 const MAX_CROSSOVER_PAIRS = 6;
@@ -27,14 +27,14 @@ const MAX_DIMENSION_INSPIRED = 3;
 
 // Genre pairs that are too closely related to be interesting as crossovers
 const RELATED_GENRE_PAIRS = new Set([
-  "Action+Adventure",
-  "Adventure+Action",
-  "Mystery+Thriller",
-  "Thriller+Mystery",
-  "Drama+Romance",
-  "Romance+Drama",
-  "Fantasy+Science Fiction",
-  "Science Fiction+Fantasy",
+  'Action+Adventure',
+  'Adventure+Action',
+  'Mystery+Thriller',
+  'Thriller+Mystery',
+  'Drama+Romance',
+  'Romance+Drama',
+  'Fantasy+Science Fiction',
+  'Science Fiction+Fantasy',
 ]);
 
 function isRelatedPair(genre1: string, genre2: string): boolean {
@@ -56,9 +56,9 @@ function normalizeScore(score: number, min: number, max: number): number {
 // Shelf 1: Best in Genre
 // ─────────────────────────────────────────────
 export const bestInGenreShelf: ShelfDefinition = {
-  id: "best-in-genre",
+  id: 'best-in-genre',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const topGenres = profile.genreAffinities
       .slice()
@@ -77,10 +77,10 @@ export const bestInGenreShelf: ShelfDefinition = {
       const score = normalizeScore(affinity.avgScore, minScore, maxScore) * 0.8 + 0.1;
 
       return {
-        shelfId: `best-in-genre:${affinity.genre.toLowerCase().replace(/\s+/g, "-")}`,
+        shelfId: `best-in-genre:${affinity.genre.toLowerCase().replace(/\s+/g, '-')}`,
         title: `Best in ${affinity.genre}`,
         subtitle: `Top-rated ${affinity.genre} films`,
-        emoji: "🎯",
+        emoji: '🎯',
         score,
         query: async ({ limit, offset }) => {
           const client = getTmdbClient();
@@ -89,7 +89,7 @@ export const bestInGenreShelf: ShelfDefinition = {
           const [response, libraryIds, watchedIds, watchlistIds, dismissedIds] = await Promise.all([
             client.discoverMovies({
               genreIds: [genreId],
-              sortBy: "vote_average.desc",
+              sortBy: 'vote_average.desc',
               voteCountGte: 50,
               page,
             }),
@@ -121,9 +121,9 @@ export const bestInGenreShelf: ShelfDefinition = {
 // Shelf 2: Genre Crossover
 // ─────────────────────────────────────────────
 export const genreCrossoverShelf: ShelfDefinition = {
-  id: "genre-crossover",
+  id: 'genre-crossover',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const topGenres = profile.genreAffinities
       .slice()
@@ -151,10 +151,10 @@ export const genreCrossoverShelf: ShelfDefinition = {
       const score = ((g1.avgScore + g2.avgScore) / 2 / 10) * 0.7 + 0.1;
 
       return {
-        shelfId: `genre-crossover:${g1.genre.toLowerCase().replace(/\s+/g, "-")}-${g2.genre.toLowerCase().replace(/\s+/g, "-")}`,
+        shelfId: `genre-crossover:${g1.genre.toLowerCase().replace(/\s+/g, '-')}-${g2.genre.toLowerCase().replace(/\s+/g, '-')}`,
         title: `${g1.genre} × ${g2.genre}`,
         subtitle: `Films that blend ${g1.genre} and ${g2.genre}`,
-        emoji: "🔀",
+        emoji: '🔀',
         score: Math.min(0.9, score),
         query: async ({ limit, offset }) => {
           const client = getTmdbClient();
@@ -217,7 +217,7 @@ function getTopMoviesForDimension(
       score: mediaScores.score,
     })
     .from(mediaScores)
-    .innerJoin(movies, and(eq(movies.id, mediaScores.mediaId), eq(mediaScores.mediaType, "movie")))
+    .innerJoin(movies, and(eq(movies.id, mediaScores.mediaId), eq(mediaScores.mediaType, 'movie')))
     .where(eq(mediaScores.dimensionId, dimensionId))
     .orderBy(desc(mediaScores.score))
     .limit(limit)
@@ -226,9 +226,9 @@ function getTopMoviesForDimension(
 }
 
 export const topDimensionShelf: ShelfDefinition = {
-  id: "top-dimension",
+  id: 'top-dimension',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const dimensions = getActiveDimensions(profile);
     if (dimensions.length === 0) return [];
@@ -237,7 +237,7 @@ export const topDimensionShelf: ShelfDefinition = {
       shelfId: `top-dimension:${dim.dimensionId}`,
       title: `Top ${dim.name} picks`,
       subtitle: `Your highest-rated films for ${dim.name}`,
-      emoji: "⭐",
+      emoji: '⭐',
       score: Math.min(0.9, 0.5 + dim.avgScore / 3000),
       query: ({ limit, offset }) => {
         const topMovies = getTopMoviesForDimension(dim.dimensionId, limit + offset);
@@ -254,8 +254,8 @@ export const topDimensionShelf: ShelfDefinition = {
             .map((m) => ({
               tmdbId: m.tmdbId,
               title: m.title,
-              overview: "",
-              releaseDate: "",
+              overview: '',
+              releaseDate: '',
               posterPath: null,
               posterUrl: libraryIds.has(m.tmdbId)
                 ? `/media/images/movie/${m.tmdbId}/poster.jpg`
@@ -290,7 +290,7 @@ function getHighScoringMovieForDimension(
       title: movies.title,
     })
     .from(mediaScores)
-    .innerJoin(movies, and(eq(movies.id, mediaScores.mediaId), eq(mediaScores.mediaType, "movie")))
+    .innerJoin(movies, and(eq(movies.id, mediaScores.mediaId), eq(mediaScores.mediaType, 'movie')))
     .innerJoin(comparisonDimensions, eq(comparisonDimensions.id, mediaScores.dimensionId))
     .where(eq(mediaScores.dimensionId, dimensionId))
     .orderBy(desc(mediaScores.score))
@@ -301,9 +301,9 @@ function getHighScoringMovieForDimension(
 }
 
 export const dimensionInspiredShelf: ShelfDefinition = {
-  id: "dimension-inspired",
+  id: 'dimension-inspired',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const dimensions = getActiveDimensions(profile).slice(0, MAX_DIMENSION_INSPIRED);
     if (dimensions.length === 0) return [];
@@ -317,7 +317,7 @@ export const dimensionInspiredShelf: ShelfDefinition = {
         shelfId: `dimension-inspired:${seed.movieId}:${dim.dimensionId}`,
         title: `You loved ${seed.title}'s ${dim.name}`,
         subtitle: `Similar films based on ${dim.name}`,
-        emoji: "💡",
+        emoji: '💡',
         score: 0.75,
         seedMovieId: seed.movieId,
         query: async ({ limit, offset }) => {

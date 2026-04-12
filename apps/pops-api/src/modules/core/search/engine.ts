@@ -3,9 +3,9 @@
  * Promise.allSettled, groups results into sections, and orders context
  * sections (current app) first.
  */
-import type { Query, SearchContext, SearchHit } from "./types.js";
-import { getAdapters } from "./registry.js";
-import { isContextDomain } from "./domain-app-mapping.js";
+import type { Query, SearchContext, SearchHit } from './types.js';
+import { getAdapters } from './registry.js';
+import { isContextDomain } from './domain-app-mapping.js';
 
 export interface SearchSection {
   domain: string;
@@ -36,8 +36,8 @@ export async function searchAll(query: Query, context: SearchContext): Promise<S
   const sections: SearchSection[] = [];
 
   for (const result of results) {
-    if (result.status === "rejected") {
-      console.warn("Search adapter failed:", result.reason);
+    if (result.status === 'rejected') {
+      console.warn('Search adapter failed:', result.reason);
       continue;
     }
 

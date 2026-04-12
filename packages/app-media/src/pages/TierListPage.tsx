@@ -5,8 +5,8 @@
  * Dimension can be switched via chips. After placing movies in tiers, submit to
  * record pairwise comparisons.
  */
-import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Alert,
   AlertTitle,
@@ -21,13 +21,13 @@ import {
   AlertDialogTitle,
   Skeleton,
   cn,
-} from "@pops/ui";
-import { LayoutGrid, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { useTierListSubmit } from "../hooks/useTierListSubmit";
-import { TierListBoard, type TierMovie, type Tier } from "../components/TierListBoard";
-import { TierListSummary } from "../components/TierListSummary";
+} from '@pops/ui';
+import { LayoutGrid, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { useTierListSubmit } from '../hooks/useTierListSubmit';
+import { TierListBoard, type TierMovie, type Tier } from '../components/TierListBoard';
+import { TierListSummary } from '../components/TierListSummary';
 
 function MovieCardSkeleton() {
   return (
@@ -76,7 +76,7 @@ export function TierListPage() {
   const movies: TierMovie[] = useMemo(
     () =>
       (tierMoviesData?.data ?? []).map((m) => ({
-        mediaType: "movie" as const,
+        mediaType: 'movie' as const,
         mediaId: m.id,
         title: m.title,
         posterUrl: m.posterUrl,
@@ -103,7 +103,7 @@ export function TierListPage() {
   } = useTierListSubmit({
     movieTitles,
     onSuccess: () => {
-      toast.success("Tier list submitted!");
+      toast.success('Tier list submitted!');
     },
   });
 
@@ -119,7 +119,7 @@ export function TierListPage() {
       const movie = movies.find((m) => m.mediaId === variables.mediaId);
       const staleness = data.data.staleness;
       const timesMarked = Math.round(Math.log(staleness) / Math.log(0.5));
-      toast.success(`${movie?.title ?? "Movie"} marked stale (×${timesMarked})`);
+      toast.success(`${movie?.title ?? 'Movie'} marked stale (×${timesMarked})`);
       refetch();
     },
   });
@@ -127,7 +127,7 @@ export function TierListPage() {
   const handleMarkStale = useCallback(
     (movieId: number) => {
       if (markStaleMutation.isPending) return;
-      markStaleMutation.mutate({ mediaType: "movie", mediaId: movieId });
+      markStaleMutation.mutate({ mediaType: 'movie', mediaId: movieId });
     },
     [markStaleMutation]
   );
@@ -144,10 +144,10 @@ export function TierListPage() {
       if (!effectiveDimension || excludeMutation.isPending) return;
       const movie = movies.find((m) => m.mediaId === movieId);
       excludeMutation.mutate(
-        { mediaType: "movie", mediaId: movieId, dimensionId: effectiveDimension },
+        { mediaType: 'movie', mediaId: movieId, dimensionId: effectiveDimension },
         {
           onSuccess: () => {
-            toast.success(`${movie?.title ?? "Movie"} excluded from this dimension`);
+            toast.success(`${movie?.title ?? 'Movie'} excluded from this dimension`);
           },
         }
       );
@@ -164,7 +164,7 @@ export function TierListPage() {
   const blacklistMutation = trpc.media.comparisons.blacklistMovie.useMutation({
     onSuccess: (_data: unknown, variables: { mediaType: string; mediaId: number }) => {
       const movie = movies.find((m) => m.mediaId === variables.mediaId);
-      toast.success(`${movie?.title ?? "Movie"} marked as not watched`);
+      toast.success(`${movie?.title ?? 'Movie'} marked as not watched`);
       setBlacklistTarget(null);
       refetch();
       utils.media.comparisons.getSmartPair.invalidate();
@@ -194,7 +194,7 @@ export function TierListPage() {
   }, [reset]);
 
   const handleDone = useCallback(() => {
-    navigate("/media/rankings");
+    navigate('/media/rankings');
   }, [navigate]);
 
   const handleSubmit = useCallback(
@@ -233,10 +233,10 @@ export function TierListPage() {
                 aria-selected={effectiveDimension === dim.id}
                 onClick={() => handleDimensionChange(dim.id)}
                 className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                  'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
                   effectiveDimension === dim.id
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
                 )}
               >
                 {dim.name}
@@ -269,7 +269,7 @@ export function TierListPage() {
                     className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
                     aria-label="Refresh movie pool"
                   >
-                    <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+                    <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
                     Refresh
                   </button>
                 </div>
@@ -326,14 +326,14 @@ export function TierListPage() {
               onClick={() => {
                 if (blacklistTarget) {
                   blacklistMutation.mutate({
-                    mediaType: "movie",
+                    mediaType: 'movie',
                     mediaId: blacklistTarget.id,
                   });
                 }
               }}
               disabled={blacklistMutation.isPending}
             >
-              {blacklistMutation.isPending ? "Removing\u2026" : "Not watched"}
+              {blacklistMutation.isPending ? 'Removing\u2026' : 'Not watched'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

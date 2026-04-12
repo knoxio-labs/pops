@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import {
   CorrectionProposalDialog,
   normalizeForMatch,
@@ -8,8 +8,8 @@ import {
   serverOpToLocalOp,
   PREVIEW_CHANGESET_MAX_TRANSACTIONS,
   type LocalOp,
-} from "./CorrectionProposalDialog";
-import type { CorrectionRule } from "./RulePicker";
+} from './CorrectionProposalDialog';
+import type { CorrectionRule } from './RulePicker';
 
 // ---------------------------------------------------------------------------
 // Mock state
@@ -33,14 +33,14 @@ const mockAddPendingChangeSet = vi.fn();
 
 let rejectOnSuccess: (() => void) | undefined;
 
-vi.mock("../../store/importStore", () => ({
+vi.mock('../../store/importStore', () => ({
   useImportStore: (selector: (s: Record<string, unknown>) => unknown) => {
     const state = { addPendingChangeSet: mockAddPendingChangeSet, pendingChangeSets: [] };
     return selector(state);
   },
 }));
 
-vi.mock("../../lib/trpc", () => ({
+vi.mock('../../lib/trpc', () => ({
   trpc: {
     core: {
       corrections: {
@@ -85,7 +85,7 @@ vi.mock("../../lib/trpc", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -97,93 +97,93 @@ vi.mock("sonner", () => ({
 // Kept utility tests (these were the entirety of the previous .test.ts)
 // ---------------------------------------------------------------------------
 
-describe("normalizeForMatch", () => {
-  it("uppercases, strips digits, and collapses whitespace", () => {
-    expect(normalizeForMatch("Woolworths 1234 Sydney")).toBe("WOOLWORTHS SYDNEY");
+describe('normalizeForMatch', () => {
+  it('uppercases, strips digits, and collapses whitespace', () => {
+    expect(normalizeForMatch('Woolworths 1234 Sydney')).toBe('WOOLWORTHS SYDNEY');
   });
 
-  it("trims leading and trailing whitespace", () => {
-    expect(normalizeForMatch("  netflix  ")).toBe("NETFLIX");
+  it('trims leading and trailing whitespace', () => {
+    expect(normalizeForMatch('  netflix  ')).toBe('NETFLIX');
   });
 
-  it("collapses multiple internal spaces to single", () => {
-    expect(normalizeForMatch("FOO    BAR")).toBe("FOO BAR");
+  it('collapses multiple internal spaces to single', () => {
+    expect(normalizeForMatch('FOO    BAR')).toBe('FOO BAR');
   });
 
-  it("strips all digits, not just standalone runs", () => {
-    expect(normalizeForMatch("TXN42ABC99")).toBe("TXNABC");
+  it('strips all digits, not just standalone runs', () => {
+    expect(normalizeForMatch('TXN42ABC99')).toBe('TXNABC');
   });
 });
 
-describe("transactionMatchesSignal", () => {
-  describe("contains", () => {
-    it("matches when normalized description contains normalized pattern", () => {
+describe('transactionMatchesSignal', () => {
+  describe('contains', () => {
+    it('matches when normalized description contains normalized pattern', () => {
       expect(
-        transactionMatchesSignal("WOOLWORTHS 1234 ERSKINEVILLE", "WOOLWORTHS", "contains")
+        transactionMatchesSignal('WOOLWORTHS 1234 ERSKINEVILLE', 'WOOLWORTHS', 'contains')
       ).toBe(true);
     });
 
-    it("ignores digits in both description and pattern", () => {
-      expect(transactionMatchesSignal("STORE 42 SYDNEY", "STORE 99", "contains")).toBe(true);
+    it('ignores digits in both description and pattern', () => {
+      expect(transactionMatchesSignal('STORE 42 SYDNEY', 'STORE 99', 'contains')).toBe(true);
     });
 
-    it("is case-insensitive via normalization", () => {
-      expect(transactionMatchesSignal("netflix australia", "NETFLIX", "contains")).toBe(true);
+    it('is case-insensitive via normalization', () => {
+      expect(transactionMatchesSignal('netflix australia', 'NETFLIX', 'contains')).toBe(true);
     });
 
-    it("rejects when pattern substring is absent", () => {
-      expect(transactionMatchesSignal("COLES 1234 NEWTOWN", "WOOLWORTHS", "contains")).toBe(false);
+    it('rejects when pattern substring is absent', () => {
+      expect(transactionMatchesSignal('COLES 1234 NEWTOWN', 'WOOLWORTHS', 'contains')).toBe(false);
     });
 
-    it("rejects an empty pattern so we do not match everything", () => {
-      expect(transactionMatchesSignal("ANYTHING", "", "contains")).toBe(false);
-      expect(transactionMatchesSignal("ANYTHING", "   ", "contains")).toBe(false);
-    });
-  });
-
-  describe("exact", () => {
-    it("matches when normalized description equals normalized pattern", () => {
-      expect(transactionMatchesSignal("NETFLIX 42", "NETFLIX", "exact")).toBe(true);
-    });
-
-    it("rejects when description has extra words", () => {
-      expect(transactionMatchesSignal("NETFLIX AUSTRALIA PTY LTD", "NETFLIX", "exact")).toBe(false);
+    it('rejects an empty pattern so we do not match everything', () => {
+      expect(transactionMatchesSignal('ANYTHING', '', 'contains')).toBe(false);
+      expect(transactionMatchesSignal('ANYTHING', '   ', 'contains')).toBe(false);
     });
   });
 
-  describe("regex", () => {
+  describe('exact', () => {
+    it('matches when normalized description equals normalized pattern', () => {
+      expect(transactionMatchesSignal('NETFLIX 42', 'NETFLIX', 'exact')).toBe(true);
+    });
+
+    it('rejects when description has extra words', () => {
+      expect(transactionMatchesSignal('NETFLIX AUSTRALIA PTY LTD', 'NETFLIX', 'exact')).toBe(false);
+    });
+  });
+
+  describe('regex', () => {
     // These tests mirror the server's `findMatchingCorrectionFromRules`
     // semantics: `new RegExp(pattern).test(normalizeDescription(desc))` —
     // no flags, and the description is uppercased + digit-stripped + space-
     // collapsed BEFORE the regex runs. Client-side preview must match.
-    it("tests against the normalized (uppercased) description, so patterns must be uppercase", () => {
+    it('tests against the normalized (uppercased) description, so patterns must be uppercase', () => {
       // Positive: uppercase pattern matches normalized description.
-      expect(transactionMatchesSignal("PayID from John", "PAYID", "regex")).toBe(true);
+      expect(transactionMatchesSignal('PayID from John', 'PAYID', 'regex')).toBe(true);
       // Negative: lowercase pattern does NOT match because normalization
       // uppercases "PayID from John" to "PAYID FROM JOHN" and the regex
       // runs without the /i flag (server parity).
-      expect(transactionMatchesSignal("PayID from John", "payid", "regex")).toBe(false);
+      expect(transactionMatchesSignal('PayID from John', 'payid', 'regex')).toBe(false);
     });
 
-    it("tests against the digit-stripped description, so \\d+ cannot match digits in the input", () => {
+    it('tests against the digit-stripped description, so \\d+ cannot match digits in the input', () => {
       // "TXN42" normalizes to "TXN " (digits stripped), so TXN\d+ cannot
       // match. Users must write patterns against the normalized form.
-      expect(transactionMatchesSignal("TXN42", "TXN\\d+", "regex")).toBe(false);
+      expect(transactionMatchesSignal('TXN42', 'TXN\\d+', 'regex')).toBe(false);
       // The same input DOES match a pattern written for the normalized form.
-      expect(transactionMatchesSignal("TXN42", "^TXN\\s*$", "regex")).toBe(true);
+      expect(transactionMatchesSignal('TXN42', '^TXN\\s*$', 'regex')).toBe(true);
     });
 
-    it("honours anchors in the pattern", () => {
-      expect(transactionMatchesSignal("NETFLIX", "^NETFLIX$", "regex")).toBe(true);
-      expect(transactionMatchesSignal("NETFLIX AUSTRALIA", "^NETFLIX$", "regex")).toBe(false);
+    it('honours anchors in the pattern', () => {
+      expect(transactionMatchesSignal('NETFLIX', '^NETFLIX$', 'regex')).toBe(true);
+      expect(transactionMatchesSignal('NETFLIX AUSTRALIA', '^NETFLIX$', 'regex')).toBe(false);
     });
 
-    it("returns false (not throws) for an invalid regex pattern", () => {
-      expect(transactionMatchesSignal("anything", "[unclosed", "regex")).toBe(false);
+    it('returns false (not throws) for an invalid regex pattern', () => {
+      expect(transactionMatchesSignal('anything', '[unclosed', 'regex')).toBe(false);
     });
 
-    it("returns false for an empty regex pattern", () => {
-      expect(transactionMatchesSignal("anything", "", "regex")).toBe(false);
+    it('returns false for an empty regex pattern', () => {
+      expect(transactionMatchesSignal('anything', '', 'regex')).toBe(false);
     });
   });
 });
@@ -194,71 +194,71 @@ describe("transactionMatchesSignal", () => {
 
 function makeRule(overrides: Partial<CorrectionRule> = {}): CorrectionRule {
   return {
-    id: "rule-1",
-    descriptionPattern: "WOOLWORTHS",
-    matchType: "contains",
+    id: 'rule-1',
+    descriptionPattern: 'WOOLWORTHS',
+    matchType: 'contains',
     entityId: null,
-    entityName: "Woolworths",
+    entityName: 'Woolworths',
     location: null,
     tags: [],
     transactionType: null,
     isActive: true,
     confidence: 0.95,
     timesApplied: 3,
-    createdAt: "2026-01-01T00:00:00.000Z",
+    createdAt: '2026-01-01T00:00:00.000Z',
     lastUsedAt: null,
     ...overrides,
   };
 }
 
-describe("serverOpToLocalOp", () => {
+describe('serverOpToLocalOp', () => {
   it("maps 'add' op without consulting targetRules", () => {
     const local = serverOpToLocalOp(
       {
-        op: "add",
+        op: 'add',
         data: {
-          descriptionPattern: "NETFLIX",
-          matchType: "contains",
-          entityName: "Netflix",
+          descriptionPattern: 'NETFLIX',
+          matchType: 'contains',
+          entityName: 'Netflix',
           tags: [],
         },
       },
       {}
     );
-    expect(local.kind).toBe("add");
-    if (local.kind !== "add") throw new Error("kind narrow");
-    expect(local.data.descriptionPattern).toBe("NETFLIX");
+    expect(local.kind).toBe('add');
+    if (local.kind !== 'add') throw new Error('kind narrow');
+    expect(local.data.descriptionPattern).toBe('NETFLIX');
     expect(local.dirty).toBe(false);
   });
 
   it("hydrates targetRule on 'edit' from the targetRules map", () => {
-    const rule = makeRule({ id: "rule-42" });
+    const rule = makeRule({ id: 'rule-42' });
     const local = serverOpToLocalOp(
-      { op: "edit", id: "rule-42", data: { entityName: "Woolies" } },
-      { "rule-42": rule }
+      { op: 'edit', id: 'rule-42', data: { entityName: 'Woolies' } },
+      { 'rule-42': rule }
     );
-    expect(local.kind).toBe("edit");
-    if (local.kind !== "edit") throw new Error("kind narrow");
-    expect(local.targetRuleId).toBe("rule-42");
+    expect(local.kind).toBe('edit');
+    if (local.kind !== 'edit') throw new Error('kind narrow');
+    expect(local.targetRuleId).toBe('rule-42');
     expect(local.targetRule).toBe(rule);
   });
 
   it("leaves targetRule as null when hydration misses on 'disable'", () => {
-    const local = serverOpToLocalOp({ op: "disable", id: "orphan" }, {});
-    expect(local.kind).toBe("disable");
-    if (local.kind !== "disable") throw new Error("kind narrow");
-    expect(local.targetRuleId).toBe("orphan");
+    const local = serverOpToLocalOp({ op: 'disable', id: 'orphan' }, {});
+    expect(local.kind).toBe('disable');
+    if (local.kind !== 'disable') throw new Error('kind narrow');
+    expect(local.targetRuleId).toBe('orphan');
     expect(local.targetRule).toBeNull();
   });
 
   it("hydrates targetRule on 'remove' when present in the map", () => {
-    const rule = makeRule({ id: "rule-99" });
+    const rule = makeRule({ id: 'rule-99' });
     const local = serverOpToLocalOp(
-      { op: "remove", id: "rule-99" },
-      { "rule-99": rule, other: makeRule({ id: "other" }) }
+      { op: 'remove', id: 'rule-99' },
+      { 'rule-99': rule, other: makeRule({ id: 'other' }) }
     );
-    expect(local.kind).toBe("remove");
-    if (local.kind !== "remove") throw new Error("kind narrow");
+    expect(local.kind).toBe('remove');
+    if (local.kind !== 'remove') throw new Error('kind narrow');
     expect(local.targetRule).toBe(rule);
   });
 });
@@ -267,55 +267,55 @@ describe("serverOpToLocalOp", () => {
 // scopePreviewTransactions — per-op filter + cap at the server zod max
 // ---------------------------------------------------------------------------
 
-function addOp(pattern: string, matchType: "exact" | "contains" | "regex" = "contains"): LocalOp {
+function addOp(pattern: string, matchType: 'exact' | 'contains' | 'regex' = 'contains'): LocalOp {
   return {
-    kind: "add",
+    kind: 'add',
     clientId: `add-${pattern}`,
-    data: { descriptionPattern: pattern, matchType, entityName: "E", tags: [] },
+    data: { descriptionPattern: pattern, matchType, entityName: 'E', tags: [] },
     dirty: false,
   };
 }
 
 function editOp(rule: CorrectionRule | null): LocalOp {
   return {
-    kind: "edit",
-    clientId: `edit-${rule?.id ?? "orphan"}`,
-    targetRuleId: rule?.id ?? "orphan",
+    kind: 'edit',
+    clientId: `edit-${rule?.id ?? 'orphan'}`,
+    targetRuleId: rule?.id ?? 'orphan',
     targetRule: rule,
-    data: { entityName: "Renamed" },
+    data: { entityName: 'Renamed' },
     dirty: false,
   };
 }
 
-describe("scopePreviewTransactions", () => {
+describe('scopePreviewTransactions', () => {
   it("filters transactions to only those matching at least one add op's signal", () => {
     const txns = [
-      { checksum: "1", description: "WOOLWORTHS 1234 SYD" },
-      { checksum: "2", description: "COLES 9999 NEW" },
-      { checksum: "3", description: "NETFLIX 1X" },
+      { checksum: '1', description: 'WOOLWORTHS 1234 SYD' },
+      { checksum: '2', description: 'COLES 9999 NEW' },
+      { checksum: '3', description: 'NETFLIX 1X' },
     ];
     const { txns: scoped, truncated } = scopePreviewTransactions(
-      [addOp("WOOLWORTHS"), addOp("NETFLIX")],
+      [addOp('WOOLWORTHS'), addOp('NETFLIX')],
       txns
     );
-    expect(scoped.map((t) => t.checksum)).toEqual(["1", "3"]);
+    expect(scoped.map((t) => t.checksum)).toEqual(['1', '3']);
     expect(truncated).toBe(false);
   });
 
   it("uses a hydrated edit op's targetRule pattern for scoping", () => {
-    const rule = makeRule({ id: "r1", descriptionPattern: "COLES", matchType: "contains" });
+    const rule = makeRule({ id: 'r1', descriptionPattern: 'COLES', matchType: 'contains' });
     const txns = [
-      { checksum: "1", description: "WOOLWORTHS 1" },
-      { checksum: "2", description: "COLES 5 NEW" },
+      { checksum: '1', description: 'WOOLWORTHS 1' },
+      { checksum: '2', description: 'COLES 5 NEW' },
     ];
     const { txns: scoped } = scopePreviewTransactions([editOp(rule)], txns);
-    expect(scoped.map((t) => t.checksum)).toEqual(["2"]);
+    expect(scoped.map((t) => t.checksum)).toEqual(['2']);
   });
 
-  it("falls back to the full preview list when any non-add op lacks a hydrated targetRule", () => {
+  it('falls back to the full preview list when any non-add op lacks a hydrated targetRule', () => {
     const txns = [
-      { checksum: "1", description: "WOOLWORTHS 1" },
-      { checksum: "2", description: "COLES 5" },
+      { checksum: '1', description: 'WOOLWORTHS 1' },
+      { checksum: '2', description: 'COLES 5' },
     ];
     // edit op without hydrated targetRule (null) — scope must not guess.
     const { txns: scoped, truncated } = scopePreviewTransactions([editOp(null)], txns);
@@ -323,24 +323,24 @@ describe("scopePreviewTransactions", () => {
     expect(truncated).toBe(false);
   });
 
-  it("caps the scoped list at PREVIEW_CHANGESET_MAX_TRANSACTIONS and reports truncated=true", () => {
+  it('caps the scoped list at PREVIEW_CHANGESET_MAX_TRANSACTIONS and reports truncated=true', () => {
     const total = PREVIEW_CHANGESET_MAX_TRANSACTIONS + 50;
     const txns = Array.from({ length: total }, (_, i) => ({
       checksum: String(i),
       description: `WOOLWORTHS ${i}`,
     }));
-    const { txns: scoped, truncated } = scopePreviewTransactions([addOp("WOOLWORTHS")], txns);
+    const { txns: scoped, truncated } = scopePreviewTransactions([addOp('WOOLWORTHS')], txns);
     expect(scoped).toHaveLength(PREVIEW_CHANGESET_MAX_TRANSACTIONS);
     expect(truncated).toBe(true);
   });
 
-  it("does not report truncated when scoped length exactly equals the cap", () => {
+  it('does not report truncated when scoped length exactly equals the cap', () => {
     const txns = Array.from({ length: PREVIEW_CHANGESET_MAX_TRANSACTIONS }, (_, i) => ({
       checksum: String(i),
       description: `WOOLWORTHS ${i}`,
     }));
     const { scoped, truncated } = (() => {
-      const r = scopePreviewTransactions([addOp("WOOLWORTHS")], txns);
+      const r = scopePreviewTransactions([addOp('WOOLWORTHS')], txns);
       return { scoped: r.txns, truncated: r.truncated };
     })();
     expect(scoped).toHaveLength(PREVIEW_CHANGESET_MAX_TRANSACTIONS);
@@ -361,20 +361,20 @@ const EMPTY_SUMMARY = {
 };
 
 const SIGNAL = {
-  descriptionPattern: "WOOLWORTHS",
-  matchType: "contains" as const,
+  descriptionPattern: 'WOOLWORTHS',
+  matchType: 'contains' as const,
   entityId: null,
-  entityName: "Woolworths",
+  entityName: 'Woolworths',
   location: null,
   tags: [],
   transactionType: null,
 };
 
 const TRIGGERING_TRANSACTION = {
-  description: "WOOLWORTHS 1234 SYDNEY",
+  description: 'WOOLWORTHS 1234 SYDNEY',
   amount: -42.5,
-  date: "2026-01-15",
-  account: "Amex",
+  date: '2026-01-15',
+  account: 'Amex',
   location: null,
   previousEntityName: null,
   previousTransactionType: null,
@@ -383,29 +383,29 @@ const TRIGGERING_TRANSACTION = {
 function seedTwoAddOps() {
   mockProposeData = {
     changeSet: {
-      source: "test",
+      source: 'test',
       ops: [
         {
-          op: "add",
+          op: 'add',
           data: {
-            descriptionPattern: "WOOLWORTHS",
-            matchType: "contains",
-            entityName: "Woolworths",
+            descriptionPattern: 'WOOLWORTHS',
+            matchType: 'contains',
+            entityName: 'Woolworths',
             tags: [],
           },
         },
         {
-          op: "add",
+          op: 'add',
           data: {
-            descriptionPattern: "COLES",
-            matchType: "contains",
-            entityName: "Coles",
+            descriptionPattern: 'COLES',
+            matchType: 'contains',
+            entityName: 'Coles',
             tags: [],
           },
         },
       ],
     },
-    rationale: "Test proposal",
+    rationale: 'Test proposal',
     preview: {
       counts: {
         affected: 0,
@@ -423,12 +423,12 @@ function renderDialog(overrides: Partial<Parameters<typeof CorrectionProposalDia
   const props = {
     open: true,
     onOpenChange: vi.fn(),
-    sessionId: "11111111-1111-1111-1111-111111111111",
+    sessionId: '11111111-1111-1111-1111-111111111111',
     signal: SIGNAL,
     triggeringTransaction: TRIGGERING_TRANSACTION,
     previewTransactions: [
-      { checksum: "a", description: "WOOLWORTHS 1234 SYD" },
-      { checksum: "b", description: "COLES 9999 NEW" },
+      { checksum: 'a', description: 'WOOLWORTHS 1234 SYD' },
+      { checksum: 'b', description: 'COLES 9999 NEW' },
     ],
     onApproved: vi.fn(),
     ...overrides,
@@ -447,20 +447,20 @@ beforeEach(() => {
   mockReviseMutateAsync.mockReset();
   mockReviseMutateAsync.mockResolvedValue({
     changeSet: {
-      source: "ai-helper",
+      source: 'ai-helper',
       ops: [
         {
-          op: "add",
+          op: 'add',
           data: {
-            descriptionPattern: "TRANSFER",
-            matchType: "contains",
-            entityName: "Transfer",
+            descriptionPattern: 'TRANSFER',
+            matchType: 'contains',
+            entityName: 'Transfer',
             tags: [],
           },
         },
       ],
     },
-    rationale: "Replaced with a transfer rule per user request.",
+    rationale: 'Replaced with a transfer rule per user request.',
   });
   mockListQuery.mockReturnValue({
     data: { data: [], pagination: {} },
@@ -469,8 +469,8 @@ beforeEach(() => {
   });
 });
 
-describe("CorrectionProposalDialog", () => {
-  it("renders both ops from the initial proposal in the operations list", async () => {
+describe('CorrectionProposalDialog', () => {
+  it('renders both ops from the initial proposal in the operations list', async () => {
     seedTwoAddOps();
     renderDialog();
 
@@ -481,7 +481,7 @@ describe("CorrectionProposalDialog", () => {
     expect(screen.getByText(/COLES → Coles/)).toBeInTheDocument();
   });
 
-  it("runs combined preview against the proposed ChangeSet on open", async () => {
+  it('runs combined preview against the proposed ChangeSet on open', async () => {
     seedTwoAddOps();
     renderDialog();
 
@@ -496,7 +496,7 @@ describe("CorrectionProposalDialog", () => {
     expect(firstCall.changeSet.ops).toHaveLength(2);
   });
 
-  it("deleting an op removes it from the list and shifts selection", async () => {
+  it('deleting an op removes it from the list and shifts selection', async () => {
     seedTwoAddOps();
     renderDialog();
 
@@ -504,7 +504,7 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByLabelText("Delete operation");
+    const deleteButtons = screen.getAllByLabelText('Delete operation');
     expect(deleteButtons).toHaveLength(2);
     fireEvent.click(deleteButtons[0]!);
 
@@ -515,7 +515,7 @@ describe("CorrectionProposalDialog", () => {
     expect(screen.getByText(/COLES → Coles/)).toBeInTheDocument();
   });
 
-  it("editing a rule field marks the ChangeSet stale and disables Apply", async () => {
+  it('editing a rule field marks the ChangeSet stale and disables Apply', async () => {
     seedTwoAddOps();
     renderDialog();
 
@@ -527,11 +527,11 @@ describe("CorrectionProposalDialog", () => {
       expect(mockPreviewMutateAsync).toHaveBeenCalled();
     });
 
-    const applyBtn = screen.getByRole("button", { name: /Apply ChangeSet/i });
+    const applyBtn = screen.getByRole('button', { name: /Apply ChangeSet/i });
     await waitFor(() => expect(applyBtn).not.toBeDisabled());
 
-    const patternInput = screen.getByDisplayValue("WOOLWORTHS") as HTMLInputElement;
-    fireEvent.change(patternInput, { target: { value: "WOOLWORTHS METRO" } });
+    const patternInput = screen.getByDisplayValue('WOOLWORTHS') as HTMLInputElement;
+    fireEvent.change(patternInput, { target: { value: 'WOOLWORTHS METRO' } });
 
     expect(screen.getByText(/Preview stale/i)).toBeInTheDocument();
     expect(applyBtn).toBeDisabled();
@@ -545,15 +545,15 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Add operation/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^Add new rule$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add operation/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Add new rule$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Operations \(3\)/)).toBeInTheDocument();
     });
   });
 
-  it("stores ChangeSet locally via addPendingChangeSet on Apply", async () => {
+  it('stores ChangeSet locally via addPendingChangeSet on Apply', async () => {
     seedTwoAddOps();
     const { props } = renderDialog();
 
@@ -564,7 +564,7 @@ describe("CorrectionProposalDialog", () => {
       expect(mockPreviewMutateAsync).toHaveBeenCalled();
     });
 
-    const applyBtn = screen.getByRole("button", { name: /Apply ChangeSet/i });
+    const applyBtn = screen.getByRole('button', { name: /Apply ChangeSet/i });
     await waitFor(() => expect(applyBtn).not.toBeDisabled());
 
     fireEvent.click(applyBtn);
@@ -575,13 +575,13 @@ describe("CorrectionProposalDialog", () => {
       source: string;
     };
     expect(call.changeSet.ops).toHaveLength(2);
-    expect(call.source).toBe("correction-proposal");
+    expect(call.source).toBe('correction-proposal');
     expect(props.onApproved).toHaveBeenCalledWith(
       expect.objectContaining({ ops: expect.any(Array) })
     );
   });
 
-  it("reject flow requires feedback and calls rejectChangeSet", async () => {
+  it('reject flow requires feedback and calls rejectChangeSet', async () => {
     seedTwoAddOps();
     renderDialog();
 
@@ -589,14 +589,14 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Reject with feedback/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Reject with feedback/i }));
 
     // The dedicated confirm button lives in the reject panel.
-    const confirmBtn = screen.getByRole("button", { name: /Confirm reject/i });
+    const confirmBtn = screen.getByRole('button', { name: /Confirm reject/i });
     expect(confirmBtn).toBeDisabled();
 
     const feedbackBox = screen.getByPlaceholderText(/Why is this proposal wrong/i);
-    fireEvent.change(feedbackBox, { target: { value: "Too broad, should be exact" } });
+    fireEvent.change(feedbackBox, { target: { value: 'Too broad, should be exact' } });
 
     expect(confirmBtn).not.toBeDisabled();
     fireEvent.click(confirmBtn);
@@ -606,11 +606,11 @@ describe("CorrectionProposalDialog", () => {
       feedback: string;
       changeSet: { ops: unknown[] };
     };
-    expect(call.feedback).toBe("Too broad, should be exact");
+    expect(call.feedback).toBe('Too broad, should be exact');
     expect(call.changeSet.ops).toHaveLength(2);
   });
 
-  it("AI helper submit calls reviseChangeSet and replaces ops with the response", async () => {
+  it('AI helper submit calls reviseChangeSet and replaces ops with the response', async () => {
     seedTwoAddOps();
     renderDialog();
 
@@ -619,12 +619,12 @@ describe("CorrectionProposalDialog", () => {
     });
 
     const input = screen.getByPlaceholderText(/split location into its own rule/i);
-    fireEvent.change(input, { target: { value: "replace with a transfer rule" } });
-    fireEvent.click(screen.getByRole("button", { name: /^Send$/i }));
+    fireEvent.change(input, { target: { value: 'replace with a transfer rule' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Send$/i }));
 
     // User message echoed in transcript.
     await waitFor(() => {
-      expect(screen.getByText("replace with a transfer rule")).toBeInTheDocument();
+      expect(screen.getByText('replace with a transfer rule')).toBeInTheDocument();
     });
 
     // The mutation was called with the current ChangeSet, instruction, and signal.
@@ -637,7 +637,7 @@ describe("CorrectionProposalDialog", () => {
       signal: unknown;
       triggeringTransactions: unknown[];
     };
-    expect(call.instruction).toBe("replace with a transfer rule");
+    expect(call.instruction).toBe('replace with a transfer rule');
     expect(call.currentChangeSet.ops).toHaveLength(2);
     expect(call.signal).toBeTruthy();
     expect(Array.isArray(call.triggeringTransactions)).toBe(true);
@@ -656,9 +656,9 @@ describe("CorrectionProposalDialog", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("AI helper surfaces an error message when reviseChangeSet rejects", async () => {
+  it('AI helper surfaces an error message when reviseChangeSet rejects', async () => {
     seedTwoAddOps();
-    mockReviseMutateAsync.mockRejectedValueOnce(new Error("AI down"));
+    mockReviseMutateAsync.mockRejectedValueOnce(new Error('AI down'));
     renderDialog();
 
     await waitFor(() => {
@@ -666,8 +666,8 @@ describe("CorrectionProposalDialog", () => {
     });
 
     const input = screen.getByPlaceholderText(/split location into its own rule/i);
-    fireEvent.change(input, { target: { value: "broken request" } });
-    fireEvent.click(screen.getByRole("button", { name: /^Send$/i }));
+    fireEvent.change(input, { target: { value: 'broken request' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Send$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Error: AI down/i)).toBeInTheDocument();
@@ -684,14 +684,14 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("triggering-description")).toHaveTextContent(
-      "WOOLWORTHS 1234 SYDNEY"
+    expect(screen.getByTestId('triggering-description')).toHaveTextContent(
+      'WOOLWORTHS 1234 SYDNEY'
     );
     // Currency formatting is locale-dependent in CI; assert it contains the
     // dollar amount and currency symbol rather than the exact glyph.
-    expect(screen.getByTestId("triggering-amount").textContent).toMatch(/42\.50/);
-    expect(screen.getByTestId("triggering-date")).toHaveTextContent("2026-01-15");
-    expect(screen.getByTestId("triggering-account")).toHaveTextContent("Amex");
+    expect(screen.getByTestId('triggering-amount').textContent).toMatch(/42\.50/);
+    expect(screen.getByTestId('triggering-date')).toHaveTextContent('2026-01-15');
+    expect(screen.getByTestId('triggering-account')).toHaveTextContent('Amex');
   });
 
   it("renders 'assigned entity: <name>' when there is no previous entity", async () => {
@@ -702,7 +702,7 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("triggering-diff")).toHaveTextContent("assigned entity: Woolworths");
+    expect(screen.getByTestId('triggering-diff')).toHaveTextContent('assigned entity: Woolworths');
   });
 
   it("renders 'was → now' diff line for an entity rename", async () => {
@@ -710,7 +710,7 @@ describe("CorrectionProposalDialog", () => {
     renderDialog({
       triggeringTransaction: {
         ...TRIGGERING_TRANSACTION,
-        previousEntityName: "Coles",
+        previousEntityName: 'Coles',
       },
     });
 
@@ -718,16 +718,16 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("triggering-diff")).toHaveTextContent("entity: Coles → Woolworths");
+    expect(screen.getByTestId('triggering-diff')).toHaveTextContent('entity: Coles → Woolworths');
   });
 
   it("renders 'was → now' diff line for a transaction-type change", async () => {
     seedTwoAddOps();
     renderDialog({
-      signal: { ...SIGNAL, transactionType: "transfer" as const },
+      signal: { ...SIGNAL, transactionType: 'transfer' as const },
       triggeringTransaction: {
         ...TRIGGERING_TRANSACTION,
-        previousTransactionType: "purchase" as const,
+        previousTransactionType: 'purchase' as const,
       },
     });
 
@@ -735,13 +735,13 @@ describe("CorrectionProposalDialog", () => {
       expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId("triggering-diff")).toHaveTextContent("type: purchase → transfer");
+    expect(screen.getByTestId('triggering-diff')).toHaveTextContent('type: purchase → transfer');
   });
 
-  it("Apply is disabled when the ChangeSet is empty", async () => {
+  it('Apply is disabled when the ChangeSet is empty', async () => {
     mockProposeData = {
-      changeSet: { source: "test", ops: [] },
-      rationale: "empty",
+      changeSet: { source: 'test', ops: [] },
+      rationale: 'empty',
       preview: {
         counts: {
           affected: 0,
@@ -768,7 +768,7 @@ describe("CorrectionProposalDialog", () => {
       ).toBeInTheDocument();
     });
 
-    const applyBtn = screen.getByRole("button", { name: /Apply ChangeSet/i });
+    const applyBtn = screen.getByRole('button', { name: /Apply ChangeSet/i });
     expect(applyBtn).toBeDisabled();
   });
 });

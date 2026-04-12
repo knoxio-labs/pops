@@ -22,7 +22,7 @@ export interface AppNavConfig {
   /** Lucide icon component name for the app rail (e.g. 'DollarSign'). */
   icon: string;
   /** Optional theme color for this app (e.g. 'emerald', 'indigo'). */
-  color?: "emerald" | "indigo" | "amber" | "rose" | "sky" | "violet";
+  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
   /** Root path for this app (e.g. '/finance'). */
   basePath: string;
   /** Pages within this app. */

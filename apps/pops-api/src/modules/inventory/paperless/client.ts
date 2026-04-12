@@ -18,7 +18,7 @@ import {
   type PaperlessTag,
   type PaperlessDocumentType,
   type PaperlessSearchResult,
-} from "./types.js";
+} from './types.js';
 
 export class PaperlessClient {
   private readonly baseUrl: string;
@@ -26,12 +26,12 @@ export class PaperlessClient {
 
   constructor(baseUrl: string, token: string) {
     if (!baseUrl) {
-      throw new Error("Paperless URL is required");
+      throw new Error('Paperless URL is required');
     }
     if (!token) {
-      throw new Error("Paperless token is required");
+      throw new Error('Paperless token is required');
     }
-    this.baseUrl = baseUrl.replace(/\/+$/, "");
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.token = token;
   }
 
@@ -99,7 +99,7 @@ export class PaperlessClient {
   /** List all correspondents. */
   async getCorrespondents(): Promise<PaperlessCorrespondent[]> {
     const raw = await this.get<RawPaperlessPaginatedResponse<RawPaperlessCorrespondent>>(
-      "/api/correspondents/?page_size=100"
+      '/api/correspondents/?page_size=100'
     );
     return raw.results.map((c) => ({
       id: c.id,
@@ -112,7 +112,7 @@ export class PaperlessClient {
   /** List all tags. */
   async getTags(): Promise<PaperlessTag[]> {
     const raw = await this.get<RawPaperlessPaginatedResponse<RawPaperlessTag>>(
-      "/api/tags/?page_size=100"
+      '/api/tags/?page_size=100'
     );
     return raw.results.map((t) => ({
       id: t.id,
@@ -127,7 +127,7 @@ export class PaperlessClient {
   /** List all document types. */
   async getDocumentTypes(): Promise<PaperlessDocumentType[]> {
     const raw = await this.get<RawPaperlessPaginatedResponse<RawPaperlessDocumentType>>(
-      "/api/document_types/?page_size=100"
+      '/api/document_types/?page_size=100'
     );
     return raw.results.map((dt) => ({
       id: dt.id,
@@ -170,10 +170,10 @@ export class PaperlessClient {
 
     try {
       response = await fetch(url, {
-        method: "GET",
+        method: 'GET',
         headers: {
           Authorization: `Token ${this.token}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
         signal: AbortSignal.timeout(5_000),
       });

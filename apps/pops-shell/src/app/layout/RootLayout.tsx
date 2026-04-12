@@ -5,17 +5,17 @@
  * Tablet (768–1023px): AppRail visible, PageNav as overlay on app icon click
  * Mobile (<768px): Hamburger opens Sidebar overlay with all pages
  */
-import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router";
-import { TopBar } from "./TopBar";
-import { AppRail } from "./AppRail";
-import { PageNav } from "./PageNav";
-import { Sidebar } from "./Sidebar";
-import { ErrorBoundary, cn } from "@pops/ui";
-import { AppContextProvider } from "@pops/navigation";
-import { useUIStore } from "@/store/uiStore";
-import { registeredApps } from "@/app/nav/registry";
-import { findActiveApp } from "@/app/nav/path-utils";
+import { useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router';
+import { TopBar } from './TopBar';
+import { AppRail } from './AppRail';
+import { PageNav } from './PageNav';
+import { Sidebar } from './Sidebar';
+import { ErrorBoundary, cn } from '@pops/ui';
+import { AppContextProvider } from '@pops/navigation';
+import { useUIStore } from '@/store/uiStore';
+import { registeredApps } from '@/app/nav/registry';
+import { findActiveApp } from '@/app/nav/path-utils';
 
 export function RootLayout() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
@@ -32,7 +32,7 @@ export function RootLayout() {
 
   return (
     <AppContextProvider>
-      <div className={cn("min-h-screen bg-background relative", appColorClass)}>
+      <div className={cn('min-h-screen bg-background relative', appColorClass)}>
         {/* Ambient background decorative elements */}
         <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0 opacity-20 dark:opacity-10">
           <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-app-accent/20 blur-[120px]" />

@@ -4,14 +4,14 @@
 
 /** Possible status values for a movie/show in the *arr system. */
 export type ArrStatus =
-  | "available"
-  | "monitored"
-  | "downloading"
-  | "unmonitored"
-  | "complete"
-  | "partial"
-  | "not_found"
-  | "unavailable";
+  | 'available'
+  | 'monitored'
+  | 'downloading'
+  | 'unmonitored'
+  | 'complete'
+  | 'partial'
+  | 'not_found'
+  | 'unavailable';
 
 /** Status result returned to the frontend. */
 export interface ArrStatusResult {
@@ -36,7 +36,7 @@ export class ArrApiError extends Error {
 
   constructor(message: string, status = 0) {
     super(message);
-    this.name = "ArrApiError";
+    this.name = 'ArrApiError';
     this.status = status;
   }
 }
@@ -242,7 +242,7 @@ export interface ArrSystemStatus {
 export interface DownloadQueueItem {
   id: string;
   title: string;
-  mediaType: "movie" | "episode";
+  mediaType: 'movie' | 'episode';
   /** Episode label, e.g. "S01E05" */
   episodeLabel?: string;
   /** Download progress 0–100. */
@@ -250,5 +250,5 @@ export interface DownloadQueueItem {
   /** Human-readable ETA, e.g. "12m", "2h 30m". */
   eta?: string;
   /** Source service. */
-  source: "radarr" | "sonarr";
+  source: 'radarr' | 'sonarr';
 }

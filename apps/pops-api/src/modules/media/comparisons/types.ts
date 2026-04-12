@@ -1,9 +1,9 @@
-import { z } from "zod";
-import type { ComparisonDimensionRow, ComparisonRow, MediaScoreRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { ComparisonDimensionRow, ComparisonRow, MediaScoreRow } from '@pops/db-types';
 
 export type { ComparisonDimensionRow, ComparisonRow, MediaScoreRow };
 
-const MEDIA_TYPES = ["movie", "tv_show"] as const;
+const MEDIA_TYPES = ['movie', 'tv_show'] as const;
 
 /** API response shape for a dimension. */
 export interface Dimension {
@@ -158,7 +158,7 @@ export type SmartPairQuery = z.infer<typeof SmartPairQuerySchema>;
 
 /** Zod schemas */
 export const CreateDimensionSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   description: z.string().nullable().optional(),
   active: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
@@ -175,10 +175,10 @@ export const UpdateDimensionSchema = z.object({
 });
 export type UpdateDimensionInput = z.infer<typeof UpdateDimensionSchema>;
 
-const DRAW_TIERS = ["high", "mid", "low"] as const;
+const DRAW_TIERS = ['high', 'mid', 'low'] as const;
 export type DrawTier = (typeof DRAW_TIERS)[number];
 
-const COMPARISON_SOURCES = ["arena", "tier_list"] as const;
+const COMPARISON_SOURCES = ['arena', 'tier_list'] as const;
 export type ComparisonSource = (typeof COMPARISON_SOURCES)[number];
 
 export const RecordComparisonSchema = z.object({
@@ -305,13 +305,13 @@ export interface PendingDebrief {
   movieId: number;
   title: string;
   posterUrl: string | null;
-  status: "pending" | "active";
+  status: 'pending' | 'active';
   createdAt: string;
   pendingDimensionCount: number;
 }
 
 export const GetDebriefSchema = z.object({
-  mediaType: z.enum(["movie", "episode"]),
+  mediaType: z.enum(['movie', 'episode']),
   mediaId: z.number().int().positive(),
 });
 export type GetDebriefInput = z.infer<typeof GetDebriefSchema>;
@@ -330,7 +330,7 @@ export interface TierListMovie {
   comparisonCount: number;
 }
 
-const TIER_RANKS = ["S", "A", "B", "C", "D"] as const;
+const TIER_RANKS = ['S', 'A', 'B', 'C', 'D'] as const;
 export type Tier = (typeof TIER_RANKS)[number];
 
 export const TierPlacementSchema = z.object({
@@ -340,7 +340,7 @@ export const TierPlacementSchema = z.object({
 
 export const SubmitTierListSchema = z.object({
   dimensionId: z.number().int().positive(),
-  placements: z.array(TierPlacementSchema).min(2, "At least 2 placements are required"),
+  placements: z.array(TierPlacementSchema).min(2, 'At least 2 placements are required'),
 });
 export type SubmitTierListInput = z.infer<typeof SubmitTierListSchema>;
 
@@ -383,7 +383,7 @@ export type BatchComparisonItem = z.infer<typeof BatchComparisonItemSchema>;
 
 export const BatchRecordComparisonsSchema = z.object({
   dimensionId: z.number().int().positive(),
-  comparisons: z.array(BatchComparisonItemSchema).min(1, "At least 1 comparison is required"),
+  comparisons: z.array(BatchComparisonItemSchema).min(1, 'At least 1 comparison is required'),
 });
 export type BatchRecordComparisonsInput = z.infer<typeof BatchRecordComparisonsSchema>;
 

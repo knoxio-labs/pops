@@ -1,15 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState, useEffect } from "react";
-import { Progress } from "./progress";
-import { Button } from "../components/Button";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState, useEffect } from 'react';
+import { Progress } from './progress';
+import { Button } from '../components/Button';
 
 const meta: Meta<typeof Progress> = {
-  title: "Data Display/Progress",
+  title: 'Data Display/Progress',
   component: Progress,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -37,16 +37,16 @@ export const BudgetTracking: Story = {
   args: {},
   render: () => {
     const budgets = [
-      { category: "Food", spent: 450, total: 600, color: "bg-blue-600" },
-      { category: "Shopping", spent: 680, total: 800, color: "bg-pink-600" },
+      { category: 'Food', spent: 450, total: 600, color: 'bg-blue-600' },
+      { category: 'Shopping', spent: 680, total: 800, color: 'bg-pink-600' },
       {
-        category: "Entertainment",
+        category: 'Entertainment',
         spent: 280,
         total: 200,
-        color: "bg-red-600",
+        color: 'bg-red-600',
       },
-      { category: "Transport", spent: 120, total: 300, color: "bg-green-600" },
-      { category: "Bills", spent: 550, total: 600, color: "bg-purple-600" },
+      { category: 'Transport', spent: 120, total: 300, color: 'bg-green-600' },
+      { category: 'Bills', spent: 550, total: 600, color: 'bg-purple-600' },
     ];
 
     return (
@@ -59,11 +59,11 @@ export const BudgetTracking: Story = {
             <div key={budget.category} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">{budget.category}</span>
-                <span className={isOverBudget ? "text-destructive font-medium" : ""}>
+                <span className={isOverBudget ? 'text-destructive font-medium' : ''}>
                   ${budget.spent} / ${budget.total}
                 </span>
               </div>
-              <Progress value={percentage} className={isOverBudget ? "bg-red-200" : ""} />
+              <Progress value={percentage} className={isOverBudget ? 'bg-red-200' : ''} />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{percentage.toFixed(0)}% spent</span>
                 {isOverBudget && (
@@ -220,18 +220,18 @@ export const MultipleGoals: Story = {
   render: () => {
     const goals = [
       {
-        name: "Emergency Fund",
+        name: 'Emergency Fund',
         current: 6750,
         target: 10000,
-        color: "bg-blue-600",
+        color: 'bg-blue-600',
       },
-      { name: "Vacation", current: 2400, target: 5000, color: "bg-green-600" },
-      { name: "New Car", current: 8200, target: 15000, color: "bg-purple-600" },
+      { name: 'Vacation', current: 2400, target: 5000, color: 'bg-green-600' },
+      { name: 'New Car', current: 8200, target: 15000, color: 'bg-purple-600' },
       {
-        name: "Home Deposit",
+        name: 'Home Deposit',
         current: 45000,
         target: 80000,
-        color: "bg-orange-600",
+        color: 'bg-orange-600',
       },
     ];
 
@@ -260,7 +260,7 @@ export const LoadingStates: Story = {
   args: {},
   render: () => {
     const [step, setStep] = useState(0);
-    const steps = ["Connecting", "Syncing", "Processing", "Complete"];
+    const steps = ['Connecting', 'Syncing', 'Processing', 'Complete'];
 
     useEffect(() => {
       const timer = setInterval(() => {

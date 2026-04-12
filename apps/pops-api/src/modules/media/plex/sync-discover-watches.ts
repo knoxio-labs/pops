@@ -17,19 +17,19 @@
  * Movies are added via TMDB ID. TV shows are added via TVDB ID and episodes
  * are matched by season + episode number within the show.
  */
-import { eq, and } from "drizzle-orm";
-import { movies, tvShows, seasons, episodes } from "@pops/db-types";
-import { PlexApiError } from "./types.js";
-import type { PlexClient } from "./client.js";
-import { extractExternalIdAsNumber } from "./sync-helpers.js";
-import { logWatch } from "../watch-history/service.js";
-import { getDrizzle } from "../../../db.js";
-import { getPlexToken, getPlexClientId } from "./service.js";
-import { getTmdbClient } from "../tmdb/index.js";
-import { getImageCache } from "../tmdb/index.js";
-import { getTvdbClient } from "../thetvdb/index.js";
-import { addMovie } from "../library/service.js";
-import { addTvShow } from "../library/tv-show-service.js";
+import { eq, and } from 'drizzle-orm';
+import { movies, tvShows, seasons, episodes } from '@pops/db-types';
+import { PlexApiError } from './types.js';
+import type { PlexClient } from './client.js';
+import { extractExternalIdAsNumber } from './sync-helpers.js';
+import { logWatch } from '../watch-history/service.js';
+import { getDrizzle } from '../../../db.js';
+import { getPlexToken, getPlexClientId } from './service.js';
+import { getTmdbClient } from '../tmdb/index.js';
+import { getImageCache } from '../tmdb/index.js';
+import { getTvdbClient } from '../thetvdb/index.js';
+import { addMovie } from '../library/service.js';
+import { addTvShow } from '../library/tv-show-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,7 +162,7 @@ export async function syncDiscoverWatches(
 ): Promise<DiscoverWatchSyncResult> {
   const db = getDrizzle();
   const token = getPlexToken();
-  if (!token) throw new Error("Plex token not available");
+  if (!token) throw new Error('Plex token not available');
 
   const tmdbClient = getTmdbClient();
   const imageCache = getImageCache();
@@ -215,7 +215,7 @@ export async function syncDiscoverWatches(
     for (const entry of entries) {
       const type = entry.metadataItem.type;
 
-      if (type === "MOVIE") {
+      if (type === 'MOVIE') {
         movieResult.total++;
         await processMovieEntry(
           entry,
@@ -227,7 +227,7 @@ export async function syncDiscoverWatches(
           movieResult,
           db
         );
-      } else if (type === "EPISODE") {
+      } else if (type === 'EPISODE') {
         tvResult.total++;
         await processEpisodeEntry(
           entry,
@@ -291,7 +291,7 @@ async function processMovieEntry(
         return;
       }
 
-      const tmdbId = extractExternalIdAsNumber(meta, "tmdb");
+      const tmdbId = extractExternalIdAsNumber(meta, 'tmdb');
       if (!tmdbId) {
         result.notFound++;
         return;
@@ -325,11 +325,11 @@ async function processMovieEntry(
     // Log the watch
     result.watched++;
     const logResult = logWatch({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: movie.id,
       watchedAt: entry.date,
       completed: 1,
-      source: "plex_sync",
+      source: 'plex_sync',
     });
     if (logResult.created) result.logged++;
     else result.alreadyLogged++;
@@ -402,11 +402,11 @@ async function processEpisodeEntry(
     // Log the watch
     result.watched++;
     const logResult = logWatch({
-      mediaType: "episode",
+      mediaType: 'episode',
       mediaId: episode.id,
       watchedAt: entry.date,
       completed: 1,
-      source: "plex_sync",
+      source: 'plex_sync',
     });
     if (logResult.created) result.logged++;
     else result.alreadyLogged++;
@@ -431,7 +431,7 @@ async function resolveShow(
 ): Promise<{ showId: number; tvdbId: number } | null> {
   try {
     await delay(RATE_LIMIT_DELAY_MS);
-    const searchResults = await plexClient.searchDiscover(showTitle, "show");
+    const searchResults = await plexClient.searchDiscover(showTitle, 'show');
     if (searchResults.length === 0) {
       result.notFound++;
       return null;
@@ -444,7 +444,7 @@ async function resolveShow(
     for (const candidate of searchResults) {
       const meta = await plexClient.getDiscoverMetadata(candidate.ratingKey);
       if (!meta) continue;
-      tvdbId = extractExternalIdAsNumber(meta, "tvdb");
+      tvdbId = extractExternalIdAsNumber(meta, 'tvdb');
       if (tvdbId) {
         ratingKey = candidate.ratingKey;
         break;
@@ -495,12 +495,12 @@ async function resolveShow(
 // ---------------------------------------------------------------------------
 
 async function fetchAccountUuid(token: string): Promise<string> {
-  const res = await fetch("https://plex.tv/api/v2/user", {
-    headers: { Accept: "application/json", "X-Plex-Token": token },
+  const res = await fetch('https://plex.tv/api/v2/user', {
+    headers: { Accept: 'application/json', 'X-Plex-Token': token },
   });
-  if (!res.ok) throw new PlexApiError(res.status, "Failed to fetch Plex account info");
+  if (!res.ok) throw new PlexApiError(res.status, 'Failed to fetch Plex account info');
   const data = (await res.json()) as { uuid?: string };
-  if (!data.uuid) throw new Error("Plex account UUID not found");
+  if (!data.uuid) throw new Error('Plex account UUID not found');
   return data.uuid;
 }
 
@@ -523,14 +523,14 @@ async function communityGraphQL<T>(
 ): Promise<T> {
   const clientId = getPlexClientId();
 
-  const res = await fetch("https://community.plex.tv/api", {
-    method: "POST",
+  const res = await fetch('https://community.plex.tv/api', {
+    method: 'POST',
     headers: {
-      Accept: "*/*",
-      "Content-Type": "application/json",
-      "x-plex-token": token,
-      "x-plex-client-identifier": clientId,
-      "x-plex-product": "POPS",
+      Accept: '*/*',
+      'Content-Type': 'application/json',
+      'x-plex-token': token,
+      'x-plex-client-identifier': clientId,
+      'x-plex-product': 'POPS',
     },
     body: JSON.stringify({ query, variables, operationName }),
   });
@@ -544,7 +544,7 @@ async function communityGraphQL<T>(
     throw new Error(`GraphQL error: ${json.errors[0]?.message}`);
   }
   if (!json.data) {
-    throw new Error("GraphQL response missing data");
+    throw new Error('GraphQL response missing data');
   }
   return json.data;
 }
@@ -567,7 +567,7 @@ async function fetchWatchHistoryPage(
         pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
       };
     };
-  }>(token, WATCH_HISTORY_QUERY, variables, "GetWatchHistoryHub");
+  }>(token, WATCH_HISTORY_QUERY, variables, 'GetWatchHistoryHub');
 
   const history = data.user?.watchHistory;
   return {
@@ -587,8 +587,8 @@ async function fetchActivityForItem(
   }>(
     token,
     ACTIVITY_FEED_QUERY,
-    { first: 50, metadataID: ratingKey, types: ["WATCH_HISTORY"] },
-    "GetActivityFeed"
+    { first: 50, metadataID: ratingKey, types: ['WATCH_HISTORY'] },
+    'GetActivityFeed'
   );
   return data.activityFeed?.nodes ?? [];
 }
@@ -615,14 +615,14 @@ export async function checkAndLogMovieWatch(
     if (!token) return false;
 
     // Find the Discover ratingKey for this movie
-    const results = await plexClient.searchDiscover(title, "movie");
+    const results = await plexClient.searchDiscover(title, 'movie');
     if (results.length === 0) return false;
 
     let ratingKey: string | null = null;
     for (const item of results) {
       const meta = await plexClient.getDiscoverMetadata(item.ratingKey);
       if (!meta) continue;
-      const id = extractExternalIdAsNumber(meta, "tmdb");
+      const id = extractExternalIdAsNumber(meta, 'tmdb');
       if (id === tmdbId) {
         ratingKey = item.ratingKey;
         break;
@@ -644,13 +644,13 @@ export async function checkAndLogMovieWatch(
     if (nodes.length === 0) {
       // Fallback to userState lastViewedAt
       logWatch({
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: movieId,
         watchedAt: state.lastViewedAt
           ? new Date(state.lastViewedAt * 1000).toISOString()
           : new Date().toISOString(),
         completed: 1,
-        source: "plex_sync",
+        source: 'plex_sync',
       });
       return true;
     }
@@ -659,11 +659,11 @@ export async function checkAndLogMovieWatch(
     let logged = false;
     for (const node of nodes) {
       const result = logWatch({
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: movieId,
         watchedAt: node.date,
         completed: 1,
-        source: "plex_sync",
+        source: 'plex_sync',
       });
       if (result.created) logged = true;
     }

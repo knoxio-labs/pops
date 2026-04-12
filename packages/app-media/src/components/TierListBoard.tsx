@@ -5,8 +5,8 @@
  * Movies can be dragged between tiers and back to unranked.
  * Submit button is disabled until at least 2 movies are placed.
  */
-import { useState, useCallback, useMemo } from "react";
-import { Button } from "@pops/ui";
+import { useState, useCallback, useMemo } from 'react';
+import { Button } from '@pops/ui';
 import {
   DndContext,
   DragOverlay,
@@ -17,29 +17,29 @@ import {
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
-} from "@dnd-kit/core";
-import { useSortable, SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { useDroppable } from "@dnd-kit/core";
-import { ImageOff, GripVertical, EyeOff, Clock, Ban } from "lucide-react";
+} from '@dnd-kit/core';
+import { useSortable, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useDroppable } from '@dnd-kit/core';
+import { ImageOff, GripVertical, EyeOff, Clock, Ban } from 'lucide-react';
 
-const TIERS = ["S", "A", "B", "C", "D"] as const;
+const TIERS = ['S', 'A', 'B', 'C', 'D'] as const;
 export type Tier = (typeof TIERS)[number];
 
 const TIER_COLORS: Record<Tier, string> = {
-  S: "bg-red-500/20 border-red-500/40 text-red-500",
-  A: "bg-orange-500/20 border-orange-500/40 text-orange-500",
-  B: "bg-yellow-500/20 border-yellow-500/40 text-yellow-500",
-  C: "bg-green-500/20 border-green-500/40 text-green-500",
-  D: "bg-blue-500/20 border-blue-500/40 text-blue-500",
+  S: 'bg-red-500/20 border-red-500/40 text-red-500',
+  A: 'bg-orange-500/20 border-orange-500/40 text-orange-500',
+  B: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500',
+  C: 'bg-green-500/20 border-green-500/40 text-green-500',
+  D: 'bg-blue-500/20 border-blue-500/40 text-blue-500',
 };
 
 const TIER_LABEL_COLORS: Record<Tier, string> = {
-  S: "bg-red-500 text-white",
-  A: "bg-orange-500 text-white",
-  B: "bg-yellow-500 text-black",
-  C: "bg-green-500 text-white",
-  D: "bg-blue-500 text-white",
+  S: 'bg-red-500 text-white',
+  A: 'bg-orange-500 text-white',
+  B: 'bg-yellow-500 text-black',
+  C: 'bg-green-500 text-white',
+  D: 'bg-blue-500 text-white',
 };
 
 export interface TierMovie {
@@ -53,27 +53,27 @@ export interface TierMovie {
 
 export type TierPlacements = Record<Tier, number[]>;
 
-const DISMISS_ZONES = ["not-watched", "stale", "n-a"] as const;
+const DISMISS_ZONES = ['not-watched', 'stale', 'n-a'] as const;
 type DismissZone = (typeof DISMISS_ZONES)[number];
 
 const DISMISS_ZONE_CONFIG: Record<
   DismissZone,
   { label: string; icon: typeof EyeOff; color: string }
 > = {
-  "not-watched": {
-    label: "Not Watched",
+  'not-watched': {
+    label: 'Not Watched',
     icon: EyeOff,
-    color: "border-red-500/40 text-red-400 bg-red-500/10",
+    color: 'border-red-500/40 text-red-400 bg-red-500/10',
   },
   stale: {
-    label: "Stale",
+    label: 'Stale',
     icon: Clock,
-    color: "border-yellow-500/40 text-yellow-400 bg-yellow-500/10",
+    color: 'border-yellow-500/40 text-yellow-400 bg-yellow-500/10',
   },
-  "n-a": {
-    label: "N/A",
+  'n-a': {
+    label: 'N/A',
     icon: Ban,
-    color: "border-muted-foreground/40 text-muted-foreground bg-muted/30",
+    color: 'border-muted-foreground/40 text-muted-foreground bg-muted/30',
   },
 };
 
@@ -129,7 +129,7 @@ export function TierListBoard({
 
     setPlacements((prev) => {
       // Find source container using fresh state to avoid stale closure issues with rapid pointer movement
-      let sourceContainer: Tier | "unranked" = "unranked";
+      let sourceContainer: Tier | 'unranked' = 'unranked';
       for (const tier of TIERS) {
         if (prev[tier].includes(activeIdNum)) {
           sourceContainer = tier;
@@ -138,14 +138,14 @@ export function TierListBoard({
       }
 
       // Determine target container
-      let targetContainer: Tier | "unranked";
+      let targetContainer: Tier | 'unranked';
       if (TIERS.includes(overId as Tier)) {
         targetContainer = overId as Tier;
-      } else if (overId === "unranked") {
-        targetContainer = "unranked";
+      } else if (overId === 'unranked') {
+        targetContainer = 'unranked';
       } else {
         // overId is a movie id — find which tier it's in using fresh state
-        let found: Tier | "unranked" = "unranked";
+        let found: Tier | 'unranked' = 'unranked';
         for (const tier of TIERS) {
           if (prev[tier].includes(Number(overId))) {
             found = tier;
@@ -160,12 +160,12 @@ export function TierListBoard({
       const next = { ...prev };
 
       // Remove from source tier
-      if (sourceContainer !== "unranked") {
+      if (sourceContainer !== 'unranked') {
         next[sourceContainer] = prev[sourceContainer].filter((id) => id !== activeIdNum);
       }
 
       // Add to target tier
-      if (targetContainer !== "unranked") {
+      if (targetContainer !== 'unranked') {
         if (!next[targetContainer].includes(activeIdNum)) {
           next[targetContainer] = [...prev[targetContainer], activeIdNum];
         }
@@ -197,19 +197,19 @@ export function TierListBoard({
           return next;
         });
         // Trigger the appropriate callback
-        if (zone === "not-watched") onNotWatched?.(activeIdNum);
-        else if (zone === "stale") onMarkStale?.(activeIdNum);
-        else if (zone === "n-a") onNA?.(activeIdNum);
+        if (zone === 'not-watched') onNotWatched?.(activeIdNum);
+        else if (zone === 'stale') onMarkStale?.(activeIdNum);
+        else if (zone === 'n-a') onNA?.(activeIdNum);
         return;
       }
 
       setPlacements((prev) => {
         // Determine target container — handles tier names, "unranked", and movie ids
-        let targetContainer: Tier | "unranked";
+        let targetContainer: Tier | 'unranked';
         if (TIERS.includes(overId as Tier)) {
           targetContainer = overId as Tier;
-        } else if (overId === "unranked") {
-          targetContainer = "unranked";
+        } else if (overId === 'unranked') {
+          targetContainer = 'unranked';
         } else {
           // overId is a movie id — find which tier it's in using fresh state
           const targetTier = TIERS.find((t) => prev[t].includes(Number(overId)));
@@ -225,7 +225,7 @@ export function TierListBoard({
         }
 
         // Add to target tier if applicable
-        if (targetContainer !== "unranked") {
+        if (targetContainer !== 'unranked') {
           next[targetContainer] = [...next[targetContainer], activeIdNum];
         }
 
@@ -276,7 +276,7 @@ export function TierListBoard({
         {/* Submit */}
         <div className="flex justify-center pt-4">
           <Button onClick={handleSubmit} disabled={totalPlaced < 2 || submitPending}>
-            {submitPending ? "Submitting\u2026" : `Submit Tier List (${totalPlaced} placed)`}
+            {submitPending ? 'Submitting\u2026' : `Submit Tier List (${totalPlaced} placed)`}
           </Button>
         </div>
       </div>
@@ -304,7 +304,7 @@ function TierRow({
       aria-label={`Tier ${tier}`}
       className={`flex items-stretch min-h-[80px] rounded-lg border transition-colors ${
         TIER_COLORS[tier]
-      } ${isOver ? "ring-2 ring-primary" : ""}`}
+      } ${isOver ? 'ring-2 ring-primary' : ''}`}
     >
       <div
         className={`flex items-center justify-center w-14 shrink-0 rounded-l-lg font-bold text-2xl ${TIER_LABEL_COLORS[tier]}`}
@@ -326,14 +326,14 @@ function TierRow({
 }
 
 function UnrankedPool({ movies }: { movies: TierMovie[] }) {
-  const { setNodeRef, isOver } = useDroppable({ id: "unranked" });
+  const { setNodeRef, isOver } = useDroppable({ id: 'unranked' });
 
   return (
     <div
       ref={setNodeRef}
       aria-label="Unranked movies"
       className={`mt-4 rounded-lg border border-dashed border-muted-foreground/30 p-3 transition-colors ${
-        isOver ? "ring-2 ring-primary bg-muted/50" : "bg-muted/20"
+        isOver ? 'ring-2 ring-primary bg-muted/50' : 'bg-muted/20'
       }`}
     >
       <h3 className="text-sm font-medium text-muted-foreground mb-2">Unranked ({movies.length})</h3>
@@ -363,7 +363,7 @@ function DismissDropZone({ zone }: { zone: DismissZone }) {
     <div
       ref={setNodeRef}
       className={`flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed p-3 transition-all ${config.color} ${
-        isOver ? "ring-2 ring-primary scale-[1.02] border-solid" : ""
+        isOver ? 'ring-2 ring-primary scale-[1.02] border-solid' : ''
       }`}
     >
       <Icon className="h-4 w-4" />

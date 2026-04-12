@@ -1,13 +1,13 @@
 /**
  * Locations tRPC router — CRUD procedures for the location tree.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { CreateLocationSchema, UpdateLocationSchema, toLocation } from "./types.js";
-import { toInventoryItem } from "../items/types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { CreateLocationSchema, UpdateLocationSchema, toLocation } from './types.js';
+import { toInventoryItem } from '../items/types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 
 export const locationsRouter = router({
   /** Get the full location tree as nested nodes. */
@@ -31,7 +31,7 @@ export const locationsRouter = router({
       return { data: toLocation(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -44,7 +44,7 @@ export const locationsRouter = router({
       return { data: rows.map(toLocation) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -74,7 +74,7 @@ export const locationsRouter = router({
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -92,11 +92,11 @@ export const locationsRouter = router({
       const row = service.createLocation(input);
       return {
         data: toLocation(row),
-        message: "Location created",
+        message: 'Location created',
       };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -115,14 +115,14 @@ export const locationsRouter = router({
         const row = service.updateLocation(input.id, input.data);
         return {
           data: toLocation(row),
-          message: "Location updated",
+          message: 'Location updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof ConflictError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
+          throw new TRPCError({ code: 'CONFLICT', message: err.message });
         }
         throw err;
       }
@@ -135,7 +135,7 @@ export const locationsRouter = router({
       return { data: stats };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -154,10 +154,10 @@ export const locationsRouter = router({
           }
         }
         service.deleteLocation(input.id);
-        return { message: "Location deleted" };
+        return { message: 'Location deleted' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }

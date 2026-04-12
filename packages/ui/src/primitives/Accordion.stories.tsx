@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./accordion";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './accordion';
 
 const meta: Meta = {
-  title: "Layout/Accordion",
+  title: 'Layout/Accordion',
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -190,7 +190,7 @@ export const BudgetCategories: Story = {
                 <span className="font-medium">$150</span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted">
-                <div className="h-full rounded-full bg-blue-600" style={{ width: "75%" }} />
+                <div className="h-full rounded-full bg-blue-600" style={{ width: '75%' }} />
               </div>
             </div>
           </AccordionContent>
@@ -218,7 +218,7 @@ export const BudgetCategories: Story = {
                 <span className="font-medium">$60</span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted">
-                <div className="h-full rounded-full bg-pink-600" style={{ width: "85%" }} />
+                <div className="h-full rounded-full bg-pink-600" style={{ width: '85%' }} />
               </div>
             </div>
           </AccordionContent>
@@ -246,7 +246,7 @@ export const BudgetCategories: Story = {
                 <span className="font-medium text-red-600">$45</span>
               </div>
               <div className="h-2 w-full rounded-full bg-red-200">
-                <div className="h-full rounded-full bg-red-600" style={{ width: "100%" }} />
+                <div className="h-full rounded-full bg-red-600" style={{ width: '100%' }} />
               </div>
             </div>
           </AccordionContent>

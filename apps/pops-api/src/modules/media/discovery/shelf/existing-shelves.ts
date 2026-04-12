@@ -13,21 +13,21 @@
  *   worth-rewatching   — Local library movies watched 6+ months ago with high ELO
  *   from-your-server   — Unwatched library movies scored by preference profile
  */
-import { getTmdbClient } from "../../tmdb/index.js";
-import * as tmdbService from "../tmdb-service.js";
-import * as plexService from "../plex-service.js";
-import * as service from "../service.js";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile, DiscoverResult, RewatchSuggestion } from "../types.js";
+import { getTmdbClient } from '../../tmdb/index.js';
+import * as tmdbService from '../tmdb-service.js';
+import * as plexService from '../plex-service.js';
+import * as service from '../service.js';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile, DiscoverResult, RewatchSuggestion } from '../types.js';
 
 /** Map a RewatchSuggestion to the DiscoverResult interface. */
 function rewatchToDiscoverResult(r: RewatchSuggestion): DiscoverResult {
   return {
     tmdbId: r.tmdbId,
     title: r.title,
-    overview: "",
-    releaseDate: r.releaseDate ?? "",
+    overview: '',
+    releaseDate: r.releaseDate ?? '',
     posterPath: r.posterPath,
     posterUrl: r.posterUrl,
     backdropPath: null,
@@ -46,21 +46,21 @@ function rewatchToDiscoverResult(r: RewatchSuggestion): DiscoverResult {
 // ---------------------------------------------------------------------------
 
 export const trendingTmdbShelf: ShelfDefinition = {
-  id: "trending-tmdb",
+  id: 'trending-tmdb',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "trending-tmdb",
-        title: "Trending",
-        subtitle: "What everyone is watching this week",
-        emoji: "🔥",
+        shelfId: 'trending-tmdb',
+        title: 'Trending',
+        subtitle: 'What everyone is watching this week',
+        emoji: '🔥',
         score: 0.5,
         query: async ({ limit, offset }) => {
           const client = getTmdbClient();
           const page = Math.floor(offset / 20) + 1;
-          const { results } = await tmdbService.getTrending(client, "week", page);
+          const { results } = await tmdbService.getTrending(client, 'week', page);
           const start = offset % 20;
           return results.slice(start, start + limit);
         },
@@ -74,16 +74,16 @@ export const trendingTmdbShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const trendingPlexShelf: ShelfDefinition = {
-  id: "trending-plex",
+  id: 'trending-plex',
   template: false,
-  category: "external",
+  category: 'external',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "trending-plex",
-        title: "Trending on Plex",
-        subtitle: "Popular on Plex Discover right now",
-        emoji: "📺",
+        shelfId: 'trending-plex',
+        title: 'Trending on Plex',
+        subtitle: 'Popular on Plex Discover right now',
+        emoji: '📺',
         score: 0.55,
         query: async ({ limit, offset }) => {
           const results = await plexService.getTrendingFromPlex(limit + offset);
@@ -100,16 +100,16 @@ export const trendingPlexShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const recommendationsShelf: ShelfDefinition = {
-  id: "recommendations",
+  id: 'recommendations',
   template: false,
-  category: "profile",
+  category: 'profile',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "recommendations",
-        title: "Recommended for You",
-        subtitle: "Based on your highest-rated movies",
-        emoji: "⭐",
+        shelfId: 'recommendations',
+        title: 'Recommended for You',
+        subtitle: 'Based on your highest-rated movies',
+        emoji: '⭐',
         score: 0.9,
         query: async ({ limit, offset }) => {
           const profile = service.getPreferenceProfile();
@@ -132,16 +132,16 @@ export const recommendationsShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const fromYourWatchlistShelf: ShelfDefinition = {
-  id: "from-your-watchlist",
+  id: 'from-your-watchlist',
   template: false,
-  category: "tmdb",
+  category: 'tmdb',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "from-your-watchlist",
-        title: "From Your Watchlist",
-        subtitle: "Movies similar to your watchlist picks",
-        emoji: "📋",
+        shelfId: 'from-your-watchlist',
+        title: 'From Your Watchlist',
+        subtitle: 'Movies similar to your watchlist picks',
+        emoji: '📋',
         score: 0.7,
         query: async ({ limit, offset }) => {
           const client = getTmdbClient();
@@ -158,16 +158,16 @@ export const fromYourWatchlistShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const worthRewatchingShelf: ShelfDefinition = {
-  id: "worth-rewatching",
+  id: 'worth-rewatching',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "worth-rewatching",
-        title: "Worth Rewatching",
-        subtitle: "Your classics — time for a revisit",
-        emoji: "🔁",
+        shelfId: 'worth-rewatching',
+        title: 'Worth Rewatching',
+        subtitle: 'Your classics — time for a revisit',
+        emoji: '🔁',
         score: 0.65,
         query: ({ limit, offset }) => {
           const suggestions = service.getRewatchSuggestions();
@@ -184,16 +184,16 @@ export const worthRewatchingShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const fromYourServerShelf: ShelfDefinition = {
-  id: "from-your-server",
+  id: 'from-your-server',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "from-your-server",
-        title: "Ready on Your Server",
-        subtitle: "Unwatched movies already in your library",
-        emoji: "🖥️",
+        shelfId: 'from-your-server',
+        title: 'Ready on Your Server',
+        subtitle: 'Unwatched movies already in your library',
+        emoji: '🖥️',
         score: 0.75,
         query: ({ limit, offset }) => {
           const unwatched = service.getUnwatchedLibraryMovies();

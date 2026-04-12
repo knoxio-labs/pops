@@ -2,10 +2,10 @@
  * PreferenceProfile — visualisation of genre distribution, genre affinity,
  * and dimension weights on the Discover page.
  */
-import { Link } from "react-router";
-import { Skeleton } from "@pops/ui";
-import { Swords, BarChart3, Heart, Weight } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Link } from 'react-router';
+import { Skeleton } from '@pops/ui';
+import { Swords, BarChart3, Heart, Weight } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface GenreDistribution {
   genre: string;
@@ -41,14 +41,14 @@ interface PreferenceProfileProps {
 }
 
 const CHART_COLORS = [
-  "var(--color-primary)",
-  "hsl(220, 70%, 55%)",
-  "hsl(260, 60%, 55%)",
-  "hsl(340, 65%, 55%)",
-  "hsl(30, 70%, 50%)",
-  "hsl(160, 55%, 45%)",
-  "hsl(190, 60%, 50%)",
-  "hsl(280, 50%, 55%)",
+  'var(--color-primary)',
+  'hsl(220, 70%, 55%)',
+  'hsl(260, 60%, 55%)',
+  'hsl(340, 65%, 55%)',
+  'hsl(30, 70%, 50%)',
+  'hsl(160, 55%, 45%)',
+  'hsl(190, 60%, 50%)',
+  'hsl(280, 50%, 55%)',
 ];
 
 function CompareCTA() {
@@ -105,7 +105,7 @@ export function PreferenceProfile({ data, isLoading }: PreferenceProfileProps) {
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis type="category" dataKey="genre" width={80} tick={{ fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value) => [`${value} movies`, "Count"]}
+                  formatter={(value) => [`${value} movies`, 'Count']}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Bar dataKey="watchCount" radius={[0, 4, 4, 0]}>
@@ -173,7 +173,7 @@ export function PreferenceProfile({ data, isLoading }: PreferenceProfileProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} />
                 <Tooltip
-                  formatter={(value) => [`${value} comparisons`, "Activity"]}
+                  formatter={(value) => [`${value} comparisons`, 'Activity']}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Bar dataKey="comparisonCount" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />

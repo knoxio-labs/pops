@@ -4,8 +4,8 @@
  * Mobile: compact list. Desktop (md+): responsive poster card grid.
  * Each entry has a delete action with confirmation dialog.
  */
-import { useState, useCallback, useMemo } from "react";
-import { Link, useNavigate } from "react-router";
+import { useState, useCallback, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router';
 import {
   Alert,
   AlertTitle,
@@ -21,36 +21,36 @@ import {
   Badge,
   Button,
   Skeleton,
-} from "@pops/ui";
-import { ClipboardCheck, Film, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { formatEpisodeCode } from "../lib/format";
+} from '@pops/ui';
+import { ClipboardCheck, Film, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { formatEpisodeCode } from '../lib/format';
 
 const PAGE_SIZE = 50;
 
-type MediaTypeFilter = "all" | "movie" | "episode";
+type MediaTypeFilter = 'all' | 'movie' | 'episode';
 
 const FILTER_OPTIONS: { value: MediaTypeFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "movie", label: "Movies" },
-  { value: "episode", label: "Episodes" },
+  { value: 'all', label: 'All' },
+  { value: 'movie', label: 'Movies' },
+  { value: 'episode', label: 'Episodes' },
 ];
 
 function formatWatchDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
 function formatShortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
+  return new Date(iso).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
   });
 }
 
@@ -98,7 +98,7 @@ interface HistoryEntry {
 }
 
 function getHistoryHref(entry: HistoryEntry): string {
-  const isEpisode = entry.mediaType === "episode";
+  const isEpisode = entry.mediaType === 'episode';
   if (isEpisode && entry.tvShowId) {
     return `/media/tv/${entry.tvShowId}/season/${entry.seasonNumber}`;
   }
@@ -123,9 +123,9 @@ function HistoryItem({
 }) {
   const href = getHistoryHref(entry);
   const posterSrc = getHistoryPoster(entry);
-  const isEpisode = entry.mediaType === "episode";
+  const isEpisode = entry.mediaType === 'episode';
 
-  const title = entry.title ?? "Unknown";
+  const title = entry.title ?? 'Unknown';
   const hasEpisodeInfo =
     isEpisode &&
     entry.showName != null &&
@@ -161,7 +161,7 @@ function HistoryItem({
                 <Link to={`/media/tv/${entry.tvShowId}`} className="hover:underline">
                   {entry.showName}
                 </Link>
-                {" — "}
+                {' — '}
                 <Link
                   to={`/media/tv/${entry.tvShowId}?season=${entry.seasonNumber}`}
                   className="hover:underline"
@@ -193,7 +193,7 @@ function HistoryItem({
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
             <Badge variant="secondary" className="text-xs">
-              {isEpisode ? "Episode" : "Movie"}
+              {isEpisode ? 'Episode' : 'Movie'}
             </Badge>
           </div>
         </div>
@@ -218,9 +218,9 @@ function HistoryCard({
   const [imageError, setImageError] = useState(false);
   const href = getHistoryHref(entry);
   const posterSrc = getHistoryPoster(entry);
-  const isEpisode = entry.mediaType === "episode";
+  const isEpisode = entry.mediaType === 'episode';
 
-  const title = entry.title ?? "Unknown";
+  const title = entry.title ?? 'Unknown';
   const hasEpisodeInfo =
     isEpisode &&
     entry.showName != null &&
@@ -238,15 +238,15 @@ function HistoryCard({
         className="relative w-full overflow-hidden rounded-md bg-muted aspect-[2/3] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => navigate(href)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             navigate(href);
           }
         }}
       >
         {/* Type badge */}
-        <Badge variant={isEpisode ? "secondary" : "default"} className="absolute top-2 left-2 z-10">
-          {isEpisode ? "Episode" : "Movie"}
+        <Badge variant={isEpisode ? 'secondary' : 'default'} className="absolute top-2 left-2 z-10">
+          {isEpisode ? 'Episode' : 'Movie'}
         </Badge>
 
         {/* Watch date badge */}
@@ -305,7 +305,7 @@ function HistoryCard({
             <Link to={`/media/tv/${entry.tvShowId}`} className="hover:underline">
               {entry.showName}
             </Link>
-            {" — "}
+            {' — '}
             <Link
               to={`/media/tv/${entry.tvShowId}?season=${entry.seasonNumber}`}
               className="hover:underline"
@@ -320,14 +320,14 @@ function HistoryCard({
 }
 
 export function HistoryPage() {
-  const [filter, setFilter] = useState<MediaTypeFilter>("all");
+  const [filter, setFilter] = useState<MediaTypeFilter>('all');
   const [offset, setOffset] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
   const queryInput = {
-    ...(filter !== "all" ? { mediaType: filter as "movie" | "episode" } : {}),
+    ...(filter !== 'all' ? { mediaType: filter as 'movie' | 'episode' } : {}),
     limit: PAGE_SIZE,
     offset,
   };
@@ -349,7 +349,7 @@ export function HistoryPage() {
 
   const deleteMutation = trpc.media.watchHistory.delete.useMutation({
     onSuccess: () => {
-      toast.success("Watch event removed");
+      toast.success('Watch event removed');
       void utils.media.watchHistory.listRecent.invalidate();
       void utils.media.watchHistory.list.invalidate();
       void utils.media.watchlist.list.invalidate();
@@ -383,7 +383,7 @@ export function HistoryPage() {
         {FILTER_OPTIONS.map((opt) => (
           <Button
             key={opt.value}
-            variant={filter === opt.value ? "default" : "secondary"}
+            variant={filter === opt.value ? 'default' : 'secondary'}
             size="sm"
             onClick={() => {
               setFilter(opt.value);
@@ -406,9 +406,9 @@ export function HistoryPage() {
       ) : entries.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">
-            {filter === "all"
-              ? "No watch history yet. Start watching something!"
-              : `No ${filter === "movie" ? "movies" : "episodes"} in your history.`}
+            {filter === 'all'
+              ? 'No watch history yet. Start watching something!'
+              : `No ${filter === 'movie' ? 'movies' : 'episodes'} in your history.`}
           </p>
           <Link to="/media" className="mt-4 inline-block text-sm text-primary underline">
             Browse library
@@ -425,7 +425,7 @@ export function HistoryPage() {
                 onDelete={handleDeleteClick}
                 isDeleting={deleteMutation.isPending}
                 debriefSessionId={
-                  entry.mediaType === "movie" ? (debriefByMovieId.get(entry.mediaId) ?? null) : null
+                  entry.mediaType === 'movie' ? (debriefByMovieId.get(entry.mediaId) ?? null) : null
                 }
               />
             ))}
@@ -440,7 +440,7 @@ export function HistoryPage() {
                 onDelete={handleDeleteClick}
                 isDeleting={deleteMutation.isPending}
                 debriefSessionId={
-                  entry.mediaType === "movie" ? (debriefByMovieId.get(entry.mediaId) ?? null) : null
+                  entry.mediaType === 'movie' ? (debriefByMovieId.get(entry.mediaId) ?? null) : null
                 }
               />
             ))}

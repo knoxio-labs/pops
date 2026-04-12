@@ -6,17 +6,17 @@
  * "Because you watched X" shelf per recent watch). Static shelves produce a
  * single instance (e.g. "Trending").
  */
-import type { PreferenceProfile, DiscoverResult } from "../types.js";
+import type { PreferenceProfile, DiscoverResult } from '../types.js';
 
 export type { PreferenceProfile };
 
 export type ShelfCategory =
-  | "seed" // seeded by a specific movie, director, actor, or dimension
-  | "profile" // driven by user preference profile (genre affinities, ELO weights)
-  | "tmdb" // pure TMDB discovery queries (trending, new releases, hidden gems, etc.)
-  | "local" // local library queries only (no TMDB)
-  | "context" // time/season/occasion triggered
-  | "external"; // external sources (Plex Discover, etc.)
+  | 'seed' // seeded by a specific movie, director, actor, or dimension
+  | 'profile' // driven by user preference profile (genre affinities, ELO weights)
+  | 'tmdb' // pure TMDB discovery queries (trending, new releases, hidden gems, etc.)
+  | 'local' // local library queries only (no TMDB)
+  | 'context' // time/season/occasion triggered
+  | 'external'; // external sources (Plex Discover, etc.)
 
 export interface ShelfInstance {
   /** Unique key for this instance, e.g. "because-you-watched:42" or "hidden-gems". */

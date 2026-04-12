@@ -8,12 +8,12 @@
  *
  * Returns SuggestedTag[] with source attribution and optional pattern.
  */
-import { eq } from "drizzle-orm";
-import { getDrizzle } from "../db.js";
-import { entities } from "@pops/db-types";
-import { findAllMatchingCorrections } from "../modules/core/corrections/service.js";
-import type { SuggestedTag } from "../modules/finance/imports/types.js";
-import { parseJsonStringArray } from "./json.js";
+import { eq } from 'drizzle-orm';
+import { getDrizzle } from '../db.js';
+import { entities } from '@pops/db-types';
+import { findAllMatchingCorrections } from '../modules/core/corrections/service.js';
+import type { SuggestedTag } from '../modules/finance/imports/types.js';
+import { parseJsonStringArray } from './json.js';
 
 export interface SuggestTagsOptions {
   description: string;
@@ -39,7 +39,7 @@ export function suggestTags(opts: SuggestTagsOptions): SuggestedTag[] {
     for (const tag of correctionTags) {
       if (!seen.has(tag)) {
         seen.add(tag);
-        result.push({ tag, source: "rule", pattern: correctionPattern });
+        result.push({ tag, source: 'rule', pattern: correctionPattern });
       }
     }
   } else {
@@ -49,7 +49,7 @@ export function suggestTags(opts: SuggestTagsOptions): SuggestedTag[] {
       for (const tag of tags) {
         if (!seen.has(tag)) {
           seen.add(tag);
-          result.push({ tag, source: "rule", pattern: correction.descriptionPattern ?? undefined });
+          result.push({ tag, source: 'rule', pattern: correction.descriptionPattern ?? undefined });
         }
       }
     }
@@ -61,7 +61,7 @@ export function suggestTags(opts: SuggestTagsOptions): SuggestedTag[] {
     const matched = knownTags.find((t) => t.toLowerCase() === lowerCategory) ?? null;
     if (matched && !seen.has(matched)) {
       seen.add(matched);
-      result.push({ tag: matched, source: "ai" });
+      result.push({ tag: matched, source: 'ai' });
     }
   }
 
@@ -78,7 +78,7 @@ export function suggestTags(opts: SuggestTagsOptions): SuggestedTag[] {
       for (const tag of tags) {
         if (!seen.has(tag)) {
           seen.add(tag);
-          result.push({ tag, source: "entity" });
+          result.push({ tag, source: 'entity' });
         }
       }
     }

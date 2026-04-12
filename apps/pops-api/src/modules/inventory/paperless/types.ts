@@ -15,7 +15,7 @@ export class PaperlessApiError extends Error {
     message: string
   ) {
     super(message);
-    this.name = "PaperlessApiError";
+    this.name = 'PaperlessApiError';
   }
 }
 

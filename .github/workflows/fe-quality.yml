@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "apps/pops-shell/**"
-      - "packages/app-*/**"
-      - "packages/db-types/**"
-      - "packages/ui/**"
-      - "packages/api-client/**"
-      - "packages/widgets/**"
-      - "packages/navigation/**"
-      - ".github/workflows/fe-quality.yml"
+      - 'apps/pops-shell/**'
+      - 'packages/app-*/**'
+      - 'packages/db-types/**'
+      - 'packages/ui/**'
+      - 'packages/api-client/**'
+      - 'packages/widgets/**'
+      - 'packages/navigation/**'
+      - '.github/workflows/fe-quality.yml'
   pull_request:
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         with:
-          node-version: "22"
+          node-version: '22'
           cache: pnpm
 
       - name: Install dependencies

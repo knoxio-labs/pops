@@ -5,28 +5,28 @@
  * inactive collections return no instance, query delegates to discoverMovies,
  * dismissed filter applied, shelfId format enables getShelfPage pagination.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies before any imports
-vi.mock("../../tmdb/index.js", () => ({ getTmdbClient: vi.fn() }));
-vi.mock("../tmdb-service.js", () => ({
+vi.mock('../../tmdb/index.js', () => ({ getTmdbClient: vi.fn() }));
+vi.mock('../tmdb-service.js', () => ({
   getLibraryTmdbIds: vi.fn().mockReturnValue(new Set()),
   toDiscoverResults: vi.fn().mockReturnValue([]),
 }));
-vi.mock("../flags.js", () => ({
+vi.mock('../flags.js', () => ({
   getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
   getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
   getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
-vi.mock("./registry.js", () => ({ registerShelf: vi.fn() }));
+vi.mock('./registry.js', () => ({ registerShelf: vi.fn() }));
 
-import { getTmdbClient } from "../../tmdb/index.js";
-import * as tmdbService from "../tmdb-service.js";
-import * as flags from "../flags.js";
-import { registerShelf } from "./registry.js";
+import { getTmdbClient } from '../../tmdb/index.js';
+import * as tmdbService from '../tmdb-service.js';
+import * as flags from '../flags.js';
+import { registerShelf } from './registry.js';
 
 // Import module under test — triggers self-registration side effects
-import { contextShelfDefinition } from "./context-shelves.js";
+import { contextShelfDefinition } from './context-shelves.js';
 
 const mockGetTmdbClient = vi.mocked(getTmdbClient);
 const mockToDiscoverResults = vi.mocked(tmdbService.toDiscoverResults);
@@ -51,8 +51,8 @@ function makeResult(tmdbId: number) {
   return {
     tmdbId,
     title: `Movie ${tmdbId}`,
-    overview: "",
-    releaseDate: "2024-01-01",
+    overview: '',
+    releaseDate: '2024-01-01',
     posterPath: null,
     posterUrl: null,
     backdropPath: null,
@@ -75,15 +75,15 @@ function makeTmdbResponse(count = 2) {
     results: Array.from({ length: count }, (_, i) => ({
       tmdbId: i + 1,
       title: `Movie ${i + 1}`,
-      overview: "",
-      releaseDate: "2024-01-01",
+      overview: '',
+      releaseDate: '2024-01-01',
       posterPath: null,
       backdropPath: null,
       voteAverage: 7.0,
       voteCount: 100,
       genreIds: [],
       popularity: 50,
-      originalLanguage: "en",
+      originalLanguage: 'en',
       adult: false,
     })),
   };
@@ -105,20 +105,20 @@ beforeEach(() => {
 // Module load: single "context" definition registered
 // ---------------------------------------------------------------------------
 
-describe("contextShelfDefinition — module load", () => {
-  it("registers 1 shelf definition on module load", () => {
+describe('contextShelfDefinition — module load', () => {
+  it('registers 1 shelf definition on module load', () => {
     expect(registrationCallCount).toBe(1);
   });
 
   it("has id='context'", () => {
-    expect(contextShelfDefinition.id).toBe("context");
+    expect(contextShelfDefinition.id).toBe('context');
   });
 
-  it("has category=context", () => {
-    expect(contextShelfDefinition.category).toBe("context");
+  it('has category=context', () => {
+    expect(contextShelfDefinition.category).toBe('context');
   });
 
-  it("has template=true", () => {
+  it('has template=true', () => {
     expect(contextShelfDefinition.template).toBe(true);
   });
 });
@@ -127,34 +127,34 @@ describe("contextShelfDefinition — module load", () => {
 // date-night: active Friday/Saturday evening 18-22
 // ---------------------------------------------------------------------------
 
-describe("date-night instance", () => {
-  it("generates instance on Friday at 19:00", () => {
-    vi.setSystemTime(new Date("2024-10-18T19:00:00")); // Friday, Oct 18
+describe('date-night instance', () => {
+  it('generates instance on Friday at 19:00', () => {
+    vi.setSystemTime(new Date('2024-10-18T19:00:00')); // Friday, Oct 18
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:date-night");
+    const instance = instances.find((i) => i.shelfId === 'context:date-night');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:date-night");
+    expect(instance!.shelfId).toBe('context:date-night');
     vi.useRealTimers();
   });
 
-  it("generates instance on Saturday at 20:00", () => {
-    vi.setSystemTime(new Date("2024-10-19T20:00:00")); // Saturday, Oct 19
+  it('generates instance on Saturday at 20:00', () => {
+    vi.setSystemTime(new Date('2024-10-19T20:00:00')); // Saturday, Oct 19
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:date-night")).toBeDefined();
+    expect(instances.find((i) => i.shelfId === 'context:date-night')).toBeDefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance on Sunday at 19:00", () => {
-    vi.setSystemTime(new Date("2024-10-20T19:00:00")); // Sunday, Oct 20
+  it('does not generate instance on Sunday at 19:00', () => {
+    vi.setSystemTime(new Date('2024-10-20T19:00:00')); // Sunday, Oct 20
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:date-night")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:date-night')).toBeUndefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance on Friday at 10:00 (morning)", () => {
-    vi.setSystemTime(new Date("2024-10-18T10:00:00")); // Friday morning
+  it('does not generate instance on Friday at 10:00 (morning)', () => {
+    vi.setSystemTime(new Date('2024-10-18T10:00:00')); // Friday morning
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:date-night")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:date-night')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -163,20 +163,20 @@ describe("date-night instance", () => {
 // sunday-flicks: active on Sunday
 // ---------------------------------------------------------------------------
 
-describe("sunday-flicks instance", () => {
-  it("generates instance on Sunday", () => {
-    vi.setSystemTime(new Date("2024-10-20T14:00:00")); // Sunday
+describe('sunday-flicks instance', () => {
+  it('generates instance on Sunday', () => {
+    vi.setSystemTime(new Date('2024-10-20T14:00:00')); // Sunday
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:sunday-flicks");
+    const instance = instances.find((i) => i.shelfId === 'context:sunday-flicks');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:sunday-flicks");
+    expect(instance!.shelfId).toBe('context:sunday-flicks');
     vi.useRealTimers();
   });
 
-  it("does not generate instance on Monday", () => {
-    vi.setSystemTime(new Date("2024-10-21T14:00:00")); // Monday
+  it('does not generate instance on Monday', () => {
+    vi.setSystemTime(new Date('2024-10-21T14:00:00')); // Monday
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:sunday-flicks")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:sunday-flicks')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -185,27 +185,27 @@ describe("sunday-flicks instance", () => {
 // late-night: active at 22:00+ or ≤02:00
 // ---------------------------------------------------------------------------
 
-describe("late-night instance", () => {
-  it("generates instance at 23:00", () => {
-    vi.setSystemTime(new Date("2024-10-21T23:00:00"));
+describe('late-night instance', () => {
+  it('generates instance at 23:00', () => {
+    vi.setSystemTime(new Date('2024-10-21T23:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:late-night");
+    const instance = instances.find((i) => i.shelfId === 'context:late-night');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:late-night");
+    expect(instance!.shelfId).toBe('context:late-night');
     vi.useRealTimers();
   });
 
-  it("generates instance at 01:00", () => {
-    vi.setSystemTime(new Date("2024-10-21T01:00:00"));
+  it('generates instance at 01:00', () => {
+    vi.setSystemTime(new Date('2024-10-21T01:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:late-night")).toBeDefined();
+    expect(instances.find((i) => i.shelfId === 'context:late-night')).toBeDefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance at 15:00", () => {
-    vi.setSystemTime(new Date("2024-10-21T15:00:00"));
+  it('does not generate instance at 15:00', () => {
+    vi.setSystemTime(new Date('2024-10-21T15:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:late-night")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:late-night')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -214,20 +214,20 @@ describe("late-night instance", () => {
 // halloween: active in October
 // ---------------------------------------------------------------------------
 
-describe("halloween instance", () => {
-  it("generates instance in October", () => {
-    vi.setSystemTime(new Date("2024-10-15T12:00:00"));
+describe('halloween instance', () => {
+  it('generates instance in October', () => {
+    vi.setSystemTime(new Date('2024-10-15T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:halloween");
+    const instance = instances.find((i) => i.shelfId === 'context:halloween');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:halloween");
+    expect(instance!.shelfId).toBe('context:halloween');
     vi.useRealTimers();
   });
 
-  it("does not generate instance in November", () => {
-    vi.setSystemTime(new Date("2024-11-01T12:00:00"));
+  it('does not generate instance in November', () => {
+    vi.setSystemTime(new Date('2024-11-01T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:halloween")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:halloween')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -236,20 +236,20 @@ describe("halloween instance", () => {
 // christmas: active in December
 // ---------------------------------------------------------------------------
 
-describe("christmas instance", () => {
-  it("generates instance in December", () => {
-    vi.setSystemTime(new Date("2024-12-10T12:00:00"));
+describe('christmas instance', () => {
+  it('generates instance in December', () => {
+    vi.setSystemTime(new Date('2024-12-10T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:christmas");
+    const instance = instances.find((i) => i.shelfId === 'context:christmas');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:christmas");
+    expect(instance!.shelfId).toBe('context:christmas');
     vi.useRealTimers();
   });
 
-  it("does not generate instance in January", () => {
-    vi.setSystemTime(new Date("2024-01-10T12:00:00"));
+  it('does not generate instance in January', () => {
+    vi.setSystemTime(new Date('2024-01-10T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:christmas")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:christmas')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -258,27 +258,27 @@ describe("christmas instance", () => {
 // oscar-season: active in February and March
 // ---------------------------------------------------------------------------
 
-describe("oscar-season instance", () => {
-  it("generates instance in February", () => {
-    vi.setSystemTime(new Date("2025-02-15T12:00:00"));
+describe('oscar-season instance', () => {
+  it('generates instance in February', () => {
+    vi.setSystemTime(new Date('2025-02-15T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:oscar-season");
+    const instance = instances.find((i) => i.shelfId === 'context:oscar-season');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:oscar-season");
+    expect(instance!.shelfId).toBe('context:oscar-season');
     vi.useRealTimers();
   });
 
-  it("generates instance in March", () => {
-    vi.setSystemTime(new Date("2025-03-01T12:00:00"));
+  it('generates instance in March', () => {
+    vi.setSystemTime(new Date('2025-03-01T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:oscar-season")).toBeDefined();
+    expect(instances.find((i) => i.shelfId === 'context:oscar-season')).toBeDefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance in April", () => {
-    vi.setSystemTime(new Date("2025-04-01T12:00:00"));
+  it('does not generate instance in April', () => {
+    vi.setSystemTime(new Date('2025-04-01T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:oscar-season")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:oscar-season')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -287,27 +287,27 @@ describe("oscar-season instance", () => {
 // morning: active 6am–10am
 // ---------------------------------------------------------------------------
 
-describe("morning instance", () => {
-  it("generates instance at 8am", () => {
-    vi.setSystemTime(new Date("2024-06-12T08:00:00")); // Wednesday 8am
+describe('morning instance', () => {
+  it('generates instance at 8am', () => {
+    vi.setSystemTime(new Date('2024-06-12T08:00:00')); // Wednesday 8am
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:morning");
+    const instance = instances.find((i) => i.shelfId === 'context:morning');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:morning");
+    expect(instance!.shelfId).toBe('context:morning');
     vi.useRealTimers();
   });
 
-  it("generates instance at 6am (boundary)", () => {
-    vi.setSystemTime(new Date("2024-06-12T06:00:00"));
+  it('generates instance at 6am (boundary)', () => {
+    vi.setSystemTime(new Date('2024-06-12T06:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:morning")).toBeDefined();
+    expect(instances.find((i) => i.shelfId === 'context:morning')).toBeDefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance at 11am", () => {
-    vi.setSystemTime(new Date("2024-06-12T11:00:00"));
+  it('does not generate instance at 11am', () => {
+    vi.setSystemTime(new Date('2024-06-12T11:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:morning")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:morning')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -316,27 +316,27 @@ describe("morning instance", () => {
 // evening: active 6pm–10pm
 // ---------------------------------------------------------------------------
 
-describe("evening instance", () => {
-  it("generates instance at 8pm", () => {
-    vi.setSystemTime(new Date("2024-06-12T20:00:00")); // Wednesday 8pm
+describe('evening instance', () => {
+  it('generates instance at 8pm', () => {
+    vi.setSystemTime(new Date('2024-06-12T20:00:00')); // Wednesday 8pm
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:evening");
+    const instance = instances.find((i) => i.shelfId === 'context:evening');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:evening");
+    expect(instance!.shelfId).toBe('context:evening');
     vi.useRealTimers();
   });
 
-  it("does not generate instance at 11pm", () => {
-    vi.setSystemTime(new Date("2024-06-12T23:00:00"));
+  it('does not generate instance at 11pm', () => {
+    vi.setSystemTime(new Date('2024-06-12T23:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:evening")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:evening')).toBeUndefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance at noon", () => {
-    vi.setSystemTime(new Date("2024-06-12T12:00:00"));
+  it('does not generate instance at noon', () => {
+    vi.setSystemTime(new Date('2024-06-12T12:00:00'));
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:evening")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:evening')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -345,27 +345,27 @@ describe("evening instance", () => {
 // weekend: active on Saturday and Sunday
 // ---------------------------------------------------------------------------
 
-describe("weekend instance", () => {
-  it("generates instance on Saturday", () => {
-    vi.setSystemTime(new Date("2024-06-15T14:00:00")); // Saturday
+describe('weekend instance', () => {
+  it('generates instance on Saturday', () => {
+    vi.setSystemTime(new Date('2024-06-15T14:00:00')); // Saturday
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:weekend");
+    const instance = instances.find((i) => i.shelfId === 'context:weekend');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:weekend");
+    expect(instance!.shelfId).toBe('context:weekend');
     vi.useRealTimers();
   });
 
-  it("generates instance on Sunday", () => {
-    vi.setSystemTime(new Date("2024-06-16T14:00:00")); // Sunday
+  it('generates instance on Sunday', () => {
+    vi.setSystemTime(new Date('2024-06-16T14:00:00')); // Sunday
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:weekend")).toBeDefined();
+    expect(instances.find((i) => i.shelfId === 'context:weekend')).toBeDefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance on Friday", () => {
-    vi.setSystemTime(new Date("2024-06-14T14:00:00")); // Friday
+  it('does not generate instance on Friday', () => {
+    vi.setSystemTime(new Date('2024-06-14T14:00:00')); // Friday
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:weekend")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:weekend')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -374,34 +374,34 @@ describe("weekend instance", () => {
 // seasonal: active June–August (summer blockbusters)
 // ---------------------------------------------------------------------------
 
-describe("seasonal instance", () => {
-  it("generates instance in July", () => {
-    vi.setSystemTime(new Date("2024-07-10T12:00:00")); // July
+describe('seasonal instance', () => {
+  it('generates instance in July', () => {
+    vi.setSystemTime(new Date('2024-07-10T12:00:00')); // July
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:seasonal");
+    const instance = instances.find((i) => i.shelfId === 'context:seasonal');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:seasonal");
+    expect(instance!.shelfId).toBe('context:seasonal');
     vi.useRealTimers();
   });
 
-  it("generates instance in June", () => {
-    vi.setSystemTime(new Date("2024-06-01T12:00:00")); // June
+  it('generates instance in June', () => {
+    vi.setSystemTime(new Date('2024-06-01T12:00:00')); // June
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:seasonal")).toBeDefined();
+    expect(instances.find((i) => i.shelfId === 'context:seasonal')).toBeDefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance in May", () => {
-    vi.setSystemTime(new Date("2024-05-15T12:00:00")); // May
+  it('does not generate instance in May', () => {
+    vi.setSystemTime(new Date('2024-05-15T12:00:00')); // May
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:seasonal")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:seasonal')).toBeUndefined();
     vi.useRealTimers();
   });
 
-  it("does not generate instance in September", () => {
-    vi.setSystemTime(new Date("2024-09-01T12:00:00")); // September
+  it('does not generate instance in September', () => {
+    vi.setSystemTime(new Date('2024-09-01T12:00:00')); // September
     const instances = contextShelfDefinition.generate(stubProfile);
-    expect(instances.find((i) => i.shelfId === "context:seasonal")).toBeUndefined();
+    expect(instances.find((i) => i.shelfId === 'context:seasonal')).toBeUndefined();
     vi.useRealTimers();
   });
 });
@@ -410,19 +410,19 @@ describe("seasonal instance", () => {
 // rainy-day: always active (fallback)
 // ---------------------------------------------------------------------------
 
-describe("rainy-day instance", () => {
-  it("generates instance at any time", () => {
+describe('rainy-day instance', () => {
+  it('generates instance at any time', () => {
     const instances = contextShelfDefinition.generate(stubProfile);
-    const instance = instances.find((i) => i.shelfId === "context:rainy-day");
+    const instance = instances.find((i) => i.shelfId === 'context:rainy-day');
     expect(instance).toBeDefined();
-    expect(instance!.shelfId).toBe("context:rainy-day");
+    expect(instance!.shelfId).toBe('context:rainy-day');
   });
 
-  it("has lower score than time-triggered context instances (fallback score)", () => {
-    vi.setSystemTime(new Date("2024-10-18T19:00:00")); // Friday evening → date-night active
+  it('has lower score than time-triggered context instances (fallback score)', () => {
+    vi.setSystemTime(new Date('2024-10-18T19:00:00')); // Friday evening → date-night active
     const instances = contextShelfDefinition.generate(stubProfile);
-    const rainyDay = instances.find((i) => i.shelfId === "context:rainy-day");
-    const dateNight = instances.find((i) => i.shelfId === "context:date-night");
+    const rainyDay = instances.find((i) => i.shelfId === 'context:rainy-day');
+    const dateNight = instances.find((i) => i.shelfId === 'context:date-night');
     expect(rainyDay).toBeDefined();
     expect(dateNight).toBeDefined();
     expect(rainyDay!.score).toBeLessThan(dateNight!.score);
@@ -434,44 +434,44 @@ describe("rainy-day instance", () => {
 // Query delegation
 // ---------------------------------------------------------------------------
 
-describe("contextShelfDefinition query()", () => {
-  it("calls discoverMovies with correct genre and keyword IDs", async () => {
+describe('contextShelfDefinition query()', () => {
+  it('calls discoverMovies with correct genre and keyword IDs', async () => {
     const discoverMoviesMock = vi.fn().mockResolvedValue(makeTmdbResponse(5));
     mockGetTmdbClient.mockReturnValue({
       discoverMovies: discoverMoviesMock,
     } as unknown as ReturnType<typeof getTmdbClient>);
 
-    vi.setSystemTime(new Date("2024-10-15T12:00:00")); // October → halloween
+    vi.setSystemTime(new Date('2024-10-15T12:00:00')); // October → halloween
     const instances = contextShelfDefinition.generate(stubProfile);
-    const halloweenInstance = instances.find((i) => i.shelfId === "context:halloween");
+    const halloweenInstance = instances.find((i) => i.shelfId === 'context:halloween');
     await halloweenInstance!.query({ limit: 10, offset: 0 });
 
     expect(discoverMoviesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         genreIds: [27], // Horror
         keywordIds: [3335], // halloween keyword
-        sortBy: "vote_average.desc",
+        sortBy: 'vote_average.desc',
         voteCountGte: 100,
       })
     );
     vi.useRealTimers();
   });
 
-  it("filters dismissed movies from results", async () => {
+  it('filters dismissed movies from results', async () => {
     const result1 = makeResult(1);
     const result2 = makeResult(2);
     mockToDiscoverResults.mockReturnValue([result1, result2]);
     mockGetDismissedTmdbIds.mockReturnValue(new Set([1])); // dismiss tmdbId 1
 
     const instances = contextShelfDefinition.generate(stubProfile);
-    const rainyDay = instances.find((i) => i.shelfId === "context:rainy-day");
+    const rainyDay = instances.find((i) => i.shelfId === 'context:rainy-day');
     const out = await rainyDay!.query({ limit: 10, offset: 0 });
 
     expect(out).toHaveLength(1);
     expect(out[0]!.tmdbId).toBe(2);
   });
 
-  it("applies offset/limit with TMDB page calculation", async () => {
+  it('applies offset/limit with TMDB page calculation', async () => {
     const discoverMoviesMock = vi.fn().mockResolvedValue(makeTmdbResponse(20));
     mockGetTmdbClient.mockReturnValue({
       discoverMovies: discoverMoviesMock,
@@ -479,7 +479,7 @@ describe("contextShelfDefinition query()", () => {
     mockToDiscoverResults.mockReturnValue(Array.from({ length: 20 }, (_, i) => makeResult(i + 1)));
 
     const instances = contextShelfDefinition.generate(stubProfile);
-    const rainyDay = instances.find((i) => i.shelfId === "context:rainy-day");
+    const rainyDay = instances.find((i) => i.shelfId === 'context:rainy-day');
     const out = await rainyDay!.query({ limit: 5, offset: 10 });
 
     // page = floor(10/20) + 1 = 1
@@ -492,8 +492,8 @@ describe("contextShelfDefinition query()", () => {
   it("shelfId format enables getShelfPage resolution (context:* splits to defId='context')", () => {
     const instances = contextShelfDefinition.generate(stubProfile);
     for (const instance of instances) {
-      const defId = instance.shelfId.split(":")[0];
-      expect(defId).toBe("context");
+      const defId = instance.shelfId.split(':')[0];
+      expect(defId).toBe('context');
     }
   });
 });

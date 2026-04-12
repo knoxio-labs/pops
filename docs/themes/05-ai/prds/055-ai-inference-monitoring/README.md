@@ -18,12 +18,12 @@ Build proactive AI capabilities — anomaly detection, smart automations, and sc
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-anomaly-detection](us-01-anomaly-detection.md) | Detect spending anomalies (spikes, unusual patterns) and surface alerts | Not started | No (first) |
-| 02 | [us-02-scheduled-analysis](us-02-scheduled-analysis.md) | Periodic analysis jobs (weekly/monthly summaries) | Not started | Blocked by us-01 |
-| 03 | [us-03-moltbot-alerts](us-03-moltbot-alerts.md) | Deliver insights via Telegram through Moltbot | Not started | Blocked by us-01 |
-| 04 | [us-04-threshold-config](us-04-threshold-config.md) | Configurable alert thresholds (what % change triggers an alert) | Not started | Blocked by us-01 |
+| #   | Story                                                   | Summary                                                                 | Status      | Parallelisable   |
+| --- | ------------------------------------------------------- | ----------------------------------------------------------------------- | ----------- | ---------------- |
+| 01  | [us-01-anomaly-detection](us-01-anomaly-detection.md)   | Detect spending anomalies (spikes, unusual patterns) and surface alerts | Not started | No (first)       |
+| 02  | [us-02-scheduled-analysis](us-02-scheduled-analysis.md) | Periodic analysis jobs (weekly/monthly summaries)                       | Not started | Blocked by us-01 |
+| 03  | [us-03-moltbot-alerts](us-03-moltbot-alerts.md)         | Deliver insights via Telegram through Moltbot                           | Not started | Blocked by us-01 |
+| 04  | [us-04-threshold-config](us-04-threshold-config.md)     | Configurable alert thresholds (what % change triggers an alert)         | Not started | Blocked by us-01 |
 
 ## Out of Scope
 

@@ -1,12 +1,12 @@
-import { z } from "zod";
-import { ChangeSetSchema } from "../../core/corrections/types.js";
+import { z } from 'zod';
+import { ChangeSetSchema } from '../../core/corrections/types.js';
 
 /**
  * Transaction as parsed from CSV (client-side or transformer)
  * Includes rawRow (full CSV row as JSON) and checksum (SHA-256 hash)
  */
 export const parsedTransactionSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   description: z.string().min(1),
   amount: z.number(),
   account: z.string().min(1),
@@ -23,7 +23,7 @@ export type ParsedTransaction = z.infer<typeof parsedTransactionSchema>;
 export const entityMatchSchema = z.object({
   entityId: z.string().optional(),
   entityName: z.string().optional(),
-  matchType: z.enum(["alias", "exact", "prefix", "contains", "ai", "learned", "none"]),
+  matchType: z.enum(['alias', 'exact', 'prefix', 'contains', 'ai', 'learned', 'none']),
   confidence: z.number().min(0).max(1).optional(),
 });
 
@@ -32,12 +32,12 @@ export type EntityMatch = z.infer<typeof entityMatchSchema>;
 /**
  * Transaction after entity matching
  */
-export const transactionTypeSchema = z.enum(["purchase", "transfer", "income"]);
+export const transactionTypeSchema = z.enum(['purchase', 'transfer', 'income']);
 export type TransactionType = z.infer<typeof transactionTypeSchema>;
 
 export const suggestedTagSchema = z.object({
   tag: z.string(),
-  source: z.enum(["ai", "rule", "entity"]),
+  source: z.enum(['ai', 'rule', 'entity']),
   /** For rule-sourced tags: the description_pattern from the matched correction */
   pattern: z.string().optional(),
 });
@@ -48,10 +48,10 @@ export type SuggestedTag = z.infer<typeof suggestedTagSchema>;
  * Provenance for transactions matched by learned correction rules (rule transparency).
  */
 export const ruleProvenanceSchema = z.object({
-  source: z.literal("correction"),
+  source: z.literal('correction'),
   ruleId: z.string().min(1),
   pattern: z.string().min(1),
-  matchType: z.enum(["exact", "contains", "regex"]),
+  matchType: z.enum(['exact', 'contains', 'regex']),
   confidence: z.number().min(0).max(1),
 });
 
@@ -59,7 +59,7 @@ export type RuleProvenance = z.infer<typeof ruleProvenanceSchema>;
 
 export const processedTransactionSchema = parsedTransactionSchema.extend({
   entity: entityMatchSchema,
-  status: z.enum(["matched", "uncertain", "failed", "skipped"]),
+  status: z.enum(['matched', 'uncertain', 'failed', 'skipped']),
   skipReason: z.string().optional(), // For skipped transactions (e.g., "Duplicate")
   error: z.string().optional(), // For failed transactions
   transactionType: transactionTypeSchema.optional(), // User-set type; undefined = purchase (default)
@@ -98,7 +98,7 @@ export type ProcessImportInput = z.infer<typeof processImportInputSchema>;
  * Import warning - non-fatal issues during processing
  */
 export const importWarningSchema = z.object({
-  type: z.enum(["AI_CATEGORIZATION_UNAVAILABLE", "AI_API_ERROR"]),
+  type: z.enum(['AI_CATEGORIZATION_UNAVAILABLE', 'AI_API_ERROR']),
   message: z.string(),
   affectedCount: z.number().optional(),
   details: z.string().optional(),
@@ -214,9 +214,9 @@ export type ApplyChangeSetAndReevaluateOutput = z.infer<
 // ---------------------------------------------------------------------------
 
 export const pendingEntitySchema = z.object({
-  tempId: z.string().regex(/^temp:entity:[0-9a-f-]{36}$/, "Temp ID must match temp:entity:{uuid}"),
+  tempId: z.string().regex(/^temp:entity:[0-9a-f-]{36}$/, 'Temp ID must match temp:entity:{uuid}'),
   name: z.string().min(1),
-  type: z.enum(["company", "person", "government", "bank"]).default("company"),
+  type: z.enum(['company', 'person', 'government', 'bank']).default('company'),
 });
 
 export type PendingEntity = z.infer<typeof pendingEntitySchema>;

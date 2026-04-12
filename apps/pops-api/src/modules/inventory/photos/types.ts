@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { ItemPhotoRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { ItemPhotoRow } from '@pops/db-types';
 
 export type { ItemPhotoRow };
 
@@ -27,8 +27,8 @@ export function toPhoto(row: ItemPhotoRow): ItemPhoto {
 
 /** Zod schema for attaching a photo to an item. */
 export const AttachPhotoSchema = z.object({
-  itemId: z.string().min(1, "Item ID is required"),
-  filePath: z.string().min(1, "File path is required"),
+  itemId: z.string().min(1, 'Item ID is required'),
+  filePath: z.string().min(1, 'File path is required'),
   caption: z.string().nullable().optional(),
   sortOrder: z.number().int().nonnegative().optional().default(0),
 });
@@ -43,7 +43,7 @@ export type UpdatePhotoInput = z.infer<typeof UpdatePhotoSchema>;
 
 /** Zod schema for listing photos for an item. */
 export const PhotoQuerySchema = z.object({
-  itemId: z.string().min(1, "Item ID is required"),
+  itemId: z.string().min(1, 'Item ID is required'),
   limit: z.coerce.number().positive().max(500).optional(),
   offset: z.coerce.number().nonnegative().optional(),
 });
@@ -51,7 +51,7 @@ export type PhotoQuery = z.infer<typeof PhotoQuerySchema>;
 
 /** Zod schema for reordering photos. */
 export const ReorderPhotosSchema = z.object({
-  itemId: z.string().min(1, "Item ID is required"),
-  orderedIds: z.array(z.number().int().positive()).min(1, "At least one photo ID is required"),
+  itemId: z.string().min(1, 'Item ID is required'),
+  orderedIds: z.array(z.number().int().positive()).min(1, 'At least one photo ID is required'),
 });
 export type ReorderPhotosInput = z.infer<typeof ReorderPhotosSchema>;

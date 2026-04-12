@@ -2,14 +2,14 @@
  * Add TV show to library — fetches TheTVDB metadata and inserts
  * show + seasons + episodes in a single transaction.
  */
-import { eq } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { tvShows, seasons, episodes } from "@pops/db-types";
-import type { TvShowRow, SeasonRow } from "@pops/db-types";
-import type { TheTvdbClient } from "../thetvdb/client.js";
-import type { TvdbArtwork, TvdbEpisode } from "../thetvdb/types.js";
-import type { ImageCacheService } from "../tmdb/image-cache.js";
-import { getTvShowByTvdbId } from "../tv-shows/service.js";
+import { eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { tvShows, seasons, episodes } from '@pops/db-types';
+import type { TvShowRow, SeasonRow } from '@pops/db-types';
+import type { TheTvdbClient } from '../thetvdb/client.js';
+import type { TvdbArtwork, TvdbEpisode } from '../thetvdb/types.js';
+import type { ImageCacheService } from '../tmdb/image-cache.js';
+import { getTvShowByTvdbId } from '../tv-shows/service.js';
 
 export interface AddTvShowResult {
   show: TvShowRow;
@@ -185,8 +185,8 @@ function pickBest(artworks: TvdbArtwork[], type: number): string | null {
 
   // Prefer English, then highest score
   const sorted = [...candidates].sort((a, b) => {
-    const aEng = a.language === "eng" ? 1 : 0;
-    const bEng = b.language === "eng" ? 1 : 0;
+    const aEng = a.language === 'eng' ? 1 : 0;
+    const bEng = b.language === 'eng' ? 1 : 0;
     if (aEng !== bEng) return bEng - aEng;
     return b.score - a.score;
   });

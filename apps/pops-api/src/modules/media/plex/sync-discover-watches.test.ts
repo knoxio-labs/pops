@@ -1,77 +1,77 @@
 /**
  * Tests for Plex Discover cloud watch sync (GraphQL activity feed approach).
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 // Mock dependencies
-vi.mock("../watch-history/service.js", () => ({
+vi.mock('../watch-history/service.js', () => ({
   logWatch: vi.fn(),
 }));
 
-vi.mock("../../../db.js", () => ({
+vi.mock('../../../db.js', () => ({
   getDrizzle: vi.fn(),
 }));
 
-vi.mock("./service.js", () => ({
+vi.mock('./service.js', () => ({
   getPlexToken: vi.fn(),
   getPlexClientId: vi.fn(),
 }));
 
-vi.mock("./sync-helpers.js", () => ({
+vi.mock('./sync-helpers.js', () => ({
   extractExternalIdAsNumber: vi.fn(),
 }));
 
-vi.mock("../tmdb/index.js", () => ({
+vi.mock('../tmdb/index.js', () => ({
   getTmdbClient: vi.fn().mockReturnValue({}),
   getImageCache: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("../thetvdb/index.js", () => ({
+vi.mock('../thetvdb/index.js', () => ({
   getTvdbClient: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("../library/service.js", () => ({
+vi.mock('../library/service.js', () => ({
   addMovie: vi.fn(),
 }));
 
-vi.mock("../library/tv-show-service.js", () => ({
+vi.mock('../library/tv-show-service.js', () => ({
   addTvShow: vi.fn(),
 }));
 
-vi.mock("@pops/db-types", () => ({
+vi.mock('@pops/db-types', () => ({
   movies: {
-    id: "id",
-    title: "title",
-    tmdbId: "tmdb_id",
-    discoverRatingKey: "discover_rating_key",
+    id: 'id',
+    title: 'title',
+    tmdbId: 'tmdb_id',
+    discoverRatingKey: 'discover_rating_key',
   },
   tvShows: {
-    id: "id",
-    name: "name",
-    tvdbId: "tvdb_id",
-    discoverRatingKey: "discover_rating_key",
+    id: 'id',
+    name: 'name',
+    tvdbId: 'tvdb_id',
+    discoverRatingKey: 'discover_rating_key',
   },
   seasons: {
-    id: "id",
-    tvShowId: "tv_show_id",
-    seasonNumber: "season_number",
+    id: 'id',
+    tvShowId: 'tv_show_id',
+    seasonNumber: 'season_number',
   },
   episodes: {
-    id: "id",
-    seasonId: "season_id",
-    episodeNumber: "episode_number",
+    id: 'id',
+    seasonId: 'season_id',
+    episodeNumber: 'episode_number',
   },
 }));
 
-import { syncDiscoverWatches, checkAndLogMovieWatch } from "./sync-discover-watches.js";
-import { logWatch } from "../watch-history/service.js";
-import { getDrizzle } from "../../../db.js";
-import { getPlexToken, getPlexClientId } from "./service.js";
-import { extractExternalIdAsNumber } from "./sync-helpers.js";
-import { addMovie } from "../library/service.js";
-import type { PlexClient } from "./client.js";
-import type { PlexMediaItem } from "./types.js";
+import { syncDiscoverWatches, checkAndLogMovieWatch } from './sync-discover-watches.js';
+import { logWatch } from '../watch-history/service.js';
+import { getDrizzle } from '../../../db.js';
+import { getPlexToken, getPlexClientId } from './service.js';
+import { extractExternalIdAsNumber } from './sync-helpers.js';
+import { addMovie } from '../library/service.js';
+import type { PlexClient } from './client.js';
+import type { PlexMediaItem } from './types.js';
 
 const mockLogWatch = vi.mocked(logWatch);
 const mockGetDrizzle = vi.mocked(getDrizzle);
@@ -89,9 +89,9 @@ function logWatchResult(created: boolean): ReturnType<typeof logWatch> {
   return {
     entry: {
       id: 1,
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: 1,
-      watchedAt: "2026-01-01T00:00:00.000Z",
+      watchedAt: '2026-01-01T00:00:00.000Z',
       completed: 1,
       blacklisted: 0,
     },
@@ -137,18 +137,18 @@ function makePlexClient(overrides: Partial<PlexClient> = {}): PlexClient {
 }
 
 function mockFetchResponses(responses: Array<{ url: string; body: unknown }>): void {
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url =
-      typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     for (const r of responses) {
       if (url.includes(r.url)) {
         return new Response(JSON.stringify(r.body), {
           status: 200,
-          headers: { "Content-Type": "application/json" },
+          headers: { 'Content-Type': 'application/json' },
         });
       }
     }
-    return new Response("Not found", { status: 404 });
+    return new Response('Not found', { status: 404 });
   });
 }
 
@@ -166,7 +166,7 @@ function graphqlWatchHistoryResponse(
   hasNextPage = false
 ): { url: string; body: unknown } {
   return {
-    url: "community.plex.tv/api",
+    url: 'community.plex.tv/api',
     body: {
       data: {
         user: {
@@ -177,7 +177,7 @@ function graphqlWatchHistoryResponse(
               metadataItem: {
                 id: n.metadataId,
                 title: n.title,
-                type: n.type ?? "MOVIE",
+                type: n.type ?? 'MOVIE',
                 index: n.index ?? 0,
                 year: 2001,
                 parent:
@@ -187,7 +187,7 @@ function graphqlWatchHistoryResponse(
                 grandparent: n.grandparentTitle ? { title: n.grandparentTitle } : null,
               },
             })),
-            pageInfo: { hasNextPage, endCursor: hasNextPage ? "cursor-1" : null },
+            pageInfo: { hasNextPage, endCursor: hasNextPage ? 'cursor-1' : null },
           },
         },
       },
@@ -195,7 +195,7 @@ function graphqlWatchHistoryResponse(
   };
 }
 
-const PLEX_USER_RESPONSE = { url: "plex.tv/api/v2/user", body: { uuid: "user-uuid-123" } };
+const PLEX_USER_RESPONSE = { url: 'plex.tv/api/v2/user', body: { uuid: 'user-uuid-123' } };
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -203,29 +203,29 @@ const PLEX_USER_RESPONSE = { url: "plex.tv/api/v2/user", body: { uuid: "user-uui
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mockGetPlexToken.mockReturnValue("test-token");
-  mockGetPlexClientId.mockReturnValue("test-client-id");
+  mockGetPlexToken.mockReturnValue('test-token');
+  mockGetPlexClientId.mockReturnValue('test-client-id');
 });
 
-describe("syncDiscoverWatches (GraphQL)", () => {
-  it("logs watch entries from activity feed matching library movies", async () => {
-    setupDrizzleMock([{ id: 1, title: "Shrek", tmdbId: 808, discoverRatingKey: "abc-123" }], []);
+describe('syncDiscoverWatches (GraphQL)', () => {
+  it('logs watch entries from activity feed matching library movies', async () => {
+    setupDrizzleMock([{ id: 1, title: 'Shrek', tmdbId: 808, discoverRatingKey: 'abc-123' }], []);
     mockLogWatch.mockReturnValue(logWatchResult(true));
 
     mockFetchResponses([
       PLEX_USER_RESPONSE,
       graphqlWatchHistoryResponse([
         {
-          id: "event-1",
-          date: "2026-03-02T09:28:32.000Z",
-          metadataId: "abc-123",
-          title: "Shrek",
+          id: 'event-1',
+          date: '2026-03-02T09:28:32.000Z',
+          metadataId: 'abc-123',
+          title: 'Shrek',
         },
         {
-          id: "event-2",
-          date: "2025-01-02T08:27:07.000Z",
-          metadataId: "abc-123",
-          title: "Shrek",
+          id: 'event-2',
+          date: '2025-01-02T08:27:07.000Z',
+          metadataId: 'abc-123',
+          title: 'Shrek',
         },
       ]),
     ]);
@@ -239,29 +239,29 @@ describe("syncDiscoverWatches (GraphQL)", () => {
     expect(mockLogWatch).toHaveBeenCalledTimes(2);
     expect(mockLogWatch).toHaveBeenCalledWith(
       expect.objectContaining({
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 1,
-        watchedAt: "2026-03-02T09:28:32.000Z",
-        source: "plex_sync",
+        watchedAt: '2026-03-02T09:28:32.000Z',
+        source: 'plex_sync',
       })
     );
     expect(mockLogWatch).toHaveBeenCalledWith(
-      expect.objectContaining({ watchedAt: "2025-01-02T08:27:07.000Z" })
+      expect.objectContaining({ watchedAt: '2025-01-02T08:27:07.000Z' })
     );
   });
 
-  it("counts already-logged movies correctly", async () => {
-    setupDrizzleMock([{ id: 1, title: "Shrek", tmdbId: 808, discoverRatingKey: "abc-123" }], []);
+  it('counts already-logged movies correctly', async () => {
+    setupDrizzleMock([{ id: 1, title: 'Shrek', tmdbId: 808, discoverRatingKey: 'abc-123' }], []);
     mockLogWatch.mockReturnValue(logWatchResult(false));
 
     mockFetchResponses([
       PLEX_USER_RESPONSE,
       graphqlWatchHistoryResponse([
         {
-          id: "event-1",
-          date: "2026-03-02T09:28:32.000Z",
-          metadataId: "abc-123",
-          title: "Shrek",
+          id: 'event-1',
+          date: '2026-03-02T09:28:32.000Z',
+          metadataId: 'abc-123',
+          title: 'Shrek',
         },
       ]),
     ]);
@@ -274,16 +274,16 @@ describe("syncDiscoverWatches (GraphQL)", () => {
     expect(result.movies.logged).toBe(0);
   });
 
-  it("resolves and adds movies not in library via Discover metadata", async () => {
+  it('resolves and adds movies not in library via Discover metadata', async () => {
     setupDrizzleMock([], []);
     mockLogWatch.mockReturnValue(logWatchResult(true));
 
     const discoverMeta = {
-      externalIds: [{ source: "tmdb", id: "808" }],
+      externalIds: [{ source: 'tmdb', id: '808' }],
     } as unknown as PlexMediaItem;
     mockExtractExternalId.mockReturnValue(808);
     mockAddMovie.mockResolvedValue({
-      movie: { id: 42, title: "Shrek", tmdbId: 808 } as never,
+      movie: { id: 42, title: 'Shrek', tmdbId: 808 } as never,
       created: true,
     });
 
@@ -291,10 +291,10 @@ describe("syncDiscoverWatches (GraphQL)", () => {
       PLEX_USER_RESPONSE,
       graphqlWatchHistoryResponse([
         {
-          id: "event-1",
-          date: "2026-03-02T09:28:32.000Z",
-          metadataId: "unknown-key",
-          title: "Shrek",
+          id: 'event-1',
+          date: '2026-03-02T09:28:32.000Z',
+          metadataId: 'unknown-key',
+          title: 'Shrek',
         },
       ]),
     ]);
@@ -310,7 +310,7 @@ describe("syncDiscoverWatches (GraphQL)", () => {
     expect(mockAddMovie).toHaveBeenCalledTimes(1);
   });
 
-  it("counts notFound when Discover metadata has no TMDB ID", async () => {
+  it('counts notFound when Discover metadata has no TMDB ID', async () => {
     setupDrizzleMock([], []);
     mockExtractExternalId.mockReturnValue(null);
 
@@ -318,10 +318,10 @@ describe("syncDiscoverWatches (GraphQL)", () => {
       PLEX_USER_RESPONSE,
       graphqlWatchHistoryResponse([
         {
-          id: "event-1",
-          date: "2026-03-02T09:28:32.000Z",
-          metadataId: "unknown-key",
-          title: "Mystery Movie",
+          id: 'event-1',
+          date: '2026-03-02T09:28:32.000Z',
+          metadataId: 'unknown-key',
+          title: 'Mystery Movie',
         },
       ]),
     ]);
@@ -338,7 +338,7 @@ describe("syncDiscoverWatches (GraphQL)", () => {
     expect(mockLogWatch).not.toHaveBeenCalled();
   });
 
-  it("handles empty watch history", async () => {
+  it('handles empty watch history', async () => {
     setupDrizzleMock([], []);
 
     mockFetchResponses([PLEX_USER_RESPONSE, graphqlWatchHistoryResponse([])]);
@@ -350,18 +350,18 @@ describe("syncDiscoverWatches (GraphQL)", () => {
     expect(result.tvShows.total).toBe(0);
   });
 
-  it("reports progress during pagination", async () => {
-    setupDrizzleMock([{ id: 1, title: "Shrek", tmdbId: 808, discoverRatingKey: "abc-123" }], []);
+  it('reports progress during pagination', async () => {
+    setupDrizzleMock([{ id: 1, title: 'Shrek', tmdbId: 808, discoverRatingKey: 'abc-123' }], []);
     mockLogWatch.mockReturnValue(logWatchResult(true));
 
     mockFetchResponses([
       PLEX_USER_RESPONSE,
       graphqlWatchHistoryResponse([
         {
-          id: "event-1",
-          date: "2026-03-02T09:28:32.000Z",
-          metadataId: "abc-123",
-          title: "Shrek",
+          id: 'event-1',
+          date: '2026-03-02T09:28:32.000Z',
+          metadataId: 'abc-123',
+          title: 'Shrek',
         },
       ]),
     ]);
@@ -375,15 +375,15 @@ describe("syncDiscoverWatches (GraphQL)", () => {
   });
 });
 
-describe("checkAndLogMovieWatch", () => {
-  it("logs individual watch dates from activity feed", async () => {
-    setupDrizzleMock([{ id: 670, title: "Shrek", tmdbId: 808, discoverRatingKey: null }], []);
+describe('checkAndLogMovieWatch', () => {
+  it('logs individual watch dates from activity feed', async () => {
+    setupDrizzleMock([{ id: 670, title: 'Shrek', tmdbId: 808, discoverRatingKey: null }], []);
     mockLogWatch.mockReturnValue(logWatchResult(true));
     mockExtractExternalId.mockReturnValue(808);
 
-    const searchResult = { ratingKey: "disc-key-123" } as PlexMediaItem;
+    const searchResult = { ratingKey: 'disc-key-123' } as PlexMediaItem;
     const discoverMeta = {
-      externalIds: [{ source: "tmdb", id: "808" }],
+      externalIds: [{ source: 'tmdb', id: '808' }],
     } as unknown as PlexMediaItem;
     const client = makePlexClient({
       searchDiscover: vi.fn().mockResolvedValue([searchResult]),
@@ -394,14 +394,14 @@ describe("checkAndLogMovieWatch", () => {
     mockFetchResponses([
       PLEX_USER_RESPONSE,
       {
-        url: "community.plex.tv/api",
+        url: 'community.plex.tv/api',
         body: {
           data: {
             activityFeed: {
               nodes: [
-                { date: "2026-03-02T09:28:32.000Z" },
-                { date: "2026-02-27T11:24:45.000Z" },
-                { date: "2025-01-02T08:27:07.000Z" },
+                { date: '2026-03-02T09:28:32.000Z' },
+                { date: '2026-02-27T11:24:45.000Z' },
+                { date: '2025-01-02T08:27:07.000Z' },
               ],
             },
           },
@@ -409,26 +409,26 @@ describe("checkAndLogMovieWatch", () => {
       },
     ]);
 
-    const result = await checkAndLogMovieWatch(client, 670, "Shrek", 808);
+    const result = await checkAndLogMovieWatch(client, 670, 'Shrek', 808);
 
     expect(result).toBe(true);
     expect(mockLogWatch).toHaveBeenCalledTimes(3);
     expect(mockLogWatch).toHaveBeenCalledWith(
-      expect.objectContaining({ watchedAt: "2026-03-02T09:28:32.000Z" })
+      expect.objectContaining({ watchedAt: '2026-03-02T09:28:32.000Z' })
     );
     expect(mockLogWatch).toHaveBeenCalledWith(
-      expect.objectContaining({ watchedAt: "2025-01-02T08:27:07.000Z" })
+      expect.objectContaining({ watchedAt: '2025-01-02T08:27:07.000Z' })
     );
   });
 
-  it("falls back to userState when activity feed is empty", async () => {
-    setupDrizzleMock([{ id: 670, title: "Shrek", tmdbId: 808, discoverRatingKey: null }], []);
+  it('falls back to userState when activity feed is empty', async () => {
+    setupDrizzleMock([{ id: 670, title: 'Shrek', tmdbId: 808, discoverRatingKey: null }], []);
     mockLogWatch.mockReturnValue(logWatchResult(true));
     mockExtractExternalId.mockReturnValue(808);
 
-    const searchResult = { ratingKey: "disc-key-123" } as PlexMediaItem;
+    const searchResult = { ratingKey: 'disc-key-123' } as PlexMediaItem;
     const discoverMeta = {
-      externalIds: [{ source: "tmdb", id: "808" }],
+      externalIds: [{ source: 'tmdb', id: '808' }],
     } as unknown as PlexMediaItem;
     const client = makePlexClient({
       searchDiscover: vi.fn().mockResolvedValue([searchResult]),
@@ -438,27 +438,27 @@ describe("checkAndLogMovieWatch", () => {
 
     mockFetchResponses([
       PLEX_USER_RESPONSE,
-      { url: "community.plex.tv/api", body: { data: { activityFeed: { nodes: [] } } } },
+      { url: 'community.plex.tv/api', body: { data: { activityFeed: { nodes: [] } } } },
     ]);
 
-    const result = await checkAndLogMovieWatch(client, 670, "Shrek", 808);
+    const result = await checkAndLogMovieWatch(client, 670, 'Shrek', 808);
 
     expect(result).toBe(true);
     expect(mockLogWatch).toHaveBeenCalledTimes(1);
   });
 
-  it("returns false when movie not found on Discover", async () => {
+  it('returns false when movie not found on Discover', async () => {
     const client = makePlexClient();
-    const result = await checkAndLogMovieWatch(client, 1, "Shrek", 42);
+    const result = await checkAndLogMovieWatch(client, 1, 'Shrek', 42);
     expect(result).toBe(false);
   });
 
-  it("returns false when not watched", async () => {
+  it('returns false when not watched', async () => {
     mockExtractExternalId.mockReturnValue(808);
 
-    const searchResult = { ratingKey: "disc-key-123" } as PlexMediaItem;
+    const searchResult = { ratingKey: 'disc-key-123' } as PlexMediaItem;
     const discoverMeta = {
-      externalIds: [{ source: "tmdb", id: "808" }],
+      externalIds: [{ source: 'tmdb', id: '808' }],
     } as unknown as PlexMediaItem;
     const client = makePlexClient({
       searchDiscover: vi.fn().mockResolvedValue([searchResult]),
@@ -466,16 +466,16 @@ describe("checkAndLogMovieWatch", () => {
       getUserState: vi.fn().mockResolvedValue({ viewCount: 0, lastViewedAt: null }),
     });
 
-    const result = await checkAndLogMovieWatch(client, 1, "Shrek", 808);
+    const result = await checkAndLogMovieWatch(client, 1, 'Shrek', 808);
     expect(result).toBe(false);
   });
 
-  it("returns false on error without throwing", async () => {
+  it('returns false on error without throwing', async () => {
     const client = makePlexClient({
-      searchDiscover: vi.fn().mockRejectedValue(new Error("Network error")),
+      searchDiscover: vi.fn().mockRejectedValue(new Error('Network error')),
     });
 
-    const result = await checkAndLogMovieWatch(client, 1, "Shrek", 42);
+    const result = await checkAndLogMovieWatch(client, 1, 'Shrek', 42);
     expect(result).toBe(false);
   });
 });

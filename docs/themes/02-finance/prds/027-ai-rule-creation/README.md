@@ -28,11 +28,13 @@ AI suggestions are always **proposals**. Rule changes are applied only after exp
 ### AI Analysis
 
 When a user makes a correction, Claude is asked:
+
 - Given description `"IKEA TEMPE NSW"` and entity `"IKEA"`, what matching pattern would work?
 - Claude suggests: `{ matchType: "prefix", pattern: "IKEA", confidence: 0.8 }`
 - Or for `"PAYMENT TO NETFLIX"` → entity "Netflix": `{ matchType: "contains", pattern: "NETFLIX", confidence: 0.9 }`
 
 The AI considers:
+
 - What part of the description is the entity name vs location/branch/noise
 - Whether prefix, contains, or exact matching is most appropriate
 - How confident the pattern is (a unique prefix is high confidence, a generic contains is lower)
@@ -43,15 +45,29 @@ The existing `corrections.generateRules` endpoint supports batch analysis — se
 
 ```typescript
 // Input: array of recent corrections in this import
-{ transactions: [
-  { description: "IKEA TEMPE NSW", entityName: "IKEA", amount: -45.00, account: "Amex", currentTags: ["shopping"] },
-  { description: "IKEA RHODES", entityName: "IKEA", amount: -120.00, account: "Amex", currentTags: ["shopping"] },
-]}
+{
+  transactions: [
+    {
+      description: 'IKEA TEMPE NSW',
+      entityName: 'IKEA',
+      amount: -45.0,
+      account: 'Amex',
+      currentTags: ['shopping'],
+    },
+    {
+      description: 'IKEA RHODES',
+      entityName: 'IKEA',
+      amount: -120.0,
+      account: 'Amex',
+      currentTags: ['shopping'],
+    },
+  ];
+}
 
 // Output: proposed rules
-{ proposals: [
-  { matchType: "prefix", pattern: "IKEA", entityName: "IKEA", confidence: 0.9 }
-]}
+{
+  proposals: [{ matchType: 'prefix', pattern: 'IKEA', entityName: 'IKEA', confidence: 0.9 }];
+}
 ```
 
 ## Business Rules
@@ -64,6 +80,7 @@ The existing `corrections.generateRules` endpoint supports batch analysis — se
 ## Iterative Improvement
 
 Each import makes the system smarter:
+
 1. First import: many uncertain, user corrects manually, AI creates rules
 2. Second import: rules from first import auto-match most transactions
 3. Third import: almost everything matches automatically
@@ -71,20 +88,20 @@ Each import makes the system smarter:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| AI proposes rule that overlaps an existing rule | Proposal may include an edit/disable operation; impact preview shows net effect |
-| AI unavailable | Save Once remains available; Save & Learn can fall back to a non-AI proposal flow |
-| AI proposes overly broad pattern | User rejects with feedback; follow-up proposal must narrow scope |
+| Case                                            | Behaviour                                                                         |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| AI proposes rule that overlaps an existing rule | Proposal may include an edit/disable operation; impact preview shows net effect   |
+| AI unavailable                                  | Save Once remains available; Save & Learn can fall back to a non-AI proposal flow |
+| AI proposes overly broad pattern                | User rejects with feedback; follow-up proposal must narrow scope                  |
 
 ## User Stories
 
-| # | Story | Summary | Parallelisable | Status |
-|---|-------|---------|----------------|--------|
-| 01 | [us-01-correction-analysis](us-01-correction-analysis.md) | Send correction signal to AI, receive proposal inputs for ChangeSet generation | No (first) | To Review |
-| 02 | [us-02-auto-apply-rules](us-02-auto-apply-rules.md) | Replace auto-apply with ChangeSet proposal + approval + re-evaluation loop | Blocked by us-01 | To Review |
-| 03 | [us-03-confirmation-flow](us-03-confirmation-flow.md) | Proposal UI for approve/reject with required feedback on reject | Blocked by us-01 | To Review |
-| 04 | [us-04-batch-analysis](us-04-batch-analysis.md) | Batch context to improve proposals (still requires approval) | Blocked by us-01 | To Review |
+| #   | Story                                                     | Summary                                                                        | Parallelisable   | Status    |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------- | --------- |
+| 01  | [us-01-correction-analysis](us-01-correction-analysis.md) | Send correction signal to AI, receive proposal inputs for ChangeSet generation | No (first)       | To Review |
+| 02  | [us-02-auto-apply-rules](us-02-auto-apply-rules.md)       | Replace auto-apply with ChangeSet proposal + approval + re-evaluation loop     | Blocked by us-01 | To Review |
+| 03  | [us-03-confirmation-flow](us-03-confirmation-flow.md)     | Proposal UI for approve/reject with required feedback on reject                | Blocked by us-01 | To Review |
+| 04  | [us-04-batch-analysis](us-04-batch-analysis.md)           | Batch context to improve proposals (still requires approval)                   | Blocked by us-01 | To Review |
 
 US-02 and US-03 can parallelise after US-01.
 

@@ -1,18 +1,18 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable, SortableHeader } from "./DataTable";
-import { EditableCell } from "./EditableCell";
-import { Checkbox } from "../primitives/checkbox";
-import { Button } from "./Button";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { DataTable, SortableHeader } from './DataTable';
+import { EditableCell } from './EditableCell';
+import { Checkbox } from '../primitives/checkbox';
+import { Button } from './Button';
 
 const meta: Meta<typeof DataTable> = {
-  title: "Data Display/Table",
+  title: 'Data Display/Table',
   component: DataTable,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -24,7 +24,7 @@ interface User {
   name: string;
   email: string;
   role: string;
-  status: "active" | "inactive";
+  status: 'active' | 'inactive';
   createdAt: string;
 }
 
@@ -41,83 +41,83 @@ interface Transaction {
 const sampleUsers: User[] = [
   {
     id: 1,
-    name: "John Doe",
-    email: "john@example.com",
-    role: "Admin",
-    status: "active",
-    createdAt: "2024-01-15",
+    name: 'John Doe',
+    email: 'john@example.com',
+    role: 'Admin',
+    status: 'active',
+    createdAt: '2024-01-15',
   },
   {
     id: 2,
-    name: "Jane Smith",
-    email: "jane@example.com",
-    role: "User",
-    status: "active",
-    createdAt: "2024-02-20",
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    role: 'User',
+    status: 'active',
+    createdAt: '2024-02-20',
   },
   {
     id: 3,
-    name: "Bob Johnson",
-    email: "bob@example.com",
-    role: "User",
-    status: "inactive",
-    createdAt: "2024-03-10",
+    name: 'Bob Johnson',
+    email: 'bob@example.com',
+    role: 'User',
+    status: 'inactive',
+    createdAt: '2024-03-10',
   },
   {
     id: 4,
-    name: "Alice Brown",
-    email: "alice@example.com",
-    role: "Moderator",
-    status: "active",
-    createdAt: "2024-01-25",
+    name: 'Alice Brown',
+    email: 'alice@example.com',
+    role: 'Moderator',
+    status: 'active',
+    createdAt: '2024-01-25',
   },
   {
     id: 5,
-    name: "Charlie Wilson",
-    email: "charlie@example.com",
-    role: "User",
-    status: "active",
-    createdAt: "2024-04-05",
+    name: 'Charlie Wilson',
+    email: 'charlie@example.com',
+    role: 'User',
+    status: 'active',
+    createdAt: '2024-04-05',
   },
 ];
 
 const sampleTransactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
   id: `txn-${i + 1}`,
-  date: new Date(2024, 0, i + 1).toISOString().split("T")[0]!,
-  description: ["Woolworths", "Coles", "Amazon", "Netflix", "Uber", "Spotify"][i % 6]!,
+  date: new Date(2024, 0, i + 1).toISOString().split('T')[0]!,
+  description: ['Woolworths', 'Coles', 'Amazon', 'Netflix', 'Uber', 'Spotify'][i % 6]!,
   amount: Math.random() * 200 - 100,
-  category: ["Food", "Shopping", "Entertainment", "Transport"][i % 4]!,
-  account: ["Checking", "Savings", "Credit Card"][i % 3]!,
+  category: ['Food', 'Shopping', 'Entertainment', 'Transport'][i % 4]!,
+  account: ['Checking', 'Savings', 'Credit Card'][i % 3]!,
 }));
 
 // Basic columns
 const userColumns: ColumnDef<User>[] = [
   {
-    accessorKey: "name",
+    accessorKey: 'name',
     header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
   },
   {
-    accessorKey: "email",
+    accessorKey: 'email',
     header: ({ column }) => <SortableHeader column={column}>Email</SortableHeader>,
   },
   {
-    accessorKey: "role",
-    header: "Role",
+    accessorKey: 'role',
+    header: 'Role',
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    accessorKey: 'status',
+    header: 'Status',
     cell: ({ row }) => {
-      const status = row.getValue("status") as string;
+      const status = row.getValue('status') as string;
       return (
-        <span className={status === "active" ? "text-green-600" : "text-muted-foreground"}>
+        <span className={status === 'active' ? 'text-green-600' : 'text-muted-foreground'}>
           {status}
         </span>
       );
     },
   },
   {
-    accessorKey: "createdAt",
+    accessorKey: 'createdAt',
     header: ({ column }) => <SortableHeader column={column}>Created</SortableHeader>,
   },
 ];
@@ -149,34 +149,34 @@ export const WithPagination: Story = {
   render: () => {
     const transactionColumns: ColumnDef<Transaction>[] = [
       {
-        accessorKey: "date",
+        accessorKey: 'date',
         header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
       },
       {
-        accessorKey: "description",
-        header: "Description",
+        accessorKey: 'description',
+        header: 'Description',
       },
       {
-        accessorKey: "amount",
+        accessorKey: 'amount',
         header: ({ column }) => <SortableHeader column={column}>Amount</SortableHeader>,
         cell: ({ row }) => {
-          const amount = row.getValue("amount") as number;
-          const formatted = new Intl.NumberFormat("en-AU", {
-            style: "currency",
-            currency: "AUD",
+          const amount = row.getValue('amount') as number;
+          const formatted = new Intl.NumberFormat('en-AU', {
+            style: 'currency',
+            currency: 'AUD',
           }).format(amount);
           return (
-            <span className={amount < 0 ? "text-red-600" : "text-green-600"}>{formatted}</span>
+            <span className={amount < 0 ? 'text-red-600' : 'text-green-600'}>{formatted}</span>
           );
         },
       },
       {
-        accessorKey: "category",
-        header: "Category",
+        accessorKey: 'category',
+        header: 'Category',
       },
       {
-        accessorKey: "account",
-        header: "Account",
+        accessorKey: 'account',
+        header: 'Account',
       },
     ];
 
@@ -201,7 +201,7 @@ export const WithRowSelection: Story = {
 
     const selectableColumns: ColumnDef<User>[] = [
       {
-        id: "select",
+        id: 'select',
         header: ({ table }) => (
           <Checkbox
             checked={table.getIsAllPageRowsSelected()}
@@ -233,7 +233,7 @@ export const WithRowSelection: Story = {
           searchColumn="name"
         />
         {selectedUsers.length > 0 && (
-          <div className="text-sm">Selected: {selectedUsers.map((u) => u.name).join(", ")}</div>
+          <div className="text-sm">Selected: {selectedUsers.map((u) => u.name).join(', ')}</div>
         )}
       </div>
     );
@@ -251,63 +251,63 @@ export const WithEditableCells: Story = {
 
     const editableColumns: ColumnDef<User>[] = [
       {
-        accessorKey: "name",
+        accessorKey: 'name',
         header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
         cell: ({ row }) => (
           <EditableCell
             value={row.original.name}
             type="text"
-            onSave={(newValue) => updateUser(row.original.id, "name", newValue)}
-            validate={(val) => val.length >= 2 || "Name must be at least 2 characters"}
+            onSave={(newValue) => updateUser(row.original.id, 'name', newValue)}
+            validate={(val) => val.length >= 2 || 'Name must be at least 2 characters'}
           />
         ),
       },
       {
-        accessorKey: "email",
-        header: "Email",
+        accessorKey: 'email',
+        header: 'Email',
         cell: ({ row }) => (
           <EditableCell
             value={row.original.email}
             type="text"
-            onSave={(newValue) => updateUser(row.original.id, "email", newValue)}
-            validate={(val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || "Invalid email"}
+            onSave={(newValue) => updateUser(row.original.id, 'email', newValue)}
+            validate={(val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Invalid email'}
           />
         ),
       },
       {
-        accessorKey: "role",
-        header: "Role",
+        accessorKey: 'role',
+        header: 'Role',
         cell: ({ row }) => (
           <EditableCell
             value={row.original.role}
             type="select"
             options={[
-              { label: "Admin", value: "Admin" },
-              { label: "Moderator", value: "Moderator" },
-              { label: "User", value: "User" },
+              { label: 'Admin', value: 'Admin' },
+              { label: 'Moderator', value: 'Moderator' },
+              { label: 'User', value: 'User' },
             ]}
-            onSave={(newValue) => updateUser(row.original.id, "role", newValue)}
+            onSave={(newValue) => updateUser(row.original.id, 'role', newValue)}
           />
         ),
       },
       {
-        accessorKey: "status",
-        header: "Status",
+        accessorKey: 'status',
+        header: 'Status',
         cell: ({ row }) => (
           <EditableCell
             value={row.original.status}
             type="select"
             options={[
-              { label: "Active", value: "active" },
-              { label: "Inactive", value: "inactive" },
+              { label: 'Active', value: 'active' },
+              { label: 'Inactive', value: 'inactive' },
             ]}
-            onSave={(newValue) => updateUser(row.original.id, "status", newValue)}
+            onSave={(newValue) => updateUser(row.original.id, 'status', newValue)}
           />
         ),
       },
       {
-        accessorKey: "createdAt",
-        header: "Created",
+        accessorKey: 'createdAt',
+        header: 'Created',
       },
     ];
 
@@ -329,8 +329,8 @@ export const WithActions: Story = {
     const columnsWithActions: ColumnDef<User>[] = [
       ...userColumns,
       {
-        id: "actions",
-        header: "Actions",
+        id: 'actions',
+        header: 'Actions',
         cell: ({ row }) => (
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => handleEdit(row.original)}>
@@ -348,7 +348,7 @@ export const WithActions: Story = {
       <DataTable
         columns={columnsWithActions}
         data={sampleUsers}
-        onRowClick={(user) => console.log("Clicked row:", user)}
+        onRowClick={(user) => console.log('Clicked row:', user)}
       />
     );
   },

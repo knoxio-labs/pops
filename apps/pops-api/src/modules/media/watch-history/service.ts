@@ -16,13 +16,13 @@ import {
   lte,
   isNotNull,
   type SQL,
-} from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { watchHistory, mediaWatchlist, episodes, seasons, movies, tvShows } from "@pops/db-types";
-import { NotFoundError } from "../../../shared/errors.js";
-import { resequencePriorities } from "../watchlist/service.js";
-import { resetStaleness } from "../comparisons/staleness.js";
-import { createDebriefSession, queueDebriefStatus } from "../debrief/service.js";
+} from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { watchHistory, mediaWatchlist, episodes, seasons, movies, tvShows } from '@pops/db-types';
+import { NotFoundError } from '../../../shared/errors.js';
+import { resequencePriorities } from '../watchlist/service.js';
+import { resetStaleness } from '../comparisons/staleness.js';
+import { createDebriefSession, queueDebriefStatus } from '../debrief/service.js';
 import type {
   WatchHistoryRow,
   LogWatchInput,
@@ -34,7 +34,7 @@ import type {
   BatchProgressEntry,
   RecentWatchHistoryFilters,
   RecentWatchHistoryEntry,
-} from "./types.js";
+} from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface WatchHistoryListResult {
@@ -52,7 +52,7 @@ export function listWatchHistory(
   const conditions: SQL[] = [];
 
   if (filters.mediaType) {
-    conditions.push(eq(watchHistory.mediaType, filters.mediaType as "movie" | "episode"));
+    conditions.push(eq(watchHistory.mediaType, filters.mediaType as 'movie' | 'episode'));
   }
   if (filters.mediaId) {
     conditions.push(eq(watchHistory.mediaId, filters.mediaId));
@@ -93,7 +93,7 @@ export function listRecent(
   const conditions: SQL[] = [];
 
   if (filters.mediaType) {
-    conditions.push(eq(watchHistory.mediaType, filters.mediaType as "movie" | "episode"));
+    conditions.push(eq(watchHistory.mediaType, filters.mediaType as 'movie' | 'episode'));
   }
   if (filters.startDate) {
     conditions.push(gte(watchHistory.watchedAt, filters.startDate));
@@ -118,7 +118,7 @@ export function listRecent(
 
   // Enrich with media metadata
   const rows: RecentWatchHistoryEntry[] = rawRows.map((row) => {
-    if (row.mediaType === "movie") {
+    if (row.mediaType === 'movie') {
       const movie = db
         .select({
           title: movies.title,
@@ -223,7 +223,7 @@ export function getWatchHistoryEntry(id: number): WatchHistoryRow {
   const db = getDrizzle();
   const row = db.select().from(watchHistory).where(eq(watchHistory.id, id)).get();
 
-  if (!row) throw new NotFoundError("WatchHistoryEntry", String(id));
+  if (!row) throw new NotFoundError('WatchHistoryEntry', String(id));
   return row;
 }
 
@@ -295,7 +295,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
           )
         )
         .get();
-      if (!existing) throw new Error("Watch history entry not found after conflict");
+      if (!existing) throw new Error('Watch history entry not found after conflict');
       return { entry: existing, created: false, watchlistRemoved: false };
     }
 
@@ -304,7 +304,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
       .from(watchHistory)
       .where(eq(watchHistory.id, Number(result.lastInsertRowid)))
       .get();
-    if (!entry) throw new Error("Watch history entry not found after insert");
+    if (!entry) throw new Error('Watch history entry not found after insert');
 
     // Reset staleness + queue debrief when a completed watch event is logged
     // (comparisons use movie/tv_show types, so resolve episode → tv_show)
@@ -312,7 +312,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
       let compMediaType: string = input.mediaType;
       let compMediaId = input.mediaId;
 
-      if (input.mediaType === "episode") {
+      if (input.mediaType === 'episode') {
         const ep = tx
           .select({ seasonId: episodes.seasonId })
           .from(episodes)
@@ -325,7 +325,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
             .where(eq(seasons.id, ep.seasonId))
             .get();
           if (season) {
-            compMediaType = "tv_show";
+            compMediaType = 'tv_show';
             compMediaId = season.tvShowId;
           }
         }
@@ -342,16 +342,16 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
 
     // Auto-remove from watchlist (PRD-011 R6) — skip for plex_sync source
     let watchlistRemoved = false;
-    if (completed === 1 && input.source !== "plex_sync") {
-      if (input.mediaType === "movie") {
+    if (completed === 1 && input.source !== 'plex_sync') {
+      if (input.mediaType === 'movie') {
         const deleteResult = tx
           .delete(mediaWatchlist)
           .where(
-            and(eq(mediaWatchlist.mediaType, "movie"), eq(mediaWatchlist.mediaId, input.mediaId))
+            and(eq(mediaWatchlist.mediaType, 'movie'), eq(mediaWatchlist.mediaId, input.mediaId))
           )
           .run();
         watchlistRemoved = deleteResult.changes > 0;
-      } else if (input.mediaType === "episode") {
+      } else if (input.mediaType === 'episode') {
         watchlistRemoved = autoRemoveTvShowIfFullyWatched(tx, input.mediaId);
       }
       if (watchlistRemoved) {
@@ -371,7 +371,7 @@ export function logWatch(input: LogWatchInput): LogWatchResult {
  * Uses a single JOIN query to count watched episodes (no N+1).
  */
 function autoRemoveTvShowIfFullyWatched(
-  tx: Parameters<Parameters<ReturnType<typeof getDrizzle>["transaction"]>[0]>[0],
+  tx: Parameters<Parameters<ReturnType<typeof getDrizzle>['transaction']>[0]>[0],
   episodeId: number
 ): boolean {
   // Look up episode → season → tv show
@@ -408,7 +408,7 @@ function autoRemoveTvShowIfFullyWatched(
     .from(watchHistory)
     .where(
       and(
-        eq(watchHistory.mediaType, "episode"),
+        eq(watchHistory.mediaType, 'episode'),
         eq(watchHistory.completed, 1),
         inArray(watchHistory.mediaId, showEpisodeIds)
       )
@@ -419,7 +419,7 @@ function autoRemoveTvShowIfFullyWatched(
   if (watched >= showEpisodeIds.length) {
     const deleteResult = tx
       .delete(mediaWatchlist)
-      .where(and(eq(mediaWatchlist.mediaType, "tv_show"), eq(mediaWatchlist.mediaId, tvShowId)))
+      .where(and(eq(mediaWatchlist.mediaType, 'tv_show'), eq(mediaWatchlist.mediaId, tvShowId)))
       .run();
     return deleteResult.changes > 0;
   }
@@ -436,7 +436,7 @@ export function getProgress(tvShowId: number): TvShowProgress {
 
   // Verify TV show exists
   const show = db.select({ id: tvShows.id }).from(tvShows).where(eq(tvShows.id, tvShowId)).get();
-  if (!show) throw new NotFoundError("TvShow", String(tvShowId));
+  if (!show) throw new NotFoundError('TvShow', String(tvShowId));
 
   // Get all seasons with their episode counts
   const seasonRows = db
@@ -463,7 +463,7 @@ export function getProgress(tvShowId: number): TvShowProgress {
     .innerJoin(seasons, eq(seasons.id, episodes.seasonId))
     .where(
       and(
-        eq(watchHistory.mediaType, "episode"),
+        eq(watchHistory.mediaType, 'episode'),
         eq(watchHistory.completed, 1),
         eq(seasons.tvShowId, tvShowId)
       )
@@ -531,7 +531,7 @@ function findNextUnwatchedEpisode(
       .innerJoin(seasons, eq(seasons.id, episodes.seasonId))
       .where(
         and(
-          eq(watchHistory.mediaType, "episode"),
+          eq(watchHistory.mediaType, 'episode'),
           eq(watchHistory.completed, 1),
           eq(seasons.tvShowId, tvShowId)
         )
@@ -581,7 +581,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
     const today = new Date().toISOString().slice(0, 10);
     const airedFilter = and(isNotNull(episodes.airDate), lte(episodes.airDate, today));
 
-    if (input.mediaType === "season") {
+    if (input.mediaType === 'season') {
       episodeIds = tx
         .select({ id: episodes.id })
         .from(episodes)
@@ -612,7 +612,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
               .from(watchHistory)
               .where(
                 and(
-                  eq(watchHistory.mediaType, "episode"),
+                  eq(watchHistory.mediaType, 'episode'),
                   eq(watchHistory.completed, 1),
                   inArray(watchHistory.mediaId, episodeIds)
                 )
@@ -629,7 +629,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
         .from(watchHistory)
         .where(
           and(
-            eq(watchHistory.mediaType, "episode"),
+            eq(watchHistory.mediaType, 'episode'),
             eq(watchHistory.blacklisted, 1),
             eq(watchHistory.watchedAt, watchedAt),
             inArray(watchHistory.mediaId, episodeIds)
@@ -645,7 +645,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
     for (const episodeId of toLog) {
       tx.insert(watchHistory)
         .values({
-          mediaType: "episode",
+          mediaType: 'episode',
           mediaId: episodeId,
           watchedAt,
           completed,
@@ -659,7 +659,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
       // Determine the TV show ID for watchlist removal + staleness reset
       let tvShowId: number | undefined;
 
-      if (input.mediaType === "show") {
+      if (input.mediaType === 'show') {
         tvShowId = input.mediaId;
       } else {
         // season → look up the show
@@ -673,7 +673,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
 
       // Reset staleness for the parent TV show (comparisons use tv_show type)
       if (tvShowId !== undefined) {
-        resetStaleness("tv_show", tvShowId);
+        resetStaleness('tv_show', tvShowId);
       }
 
       if (tvShowId !== undefined) {
@@ -692,7 +692,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
             .from(watchHistory)
             .where(
               and(
-                eq(watchHistory.mediaType, "episode"),
+                eq(watchHistory.mediaType, 'episode'),
                 eq(watchHistory.completed, 1),
                 inArray(watchHistory.mediaId, allShowEpisodeIds)
               )
@@ -704,7 +704,7 @@ export function batchLogWatch(input: BatchLogWatchInput): BatchLogResult {
             const removeResult = tx
               .delete(mediaWatchlist)
               .where(
-                and(eq(mediaWatchlist.mediaType, "tv_show"), eq(mediaWatchlist.mediaId, tvShowId))
+                and(eq(mediaWatchlist.mediaType, 'tv_show'), eq(mediaWatchlist.mediaId, tvShowId))
               )
               .run();
             if (removeResult.changes > 0) {
@@ -751,7 +751,7 @@ export function getBatchProgress(tvShowIds: number[]): BatchProgressEntry[] {
     .innerJoin(seasons, eq(seasons.id, episodes.seasonId))
     .where(
       and(
-        eq(watchHistory.mediaType, "episode"),
+        eq(watchHistory.mediaType, 'episode'),
         eq(watchHistory.completed, 1),
         inArray(seasons.tvShowId, tvShowIds)
       )
@@ -775,5 +775,5 @@ export function deleteWatchHistoryEntry(id: number): void {
   getWatchHistoryEntry(id);
 
   const result = getDrizzle().delete(watchHistory).where(eq(watchHistory.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("WatchHistoryEntry", String(id));
+  if (result.changes === 0) throw new NotFoundError('WatchHistoryEntry', String(id));
 }

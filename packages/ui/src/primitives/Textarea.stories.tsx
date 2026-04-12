@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { Textarea } from "./textarea";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { Textarea } from './textarea';
 
 const meta: Meta<typeof Textarea> = {
-  title: "Inputs/Textarea",
+  title: 'Inputs/Textarea',
   component: Textarea,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 };
 
 export default meta;
@@ -16,20 +16,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    placeholder: "Enter your text here...",
+    placeholder: 'Enter your text here...',
   },
 };
 
 export const WithValue: Story = {
   args: {
-    defaultValue: "This is some default text in the textarea.",
+    defaultValue: 'This is some default text in the textarea.',
   },
 };
 
 export const Disabled: Story = {
   args: {
     disabled: true,
-    defaultValue: "This textarea is disabled",
+    defaultValue: 'This textarea is disabled',
   },
 };
 
@@ -46,7 +46,7 @@ export const WithLabel: Story = {
 export const WithCharacterCount: Story = {
   args: {},
   render: () => {
-    const [value, setValue] = useState("");
+    const [value, setValue] = useState('');
     const maxLength = 280;
 
     return (
@@ -80,7 +80,7 @@ export const WithError: Story = {
 export const TransactionNote: Story = {
   args: {},
   render: () => {
-    const [note, setNote] = useState("");
+    const [note, setNote] = useState('');
 
     return (
       <div className="space-y-4 w-96 rounded-lg border p-6">
@@ -106,7 +106,7 @@ export const TransactionNote: Story = {
 export const BudgetDescription: Story = {
   args: {},
   render: () => {
-    const [description, setDescription] = useState("");
+    const [description, setDescription] = useState('');
 
     return (
       <div className="space-y-6 w-96">
@@ -139,7 +139,7 @@ export const BudgetDescription: Story = {
 export const Feedback: Story = {
   args: {},
   render: () => {
-    const [feedback, setFeedback] = useState("");
+    const [feedback, setFeedback] = useState('');
     const minLength = 20;
     const isValid = feedback.length >= minLength;
 
@@ -156,7 +156,7 @@ export const Feedback: Story = {
             placeholder="Tell us what you think..."
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
-            aria-invalid={feedback.length > 0 && !isValid ? "true" : undefined}
+            aria-invalid={feedback.length > 0 && !isValid ? 'true' : undefined}
             rows={5}
           />
           {feedback.length > 0 && !isValid && (
@@ -181,7 +181,7 @@ export const Feedback: Story = {
 export const AutoGrowing: Story = {
   args: {},
   render: () => {
-    const [value, setValue] = useState("");
+    const [value, setValue] = useState('');
 
     return (
       <div className="space-y-2 w-96">
@@ -225,9 +225,9 @@ export const Form: Story = {
   args: {},
   render: () => {
     const [formData, setFormData] = useState({
-      title: "",
-      description: "",
-      notes: "",
+      title: '',
+      description: '',
+      notes: '',
     });
 
     return (

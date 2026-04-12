@@ -1,8 +1,8 @@
-import { eq, desc } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { NotFoundError } from "../../../shared/errors.js";
-import { tagVocabulary, transactionTagRules } from "@pops/db-types";
-import type { TransactionTagRuleRow } from "@pops/db-types";
+import { eq, desc } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { NotFoundError } from '../../../shared/errors.js';
+import { tagVocabulary, transactionTagRules } from '@pops/db-types';
+import type { TransactionTagRuleRow } from '@pops/db-types';
 import type {
   TagRuleChangeSet,
   TagRuleChangeSetOp,
@@ -10,7 +10,7 @@ import type {
   TagRuleImpactCounts,
   TagRuleImpactItem,
   TagSuggestion,
-} from "./types.js";
+} from './types.js';
 
 export type TagRuleRow = TransactionTagRuleRow;
 
@@ -24,7 +24,7 @@ export function listVocabulary(): string[] {
     .map((r) => r.tag);
 }
 
-export function upsertVocabularyTag(tag: string, source: "seed" | "user"): void {
+export function upsertVocabularyTag(tag: string, source: 'seed' | 'user'): void {
   const db = getDrizzle();
   db.insert(tagVocabulary)
     .values({ tag, source, isActive: true })
@@ -59,7 +59,7 @@ export function applyTagRuleChangeSet(changeSet: TagRuleChangeSet): TagRuleRow[]
 }
 
 function applyOp(tx: ReturnType<typeof getDrizzle>, op: TagRuleChangeSetOp): void {
-  if (op.op === "add") {
+  if (op.op === 'add') {
     tx.insert(transactionTagRules)
       .values({
         descriptionPattern: op.data.descriptionPattern,
@@ -74,13 +74,13 @@ function applyOp(tx: ReturnType<typeof getDrizzle>, op: TagRuleChangeSetOp): voi
       .run();
     return;
   }
-  if (op.op === "edit") {
+  if (op.op === 'edit') {
     const existing = tx
       .select({ id: transactionTagRules.id })
       .from(transactionTagRules)
       .where(eq(transactionTagRules.id, op.id))
       .get();
-    if (!existing) throw new NotFoundError("transaction_tag_rules", op.id);
+    if (!existing) throw new NotFoundError('transaction_tag_rules', op.id);
 
     tx.update(transactionTagRules)
       .set({
@@ -94,18 +94,18 @@ function applyOp(tx: ReturnType<typeof getDrizzle>, op: TagRuleChangeSetOp): voi
       .run();
     return;
   }
-  if (op.op === "disable") {
+  if (op.op === 'disable') {
     const res = tx
       .update(transactionTagRules)
       .set({ isActive: false })
       .where(eq(transactionTagRules.id, op.id))
       .run();
-    if (res.changes === 0) throw new NotFoundError("transaction_tag_rules", op.id);
+    if (res.changes === 0) throw new NotFoundError('transaction_tag_rules', op.id);
     return;
   }
-  if (op.op === "remove") {
+  if (op.op === 'remove') {
     const res = tx.delete(transactionTagRules).where(eq(transactionTagRules.id, op.id)).run();
-    if (res.changes === 0) throw new NotFoundError("transaction_tag_rules", op.id);
+    if (res.changes === 0) throw new NotFoundError('transaction_tag_rules', op.id);
   }
 }
 
@@ -170,18 +170,18 @@ export function previewTagRuleChangeSet(args: {
 
 function materializeProposedRules(changeSet: TagRuleChangeSet): Array<{
   descriptionPattern: string;
-  matchType: "exact" | "contains" | "regex";
+  matchType: 'exact' | 'contains' | 'regex';
   entityId: string | null;
   tags: string[];
 }> {
   const rules: Array<{
     descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
+    matchType: 'exact' | 'contains' | 'regex';
     entityId: string | null;
     tags: string[];
   }> = [];
   for (const op of changeSet.ops) {
-    if (op.op === "add") {
+    if (op.op === 'add') {
       rules.push({
         descriptionPattern: op.data.descriptionPattern,
         matchType: op.data.matchType,
@@ -199,7 +199,7 @@ function suggestFromRules(
   entityId: string | null,
   rules: Array<{
     descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
+    matchType: 'exact' | 'contains' | 'regex';
     entityId: string | null;
     tags: string[];
   }>,
@@ -213,13 +213,13 @@ function suggestFromRules(
     if (rule.entityId && rule.entityId !== entityId) continue;
     const pattern = rule.descriptionPattern.toUpperCase();
     const matches =
-      rule.matchType === "exact"
+      rule.matchType === 'exact'
         ? normalized === pattern
-        : rule.matchType === "contains"
+        : rule.matchType === 'contains'
           ? normalized.includes(pattern)
           : (() => {
               try {
-                return new RegExp(rule.descriptionPattern, "i").test(description);
+                return new RegExp(rule.descriptionPattern, 'i').test(description);
               } catch {
                 return false;
               }
@@ -231,7 +231,7 @@ function suggestFromRules(
       seen.add(tag);
       out.push({
         tag,
-        source: "tag_rule",
+        source: 'tag_rule',
         pattern: rule.descriptionPattern,
         isNew: !vocabulary.has(tag.toLowerCase()),
       });
@@ -247,7 +247,7 @@ function suggestFromRules(
 export function proposeTagRuleChangeSet(args: {
   signal: {
     descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
+    matchType: 'exact' | 'contains' | 'regex';
     entityId?: string | null;
     tags: string[];
   };
@@ -255,11 +255,11 @@ export function proposeTagRuleChangeSet(args: {
   maxPreviewItems: number;
 }): TagRuleChangeSetProposal {
   const changeSet: TagRuleChangeSet = {
-    source: "tag-edit-signal",
-    reason: "Create new tag rule from tag edit signal",
+    source: 'tag-edit-signal',
+    reason: 'Create new tag rule from tag edit signal',
     ops: [
       {
-        op: "add",
+        op: 'add',
         data: {
           descriptionPattern: args.signal.descriptionPattern,
           matchType: args.signal.matchType,

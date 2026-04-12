@@ -6,17 +6,17 @@
  * Director shelf queries /discover/movie?with_crew={personId}.
  * Actor shelf queries /discover/movie?with_cast={personId}.
  */
-import { sql, eq } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { movies, mediaScores } from "@pops/db-types";
-import { getTmdbClient } from "../../tmdb/index.js";
-import type { TmdbMovieCredits } from "../../tmdb/types.js";
-import { getLibraryTmdbIds, toDiscoverResults } from "../tmdb-service.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "../flags.js";
-import { scoreDiscoverResults } from "../service.js";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile } from "../types.js";
+import { sql, eq } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { movies, mediaScores } from '@pops/db-types';
+import { getTmdbClient } from '../../tmdb/index.js';
+import type { TmdbMovieCredits } from '../../tmdb/types.js';
+import { getLibraryTmdbIds, toDiscoverResults } from '../tmdb-service.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from '../flags.js';
+import { scoreDiscoverResults } from '../service.js';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile } from '../types.js';
 
 const MAX_SEEDS = 10;
 const LEAD_CAST_COUNT = 3;
@@ -94,7 +94,7 @@ async function getCachedCredits(tmdbId: number): Promise<TmdbMovieCredits> {
 
 /** Extract the director from credits (crew, job=Director). Returns null if not found. */
 function extractDirector(credits: TmdbMovieCredits): { id: number; name: string } | null {
-  const director = credits.crew.find((c) => c.job === "Director");
+  const director = credits.crew.find((c) => c.job === 'Director');
   return director ? { id: director.id, name: director.name } : null;
 }
 
@@ -117,7 +117,7 @@ function buildDirectorInstance(seed: SeedMovie, profile: PreferenceProfile): She
     shelfId: `more-from-director:${seed.id}`,
     title,
     subtitle: director ? `Films directed by ${director.name}` : undefined,
-    emoji: "🎬",
+    emoji: '🎬',
     score,
     seedMovieId: seed.id,
     query: async ({ limit, offset }) => {
@@ -165,7 +165,7 @@ function buildActorInstance(
     shelfId: `more-from-actor:${seed.id}:${actorIndex}`,
     title,
     subtitle: actor ? `Films featuring ${actor.name}` : undefined,
-    emoji: "🎭",
+    emoji: '🎭',
     score,
     seedMovieId: seed.id,
     query: async ({ limit, offset }) => {
@@ -199,9 +199,9 @@ function buildActorInstance(
 }
 
 export const moreFromDirectorShelf: ShelfDefinition = {
-  id: "more-from-director",
+  id: 'more-from-director',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const seeds = selectSeedMovies();
     return seeds.map((seed) => buildDirectorInstance(seed, profile));
@@ -209,9 +209,9 @@ export const moreFromDirectorShelf: ShelfDefinition = {
 };
 
 export const moreFromActorShelf: ShelfDefinition = {
-  id: "more-from-actor",
+  id: 'more-from-actor',
   template: true,
-  category: "seed",
+  category: 'seed',
   generate(profile: PreferenceProfile): ShelfInstance[] {
     const seeds = selectSeedMovies();
     // One instance per seed per lead actor position (up to LEAD_CAST_COUNT)

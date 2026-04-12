@@ -1,6 +1,6 @@
-import { z } from "zod";
-import type { EntityRow } from "@pops/db-types";
-import { ENTITY_TYPES } from "@pops/db-types";
+import { z } from 'zod';
+import type { EntityRow } from '@pops/db-types';
+import { ENTITY_TYPES } from '@pops/db-types';
 
 export type { EntityRow };
 export { ENTITY_TYPES };
@@ -35,7 +35,7 @@ export function toEntity(row: EntityRow & { transactionCount?: number }): Entity
     abn: row.abn,
     aliases: row.aliases
       ? row.aliases
-          .split(",")
+          .split(',')
           .map((s) => s.trim())
           .filter(Boolean)
       : [],
@@ -45,7 +45,7 @@ export function toEntity(row: EntityRow & { transactionCount?: number }): Entity
           try {
             const parsed = JSON.parse(row.defaultTags) as unknown;
             if (Array.isArray(parsed)) {
-              return parsed.filter((item): item is string => typeof item === "string");
+              return parsed.filter((item): item is string => typeof item === 'string');
             }
             return [];
           } catch {
@@ -61,8 +61,8 @@ export function toEntity(row: EntityRow & { transactionCount?: number }): Entity
 
 /** Zod schema for creating an entity. */
 export const CreateEntitySchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  type: z.enum(ENTITY_TYPES).optional().default("company"),
+  name: z.string().min(1, 'Name is required'),
+  type: z.enum(ENTITY_TYPES).optional().default('company'),
   abn: z.string().nullable().optional(),
   aliases: z.array(z.string()).optional().default([]),
   defaultTransactionType: z.string().nullable().optional(),
@@ -73,7 +73,7 @@ export type CreateEntityInput = z.infer<typeof CreateEntitySchema>;
 
 /** Zod schema for updating an entity (all fields optional). */
 export const UpdateEntitySchema = z.object({
-  name: z.string().min(1, "Name cannot be empty").optional(),
+  name: z.string().min(1, 'Name cannot be empty').optional(),
   type: z.enum(ENTITY_TYPES).optional(),
   abn: z.string().nullable().optional(),
   aliases: z.array(z.string()).optional(),

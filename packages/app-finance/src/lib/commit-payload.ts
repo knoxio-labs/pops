@@ -1,6 +1,6 @@
-import type { ConfirmedTransaction } from "@pops/api/modules/finance/imports";
-import type { ChangeSet } from "@pops/api/modules/core/corrections/types";
-import type { PendingEntity, PendingChangeSet } from "../store/importStore";
+import type { ConfirmedTransaction } from '@pops/api/modules/finance/imports';
+import type { ChangeSet } from '@pops/api/modules/core/corrections/types';
+import type { PendingEntity, PendingChangeSet } from '../store/importStore';
 
 // ---------------------------------------------------------------------------
 // CommitPayload — PRD-030 US-09
@@ -15,7 +15,7 @@ export interface CommitPayload {
 }
 
 export interface DanglingEntityRefError {
-  type: "dangling-entity-ref";
+  type: 'dangling-entity-ref';
   tempId: string;
   changeSetTempId: string;
 }
@@ -42,11 +42,11 @@ export function buildCommitPayload(
   for (const pcs of pendingChangeSets) {
     for (const op of pcs.changeSet.ops) {
       const entityId =
-        (op.op === "add" || op.op === "edit") && op.data.entityId ? op.data.entityId : null;
+        (op.op === 'add' || op.op === 'edit') && op.data.entityId ? op.data.entityId : null;
 
-      if (entityId?.startsWith("temp:entity:") && !validTempEntityIds.has(entityId)) {
+      if (entityId?.startsWith('temp:entity:') && !validTempEntityIds.has(entityId)) {
         const err: DanglingEntityRefError = {
-          type: "dangling-entity-ref",
+          type: 'dangling-entity-ref',
           tempId: entityId,
           changeSetTempId: pcs.tempId,
         };

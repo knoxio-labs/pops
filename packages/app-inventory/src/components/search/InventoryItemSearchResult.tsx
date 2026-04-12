@@ -4,8 +4,8 @@
  * Renders item name (highlighted), location, and formatted value.
  * Registered for domain "inventory-items" in the search result component registry.
  */
-import { Package } from "lucide-react";
-import type { ResultComponentProps } from "@pops/navigation";
+import { Package } from 'lucide-react';
+import type { ResultComponentProps } from '@pops/navigation';
 
 interface InventoryItemHitData {
   itemName: string;
@@ -26,7 +26,7 @@ export function highlightMatch(text: string, query: string, matchType: string): 
   const lowerQuery = query.toLowerCase();
   let start = -1;
 
-  if (matchType === "exact" || matchType === "prefix") {
+  if (matchType === 'exact' || matchType === 'prefix') {
     start = 0;
   } else {
     start = lowerText.indexOf(lowerQuery);
@@ -47,9 +47,9 @@ export function highlightMatch(text: string, query: string, matchType: string): 
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
@@ -61,10 +61,10 @@ export function InventoryItemSearchResult({ data }: ResultComponentProps) {
     _matchType?: string;
   };
   const { itemName, location, room, replacementValue, brand } = hit;
-  const query = hit._query ?? "";
-  const matchType = hit._matchType ?? "contains";
+  const query = hit._query ?? '';
+  const matchType = hit._matchType ?? 'contains';
 
-  const locationText = [room, location].filter(Boolean).join(" · ");
+  const locationText = [room, location].filter(Boolean).join(' · ');
 
   return (
     <div className="flex items-center gap-3 py-1" data-testid="inventory-item-search-result">

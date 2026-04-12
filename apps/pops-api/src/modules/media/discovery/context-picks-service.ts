@@ -2,12 +2,12 @@
  * Context-aware picks service — fetches TMDB discover results
  * for the currently active context collections.
  */
-import { getDrizzle } from "../../../db.js";
-import { movies } from "@pops/db-types";
-import type { TmdbClient } from "../tmdb/client.js";
-import type { DiscoverResult } from "./types.js";
-import { getActiveCollections, type ContextCollection } from "./context-collections.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
+import { getDrizzle } from '../../../db.js';
+import { movies } from '@pops/db-types';
+import type { TmdbClient } from '../tmdb/client.js';
+import type { DiscoverResult } from './types.js';
+import { getActiveCollections, type ContextCollection } from './context-collections.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from './flags.js';
 
 /** A context collection result set for the API response. */
 export interface ContextPicksCollection {
@@ -53,7 +53,7 @@ async function fetchCollectionResults(
   const response = await client.discoverMovies({
     genreIds: collection.genreIds.length > 0 ? collection.genreIds : undefined,
     keywordIds: collection.keywordIds.length > 0 ? collection.keywordIds : undefined,
-    sortBy: "vote_average.desc",
+    sortBy: 'vote_average.desc',
     voteCountGte: 100,
     page,
   });

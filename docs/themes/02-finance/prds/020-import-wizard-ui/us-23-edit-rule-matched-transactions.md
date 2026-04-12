@@ -22,4 +22,3 @@ As a user, I want to safely correct transactions that were matched by learned ru
 ## Notes
 
 The Correction Proposal workflow is specified in PRD-028.
-

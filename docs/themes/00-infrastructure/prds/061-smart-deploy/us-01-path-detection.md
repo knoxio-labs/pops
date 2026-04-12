@@ -14,12 +14,12 @@ As a developer, I want the deploy workflow to detect which categories of files c
 - [x] Categorises changed paths into outputs: `frontend`, `backend`, `infra`, `skip_deploy`
 - [x] Path-to-category mapping:
 
-| Pattern | Category |
-|---------|----------|
-| `apps/pops-shell/**`, `packages/app-*/**`, `packages/ui/**`, `packages/widgets/**`, `packages/navigation/**` | frontend |
-| `apps/pops-api/**`, `packages/db-types/**`, `packages/types/**`, `packages/auth/**` | backend |
-| `infra/**`, `docker-compose*`, `apps/pops-shell/nginx.conf` | infra |
-| `docs/**`, `.github/**`, `*.md`, `packages/test-utils/**` | skip (only if no other category matched) |
+| Pattern                                                                                                      | Category                                 |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| `apps/pops-shell/**`, `packages/app-*/**`, `packages/ui/**`, `packages/widgets/**`, `packages/navigation/**` | frontend                                 |
+| `apps/pops-api/**`, `packages/db-types/**`, `packages/types/**`, `packages/auth/**`                          | backend                                  |
+| `infra/**`, `docker-compose*`, `apps/pops-shell/nginx.conf`                                                  | infra                                    |
+| `docs/**`, `.github/**`, `*.md`, `packages/test-utils/**`                                                    | skip (only if no other category matched) |
 
 - [x] Multiple categories can be true simultaneously (e.g., frontend + backend)
 - [x] If `infra` is true, all other categories are ignored (full deploy)

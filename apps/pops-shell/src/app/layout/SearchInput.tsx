@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import { Search, X, Film, Tv, Box, ArrowRightLeft, PiggyBank, Building2 } from "lucide-react";
-import { Input, Button } from "@pops/ui";
-import { useSearchStore } from "@/store/searchStore";
-import { trpc } from "@/lib/trpc";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Search, X, Film, Tv, Box, ArrowRightLeft, PiggyBank, Building2 } from 'lucide-react';
+import { Input, Button } from '@pops/ui';
+import { useSearchStore } from '@/store/searchStore';
+import { trpc } from '@/lib/trpc';
 import {
   SearchResultsPanel,
   type SearchResultSection,
@@ -11,7 +11,7 @@ import {
   useCurrentApp,
   useSearchResultNavigation,
   useSearchKeyboardNav,
-} from "@pops/navigation";
+} from '@pops/navigation';
 
 const DEBOUNCE_MS = 300;
 
@@ -28,9 +28,9 @@ const ICON_MAP: Record<string, ReactNode> = {
 /** Derive a human-readable section label from a domain slug. */
 function domainToLabel(domain: string): string {
   return domain
-    .split("-")
+    .split('-')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+    .join(' ');
 }
 
 export function SearchInput() {
@@ -132,7 +132,7 @@ export function SearchInput() {
   const { selectedIndex } = useSearchKeyboardNav({
     containerRef,
     resultCount: orderedUris.length,
-    onSelect: (index) => handleResultClick(orderedUris[index] ?? ""),
+    onSelect: (index) => handleResultClick(orderedUris[index] ?? ''),
     onClose: handleClose,
   });
 
@@ -150,7 +150,7 @@ export function SearchInput() {
   const handleClear = useCallback(() => {
     clear();
     if (inputRef.current) {
-      inputRef.current.value = "";
+      inputRef.current.value = '';
       inputRef.current.focus();
     }
   }, [clear]);
@@ -158,13 +158,13 @@ export function SearchInput() {
   // Cmd+K / Ctrl+K keyboard shortcut
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         inputRef.current?.focus();
       }
     }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Clean up debounce timer on unmount

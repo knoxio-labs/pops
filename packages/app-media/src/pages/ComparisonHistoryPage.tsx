@@ -2,12 +2,12 @@
  * ComparisonHistoryPage — paginated list of all comparisons with delete capability.
  * Allows users to review past comparisons and undo mistakes.
  */
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router";
-import { toast } from "sonner";
-import { Button, Card, CardContent, Skeleton, Select, Input } from "@pops/ui";
-import { Trash2, ChevronLeft, ChevronRight, History, Undo2 } from "lucide-react";
-import { trpc } from "../lib/trpc";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router';
+import { toast } from 'sonner';
+import { Button, Card, CardContent, Skeleton, Select, Input } from '@pops/ui';
+import { Trash2, ChevronLeft, ChevronRight, History, Undo2 } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 const PAGE_SIZE = 20;
 const UNDO_DELAY_MS = 5000;
@@ -23,8 +23,8 @@ function useDebouncedValue(value: string, delay: number): string {
 
 export function ComparisonHistoryPage() {
   const [page, setPage] = useState(0);
-  const [dimensionFilter, setDimensionFilter] = useState<string>("");
-  const [searchInput, setSearchInput] = useState<string>("");
+  const [dimensionFilter, setDimensionFilter] = useState<string>('');
+  const [searchInput, setSearchInput] = useState<string>('');
   const [pendingDeletes, setPendingDeletes] = useState<Set<number>>(new Set());
   const pendingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -62,7 +62,7 @@ export function ComparisonHistoryPage() {
         next.delete(variables.id);
         return next;
       });
-      toast.error("Failed to delete comparison");
+      toast.error('Failed to delete comparison');
     },
   });
 
@@ -83,7 +83,7 @@ export function ComparisonHistoryPage() {
   const totalPages = data?.pagination ? Math.ceil(data.pagination.total / PAGE_SIZE) : 0;
 
   const dimensionOptions = [
-    { label: "All dimensions", value: "" },
+    { label: 'All dimensions', value: '' },
     ...dimensions.map((d: { id: number; name: string }) => ({
       label: d.name,
       value: String(d.id),
@@ -144,7 +144,7 @@ export function ComparisonHistoryPage() {
         />
         {data?.pagination && (
           <span className="text-sm text-muted-foreground">
-            {data.pagination.total} comparison{data.pagination.total !== 1 ? "s" : ""}
+            {data.pagination.total} comparison{data.pagination.total !== 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -158,10 +158,10 @@ export function ComparisonHistoryPage() {
       ) : comparisons.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
-            No comparisons yet. Head to the{" "}
+            No comparisons yet. Head to the{' '}
             <Link to="/media/compare" className="text-primary underline">
               Compare Arena
-            </Link>{" "}
+            </Link>{' '}
             to start comparing movies.
           </CardContent>
         </Card>
@@ -185,7 +185,7 @@ export function ComparisonHistoryPage() {
               <ComparisonRow
                 key={comp.id}
                 comparison={comp}
-                dimensionName={dimensionMap.get(comp.dimensionId) ?? "Unknown"}
+                dimensionName={dimensionMap.get(comp.dimensionId) ?? 'Unknown'}
                 onDelete={handleDelete}
               />
             )
@@ -227,13 +227,13 @@ function EloDelta({ delta }: { delta: number | null }) {
     <span
       className={`text-2xs font-mono tabular-nums px-1 py-0.5 rounded ${
         isPositive
-          ? "text-green-500 bg-green-500/10"
+          ? 'text-green-500 bg-green-500/10'
           : delta < 0
-            ? "text-red-500 bg-red-500/10"
-            : "text-muted-foreground"
+            ? 'text-red-500 bg-red-500/10'
+            : 'text-muted-foreground'
       }`}
     >
-      {isPositive ? "+" : ""}
+      {isPositive ? '+' : ''}
       {delta}
     </span>
   );
@@ -338,7 +338,7 @@ function UndoToast({ toastId, onUndo }: { toastId: string | number; onUndo: () =
           className="h-full rounded-full bg-primary animate-shrink-bar"
           style={
             {
-              "--shrink-duration": `${UNDO_DELAY_MS}ms`,
+              '--shrink-duration': `${UNDO_DELAY_MS}ms`,
             } as React.CSSProperties
           }
         />

@@ -9,13 +9,13 @@ Ensure the shell and all shared components work on every viewport — from 375px
 
 ## Breakpoint System
 
-| Name | Width | Use case |
-|------|-------|----------|
-| `sm` | 640px | Large phones landscape |
-| `md` | 768px | Tablets portrait — **primary divider** |
-| `lg` | 1024px | Tablets landscape, small laptops |
-| `xl` | 1280px | Desktops |
-| `2xl` | 1536px | Large desktops |
+| Name  | Width  | Use case                               |
+| ----- | ------ | -------------------------------------- |
+| `sm`  | 640px  | Large phones landscape                 |
+| `md`  | 768px  | Tablets portrait — **primary divider** |
+| `lg`  | 1024px | Tablets landscape, small laptops       |
+| `xl`  | 1280px | Desktops                               |
+| `2xl` | 1536px | Large desktops                         |
 
 Tailwind v4 defaults. Mobile-first CSS: base styles target mobile, `md:` prefix for desktop.
 
@@ -29,12 +29,13 @@ The shell's `<main>` element has **zero padding** (`p-0`). Pages own their own p
 
 ### Page Categories
 
-| Category | Max width | Centering | Use when |
-|----------|----------|-----------|----------|
-| **Full-width** | None | N/A | Content fills available space: grids, scroll rows, data tables, hero backdrops |
-| **Constrained** | `max-w-4xl mx-auto` | Centered | Text/forms that become hard to read at full width: settings, forms, detail page content |
+| Category        | Max width           | Centering | Use when                                                                                |
+| --------------- | ------------------- | --------- | --------------------------------------------------------------------------------------- |
+| **Full-width**  | None                | N/A       | Content fills available space: grids, scroll rows, data tables, hero backdrops          |
+| **Constrained** | `max-w-4xl mx-auto` | Centered  | Text/forms that become hard to read at full width: settings, forms, detail page content |
 
 **Rules:**
+
 - Constrained sections must always use `mx-auto` to center — `max-w-*` without `mx-auto` creates dead space on the right, never acceptable
 - Pages mix full-width and constrained sections freely (e.g., full-width hero → constrained text below)
 - No page should be designed for a single viewport width
@@ -62,20 +63,21 @@ Page title icons must be consistent within an app — either all top-level pages
 
 ## Component Responsive Behaviour
 
-| Component | Mobile (<768px) | Desktop (≥768px) |
-|-----------|----------------|-------------------|
-| **DataTable** | Horizontal scroll | Full table |
-| **DataTableFilters** | Collapse behind a "Filters" button → opens sheet/drawer | Inline filter row |
-| **Forms** | Labels stacked above inputs, full-width inputs | Side-by-side where appropriate |
-| **Dialogs** | Full-screen (sheet pattern, slide up from bottom) | Centered overlay |
-| **Autocomplete/Combobox** | Dropdown positioned correctly, not viewport-clipped | Standard dropdown |
-| **ChipInput** | Chips wrap to multiple lines, 44px remove buttons | Inline chips |
+| Component                 | Mobile (<768px)                                         | Desktop (≥768px)               |
+| ------------------------- | ------------------------------------------------------- | ------------------------------ |
+| **DataTable**             | Horizontal scroll                                       | Full table                     |
+| **DataTableFilters**      | Collapse behind a "Filters" button → opens sheet/drawer | Inline filter row              |
+| **Forms**                 | Labels stacked above inputs, full-width inputs          | Side-by-side where appropriate |
+| **Dialogs**               | Full-screen (sheet pattern, slide up from bottom)       | Centered overlay               |
+| **Autocomplete/Combobox** | Dropdown positioned correctly, not viewport-clipped     | Standard dropdown              |
+| **ChipInput**             | Chips wrap to multiple lines, 44px remove buttons       | Inline chips                   |
 
 **Approach:** CSS-driven via Tailwind responsive classes. Use `useMediaQuery` only if JavaScript behaviour must differ (e.g., swapping DataTable for card list). Prefer CSS.
 
 ## Touch Target Standards
 
 Per Apple HIG and WCAG:
+
 - Minimum touch target: **44x44px**
 - Minimum spacing between adjacent targets: **8px**
 - Applies to: buttons, links, checkboxes, chips, table rows, all interactive elements
@@ -89,21 +91,21 @@ Per Apple HIG and WCAG:
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
+| Case                   | Behaviour                                                          |
+| ---------------------- | ------------------------------------------------------------------ |
 | ImportWizard on mobile | Finance-specific, out of scope — power-user flow unlikely on phone |
-| iPad (768-1024px) | Works naturally with `md` breakpoint |
-| HomePad / wall mount | Future concern — dedicated dashboard mode, not this PRD |
-| Mobile detection | No JavaScript detection — use Tailwind responsive classes |
+| iPad (768-1024px)      | Works naturally with `md` breakpoint                               |
+| HomePad / wall mount   | Future concern — dedicated dashboard mode, not this PRD            |
+| Mobile detection       | No JavaScript detection — use Tailwind responsive classes          |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-mobile-shell](us-01-mobile-shell.md) | Shell layout works on mobile: compact TopBar, mobile nav pattern, full-width content | Done | No (first) |
-| 02 | [us-02-component-audit](us-02-component-audit.md) | All @pops/ui components render without overflow at 375px: DataTable, forms, dialogs, filters | Partial | Yes |
-| 03 | [us-03-touch-targets](us-03-touch-targets.md) | All interactive elements meet 44x44px minimum with 8px spacing | Not started | Yes |
-| 04 | [us-04-page-conventions](us-04-page-conventions.md) | Page width, padding, empty state, error state, and title icon conventions established and documented | Done | Yes |
+| #   | Story                                               | Summary                                                                                              | Status      | Parallelisable |
+| --- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------- | -------------- |
+| 01  | [us-01-mobile-shell](us-01-mobile-shell.md)         | Shell layout works on mobile: compact TopBar, mobile nav pattern, full-width content                 | Done        | No (first)     |
+| 02  | [us-02-component-audit](us-02-component-audit.md)   | All @pops/ui components render without overflow at 375px: DataTable, forms, dialogs, filters         | Partial     | Yes            |
+| 03  | [us-03-touch-targets](us-03-touch-targets.md)       | All interactive elements meet 44x44px minimum with 8px spacing                                       | Not started | Yes            |
+| 04  | [us-04-page-conventions](us-04-page-conventions.md) | Page width, padding, empty state, error state, and title icon conventions established and documented | Done        | Yes            |
 
 US-02, US-03, US-04 can parallelise after US-01.
 

@@ -1,12 +1,12 @@
 /**
  * Wishlist page - savings goals
  */
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { trpc } from '../lib/trpc';
 import {
   DataTable,
   SortableHeader,
@@ -33,18 +33,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@pops/ui";
-import { MoreHorizontal, Plus, ExternalLink, Pencil, Trash2, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import type { ColumnFilter } from "@pops/ui";
+} from '@pops/ui';
+import { MoreHorizontal, Plus, ExternalLink, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import type { ColumnFilter } from '@pops/ui';
 
 // Schema matching the API
 const WishlistItemSchema = z.object({
-  item: z.string().min(1, "Item name is required"),
+  item: z.string().min(1, 'Item name is required'),
   targetAmount: z.number().nullable().optional(),
   saved: z.number().nullable().optional(),
-  priority: z.enum(["Needing", "Soon", "One Day", "Dreaming"]).nullable().optional(),
-  url: z.string().url("Must be a valid URL").or(z.literal("")).nullable().optional(),
+  priority: z.enum(['Needing', 'Soon', 'One Day', 'Dreaming']).nullable().optional(),
+  url: z.string().url('Must be a valid URL').or(z.literal('')).nullable().optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -74,7 +74,7 @@ export function WishlistPage() {
 
   const createMutation = trpc.finance.wishlist.create.useMutation({
     onSuccess: () => {
-      toast.success("Item added to wishlist");
+      toast.success('Item added to wishlist');
       utils.finance.wishlist.list.invalidate();
       setIsDialogOpen(false);
     },
@@ -83,7 +83,7 @@ export function WishlistPage() {
 
   const updateMutation = trpc.finance.wishlist.update.useMutation({
     onSuccess: () => {
-      toast.success("Item updated");
+      toast.success('Item updated');
       utils.finance.wishlist.list.invalidate();
       setIsDialogOpen(false);
       setEditingItem(null);
@@ -93,7 +93,7 @@ export function WishlistPage() {
 
   const deleteMutation = trpc.finance.wishlist.delete.useMutation({
     onSuccess: () => {
-      toast.success("Item removed");
+      toast.success('Item removed');
       utils.finance.wishlist.list.invalidate();
       setDeletingId(null);
     },
@@ -103,24 +103,24 @@ export function WishlistPage() {
   const form = useForm<WishlistFormValues>({
     resolver: zodResolver(WishlistItemSchema),
     defaultValues: {
-      item: "",
+      item: '',
       targetAmount: null,
       saved: null,
-      priority: "Soon",
-      url: "",
-      notes: "",
+      priority: 'Soon',
+      url: '',
+      notes: '',
     },
   });
 
   const handleAdd = () => {
     setEditingItem(null);
     form.reset({
-      item: "",
+      item: '',
       targetAmount: null,
       saved: null,
-      priority: "Soon",
-      url: "",
-      notes: "",
+      priority: 'Soon',
+      url: '',
+      notes: '',
     });
     setIsDialogOpen(true);
   };
@@ -131,9 +131,9 @@ export function WishlistPage() {
       item: item.item,
       targetAmount: item.targetAmount,
       saved: item.saved,
-      priority: (item.priority as WishlistFormValues["priority"]) || "Soon",
-      url: item.url || "",
-      notes: item.notes || "",
+      priority: (item.priority as WishlistFormValues['priority']) || 'Soon',
+      url: item.url || '',
+      notes: item.notes || '',
     });
     setIsDialogOpen(true);
   };
@@ -148,7 +148,7 @@ export function WishlistPage() {
 
   const columns: ColumnDef<WishlistItem>[] = [
     {
-      accessorKey: "item",
+      accessorKey: 'item',
       header: ({ column }) => <SortableHeader column={column}>Item</SortableHeader>,
       cell: ({ row }) => (
         <div className="flex flex-col">
@@ -167,15 +167,15 @@ export function WishlistPage() {
       ),
     },
     {
-      accessorKey: "priority",
-      header: "Priority",
+      accessorKey: 'priority',
+      header: 'Priority',
       cell: ({ row }) => {
         const priority = row.original.priority;
         if (!priority) return <span className="text-muted-foreground">—</span>;
         return (
           <Badge
             variant={
-              priority === "Needing" ? "default" : priority === "Soon" ? "secondary" : "outline"
+              priority === 'Needing' ? 'default' : priority === 'Soon' ? 'secondary' : 'outline'
             }
           >
             {priority}
@@ -184,7 +184,7 @@ export function WishlistPage() {
       },
     },
     {
-      accessorKey: "targetAmount",
+      accessorKey: 'targetAmount',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Target</SortableHeader>
@@ -205,7 +205,7 @@ export function WishlistPage() {
       },
     },
     {
-      accessorKey: "saved",
+      accessorKey: 'saved',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Saved</SortableHeader>
@@ -226,8 +226,8 @@ export function WishlistPage() {
       },
     },
     {
-      id: "progress",
-      header: "Progress",
+      id: 'progress',
+      header: 'Progress',
       cell: ({ row }) => {
         const { targetAmount, saved } = row.original;
         if (targetAmount === null || saved === null || targetAmount === 0) {
@@ -243,7 +243,7 @@ export function WishlistPage() {
       },
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => (
         <div className="text-right">
           <DropdownMenu
@@ -272,15 +272,15 @@ export function WishlistPage() {
 
   const tableFilters: ColumnFilter[] = [
     {
-      id: "priority",
-      type: "select",
-      label: "Priority",
+      id: 'priority',
+      type: 'select',
+      label: 'Priority',
       options: [
-        { label: "All Priorities", value: "" },
-        { label: "Needing", value: "Needing" },
-        { label: "Soon", value: "Soon" },
-        { label: "One Day", value: "One Day" },
-        { label: "Dreaming", value: "Dreaming" },
+        { label: 'All Priorities', value: '' },
+        { label: 'Needing', value: 'Needing' },
+        { label: 'Soon', value: 'Soon' },
+        { label: 'One Day', value: 'One Day' },
+        { label: 'Dreaming', value: 'Dreaming' },
       ],
     },
   ];
@@ -308,7 +308,7 @@ export function WishlistPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Wish List</h1>
           <p className="text-muted-foreground text-sm">
-            {data ? `${data.pagination.total} items to save for` : "Tracking your goals"}
+            {data ? `${data.pagination.total} items to save for` : 'Tracking your goals'}
           </p>
         </div>
         <Button onClick={handleAdd}>
@@ -339,14 +339,14 @@ export function WishlistPage() {
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>{editingItem ? "Edit Item" : "New Wishlist Item"}</DialogTitle>
+              <DialogTitle>{editingItem ? 'Edit Item' : 'New Wishlist Item'}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <TextInput
                   label="Item Name"
                   placeholder="e.g. Mechanical Keyboard"
-                  {...form.register("item")}
+                  {...form.register('item')}
                   error={form.formState.errors.item?.message}
                 />
               </div>
@@ -356,7 +356,7 @@ export function WishlistPage() {
                   label="Target Amount"
                   placeholder="0.00"
                   prefix="$"
-                  {...form.register("targetAmount", { valueAsNumber: true })}
+                  {...form.register('targetAmount', { valueAsNumber: true })}
                   error={form.formState.errors.targetAmount?.message}
                 />
                 <TextInput
@@ -364,7 +364,7 @@ export function WishlistPage() {
                   label="Already Saved"
                   placeholder="0.00"
                   prefix="$"
-                  {...form.register("saved", { valueAsNumber: true })}
+                  {...form.register('saved', { valueAsNumber: true })}
                   error={form.formState.errors.saved?.message}
                 />
               </div>
@@ -372,12 +372,12 @@ export function WishlistPage() {
                 <Select
                   label="Priority"
                   options={[
-                    { label: "Needing", value: "Needing" },
-                    { label: "Soon", value: "Soon" },
-                    { label: "One Day", value: "One Day" },
-                    { label: "Dreaming", value: "Dreaming" },
+                    { label: 'Needing', value: 'Needing' },
+                    { label: 'Soon', value: 'Soon' },
+                    { label: 'One Day', value: 'One Day' },
+                    { label: 'Dreaming', value: 'Dreaming' },
                   ]}
-                  {...form.register("priority")}
+                  {...form.register('priority')}
                   error={form.formState.errors.priority?.message}
                 />
               </div>
@@ -385,7 +385,7 @@ export function WishlistPage() {
                 <TextInput
                   label="URL (Optional)"
                   placeholder="https://..."
-                  {...form.register("url")}
+                  {...form.register('url')}
                   error={form.formState.errors.url?.message}
                 />
               </div>
@@ -393,7 +393,7 @@ export function WishlistPage() {
                 <TextInput
                   label="Notes"
                   placeholder="Why do you want this?"
-                  {...form.register("notes")}
+                  {...form.register('notes')}
                   error={form.formState.errors.notes?.message}
                 />
               </div>
@@ -409,7 +409,7 @@ export function WishlistPage() {
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingItem ? "Update" : "Create"}
+                {editingItem ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
           </form>
@@ -432,7 +432,7 @@ export function WishlistPage() {
               onClick={() => deletingId && deleteMutation.mutate({ id: deletingId })}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

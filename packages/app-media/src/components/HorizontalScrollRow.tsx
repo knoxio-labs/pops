@@ -2,9 +2,9 @@
  * HorizontalScrollRow — a titled section with horizontally scrollable content.
  * Used on the Discover page for trending, recommendations, and similar sections.
  */
-import { useRef } from "react";
-import { cn, Button, Skeleton } from "@pops/ui";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef } from 'react';
+import { cn, Button, Skeleton } from '@pops/ui';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface HorizontalScrollRowProps {
   /** Section title. */
@@ -31,17 +31,17 @@ export function HorizontalScrollRow({
 }: HorizontalScrollRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const scroll = (direction: "left" | "right") => {
+  const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
     const scrollAmount = scrollRef.current.clientWidth * 0.75;
     scrollRef.current.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
     });
   };
 
   return (
-    <section className={cn("space-y-3", className)}>
+    <section className={cn('space-y-3', className)}>
       {/* Header */}
       <div className="flex items-end justify-between gap-2 px-1">
         <div>
@@ -53,7 +53,7 @@ export function HorizontalScrollRow({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => scroll("left")}
+            onClick={() => scroll('left')}
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function HorizontalScrollRow({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => scroll("right")}
+            onClick={() => scroll('right')}
             aria-label="Scroll right"
           >
             <ChevronRight className="h-4 w-4" />
@@ -86,4 +86,4 @@ export function HorizontalScrollRow({
   );
 }
 
-HorizontalScrollRow.displayName = "HorizontalScrollRow";
+HorizontalScrollRow.displayName = 'HorizontalScrollRow';

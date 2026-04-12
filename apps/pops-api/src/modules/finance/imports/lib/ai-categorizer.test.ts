@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { categorizeWithAi, clearCache, AiCategorizationError } from "./ai-categorizer.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { categorizeWithAi, clearCache, AiCategorizationError } from './ai-categorizer.js';
 
 /**
  * Unit tests for AI categorization with mocked Anthropic API.
@@ -9,7 +9,7 @@ import { categorizeWithAi, clearCache, AiCategorizationError } from "./ai-catego
 // Mock the Anthropic SDK
 const mockCreate = vi.fn();
 
-vi.mock("@anthropic-ai/sdk", () => {
+vi.mock('@anthropic-ai/sdk', () => {
   return {
     default: vi.fn().mockImplementation(function () {
       return {
@@ -23,7 +23,7 @@ vi.mock("@anthropic-ai/sdk", () => {
 
 // Mock the database
 const mockDbRun = vi.fn();
-vi.mock("../../../../db.js", () => {
+vi.mock('../../../../db.js', () => {
   return {
     getDrizzle: vi.fn(() => ({
       insert: vi.fn(() => ({
@@ -38,7 +38,7 @@ vi.mock("../../../../db.js", () => {
 });
 
 // Mock node:fs so disk I/O doesn't interfere with unit tests
-vi.mock("node:fs", () => ({
+vi.mock('node:fs', () => ({
   existsSync: vi.fn().mockReturnValue(false),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock("node:fs", () => ({
 }));
 
 // Store original env var
-const originalEnv = process.env["CLAUDE_API_KEY"];
+const originalEnv = process.env['CLAUDE_API_KEY'];
 
 beforeEach(() => {
   // Clear cache before each test to prevent pollution
@@ -55,32 +55,32 @@ beforeEach(() => {
   mockCreate.mockClear();
   mockDbRun.mockClear();
   // Set API key by default for tests
-  process.env["CLAUDE_API_KEY"] = "test-api-key-12345";
+  process.env['CLAUDE_API_KEY'] = 'test-api-key-12345';
 });
 
 afterEach(() => {
   // Restore original env var
   if (originalEnv === undefined) {
-    delete process.env["CLAUDE_API_KEY"];
+    delete process.env['CLAUDE_API_KEY'];
   } else {
-    process.env["CLAUDE_API_KEY"] = originalEnv;
+    process.env['CLAUDE_API_KEY'] = originalEnv;
   }
 });
 
-describe("categorizeWithAi", () => {
-  describe("Caching behavior", () => {
-    it("calls mocked API for new rawRow", async () => {
+describe('categorizeWithAi', () => {
+  describe('Caching behavior', () => {
+    it('calls mocked API for new rawRow', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Woolworths", "category": "Groceries"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Woolworths", "category": "Groceries"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result, usage } = await categorizeWithAi("WOOLWORTHS 1234");
+      const { result, usage } = await categorizeWithAi('WOOLWORTHS 1234');
 
       expect(mockCreate).toHaveBeenCalledTimes(1);
       expect(result).not.toBeNull();
-      expect(result?.entityName).toBe("Woolworths");
-      expect(result?.category).toBe("Groceries");
+      expect(result?.entityName).toBe('Woolworths');
+      expect(result?.category).toBe('Groceries');
       expect(result?.cachedAt).toBeDefined();
       expect(usage).toBeDefined();
       expect(usage?.inputTokens).toBe(50);
@@ -88,109 +88,109 @@ describe("categorizeWithAi", () => {
       expect(usage?.costUsd).toBeCloseTo(0.00015); // (50/1M * $1) + (20/1M * $5)
     });
 
-    it("returns cached result without calling API on second call", async () => {
+    it('returns cached result without calling API on second call', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Coles", "category": "Groceries"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Coles", "category": "Groceries"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
       // First call
-      const { result: result1, usage: usage1 } = await categorizeWithAi("COLES 5678");
+      const { result: result1, usage: usage1 } = await categorizeWithAi('COLES 5678');
       expect(mockCreate).toHaveBeenCalledTimes(1);
       expect(usage1).toBeDefined();
 
       // Second call with same rawRow
-      const { result: result2, usage: usage2 } = await categorizeWithAi("COLES 5678");
+      const { result: result2, usage: usage2 } = await categorizeWithAi('COLES 5678');
       expect(mockCreate).toHaveBeenCalledTimes(1); // Still only 1 call
-      expect(result2?.entityName).toBe("Coles");
+      expect(result2?.entityName).toBe('Coles');
       expect(result2?.cachedAt).toBe(result1?.cachedAt); // Same cached result
       expect(usage2).toBeUndefined(); // No usage stats for cache hit
     });
 
-    it("caches are case-insensitive and trimmed", async () => {
+    it('caches are case-insensitive and trimmed', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Netflix", "category": "Subscriptions"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Netflix", "category": "Subscriptions"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
       // First call
-      await categorizeWithAi("  netflix.com  ");
+      await categorizeWithAi('  netflix.com  ');
       expect(mockCreate).toHaveBeenCalledTimes(1);
 
       // Second call with different case/whitespace
-      const { result: result2, usage: usage2 } = await categorizeWithAi("NETFLIX.COM");
+      const { result: result2, usage: usage2 } = await categorizeWithAi('NETFLIX.COM');
       expect(mockCreate).toHaveBeenCalledTimes(1); // Cache hit
 
-      expect(result2?.entityName).toBe("Netflix");
+      expect(result2?.entityName).toBe('Netflix');
       expect(usage2).toBeUndefined(); // No usage stats for cache hit
     });
 
-    it("calls API for different rawRow", async () => {
+    it('calls API for different rawRow', async () => {
       mockCreate.mockResolvedValueOnce({
-        content: [{ type: "text", text: '{"entityName": "Woolworths", "category": "Groceries"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Woolworths", "category": "Groceries"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      await categorizeWithAi("WOOLWORTHS 1234");
+      await categorizeWithAi('WOOLWORTHS 1234');
       expect(mockCreate).toHaveBeenCalledTimes(1);
 
       mockCreate.mockResolvedValueOnce({
-        content: [{ type: "text", text: '{"entityName": "Coles", "category": "Groceries"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Coles", "category": "Groceries"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      await categorizeWithAi("COLES 5678");
+      await categorizeWithAi('COLES 5678');
       expect(mockCreate).toHaveBeenCalledTimes(2); // Different description = new call
     });
 
-    it("sets cachedAt timestamp", async () => {
+    it('sets cachedAt timestamp', async () => {
       const before = new Date().toISOString();
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("TEST MERCHANT");
+      const { result } = await categorizeWithAi('TEST MERCHANT');
       const after = new Date().toISOString();
 
       expect(result?.cachedAt).toBeDefined();
       const cachedAt = result?.cachedAt;
-      if (!cachedAt) throw new Error("Expected cachedAt to be defined");
+      if (!cachedAt) throw new Error('Expected cachedAt to be defined');
       expect(cachedAt >= before).toBe(true);
       expect(cachedAt <= after).toBe(true);
     });
   });
 
-  describe("API key handling", () => {
-    it("throws AiCategorizationError when CLAUDE_API_KEY is missing", async () => {
-      delete process.env["CLAUDE_API_KEY"];
+  describe('API key handling', () => {
+    it('throws AiCategorizationError when CLAUDE_API_KEY is missing', async () => {
+      delete process.env['CLAUDE_API_KEY'];
 
-      await expect(categorizeWithAi("WOOLWORTHS 1234")).rejects.toThrow(AiCategorizationError);
-      await expect(categorizeWithAi("WOOLWORTHS 1234")).rejects.toThrow(
-        "CLAUDE_API_KEY not configured"
+      await expect(categorizeWithAi('WOOLWORTHS 1234')).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('WOOLWORTHS 1234')).rejects.toThrow(
+        'CLAUDE_API_KEY not configured'
       );
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("throws AiCategorizationError when CLAUDE_API_KEY is empty string", async () => {
-      process.env["CLAUDE_API_KEY"] = "";
+    it('throws AiCategorizationError when CLAUDE_API_KEY is empty string', async () => {
+      process.env['CLAUDE_API_KEY'] = '';
 
-      await expect(categorizeWithAi("WOOLWORTHS 1234")).rejects.toThrow(AiCategorizationError);
-      await expect(categorizeWithAi("WOOLWORTHS 1234")).rejects.toThrow(
-        "CLAUDE_API_KEY not configured"
+      await expect(categorizeWithAi('WOOLWORTHS 1234')).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('WOOLWORTHS 1234')).rejects.toThrow(
+        'CLAUDE_API_KEY not configured'
       );
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it("uses provided API key to create client", async () => {
-      process.env["CLAUDE_API_KEY"] = "my-secret-key";
+    it('uses provided API key to create client', async () => {
+      process.env['CLAUDE_API_KEY'] = 'my-secret-key';
 
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      await categorizeWithAi("TEST");
+      await categorizeWithAi('TEST');
 
       // Can't easily verify apiKey without exposing it from constructor
       // But we verified it creates client and calls API
@@ -198,195 +198,195 @@ describe("categorizeWithAi", () => {
     });
   });
 
-  describe("API response handling", () => {
-    it("parses JSON response correctly", async () => {
+  describe('API response handling', () => {
+    it('parses JSON response correctly', async () => {
       mockCreate.mockResolvedValue({
         content: [
-          { type: "text", text: '{"entityName": "Roastville Cafe", "category": "Dining"}' },
+          { type: 'text', text: '{"entityName": "Roastville Cafe", "category": "Dining"}' },
         ],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("ROASTVILLE CAFE");
+      const { result } = await categorizeWithAi('ROASTVILLE CAFE');
 
-      expect(result?.entityName).toBe("Roastville Cafe");
-      expect(result?.category).toBe("Dining");
-      expect(result?.description).toBe("ROASTVILLE CAFE");
+      expect(result?.entityName).toBe('Roastville Cafe');
+      expect(result?.category).toBe('Dining');
+      expect(result?.description).toBe('ROASTVILLE CAFE');
     });
 
-    it("returns null when API returns non-text content", async () => {
+    it('returns null when API returns non-text content', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "image", data: "..." }],
+        content: [{ type: 'image', data: '...' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("TEST");
+      const { result } = await categorizeWithAi('TEST');
 
       expect(result).toBeNull();
     });
 
-    it("returns null when API returns empty content array", async () => {
+    it('returns null when API returns empty content array', async () => {
       mockCreate.mockResolvedValue({
         content: [],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("TEST");
+      const { result } = await categorizeWithAi('TEST');
 
       expect(result).toBeNull();
     });
 
-    it("throws AiCategorizationError when API returns invalid JSON", async () => {
+    it('throws AiCategorizationError when API returns invalid JSON', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: "This is not JSON" }],
+        content: [{ type: 'text', text: 'This is not JSON' }],
       });
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
     });
 
-    it("handles JSON with partial data (missing entityName)", async () => {
+    it('handles JSON with partial data (missing entityName)', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"category": "Groceries"}' }],
+        content: [{ type: 'text', text: '{"category": "Groceries"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("TEST");
+      const { result } = await categorizeWithAi('TEST');
 
       // Code doesn't validate schema, so it creates entry with undefined fields
       expect(result?.entityName).toBeUndefined();
-      expect(result?.category).toBe("Groceries");
+      expect(result?.category).toBe('Groceries');
     });
 
-    it("handles JSON with partial data (missing category)", async () => {
+    it('handles JSON with partial data (missing category)', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Woolworths"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Woolworths"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("TEST");
+      const { result } = await categorizeWithAi('TEST');
 
-      expect(result?.entityName).toBe("Woolworths");
+      expect(result?.entityName).toBe('Woolworths');
       expect(result?.category).toBeUndefined();
     });
 
-    it("handles special characters in response", async () => {
+    it('handles special characters in response', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "McDonald\'s", "category": "Dining"}' }],
+        content: [{ type: 'text', text: '{"entityName": "McDonald\'s", "category": "Dining"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("MCDONALDS");
+      const { result } = await categorizeWithAi('MCDONALDS');
 
       expect(result?.entityName).toBe("McDonald's");
     });
 
-    it("trims rawRow in description field", async () => {
+    it('trims rawRow in description field', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("  TEST MERCHANT  ");
+      const { result } = await categorizeWithAi('  TEST MERCHANT  ');
 
-      expect(result?.description).toBe("TEST MERCHANT"); // Trimmed
+      expect(result?.description).toBe('TEST MERCHANT'); // Trimmed
     });
   });
 
-  describe("Error handling", () => {
-    it("throws AiCategorizationError when API throws error", async () => {
-      mockCreate.mockRejectedValue(new Error("API timeout"));
+  describe('Error handling', () => {
+    it('throws AiCategorizationError when API throws error', async () => {
+      mockCreate.mockRejectedValue(new Error('API timeout'));
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
-      await expect(categorizeWithAi("TEST")).rejects.toThrow("Failed to categorize: API timeout");
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow('Failed to categorize: API timeout');
     });
 
-    it("throws AiCategorizationError when API throws network error", async () => {
-      mockCreate.mockRejectedValue(new Error("ECONNREFUSED"));
+    it('throws AiCategorizationError when API throws network error', async () => {
+      mockCreate.mockRejectedValue(new Error('ECONNREFUSED'));
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
-      await expect(categorizeWithAi("TEST")).rejects.toThrow("Failed to categorize: ECONNREFUSED");
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow('Failed to categorize: ECONNREFUSED');
     });
 
-    it("throws AiCategorizationError when JSON parsing fails", async () => {
+    it('throws AiCategorizationError when JSON parsing fails', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: "{invalid json" }],
+        content: [{ type: 'text', text: '{invalid json' }],
       });
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
     });
 
-    it("throws AiCategorizationError when API returns malformed response structure", async () => {
+    it('throws AiCategorizationError when API returns malformed response structure', async () => {
       mockCreate.mockResolvedValue({
         content: null, // Malformed
       });
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
     });
 
-    it("throws AiCategorizationError for undefined content", async () => {
+    it('throws AiCategorizationError for undefined content', async () => {
       mockCreate.mockResolvedValue({
         content: undefined,
       });
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
     });
 
-    it("throws INSUFFICIENT_CREDITS error when API returns 400 with credit balance message", async () => {
+    it('throws INSUFFICIENT_CREDITS error when API returns 400 with credit balance message', async () => {
       mockCreate.mockRejectedValue({
         status: 400,
-        message: "Bad request",
+        message: 'Bad request',
         error: {
           error: {
             message:
-              "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+              'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.',
           },
         },
       });
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(/credit balance/i);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(/credit balance/i);
 
       try {
-        await categorizeWithAi("TEST");
+        await categorizeWithAi('TEST');
       } catch (error) {
         expect(error).toBeInstanceOf(AiCategorizationError);
-        expect((error as AiCategorizationError).code).toBe("INSUFFICIENT_CREDITS");
+        expect((error as AiCategorizationError).code).toBe('INSUFFICIENT_CREDITS');
       }
     });
 
-    it("throws API_ERROR when API returns 400 without credit balance message", async () => {
+    it('throws API_ERROR when API returns 400 without credit balance message', async () => {
       mockCreate.mockRejectedValue({
         status: 400,
-        message: "Invalid request format",
+        message: 'Invalid request format',
       });
 
-      await expect(categorizeWithAi("TEST")).rejects.toThrow(AiCategorizationError);
+      await expect(categorizeWithAi('TEST')).rejects.toThrow(AiCategorizationError);
 
       try {
-        await categorizeWithAi("TEST");
+        await categorizeWithAi('TEST');
       } catch (error) {
         expect(error).toBeInstanceOf(AiCategorizationError);
-        expect((error as AiCategorizationError).code).toBe("API_ERROR");
+        expect((error as AiCategorizationError).code).toBe('API_ERROR');
       }
     });
   });
 
-  describe("Edge cases", () => {
-    it("handles empty rawRow", async () => {
+  describe('Edge cases', () => {
+    it('handles empty rawRow', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Unknown", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Unknown", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("");
+      const { result } = await categorizeWithAi('');
 
-      expect(result?.description).toBe("");
+      expect(result?.description).toBe('');
     });
 
-    it("handles very long rawRow", async () => {
-      const longRow = "A".repeat(10000);
+    it('handles very long rawRow', async () => {
+      const longRow = 'A'.repeat(10000);
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
@@ -404,60 +404,60 @@ describe("categorizeWithAi", () => {
       );
     });
 
-    it("calls API with correct model and parameters", async () => {
+    it('calls API with correct model and parameters', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      await categorizeWithAi("TEST");
+      await categorizeWithAi('TEST');
 
       expect(mockCreate).toHaveBeenCalledWith({
-        model: "claude-haiku-4-5-20251001",
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
         messages: [
           {
-            role: "user",
-            content: expect.stringContaining("TEST"),
+            role: 'user',
+            content: expect.stringContaining('TEST'),
           },
         ],
       });
     });
 
-    it("includes transaction data in prompt", async () => {
+    it('includes transaction data in prompt', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      await categorizeWithAi("WOOLWORTHS 1234");
+      await categorizeWithAi('WOOLWORTHS 1234');
 
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           messages: [
             {
-              role: "user",
-              content: expect.stringContaining("WOOLWORTHS 1234"),
+              role: 'user',
+              content: expect.stringContaining('WOOLWORTHS 1234'),
             },
           ],
         })
       );
     });
 
-    it("handles concurrent calls with same key (cache race)", async () => {
+    it('handles concurrent calls with same key (cache race)', async () => {
       let callCount = 0;
       mockCreate.mockImplementation(() => {
         callCount++;
         return Promise.resolve({
-          content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+          content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
           usage: { input_tokens: 50, output_tokens: 20 },
         });
       });
 
       // Simulate concurrent calls
       const [response1, response2] = await Promise.all([
-        categorizeWithAi("CONCURRENT TEST"),
-        categorizeWithAi("CONCURRENT TEST"),
+        categorizeWithAi('CONCURRENT TEST'),
+        categorizeWithAi('CONCURRENT TEST'),
       ]);
 
       // Both should succeed
@@ -468,43 +468,43 @@ describe("categorizeWithAi", () => {
       expect(callCount).toBeLessThanOrEqual(2);
     });
 
-    it("handles unicode characters in rawRow", async () => {
+    it('handles unicode characters in rawRow', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Café", "category": "Dining"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Café", "category": "Dining"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("CAFÉ ROASTVILLE");
+      const { result } = await categorizeWithAi('CAFÉ ROASTVILLE');
 
-      expect(result?.entityName).toBe("Café");
+      expect(result?.entityName).toBe('Café');
     });
 
-    it("handles newlines in rawRow", async () => {
+    it('handles newlines in rawRow', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
-      const { result } = await categorizeWithAi("LINE1\nLINE2");
+      const { result } = await categorizeWithAi('LINE1\nLINE2');
 
-      expect(result?.description).toBe("LINE1\nLINE2");
+      expect(result?.description).toBe('LINE1\nLINE2');
     });
 
-    it("clearCache function clears the cache", async () => {
+    it('clearCache function clears the cache', async () => {
       mockCreate.mockResolvedValue({
-        content: [{ type: "text", text: '{"entityName": "Test", "category": "Other"}' }],
+        content: [{ type: 'text', text: '{"entityName": "Test", "category": "Other"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
       });
 
       // First call
-      await categorizeWithAi("TEST");
+      await categorizeWithAi('TEST');
       expect(mockCreate).toHaveBeenCalledTimes(1);
 
       // Clear cache
       clearCache();
 
       // Second call should hit API again
-      await categorizeWithAi("TEST");
+      await categorizeWithAi('TEST');
       expect(mockCreate).toHaveBeenCalledTimes(2); // Called again after cache clear
     });
   });

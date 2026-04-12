@@ -2,17 +2,17 @@
  * Library service — orchestrates adding media to the local library
  * by fetching metadata from external APIs and inserting records.
  */
-import { sql, type SQL } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { movies, tvShows, watchHistory } from "@pops/db-types";
-import type { TmdbClient } from "../tmdb/client.js";
-import type { ImageCacheService } from "../tmdb/image-cache.js";
-import type { TmdbMovieDetail } from "../tmdb/types.js";
-import { getMovieByTmdbId, getMovie, createMovie, updateMovie } from "../movies/service.js";
-import { toMovie } from "../movies/types.js";
-import type { Movie, UpdateMovieInput } from "../movies/types.js";
-import type { MovieRow } from "@pops/db-types";
-import type { LibraryListInput, LibraryItem, LibrarySortOption } from "./types.js";
+import { sql, type SQL } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { movies, tvShows, watchHistory } from '@pops/db-types';
+import type { TmdbClient } from '../tmdb/client.js';
+import type { ImageCacheService } from '../tmdb/image-cache.js';
+import type { TmdbMovieDetail } from '../tmdb/types.js';
+import { getMovieByTmdbId, getMovie, createMovie, updateMovie } from '../movies/service.js';
+import { toMovie } from '../movies/types.js';
+import type { Movie, UpdateMovieInput } from '../movies/types.js';
+import type { MovieRow } from '@pops/db-types';
+import type { LibraryListInput, LibraryItem, LibrarySortOption } from './types.js';
 
 /**
  * Add a movie to the library by TMDB ID.
@@ -127,13 +127,13 @@ export async function refreshMovie(
 /** Map a sort option to a Drizzle SQL fragment. */
 function sortClause(sort: LibrarySortOption): SQL {
   switch (sort) {
-    case "title":
+    case 'title':
       return sql`title COLLATE NOCASE ASC`;
-    case "dateAdded":
+    case 'dateAdded':
       return sql`created_at DESC`;
-    case "releaseDate":
+    case 'releaseDate':
       return sql`release_date DESC`;
-    case "rating":
+    case 'rating':
       return sql`vote_average DESC`;
     default:
       return sql`title COLLATE NOCASE ASC`;
@@ -145,7 +145,7 @@ function parseGenres(raw: string | null): string[] {
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((g): g is string => typeof g === "string") : [];
+    return Array.isArray(parsed) ? parsed.filter((g): g is string => typeof g === 'string') : [];
   } catch {
     return [];
   }
@@ -165,12 +165,12 @@ function tvPosterUrl(row: LibraryRawRow): string | null {
   return null;
 }
 
-const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342";
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w342';
 
 /** Build a CDN poster URL (TMDB for movies, local fallback for TV). */
 function cdnPosterUrl(row: LibraryRawRow): string | null {
   if (row.poster_override_path) return null; // override is local-only
-  if (row.type === "movie" && row.poster_path) return `${TMDB_IMAGE_BASE}${row.poster_path}`;
+  if (row.type === 'movie' && row.poster_path) return `${TMDB_IMAGE_BASE}${row.poster_path}`;
   return null;
 }
 
@@ -211,12 +211,12 @@ function libraryUnionSql(): SQL {
 function buildWhereClause(input: LibraryListInput): SQL | null {
   const conditions: SQL[] = [];
 
-  if (input.type !== "all") {
+  if (input.type !== 'all') {
     conditions.push(sql`type = ${input.type}`);
   }
 
   if (input.search) {
-    conditions.push(sql`title LIKE ${"%" + input.search + "%"}`);
+    conditions.push(sql`title LIKE ${'%' + input.search + '%'}`);
   }
 
   if (input.genre) {
@@ -255,10 +255,10 @@ export function listLibrary(input: LibraryListInput): { items: LibraryItem[]; to
 
   const items: LibraryItem[] = rows.map((row) => ({
     id: row.id,
-    type: row.type as "movie" | "tv",
+    type: row.type as 'movie' | 'tv',
     title: row.title,
     year: row.release_date ? new Date(row.release_date).getFullYear() : null,
-    posterUrl: row.type === "movie" ? moviePosterUrl(row) : tvPosterUrl(row),
+    posterUrl: row.type === 'movie' ? moviePosterUrl(row) : tvPosterUrl(row),
     cdnPosterUrl: cdnPosterUrl(row),
     genres: parseGenres(row.genres),
     voteAverage: row.vote_average,

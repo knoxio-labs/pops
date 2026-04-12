@@ -14,13 +14,13 @@ Theme → Epic → PRD → User Story
 
 ### Theme (`themes/<name>/README.md`)
 
-Strategic overview of a domain. Defines *what* and *why* at a high level.
+Strategic overview of a domain. Defines _what_ and _why_ at a high level.
 
 - ~1 page
 - Lists epics with status
 - Key decisions, risks, out of scope
 - No implementation details
-- Template: [_templates/theme-readme.md](_templates/theme-readme.md)
+- Template: [\_templates/theme-readme.md](_templates/theme-readme.md)
 
 ### Epic (`themes/<name>/epics/NN-slug.md`)
 
@@ -30,7 +30,7 @@ A buildable chunk of work. Defines scope, coordination, and what PRDs fall under
 - Lists PRDs with dependencies and parallelisation notes
 - Scope boundaries (what's in, what's out)
 - No detailed specs — that's the PRD's job
-- Template: [_templates/epic.md](_templates/epic.md)
+- Template: [\_templates/epic.md](_templates/epic.md)
 
 ### PRD (`themes/<name>/prds/NNN-slug/README.md`)
 
@@ -40,7 +40,7 @@ Detailed spec for a feature or deliverable. Enough detail to build from.
 - Data model, API surface, business rules, edge cases
 - General direction on how to build (not step-by-step instructions)
 - Lists user stories with parallelisation notes
-- Template: [_templates/prd.md](_templates/prd.md)
+- Template: [\_templates/prd.md](_templates/prd.md)
 
 ### User Story (`themes/<name>/prds/NNN-slug/us-NN-slug.md`)
 
@@ -51,7 +51,7 @@ Single implementable unit. An AI agent or developer picks up one file and builds
 - Acceptance criteria (testable)
 - References parent PRD for context
 - Designed to be parallelisable — minimise dependencies between stories
-- Template: [_templates/us.md](_templates/us.md)
+- Template: [\_templates/us.md](_templates/us.md)
 
 ### ADR (`architecture/adr-NNN-slug.md`)
 
@@ -60,7 +60,7 @@ Architecture Decision Record. Documents a technical choice and why it was made.
 - ~1 page
 - Context, options considered, decision, consequences
 - Referenced by themes/epics/PRDs where relevant
-- Template: [_templates/adr.md](_templates/adr.md)
+- Template: [\_templates/adr.md](_templates/adr.md)
 
 ## Folder Structure
 
@@ -89,14 +89,14 @@ docs/
 
 ## Naming Conventions
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| Theme folder | `NN-<name>/` | `00-infrastructure/`, `01-foundation/`, `03-media/` |
-| Epic file | `NN-slug.md` | `00-data-model.md`, `03-connections-graph.md` |
-| PRD folder | `NNN-slug/` | `007-app-theme-colour-propagation/`, `015-plex-sync/` |
-| PRD file | `README.md` inside PRD folder | `prds/007-app-theme-colour-propagation/README.md` |
-| User story | `us-NN-slug.md` | `us-01-search-movies.md`, `us-03-poster-cache.md` |
-| ADR | `adr-NNN-slug.md` | `adr-006-tailwind-only-styling.md` |
+| Type         | Pattern                       | Example                                               |
+| ------------ | ----------------------------- | ----------------------------------------------------- |
+| Theme folder | `NN-<name>/`                  | `00-infrastructure/`, `01-foundation/`, `03-media/`   |
+| Epic file    | `NN-slug.md`                  | `00-data-model.md`, `03-connections-graph.md`         |
+| PRD folder   | `NNN-slug/`                   | `007-app-theme-colour-propagation/`, `015-plex-sync/` |
+| PRD file     | `README.md` inside PRD folder | `prds/007-app-theme-colour-propagation/README.md`     |
+| User story   | `us-NN-slug.md`               | `us-01-search-movies.md`, `us-03-poster-cache.md`     |
+| ADR          | `adr-NNN-slug.md`             | `adr-006-tailwind-only-styling.md`                    |
 
 - Epic numbers are sequential within their theme (restart per theme)
 - US numbers are sequential within their PRD (restart per PRD)
@@ -139,13 +139,13 @@ Epic → PRD → User Story (with acceptance criteria) → Implementation
 
 Use these consistently across all doc types:
 
-| Status | Meaning |
-|--------|---------|
-| To Review | Exists in docs but not yet validated against implementation |
-| Not started | Validated — no work done |
-| In progress | Actively being worked on |
-| Partial | Some parts done, some not (specify what's missing) |
-| Done | Complete and verified |
+| Status      | Meaning                                                     |
+| ----------- | ----------------------------------------------------------- |
+| To Review   | Exists in docs but not yet validated against implementation |
+| Not started | Validated — no work done                                    |
+| In progress | Actively being worked on                                    |
+| Partial     | Some parts done, some not (specify what's missing)          |
+| Done        | Complete and verified                                       |
 
 ### Cross-References
 
@@ -158,21 +158,27 @@ Use these consistently across all doc types:
 When implementation work completes (a US is built, a PRD is finished, an epic wraps up), update all places that track status. There are exactly four:
 
 ### 1. User Story — acceptance criteria checkboxes
+
 Mark each `- [ ]` criterion as `- [x]` when it passes. When all criteria are checked, the US is done.
 
 ### 2. PRD — user story table
+
 Update the story's status in the PRD's `## User Stories` table from `Not started` → `In progress` → `Done`.
 
 ### 3. Epic — PRD table
+
 Update the PRD's status in the epic's `## PRDs` table. A PRD is `Done` when all its user stories are done.
 
 ### 4. Theme README — epic table
+
 Update the epic's status in the theme's `## Epics` table. An epic is `Done` when all its PRDs are done.
 
 ### 5. Roadmap — implementation tracker
+
 Update the corresponding row in `roadmap.md` under `## Implementation Tracker`. This is the top-level view.
 
 ### 6. Docs root README — current state
+
 Update the `## Current State` section in `docs/README.md` if the change affects the high-level summary (e.g., a new app becomes functional, a phase completes).
 
 ### Status flows upward

@@ -13,16 +13,19 @@
 ### Task 1: Add failing tests for type-only learned correction behavior
 
 **Files:**
+
 - Modify: `apps/pops-api/src/modules/finance/imports/service.test.ts`
 
 - [ ] **Step 1: Write failing unit test for applyLearnedCorrection transfer-only**
 
 Add a test that seeds a correction with:
+
 - `transactionType = "transfer"`
 - `entityId = null`
 - pattern matches the transaction description
 
 Assert:
+
 - return value is non-null
 - `bucket === "matched"`
 - `processed.status === "matched"`
@@ -42,11 +45,13 @@ Expected: FAIL because current implementation returns `null` when entityId is mi
 ### Task 2: Implement type-only learned correction support
 
 **Files:**
+
 - Modify: `apps/pops-api/src/modules/finance/imports/service.ts`
 
 - [ ] **Step 1: Implement minimal logic change in applyLearnedCorrection**
 
 When rule matches and has no entityId:
+
 - if `correction.transactionType` is set → return matched result applying type-only fields
 - else → keep falling through
 
@@ -62,12 +67,14 @@ Expected: PASS.
 ### Task 3: Re-evaluation affectedCount counts type-only changes
 
 **Files:**
+
 - Modify: `apps/pops-api/src/modules/finance/imports/service.test.ts`
 - Modify: `apps/pops-api/src/modules/finance/imports/service.ts`
 
 - [ ] **Step 1: Write failing test for affectedCount when transactionType changes**
 
 Create a `ProcessImportOutput` where an item is uncertain, then after applying a type-only correction + `reevaluateImportSessionResult`, assert:
+
 - item moves to `matched`
 - `affectedCount` increments
 
@@ -83,6 +90,7 @@ Run:
 ### Task 4: Proposal preview includes type-only diffs (coverage)
 
 **Files:**
+
 - Modify: `apps/pops-api/src/modules/core/corrections/corrections.test.ts` (or nearest existing tests for propose/preview impact)
 
 - [ ] **Step 1: Add failing test asserting proposal preview includes affected items for type-only change**
@@ -103,6 +111,7 @@ Run:
 ### Task 5: Repo quality gates and docs sync
 
 **Files:**
+
 - Modify: `docs/themes/02-finance/prds/028-correction-proposal-engine/` (only if required by doc rules for #1650 linkage)
 
 - [ ] **Step 1: Run pops-api checks**
@@ -114,4 +123,3 @@ Run:
 
 Run:
 `mise lint && mise typecheck`
-

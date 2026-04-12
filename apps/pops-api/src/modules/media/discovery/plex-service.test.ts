@@ -1,29 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { PlexMediaItem } from "../plex/types.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { PlexMediaItem } from '../plex/types.js';
 
 // Mock dependencies before imports
-vi.mock("../plex/service.js", () => ({
+vi.mock('../plex/service.js', () => ({
   getPlexClient: vi.fn(),
 }));
 
-vi.mock("../../../db.js", () => ({
+vi.mock('../../../db.js', () => ({
   getDrizzle: vi.fn(),
 }));
 
-vi.mock("@pops/db-types", () => ({
-  movies: { tmdbId: "tmdb_id" },
+vi.mock('@pops/db-types', () => ({
+  movies: { tmdbId: 'tmdb_id' },
 }));
 
-vi.mock("./flags.js", () => ({
+vi.mock('./flags.js', () => ({
   getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
   getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
 // Now import mocked modules
-import { getPlexClient } from "../plex/service.js";
-import { getDrizzle } from "../../../db.js";
-import { getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
-import { getTrendingFromPlex } from "./plex-service.js";
+import { getPlexClient } from '../plex/service.js';
+import { getDrizzle } from '../../../db.js';
+import { getWatchedTmdbIds, getWatchlistTmdbIds } from './flags.js';
+import { getTrendingFromPlex } from './plex-service.js';
 
 const mockGetPlexClient = vi.mocked(getPlexClient);
 const mockGetDrizzle = vi.mocked(getDrizzle);
@@ -33,14 +33,14 @@ const mockGetWatchlistTmdbIds = vi.mocked(getWatchlistTmdbIds);
 /** Build a minimal PlexMediaItem for testing. */
 function makePlexItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
   return {
-    ratingKey: "1",
-    type: "movie",
-    title: "Test Movie",
+    ratingKey: '1',
+    type: 'movie',
+    title: 'Test Movie',
     originalTitle: null,
-    summary: "A test movie",
+    summary: 'A test movie',
     tagline: null,
     year: 2025,
-    thumbUrl: "/thumb/1",
+    thumbUrl: '/thumb/1',
     artUrl: null,
     durationMs: null,
     addedAt: 0,
@@ -50,8 +50,8 @@ function makePlexItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
     rating: null,
     audienceRating: 7.5,
     contentRating: null,
-    externalIds: [{ source: "tmdb", id: "550" }],
-    genres: ["Action"],
+    externalIds: [{ source: 'tmdb', id: '550' }],
+    genres: ['Action'],
     directors: [],
     leafCount: null,
     viewedLeafCount: null,
@@ -75,30 +75,30 @@ function createMockDb(libraryTmdbIds: number[] = []) {
   } as unknown as ReturnType<typeof getDrizzle>;
 }
 
-describe("getTrendingFromPlex", () => {
+describe('getTrendingFromPlex', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns null when Plex is not connected", async () => {
+  it('returns null when Plex is not connected', async () => {
     mockGetPlexClient.mockReturnValue(null);
 
     const result = await getTrendingFromPlex();
     expect(result).toBeNull();
   });
 
-  it("returns DiscoverResult[] when Plex is connected", async () => {
+  it('returns DiscoverResult[] when Plex is connected', async () => {
     const mockClient = {
       getTrending: vi.fn().mockResolvedValue([
         makePlexItem({
-          ratingKey: "1",
-          title: "Movie A",
-          externalIds: [{ source: "tmdb", id: "100" }],
+          ratingKey: '1',
+          title: 'Movie A',
+          externalIds: [{ source: 'tmdb', id: '100' }],
         }),
         makePlexItem({
-          ratingKey: "2",
-          title: "Movie B",
-          externalIds: [{ source: "tmdb", id: "200" }],
+          ratingKey: '2',
+          title: 'Movie B',
+          externalIds: [{ source: 'tmdb', id: '200' }],
         }),
       ]),
     };
@@ -111,18 +111,18 @@ describe("getTrendingFromPlex", () => {
     expect(result).not.toBeNull();
     expect(result).toHaveLength(2);
     expect(result![0]!.tmdbId).toBe(100);
-    expect(result![0]!.title).toBe("Movie A");
+    expect(result![0]!.title).toBe('Movie A');
     expect(result![1]!.tmdbId).toBe(200);
   });
 
-  it("excludes items without TMDB IDs", async () => {
+  it('excludes items without TMDB IDs', async () => {
     const mockClient = {
       getTrending: vi
         .fn()
         .mockResolvedValue([
-          makePlexItem({ title: "Has TMDB", externalIds: [{ source: "tmdb", id: "100" }] }),
-          makePlexItem({ title: "No TMDB", externalIds: [{ source: "imdb", id: "tt1234" }] }),
-          makePlexItem({ title: "No IDs", externalIds: [] }),
+          makePlexItem({ title: 'Has TMDB', externalIds: [{ source: 'tmdb', id: '100' }] }),
+          makePlexItem({ title: 'No TMDB', externalIds: [{ source: 'imdb', id: 'tt1234' }] }),
+          makePlexItem({ title: 'No IDs', externalIds: [] }),
         ]),
     };
     mockGetPlexClient.mockReturnValue(
@@ -132,16 +132,16 @@ describe("getTrendingFromPlex", () => {
 
     const result = await getTrendingFromPlex();
     expect(result).toHaveLength(1);
-    expect(result![0]!.title).toBe("Has TMDB");
+    expect(result![0]!.title).toBe('Has TMDB');
   });
 
-  it("marks items as inLibrary when TMDB ID matches", async () => {
+  it('marks items as inLibrary when TMDB ID matches', async () => {
     const mockClient = {
       getTrending: vi
         .fn()
         .mockResolvedValue([
-          makePlexItem({ title: "In Library", externalIds: [{ source: "tmdb", id: "100" }] }),
-          makePlexItem({ title: "Not In Library", externalIds: [{ source: "tmdb", id: "200" }] }),
+          makePlexItem({ title: 'In Library', externalIds: [{ source: 'tmdb', id: '100' }] }),
+          makePlexItem({ title: 'Not In Library', externalIds: [{ source: 'tmdb', id: '200' }] }),
         ]),
     };
     mockGetPlexClient.mockReturnValue(
@@ -151,23 +151,23 @@ describe("getTrendingFromPlex", () => {
 
     const result = await getTrendingFromPlex();
     expect(result![0]!.inLibrary).toBe(true);
-    expect(result![0]!.posterUrl).toBe("/media/images/movie/100/poster.jpg");
+    expect(result![0]!.posterUrl).toBe('/media/images/movie/100/poster.jpg');
     expect(result![1]!.inLibrary).toBe(false);
-    expect(result![1]!.posterUrl).toBe("/thumb/1");
+    expect(result![1]!.posterUrl).toBe('/thumb/1');
   });
 
-  it("deduplicates by TMDB ID", async () => {
+  it('deduplicates by TMDB ID', async () => {
     const mockClient = {
       getTrending: vi.fn().mockResolvedValue([
         makePlexItem({
-          ratingKey: "1",
-          title: "Movie A",
-          externalIds: [{ source: "tmdb", id: "100" }],
+          ratingKey: '1',
+          title: 'Movie A',
+          externalIds: [{ source: 'tmdb', id: '100' }],
         }),
         makePlexItem({
-          ratingKey: "2",
-          title: "Movie A Duplicate",
-          externalIds: [{ source: "tmdb", id: "100" }],
+          ratingKey: '2',
+          title: 'Movie A Duplicate',
+          externalIds: [{ source: 'tmdb', id: '100' }],
         }),
       ]),
     };
@@ -178,16 +178,16 @@ describe("getTrendingFromPlex", () => {
 
     const result = await getTrendingFromPlex();
     expect(result).toHaveLength(1);
-    expect(result![0]!.title).toBe("Movie A");
+    expect(result![0]!.title).toBe('Movie A');
   });
 
-  it("excludes dismissed movies", async () => {
+  it('excludes dismissed movies', async () => {
     const mockClient = {
       getTrending: vi
         .fn()
         .mockResolvedValue([
-          makePlexItem({ title: "Keep", externalIds: [{ source: "tmdb", id: "100" }] }),
-          makePlexItem({ title: "Dismissed", externalIds: [{ source: "tmdb", id: "200" }] }),
+          makePlexItem({ title: 'Keep', externalIds: [{ source: 'tmdb', id: '100' }] }),
+          makePlexItem({ title: 'Dismissed', externalIds: [{ source: 'tmdb', id: '200' }] }),
         ]),
     };
     mockGetPlexClient.mockReturnValue(
@@ -201,15 +201,15 @@ describe("getTrendingFromPlex", () => {
 
     const result = await getTrendingFromPlex();
     expect(result).toHaveLength(1);
-    expect(result![0]!.title).toBe("Keep");
+    expect(result![0]!.title).toBe('Keep');
   });
 
-  it("respects limit parameter", async () => {
+  it('respects limit parameter', async () => {
     const items = Array.from({ length: 10 }, (_, i) =>
       makePlexItem({
         ratingKey: String(i),
         title: `Movie ${i}`,
-        externalIds: [{ source: "tmdb", id: String(i + 100) }],
+        externalIds: [{ source: 'tmdb', id: String(i + 100) }],
       })
     );
     const mockClient = {
@@ -225,16 +225,16 @@ describe("getTrendingFromPlex", () => {
   });
 });
 
-describe("getTrendingFromPlex — isWatched + onWatchlist flags", () => {
+describe('getTrendingFromPlex — isWatched + onWatchlist flags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("sets isWatched=false and onWatchlist=false by default", async () => {
+  it('sets isWatched=false and onWatchlist=false by default', async () => {
     const mockClient = {
       getTrending: vi
         .fn()
-        .mockResolvedValue([makePlexItem({ externalIds: [{ source: "tmdb", id: "100" }] })]),
+        .mockResolvedValue([makePlexItem({ externalIds: [{ source: 'tmdb', id: '100' }] })]),
     };
     mockGetPlexClient.mockReturnValue(
       mockClient as unknown as ReturnType<typeof getPlexClient> & object
@@ -248,13 +248,13 @@ describe("getTrendingFromPlex — isWatched + onWatchlist flags", () => {
     expect(result![0]!.onWatchlist).toBe(false);
   });
 
-  it("sets isWatched=true when tmdbId is in watch history", async () => {
+  it('sets isWatched=true when tmdbId is in watch history', async () => {
     const mockClient = {
       getTrending: vi
         .fn()
         .mockResolvedValue([
-          makePlexItem({ title: "Watched", externalIds: [{ source: "tmdb", id: "100" }] }),
-          makePlexItem({ title: "Unwatched", externalIds: [{ source: "tmdb", id: "200" }] }),
+          makePlexItem({ title: 'Watched', externalIds: [{ source: 'tmdb', id: '100' }] }),
+          makePlexItem({ title: 'Unwatched', externalIds: [{ source: 'tmdb', id: '200' }] }),
         ]),
     };
     mockGetPlexClient.mockReturnValue(
@@ -271,13 +271,13 @@ describe("getTrendingFromPlex — isWatched + onWatchlist flags", () => {
     expect(unwatched!.isWatched).toBe(false);
   });
 
-  it("sets onWatchlist=true when tmdbId is on watchlist", async () => {
+  it('sets onWatchlist=true when tmdbId is on watchlist', async () => {
     const mockClient = {
       getTrending: vi
         .fn()
         .mockResolvedValue([
-          makePlexItem({ title: "On WL", externalIds: [{ source: "tmdb", id: "300" }] }),
-          makePlexItem({ title: "Not on WL", externalIds: [{ source: "tmdb", id: "400" }] }),
+          makePlexItem({ title: 'On WL', externalIds: [{ source: 'tmdb', id: '300' }] }),
+          makePlexItem({ title: 'Not on WL', externalIds: [{ source: 'tmdb', id: '400' }] }),
         ]),
     };
     mockGetPlexClient.mockReturnValue(

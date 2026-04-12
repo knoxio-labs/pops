@@ -17,4 +17,3 @@ As a user, I want the system to propose tag rules based on my tag edits during i
 - [x] Proposals can be generated from either:
   - transaction scope signals (single-transaction tag edit)
   - group scope signals (entity-group tag edits / acceptance in Tag Review)
-

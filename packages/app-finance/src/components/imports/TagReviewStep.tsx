@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
-import { useImportStore } from "../../store/importStore";
-import { trpc } from "../../lib/trpc";
-import { Button } from "@pops/ui";
-import { Badge } from "@pops/ui";
-import { TagEditor, type TagMetaEntry } from "../TagEditor";
-import { toast } from "sonner";
-import type { ConfirmedTransaction, SuggestedTag } from "@pops/api/modules/finance/imports";
-import { cn } from "../../lib/utils";
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { ChevronDown, ChevronRight, Loader2, X } from 'lucide-react';
+import { useImportStore } from '../../store/importStore';
+import { trpc } from '../../lib/trpc';
+import { Button } from '@pops/ui';
+import { Badge } from '@pops/ui';
+import { TagEditor, type TagMetaEntry } from '../TagEditor';
+import { toast } from 'sonner';
+import type { ConfirmedTransaction, SuggestedTag } from '@pops/api/modules/finance/imports';
+import { cn } from '../../lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,7 +27,7 @@ interface ConfirmedGroup {
 function groupByEntity(transactions: ConfirmedTransaction[]): ConfirmedGroup[] {
   const map = new Map<string, ConfirmedTransaction[]>();
   for (const t of transactions) {
-    const key = t.entityName ?? "No Entity";
+    const key = t.entityName ?? 'No Entity';
     const existing = map.get(key);
     if (existing) {
       existing.push(t);
@@ -119,18 +119,18 @@ export function TagReviewStep() {
   });
 
   const progressQuery = trpc.finance.imports.getImportProgress.useQuery(
-    { sessionId: executeSessionId ?? "" },
+    { sessionId: executeSessionId ?? '' },
     { enabled: pollingEnabled && !!executeSessionId, refetchInterval: 1500 }
   );
 
   useEffect(() => {
     if (!progressQuery.data) return;
     const { status } = progressQuery.data;
-    if (status === "completed") {
+    if (status === 'completed') {
       setPollingEnabled(false);
       const result = progressQuery.data.result;
       // Narrow to ExecuteImportOutput (has `imported` count) vs ProcessImportOutput
-      if (result && "imported" in result) {
+      if (result && 'imported' in result) {
         setImportResult({
           imported: result.imported,
           failed: result.failed,
@@ -138,9 +138,9 @@ export function TagReviewStep() {
         });
         nextStep();
       }
-    } else if (status === "failed") {
+    } else if (status === 'failed') {
       setPollingEnabled(false);
-      setImportError("Import failed. Please try again.");
+      setImportError('Import failed. Please try again.');
     }
   }, [progressQuery.data, nextStep, setImportResult]);
 
@@ -155,7 +155,7 @@ export function TagReviewStep() {
       updated[t.checksum] = t.tags ?? [];
     }
     setLocalTags(updated);
-    toast.success("All suggested tags accepted");
+    toast.success('All suggested tags accepted');
   }, [confirmedTransactions]);
 
   /**
@@ -236,11 +236,11 @@ export function TagReviewStep() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <div className="text-center space-y-1">
               <p className="font-semibold">Importing transactions…</p>
-              {progressQuery.data?.status === "processing" && (
+              {progressQuery.data?.status === 'processing' && (
                 <p className="text-sm text-muted-foreground">
-                  {progressQuery.data.currentStep === "writing"
+                  {progressQuery.data.currentStep === 'writing'
                     ? `Writing ${progressQuery.data.processedCount ?? 0} / ${progressQuery.data.totalTransactions ?? confirmedTransactions.length}`
-                    : (progressQuery.data.currentStep ?? "Processing…")}
+                    : (progressQuery.data.currentStep ?? 'Processing…')}
                 </p>
               )}
             </div>
@@ -290,7 +290,7 @@ export function TagReviewStep() {
           Back
         </Button>
         <Button onClick={handleImport} disabled={isImporting || confirmedTransactions.length === 0}>
-          {`Import ${confirmedTransactions.length} transaction${confirmedTransactions.length !== 1 ? "s" : ""} →`}
+          {`Import ${confirmedTransactions.length} transaction${confirmedTransactions.length !== 1 ? 's' : ''} →`}
         </Button>
       </div>
     </div>
@@ -343,7 +343,7 @@ function EntityGroup({
     if (suggestedUnion.length === 0) return;
     onApplyGroupTags(group, suggestedUnion);
     toast.success(
-      `Suggestions merged into ${group.transactions.length} transaction${group.transactions.length !== 1 ? "s" : ""}`
+      `Suggestions merged into ${group.transactions.length} transaction${group.transactions.length !== 1 ? 's' : ''}`
     );
   }, [group, suggestedUnion, onApplyGroupTags]);
 
@@ -351,7 +351,7 @@ function EntityGroup({
     if (groupStagedTags.length === 0) return;
     onApplyGroupTags(group, groupStagedTags);
     toast.success(
-      `Tags merged into ${group.transactions.length} transaction${group.transactions.length !== 1 ? "s" : ""}`
+      `Tags merged into ${group.transactions.length} transaction${group.transactions.length !== 1 ? 's' : ''}`
     );
     setGroupStagedTags([]);
   }, [group, groupStagedTags, onApplyGroupTags]);
@@ -412,7 +412,7 @@ function EntityGroup({
               size="sm"
               onClick={handleApplySuggestions}
               className="text-xs px-2 py-1 h-auto whitespace-nowrap"
-              title={`Apply suggestions: ${suggestedUnion.join(", ")}`}
+              title={`Apply suggestions: ${suggestedUnion.join(', ')}`}
             >
               Apply suggestions
             </Button>
@@ -474,12 +474,12 @@ function GroupTagBar({
   onRemoveTag,
   onApply,
 }: GroupTagBarProps) {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = (() => {
-    if (inputValue === "") {
+    if (inputValue === '') {
       return availableTags.filter((t) => !stagedTags.includes(t));
     }
     const lower = inputValue.toLowerCase();
@@ -500,18 +500,18 @@ function GroupTagBar({
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowPicker(false);
-        setInputValue("");
+        setInputValue('');
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPicker]);
 
   const handleAddFromInput = () => {
     const trimmed = inputValue.trim();
     if (trimmed) {
       onAddTag(trimmed);
-      setInputValue("");
+      setInputValue('');
     }
   };
 
@@ -548,15 +548,15 @@ function GroupTagBar({
           }}
           onFocus={() => setShowPicker(true)}
           onKeyDown={(e) => {
-            if (e.key === "Tab" && filtered.length > 0) {
+            if (e.key === 'Tab' && filtered.length > 0) {
               e.preventDefault();
               const first = filtered[0];
               if (first) onAddTag(first);
               setShowPicker(false);
-              setInputValue("");
+              setInputValue('');
               return;
             }
-            if (e.key === "Enter") {
+            if (e.key === 'Enter') {
               e.preventDefault();
               // If there's an exact match in filtered, pick it; else add free-form
               const exactMatch = filtered.find((t) => t.toLowerCase() === inputValue.toLowerCase());
@@ -566,10 +566,10 @@ function GroupTagBar({
                 handleAddFromInput();
               }
               setShowPicker(false);
-              setInputValue("");
-            } else if (e.key === "Escape") {
+              setInputValue('');
+            } else if (e.key === 'Escape') {
               setShowPicker(false);
-              setInputValue("");
+              setInputValue('');
             }
           }}
           placeholder="+ Add tag…"
@@ -586,7 +586,7 @@ function GroupTagBar({
                   e.preventDefault(); // prevent input blur
                   onAddTag(tag);
                   setShowPicker(false);
-                  setInputValue("");
+                  setInputValue('');
                 }}
               >
                 {tag}
@@ -603,8 +603,8 @@ function GroupTagBar({
         onClick={onApply}
         disabled={stagedTags.length === 0}
         className={cn(
-          "px-2 py-0.5 h-auto text-xs whitespace-nowrap",
-          stagedTags.length > 0 && "border-primary text-primary hover:bg-primary/10"
+          'px-2 py-0.5 h-auto text-xs whitespace-nowrap',
+          stagedTags.length > 0 && 'border-primary text-primary hover:bg-primary/10'
         )}
       >
         Merge into all
@@ -654,11 +654,11 @@ function TransactionTagRow({
       {/* Amount */}
       <span
         className={cn(
-          "text-sm font-mono tabular-nums flex-shrink-0",
-          isNegative ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
+          'text-sm font-mono tabular-nums flex-shrink-0',
+          isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
         )}
       >
-        {isNegative ? "-" : "+"}${Math.abs(amount).toFixed(2)}
+        {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}
       </span>
 
       {/* Inline tag editor — with source badge display in trigger */}

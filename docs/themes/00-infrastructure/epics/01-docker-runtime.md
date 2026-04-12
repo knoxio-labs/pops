@@ -8,9 +8,9 @@ Set up Docker Compose with multi-network architecture, service definitions, heal
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
-| 013 | [Docker Runtime](../prds/013-docker-runtime/README.md) | Compose file, 3 networks (frontend/backend/documents), service definitions, health checks, volumes | Done |
+| #   | PRD                                                    | Summary                                                                                            | Status |
+| --- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ------ |
+| 013 | [Docker Runtime](../prds/013-docker-runtime/README.md) | Compose file, 3 networks (frontend/backend/documents), service definitions, health checks, volumes | Done   |
 
 ## Dependencies
 

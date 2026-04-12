@@ -6,7 +6,7 @@
  */
 
 /** Known app identifiers. */
-export type AppName = "finance" | "media" | "inventory" | "ai";
+export type AppName = 'finance' | 'media' | 'inventory' | 'ai';
 
 /** An entity the user is currently viewing (e.g. a specific movie or transaction). */
 export interface AppContextEntity {
@@ -29,7 +29,7 @@ export interface AppContext {
   /** Current page identifier set by the active page component, or null. */
   page: string | null;
   /** Whether the current page is a top-level list/dashboard or a drill-down detail view. */
-  pageType: "top-level" | "drill-down";
+  pageType: 'top-level' | 'drill-down';
   /** Set when the user is viewing a specific entity. Cleared on navigation. */
   entity?: AppContextEntity;
   /** Active filter state on list pages. Cleared on navigation. */
@@ -40,5 +40,5 @@ export interface AppContext {
 export const DEFAULT_APP_CONTEXT: AppContext = {
   app: null,
   page: null,
-  pageType: "top-level",
+  pageType: 'top-level',
 };

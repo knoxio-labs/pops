@@ -1,7 +1,7 @@
-import { applyChangeSetToRules } from "@pops/api/modules/core/corrections/service";
-import type { CorrectionRow } from "@pops/api/modules/core/corrections/types";
-import type { Entity } from "@pops/api/modules/core/entities/types";
-import type { PendingChangeSet, PendingEntity } from "../store/importStore";
+import { applyChangeSetToRules } from '@pops/api/modules/core/corrections/service';
+import type { CorrectionRow } from '@pops/api/modules/core/corrections/types';
+import type { Entity } from '@pops/api/modules/core/entities/types';
+import type { PendingChangeSet, PendingEntity } from '../store/importStore';
 
 // ---------------------------------------------------------------------------
 // computeMergedRules — PRD-030 US-03

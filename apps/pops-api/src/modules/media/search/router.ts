@@ -1,12 +1,12 @@
 /**
  * Media search tRPC router — exposes TMDB movie search and TheTVDB series search.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { getTmdbClient, TmdbApiError } from "../tmdb/index.js";
-import { getTvdbClient } from "../thetvdb/index.js";
-import { TvdbApiError } from "../thetvdb/types.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { getTmdbClient, TmdbApiError } from '../tmdb/index.js';
+import { getTvdbClient } from '../thetvdb/index.js';
+import { TvdbApiError } from '../thetvdb/types.js';
 
 const SearchMoviesSchema = z.object({
   query: z.string().min(1).max(200),
@@ -36,9 +36,9 @@ export const searchRouter = router({
           ? `TMDB API error: ${err.message}`
           : err instanceof Error
             ? err.message
-            : "Unknown error searching movies";
+            : 'Unknown error searching movies';
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
+        code: 'INTERNAL_SERVER_ERROR',
         message,
       });
     }
@@ -57,9 +57,9 @@ export const searchRouter = router({
           ? `TheTVDB API error: ${err.message}`
           : err instanceof Error
             ? err.message
-            : "Unknown error searching TV shows";
+            : 'Unknown error searching TV shows';
       throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
+        code: 'INTERNAL_SERVER_ERROR',
         message,
       });
     }

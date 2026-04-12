@@ -2,12 +2,12 @@
  * Shared test utilities for pops-api.
  * Provides in-memory SQLite setup, tRPC caller factory, and seed helpers.
  */
-import type { Database } from "better-sqlite3";
-import BetterSqlite3 from "better-sqlite3";
-import { setDb, closeDb } from "../db.js";
-import { appRouter } from "../router.js";
-import type { Context } from "../trpc.js";
-import { TAG_VOCABULARY_V1 } from "./tag-vocabulary.js";
+import type { Database } from 'better-sqlite3';
+import BetterSqlite3 from 'better-sqlite3';
+import { setDb, closeDb } from '../db.js';
+import { appRouter } from '../router.js';
+import type { Context } from '../trpc.js';
+import { TAG_VOCABULARY_V1 } from './tag-vocabulary.js';
 
 /**
  * Create a tRPC caller with authentication.
@@ -15,7 +15,7 @@ import { TAG_VOCABULARY_V1 } from "./tag-vocabulary.js";
  */
 export function createCaller(authenticated = true): ReturnType<typeof appRouter.createCaller> {
   const ctx: Context = {
-    user: authenticated ? { email: "test@example.com" } : null,
+    user: authenticated ? { email: 'test@example.com' } : null,
   };
   return appRouter.createCaller(ctx);
 }
@@ -25,9 +25,9 @@ export function createCaller(authenticated = true): ReturnType<typeof appRouter.
  * Call this in beforeEach to get a fresh DB per test.
  */
 export function createTestDb(): Database {
-  const db = new BetterSqlite3(":memory:");
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+  const db = new BetterSqlite3(':memory:');
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
 
   // Create all tables that pops-api might query
   db.exec(`
@@ -529,14 +529,14 @@ export function seedEntity(
   `
   ).run({
     id,
-    name: overrides.name ?? "Test Entity",
-    type: overrides.type ?? "company",
+    name: overrides.name ?? 'Test Entity',
+    type: overrides.type ?? 'company',
     abn: overrides.abn ?? null,
     aliases: overrides.aliases ?? null,
     default_transaction_type: overrides.default_transaction_type ?? null,
     default_tags: overrides.default_tags ?? null,
     notes: overrides.notes ?? null,
-    last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
   });
 
   return id;
@@ -584,12 +584,12 @@ export function seedTransaction(
   `
   ).run({
     id,
-    description: overrides.description ?? "Test Transaction",
-    account: overrides.account ?? "Test Account",
+    description: overrides.description ?? 'Test Transaction',
+    account: overrides.account ?? 'Test Account',
     amount: overrides.amount ?? 100.0,
-    date: overrides.date ?? "2025-01-01",
-    type: overrides.type ?? "",
-    tags: overrides.tags ?? "[]",
+    date: overrides.date ?? '2025-01-01',
+    type: overrides.type ?? '',
+    tags: overrides.tags ?? '[]',
     entity_id: overrides.entity_id ?? null,
     entity_name: overrides.entity_name ?? null,
     location: overrides.location ?? null,
@@ -598,7 +598,7 @@ export function seedTransaction(
     notes: overrides.notes ?? null,
     checksum: overrides.checksum ?? null,
     raw_row: overrides.raw_row ?? null,
-    last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
   });
 
   return id;
@@ -654,7 +654,7 @@ export function seedInventoryItem(
   `
   ).run({
     id,
-    item_name: overrides.item_name ?? "Test Item",
+    item_name: overrides.item_name ?? 'Test Item',
     brand: overrides.brand ?? null,
     model: overrides.model ?? null,
     item_id: overrides.item_id ?? null,
@@ -674,7 +674,7 @@ export function seedInventoryItem(
     asset_id: overrides.asset_id ?? null,
     notes: overrides.notes ?? null,
     location_id: overrides.location_id ?? null,
-    last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
   });
 
   return id;
@@ -703,10 +703,10 @@ export function seedLocation(
   `
   ).run({
     id,
-    name: overrides.name ?? "Test Location",
+    name: overrides.name ?? 'Test Location',
     parent_id: overrides.parent_id ?? null,
     sort_order: overrides.sort_order ?? 0,
-    last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
   });
 
   return id;
@@ -749,7 +749,7 @@ export function seedItemPhoto(
     )
     .run({
       item_id: overrides.item_id,
-      file_path: overrides.file_path ?? "items/test/photo_001.jpg",
+      file_path: overrides.file_path ?? 'items/test/photo_001.jpg',
       caption: overrides.caption ?? null,
       sort_order: overrides.sort_order ?? 0,
     });
@@ -780,7 +780,7 @@ export function seedItemDocument(
     .run({
       item_id: overrides.item_id,
       paperless_document_id: overrides.paperless_document_id,
-      document_type: overrides.document_type ?? "receipt",
+      document_type: overrides.document_type ?? 'receipt',
       title: overrides.title ?? null,
     });
 
@@ -812,12 +812,12 @@ export function seedBudget(
   `
   ).run({
     id,
-    category: overrides.category ?? "Test Category",
+    category: overrides.category ?? 'Test Category',
     period: overrides.period ?? null,
     amount: overrides.amount ?? null,
     active: overrides.active ?? 0,
     notes: overrides.notes ?? null,
-    last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
   });
 
   return id;
@@ -831,11 +831,11 @@ export function seedSetting(
   db: Database,
   overrides: Partial<{ key: string; value: string }> = {}
 ): string {
-  const key = overrides.key ?? "test_key";
+  const key = overrides.key ?? 'test_key';
 
   db.prepare(`INSERT INTO settings (key, value) VALUES (@key, @value)`).run({
     key,
-    value: overrides.value ?? "test_value",
+    value: overrides.value ?? 'test_value',
   });
 
   return key;
@@ -867,13 +867,13 @@ export function seedWishListItem(
   `
   ).run({
     id,
-    item: overrides.item ?? "Test Wish List Item",
+    item: overrides.item ?? 'Test Wish List Item',
     target_amount: overrides.target_amount ?? null,
     saved: overrides.saved ?? null,
     priority: overrides.priority ?? null,
     url: overrides.url ?? null,
     notes: overrides.notes ?? null,
-    last_edited_time: overrides.last_edited_time ?? "2025-01-01T00:00:00.000Z",
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
   });
 
   return id;
@@ -927,7 +927,7 @@ export function seedMovie(
     .run({
       tmdb_id: overrides.tmdb_id ?? 12345,
       imdb_id: overrides.imdb_id ?? null,
-      title: overrides.title ?? "Test Movie",
+      title: overrides.title ?? 'Test Movie',
       original_title: overrides.original_title ?? null,
       overview: overrides.overview ?? null,
       tagline: overrides.tagline ?? null,
@@ -943,7 +943,7 @@ export function seedMovie(
       poster_override_path: overrides.poster_override_path ?? null,
       vote_average: overrides.vote_average ?? null,
       vote_count: overrides.vote_count ?? null,
-      genres: overrides.genres ?? "[]",
+      genres: overrides.genres ?? '[]',
     });
 
   return Number(result.lastInsertRowid);
@@ -972,11 +972,11 @@ export function seedWatchlistEntry(
   `
     )
     .run({
-      media_type: overrides.media_type ?? "movie",
+      media_type: overrides.media_type ?? 'movie',
       media_id: overrides.media_id ?? 1,
       priority: overrides.priority ?? null,
       notes: overrides.notes ?? null,
-      source: overrides.source ?? "manual",
+      source: overrides.source ?? 'manual',
       plex_rating_key: overrides.plex_rating_key ?? null,
     });
 
@@ -1005,7 +1005,7 @@ export function seedWatchHistoryEntry(
   `
     )
     .run({
-      media_type: overrides.media_type ?? "movie",
+      media_type: overrides.media_type ?? 'movie',
       media_id: overrides.media_id ?? 1,
       watched_at: overrides.watched_at ?? new Date().toISOString(),
       completed: overrides.completed ?? 1,
@@ -1035,7 +1035,7 @@ export function seedPhoto(
     )
     .run({
       item_id: overrides.item_id,
-      file_path: overrides.file_path ?? "items/test/photo.jpg",
+      file_path: overrides.file_path ?? 'items/test/photo.jpg',
       caption: overrides.caption ?? null,
       sort_order: overrides.sort_order ?? 0,
     });
@@ -1109,7 +1109,7 @@ export function seedTvShow(
     )
     .run({
       tvdb_id: overrides.tvdb_id ?? 99999,
-      name: overrides.name ?? "Test Show",
+      name: overrides.name ?? 'Test Show',
       original_name: overrides.original_name ?? null,
       overview: overrides.overview ?? null,
       first_air_date: overrides.first_air_date ?? null,
@@ -1222,7 +1222,7 @@ export function seedDimension(
      VALUES (@name, @description, @active, @sort_order, @weight)`
     )
     .run({
-      name: overrides.name ?? "Test Dimension",
+      name: overrides.name ?? 'Test Dimension',
       description: overrides.description ?? null,
       active: overrides.active ?? 1,
       sort_order: overrides.sort_order ?? 0,
@@ -1251,7 +1251,7 @@ export function seedAiUsage(
      VALUES (@description, @entity_name, @category, @input_tokens, @output_tokens, @cost_usd, @cached, @import_batch_id, @created_at)`
     )
     .run({
-      description: overrides.description ?? "Test categorisation",
+      description: overrides.description ?? 'Test categorisation',
       entity_name: overrides.entity_name ?? null,
       category: overrides.category ?? null,
       input_tokens: overrides.input_tokens ?? 100,
@@ -1281,7 +1281,7 @@ export function seedDebriefSession(
     )
     .run({
       watch_history_id: overrides.watch_history_id,
-      status: overrides.status ?? "pending",
+      status: overrides.status ?? 'pending',
     });
   return Number(result.lastInsertRowid);
 }

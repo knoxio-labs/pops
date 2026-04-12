@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { TvShowRow, SeasonRow, EpisodeRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { TvShowRow, SeasonRow, EpisodeRow } from '@pops/db-types';
 
 export type { TvShowRow, SeasonRow, EpisodeRow };
 
@@ -125,9 +125,9 @@ export function toSeason(row: SeasonRow): Season {
   // 3. Null
   let posterUrl: string | null = null;
   if (row.posterPath) {
-    if (row.posterPath.startsWith("http")) {
+    if (row.posterPath.startsWith('http')) {
       posterUrl = row.posterPath;
-    } else if (row.posterPath.startsWith("/")) {
+    } else if (row.posterPath.startsWith('/')) {
       posterUrl = `https://image.tmdb.org/t/p/w600_and_h900_bestv2${row.posterPath}`;
     }
   }
@@ -177,7 +177,7 @@ function parseJsonArray(value: string | null): string[] {
 
 export const CreateTvShowSchema = z.object({
   tvdbId: z.number().int().positive(),
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   originalName: z.string().nullable().optional(),
   overview: z.string().nullable().optional(),
   firstAirDate: z.string().nullable().optional(),

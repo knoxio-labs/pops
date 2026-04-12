@@ -3,14 +3,14 @@
  * Calls Claude Haiku with a batch of transactions to propose reusable tagging rules.
  * Uses the same withRateLimitRetry / ai_usage tracking pattern as ai-categorizer.ts.
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { and, isNotNull, ne } from "drizzle-orm";
-import { getEnv } from "../../../../env.js";
-import { getDrizzle } from "../../../../db.js";
-import { aiUsage, transactions as transactionsTable } from "@pops/db-types";
-import { logger } from "../../../../lib/logger.js";
-import { withRateLimitRetry } from "../../../../lib/ai-retry.js";
-import { normalizeDescription } from "../types.js";
+import Anthropic from '@anthropic-ai/sdk';
+import { and, isNotNull, ne } from 'drizzle-orm';
+import { getEnv } from '../../../../env.js';
+import { getDrizzle } from '../../../../db.js';
+import { aiUsage, transactions as transactionsTable } from '@pops/db-types';
+import { logger } from '../../../../lib/logger.js';
+import { withRateLimitRetry } from '../../../../lib/ai-retry.js';
+import { normalizeDescription } from '../types.js';
 
 /**
  * Load all distinct tag values from existing transactions.
@@ -21,7 +21,7 @@ function loadAvailableTagsFromDb(): string[] {
     const rows = getDrizzle()
       .select({ tags: transactionsTable.tags })
       .from(transactionsTable)
-      .where(and(isNotNull(transactionsTable.tags), ne(transactionsTable.tags, "[]")))
+      .where(and(isNotNull(transactionsTable.tags), ne(transactionsTable.tags, '[]')))
       .all();
 
     const tagSet = new Set<string>();
@@ -30,7 +30,7 @@ function loadAvailableTagsFromDb(): string[] {
         const parsed = JSON.parse(row.tags) as unknown;
         if (Array.isArray(parsed)) {
           for (const t of parsed) {
-            if (typeof t === "string" && t.trim()) tagSet.add(t.trim());
+            if (typeof t === 'string' && t.trim()) tagSet.add(t.trim());
           }
         }
       } catch {
@@ -45,13 +45,13 @@ function loadAvailableTagsFromDb(): string[] {
 
 export interface ProposedRule {
   descriptionPattern: string;
-  matchType: "exact" | "contains" | "regex";
+  matchType: 'exact' | 'contains' | 'regex';
   tags: string[];
   reasoning: string;
 }
 
 export interface CorrectionAnalysis {
-  matchType: "exact" | "contains" | "regex";
+  matchType: 'exact' | 'contains' | 'regex';
   pattern: string;
   confidence: number;
 }
@@ -66,21 +66,21 @@ export interface CorrectionAnalysis {
  */
 export function patternMatchesDescription(
   pattern: string,
-  matchType: "exact" | "contains" | "regex",
+  matchType: 'exact' | 'contains' | 'regex',
   description: string
 ): boolean {
   const normalizedDescription = normalizeDescription(description);
   // Patterns are stored normalized in the DB; mirror that here so the
   // validation matches what would actually persist.
-  const normalizedPattern = matchType === "regex" ? pattern : normalizeDescription(pattern);
+  const normalizedPattern = matchType === 'regex' ? pattern : normalizeDescription(pattern);
 
   if (normalizedPattern.length === 0) return false;
 
-  if (matchType === "exact") {
+  if (matchType === 'exact') {
     return normalizedPattern === normalizedDescription;
   }
 
-  if (matchType === "contains") {
+  if (matchType === 'contains') {
     return normalizedDescription.includes(normalizedPattern);
   }
 
@@ -113,24 +113,24 @@ interface TransactionInput {
  * Returns proposals without saving — caller must confirm via corrections.createOrUpdate.
  */
 export async function generateRules(transactions: TransactionInput[]): Promise<ProposedRule[]> {
-  const apiKey = getEnv("CLAUDE_API_KEY");
+  const apiKey = getEnv('CLAUDE_API_KEY');
   if (!apiKey) {
-    throw new Error("CLAUDE_API_KEY not configured");
+    throw new Error('CLAUDE_API_KEY not configured');
   }
 
   const client = new Anthropic({ apiKey, maxRetries: 0 });
 
   const transactionLines = transactions
     .map((t, i) => {
-      const entity = t.entityName ?? "unknown";
-      const tags = t.currentTags.length > 0 ? t.currentTags.join(", ") : "none";
+      const entity = t.entityName ?? 'unknown';
+      const tags = t.currentTags.length > 0 ? t.currentTags.join(', ') : 'none';
       return `${i + 1}. "${t.description}" | entity: ${entity} | amount: ${t.amount} | account: ${t.account} | current tags: ${tags}`;
     })
-    .join("\n");
+    .join('\n');
 
   const availableTags = loadAvailableTagsFromDb();
   const tagListStr =
-    availableTags.length > 0 ? availableTags.join(", ") : "common financial categories";
+    availableTags.length > 0 ? availableTags.join(', ') : 'common financial categories';
 
   const prompt = `You are a transaction categorization assistant. Given these bank transactions, propose reusable tagging rules that could apply to similar transactions in the future.
 
@@ -153,21 +153,21 @@ Return ONLY the JSON array, no markdown, no explanation.`;
   const response = await withRateLimitRetry(
     () =>
       client.messages.create({
-        model: "claude-haiku-4-5-20251001",
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       }),
-    "generateRules",
-    { logger, logPrefix: "[RuleGen]" }
+    'generateRules',
+    { logger, logPrefix: '[RuleGen]' }
   );
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : null;
+  const text = response.content[0]?.type === 'text' ? response.content[0].text : null;
   if (!text) return [];
 
   const cleanedText = text
     .trim()
-    .replace(/^```(?:json)?\s*\n?/gm, "")
-    .replace(/\n?```\s*$/gm, "");
+    .replace(/^```(?:json)?\s*\n?/gm, '')
+    .replace(/\n?```\s*$/gm, '');
 
   let proposals: ProposedRule[];
   try {
@@ -177,22 +177,22 @@ Return ONLY the JSON array, no markdown, no explanation.`;
     proposals = parsed
       .filter(
         (item): item is Record<string, unknown> =>
-          item !== null && typeof item === "object" && !Array.isArray(item)
+          item !== null && typeof item === 'object' && !Array.isArray(item)
       )
       .map((item) => ({
         descriptionPattern:
-          typeof item["descriptionPattern"] === "string" ? item["descriptionPattern"] : "",
-        matchType: (["exact", "contains", "regex"].includes(String(item["matchType"]))
-          ? item["matchType"]
-          : "contains") as "exact" | "contains" | "regex",
-        tags: Array.isArray(item["tags"])
-          ? (item["tags"] as unknown[]).filter((t): t is string => typeof t === "string")
+          typeof item['descriptionPattern'] === 'string' ? item['descriptionPattern'] : '',
+        matchType: (['exact', 'contains', 'regex'].includes(String(item['matchType']))
+          ? item['matchType']
+          : 'contains') as 'exact' | 'contains' | 'regex',
+        tags: Array.isArray(item['tags'])
+          ? (item['tags'] as unknown[]).filter((t): t is string => typeof t === 'string')
           : [],
-        reasoning: typeof item["reasoning"] === "string" ? item["reasoning"] : "",
+        reasoning: typeof item['reasoning'] === 'string' ? item['reasoning'] : '',
       }))
       .filter((p) => p.descriptionPattern.length > 0);
   } catch {
-    logger.error({ text: cleanedText }, "[RuleGen] Failed to parse LLM response");
+    logger.error({ text: cleanedText }, '[RuleGen] Failed to parse LLM response');
     return [];
   }
 
@@ -207,7 +207,7 @@ Return ONLY the JSON array, no markdown, no explanation.`;
       .values({
         description: `generateRules (${transactions.length} transactions)`,
         entityName: null,
-        category: "rule-generation",
+        category: 'rule-generation',
         inputTokens,
         outputTokens,
         costUsd,
@@ -222,7 +222,7 @@ Return ONLY the JSON array, no markdown, no explanation.`;
 
   logger.info(
     { count: proposals.length, inputTokens, outputTokens, costUsd: costUsd.toFixed(6) },
-    "[RuleGen] Generated rules"
+    '[RuleGen] Generated rules'
   );
 
   return proposals;
@@ -237,9 +237,9 @@ const MIN_PATTERN_LENGTH = 3;
 export async function analyzeCorrection(
   input: CorrectionInput
 ): Promise<CorrectionAnalysis | null> {
-  const apiKey = getEnv("CLAUDE_API_KEY");
+  const apiKey = getEnv('CLAUDE_API_KEY');
   if (!apiKey) {
-    logger.warn("[RuleGen] CLAUDE_API_KEY not configured — skipping correction analysis");
+    logger.warn('[RuleGen] CLAUDE_API_KEY not configured — skipping correction analysis');
     return null;
   }
 
@@ -283,49 +283,49 @@ Return ONLY the JSON object, no markdown, no explanation.`;
     response = await withRateLimitRetry(
       () =>
         client.messages.create({
-          model: "claude-haiku-4-5-20251001",
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 200,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: 'user', content: prompt }],
         }),
-      "analyzeCorrection",
-      { logger, logPrefix: "[RuleGen]" }
+      'analyzeCorrection',
+      { logger, logPrefix: '[RuleGen]' }
     );
   } catch (error) {
-    logger.error({ error }, "[RuleGen] AI call failed for correction analysis");
+    logger.error({ error }, '[RuleGen] AI call failed for correction analysis');
     return null;
   }
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : null;
+  const text = response.content[0]?.type === 'text' ? response.content[0].text : null;
   if (!text) return null;
 
   const cleanedText = text
     .trim()
-    .replace(/^```(?:json)?\s*\n?/gm, "")
-    .replace(/\n?```\s*$/gm, "");
+    .replace(/^```(?:json)?\s*\n?/gm, '')
+    .replace(/\n?```\s*$/gm, '');
 
   let result: CorrectionAnalysis | null = null;
   try {
     const parsed = JSON.parse(cleanedText) as Record<string, unknown>;
 
-    const rawMatchType = parsed["matchType"];
-    const rawPattern = parsed["pattern"];
-    const rawConfidence = parsed["confidence"];
+    const rawMatchType = parsed['matchType'];
+    const rawPattern = parsed['pattern'];
+    const rawConfidence = parsed['confidence'];
 
-    const matchType = typeof rawMatchType === "string" ? rawMatchType : "";
-    const pattern = typeof rawPattern === "string" ? rawPattern : "";
-    const confidence = typeof rawConfidence === "number" ? rawConfidence : 0;
+    const matchType = typeof rawMatchType === 'string' ? rawMatchType : '';
+    const pattern = typeof rawPattern === 'string' ? rawPattern : '';
+    const confidence = typeof rawConfidence === 'number' ? rawConfidence : 0;
 
     if (
-      !["exact", "contains", "regex"].includes(matchType) ||
+      !['exact', 'contains', 'regex'].includes(matchType) ||
       pattern.length < MIN_PATTERN_LENGTH ||
       confidence < 0 ||
       confidence > 1
     ) {
-      logger.warn({ parsed }, "[RuleGen] Invalid correction analysis response");
+      logger.warn({ parsed }, '[RuleGen] Invalid correction analysis response');
       return null;
     }
 
-    const typedMatchType = matchType as "exact" | "contains" | "regex";
+    const typedMatchType = matchType as 'exact' | 'contains' | 'regex';
 
     // Defence in depth: the rule MUST match the triggering description.
     // Catches AI hallucinations (e.g. echoing the entity name when it isn't in
@@ -334,7 +334,7 @@ Return ONLY the JSON object, no markdown, no explanation.`;
     if (!patternMatchesDescription(pattern, typedMatchType, input.description)) {
       logger.warn(
         { parsed, description: input.description },
-        "[RuleGen] AI proposed pattern does not match the triggering description — rejecting"
+        '[RuleGen] AI proposed pattern does not match the triggering description — rejecting'
       );
       return null;
     }
@@ -345,7 +345,7 @@ Return ONLY the JSON object, no markdown, no explanation.`;
       confidence,
     };
   } catch {
-    logger.error({ text: cleanedText }, "[RuleGen] Failed to parse correction analysis response");
+    logger.error({ text: cleanedText }, '[RuleGen] Failed to parse correction analysis response');
     return null;
   }
 
@@ -360,7 +360,7 @@ Return ONLY the JSON object, no markdown, no explanation.`;
       .values({
         description: `analyzeCorrection: "${input.description}" → "${input.entityName}"`,
         entityName: input.entityName,
-        category: "correction-analysis",
+        category: 'correction-analysis',
         inputTokens,
         outputTokens,
         costUsd,
@@ -375,7 +375,7 @@ Return ONLY the JSON object, no markdown, no explanation.`;
 
   logger.info(
     { result, inputTokens, outputTokens, costUsd: costUsd.toFixed(6) },
-    "[RuleGen] Correction analysis complete"
+    '[RuleGen] Correction analysis complete'
   );
 
   return result;

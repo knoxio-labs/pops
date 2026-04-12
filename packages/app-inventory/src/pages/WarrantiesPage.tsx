@@ -4,11 +4,11 @@
  * 5-tier system: <30d (red), 30-60d (yellow), 60-90d (orange),
  * >90d active (green), expired (grey). PRD-050/US-01.
  */
-import { useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router";
-import { ShieldCheck, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
-import { Skeleton, AssetIdBadge, Badge, PageHeader, Button } from "@pops/ui";
-import { trpc } from "../lib/trpc";
+import { useMemo, useState } from 'react';
+import { useNavigate, Link } from 'react-router';
+import { ShieldCheck, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
+import { Skeleton, AssetIdBadge, Badge, PageHeader, Button } from '@pops/ui';
+import { trpc } from '../lib/trpc';
 
 interface WarrantyItem {
   id: string;
@@ -22,19 +22,19 @@ interface WarrantyItem {
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+  return new Date(dateStr).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
@@ -46,10 +46,10 @@ function daysUntil(dateStr: string): number {
   return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function urgencyBadgeVariant(days: number): "destructive" | "secondary" | "outline" {
-  if (days <= 14) return "destructive";
-  if (days <= 30) return "secondary";
-  return "outline";
+function urgencyBadgeVariant(days: number): 'destructive' | 'secondary' | 'outline' {
+  if (days <= 14) return 'destructive';
+  if (days <= 30) return 'secondary';
+  return 'outline';
 }
 
 function WarrantySkeleton() {
@@ -72,8 +72,8 @@ interface WarrantyRowProps {
 }
 
 function formatDaysRemaining(days: number): string {
-  if (days === 0) return "Today";
-  if (days === 1) return "1 day";
+  if (days === 0) return 'Today';
+  if (days === 1) return '1 day';
   return `${days} days`;
 }
 
@@ -160,34 +160,34 @@ interface TierConfig {
 
 const TIER_STYLES: Record<string, TierConfig> = {
   critical: {
-    label: "Critical — Under 30 Days",
-    borderColor: "border-red-500/20",
-    bgColor: "bg-red-500/5",
-    headerBg: "bg-red-500/10",
-    dotColor: "bg-red-500",
-    badgeBg: "bg-red-500/20",
-    badgeText: "text-red-600 dark:text-red-400",
-    badgeBorder: "border-red-500/30",
+    label: 'Critical — Under 30 Days',
+    borderColor: 'border-red-500/20',
+    bgColor: 'bg-red-500/5',
+    headerBg: 'bg-red-500/10',
+    dotColor: 'bg-red-500',
+    badgeBg: 'bg-red-500/20',
+    badgeText: 'text-red-600 dark:text-red-400',
+    badgeBorder: 'border-red-500/30',
   },
   warning: {
-    label: "Warning — 30 to 60 Days",
-    borderColor: "border-yellow-500/20",
-    bgColor: "bg-yellow-500/5",
-    headerBg: "bg-yellow-500/10",
-    dotColor: "bg-yellow-500",
-    badgeBg: "bg-yellow-500/20",
-    badgeText: "text-yellow-600 dark:text-yellow-400",
-    badgeBorder: "border-yellow-500/30",
+    label: 'Warning — 30 to 60 Days',
+    borderColor: 'border-yellow-500/20',
+    bgColor: 'bg-yellow-500/5',
+    headerBg: 'bg-yellow-500/10',
+    dotColor: 'bg-yellow-500',
+    badgeBg: 'bg-yellow-500/20',
+    badgeText: 'text-yellow-600 dark:text-yellow-400',
+    badgeBorder: 'border-yellow-500/30',
   },
   caution: {
-    label: "Caution — 60 to 90 Days",
-    borderColor: "border-orange-500/20",
-    bgColor: "bg-orange-500/5",
-    headerBg: "bg-orange-500/10",
-    dotColor: "bg-orange-500",
-    badgeBg: "bg-orange-500/20",
-    badgeText: "text-orange-600 dark:text-orange-400",
-    badgeBorder: "border-orange-500/30",
+    label: 'Caution — 60 to 90 Days',
+    borderColor: 'border-orange-500/20',
+    bgColor: 'bg-orange-500/5',
+    headerBg: 'bg-orange-500/10',
+    dotColor: 'bg-orange-500',
+    badgeBg: 'bg-orange-500/20',
+    badgeText: 'text-orange-600 dark:text-orange-400',
+    badgeBorder: 'border-orange-500/30',
   },
 };
 

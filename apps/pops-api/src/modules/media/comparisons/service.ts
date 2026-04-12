@@ -1,8 +1,8 @@
 /**
  * Comparisons service — dimensions, 1v1 comparisons, and Elo scores.
  */
-import { eq, and, or, asc, count, desc, like, inArray, type SQL } from "drizzle-orm";
-import { getDb, getDrizzle } from "../../../db.js";
+import { eq, and, or, asc, count, desc, like, inArray, type SQL } from 'drizzle-orm';
+import { getDb, getDrizzle } from '../../../db.js';
 import {
   comparisonDimensions,
   comparisons,
@@ -13,8 +13,8 @@ import {
   mediaScores,
   watchHistory,
   movies,
-} from "@pops/db-types";
-import { NotFoundError, ConflictError, ValidationError } from "../../../shared/errors.js";
+} from '@pops/db-types';
+import { NotFoundError, ConflictError, ValidationError } from '../../../shared/errors.js';
 import {
   type ComparisonRow,
   type MediaScoreRow,
@@ -29,31 +29,31 @@ import {
   type RecordDebriefComparisonInput,
   type BatchComparisonItem,
   type BatchRecordResult,
-} from "./types.js";
-import { setTierOverride } from "./tier-overrides.js";
-import { convertTierPlacements } from "./tier-conversion.js";
-import { getDimension } from "./dimensions.service.js";
-import { getGlobalComparisonCount } from "./global-count.js";
+} from './types.js';
+import { setTierOverride } from './tier-overrides.js';
+import { convertTierPlacements } from './tier-conversion.js';
+import { getDimension } from './dimensions.service.js';
+import { getGlobalComparisonCount } from './global-count.js';
 export {
   createDimension,
   listDimensions,
   seedDefaultDimensions,
   updateDimension,
-} from "./dimensions.service.js";
-export { getRandomPair } from "./pairs/random-pair.js";
-export { getSmartPair } from "./pairs/smart-pair.js";
-export { getGlobalComparisonCount } from "./global-count.js";
-export { getScoresForMedia } from "./scores.service.js";
-export { getRankings, resolvePosterUrl, type RankingsResult } from "./rankings.service.js";
+} from './dimensions.service.js';
+export { getRandomPair } from './pairs/random-pair.js';
+export { getSmartPair } from './pairs/smart-pair.js';
+export { getGlobalComparisonCount } from './global-count.js';
+export { getScoresForMedia } from './scores.service.js';
+export { getRankings, resolvePosterUrl, type RankingsResult } from './rankings.service.js';
 
 // ── Source Hierarchy ──
 
 /** Source authority ranking: higher rank = more authoritative. null/historical = 0. */
 function sourceRank(source: string | null | undefined): number {
   switch (source) {
-    case "arena":
+    case 'arena':
       return 2;
-    case "tier_list":
+    case 'tier_list':
       return 1;
     default:
       return 0;
@@ -111,9 +111,9 @@ const ELO_K = 32;
 /** Map draw tier to ELO outcome value. High = both gain, Mid = neutral, Low = both lose. */
 function drawTierOutcome(tier: string | null | undefined): number {
   switch (tier) {
-    case "high":
+    case 'high':
       return 0.7;
-    case "low":
+    case 'low':
       return 0.3;
     default:
       return 0.5;
@@ -136,7 +136,7 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
   // Verify dimension exists and is active
   const dimension = getDimension(input.dimensionId);
   if (dimension.active !== 1) {
-    throw new ValidationError("Cannot record comparison for inactive dimension");
+    throw new ValidationError('Cannot record comparison for inactive dimension');
   }
 
   // Validate winner matches one of the two media items, or is a draw (winnerId = 0)
@@ -147,10 +147,10 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
     !isDraw && input.winnerType === input.mediaBType && input.winnerId === input.mediaBId;
 
   if (!isDraw && !winnerIsA && !winnerIsB) {
-    throw new ValidationError("Winner must match either media A or media B, or be 0 for a draw");
+    throw new ValidationError('Winner must match either media A or media B, or be 0 for a draw');
   }
 
-  const newSource = input.source ?? "arena";
+  const newSource = input.source ?? 'arena';
 
   // Wrap insert + Elo update in a transaction
   const rawDb = getDb();
@@ -194,7 +194,7 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
           .from(comparisons)
           .where(eq(comparisons.id, Number(result.lastInsertRowid)))
           .get();
-        if (!inserted) throw new Error("Failed to retrieve recorded comparison");
+        if (!inserted) throw new Error('Failed to retrieve recorded comparison');
         return inserted;
       } else {
         // Skip: existing has higher authority
@@ -227,7 +227,7 @@ export function recordComparison(input: RecordComparisonInput): ComparisonRow {
       .from(comparisons)
       .where(eq(comparisons.id, Number(result.lastInsertRowid)))
       .get();
-    if (!inserted) throw new Error("Failed to retrieve recorded comparison");
+    if (!inserted) throw new Error('Failed to retrieve recorded comparison');
     return inserted;
   })();
 
@@ -369,7 +369,7 @@ export function deleteComparison(id: number): void {
   const rawDb = getDb();
 
   const comparison = drizzleDb.select().from(comparisons).where(eq(comparisons.id, id)).get();
-  if (!comparison) throw new NotFoundError("Comparison", String(id));
+  if (!comparison) throw new NotFoundError('Comparison', String(id));
 
   const dimensionId = comparison.dimensionId;
 
@@ -513,13 +513,13 @@ function recalcDimensionElo(dimensionId: number): void {
   for (const comp of remaining) {
     const { deltaA, deltaB } = updateEloScores({
       dimensionId: comp.dimensionId,
-      mediaAType: comp.mediaAType as "movie" | "tv_show",
+      mediaAType: comp.mediaAType as 'movie' | 'tv_show',
       mediaAId: comp.mediaAId,
-      mediaBType: comp.mediaBType as "movie" | "tv_show",
+      mediaBType: comp.mediaBType as 'movie' | 'tv_show',
       mediaBId: comp.mediaBId,
-      winnerType: comp.winnerType as "movie" | "tv_show",
+      winnerType: comp.winnerType as 'movie' | 'tv_show',
       winnerId: comp.winnerId,
-      drawTier: comp.drawTier as "high" | "mid" | "low" | null,
+      drawTier: comp.drawTier as 'high' | 'mid' | 'low' | null,
     });
 
     drizzleDb.update(comparisons).set({ deltaA, deltaB }).where(eq(comparisons.id, comp.id)).run();
@@ -636,7 +636,7 @@ export function includeInDimension(mediaType: string, mediaId: number, dimension
     .get();
 
   if (!existing) {
-    throw new NotFoundError("MediaScore", `${mediaType}:${mediaId}:${dimensionId}`);
+    throw new NotFoundError('MediaScore', `${mediaType}:${mediaId}:${dimensionId}`);
   }
 
   drizzleDb
@@ -791,7 +791,7 @@ export function getDebriefOpponent(
       .from(watchHistory)
       .where(
         and(
-          eq(watchHistory.mediaType, mediaType as "movie" | "episode"),
+          eq(watchHistory.mediaType, mediaType as 'movie' | 'episode'),
           eq(watchHistory.blacklisted, 1)
         )
       )
@@ -901,7 +901,7 @@ export function getPendingDebriefs(): PendingDebrief[] {
       createdAt: debriefSessions.createdAt,
     })
     .from(debriefSessions)
-    .where(or(eq(debriefSessions.status, "pending"), eq(debriefSessions.status, "active")))
+    .where(or(eq(debriefSessions.status, 'pending'), eq(debriefSessions.status, 'active')))
     .orderBy(desc(debriefSessions.createdAt))
     .all();
 
@@ -928,7 +928,7 @@ export function getPendingDebriefs(): PendingDebrief[] {
       .where(eq(watchHistory.id, session.watchHistoryId))
       .get();
 
-    if (!whEntry || whEntry.mediaType !== "movie") continue;
+    if (!whEntry || whEntry.mediaType !== 'movie') continue;
 
     // Get movie info
     const movieRow = db
@@ -966,7 +966,7 @@ export function getPendingDebriefs(): PendingDebrief[] {
       movieId: movieRow.id,
       title: movieRow.title,
       posterUrl,
-      status: session.status as "pending" | "active",
+      status: session.status as 'pending' | 'active',
       createdAt: session.createdAt,
       pendingDimensionCount,
     });
@@ -1075,9 +1075,9 @@ export function getTierListMovies(dimensionId: number): TierListMovie[] {
       let newPairs = 0;
       for (const sel of selected) {
         const [nAt, nAi, nBt, nBi] = normalizePairOrder(
-          "movie",
+          'movie',
           candidate.mediaId,
-          "movie",
+          'movie',
           sel.mediaId
         );
         const key = `${nAt}:${nAi}:${nBt}:${nBi}`;
@@ -1143,9 +1143,9 @@ export function dismissDebriefDimension(sessionId: number, dimensionId: number):
   const session = db.select().from(debriefSessions).where(eq(debriefSessions.id, sessionId)).get();
 
   if (!session) {
-    throw new NotFoundError("Debrief session", String(sessionId));
+    throw new NotFoundError('Debrief session', String(sessionId));
   }
-  if (session.status === "complete") {
+  if (session.status === 'complete') {
     throw new ValidationError(`Debrief session ${sessionId} is already complete`);
   }
 
@@ -1204,7 +1204,7 @@ export function dismissDebriefDimension(sessionId: number, dimensionId: number):
 
   if (resultCount && resultCount.cnt >= activeDims.length) {
     db.update(debriefSessions)
-      .set({ status: "complete" })
+      .set({ status: 'complete' })
       .where(eq(debriefSessions.id, sessionId))
       .run();
   }
@@ -1246,7 +1246,7 @@ export function batchRecordComparisons(
   // Validate dimension exists and is active
   const dimension = getDimension(dimensionId);
   if (dimension.active !== 1) {
-    throw new ValidationError("Cannot record comparisons for inactive dimension");
+    throw new ValidationError('Cannot record comparisons for inactive dimension');
   }
 
   let insertedCount = 0;
@@ -1362,7 +1362,7 @@ export function submitTierList(input: SubmitTierListInput): SubmitTierListResult
       .from(mediaScores)
       .where(
         and(
-          eq(mediaScores.mediaType, "movie"),
+          eq(mediaScores.mediaType, 'movie'),
           eq(mediaScores.mediaId, placement.movieId),
           eq(mediaScores.dimensionId, input.dimensionId)
         )
@@ -1374,11 +1374,11 @@ export function submitTierList(input: SubmitTierListInput): SubmitTierListResult
   // Convert placements to pairwise comparisons, then to batch items
   const pairwise = convertTierPlacements(input.placements);
   const batchItems: BatchComparisonItem[] = pairwise.map((pair) => ({
-    mediaAType: "movie" as const,
+    mediaAType: 'movie' as const,
     mediaAId: pair.mediaAId,
-    mediaBType: "movie" as const,
+    mediaBType: 'movie' as const,
     mediaBId: pair.mediaBId,
-    winnerType: "movie" as const,
+    winnerType: 'movie' as const,
     winnerId: pair.winnerId,
     drawTier: pair.drawTier,
   }));
@@ -1387,13 +1387,13 @@ export function submitTierList(input: SubmitTierListInput): SubmitTierListResult
   const { count: comparisonsRecorded, skipped } = batchRecordComparisons(
     input.dimensionId,
     batchItems,
-    "tier_list"
+    'tier_list'
   );
 
   // Set tier overrides for each placement
   rawDb.transaction(() => {
     for (const placement of input.placements) {
-      setTierOverride("movie", placement.movieId, input.dimensionId, placement.tier);
+      setTierOverride('movie', placement.movieId, input.dimensionId, placement.tier);
     }
   })();
 
@@ -1405,7 +1405,7 @@ export function submitTierList(input: SubmitTierListInput): SubmitTierListResult
       .from(mediaScores)
       .where(
         and(
-          eq(mediaScores.mediaType, "movie"),
+          eq(mediaScores.mediaType, 'movie'),
           eq(mediaScores.mediaId, placement.movieId),
           eq(mediaScores.dimensionId, input.dimensionId)
         )
@@ -1443,9 +1443,9 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
     .from(debriefSessions)
     .where(eq(debriefSessions.id, input.sessionId))
     .get();
-  if (!session) throw new NotFoundError("Debrief session", String(input.sessionId));
-  if (session.status === "complete") {
-    throw new ValidationError("Debrief session is already complete");
+  if (!session) throw new NotFoundError('Debrief session', String(input.sessionId));
+  if (session.status === 'complete') {
+    throw new ValidationError('Debrief session is already complete');
   }
 
   // Get the debrief movie from watch_history
@@ -1454,7 +1454,7 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
     .from(watchHistory)
     .where(eq(watchHistory.id, session.watchHistoryId))
     .get();
-  if (!watchEntry) throw new NotFoundError("Watch history entry", String(session.watchHistoryId));
+  if (!watchEntry) throw new NotFoundError('Watch history entry', String(session.watchHistoryId));
 
   // Check dimension hasn't already been recorded for this session
   const existingResult = drizzleDb
@@ -1468,7 +1468,7 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
     )
     .get();
   if (existingResult) {
-    throw new ConflictError("Dimension already recorded for this session");
+    throw new ConflictError('Dimension already recorded for this session');
   }
 
   return rawDb.transaction(() => {
@@ -1478,17 +1478,17 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
       // Record a real comparison
       const compRow = recordComparison({
         dimensionId: input.dimensionId,
-        mediaAType: watchEntry.mediaType as "movie" | "tv_show",
+        mediaAType: watchEntry.mediaType as 'movie' | 'tv_show',
         mediaAId: watchEntry.mediaId,
         mediaBType: input.opponentType,
         mediaBId: input.opponentId,
         winnerType:
           input.winnerId === watchEntry.mediaId
-            ? (watchEntry.mediaType as "movie" | "tv_show")
+            ? (watchEntry.mediaType as 'movie' | 'tv_show')
             : input.opponentType,
         winnerId: input.winnerId,
         drawTier: input.drawTier ?? null,
-        source: "arena",
+        source: 'arena',
       });
       comparisonId = compRow.id;
     }
@@ -1517,10 +1517,10 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
       .run();
 
     // Activate session if still pending
-    if (session.status === "pending") {
+    if (session.status === 'pending') {
       drizzleDb
         .update(debriefSessions)
-        .set({ status: "active" })
+        .set({ status: 'active' })
         .where(eq(debriefSessions.id, input.sessionId))
         .run();
     }
@@ -1546,7 +1546,7 @@ export function recordDebriefComparison(input: RecordDebriefComparisonInput): {
     if (sessionComplete) {
       drizzleDb
         .update(debriefSessions)
-        .set({ status: "complete" })
+        .set({ status: 'complete' })
         .where(eq(debriefSessions.id, input.sessionId))
         .run();
     }

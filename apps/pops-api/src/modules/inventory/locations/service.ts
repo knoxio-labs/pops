@@ -2,18 +2,18 @@
  * Location service — CRUD operations for the location tree.
  * SQLite is the source of truth. All operations are local.
  */
-import { eq, asc, count, inArray } from "drizzle-orm";
-import { locations, homeInventory } from "@pops/db-types";
-import { getDrizzle } from "../../../db.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { eq, asc, count, inArray } from 'drizzle-orm';
+import { locations, homeInventory } from '@pops/db-types';
+import { getDrizzle } from '../../../db.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 import type {
   LocationRow,
   CreateLocationInput,
   UpdateLocationInput,
   LocationTreeNode,
   DeleteLocationStats,
-} from "./types.js";
-import { toLocation } from "./types.js";
+} from './types.js';
+import { toLocation } from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface LocationListResult {
@@ -39,7 +39,7 @@ export function getLocation(id: string): LocationRow {
   const db = getDrizzle();
   const row = db.select().from(locations).where(eq(locations.id, id)).get();
 
-  if (!row) throw new NotFoundError("Location", id);
+  if (!row) throw new NotFoundError('Location', id);
   return row;
 }
 
@@ -105,7 +105,7 @@ export function createLocation(input: CreateLocationInput): LocationRow {
       .from(locations)
       .where(eq(locations.id, input.parentId))
       .get();
-    if (!parent) throw new NotFoundError("Parent location", input.parentId);
+    if (!parent) throw new NotFoundError('Parent location', input.parentId);
   }
 
   const id = crypto.randomUUID();
@@ -138,7 +138,7 @@ export function updateLocation(id: string, input: UpdateLocationInput): Location
   // If changing parent, validate it exists and prevent cycles
   if (input.parentId !== undefined && input.parentId !== null) {
     if (input.parentId === id) {
-      throw new ConflictError("A location cannot be its own parent");
+      throw new ConflictError('A location cannot be its own parent');
     }
 
     const parent = db
@@ -146,7 +146,7 @@ export function updateLocation(id: string, input: UpdateLocationInput): Location
       .from(locations)
       .where(eq(locations.id, input.parentId))
       .get();
-    if (!parent) throw new NotFoundError("Parent location", input.parentId);
+    if (!parent) throw new NotFoundError('Parent location', input.parentId);
 
     // Check for circular reference: walk up from proposed parent
     let current: string | null = input.parentId;
@@ -158,7 +158,7 @@ export function updateLocation(id: string, input: UpdateLocationInput): Location
         .get();
       if (!ancestor) break;
       if (ancestor.parentId === id) {
-        throw new ConflictError("Moving this location would create a circular reference");
+        throw new ConflictError('Moving this location would create a circular reference');
       }
       current = ancestor.parentId;
     }
@@ -256,7 +256,7 @@ export function deleteLocation(id: string): void {
 
   const db = getDrizzle();
   const result = db.delete(locations).where(eq(locations.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Location", id);
+  if (result.changes === 0) throw new NotFoundError('Location', id);
 }
 
 /**

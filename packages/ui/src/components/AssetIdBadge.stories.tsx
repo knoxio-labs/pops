@@ -1,26 +1,26 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AssetIdBadge } from "./AssetIdBadge";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { AssetIdBadge } from './AssetIdBadge';
 
 const meta: Meta<typeof AssetIdBadge> = {
-  title: "Inventory/AssetIdBadge",
+  title: 'Inventory/AssetIdBadge',
   component: AssetIdBadge,
-  parameters: { layout: "centered" },
-  tags: ["autodocs"],
+  parameters: { layout: 'centered' },
+  tags: ['autodocs'],
 };
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { assetId: "INV-001" },
+  args: { assetId: 'INV-001' },
 };
 
 export const LongId: Story = {
-  args: { assetId: "ASSET-2026-0042" },
+  args: { assetId: 'ASSET-2026-0042' },
 };
 
 export const NumericId: Story = {
-  args: { assetId: "00847" },
+  args: { assetId: '00847' },
 };
 
 export const AllVariants: Story = {

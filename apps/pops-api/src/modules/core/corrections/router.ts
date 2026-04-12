@@ -1,11 +1,11 @@
 /**
  * Corrections tRPC router - CRUD for transaction corrections
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
-import { logger } from "../../../lib/logger.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
+import { logger } from '../../../lib/logger.js';
 import {
   CreateCorrectionSchema,
   UpdateCorrectionSchema,
@@ -14,10 +14,10 @@ import {
   ChangeSetSchema,
   ChangeSetImpactSummarySchema,
   toCorrection,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
-import { generateRules, analyzeCorrection } from "./lib/rule-generator.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError } from '../../../shared/errors.js';
+import { generateRules, analyzeCorrection } from './lib/rule-generator.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -29,7 +29,7 @@ export const correctionsRouter = router({
     .input(
       z.object({
         minConfidence: z.number().min(0).max(1).optional(),
-        matchType: z.enum(["exact", "contains", "regex"]).optional(),
+        matchType: z.enum(['exact', 'contains', 'regex']).optional(),
         limit: z.coerce.number().positive().optional(),
         offset: z.coerce.number().nonnegative().optional(),
       })
@@ -58,7 +58,7 @@ export const correctionsRouter = router({
       return { data: toCorrection(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -80,7 +80,7 @@ export const correctionsRouter = router({
     const row = service.createOrUpdateCorrection(input);
     return {
       data: toCorrection(row),
-      message: "Correction saved",
+      message: 'Correction saved',
     };
   }),
 
@@ -97,11 +97,11 @@ export const correctionsRouter = router({
         const row = service.updateCorrection(input.id, input.data);
         return {
           data: toCorrection(row),
-          message: "Correction updated",
+          message: 'Correction updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -111,10 +111,10 @@ export const correctionsRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     try {
       service.deleteCorrection(input.id);
-      return { message: "Correction deleted" };
+      return { message: 'Correction deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -131,10 +131,10 @@ export const correctionsRouter = router({
     .mutation(({ input }) => {
       try {
         service.adjustConfidence(input.id, input.delta);
-        return { message: "Confidence adjusted" };
+        return { message: 'Confidence adjusted' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -241,7 +241,7 @@ export const correctionsRouter = router({
           minConfidence: input.minConfidence,
         });
         logger.info({
-          event: "corrections.proposal.preview",
+          event: 'corrections.proposal.preview',
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
           ops: input.changeSet.ops,
@@ -252,7 +252,7 @@ export const correctionsRouter = router({
         return result;
       } catch (err) {
         logger.error({
-          event: "corrections.proposal.preview",
+          event: 'corrections.proposal.preview',
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
           ops: input.changeSet.ops,
@@ -261,7 +261,7 @@ export const correctionsRouter = router({
           err,
         });
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -276,25 +276,25 @@ export const correctionsRouter = router({
       try {
         const rows = service.applyChangeSet(input.changeSet);
         logger.info({
-          event: "corrections.proposal.apply",
+          event: 'corrections.proposal.apply',
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
           ops: input.changeSet.ops,
-          outcome: "approved",
+          outcome: 'approved',
           resultRuleCount: rows.length,
         });
-        return { data: rows.map(toCorrection), message: "ChangeSet applied" };
+        return { data: rows.map(toCorrection), message: 'ChangeSet applied' };
       } catch (err) {
         logger.error({
-          event: "corrections.proposal.apply",
+          event: 'corrections.proposal.apply',
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
           ops: input.changeSet.ops,
-          outcome: "apply_failed",
+          outcome: 'apply_failed',
           err,
         });
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -321,7 +321,7 @@ export const correctionsRouter = router({
         });
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -363,7 +363,7 @@ export const correctionsRouter = router({
           triggeringTransactions: input.triggeringTransactions,
         });
         logger.info({
-          event: "corrections.proposal.revise",
+          event: 'corrections.proposal.revise',
           userEmail: ctx.user.email,
           instructionLength: input.instruction.length,
           inputOpCount: input.currentChangeSet.ops.length,
@@ -373,7 +373,7 @@ export const correctionsRouter = router({
         return result;
       } catch (err) {
         logger.error({
-          event: "corrections.proposal.revise",
+          event: 'corrections.proposal.revise',
           userEmail: ctx.user.email,
           instructionLength: input.instruction.length,
           inputOpCount: input.currentChangeSet.ops.length,
@@ -381,11 +381,11 @@ export const correctionsRouter = router({
           err,
         });
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message:
             err instanceof Error
               ? `Failed to revise ChangeSet: ${err.message}`
-              : "Failed to revise ChangeSet",
+              : 'Failed to revise ChangeSet',
           cause: err,
         });
       }
@@ -415,7 +415,7 @@ export const correctionsRouter = router({
         });
       } catch (err) {
         logger.error({
-          event: "corrections.proposal.reject.persistence_failed",
+          event: 'corrections.proposal.reject.persistence_failed',
           userEmail: ctx.user.email,
           opCount: input.changeSet.ops.length,
           ops: input.changeSet.ops,
@@ -423,14 +423,14 @@ export const correctionsRouter = router({
         });
       }
       logger.info({
-        event: "corrections.proposal.reject",
+        event: 'corrections.proposal.reject',
         userEmail: ctx.user.email,
         opCount: input.changeSet.ops.length,
         ops: input.changeSet.ops,
-        outcome: "rejected",
+        outcome: 'rejected',
         feedback: input.feedback,
         impactSummary: input.impactSummary ?? null,
       });
-      return { message: "ChangeSet rejected" };
+      return { message: 'ChangeSet rejected' };
     }),
 });

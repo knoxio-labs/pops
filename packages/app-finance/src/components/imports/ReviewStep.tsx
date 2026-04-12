@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   CheckCircle,
   AlertTriangle,
@@ -7,24 +7,24 @@ import {
   List,
   Layers,
   Settings2,
-} from "lucide-react";
-import { useImportStore } from "../../store/importStore";
-import type { ProcessedTransaction } from "../../store/importStore";
-import { trpc } from "../../lib/trpc";
-import { Button } from "@pops/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@pops/ui";
-import { EntityCreateDialog } from "./EntityCreateDialog";
-import { TransactionCard } from "./TransactionCard";
-import { TransactionGroup } from "./TransactionGroup";
-import { EditableTransactionCard } from "./EditableTransactionCard";
-import { CorrectionProposalDialog } from "./CorrectionProposalDialog";
-import { toast } from "sonner";
-import type { ConfirmedTransaction } from "@pops/api/modules/finance/imports";
-import { groupTransactionsByEntity } from "../../lib/transaction-utils";
-import { computeMergedEntities, computeMergedRules } from "../../lib/merged-state";
-import { reevaluateTransactions } from "../../lib/local-re-evaluation";
+} from 'lucide-react';
+import { useImportStore } from '../../store/importStore';
+import type { ProcessedTransaction } from '../../store/importStore';
+import { trpc } from '../../lib/trpc';
+import { Button } from '@pops/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
+import { EntityCreateDialog } from './EntityCreateDialog';
+import { TransactionCard } from './TransactionCard';
+import { TransactionGroup } from './TransactionGroup';
+import { EditableTransactionCard } from './EditableTransactionCard';
+import { CorrectionProposalDialog } from './CorrectionProposalDialog';
+import { toast } from 'sonner';
+import type { ConfirmedTransaction } from '@pops/api/modules/finance/imports';
+import { groupTransactionsByEntity } from '../../lib/transaction-utils';
+import { computeMergedEntities, computeMergedRules } from '../../lib/merged-state';
+import { reevaluateTransactions } from '../../lib/local-re-evaluation';
 
-type ViewMode = "list" | "grouped";
+type ViewMode = 'list' | 'grouped';
 
 /**
  * Step 4: Review transactions and resolve uncertain/failed matches
@@ -46,16 +46,16 @@ export function ReviewStep() {
     ProcessedTransaction[] | null
   >(null);
   const [editingTransaction, setEditingTransaction] = useState<ProcessedTransaction | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("grouped");
+  const [viewMode, setViewMode] = useState<ViewMode>('grouped');
   const [proposalOpen, setProposalOpen] = useState(false);
   const [proposalSignal, setProposalSignal] = useState<{
     descriptionPattern: string;
-    matchType: "exact" | "contains" | "regex";
+    matchType: 'exact' | 'contains' | 'regex';
     entityId?: string | null;
     entityName?: string | null;
     location?: string | null;
     tags?: string[];
-    transactionType?: "purchase" | "transfer" | "income" | null;
+    transactionType?: 'purchase' | 'transfer' | 'income' | null;
   } | null>(null);
   const [proposalTriggeringTransaction, setProposalTriggeringTransaction] = useState<{
     description: string;
@@ -64,12 +64,12 @@ export function ReviewStep() {
     account: string;
     location?: string | null;
     previousEntityName?: string | null;
-    previousTransactionType?: "purchase" | "transfer" | "income" | null;
+    previousTransactionType?: 'purchase' | 'transfer' | 'income' | null;
   } | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
 
   // Default to Uncertain tab when uncertain transactions exist, otherwise Matched
-  const initialTab = localTransactions.uncertain.length > 0 ? "uncertain" : "matched";
+  const initialTab = localTransactions.uncertain.length > 0 ? 'uncertain' : 'matched';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Preserve scroll position per tab
@@ -155,7 +155,7 @@ export function ReviewStep() {
   const analyzeCorrectionMutation = trpc.core.corrections.analyzeCorrection.useMutation();
 
   const computeFallbackPattern = useCallback((description: string) => {
-    return description.toUpperCase().replace(/\d+/g, "").replace(/\s+/g, " ").trim();
+    return description.toUpperCase().replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
   }, []);
 
   const generateProposal = useCallback(
@@ -166,7 +166,7 @@ export function ReviewStep() {
       entityId: string | null;
       entityName: string | null;
       location?: string | null;
-      transactionType?: "purchase" | "transfer" | "income" | null;
+      transactionType?: 'purchase' | 'transfer' | 'income' | null;
     }) => {
       // The AI must analyse the ORIGINAL description, not the user's
       // correction. Otherwise the rule it learns will only ever match the
@@ -188,7 +188,7 @@ export function ReviewStep() {
       try {
         const res = await analyzeCorrectionMutation.mutateAsync({
           description: originalDescription,
-          entityName: args.entityName ?? "unknown",
+          entityName: args.entityName ?? 'unknown',
           amount: originalAmount,
         });
         const analysis = res.data;
@@ -196,7 +196,7 @@ export function ReviewStep() {
         const suggestedPattern =
           analysis && analysis.pattern.length >= 3 ? analysis.pattern : fallbackPattern;
         const suggestedMatchType =
-          analysis && analysis.pattern.length >= 3 ? analysis.matchType : "contains";
+          analysis && analysis.pattern.length >= 3 ? analysis.matchType : 'contains';
 
         setProposalSignal({
           descriptionPattern: suggestedPattern,
@@ -209,11 +209,11 @@ export function ReviewStep() {
         });
         setProposalTriggeringTransaction(triggeringContext);
         setProposalOpen(true);
-        toast.success("Proposal generated — review and approve to learn");
+        toast.success('Proposal generated — review and approve to learn');
       } catch {
         setProposalSignal({
           descriptionPattern: fallbackPattern,
-          matchType: "contains",
+          matchType: 'contains',
           entityId: args.entityId,
           entityName: args.entityName,
           location: args.location ?? null,
@@ -222,7 +222,7 @@ export function ReviewStep() {
         });
         setProposalTriggeringTransaction(triggeringContext);
         setProposalOpen(true);
-        toast.info("Proposal generated (fallback) — review and approve to learn");
+        toast.info('Proposal generated (fallback) — review and approve to learn');
       }
     },
     [analyzeCorrectionMutation, computeFallbackPattern]
@@ -265,10 +265,10 @@ export function ReviewStep() {
             entity: {
               entityId,
               entityName,
-              matchType: "manual" as never, // UI-only matchType
+              matchType: 'manual' as never, // UI-only matchType
               confidence: 1,
             },
-            status: "matched" as const,
+            status: 'matched' as const,
           } as ProcessedTransaction,
         ],
       }));
@@ -335,7 +335,7 @@ export function ReviewStep() {
       const firstTx = transactions[0];
       const entityName = firstTx?.entity?.entityName;
       if (!entityName) {
-        toast.error("No entity name found");
+        toast.error('No entity name found');
         return;
       }
 
@@ -346,7 +346,7 @@ export function ReviewStep() {
         // Create a pending entity if it doesn't exist
         if (!entityId) {
           const pending = addPendingEntity(
-            { name: entityName, type: "company" },
+            { name: entityName, type: 'company' },
             dbEntitiesData?.data
           );
           entityId = pending.tempId;
@@ -369,10 +369,10 @@ export function ReviewStep() {
                   entity: {
                     entityId: resolvedEntityId,
                     entityName,
-                    matchType: "ai" as const,
+                    matchType: 'ai' as const,
                     confidence: 1,
                   },
-                  status: "matched" as const,
+                  status: 'matched' as const,
                 } as ProcessedTransaction,
               ],
             };
@@ -380,7 +380,7 @@ export function ReviewStep() {
           return updated;
         });
         toast.success(
-          `Accepted ${transactions.length} transaction${transactions.length !== 1 ? "s" : ""}`
+          `Accepted ${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`
         );
 
         // Auto-save correction rule using the first transaction and re-evaluate
@@ -389,7 +389,7 @@ export function ReviewStep() {
         }
       } catch (error) {
         toast.error(
-          `Failed to accept: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Failed to accept: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
     },
@@ -435,10 +435,10 @@ export function ReviewStep() {
                   entity: {
                     entityId: entity.entityId,
                     entityName: entity.entityName,
-                    matchType: "ai" as const,
+                    matchType: 'ai' as const,
                     confidence: 1,
                   },
-                  status: "matched" as const,
+                  status: 'matched' as const,
                 } as ProcessedTransaction,
               ],
             };
@@ -448,7 +448,7 @@ export function ReviewStep() {
         setPendingBulkTransactions(null);
         setSelectedTransaction(null);
         toast.success(
-          `Created "${entity.entityName}" and assigned to ${bulkCount} transaction${bulkCount !== 1 ? "s" : ""}`
+          `Created "${entity.entityName}" and assigned to ${bulkCount} transaction${bulkCount !== 1 ? 's' : ''}`
         );
 
         // Route through the CorrectionProposalDialog so a persistent rule is
@@ -485,7 +485,7 @@ export function ReviewStep() {
       shouldLearn: boolean = false
     ) => {
       const isRuleMatched =
-        Boolean(transaction.ruleProvenance) || transaction.entity?.matchType === "learned";
+        Boolean(transaction.ruleProvenance) || transaction.entity?.matchType === 'learned';
 
       // Detect what changed (include description/amount changes so Save & Learn works for any edit)
       const hasChanges =
@@ -503,7 +503,7 @@ export function ReviewStep() {
           editedFields.entity?.entityName ?? transaction.entity?.entityName ?? null;
         const updatedLocation = editedFields.location ?? transaction.location ?? null;
         const updatedType =
-          editedFields.transactionType ?? transaction.transactionType ?? "purchase";
+          editedFields.transactionType ?? transaction.transactionType ?? 'purchase';
 
         // Pass the ORIGINAL transaction so the AI analyzes the unedited
         // description — using the user's edited string would learn a rule
@@ -525,7 +525,7 @@ export function ReviewStep() {
         manuallyEdited: true,
       };
       const isNoEntityType =
-        updatedTx.transactionType === "transfer" || updatedTx.transactionType === "income";
+        updatedTx.transactionType === 'transfer' || updatedTx.transactionType === 'income';
 
       setLocalTransactions((prev) => {
         // Transfers and income don't need an entity — promote them straight to matched.
@@ -534,9 +534,9 @@ export function ReviewStep() {
             ...prev,
             matched: prev.matched.some((t) => t === transaction)
               ? prev.matched.map((t) =>
-                  t === transaction ? { ...updatedTx, status: "matched" as const } : t
+                  t === transaction ? { ...updatedTx, status: 'matched' as const } : t
                 )
-              : [...prev.matched, { ...updatedTx, status: "matched" as const }],
+              : [...prev.matched, { ...updatedTx, status: 'matched' as const }],
             uncertain: prev.uncertain.filter((t) => t !== transaction),
             failed: prev.failed.filter((t) => t !== transaction),
             skipped: prev.skipped.filter((t) => t !== transaction),
@@ -567,7 +567,7 @@ export function ReviewStep() {
           editedFields.entity?.entityName ?? transaction.entity?.entityName ?? null;
         const updatedLocation = editedFields.location ?? transaction.location ?? null;
         const updatedType =
-          editedFields.transactionType ?? transaction.transactionType ?? "purchase";
+          editedFields.transactionType ?? transaction.transactionType ?? 'purchase';
         // Same reasoning as above: feed the AI the original transaction.
         void generateProposal({
           triggeringTransaction: transaction,
@@ -578,18 +578,18 @@ export function ReviewStep() {
         });
       } else if (hasChanges && !shouldLearn) {
         // Show toast asking if they want to learn
-        toast.info("Apply this correction to future imports?", {
-          description: "This will help auto-match similar transactions next time.",
+        toast.info('Apply this correction to future imports?', {
+          description: 'This will help auto-match similar transactions next time.',
           action: {
-            label: "Save & Learn",
+            label: 'Save & Learn',
             onClick: () => {
               handleSaveEdit(transaction, editedFields, true);
             },
           },
         });
-        toast.success("Transaction updated");
+        toast.success('Transaction updated');
       } else {
-        toast.success("Transaction updated");
+        toast.success('Transaction updated');
       }
     },
     [generateProposal]
@@ -602,7 +602,7 @@ export function ReviewStep() {
   const handleContinueToTagReview = useCallback(() => {
     const confirmed: ConfirmedTransaction[] = localTransactions.matched
       .filter((t: ProcessedTransaction) => {
-        const isNoEntityType = t.transactionType === "transfer" || t.transactionType === "income";
+        const isNoEntityType = t.transactionType === 'transfer' || t.transactionType === 'income';
         return isNoEntityType || (t.entity?.entityId && t.entity?.entityName);
       })
       .map((t: ProcessedTransaction) => ({
@@ -642,7 +642,7 @@ export function ReviewStep() {
       <CorrectionProposalDialog
         open={proposalOpen}
         onOpenChange={setProposalOpen}
-        sessionId={processSessionId ?? ""}
+        sessionId={processSessionId ?? ''}
         signal={proposalSignal}
         triggeringTransaction={proposalTriggeringTransaction}
         previewTransactions={[
@@ -654,14 +654,14 @@ export function ReviewStep() {
         onApproved={() => {
           // Re-evaluation is handled by the pendingChangeSets useEffect (US-07 AC-8).
           // The effect fires on next render when pendingChangeSets ref changes.
-          toast.success("Rules saved locally");
+          toast.success('Rules saved locally');
         }}
       />
       <CorrectionProposalDialog
         open={browseOpen}
         onOpenChange={setBrowseOpen}
         mode="browse"
-        sessionId={processSessionId ?? ""}
+        sessionId={processSessionId ?? ''}
         signal={null}
         triggeringTransaction={null}
         previewTransactions={[
@@ -684,11 +684,11 @@ export function ReviewStep() {
                 onSuccess: ({ result, affectedCount }) => {
                   setLocalTransactions(result);
                   toast.success(
-                    `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? "" : "s"} re-evaluated`
+                    `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? '' : 's'} re-evaluated`
                   );
                 },
                 onError: () => {
-                  toast.error("Failed to re-evaluate transactions against updated rules");
+                  toast.error('Failed to re-evaluate transactions against updated rules');
                 },
               }
             );
@@ -701,7 +701,7 @@ export function ReviewStep() {
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {unresolvedCount > 0
               ? `${unresolvedCount} transaction(s) need your attention`
-              : "All transactions are ready to import"}
+              : 'All transactions are ready to import'}
           </p>
         </div>
         <Button
@@ -728,9 +728,9 @@ export function ReviewStep() {
                   <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 space-y-1">
                     <p className="font-medium">
-                      {warning.type === "AI_CATEGORIZATION_UNAVAILABLE"
-                        ? "AI Categorization Unavailable"
-                        : "AI API Error"}
+                      {warning.type === 'AI_CATEGORIZATION_UNAVAILABLE'
+                        ? 'AI Categorization Unavailable'
+                        : 'AI API Error'}
                     </p>
                     <p className="text-xs">{warning.message}</p>
                     {warning.details && (
@@ -739,7 +739,7 @@ export function ReviewStep() {
                     {warning.affectedCount && (
                       <p className="text-xs opacity-80">
                         {warning.affectedCount} transaction
-                        {warning.affectedCount !== 1 ? "s" : ""} could not be automatically
+                        {warning.affectedCount !== 1 ? 's' : ''} could not be automatically
                         categorized and may appear in the Uncertain or Failed tabs.
                       </p>
                     )}
@@ -959,19 +959,19 @@ function UncertainTab({
       {/* View mode toggle */}
       <div className="flex items-center justify-end gap-2">
         <Button
-          variant={viewMode === "list" ? "default" : "outline"}
+          variant={viewMode === 'list' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onViewModeChange("list")}
-          aria-pressed={viewMode === "list"}
+          onClick={() => onViewModeChange('list')}
+          aria-pressed={viewMode === 'list'}
         >
           <List className="w-4 h-4 mr-1" aria-hidden="true" />
           List
         </Button>
         <Button
-          variant={viewMode === "grouped" ? "default" : "outline"}
+          variant={viewMode === 'grouped' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onViewModeChange("grouped")}
-          aria-pressed={viewMode === "grouped"}
+          onClick={() => onViewModeChange('grouped')}
+          aria-pressed={viewMode === 'grouped'}
         >
           <Layers className="w-4 h-4 mr-1" aria-hidden="true" />
           Grouped
@@ -979,7 +979,7 @@ function UncertainTab({
       </div>
 
       {/* Grouped view */}
-      {viewMode === "grouped" ? (
+      {viewMode === 'grouped' ? (
         <div className="space-y-3">
           {groups.map((group, idx) => (
             <TransactionGroup
@@ -1073,19 +1073,19 @@ function FailedTab({
       {/* View mode toggle */}
       <div className="flex items-center justify-end gap-2">
         <Button
-          variant={viewMode === "list" ? "default" : "outline"}
+          variant={viewMode === 'list' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onViewModeChange("list")}
-          aria-pressed={viewMode === "list"}
+          onClick={() => onViewModeChange('list')}
+          aria-pressed={viewMode === 'list'}
         >
           <List className="w-4 h-4 mr-1" aria-hidden="true" />
           List
         </Button>
         <Button
-          variant={viewMode === "grouped" ? "default" : "outline"}
+          variant={viewMode === 'grouped' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => onViewModeChange("grouped")}
-          aria-pressed={viewMode === "grouped"}
+          onClick={() => onViewModeChange('grouped')}
+          aria-pressed={viewMode === 'grouped'}
         >
           <Layers className="w-4 h-4 mr-1" aria-hidden="true" />
           Grouped
@@ -1093,7 +1093,7 @@ function FailedTab({
       </div>
 
       {/* Grouped view */}
-      {viewMode === "grouped" ? (
+      {viewMode === 'grouped' ? (
         <div className="space-y-3">
           {groups.map((group, idx) => (
             <TransactionGroup

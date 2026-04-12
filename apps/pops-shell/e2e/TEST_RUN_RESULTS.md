@@ -36,6 +36,7 @@ These tests validate existing UI functionality:
 All 34 failures are due to UI elements that haven't been implemented yet. This is expected and documented in the implementation plan.
 
 **Breakdown by feature:**
+
 - **Transaction Editing** (4) - Missing edit UI, Save Once/Learn buttons
 - **AI Suggestions** (3) - Missing accept buttons, similarity toasts
 - **Bulk Operations** (5) - Missing grouped view, bulk action buttons
@@ -52,10 +53,12 @@ All 34 failures are due to UI elements that haven't been implemented yet. This i
 **Issue:** Strict mode violation in `navigateToReviewStep` helper
 
 **Problem:** Multiple elements matched `getByText('Review')`
+
 - `<span class="text-sm hidden sm:inline">Review</span>` (hidden on mobile)
 - `<h2 class="text-2xl font-semibold mb-2">Review</h2>` (heading)
 
 **Fix Applied:**
+
 ```typescript
 // Before (line 290):
 await expect(page.getByText('Review')).toBeVisible({ timeout: 10000 });
@@ -82,24 +85,28 @@ This makes the selector more specific and resilient to responsive design changes
 The failing tests serve as a **product specification** for the Import Wizard:
 
 **Priority 1: Core Review Features**
+
 - Transaction cards with `data-testid="transaction-card"`
 - Entity selection dropdowns
 - Tab count indicators (e.g., "Uncertain (6)")
 - Import button state management
 
 **Priority 2: Enhanced Features**
+
 - Transaction editing UI (inline forms)
 - Save Once vs Save & Learn buttons
 - AI suggestion acceptance workflow
 - Entity creation during review
 
 **Priority 3: Advanced Features**
+
 - Grouped view toggle (List/Grouped)
 - Bulk operations (Accept All, Create New for All)
 - Progress overlay with write status
 - Learning system integration
 
 **Priority 4: Polish**
+
 - Enhanced accessibility (aria-labels, keyboard nav)
 - Error recovery UI (retry buttons)
 - State preservation on navigation
@@ -153,6 +160,7 @@ npx playwright test -g "should edit transaction" --headed
 ### 4. Test-Driven Development
 
 Use tests to drive implementation:
+
 1. Read test → understand expected behavior
 2. Implement UI → match test expectations
 3. Run test → get immediate feedback
@@ -161,6 +169,7 @@ Use tests to drive implementation:
 ## Example: Implementing Transaction Editing
 
 **Test expectation** (from line 458-482):
+
 ```typescript
 test('should edit transaction with Save Once', async ({ page }) => {
   // 1. Click Edit button
@@ -183,6 +192,7 @@ test('should edit transaction with Save Once', async ({ page }) => {
 ```
 
 **Implementation checklist:**
+
 - [ ] Add Edit button to transaction card
 - [ ] Create inline edit form component
 - [ ] Add description and amount input fields
@@ -226,6 +236,7 @@ These tests provide:
 ---
 
 **Test Command:**
+
 ```bash
 # Run all import wizard tests
 npx playwright test import-wizard --project=chromium

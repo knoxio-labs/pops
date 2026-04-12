@@ -2,8 +2,8 @@
  * Discovery service — computes preference profile from watch history,
  * comparison scores, and genre data.
  */
-import { count, desc, eq, sql, and, notInArray } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
+import { count, desc, eq, sql, and, notInArray } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
 import {
   movies,
   mediaScores,
@@ -12,7 +12,7 @@ import {
   comparisons,
   mediaWatchlist,
   dismissedDiscover,
-} from "@pops/db-types";
+} from '@pops/db-types';
 import type {
   GenreAffinity,
   DimensionWeight,
@@ -22,8 +22,8 @@ import type {
   DiscoverResult,
   ScoredDiscoverResult,
   RewatchSuggestion,
-} from "./types.js";
-import { TMDB_GENRE_MAP } from "./types.js";
+} from './types.js';
+import { TMDB_GENRE_MAP } from './types.js';
 
 /**
  * Compute genre affinity scores by averaging Elo scores for movies
@@ -46,7 +46,7 @@ function getGenreAffinities(): GenreAffinity[] {
     .innerJoin(sql`json_each(${movies.genres}) g`, sql`1=1`)
     .innerJoin(
       mediaScores,
-      and(eq(mediaScores.mediaType, "movie"), eq(mediaScores.mediaId, movies.id))
+      and(eq(mediaScores.mediaType, 'movie'), eq(mediaScores.mediaId, movies.id))
     )
     .groupBy(sql`g.value`)
     .orderBy(desc(sql`ROUND(AVG(${mediaScores.score}), 1)`))
@@ -87,7 +87,7 @@ function getGenreDistribution(): { genres: GenreDistribution[]; totalWatched: nu
   const [totalResult] = db
     .select({ cnt: sql<number>`COUNT(DISTINCT ${watchHistory.mediaId})` })
     .from(watchHistory)
-    .where(eq(watchHistory.mediaType, "movie"))
+    .where(eq(watchHistory.mediaType, 'movie'))
     .all();
 
   const totalWatched = totalResult?.cnt ?? 0;
@@ -104,7 +104,7 @@ function getGenreDistribution(): { genres: GenreDistribution[]; totalWatched: nu
     .from(watchHistory)
     .innerJoin(
       movies,
-      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, "movie"))
+      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, 'movie'))
     )
     .innerJoin(sql`json_each(${movies.genres}) g`, sql`1=1`)
     .groupBy(sql`g.value`)
@@ -141,12 +141,12 @@ export function getQuickPickMovies(count_: number): QuickPickMovie[] {
   const watchedIds = db
     .selectDistinct({ mediaId: watchHistory.mediaId })
     .from(watchHistory)
-    .where(eq(watchHistory.mediaType, "movie"));
+    .where(eq(watchHistory.mediaType, 'movie'));
 
   const watchlistIds = db
     .select({ mediaId: mediaWatchlist.mediaId })
     .from(mediaWatchlist)
-    .where(eq(mediaWatchlist.mediaType, "movie"));
+    .where(eq(mediaWatchlist.mediaType, 'movie'));
 
   const rows = db
     .select({
@@ -169,7 +169,7 @@ export function getQuickPickMovies(count_: number): QuickPickMovie[] {
 
   return rows.map((row) => ({
     ...row,
-    genres: row.genres ?? "[]",
+    genres: row.genres ?? '[]',
     posterUrl: row.posterPath ? `/media/images/movie/${row.tmdbId}/poster.jpg` : null,
   }));
 }
@@ -207,7 +207,7 @@ export function getUnwatchedLibraryMovies(): DiscoverResult[] {
   const watchedIds = db
     .selectDistinct({ mediaId: watchHistory.mediaId })
     .from(watchHistory)
-    .where(eq(watchHistory.mediaType, "movie"));
+    .where(eq(watchHistory.mediaType, 'movie'));
 
   const rows = db
     .select({
@@ -240,8 +240,8 @@ export function getUnwatchedLibraryMovies(): DiscoverResult[] {
     return {
       tmdbId: row.tmdbId,
       title: row.title,
-      overview: row.overview ?? "",
-      releaseDate: row.releaseDate ?? "",
+      overview: row.overview ?? '',
+      releaseDate: row.releaseDate ?? '',
       posterPath: row.posterPath,
       posterUrl: row.posterPath ? `/media/images/movie/${row.tmdbId}/poster.jpg` : null,
       backdropPath: row.backdropPath,
@@ -293,7 +293,7 @@ export function scoreDiscoverResults(
         .filter((name): name is string => name != null);
 
       if (genreNames.length === 0 || affinityMap.size === 0) {
-        return { ...result, matchPercentage: 0, matchReason: "" };
+        return { ...result, matchPercentage: 0, matchReason: '' };
       }
 
       // Average the normalized affinity scores for this movie's genres
@@ -314,7 +314,7 @@ export function scoreDiscoverResults(
       // Top matching genres for the explanation
       matchedGenres.sort((a, b) => b.score - a.score);
       const topGenres = matchedGenres.slice(0, 3).map((g) => g.name);
-      const matchReason = topGenres.length > 0 ? topGenres.join(", ") : "";
+      const matchReason = topGenres.length > 0 ? topGenres.join(', ') : '';
 
       return { ...result, matchPercentage, matchReason };
     })
@@ -364,11 +364,11 @@ export function getRewatchSuggestions(): RewatchSuggestion[] {
     .from(watchHistory)
     .innerJoin(
       movies,
-      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, "movie"))
+      and(eq(movies.id, watchHistory.mediaId), eq(watchHistory.mediaType, 'movie'))
     )
     .leftJoin(
       mediaScores,
-      and(eq(mediaScores.mediaType, "movie"), eq(mediaScores.mediaId, movies.id))
+      and(eq(mediaScores.mediaType, 'movie'), eq(mediaScores.mediaId, movies.id))
     )
     .groupBy(movies.id)
     .having(sql`MAX(${watchHistory.watchedAt}) <= ${sixMonthsAgo}`)

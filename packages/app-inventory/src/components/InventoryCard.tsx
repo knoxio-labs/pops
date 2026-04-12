@@ -7,7 +7,7 @@
  * - "horizontal" (default): compact row with small thumbnail — used in list views
  * - "vertical": photo on top with consistent aspect ratio — used in grid views
  */
-import { useState } from "react";
+import { useState } from 'react';
 import {
   cn,
   Skeleton,
@@ -15,9 +15,9 @@ import {
   ConditionBadge,
   TypeBadge,
   LocationBreadcrumb,
-} from "@pops/ui";
-import type { Condition, LocationSegment } from "@pops/ui";
-import { Package, MapPin } from "lucide-react";
+} from '@pops/ui';
+import type { Condition, LocationSegment } from '@pops/ui';
+import { Package, MapPin } from 'lucide-react';
 
 export interface InventoryCardProps {
   id: string;
@@ -32,7 +32,7 @@ export interface InventoryCardProps {
   locationName?: string | null;
   photoUrl?: string | null;
   /** Card layout: "horizontal" for list, "vertical" for grid. */
-  layout?: "horizontal" | "vertical";
+  layout?: 'horizontal' | 'vertical';
   onClick?: (id: string) => void;
   onLocationNavigate?: (segment: LocationSegment) => void;
   className?: string;
@@ -49,7 +49,7 @@ export function InventoryCard({
   locationSegments = [],
   locationName,
   photoUrl,
-  layout = "horizontal",
+  layout = 'horizontal',
   onClick,
   onLocationNavigate,
   className,
@@ -61,15 +61,15 @@ export function InventoryCard({
   const hasBadges = assetId || type || condition;
   const hasLocation = locationSegments.length > 0 || locationName;
 
-  if (layout === "vertical") {
+  if (layout === 'vertical') {
     return (
       <button
         type="button"
         aria-label={itemName}
         className={cn(
-          "group flex w-full cursor-pointer flex-col rounded-lg border border-border bg-card text-left",
-          "transition-all hover:bg-accent/50 hover:shadow-md",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          'group flex w-full cursor-pointer flex-col rounded-lg border border-border bg-card text-left',
+          'transition-all hover:bg-accent/50 hover:shadow-md',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           className
         )}
         onClick={() => onClick?.(id)}
@@ -82,9 +82,9 @@ export function InventoryCard({
               alt={`${itemName} photo`}
               loading="lazy"
               className={cn(
-                "h-full w-full object-cover transition-opacity duration-200",
-                "group-hover:opacity-90",
-                imageLoaded ? "opacity-100" : "opacity-0"
+                'h-full w-full object-cover transition-opacity duration-200',
+                'group-hover:opacity-90',
+                imageLoaded ? 'opacity-100' : 'opacity-0'
               )}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
@@ -140,10 +140,10 @@ export function InventoryCard({
       type="button"
       aria-label={itemName}
       className={cn(
-        "group flex w-full cursor-pointer gap-3 rounded-lg border border-border bg-card p-3 text-left",
-        "border-l-4 border-l-app-accent/50",
-        "transition-colors hover:bg-accent/50",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        'group flex w-full cursor-pointer gap-3 rounded-lg border border-border bg-card p-3 text-left',
+        'border-l-4 border-l-app-accent/50',
+        'transition-colors hover:bg-accent/50',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className
       )}
       onClick={() => onClick?.(id)}
@@ -156,8 +156,8 @@ export function InventoryCard({
             alt={`${itemName} photo`}
             loading="lazy"
             className={cn(
-              "h-full w-full object-cover transition-opacity duration-200",
-              imageLoaded ? "opacity-100" : "opacity-0"
+              'h-full w-full object-cover transition-opacity duration-200',
+              imageLoaded ? 'opacity-100' : 'opacity-0'
             )}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
@@ -207,4 +207,4 @@ export function InventoryCard({
   );
 }
 
-InventoryCard.displayName = "InventoryCard";
+InventoryCard.displayName = 'InventoryCard';

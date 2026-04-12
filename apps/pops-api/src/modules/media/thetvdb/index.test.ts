@@ -1,14 +1,14 @@
 /**
  * TheTVDB index module tests — startup validation and client factory.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { validateTvdbConfig, getTvdbClient, setTvdbClient } from "./index.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { validateTvdbConfig, getTvdbClient, setTvdbClient } from './index.js';
 
 // Mock auth + client so getTvdbClient doesn't make real HTTP calls
-vi.mock("./auth.js", () => ({
+vi.mock('./auth.js', () => ({
   TheTvdbAuth: vi.fn(),
 }));
-vi.mock("./client.js", () => ({
+vi.mock('./client.js', () => ({
   TheTvdbClient: vi.fn(),
 }));
 
@@ -21,32 +21,32 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("validateTvdbConfig", () => {
-  it("throws when THETVDB_API_KEY is not set", () => {
-    vi.stubEnv("THETVDB_API_KEY", "");
-    expect(() => validateTvdbConfig()).toThrow("THETVDB_API_KEY");
+describe('validateTvdbConfig', () => {
+  it('throws when THETVDB_API_KEY is not set', () => {
+    vi.stubEnv('THETVDB_API_KEY', '');
+    expect(() => validateTvdbConfig()).toThrow('THETVDB_API_KEY');
   });
 
-  it("does not throw when THETVDB_API_KEY is set", () => {
-    vi.stubEnv("THETVDB_API_KEY", "test-key");
+  it('does not throw when THETVDB_API_KEY is set', () => {
+    vi.stubEnv('THETVDB_API_KEY', 'test-key');
     expect(() => validateTvdbConfig()).not.toThrow();
   });
 });
 
-describe("getTvdbClient", () => {
-  it("throws when THETVDB_API_KEY is not set", () => {
-    vi.stubEnv("THETVDB_API_KEY", "");
-    expect(() => getTvdbClient()).toThrow("THETVDB_API_KEY");
+describe('getTvdbClient', () => {
+  it('throws when THETVDB_API_KEY is not set', () => {
+    vi.stubEnv('THETVDB_API_KEY', '');
+    expect(() => getTvdbClient()).toThrow('THETVDB_API_KEY');
   });
 
-  it("returns a client when THETVDB_API_KEY is set", () => {
-    vi.stubEnv("THETVDB_API_KEY", "test-key");
+  it('returns a client when THETVDB_API_KEY is set', () => {
+    vi.stubEnv('THETVDB_API_KEY', 'test-key');
     const client = getTvdbClient();
     expect(client).toBeDefined();
   });
 
-  it("returns the same singleton on subsequent calls", () => {
-    vi.stubEnv("THETVDB_API_KEY", "test-key");
+  it('returns the same singleton on subsequent calls', () => {
+    vi.stubEnv('THETVDB_API_KEY', 'test-key');
     const client1 = getTvdbClient();
     const client2 = getTvdbClient();
     expect(client1).toBe(client2);

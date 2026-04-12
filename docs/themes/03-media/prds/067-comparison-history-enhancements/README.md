@@ -12,8 +12,8 @@ The comparison history page shows a paginated list of past comparisons. This PRD
 
 Two new nullable integer columns are added:
 
-| Column | Type | Description |
-|--------|------|-------------|
+| Column    | Type                 | Description                                     |
+| --------- | -------------------- | ----------------------------------------------- |
 | `delta_a` | `INTEGER` (nullable) | ELO point change for media A in this comparison |
 | `delta_b` | `INTEGER` (nullable) | ELO point change for media B in this comparison |
 
@@ -58,6 +58,6 @@ The Matrix  +12  beat  Inception  -12    CINEMATOGRAPHY  4/6/2026  [🗑]
 
 ## User Stories
 
-| # | Story | Summary | Status |
-|---|-------|---------|--------|
-| 01 | [us-01-elo-delta](us-01-elo-delta.md) | Store ELO deltas on comparison record; display as coloured badges in history | Done |
+| #   | Story                                 | Summary                                                                      | Status |
+| --- | ------------------------------------- | ---------------------------------------------------------------------------- | ------ |
+| 01  | [us-01-elo-delta](us-01-elo-delta.md) | Store ELO deltas on comparison record; display as coloured badges in history | Done   |

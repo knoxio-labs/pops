@@ -4,8 +4,8 @@
  * Supports per-dimension tabs (Overall + each active dimension).
  * Uses the comparisons.rankings tRPC query with pagination.
  */
-import { useState, useMemo, useCallback } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useState, useMemo, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import {
   Alert,
   AlertTitle,
@@ -15,9 +15,9 @@ import {
   Tabs,
   TabsContent,
   cn,
-} from "@pops/ui";
-import { Trophy } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { Trophy } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 const PAGE_SIZE = 25;
 
@@ -62,14 +62,14 @@ function RankingRow({
   year,
   posterUrl,
 }: RankingRowProps) {
-  const href = mediaType === "movie" ? `/media/movies/${mediaId}` : `/media/tv/${mediaId}`;
+  const href = mediaType === 'movie' ? `/media/movies/${mediaId}` : `/media/tv/${mediaId}`;
   return (
     <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
       <span className="w-8 text-right text-sm font-bold text-muted-foreground tabular-nums">
         {rank <= 3 ? (
           <span
             className={
-              rank === 1 ? "text-yellow-500" : rank === 2 ? "text-zinc-400" : "text-amber-700"
+              rank === 1 ? 'text-yellow-500' : rank === 2 ? 'text-zinc-400' : 'text-amber-700'
             }
           >
             #{rank}
@@ -98,7 +98,7 @@ function RankingRow({
         </Link>
         <div className="flex items-center gap-2 mt-0.5">
           <Badge variant="secondary" className="text-xs">
-            {mediaType === "movie" ? "Movie" : "TV"}
+            {mediaType === 'movie' ? 'Movie' : 'TV'}
           </Badge>
           {year && <span className="text-xs text-muted-foreground">{year}</span>}
         </div>
@@ -107,17 +107,17 @@ function RankingRow({
       <div className="text-right shrink-0">
         <div className="text-sm font-semibold tabular-nums">{score}</div>
         <div className="text-xs text-muted-foreground">
-          {comparisonCount} {comparisonCount === 1 ? "match" : "matches"}
+          {comparisonCount} {comparisonCount === 1 ? 'match' : 'matches'}
         </div>
         {comparisonCount > 0 && (
           <div
             className={cn(
-              "text-xs tabular-nums",
+              'text-xs tabular-nums',
               confidence >= 0.7
-                ? "text-green-600 dark:text-green-400"
+                ? 'text-green-600 dark:text-green-400'
                 : confidence >= 0.4
-                  ? "text-yellow-600 dark:text-yellow-400"
-                  : "text-red-500 dark:text-red-400"
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-red-500 dark:text-red-400'
             )}
           >
             {Math.round(confidence * 100)}% conf
@@ -196,7 +196,7 @@ function RankingsList({ dimensionId }: { dimensionId?: number }) {
       {pagination && pagination.total > PAGE_SIZE && (
         <div className="flex items-center justify-between pt-2">
           <span className="text-sm text-muted-foreground">
-            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, pagination.total)} of{" "}
+            Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, pagination.total)} of{' '}
             {pagination.total}
           </span>
           <div className="flex gap-2">
@@ -225,7 +225,7 @@ function RankingsList({ dimensionId }: { dimensionId?: number }) {
 
 export function RankingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const dimensionParam = searchParams.get("dimension") ?? "overall";
+  const dimensionParam = searchParams.get('dimension') ?? 'overall';
 
   const { data: dimensionsData, isLoading: dimsLoading } =
     trpc.media.comparisons.listDimensions.useQuery();
@@ -242,10 +242,10 @@ export function RankingsPage() {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          if (value === "overall") {
-            next.delete("dimension");
+          if (value === 'overall') {
+            next.delete('dimension');
           } else {
-            next.set("dimension", value);
+            next.set('dimension', value);
           }
           return next;
         },
@@ -268,7 +268,7 @@ export function RankingsPage() {
         <Tabs value={dimensionParam} onValueChange={handleTabChange}>
           <div className="flex flex-wrap justify-center gap-2" role="tablist">
             {[
-              { value: "overall", label: "Overall" },
+              { value: 'overall', label: 'Overall' },
               ...activeDimensions.map((dim: { id: number; name: string }) => ({
                 value: String(dim.id),
                 label: dim.name,
@@ -280,10 +280,10 @@ export function RankingsPage() {
                 aria-selected={dimensionParam === chip.value}
                 onClick={() => handleTabChange(chip.value)}
                 className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                  'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
                   dimensionParam === chip.value
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
                 )}
               >
                 {chip.label}

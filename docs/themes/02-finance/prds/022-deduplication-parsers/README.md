@@ -10,9 +10,11 @@ Build the deduplication system and per-bank CSV parsers that prepare transaction
 ## Deduplication
 
 ### Mechanism
+
 SHA-256 checksum of the entire raw CSV row (JSON stringified). Deterministic — same row always produces the same hash.
 
 ### Process
+
 1. Extract checksums from all parsed transactions
 2. Batch query SQLite: `SELECT checksum FROM transactions WHERE checksum IN (?)`
 3. Batches in groups of 500 (SQLite variable limit)
@@ -20,6 +22,7 @@ SHA-256 checksum of the entire raw CSV row (JSON stringified). Deterministic —
 5. New → proceed to entity matching
 
 ### Why Checksums Work
+
 - Bank CSV rows are deterministic (same transaction = identical row)
 - Re-importing same file → same checksums → all skipped
 - No date/amount ambiguity (hash includes all fields)
@@ -29,40 +32,46 @@ SHA-256 checksum of the entire raw CSV row (JSON stringified). Deterministic —
 Each bank has a different CSV format. A parser (transformer) normalizes to `ParsedTransaction`:
 
 ### Amex
-| CSV Column | Mapping | Transformation |
-|-----------|---------|---------------|
-| Date | date | DD/MM/YYYY → YYYY-MM-DD |
-| Amount | amount | Parse float, invert sign (charges positive → expenses negative) |
-| Description | description | Clean whitespace |
-| Town/City | location | First line of multiline, title-case |
+
+| CSV Column  | Mapping     | Transformation                                                  |
+| ----------- | ----------- | --------------------------------------------------------------- |
+| Date        | date        | DD/MM/YYYY → YYYY-MM-DD                                         |
+| Amount      | amount      | Parse float, invert sign (charges positive → expenses negative) |
+| Description | description | Clean whitespace                                                |
+| Town/City   | location    | First line of multiline, title-case                             |
 
 Account: "Amex" (hardcoded)
 
 ### ANZ
-| CSV Column | Mapping | Transformation |
-|-----------|---------|---------------|
-| Date | date | DD/MM/YYYY → YYYY-MM-DD |
-| Amount | amount | Parse float (already signed correctly) |
-| Description | description | Clean whitespace |
+
+| CSV Column  | Mapping     | Transformation                         |
+| ----------- | ----------- | -------------------------------------- |
+| Date        | date        | DD/MM/YYYY → YYYY-MM-DD                |
+| Amount      | amount      | Parse float (already signed correctly) |
+| Description | description | Clean whitespace                       |
 
 Account: "ANZ Everyday" or "ANZ Savings" (from CSV or user selection)
 
 ### ING
-| CSV Column | Mapping | Transformation |
-|-----------|---------|---------------|
-| Date | date | DD/MM/YYYY → YYYY-MM-DD |
-| Credit/Debit | amount | Parse, negate debits |
-| Description | description | Clean whitespace |
+
+| CSV Column   | Mapping     | Transformation          |
+| ------------ | ----------- | ----------------------- |
+| Date         | date        | DD/MM/YYYY → YYYY-MM-DD |
+| Credit/Debit | amount      | Parse, negate debits    |
+| Description  | description | Clean whitespace        |
 
 Account: "ING Savings"
 
 ### Up Bank (API, not CSV)
+
 Fetched via Up Bank REST API, not CSV upload. Batch import by date range.
+
 - Transactions from API already normalized
 - Account from API response
 - Webhook-triggered for real-time
 
 ## Common Transformations
+
 - `normaliseDate()`: DD/MM/YYYY → YYYY-MM-DD
 - `normaliseAmount()`: strip currency symbols, parse float, handle sign conventions
 - `extractLocation()`: first line of multiline, title-case
@@ -78,23 +87,23 @@ Fetched via Up Bank REST API, not CSV upload. Batch import by date range.
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Bank changes CSV format | Parser fails gracefully — affected rows shown as errors in Step 2 |
-| Manual CSV edits (amount changed) | Different checksum — treated as new transaction |
-| Same amount, same day, different merchant | Different raw rows → different checksums → no false dedup |
-| Up Bank webhook + batch import overlap | Checksum dedup handles it — same transaction won't be double-inserted |
+| Case                                      | Behaviour                                                             |
+| ----------------------------------------- | --------------------------------------------------------------------- |
+| Bank changes CSV format                   | Parser fails gracefully — affected rows shown as errors in Step 2     |
+| Manual CSV edits (amount changed)         | Different checksum — treated as new transaction                       |
+| Same amount, same day, different merchant | Different raw rows → different checksums → no false dedup             |
+| Up Bank webhook + batch import overlap    | Checksum dedup handles it — same transaction won't be double-inserted |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-checksum-dedup](us-01-checksum-dedup.md) | Checksum-based deduplication with batch SQLite queries | Done | No (first) |
-| 02 | [us-02-amex-parser](us-02-amex-parser.md) | Amex CSV parser: date, amount inversion, location extraction | Done | Yes |
-| 03 | [us-03-anz-parser](us-03-anz-parser.md) | ANZ CSV parser | Not started | Yes |
-| 04 | [us-04-ing-parser](us-04-ing-parser.md) | ING CSV parser | Not started | Yes |
-| 05 | [us-05-up-bank-import](us-05-up-bank-import.md) | Up Bank API batch import by date range | Not started | Yes |
-| 06 | [us-06-common-utils](us-06-common-utils.md) | Shared utilities: normaliseDate, normaliseAmount, extractLocation, online detection | Partial | No (first, parallel with us-01) |
+| #   | Story                                           | Summary                                                                             | Status      | Parallelisable                  |
+| --- | ----------------------------------------------- | ----------------------------------------------------------------------------------- | ----------- | ------------------------------- |
+| 01  | [us-01-checksum-dedup](us-01-checksum-dedup.md) | Checksum-based deduplication with batch SQLite queries                              | Done        | No (first)                      |
+| 02  | [us-02-amex-parser](us-02-amex-parser.md)       | Amex CSV parser: date, amount inversion, location extraction                        | Done        | Yes                             |
+| 03  | [us-03-anz-parser](us-03-anz-parser.md)         | ANZ CSV parser                                                                      | Not started | Yes                             |
+| 04  | [us-04-ing-parser](us-04-ing-parser.md)         | ING CSV parser                                                                      | Not started | Yes                             |
+| 05  | [us-05-up-bank-import](us-05-up-bank-import.md) | Up Bank API batch import by date range                                              | Not started | Yes                             |
+| 06  | [us-06-common-utils](us-06-common-utils.md)     | Shared utilities: normaliseDate, normaliseAmount, extractLocation, online detection | Partial     | No (first, parallel with us-01) |
 
 US-02 through US-05 can all parallelise (independent parsers). US-06 is shared utilities used by all parsers.
 

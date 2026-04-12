@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { ChevronRight, Sparkles } from "lucide-react";
-import { Button, Label, Select as UiSelect } from "@pops/ui";
-import { Badge } from "@pops/ui";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@pops/ui";
-import { TransactionCard } from "./TransactionCard";
-import { EditableTransactionCard } from "./EditableTransactionCard";
-import type { ProcessedTransaction } from "@pops/api/modules/finance/imports";
-import type { TransactionGroup as TransactionGroupType } from "../../lib/transaction-utils";
+import { useState } from 'react';
+import { ChevronRight, Sparkles } from 'lucide-react';
+import { Button, Label, Select as UiSelect } from '@pops/ui';
+import { Badge } from '@pops/ui';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
+import { TransactionCard } from './TransactionCard';
+import { EditableTransactionCard } from './EditableTransactionCard';
+import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
+import type { TransactionGroup as TransactionGroupType } from '../../lib/transaction-utils';
 
 interface TransactionGroupProps {
   group: TransactionGroupType;
@@ -23,7 +23,7 @@ interface TransactionGroupProps {
   ) => void;
   onCancelEdit?: () => void;
   entities?: Array<{ id: string; name: string; type: string }>;
-  variant?: "uncertain" | "failed";
+  variant?: 'uncertain' | 'failed';
 }
 
 /**
@@ -41,7 +41,7 @@ export function TransactionGroup({
   onSaveEdit,
   onCancelEdit,
   entities,
-  variant = "uncertain",
+  variant = 'uncertain',
 }: TransactionGroupProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEntitySelector, setShowEntitySelector] = useState(false);
@@ -57,25 +57,25 @@ export function TransactionGroup({
     <div
       className={`border rounded-lg ${
         group.aiSuggestion
-          ? "border-purple-300 dark:border-purple-700"
-          : "border-gray-200 dark:border-gray-700"
+          ? 'border-purple-300 dark:border-purple-700'
+          : 'border-gray-200 dark:border-gray-700'
       }`}
       data-testid="transaction-group"
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <div
           className={`p-4 ${
-            group.aiSuggestion ? "bg-purple-50 dark:bg-purple-950" : "bg-gray-50 dark:bg-gray-900"
+            group.aiSuggestion ? 'bg-purple-50 dark:bg-purple-950' : 'bg-gray-50 dark:bg-gray-900'
           }`}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <CollapsibleTrigger
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                aria-label={isExpanded ? "Collapse" : "Expand"}
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
               >
                 <ChevronRight
-                  className={`w-5 h-5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                  className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                   aria-hidden="true"
                 />
                 <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function TransactionGroup({
               <div className="flex items-center gap-3 mt-2 ml-7">
                 <Badge variant="secondary">
                   {group.transactions.length} transaction
-                  {group.transactions.length !== 1 ? "s" : ""}
+                  {group.transactions.length !== 1 ? 's' : ''}
                 </Badge>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   Total: ${totalAmount.toFixed(2)}
@@ -112,7 +112,7 @@ export function TransactionGroup({
                     onClick={() => onAcceptAll(group.transactions)}
                     className="bg-purple-600 hover:bg-purple-700"
                   >
-                    {entityExists ? "✓" : "+"} Accept All as "{group.entityName}"
+                    {entityExists ? '✓' : '+'} Accept All as "{group.entityName}"
                   </Button>
                   <Button
                     variant="outline"

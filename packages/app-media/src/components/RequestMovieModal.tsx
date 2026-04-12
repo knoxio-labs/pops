@@ -4,7 +4,7 @@
  * Presents quality profile and root folder dropdowns,
  * then submits to Radarr's addMovie endpoint.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,10 @@ import {
   DialogTitle,
   DialogDescription,
   Select,
-} from "@pops/ui";
-import { Button } from "@pops/ui";
-import { RefreshCw, CheckCircle2 } from "lucide-react";
-import { trpc } from "../lib/trpc";
+} from '@pops/ui';
+import { Button } from '@pops/ui';
+import { RefreshCw, CheckCircle2 } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 interface RequestMovieModalProps {
   open: boolean;
@@ -32,7 +32,7 @@ function formatBytes(bytes: number): string {
 
 export function RequestMovieModal({ open, onClose, tmdbId, title, year }: RequestMovieModalProps) {
   const [qualityProfileId, setQualityProfileId] = useState<number | null>(null);
-  const [rootFolderPath, setRootFolderPath] = useState<string>("");
+  const [rootFolderPath, setRootFolderPath] = useState<string>('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +69,7 @@ export function RequestMovieModal({ open, onClose, tmdbId, title, year }: Reques
         onClose();
         setSuccess(false);
         setQualityProfileId(null);
-        setRootFolderPath("");
+        setRootFolderPath('');
       }, 1500);
     },
     onError: (err: { message: string }) => {
@@ -83,7 +83,7 @@ export function RequestMovieModal({ open, onClose, tmdbId, title, year }: Reques
       setError(null);
       setSuccess(false);
       setQualityProfileId(null);
-      setRootFolderPath("");
+      setRootFolderPath('');
     }
   };
 
@@ -111,7 +111,7 @@ export function RequestMovieModal({ open, onClose, tmdbId, title, year }: Reques
           ) : profileList.length === 0 || folderList.length === 0 ? (
             <div className="text-center py-4 space-y-2">
               <p className="text-sm text-red-400">
-                {profileList.length === 0 ? "No quality profiles found" : "No root folders found"}.
+                {profileList.length === 0 ? 'No quality profiles found' : 'No root folders found'}.
               </p>
               <Button
                 variant="outline"
@@ -130,7 +130,7 @@ export function RequestMovieModal({ open, onClose, tmdbId, title, year }: Reques
               <Select
                 label="Quality Profile"
                 id="quality-profile"
-                value={String(qualityProfileId ?? "")}
+                value={String(qualityProfileId ?? '')}
                 onChange={(e) => setQualityProfileId(Number(e.target.value))}
                 disabled={addMovie.isPending || success}
                 options={profileList.map((p) => ({
@@ -188,7 +188,7 @@ export function RequestMovieModal({ open, onClose, tmdbId, title, year }: Reques
                   Adding...
                 </>
               ) : (
-                "Request"
+                'Request'
               )}
             </Button>
           </div>

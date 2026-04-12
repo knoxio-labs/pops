@@ -11,18 +11,18 @@
  *   - Items removed from Plex with source="plex" → remove from POPS
  *   - Items removed from Plex with source="both" → downgrade to "manual"
  */
-import { eq, and, isNotNull } from "drizzle-orm";
-import { mediaWatchlist } from "@pops/db-types";
-import type { PlexMediaItem } from "./types.js";
-import { PlexApiError } from "./types.js";
-import { extractExternalIdAsNumber } from "./sync-helpers.js";
-import { getPlexClientId } from "./service.js";
-import { getDb, getDrizzle } from "../../../db.js";
-import { getMovieByTmdbId, createMovie } from "../movies/service.js";
-import { getTvShowByTvdbId } from "../tv-shows/service.js";
-import { getTmdbClient } from "../tmdb/index.js";
-import { getTvdbClient } from "../thetvdb/index.js";
-import * as tvShowService from "../library/tv-show-service.js";
+import { eq, and, isNotNull } from 'drizzle-orm';
+import { mediaWatchlist } from '@pops/db-types';
+import type { PlexMediaItem } from './types.js';
+import { PlexApiError } from './types.js';
+import { extractExternalIdAsNumber } from './sync-helpers.js';
+import { getPlexClientId } from './service.js';
+import { getDb, getDrizzle } from '../../../db.js';
+import { getMovieByTmdbId, createMovie } from '../movies/service.js';
+import { getTvShowByTvdbId } from '../tv-shows/service.js';
+import { getTmdbClient } from '../tmdb/index.js';
+import { getTvdbClient } from '../thetvdb/index.js';
+import * as tvShowService from '../library/tv-show-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,7 +56,7 @@ export interface WatchlistSyncOptions {
 // Plex Discover API
 // ---------------------------------------------------------------------------
 
-const PLEX_DISCOVER_BASE = "https://discover.provider.plex.tv";
+const PLEX_DISCOVER_BASE = 'https://discover.provider.plex.tv';
 
 const WATCHLIST_PAGE_SIZE = 50;
 
@@ -93,8 +93,8 @@ async function fetchPlexWatchlistPage(
   let response: Response;
   try {
     response = await fetch(url, {
-      method: "GET",
-      headers: { Accept: "application/json" },
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     });
   } catch (err) {
     throw new PlexApiError(
@@ -261,7 +261,7 @@ async function syncSingleWatchlistItem(
     progress.skipped++;
     progress.skipReasons.push({
       title: item.title,
-      reason: skipReason ?? "Could not resolve media item",
+      reason: skipReason ?? 'Could not resolve media item',
     });
     return;
   }
@@ -277,22 +277,22 @@ async function syncSingleWatchlistItem(
 
   if (existing) {
     // Already on watchlist — handle source escalation
-    if (existing.source === "manual") {
+    if (existing.source === 'manual') {
       db.update(mediaWatchlist)
-        .set({ source: "both", plexRatingKey })
+        .set({ source: 'both', plexRatingKey })
         .where(eq(mediaWatchlist.id, existing.id))
         .run();
-    } else if (!existing.source || existing.source === "plex") {
+    } else if (!existing.source || existing.source === 'plex') {
       // Ensure plexRatingKey is set
       db.update(mediaWatchlist)
-        .set({ source: "plex", plexRatingKey })
+        .set({ source: 'plex', plexRatingKey })
         .where(eq(mediaWatchlist.id, existing.id))
         .run();
     }
     progress.skipped++;
     progress.skipReasons.push({
       title: item.title,
-      reason: "Already on watchlist",
+      reason: 'Already on watchlist',
     });
     return;
   }
@@ -302,7 +302,7 @@ async function syncSingleWatchlistItem(
     .values({
       mediaType,
       mediaId,
-      source: "plex",
+      source: 'plex',
       plexRatingKey,
     })
     .run();
@@ -315,7 +315,7 @@ async function syncSingleWatchlistItem(
 // ---------------------------------------------------------------------------
 
 interface ResolvedMedia {
-  mediaType: "movie" | "tv_show";
+  mediaType: 'movie' | 'tv_show';
   mediaId: number;
 }
 
@@ -329,16 +329,16 @@ interface ResolveResult {
  * Ensures the item exists in the POPS library (adds if missing).
  */
 async function resolveMediaItem(item: PlexMediaItem): Promise<ResolveResult> {
-  if (item.type === "movie") {
+  if (item.type === 'movie') {
     return resolveMovie(item);
-  } else if (item.type === "show") {
+  } else if (item.type === 'show') {
     return resolveTvShow(item);
   }
   return { resolved: null, skipReason: `Unsupported media type: ${item.type}` };
 }
 
 async function resolveMovie(item: PlexMediaItem): Promise<ResolveResult> {
-  let tmdbId = extractExternalIdAsNumber(item, "tmdb");
+  let tmdbId = extractExternalIdAsNumber(item, 'tmdb');
 
   // Fall back to TMDB title search when Plex metadata lacks the ID
   if (!tmdbId) {
@@ -346,7 +346,7 @@ async function resolveMovie(item: PlexMediaItem): Promise<ResolveResult> {
     if (!tmdbId) {
       return {
         resolved: null,
-        skipReason: "No TMDB ID in Plex metadata and title search found no match",
+        skipReason: 'No TMDB ID in Plex metadata and title search found no match',
       };
     }
   }
@@ -383,16 +383,16 @@ async function resolveMovie(item: PlexMediaItem): Promise<ResolveResult> {
 
       movie = getMovieByTmdbId(tmdbId);
     } catch {
-      return { resolved: null, skipReason: "Failed to fetch movie from TMDB" };
+      return { resolved: null, skipReason: 'Failed to fetch movie from TMDB' };
     }
   }
 
-  if (!movie) return { resolved: null, skipReason: "Failed to create movie record" };
-  return { resolved: { mediaType: "movie", mediaId: movie.id }, skipReason: null };
+  if (!movie) return { resolved: null, skipReason: 'Failed to create movie record' };
+  return { resolved: { mediaType: 'movie', mediaId: movie.id }, skipReason: null };
 }
 
 async function resolveTvShow(item: PlexMediaItem): Promise<ResolveResult> {
-  let tvdbId = extractExternalIdAsNumber(item, "tvdb");
+  let tvdbId = extractExternalIdAsNumber(item, 'tvdb');
 
   // Fall back to TVDB title search when Plex metadata lacks the ID
   if (!tvdbId) {
@@ -400,7 +400,7 @@ async function resolveTvShow(item: PlexMediaItem): Promise<ResolveResult> {
     if (!tvdbId) {
       return {
         resolved: null,
-        skipReason: "No TVDB ID in Plex metadata and title search found no match",
+        skipReason: 'No TVDB ID in Plex metadata and title search found no match',
       };
     }
   }
@@ -413,12 +413,12 @@ async function resolveTvShow(item: PlexMediaItem): Promise<ResolveResult> {
       await tvShowService.addTvShow(tvdbId, tvdbClient);
       show = getTvShowByTvdbId(tvdbId);
     } catch {
-      return { resolved: null, skipReason: "Failed to fetch TV show from TVDB" };
+      return { resolved: null, skipReason: 'Failed to fetch TV show from TVDB' };
     }
   }
 
-  if (!show) return { resolved: null, skipReason: "Failed to create TV show record" };
-  return { resolved: { mediaType: "tv_show", mediaId: show.id }, skipReason: null };
+  if (!show) return { resolved: null, skipReason: 'Failed to create TV show record' };
+  return { resolved: { mediaType: 'tv_show', mediaId: show.id }, skipReason: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -515,12 +515,12 @@ function handleRemovals(seenPlexRatingKeys: Set<string>, progress: WatchlistSync
       if (!entry.plexRatingKey) continue;
       if (seenPlexRatingKeys.has(entry.plexRatingKey)) continue;
 
-      if (entry.source === "plex") {
+      if (entry.source === 'plex') {
         db.delete(mediaWatchlist).where(eq(mediaWatchlist.id, entry.id)).run();
         progress.removed++;
-      } else if (entry.source === "both") {
+      } else if (entry.source === 'both') {
         db.update(mediaWatchlist)
-          .set({ source: "manual", plexRatingKey: null })
+          .set({ source: 'manual', plexRatingKey: null })
           .where(eq(mediaWatchlist.id, entry.id))
           .run();
       }

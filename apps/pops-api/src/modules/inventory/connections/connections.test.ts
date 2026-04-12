@@ -1,16 +1,16 @@
 /**
  * Item connections router tests.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { Database } from "better-sqlite3";
-import { TRPCError } from "@trpc/server";
-import type { TraceNode } from "./types.js";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Database } from 'better-sqlite3';
+import { TRPCError } from '@trpc/server';
+import type { TraceNode } from './types.js';
 import {
   setupTestContext,
   createCaller,
   seedInventoryItem,
   seedItemConnection,
-} from "../../../shared/test-utils.js";
+} from '../../../shared/test-utils.js';
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
@@ -25,14 +25,14 @@ afterEach(() => {
 });
 
 /** Seed two items and return their IDs (sorted for A<B). */
-function seedTwoItems(nameA = "Item A", nameB = "Item B") {
+function seedTwoItems(nameA = 'Item A', nameB = 'Item B') {
   const idA = seedInventoryItem(db, { item_name: nameA });
   const idB = seedInventoryItem(db, { item_name: nameB });
   return [idA, idB].sort() as [string, string];
 }
 
-describe("inventory.connections.connect", () => {
-  it("connects two items and returns the connection", async () => {
+describe('inventory.connections.connect', () => {
+  it('connects two items and returns the connection', async () => {
     const [idA, idB] = seedTwoItems();
 
     const result = await caller.inventory.connections.connect({
@@ -44,12 +44,12 @@ describe("inventory.connections.connect", () => {
       itemAId: idA,
       itemBId: idB,
     });
-    expect(result.data.id).toBeTypeOf("number");
-    expect(result.data.createdAt).toBeTypeOf("string");
-    expect(result.message).toBe("Items connected");
+    expect(result.data.id).toBeTypeOf('number');
+    expect(result.data.createdAt).toBeTypeOf('string');
+    expect(result.message).toBe('Items connected');
   });
 
-  it("auto-orders A<B when inputs are reversed", async () => {
+  it('auto-orders A<B when inputs are reversed', async () => {
     const [idA, idB] = seedTwoItems();
 
     // Pass in reverse order (B first, A second)
@@ -63,7 +63,7 @@ describe("inventory.connections.connect", () => {
     expect(result.data.itemBId).toBe(idB);
   });
 
-  it("throws CONFLICT when connecting same pair twice", async () => {
+  it('throws CONFLICT when connecting same pair twice', async () => {
     const [idA, idB] = seedTwoItems();
 
     await caller.inventory.connections.connect({ itemAId: idA, itemBId: idB });
@@ -75,11 +75,11 @@ describe("inventory.connections.connect", () => {
     try {
       await caller.inventory.connections.connect({ itemAId: idA, itemBId: idB });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("CONFLICT");
+      expect((err as TRPCError).code).toBe('CONFLICT');
     }
   });
 
-  it("throws CONFLICT when connecting same pair in reverse order", async () => {
+  it('throws CONFLICT when connecting same pair in reverse order', async () => {
     const [idA, idB] = seedTwoItems();
 
     await caller.inventory.connections.connect({ itemAId: idA, itemBId: idB });
@@ -89,8 +89,8 @@ describe("inventory.connections.connect", () => {
     ).rejects.toThrow(TRPCError);
   });
 
-  it("throws CONFLICT when connecting an item to itself", async () => {
-    const id = seedInventoryItem(db, { item_name: "Solo Item" });
+  it('throws CONFLICT when connecting an item to itself', async () => {
+    const id = seedInventoryItem(db, { item_name: 'Solo Item' });
 
     await expect(
       caller.inventory.connections.connect({ itemAId: id, itemBId: id })
@@ -99,45 +99,45 @@ describe("inventory.connections.connect", () => {
     try {
       await caller.inventory.connections.connect({ itemAId: id, itemBId: id });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("CONFLICT");
+      expect((err as TRPCError).code).toBe('CONFLICT');
     }
   });
 
-  it("throws NOT_FOUND when item A does not exist", async () => {
-    const idB = seedInventoryItem(db, { item_name: "Real Item" });
+  it('throws NOT_FOUND when item A does not exist', async () => {
+    const idB = seedInventoryItem(db, { item_name: 'Real Item' });
 
     await expect(
-      caller.inventory.connections.connect({ itemAId: "nonexistent", itemBId: idB })
+      caller.inventory.connections.connect({ itemAId: 'nonexistent', itemBId: idB })
     ).rejects.toThrow(TRPCError);
 
     try {
-      await caller.inventory.connections.connect({ itemAId: "nonexistent", itemBId: idB });
+      await caller.inventory.connections.connect({ itemAId: 'nonexistent', itemBId: idB });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("NOT_FOUND");
+      expect((err as TRPCError).code).toBe('NOT_FOUND');
     }
   });
 
-  it("throws NOT_FOUND when item B does not exist", async () => {
-    const idA = seedInventoryItem(db, { item_name: "Real Item" });
+  it('throws NOT_FOUND when item B does not exist', async () => {
+    const idA = seedInventoryItem(db, { item_name: 'Real Item' });
 
     await expect(
-      caller.inventory.connections.connect({ itemAId: idA, itemBId: "nonexistent" })
+      caller.inventory.connections.connect({ itemAId: idA, itemBId: 'nonexistent' })
     ).rejects.toThrow(TRPCError);
 
     try {
-      await caller.inventory.connections.connect({ itemAId: idA, itemBId: "nonexistent" });
+      await caller.inventory.connections.connect({ itemAId: idA, itemBId: 'nonexistent' });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("NOT_FOUND");
+      expect((err as TRPCError).code).toBe('NOT_FOUND');
     }
   });
 
-  it("persists to the database", async () => {
+  it('persists to the database', async () => {
     const [idA, idB] = seedTwoItems();
 
     await caller.inventory.connections.connect({ itemAId: idA, itemBId: idB });
 
     const row = db
-      .prepare("SELECT * FROM item_connections WHERE item_a_id = ? AND item_b_id = ?")
+      .prepare('SELECT * FROM item_connections WHERE item_a_id = ? AND item_b_id = ?')
       .get(idA, idB) as { item_a_id: string; item_b_id: string } | undefined;
 
     expect(row).toBeDefined();
@@ -146,33 +146,33 @@ describe("inventory.connections.connect", () => {
   });
 });
 
-describe("inventory.connections.disconnect", () => {
-  it("removes an existing connection", async () => {
+describe('inventory.connections.disconnect', () => {
+  it('removes an existing connection', async () => {
     const [idA, idB] = seedTwoItems();
     const connId = seedItemConnection(db, idA, idB);
 
     const result = await caller.inventory.connections.disconnect({ id: connId });
 
-    expect(result.message).toBe("Items disconnected");
+    expect(result.message).toBe('Items disconnected');
 
-    const row = db.prepare("SELECT * FROM item_connections WHERE id = ?").get(connId);
+    const row = db.prepare('SELECT * FROM item_connections WHERE id = ?').get(connId);
     expect(row).toBeUndefined();
   });
 
-  it("throws NOT_FOUND for nonexistent connection", async () => {
+  it('throws NOT_FOUND for nonexistent connection', async () => {
     await expect(caller.inventory.connections.disconnect({ id: 999 })).rejects.toThrow(TRPCError);
 
     try {
       await caller.inventory.connections.disconnect({ id: 999 });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("NOT_FOUND");
+      expect((err as TRPCError).code).toBe('NOT_FOUND');
     }
   });
 });
 
-describe("inventory.connections.listForItem", () => {
-  it("returns empty list when no connections exist", async () => {
-    const id = seedInventoryItem(db, { item_name: "Lonely Item" });
+describe('inventory.connections.listForItem', () => {
+  it('returns empty list when no connections exist', async () => {
+    const id = seedInventoryItem(db, { item_name: 'Lonely Item' });
 
     const result = await caller.inventory.connections.listForItem({ itemId: id });
 
@@ -180,8 +180,8 @@ describe("inventory.connections.listForItem", () => {
     expect(result.pagination.total).toBe(0);
   });
 
-  it("returns connections where item is in A column", async () => {
-    const [idA, idB] = seedTwoItems("AAA", "ZZZ");
+  it('returns connections where item is in A column', async () => {
+    const [idA, idB] = seedTwoItems('AAA', 'ZZZ');
     seedItemConnection(db, idA, idB);
 
     const result = await caller.inventory.connections.listForItem({ itemId: idA });
@@ -191,8 +191,8 @@ describe("inventory.connections.listForItem", () => {
     expect(result.data[0]!.itemBId).toBe(idB);
   });
 
-  it("returns connections where item is in B column", async () => {
-    const [idA, idB] = seedTwoItems("AAA", "ZZZ");
+  it('returns connections where item is in B column', async () => {
+    const [idA, idB] = seedTwoItems('AAA', 'ZZZ');
     seedItemConnection(db, idA, idB);
 
     const result = await caller.inventory.connections.listForItem({ itemId: idB });
@@ -202,10 +202,10 @@ describe("inventory.connections.listForItem", () => {
     expect(result.data[0]!.itemBId).toBe(idB);
   });
 
-  it("returns multiple connections for an item", async () => {
-    const idA = seedInventoryItem(db, { item_name: "Hub" });
-    const idB = seedInventoryItem(db, { item_name: "Device 1" });
-    const idC = seedInventoryItem(db, { item_name: "Device 2" });
+  it('returns multiple connections for an item', async () => {
+    const idA = seedInventoryItem(db, { item_name: 'Hub' });
+    const idB = seedInventoryItem(db, { item_name: 'Device 1' });
+    const idC = seedInventoryItem(db, { item_name: 'Device 2' });
 
     // Manually sort pairs for A<B
     const pairAB = [idA, idB].sort() as [string, string];
@@ -220,8 +220,8 @@ describe("inventory.connections.listForItem", () => {
     expect(result.pagination.total).toBe(2);
   });
 
-  it("paginates results", async () => {
-    const idA = seedInventoryItem(db, { item_name: "Hub" });
+  it('paginates results', async () => {
+    const idA = seedInventoryItem(db, { item_name: 'Hub' });
     const items: string[] = [];
 
     for (let i = 0; i < 3; i++) {
@@ -254,11 +254,11 @@ describe("inventory.connections.listForItem", () => {
   });
 });
 
-describe("inventory.connections.graph", () => {
-  it("returns nodes and edges for a connected graph", async () => {
-    const idA = seedInventoryItem(db, { item_name: "Hub" });
-    const idB = seedInventoryItem(db, { item_name: "Device 1" });
-    const idC = seedInventoryItem(db, { item_name: "Device 2" });
+describe('inventory.connections.graph', () => {
+  it('returns nodes and edges for a connected graph', async () => {
+    const idA = seedInventoryItem(db, { item_name: 'Hub' });
+    const idB = seedInventoryItem(db, { item_name: 'Device 1' });
+    const idC = seedInventoryItem(db, { item_name: 'Device 2' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairAC = [idA, idC].sort() as [string, string];
@@ -274,8 +274,8 @@ describe("inventory.connections.graph", () => {
     expect(nodeIds).toEqual([idA, idB, idC].sort());
   });
 
-  it("returns single node with no edges when item has no connections", async () => {
-    const id = seedInventoryItem(db, { item_name: "Lonely Item" });
+  it('returns single node with no edges when item has no connections', async () => {
+    const id = seedInventoryItem(db, { item_name: 'Lonely Item' });
 
     const result = await caller.inventory.connections.graph({ itemId: id });
 
@@ -284,24 +284,24 @@ describe("inventory.connections.graph", () => {
     expect(result.data.edges).toHaveLength(0);
   });
 
-  it("throws NOT_FOUND for nonexistent item", async () => {
-    await expect(caller.inventory.connections.graph({ itemId: "nonexistent" })).rejects.toThrow(
+  it('throws NOT_FOUND for nonexistent item', async () => {
+    await expect(caller.inventory.connections.graph({ itemId: 'nonexistent' })).rejects.toThrow(
       TRPCError
     );
 
     try {
-      await caller.inventory.connections.graph({ itemId: "nonexistent" });
+      await caller.inventory.connections.graph({ itemId: 'nonexistent' });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("NOT_FOUND");
+      expect((err as TRPCError).code).toBe('NOT_FOUND');
     }
   });
 
-  it("respects maxDepth parameter", async () => {
+  it('respects maxDepth parameter', async () => {
     // Chain: A -- B -- C -- D
-    const idA = seedInventoryItem(db, { item_name: "A" });
-    const idB = seedInventoryItem(db, { item_name: "B" });
-    const idC = seedInventoryItem(db, { item_name: "C" });
-    const idD = seedInventoryItem(db, { item_name: "D" });
+    const idA = seedInventoryItem(db, { item_name: 'A' });
+    const idB = seedInventoryItem(db, { item_name: 'B' });
+    const idC = seedInventoryItem(db, { item_name: 'C' });
+    const idD = seedInventoryItem(db, { item_name: 'D' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairBC = [idB, idC].sort() as [string, string];
@@ -318,11 +318,11 @@ describe("inventory.connections.graph", () => {
     expect(nodeIds).toEqual([idA, idB].sort());
   });
 
-  it("includes cross-links between visited nodes", async () => {
+  it('includes cross-links between visited nodes', async () => {
     // Triangle: A -- B, A -- C, B -- C
-    const idA = seedInventoryItem(db, { item_name: "A" });
-    const idB = seedInventoryItem(db, { item_name: "B" });
-    const idC = seedInventoryItem(db, { item_name: "C" });
+    const idA = seedInventoryItem(db, { item_name: 'A' });
+    const idB = seedInventoryItem(db, { item_name: 'B' });
+    const idC = seedInventoryItem(db, { item_name: 'C' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairAC = [idA, idC].sort() as [string, string];
@@ -338,39 +338,39 @@ describe("inventory.connections.graph", () => {
     expect(result.data.edges).toHaveLength(3);
   });
 
-  it("returns node metadata (itemName, assetId, type)", async () => {
+  it('returns node metadata (itemName, assetId, type)', async () => {
     const id = seedInventoryItem(db, {
-      item_name: "MacBook Pro",
-      asset_id: "ASSET-001",
-      type: "electronics",
+      item_name: 'MacBook Pro',
+      asset_id: 'ASSET-001',
+      type: 'electronics',
     });
 
     const result = await caller.inventory.connections.graph({ itemId: id });
 
     expect(result.data.nodes[0]).toMatchObject({
       id,
-      itemName: "MacBook Pro",
-      assetId: "ASSET-001",
-      type: "electronics",
+      itemName: 'MacBook Pro',
+      assetId: 'ASSET-001',
+      type: 'electronics',
     });
   });
 });
 
-describe("inventory.connections.trace", () => {
-  it("returns root node with no children when item has no connections", async () => {
-    const id = seedInventoryItem(db, { item_name: "Lonely Item" });
+describe('inventory.connections.trace', () => {
+  it('returns root node with no children when item has no connections', async () => {
+    const id = seedInventoryItem(db, { item_name: 'Lonely Item' });
 
     const result = await caller.inventory.connections.trace({ itemId: id });
 
     expect(result.data.id).toBe(id);
-    expect(result.data.itemName).toBe("Lonely Item");
+    expect(result.data.itemName).toBe('Lonely Item');
     expect(result.data.children).toEqual([]);
   });
 
-  it("returns tree with direct connections as children", async () => {
-    const idA = seedInventoryItem(db, { item_name: "Hub" });
-    const idB = seedInventoryItem(db, { item_name: "Device 1" });
-    const idC = seedInventoryItem(db, { item_name: "Device 2" });
+  it('returns tree with direct connections as children', async () => {
+    const idA = seedInventoryItem(db, { item_name: 'Hub' });
+    const idB = seedInventoryItem(db, { item_name: 'Device 1' });
+    const idC = seedInventoryItem(db, { item_name: 'Device 2' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairAC = [idA, idC].sort() as [string, string];
@@ -385,12 +385,12 @@ describe("inventory.connections.trace", () => {
     expect(childIds).toEqual([idB, idC].sort());
   });
 
-  it("traverses multi-level chain recursively", async () => {
+  it('traverses multi-level chain recursively', async () => {
     // Chain: A -- B -- C -- D
-    const idA = seedInventoryItem(db, { item_name: "A" });
-    const idB = seedInventoryItem(db, { item_name: "B" });
-    const idC = seedInventoryItem(db, { item_name: "C" });
-    const idD = seedInventoryItem(db, { item_name: "D" });
+    const idA = seedInventoryItem(db, { item_name: 'A' });
+    const idB = seedInventoryItem(db, { item_name: 'B' });
+    const idC = seedInventoryItem(db, { item_name: 'C' });
+    const idD = seedInventoryItem(db, { item_name: 'D' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairBC = [idB, idC].sort() as [string, string];
@@ -418,12 +418,12 @@ describe("inventory.connections.trace", () => {
     expect(nodeD.children).toEqual([]);
   });
 
-  it("respects maxDepth and stops traversal", async () => {
+  it('respects maxDepth and stops traversal', async () => {
     // Chain: A -- B -- C -- D
-    const idA = seedInventoryItem(db, { item_name: "A" });
-    const idB = seedInventoryItem(db, { item_name: "B" });
-    const idC = seedInventoryItem(db, { item_name: "C" });
-    const idD = seedInventoryItem(db, { item_name: "D" });
+    const idA = seedInventoryItem(db, { item_name: 'A' });
+    const idB = seedInventoryItem(db, { item_name: 'B' });
+    const idC = seedInventoryItem(db, { item_name: 'C' });
+    const idD = seedInventoryItem(db, { item_name: 'D' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairBC = [idB, idC].sort() as [string, string];
@@ -442,11 +442,11 @@ describe("inventory.connections.trace", () => {
     expect(result.data.children[0]!.children).toEqual([]);
   });
 
-  it("prevents cycles in triangle connections", async () => {
+  it('prevents cycles in triangle connections', async () => {
     // Triangle: A -- B, A -- C, B -- C
-    const idA = seedInventoryItem(db, { item_name: "A" });
-    const idB = seedInventoryItem(db, { item_name: "B" });
-    const idC = seedInventoryItem(db, { item_name: "C" });
+    const idA = seedInventoryItem(db, { item_name: 'A' });
+    const idB = seedInventoryItem(db, { item_name: 'B' });
+    const idC = seedInventoryItem(db, { item_name: 'C' });
 
     const pairAB = [idA, idB].sort() as [string, string];
     const pairAC = [idA, idC].sort() as [string, string];
@@ -468,55 +468,55 @@ describe("inventory.connections.trace", () => {
     expect(countNodes(result.data)).toBe(3);
   });
 
-  it("throws NOT_FOUND for nonexistent item", async () => {
-    await expect(caller.inventory.connections.trace({ itemId: "nonexistent" })).rejects.toThrow(
+  it('throws NOT_FOUND for nonexistent item', async () => {
+    await expect(caller.inventory.connections.trace({ itemId: 'nonexistent' })).rejects.toThrow(
       TRPCError
     );
 
     try {
-      await caller.inventory.connections.trace({ itemId: "nonexistent" });
+      await caller.inventory.connections.trace({ itemId: 'nonexistent' });
     } catch (err) {
-      expect((err as TRPCError).code).toBe("NOT_FOUND");
+      expect((err as TRPCError).code).toBe('NOT_FOUND');
     }
   });
 
-  it("includes node metadata (itemName, assetId, type)", async () => {
+  it('includes node metadata (itemName, assetId, type)', async () => {
     const id = seedInventoryItem(db, {
-      item_name: "MacBook Pro",
-      asset_id: "ASSET-001",
-      type: "electronics",
+      item_name: 'MacBook Pro',
+      asset_id: 'ASSET-001',
+      type: 'electronics',
     });
 
     const result = await caller.inventory.connections.trace({ itemId: id });
 
     expect(result.data).toMatchObject({
       id,
-      itemName: "MacBook Pro",
-      assetId: "ASSET-001",
-      type: "electronics",
+      itemName: 'MacBook Pro',
+      assetId: 'ASSET-001',
+      type: 'electronics',
       children: [],
     });
   });
 });
 
-describe("inventory.connections auth", () => {
-  it("throws UNAUTHORIZED without auth on connect", async () => {
+describe('inventory.connections auth', () => {
+  it('throws UNAUTHORIZED without auth on connect', async () => {
     const unauthCaller = createCaller(false);
     await expect(
-      unauthCaller.inventory.connections.connect({ itemAId: "a", itemBId: "b" })
+      unauthCaller.inventory.connections.connect({ itemAId: 'a', itemBId: 'b' })
     ).rejects.toThrow(TRPCError);
   });
 
-  it("throws UNAUTHORIZED without auth on disconnect", async () => {
+  it('throws UNAUTHORIZED without auth on disconnect', async () => {
     const unauthCaller = createCaller(false);
     await expect(unauthCaller.inventory.connections.disconnect({ id: 1 })).rejects.toThrow(
       TRPCError
     );
   });
 
-  it("throws UNAUTHORIZED without auth on listForItem", async () => {
+  it('throws UNAUTHORIZED without auth on listForItem', async () => {
     const unauthCaller = createCaller(false);
-    await expect(unauthCaller.inventory.connections.listForItem({ itemId: "a" })).rejects.toThrow(
+    await expect(unauthCaller.inventory.connections.listForItem({ itemId: 'a' })).rejects.toThrow(
       TRPCError
     );
   });

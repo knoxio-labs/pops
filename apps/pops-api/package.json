@@ -37,14 +37,13 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "format": "prettier --check \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "format:fix": "prettier --write \"src/**/*.ts\"",
+    "format:check": "oxfmt -c ../../.oxfmtrc.json --check \"src/**/*.ts\"",
+    "format:fix": "oxfmt -c ../../.oxfmtrc.json --write \"src/**/*.ts\"",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:all": "vitest run && vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
-    "ci": "pnpm typecheck && pnpm lint && pnpm format && pnpm test && pnpm build"
+    "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.85.0",
@@ -74,7 +73,6 @@
     "eslint": "^10.2.0",
     "msw": "^2.13.1",
     "papaparse": "^5.5.3",
-    "prettier": "^3.0.0",
     "supertest": "^7.2.2",
     "tsx": "^4.19.0",
     "typescript": "^6.0.0",

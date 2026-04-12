@@ -1,7 +1,7 @@
 /**
  * Discovery / preference profile types and trending/recommendation types.
  */
-import { z } from "zod";
+import { z } from 'zod';
 
 export interface GenreAffinity {
   genre: string;
@@ -47,7 +47,7 @@ export interface QuickPickMovie {
 
 /** Schema for trending query input. */
 export const TrendingQuerySchema = z.object({
-  timeWindow: z.enum(["day", "week"]).optional().default("week"),
+  timeWindow: z.enum(['day', 'week']).optional().default('week'),
   page: z.number().int().positive().max(500).optional().default(1),
 });
 
@@ -108,23 +108,23 @@ export interface RewatchSuggestion {
  * @see https://developer.themoviedb.org/reference/genre-movie-list
  */
 export const TMDB_GENRE_MAP: Record<number, string> = {
-  28: "Action",
-  12: "Adventure",
-  16: "Animation",
-  35: "Comedy",
-  80: "Crime",
-  99: "Documentary",
-  18: "Drama",
-  10751: "Family",
-  14: "Fantasy",
-  36: "History",
-  27: "Horror",
-  10402: "Music",
-  9648: "Mystery",
-  10749: "Romance",
-  878: "Science Fiction",
-  10770: "TV Movie",
-  53: "Thriller",
-  10752: "War",
-  37: "Western",
+  28: 'Action',
+  12: 'Adventure',
+  16: 'Animation',
+  35: 'Comedy',
+  80: 'Crime',
+  99: 'Documentary',
+  18: 'Drama',
+  10751: 'Family',
+  14: 'Fantasy',
+  36: 'History',
+  27: 'Horror',
+  10402: 'Music',
+  9648: 'Mystery',
+  10749: 'Romance',
+  878: 'Science Fiction',
+  10770: 'TV Movie',
+  53: 'Thriller',
+  10752: 'War',
+  37: 'Western',
 };

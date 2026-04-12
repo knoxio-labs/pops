@@ -5,30 +5,30 @@
  * The startSyncJob mutation returns immediately with a job ID.
  * The frontend polls getSyncJobStatus for progress and results.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { eq, inArray } from "drizzle-orm";
-import { settings } from "@pops/db-types";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { PlexApiError } from "./types.js";
-import { PlexClient } from "./client.js";
-import * as plexService from "./service.js";
-import * as scheduler from "./scheduler.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { eq, inArray } from 'drizzle-orm';
+import { settings } from '@pops/db-types';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { PlexApiError } from './types.js';
+import { PlexClient } from './client.js';
+import * as plexService from './service.js';
+import * as scheduler from './scheduler.js';
 import {
   SYNC_JOB_TYPES,
   startJob,
   getJob,
   getActiveJobs,
   getLastCompletedJobs,
-} from "./sync-job-manager.js";
-import { getDrizzle } from "../../../db.js";
+} from './sync-job-manager.js';
+import { getDrizzle } from '../../../db.js';
 
 function requirePlexClient(): PlexClient {
   const client = plexService.getPlexClient();
   if (!client) {
     throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Plex is not configured. Connect to Plex in settings first.",
+      code: 'PRECONDITION_FAILED',
+      message: 'Plex is not configured. Connect to Plex in settings first.',
     });
   }
   return client;
@@ -56,7 +56,7 @@ export const plexRouter = router({
     } catch (err) {
       if (err instanceof PlexApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Plex API error: ${err.message}`,
         });
       }
@@ -89,7 +89,7 @@ export const plexRouter = router({
         return { data: { jobId } };
       } catch (err) {
         throw new TRPCError({
-          code: "CONFLICT",
+          code: 'CONFLICT',
           message: err instanceof Error ? err.message : String(err),
         });
       }
@@ -101,7 +101,7 @@ export const plexRouter = router({
     .query(({ input }) => {
       const job = getJob(input.jobId);
       if (!job) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
       }
       return { data: job };
     }),
@@ -125,7 +125,7 @@ export const plexRouter = router({
     .input(z.object({ url: z.string().min(1) }))
     .mutation(async ({ input }) => {
       let finalUrl = input.url.trim();
-      if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
         finalUrl = `http://${finalUrl}`;
       }
 
@@ -133,14 +133,14 @@ export const plexRouter = router({
         new URL(finalUrl);
       } catch {
         throw new TRPCError({
-          code: "BAD_REQUEST",
+          code: 'BAD_REQUEST',
           message:
-            "Invalid URL format. Please provide a valid address (e.g., http://192.168.1.100:32400)",
+            'Invalid URL format. Please provide a valid address (e.g., http://192.168.1.100:32400)',
         });
       }
 
       const db = getDrizzle();
-      const tokenRecord = db.select().from(settings).where(eq(settings.key, "plex_token")).get();
+      const tokenRecord = db.select().from(settings).where(eq(settings.key, 'plex_token')).get();
       const token = tokenRecord?.value;
 
       try {
@@ -156,7 +156,7 @@ export const plexRouter = router({
           try {
             const res = await fetch(`${finalUrl}/identity`, {
               signal: controller.signal,
-              headers: { Accept: "application/json" },
+              headers: { Accept: 'application/json' },
             });
             if (!res.ok && res.status !== 401) {
               throw new Error(`Server responded with ${res.status}`);
@@ -168,18 +168,18 @@ export const plexRouter = router({
       } catch (err) {
         console.error(`[Plex] Connection validation failed for ${finalUrl}:`, err);
         throw new TRPCError({
-          code: "BAD_REQUEST",
+          code: 'BAD_REQUEST',
           message: `Could not connect to Plex server at ${finalUrl}. Verify the address is correct and the server is reachable.`,
         });
       }
 
       console.log(`[Plex] Updating server URL to: ${finalUrl}`);
       db.insert(settings)
-        .values({ key: "plex_url", value: finalUrl })
+        .values({ key: 'plex_url', value: finalUrl })
         .onConflictDoUpdate({ target: settings.key, set: { value: finalUrl } })
         .run();
 
-      return { message: "Plex URL updated and validated" };
+      return { message: 'Plex URL updated and validated' };
     }),
 
   getPlexUrl: protectedProcedure.query(() => {
@@ -229,23 +229,23 @@ export const plexRouter = router({
     )
     .mutation(({ input }) => {
       plexService.savePlexSectionIds(input.movieSectionId, input.tvSectionId);
-      return { message: "Section IDs saved" };
+      return { message: 'Section IDs saved' };
     }),
 
   getAuthPin: protectedProcedure.mutation(async () => {
     const clientId = plexService.getPlexClientId();
-    const res = await fetch("https://plex.tv/api/v2/pins?strong=false", {
-      method: "POST",
+    const res = await fetch('https://plex.tv/api/v2/pins?strong=false', {
+      method: 'POST',
       headers: {
-        Accept: "application/json",
-        "X-Plex-Product": "POPS",
-        "X-Plex-Client-Identifier": clientId,
+        Accept: 'application/json',
+        'X-Plex-Product': 'POPS',
+        'X-Plex-Client-Identifier': clientId,
       },
     });
     if (!res.ok) {
       const status = res.status;
       throw new TRPCError({
-        code: status === 429 ? "TOO_MANY_REQUESTS" : "INTERNAL_SERVER_ERROR",
+        code: status === 429 ? 'TOO_MANY_REQUESTS' : 'INTERNAL_SERVER_ERROR',
         message: `Failed to get Plex PIN (HTTP ${status})`,
       });
     }
@@ -259,8 +259,8 @@ export const plexRouter = router({
       const clientId = plexService.getPlexClientId();
       const res = await fetch(`https://plex.tv/api/v2/pins/${input.id}`, {
         headers: {
-          Accept: "application/json",
-          "X-Plex-Client-Identifier": clientId,
+          Accept: 'application/json',
+          'X-Plex-Client-Identifier': clientId,
         },
       });
 
@@ -268,12 +268,12 @@ export const plexRouter = router({
         const status = res.status;
         if (status === 404) {
           throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Invalid or expired PIN ID",
+            code: 'NOT_FOUND',
+            message: 'Invalid or expired PIN ID',
           });
         }
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to check Plex PIN (HTTP ${status})`,
         });
       }
@@ -293,7 +293,7 @@ export const plexRouter = router({
 
       console.log(
         `[Plex] PIN check response for ${input.id}:`,
-        data.authToken ? "Token received" : "No token yet"
+        data.authToken ? 'Token received' : 'No token yet'
       );
 
       if (data.authToken) {
@@ -301,13 +301,13 @@ export const plexRouter = router({
         console.log(`[Plex] Encrypting and saving token to database...`);
         const encryptedToken = plexService.encryptToken(data.authToken);
         db.insert(settings)
-          .values({ key: "plex_token", value: encryptedToken })
+          .values({ key: 'plex_token', value: encryptedToken })
           .onConflictDoUpdate({ target: settings.key, set: { value: encryptedToken } })
           .run();
 
         if (data.username) {
           db.insert(settings)
-            .values({ key: "plex_username", value: data.username })
+            .values({ key: 'plex_username', value: data.username })
             .onConflictDoUpdate({ target: settings.key, set: { value: data.username } })
             .run();
         }
@@ -324,8 +324,8 @@ export const plexRouter = router({
   disconnect: protectedProcedure.mutation(() => {
     const db = getDrizzle();
     db.delete(settings)
-      .where(inArray(settings.key, ["plex_token", "plex_username"]))
+      .where(inArray(settings.key, ['plex_token', 'plex_username']))
       .run();
-    return { message: "Disconnected from Plex" };
+    return { message: 'Disconnected from Plex' };
   }),
 });

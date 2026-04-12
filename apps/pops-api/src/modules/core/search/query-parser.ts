@@ -10,9 +10,9 @@
  *
  * Unrecognised key:value tokens are treated as plain text.
  */
-import type { Query, StructuredFilter } from "./types.js";
+import type { Query, StructuredFilter } from './types.js';
 
-const KNOWN_KEYS = new Set(["type", "domain", "year", "value", "warranty"]);
+const KNOWN_KEYS = new Set(['type', 'domain', 'year', 'value', 'warranty']);
 
 /**
  * Matches tokens like `key:value`, `key:>value`, `key:<value`.
@@ -34,10 +34,10 @@ export function parseQuery(input: string): Query {
     FILTER_PATTERN.lastIndex = 0;
     const match = FILTER_PATTERN.exec(token);
 
-    if (match && match.index === 0 && match[0] === token && KNOWN_KEYS.has(match[1] ?? "")) {
-      const key = match[1] ?? "";
-      const operator = match[2] || "";
-      const value = match[3] ?? "";
+    if (match && match.index === 0 && match[0] === token && KNOWN_KEYS.has(match[1] ?? '')) {
+      const key = match[1] ?? '';
+      const operator = match[2] || '';
+      const value = match[3] ?? '';
       filters.push({ key, value: `${operator}${value}` });
     } else {
       textParts.push(token);
@@ -45,7 +45,7 @@ export function parseQuery(input: string): Query {
   }
 
   return {
-    text: textParts.join(" "),
+    text: textParts.join(' '),
     filters: filters.length > 0 ? filters : undefined,
   };
 }

@@ -7,31 +7,31 @@
  * Downloads concurrently. Skips null paths and existing files.
  * Failures are logged, not thrown.
  */
-import { mkdir, rm, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
-const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 /** Allowed hostnames for image downloads. */
-const ALLOWED_IMAGE_HOSTS = new Set(["image.tmdb.org", "artworks.thetvdb.com"]);
+const ALLOWED_IMAGE_HOSTS = new Set(['image.tmdb.org', 'artworks.thetvdb.com']);
 
 /** Map media type to directory name. */
 export const MEDIA_DIR_NAMES: Record<string, string> = {
-  movie: "movies",
-  tv: "tv",
+  movie: 'movies',
+  tv: 'tv',
 };
 
 const IMAGE_SIZES = {
-  poster: "w780",
-  backdrop: "w1280",
-  logo: "original",
+  poster: 'w780',
+  backdrop: 'w1280',
+  logo: 'original',
 } as const;
 
 const IMAGE_FILENAMES = {
-  poster: "poster.jpg",
-  backdrop: "backdrop.jpg",
-  logo: "logo.png",
-  override: "override.jpg",
+  poster: 'poster.jpg',
+  backdrop: 'backdrop.jpg',
+  logo: 'logo.png',
+  override: 'override.jpg',
 } as const;
 
 export type ImageType = keyof typeof IMAGE_FILENAMES;
@@ -172,7 +172,7 @@ export class ImageCacheService {
    * Returns null if the file doesn't exist.
    */
   async getImagePath(
-    mediaType: "movie" | "tv",
+    mediaType: 'movie' | 'tv',
     id: number,
     imageType: ImageType
   ): Promise<string | null> {
@@ -214,11 +214,11 @@ export class ImageCacheService {
   }
 
   private movieDir(tmdbId: number): string {
-    return join(this.imagesDir, "movies", String(tmdbId));
+    return join(this.imagesDir, 'movies', String(tmdbId));
   }
 
   private tvShowDir(tvdbId: number): string {
-    return join(this.imagesDir, "tv", String(tvdbId));
+    return join(this.imagesDir, 'tv', String(tvdbId));
   }
 
   /**
@@ -259,10 +259,10 @@ export class ImageCacheService {
 
     const hue = (seed * 137) % 360;
     const escapedLabel = label
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="780" height="1170" viewBox="0 0 780 1170">
   <rect width="780" height="1170" fill="hsl(${hue}, 40%, 30%)" />
@@ -273,7 +273,7 @@ export class ImageCacheService {
   </text>
 </svg>`;
 
-    await writeFile(destPath, svg, "utf-8");
+    await writeFile(destPath, svg, 'utf-8');
   }
 
   private async downloadImage(url: string, destPath: string): Promise<void> {

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ const mockStopSchedulerMutate = vi.fn();
 
 let getPinOpts: Record<string, unknown> = {};
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 /** Per-job-type sync state, controlled via `setSyncJobState`. */
 const syncJobStates: Record<
@@ -35,7 +35,7 @@ const syncJobStates: Record<
     error: string | null;
     durationMs: number | null;
     completedAt: string | null;
-    status: "idle" | "running" | "completed" | "failed";
+    status: 'idle' | 'running' | 'completed' | 'failed';
   }
 > = {};
 
@@ -49,7 +49,7 @@ function defaultSyncJobState() {
     error: null,
     durationMs: null,
     completedAt: null,
-    status: "idle" as const,
+    status: 'idle' as const,
   };
 }
 
@@ -57,11 +57,11 @@ function setSyncJobState(jobType: string, overrides: Record<string, unknown>) {
   syncJobStates[jobType] = { ...defaultSyncJobState(), ...overrides };
 }
 
-vi.mock("../hooks/useSyncJob", () => ({
+vi.mock('../hooks/useSyncJob', () => ({
   useSyncJob: (jobType: string) => syncJobStates[jobType] ?? defaultSyncJobState(),
 }));
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       plex: {
@@ -138,7 +138,7 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { PlexSettingsPage } from "./PlexSettingsPage";
+import { PlexSettingsPage } from './PlexSettingsPage';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -159,8 +159,8 @@ function setupDefaults(
     hasUrl = true,
     connected = true,
     libraries = [
-      { key: "1", title: "Movies", type: "movie" },
-      { key: "2", title: "TV Shows", type: "show" },
+      { key: '1', title: 'Movies', type: 'movie' },
+      { key: '2', title: 'TV Shows', type: 'show' },
     ],
     schedulerRunning = false,
     schedulerIntervalMs = 21600000,
@@ -172,10 +172,10 @@ function setupDefaults(
   });
   mockGetPlexUrl.mockReturnValue({
     isLoading: false,
-    data: { data: hasUrl ? "http://192.168.1.100:32400" : null },
+    data: { data: hasUrl ? 'http://192.168.1.100:32400' : null },
   });
   mockGetSectionIds.mockReturnValue({
-    data: { data: { movieSectionId: "1", tvSectionId: "2" } },
+    data: { data: { movieSectionId: '1', tvSectionId: '2' } },
   });
   mockGetSchedulerStatus.mockReturnValue({
     data: {
@@ -223,8 +223,8 @@ beforeEach(() => {
   }
 });
 
-describe("PlexSettingsPage", () => {
-  it("shows loading skeleton when data is loading", () => {
+describe('PlexSettingsPage', () => {
+  it('shows loading skeleton when data is loading', () => {
     mockGetSyncStatus.mockReturnValue({ isLoading: true });
     mockGetPlexUrl.mockReturnValue({ isLoading: true });
     mockGetSectionIds.mockReturnValue({ data: null });
@@ -235,23 +235,23 @@ describe("PlexSettingsPage", () => {
 
     renderPage();
     // Skeletons are rendered (no page header visible)
-    expect(screen.queryByText("Plex Settings")).not.toBeInTheDocument();
+    expect(screen.queryByText('Plex Settings')).not.toBeInTheDocument();
   });
 
-  it("renders URL input and save button", () => {
+  it('renders URL input and save button', () => {
     setupDefaults({ connected: false, hasToken: false, configured: false, hasUrl: false });
     renderPage();
 
-    expect(screen.getByPlaceholderText("http://192.168.1.100:32400")).toBeInTheDocument();
-    expect(screen.getByText("Server Configuration")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('http://192.168.1.100:32400')).toBeInTheDocument();
+    expect(screen.getByText('Server Configuration')).toBeInTheDocument();
   });
 
-  it("shows PIN code prominently during auth flow", () => {
+  it('shows PIN code prominently during auth flow', () => {
     setupDefaults({ hasToken: false, configured: false });
     renderPage();
 
     // Click connect
-    const connectBtn = screen.getByText("Connect to Plex");
+    const connectBtn = screen.getByText('Connect to Plex');
     expect(connectBtn).toBeInTheDocument();
     fireEvent.click(connectBtn);
     expect(mockGetPinMutate).toHaveBeenCalled();
@@ -261,211 +261,211 @@ describe("PlexSettingsPage", () => {
       data: { id: number; code: string; clientId: string };
     }) => void;
     act(() => {
-      onSuccess({ data: { id: 123, code: "ABCD", clientId: "test-client" } });
+      onSuccess({ data: { id: 123, code: 'ABCD', clientId: 'test-client' } });
     });
 
     // PIN code should be visible
-    expect(screen.getByText("ABCD")).toBeInTheDocument();
+    expect(screen.getByText('ABCD')).toBeInTheDocument();
   });
 
-  it("shows plex.tv/link URL during PIN auth", () => {
+  it('shows plex.tv/link URL during PIN auth', () => {
     setupDefaults({ hasToken: false, configured: false });
     renderPage();
 
     // Trigger PIN flow
-    fireEvent.click(screen.getByText("Connect to Plex"));
+    fireEvent.click(screen.getByText('Connect to Plex'));
     const onSuccess = getPinOpts.onSuccess as (res: {
       data: { id: number; code: string; clientId: string };
     }) => void;
     act(() => {
-      onSuccess({ data: { id: 123, code: "WXYZ", clientId: "test" } });
+      onSuccess({ data: { id: 123, code: 'WXYZ', clientId: 'test' } });
     });
 
     // The link should be present
-    const link = screen.getByText("plex.tv/link");
+    const link = screen.getByText('plex.tv/link');
     expect(link).toBeInTheDocument();
-    expect(link.closest("a")).toHaveAttribute("href", "https://plex.tv/link");
+    expect(link.closest('a')).toHaveAttribute('href', 'https://plex.tv/link');
   });
 
-  it("renders movie and TV library selects when connected", () => {
+  it('renders movie and TV library selects when connected', () => {
     setupDefaults();
     renderPage();
 
-    expect(screen.getByLabelText("Select movie library")).toBeInTheDocument();
-    expect(screen.getByLabelText("Select TV library")).toBeInTheDocument();
+    expect(screen.getByLabelText('Select movie library')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select TV library')).toBeInTheDocument();
   });
 
-  it("displays inline sync results after movie sync", () => {
+  it('displays inline sync results after movie sync', () => {
     setupDefaults();
-    setSyncJobState("syncMovies", {
-      status: "completed",
+    setSyncJobState('syncMovies', {
+      status: 'completed',
       result: {
         synced: 5,
         skipped: 2,
-        errors: [{ title: "Bad Movie", reason: "TMDB not found", year: 2020 }],
+        errors: [{ title: 'Bad Movie', reason: 'TMDB not found', year: 2020 }],
       },
     });
     renderPage();
 
-    expect(screen.getByText("Movie Results:")).toBeInTheDocument();
-    expect(screen.getByText("5 synced")).toBeInTheDocument();
-    expect(screen.getByText("2 skipped")).toBeInTheDocument();
-    expect(screen.getByText("1 errors")).toBeInTheDocument();
+    expect(screen.getByText('Movie Results:')).toBeInTheDocument();
+    expect(screen.getByText('5 synced')).toBeInTheDocument();
+    expect(screen.getByText('2 skipped')).toBeInTheDocument();
+    expect(screen.getByText('1 errors')).toBeInTheDocument();
   });
 
-  it("displays inline sync results after TV sync", () => {
+  it('displays inline sync results after TV sync', () => {
     setupDefaults();
-    setSyncJobState("syncTvShows", {
-      status: "completed",
+    setSyncJobState('syncTvShows', {
+      status: 'completed',
       result: { synced: 3, skipped: 1, errors: [] },
     });
     renderPage();
 
-    expect(screen.getByText("TV Results:")).toBeInTheDocument();
-    expect(screen.getByText("3 synced")).toBeInTheDocument();
+    expect(screen.getByText('TV Results:')).toBeInTheDocument();
+    expect(screen.getByText('3 synced')).toBeInTheDocument();
   });
 
-  it("shows expandable error details for sync errors", () => {
+  it('shows expandable error details for sync errors', () => {
     setupDefaults();
-    setSyncJobState("syncMovies", {
-      status: "completed",
+    setSyncJobState('syncMovies', {
+      status: 'completed',
       result: {
         synced: 1,
         skipped: 0,
-        errors: [{ title: "Broken Film", reason: "No TMDB match", year: null }],
+        errors: [{ title: 'Broken Film', reason: 'No TMDB match', year: null }],
       },
     });
     renderPage();
 
     // Click show errors
-    const showBtn = screen.getByText("Show error details");
+    const showBtn = screen.getByText('Show error details');
     fireEvent.click(showBtn);
 
     expect(screen.getByText(/Broken Film/)).toBeInTheDocument();
     expect(screen.getByText(/No TMDB match/)).toBeInTheDocument();
   });
 
-  it("renders scheduler section with start button when not running", () => {
+  it('renders scheduler section with start button when not running', () => {
     setupDefaults({ schedulerRunning: false });
     renderPage();
 
-    expect(screen.getByText("Auto Sync Scheduler")).toBeInTheDocument();
-    expect(screen.getByText("Start Scheduler")).toBeInTheDocument();
-    expect(screen.getByText("Scheduler off")).toBeInTheDocument();
+    expect(screen.getByText('Auto Sync Scheduler')).toBeInTheDocument();
+    expect(screen.getByText('Start Scheduler')).toBeInTheDocument();
+    expect(screen.getByText('Scheduler off')).toBeInTheDocument();
   });
 
-  it("renders scheduler with stop button when running", () => {
+  it('renders scheduler with stop button when running', () => {
     setupDefaults({ schedulerRunning: true, schedulerIntervalMs: 21600000 });
     renderPage();
 
-    expect(screen.getByText("Stop Scheduler")).toBeInTheDocument();
+    expect(screen.getByText('Stop Scheduler')).toBeInTheDocument();
     expect(screen.getByText(/Scheduler active/)).toBeInTheDocument();
   });
 
-  it("calls startScheduler with correct interval", () => {
+  it('calls startScheduler with correct interval', () => {
     setupDefaults({ schedulerRunning: false });
     renderPage();
 
-    const input = screen.getByLabelText("Sync every") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "12" } });
+    const input = screen.getByLabelText('Sync every') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '12' } });
 
-    fireEvent.click(screen.getByText("Start Scheduler"));
+    fireEvent.click(screen.getByText('Start Scheduler'));
     expect(mockStartSchedulerMutate).toHaveBeenCalledWith({
       intervalMs: 12 * 60 * 60 * 1000,
-      movieSectionId: "1",
-      tvSectionId: "2",
+      movieSectionId: '1',
+      tvSectionId: '2',
     });
   });
 
-  it("shows disconnect button when has token", () => {
+  it('shows disconnect button when has token', () => {
     setupDefaults({ hasToken: true });
     renderPage();
 
-    const btn = screen.getByText("Disconnect");
+    const btn = screen.getByText('Disconnect');
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
     expect(mockDisconnectMutate).toHaveBeenCalled();
   });
 
-  it("shows connection error when test fails", () => {
+  it('shows connection error when test fails', () => {
     setupDefaults();
     mockTestConnection.mockReturnValue({
-      data: { data: { connected: false, error: "Connection refused" } },
+      data: { data: { connected: false, error: 'Connection refused' } },
       refetch: vi.fn(),
     });
     renderPage();
 
-    expect(screen.getByText("Connection Failed")).toBeInTheDocument();
-    expect(screen.getByText("Connection refused")).toBeInTheDocument();
+    expect(screen.getByText('Connection Failed')).toBeInTheDocument();
+    expect(screen.getByText('Connection refused')).toBeInTheDocument();
   });
 
   // ── Watchlist Sync ──────────────────────────────────────────────────────
 
-  it("shows Watchlist Sync section when connected", () => {
+  it('shows Watchlist Sync section when connected', () => {
     setupDefaults();
     renderPage();
 
-    expect(screen.getByText("Watchlist Sync")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sync watchlist/i })).toBeInTheDocument();
+    expect(screen.getByText('Watchlist Sync')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sync watchlist/i })).toBeInTheDocument();
   });
 
-  it("hides Watchlist Sync section when not connected", () => {
+  it('hides Watchlist Sync section when not connected', () => {
     setupDefaults({ connected: false, hasToken: false, configured: false });
     renderPage();
 
-    expect(screen.queryByText("Watchlist Sync")).not.toBeInTheDocument();
+    expect(screen.queryByText('Watchlist Sync')).not.toBeInTheDocument();
   });
 
-  it("triggers syncWatchlist start on button click", () => {
+  it('triggers syncWatchlist start on button click', () => {
     const mockStart = vi.fn();
-    setSyncJobState("syncWatchlist", { start: mockStart });
+    setSyncJobState('syncWatchlist', { start: mockStart });
     setupDefaults();
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /sync watchlist/i }));
+    fireEvent.click(screen.getByRole('button', { name: /sync watchlist/i }));
     expect(mockStart).toHaveBeenCalledOnce();
   });
 
-  it("displays watchlist sync results after successful sync", () => {
+  it('displays watchlist sync results after successful sync', () => {
     setupDefaults();
-    setSyncJobState("syncWatchlist", {
-      status: "completed",
+    setSyncJobState('syncWatchlist', {
+      status: 'completed',
       result: { added: 3, removed: 1, skipped: 5, errors: [] },
     });
     renderPage();
 
-    expect(screen.getByText("Watchlist Results:")).toBeInTheDocument();
-    expect(screen.getByText("3 added")).toBeInTheDocument();
-    expect(screen.getByText("1 removed")).toBeInTheDocument();
-    expect(screen.getByText("5 skipped")).toBeInTheDocument();
+    expect(screen.getByText('Watchlist Results:')).toBeInTheDocument();
+    expect(screen.getByText('3 added')).toBeInTheDocument();
+    expect(screen.getByText('1 removed')).toBeInTheDocument();
+    expect(screen.getByText('5 skipped')).toBeInTheDocument();
   });
 
-  it("shows expandable error details for watchlist sync errors", () => {
+  it('shows expandable error details for watchlist sync errors', () => {
     setupDefaults();
-    setSyncJobState("syncWatchlist", {
-      status: "completed",
+    setSyncJobState('syncWatchlist', {
+      status: 'completed',
       result: {
         added: 1,
         removed: 0,
         skipped: 0,
-        errors: [{ title: "Unknown Movie", reason: "No TMDB match found" }],
+        errors: [{ title: 'Unknown Movie', reason: 'No TMDB match found' }],
       },
     });
     renderPage();
 
-    expect(screen.getByText("1 errors")).toBeInTheDocument();
+    expect(screen.getByText('1 errors')).toBeInTheDocument();
     // Errors hidden initially
     expect(screen.queryByText(/No TMDB match found/)).not.toBeInTheDocument();
 
     // Expand errors — the watchlist section's "Show error details" is the only one visible
-    const showBtn = screen.getByText("Show error details");
+    const showBtn = screen.getByText('Show error details');
     fireEvent.click(showBtn);
 
     expect(screen.getByText(/Unknown Movie:/)).toBeInTheDocument();
     expect(screen.getByText(/No TMDB match found/)).toBeInTheDocument();
 
     // Collapse
-    const hideBtn = screen.getByText("Hide error details");
+    const hideBtn = screen.getByText('Hide error details');
     fireEvent.click(hideBtn);
     expect(screen.queryByText(/No TMDB match found/)).not.toBeInTheDocument();
   });

@@ -1,17 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { RadioInput } from "./RadioInput";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { RadioInput } from './RadioInput';
 
 const meta: Meta<typeof RadioInput> = {
-  title: "Inputs/Radio",
+  title: 'Inputs/Radio',
   component: RadioInput,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ width: "400px", padding: "2rem" }}>
+      <div style={{ width: '400px', padding: '2rem' }}>
         <Story />
       </div>
     ),
@@ -23,39 +23,39 @@ type Story = StoryObj<typeof meta>;
 
 const planOptions = [
   {
-    label: "Free",
-    value: "free",
-    description: "Basic features for personal use",
+    label: 'Free',
+    value: 'free',
+    description: 'Basic features for personal use',
   },
   {
-    label: "Pro",
-    value: "pro",
-    description: "Advanced features for professionals",
+    label: 'Pro',
+    value: 'pro',
+    description: 'Advanced features for professionals',
   },
   {
-    label: "Enterprise",
-    value: "enterprise",
-    description: "Custom solutions for teams",
+    label: 'Enterprise',
+    value: 'enterprise',
+    description: 'Custom solutions for teams',
   },
 ];
 
 const paymentOptions = [
-  { label: "Credit Card", value: "credit" },
-  { label: "PayPal", value: "paypal" },
-  { label: "Bank Transfer", value: "bank" },
+  { label: 'Credit Card', value: 'credit' },
+  { label: 'PayPal', value: 'paypal' },
+  { label: 'Bank Transfer', value: 'bank' },
 ];
 
 const sizeOptions = [
-  { label: "Small", value: "sm" },
-  { label: "Medium", value: "md" },
-  { label: "Large", value: "lg" },
-  { label: "Extra Large", value: "xl" },
+  { label: 'Small', value: 'sm' },
+  { label: 'Medium', value: 'md' },
+  { label: 'Large', value: 'lg' },
+  { label: 'Extra Large', value: 'xl' },
 ];
 
 export const Default: Story = {
   args: {},
   render: () => {
-    const [plan, setPlan] = useState("free");
+    const [plan, setPlan] = useState('free');
     return (
       <RadioInput
         label="Select a plan"
@@ -70,7 +70,7 @@ export const Default: Story = {
 export const WithDescription: Story = {
   args: {},
   render: () => {
-    const [plan, setPlan] = useState("pro");
+    const [plan, setPlan] = useState('pro');
     return (
       <RadioInput
         label="Choose your subscription"
@@ -86,7 +86,7 @@ export const WithDescription: Story = {
 export const Required: Story = {
   args: {},
   render: () => {
-    const [payment, setPayment] = useState("");
+    const [payment, setPayment] = useState('');
     return (
       <RadioInput
         label="Payment method"
@@ -102,7 +102,7 @@ export const Required: Story = {
 export const WithError: Story = {
   args: {},
   render: () => {
-    const [payment, setPayment] = useState("");
+    const [payment, setPayment] = useState('');
     return (
       <RadioInput
         label="Payment method"
@@ -121,7 +121,7 @@ export const WithError: Story = {
 export const Horizontal: Story = {
   args: {},
   render: () => {
-    const [size, setSize] = useState("md");
+    const [size, setSize] = useState('md');
     return (
       <RadioInput
         label="Select size"
@@ -137,17 +137,17 @@ export const Horizontal: Story = {
 export const WithDisabledOption: Story = {
   args: {},
   render: () => {
-    const [plan, setPlan] = useState("free");
+    const [plan, setPlan] = useState('free');
     return (
       <RadioInput
         label="Select a plan"
         options={[
-          { label: "Free", value: "free", description: "Basic features" },
-          { label: "Pro", value: "pro", description: "Advanced features" },
+          { label: 'Free', value: 'free', description: 'Basic features' },
+          { label: 'Pro', value: 'pro', description: 'Advanced features' },
           {
-            label: "Enterprise",
-            value: "enterprise",
-            description: "Coming soon",
+            label: 'Enterprise',
+            value: 'enterprise',
+            description: 'Coming soon',
             disabled: true,
           },
         ]}
@@ -190,13 +190,13 @@ export const DefaultValue: Story = {
 export const SimpleOptions: Story = {
   args: {},
   render: () => {
-    const [answer, setAnswer] = useState("");
+    const [answer, setAnswer] = useState('');
     return (
       <RadioInput
         label="Do you agree?"
         options={[
-          { label: "Yes", value: "yes" },
-          { label: "No", value: "no" },
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
         ]}
         value={answer}
         onValueChange={setAnswer}

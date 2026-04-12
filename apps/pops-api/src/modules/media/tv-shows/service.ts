@@ -1,17 +1,17 @@
 /**
  * TV Shows service — CRUD operations for tv_shows, seasons, and episodes.
  */
-import { eq, and, like, asc, count } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { tvShows, seasons, episodes } from "@pops/db-types";
-import type { TvShowRow, SeasonRow, EpisodeRow } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { eq, and, like, asc, count } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { tvShows, seasons, episodes } from '@pops/db-types';
+import type { TvShowRow, SeasonRow, EpisodeRow } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 import type {
   CreateTvShowInput,
   UpdateTvShowInput,
   CreateSeasonInput,
   CreateEpisodeInput,
-} from "./types.js";
+} from './types.js';
 
 // ── TV Shows ──
 
@@ -56,7 +56,7 @@ export function listTvShows(
 export function getTvShow(id: number): TvShowRow {
   const db = getDrizzle();
   const row = db.select().from(tvShows).where(eq(tvShows.id, id)).get();
-  if (!row) throw new NotFoundError("TvShow", String(id));
+  if (!row) throw new NotFoundError('TvShow', String(id));
   return row;
 }
 
@@ -233,7 +233,7 @@ export function listSeasons(tvShowId: number): SeasonListResult {
 export function getSeason(id: number): SeasonRow {
   const db = getDrizzle();
   const row = db.select().from(seasons).where(eq(seasons.id, id)).get();
-  if (!row) throw new NotFoundError("Season", String(id));
+  if (!row) throw new NotFoundError('Season', String(id));
   return row;
 }
 
@@ -312,7 +312,7 @@ export function listEpisodes(seasonId: number): EpisodeListResult {
 export function getEpisode(id: number): EpisodeRow {
   const db = getDrizzle();
   const row = db.select().from(episodes).where(eq(episodes.id, id)).get();
-  if (!row) throw new NotFoundError("Episode", String(id));
+  if (!row) throw new NotFoundError('Episode', String(id));
   return row;
 }
 

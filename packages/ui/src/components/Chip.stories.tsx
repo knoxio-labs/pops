@@ -2,41 +2,41 @@
  * Chip component stories
  * Demonstrates all variants, sizes, removable options, and use cases
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { Chip } from "./Chip";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { Chip } from './Chip';
 
 const meta: Meta<typeof Chip> = {
   component: Chip,
-  title: "Data Display/Chip",
-  tags: ["autodocs"],
+  title: 'Data Display/Chip',
+  tags: ['autodocs'],
   argTypes: {
     variant: {
-      control: "select",
+      control: 'select',
       options: [
-        "default",
-        "primary",
-        "destructive",
-        "success",
-        "warning",
-        "info",
-        "outline",
-        "ghost",
+        'default',
+        'primary',
+        'destructive',
+        'success',
+        'warning',
+        'info',
+        'outline',
+        'ghost',
       ],
-      description: "Visual style variant of the chip",
+      description: 'Visual style variant of the chip',
     },
     size: {
-      control: "select",
-      options: ["sm", "default", "lg"],
-      description: "Size of the chip",
+      control: 'select',
+      options: ['sm', 'default', 'lg'],
+      description: 'Size of the chip',
     },
     removable: {
-      control: "boolean",
-      description: "Shows remove button (X)",
+      control: 'boolean',
+      description: 'Shows remove button (X)',
     },
     children: {
-      control: "text",
-      description: "Chip text content",
+      control: 'text',
+      description: 'Chip text content',
     },
   },
 };
@@ -47,98 +47,98 @@ type Story = StoryObj<typeof Chip>;
 // Basic variants
 export const Default: Story = {
   args: {
-    children: "Default",
+    children: 'Default',
   },
 };
 
 export const Primary: Story = {
   args: {
-    children: "Primary",
-    variant: "primary",
+    children: 'Primary',
+    variant: 'primary',
   },
 };
 
 export const Destructive: Story = {
   args: {
-    children: "Destructive",
-    variant: "destructive",
+    children: 'Destructive',
+    variant: 'destructive',
   },
 };
 
 export const Success: Story = {
   args: {
-    children: "Success",
-    variant: "success",
+    children: 'Success',
+    variant: 'success',
   },
 };
 
 export const Warning: Story = {
   args: {
-    children: "Warning",
-    variant: "warning",
+    children: 'Warning',
+    variant: 'warning',
   },
 };
 
 export const Info: Story = {
   args: {
-    children: "Info",
-    variant: "info",
+    children: 'Info',
+    variant: 'info',
   },
 };
 
 export const Outline: Story = {
   args: {
-    children: "Outline",
-    variant: "outline",
+    children: 'Outline',
+    variant: 'outline',
   },
 };
 
 export const Ghost: Story = {
   args: {
-    children: "Ghost",
-    variant: "ghost",
+    children: 'Ghost',
+    variant: 'ghost',
   },
 };
 
 // Sizes
 export const Small: Story = {
   args: {
-    children: "Small chip",
-    size: "sm",
+    children: 'Small chip',
+    size: 'sm',
   },
 };
 
 export const Large: Story = {
   args: {
-    children: "Large chip",
-    size: "lg",
+    children: 'Large chip',
+    size: 'lg',
   },
 };
 
 // Removable chips
 export const Removable: Story = {
   args: {
-    children: "Removable",
+    children: 'Removable',
     removable: true,
-    onRemove: () => alert("Chip removed!"),
+    onRemove: () => alert('Chip removed!'),
   },
 };
 
 export const RemovablePrimary: Story = {
   args: {
-    children: "Primary",
-    variant: "primary",
+    children: 'Primary',
+    variant: 'primary',
     removable: true,
-    onRemove: () => alert("Chip removed!"),
+    onRemove: () => alert('Chip removed!'),
   },
 };
 
 export const RemovableSuccess: Story = {
   args: {
-    children: "Success",
-    variant: "success",
+    children: 'Success',
+    variant: 'success',
     removable: true,
-    onRemove: () => alert("Chip removed!"),
+    onRemove: () => alert('Chip removed!'),
   },
 };
 
@@ -213,18 +213,18 @@ const AlertIcon = () => (
 
 export const WithIcon: Story = {
   args: {
-    children: "Tagged",
+    children: 'Tagged',
     prefix: <TagIcon />,
   },
 };
 
 export const WithIconRemovable: Story = {
   args: {
-    children: "User",
+    children: 'User',
     prefix: <UserIcon />,
-    variant: "primary",
+    variant: 'primary',
     removable: true,
-    onRemove: () => alert("Chip removed!"),
+    onRemove: () => alert('Chip removed!'),
   },
 };
 
@@ -259,12 +259,12 @@ export const AllSizes: Story = {
 export const AllRemovableVariants: Story = {
   render: () => {
     const [chips, setChips] = useState([
-      { id: 1, label: "Default", variant: "default" as const },
-      { id: 2, label: "Primary", variant: "primary" as const },
-      { id: 3, label: "Destructive", variant: "destructive" as const },
-      { id: 4, label: "Success", variant: "success" as const },
-      { id: 5, label: "Warning", variant: "warning" as const },
-      { id: 6, label: "Info", variant: "info" as const },
+      { id: 1, label: 'Default', variant: 'default' as const },
+      { id: 2, label: 'Primary', variant: 'primary' as const },
+      { id: 3, label: 'Destructive', variant: 'destructive' as const },
+      { id: 4, label: 'Success', variant: 'success' as const },
+      { id: 5, label: 'Warning', variant: 'warning' as const },
+      { id: 6, label: 'Info', variant: 'info' as const },
     ]);
 
     return (
@@ -318,9 +318,9 @@ export const StatusIndicators: Story = {
 export const FilterChips: Story = {
   render: () => {
     const [activeFilters, setActiveFilters] = useState([
-      "Food & Dining",
-      "Last 30 days",
-      "Amount > $50",
+      'Food & Dining',
+      'Last 30 days',
+      'Amount > $50',
     ]);
 
     return (
@@ -435,9 +435,9 @@ export const LongText: Story = {
 // Interactive playground
 export const Playground: Story = {
   args: {
-    children: "Playground Chip",
-    variant: "default",
-    size: "default",
+    children: 'Playground Chip',
+    variant: 'default',
+    size: 'default',
     removable: false,
   },
 };

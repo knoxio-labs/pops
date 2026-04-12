@@ -1,11 +1,11 @@
 /**
  * Movie service — CRUD operations against SQLite via Drizzle ORM.
  */
-import { count, desc, eq, like, and, sql, type SQL } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { movies } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { MovieRow, CreateMovieInput, UpdateMovieInput, MovieFilters } from "./types.js";
+import { count, desc, eq, like, and, sql, type SQL } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { movies } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
+import type { MovieRow, CreateMovieInput, UpdateMovieInput, MovieFilters } from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface MovieListResult {
@@ -48,7 +48,7 @@ export function getMovie(id: number): MovieRow {
   const db = getDrizzle();
   const row = db.select().from(movies).where(eq(movies.id, id)).get();
 
-  if (!row) throw new NotFoundError("Movie", String(id));
+  if (!row) throw new NotFoundError('Movie', String(id));
   return row;
 }
 
@@ -90,7 +90,7 @@ export function createMovie(input: CreateMovieInput): MovieRow {
 
     return getMovie(Number(result.lastInsertRowid));
   } catch (err) {
-    if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
       throw new ConflictError(`Movie with tmdbId ${input.tmdbId} already exists`);
     }
     throw err;
@@ -140,5 +140,5 @@ export function deleteMovie(id: number): void {
   getMovie(id);
 
   const result = getDrizzle().delete(movies).where(eq(movies.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Movie", String(id));
+  if (result.changes === 0) throw new NotFoundError('Movie', String(id));
 }

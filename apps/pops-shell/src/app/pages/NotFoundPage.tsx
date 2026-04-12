@@ -1,5 +1,5 @@
-import { Link } from "react-router";
-import { FileQuestion } from "lucide-react";
+import { Link } from 'react-router';
+import { FileQuestion } from 'lucide-react';
 
 export function NotFoundPage() {
   return (

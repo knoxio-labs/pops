@@ -1,26 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { TmdbClient } from "../tmdb/client.js";
-import type { TmdbSearchResult } from "../tmdb/types.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { TmdbClient } from '../tmdb/client.js';
+import type { TmdbSearchResult } from '../tmdb/types.js';
 
 // Mock dependencies before imports
-vi.mock("../../../db.js", () => ({
+vi.mock('../../../db.js', () => ({
   getDrizzle: vi.fn(),
 }));
 
-vi.mock("@pops/db-types", () => ({
-  movies: { tmdbId: "tmdb_id", id: "id" },
-  mediaWatchlist: { mediaId: "media_id", mediaType: "media_type", addedAt: "added_at" },
+vi.mock('@pops/db-types', () => ({
+  movies: { tmdbId: 'tmdb_id', id: 'id' },
+  mediaWatchlist: { mediaId: 'media_id', mediaType: 'media_type', addedAt: 'added_at' },
 }));
 
-vi.mock("./flags.js", () => ({
+vi.mock('./flags.js', () => ({
   getWatchedTmdbIds: vi.fn().mockReturnValue(new Set()),
   getWatchlistTmdbIds: vi.fn().mockReturnValue(new Set()),
   getDismissedTmdbIds: vi.fn().mockReturnValue(new Set()),
 }));
 
-import { getDrizzle } from "../../../db.js";
-import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from "./flags.js";
-import { getRecommendations } from "./tmdb-service.js";
+import { getDrizzle } from '../../../db.js';
+import { getDismissedTmdbIds, getWatchedTmdbIds, getWatchlistTmdbIds } from './flags.js';
+import { getRecommendations } from './tmdb-service.js';
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
 const mockGetDismissedTmdbIds = vi.mocked(getDismissedTmdbIds);
@@ -29,16 +29,16 @@ const mockGetDismissedTmdbIds = vi.mocked(getDismissedTmdbIds);
 function makeTmdbResult(overrides: Partial<TmdbSearchResult> = {}): TmdbSearchResult {
   return {
     tmdbId: 100,
-    title: "Test Movie",
-    originalTitle: "Test Movie",
-    overview: "A test",
-    releaseDate: "2025-01-01",
-    posterPath: "/poster.jpg",
-    backdropPath: "/backdrop.jpg",
+    title: 'Test Movie',
+    originalTitle: 'Test Movie',
+    overview: 'A test',
+    releaseDate: '2025-01-01',
+    posterPath: '/poster.jpg',
+    backdropPath: '/backdrop.jpg',
     voteAverage: 7.5,
     voteCount: 1000,
     genreIds: [28],
-    originalLanguage: "en",
+    originalLanguage: 'en',
     popularity: 50,
     ...overrides,
   };
@@ -74,7 +74,7 @@ function createMockDb(libraryTmdbIds: number[] = [], dismissedTmdbIds: number[] 
     const currentCall = selectCallCount++;
     // First select: topMovies query
     if (currentCall === 0) {
-      return [{ tmdbId: 555, title: "Source Movie" }];
+      return [{ tmdbId: 555, title: 'Source Movie' }];
     }
     // Second select: getLibraryTmdbIds
     return libraryTmdbIds.map((id) => ({ tmdbId: id }));
@@ -89,13 +89,13 @@ function createMockDb(libraryTmdbIds: number[] = [], dismissedTmdbIds: number[] 
   } as unknown as ReturnType<typeof getDrizzle>;
 }
 
-describe("getRecommendations", () => {
+describe('getRecommendations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetDismissedTmdbIds.mockReturnValue(new Set());
   });
 
-  it("returns empty when no top movies exist", async () => {
+  it('returns empty when no top movies exist', async () => {
     const mockDb = createMockDb();
     // Override first query (topMovies) to return empty
     const mockAll = vi.fn().mockReturnValue([]);
@@ -114,14 +114,14 @@ describe("getRecommendations", () => {
     expect(result.sourceMovies).toHaveLength(0);
   });
 
-  it("excludes movies already in library", async () => {
+  it('excludes movies already in library', async () => {
     const mockDb = createMockDb([200]); // tmdbId 200 is in library
     mockGetDrizzle.mockReturnValue(mockDb);
 
     const client = makeTmdbClient([
       [
-        makeTmdbResult({ tmdbId: 100, title: "Not in lib" }),
-        makeTmdbResult({ tmdbId: 200, title: "In library" }),
+        makeTmdbResult({ tmdbId: 100, title: 'Not in lib' }),
+        makeTmdbResult({ tmdbId: 200, title: 'In library' }),
       ],
     ]);
 
@@ -130,15 +130,15 @@ describe("getRecommendations", () => {
     expect(result.results.find((r) => r.tmdbId === 100)).toBeTruthy();
   });
 
-  it("excludes dismissed movies", async () => {
+  it('excludes dismissed movies', async () => {
     const mockDb = createMockDb();
     mockGetDrizzle.mockReturnValue(mockDb);
     mockGetDismissedTmdbIds.mockReturnValue(new Set([300]));
 
     const client = makeTmdbClient([
       [
-        makeTmdbResult({ tmdbId: 100, title: "Keep" }),
-        makeTmdbResult({ tmdbId: 300, title: "Dismissed" }),
+        makeTmdbResult({ tmdbId: 100, title: 'Keep' }),
+        makeTmdbResult({ tmdbId: 300, title: 'Dismissed' }),
       ],
     ]);
 
@@ -147,7 +147,7 @@ describe("getRecommendations", () => {
     expect(result.results.find((r) => r.tmdbId === 100)).toBeTruthy();
   });
 
-  it("deduplicates results by tmdbId across source movies", async () => {
+  it('deduplicates results by tmdbId across source movies', async () => {
     // Two source movies both recommend tmdbId 100
     const mockDb = createMockDb();
     // Override topMovies to return 2 source movies
@@ -156,8 +156,8 @@ describe("getRecommendations", () => {
       const current = selectCallCount++;
       if (current === 0)
         return [
-          { tmdbId: 555, title: "Source 1" },
-          { tmdbId: 666, title: "Source 2" },
+          { tmdbId: 555, title: 'Source 1' },
+          { tmdbId: 666, title: 'Source 2' },
         ];
       return []; // library IDs
     });
@@ -173,8 +173,8 @@ describe("getRecommendations", () => {
     mockGetDrizzle.mockReturnValue(mockDb);
 
     const client = makeTmdbClient([
-      [makeTmdbResult({ tmdbId: 100, title: "Shared Rec" })],
-      [makeTmdbResult({ tmdbId: 100, title: "Shared Rec Again" })],
+      [makeTmdbResult({ tmdbId: 100, title: 'Shared Rec' })],
+      [makeTmdbResult({ tmdbId: 100, title: 'Shared Rec Again' })],
     ]);
 
     const result = await getRecommendations(client, 2);
@@ -182,16 +182,16 @@ describe("getRecommendations", () => {
     expect(tmdbIds.filter((id) => id === 100)).toHaveLength(1);
   });
 
-  it("returns sourceMovies array", async () => {
+  it('returns sourceMovies array', async () => {
     const mockDb = createMockDb();
     mockGetDrizzle.mockReturnValue(mockDb);
 
     const client = makeTmdbClient([[makeTmdbResult({ tmdbId: 100 })]]);
     const result = await getRecommendations(client, 1);
-    expect(result.sourceMovies).toEqual(["Source Movie"]);
+    expect(result.sourceMovies).toEqual(['Source Movie']);
   });
 
-  it("marks all results as not in library", async () => {
+  it('marks all results as not in library', async () => {
     const mockDb = createMockDb();
     mockGetDrizzle.mockReturnValue(mockDb);
 
@@ -200,7 +200,7 @@ describe("getRecommendations", () => {
     expect(result.results.every((r) => !r.inLibrary)).toBe(true);
   });
 
-  it("sets isWatched=true when tmdbId is in watch history", async () => {
+  it('sets isWatched=true when tmdbId is in watch history', async () => {
     vi.mocked(getWatchedTmdbIds).mockReturnValue(new Set([100]));
     const mockDb = createMockDb();
     mockGetDrizzle.mockReturnValue(mockDb);
@@ -214,7 +214,7 @@ describe("getRecommendations", () => {
     expect(result.results.find((r) => r.tmdbId === 400)!.isWatched).toBe(false);
   });
 
-  it("sets onWatchlist=true when tmdbId is on watchlist", async () => {
+  it('sets onWatchlist=true when tmdbId is on watchlist', async () => {
     vi.mocked(getWatchlistTmdbIds).mockReturnValue(new Set([400]));
     const mockDb = createMockDb();
     mockGetDrizzle.mockReturnValue(mockDb);

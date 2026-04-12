@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,14 +10,14 @@ import {
   Button,
   Badge,
   Input,
-} from "@pops/ui";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
-import { toast } from "sonner";
-import type { AppRouter } from "@pops/api-client";
-import { trpc } from "../../lib/trpc";
-import { useImportStore } from "../../store/importStore";
-import type { CorrectionRule } from "./RulePicker";
-import { computeMergedRules } from "../../lib/merged-state";
+} from '@pops/ui';
+import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
+import { toast } from 'sonner';
+import type { AppRouter } from '@pops/api-client';
+import { trpc } from '../../lib/trpc';
+import { useImportStore } from '../../store/importStore';
+import type { CorrectionRule } from './RulePicker';
+import { computeMergedRules } from '../../lib/merged-state';
 import {
   AiHelperPanel,
   BrowseRuleDetailPanel,
@@ -28,22 +28,22 @@ import {
   RejectPanel,
   type AiMessage,
   type PreviewView,
-} from "./CorrectionProposalDialogPanels";
+} from './CorrectionProposalDialogPanels';
 
 // ---------------------------------------------------------------------------
 // tRPC type helpers
 // ---------------------------------------------------------------------------
 
 export type CorrectionSignal =
-  inferRouterInputs<AppRouter>["core"]["corrections"]["proposeChangeSet"]["signal"];
+  inferRouterInputs<AppRouter>['core']['corrections']['proposeChangeSet']['signal'];
 export type PreviewChangeSetOutput =
-  inferRouterOutputs<AppRouter>["core"]["corrections"]["previewChangeSet"];
+  inferRouterOutputs<AppRouter>['core']['corrections']['previewChangeSet'];
 type ProposeChangeSetOutput =
-  inferRouterOutputs<AppRouter>["core"]["corrections"]["proposeChangeSet"];
-type ServerChangeSet = ProposeChangeSetOutput["changeSet"];
-type ServerChangeSetOp = ServerChangeSet["ops"][number];
-export type AddRuleData = Extract<ServerChangeSetOp, { op: "add" }>["data"];
-export type EditRuleData = Extract<ServerChangeSetOp, { op: "edit" }>["data"];
+  inferRouterOutputs<AppRouter>['core']['corrections']['proposeChangeSet'];
+type ServerChangeSet = ProposeChangeSetOutput['changeSet'];
+type ServerChangeSetOp = ServerChangeSet['ops'][number];
+export type AddRuleData = Extract<ServerChangeSetOp, { op: 'add' }>['data'];
+export type EditRuleData = Extract<ServerChangeSetOp, { op: 'edit' }>['data'];
 
 // ---------------------------------------------------------------------------
 // Normalization helpers (reused by tests)
@@ -53,7 +53,7 @@ export type EditRuleData = Extract<ServerChangeSetOp, { op: "edit" }>["data"];
  *  Uppercases, strips digits, collapses whitespace. Duplicated here to avoid
  *  pulling server code into the frontend bundle. */
 export function normalizeForMatch(value: string): string {
-  return value.toUpperCase().replace(/\d+/g, "").replace(/\s+/g, " ").trim();
+  return value.toUpperCase().replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -72,10 +72,10 @@ export function normalizeForMatch(value: string): string {
 export function transactionMatchesSignal(
   description: string,
   pattern: string,
-  matchType: "exact" | "contains" | "regex"
+  matchType: 'exact' | 'contains' | 'regex'
 ): boolean {
   const normDesc = normalizeForMatch(description);
-  if (matchType === "regex") {
+  if (matchType === 'regex') {
     if (pattern.length === 0) return false;
     try {
       return new RegExp(pattern).test(normDesc);
@@ -85,7 +85,7 @@ export function transactionMatchesSignal(
   }
   const normPattern = normalizeForMatch(pattern);
   if (!normPattern) return false;
-  if (matchType === "exact") return normDesc === normPattern;
+  if (matchType === 'exact') return normDesc === normPattern;
   return normDesc.includes(normPattern);
 }
 
@@ -124,12 +124,12 @@ export function scopePreviewTransactions<T extends { description: string }>(
   ops: LocalOp[],
   previewTransactions: readonly T[]
 ): ScopedPreviewTxnResult<T> {
-  const hasUnscopedRuleOp = ops.some((op) => op.kind !== "add" && !op.targetRule);
+  const hasUnscopedRuleOp = ops.some((op) => op.kind !== 'add' && !op.targetRule);
   const filtered = hasUnscopedRuleOp
     ? [...previewTransactions]
     : previewTransactions.filter((t) =>
         ops.some((op) => {
-          if (op.kind === "add") {
+          if (op.kind === 'add') {
             return transactionMatchesSignal(
               t.description,
               op.data.descriptionPattern,
@@ -167,13 +167,13 @@ export function scopePreviewTransactions<T extends { description: string }>(
  */
 export type LocalOp =
   | {
-      kind: "add";
+      kind: 'add';
       clientId: string;
       data: AddRuleData;
       dirty: boolean;
     }
   | {
-      kind: "edit";
+      kind: 'edit';
       clientId: string;
       targetRuleId: string;
       targetRule: CorrectionRule | null;
@@ -181,7 +181,7 @@ export type LocalOp =
       dirty: boolean;
     }
   | {
-      kind: "disable";
+      kind: 'disable';
       clientId: string;
       targetRuleId: string;
       targetRule: CorrectionRule | null;
@@ -189,7 +189,7 @@ export type LocalOp =
       dirty: boolean;
     }
   | {
-      kind: "remove";
+      kind: 'remove';
       clientId: string;
       targetRuleId: string;
       targetRule: CorrectionRule | null;
@@ -197,7 +197,7 @@ export type LocalOp =
       dirty: boolean;
     };
 
-export type OpKind = LocalOp["kind"];
+export type OpKind = LocalOp['kind'];
 
 let clientIdCounter = 0;
 function newClientId(prefix: OpKind): string {
@@ -221,45 +221,45 @@ export function serverOpToLocalOp(
   op: ServerChangeSetOp,
   targetRules: Record<string, CorrectionRule>
 ): LocalOp {
-  if (op.op === "add") {
-    return { kind: "add", clientId: newClientId("add"), data: op.data, dirty: false };
+  if (op.op === 'add') {
+    return { kind: 'add', clientId: newClientId('add'), data: op.data, dirty: false };
   }
   const hydrated = targetRules[op.id] ?? null;
-  if (op.op === "edit") {
+  if (op.op === 'edit') {
     return {
-      kind: "edit",
-      clientId: newClientId("edit"),
+      kind: 'edit',
+      clientId: newClientId('edit'),
       targetRuleId: op.id,
       targetRule: hydrated,
       data: op.data,
       dirty: false,
     };
   }
-  if (op.op === "disable") {
+  if (op.op === 'disable') {
     return {
-      kind: "disable",
-      clientId: newClientId("disable"),
+      kind: 'disable',
+      clientId: newClientId('disable'),
       targetRuleId: op.id,
       targetRule: hydrated,
-      rationale: "",
+      rationale: '',
       dirty: false,
     };
   }
   return {
-    kind: "remove",
-    clientId: newClientId("remove"),
+    kind: 'remove',
+    clientId: newClientId('remove'),
     targetRuleId: op.id,
     targetRule: hydrated,
-    rationale: "",
+    rationale: '',
     dirty: false,
   };
 }
 
 function localOpToServerOp(op: LocalOp): ServerChangeSetOp {
-  if (op.kind === "add") return { op: "add", data: op.data };
-  if (op.kind === "edit") return { op: "edit", id: op.targetRuleId, data: op.data };
-  if (op.kind === "disable") return { op: "disable", id: op.targetRuleId };
-  return { op: "remove", id: op.targetRuleId };
+  if (op.kind === 'add') return { op: 'add', data: op.data };
+  if (op.kind === 'edit') return { op: 'edit', id: op.targetRuleId, data: op.data };
+  if (op.kind === 'disable') return { op: 'disable', id: op.targetRuleId };
+  return { op: 'remove', id: op.targetRuleId };
 }
 
 function localOpsToChangeSet(
@@ -268,47 +268,47 @@ function localOpsToChangeSet(
 ): ServerChangeSet | null {
   if (ops.length === 0) return null;
   return {
-    source: extras?.source ?? "correction-proposal-dialog",
+    source: extras?.source ?? 'correction-proposal-dialog',
     reason: extras?.reason,
     ops: ops.map(localOpToServerOp),
   };
 }
 
 export function opKindLabel(kind: OpKind): string {
-  if (kind === "add") return "Add rule";
-  if (kind === "edit") return "Edit rule";
-  if (kind === "disable") return "Disable rule";
-  return "Remove rule";
+  if (kind === 'add') return 'Add rule';
+  if (kind === 'edit') return 'Edit rule';
+  if (kind === 'disable') return 'Disable rule';
+  return 'Remove rule';
 }
 
 export function opKindBadgeVariant(
   kind: OpKind
-): "default" | "secondary" | "outline" | "destructive" {
-  if (kind === "add") return "default";
-  if (kind === "edit") return "secondary";
-  if (kind === "disable") return "outline";
-  return "destructive";
+): 'default' | 'secondary' | 'outline' | 'destructive' {
+  if (kind === 'add') return 'default';
+  if (kind === 'edit') return 'secondary';
+  if (kind === 'disable') return 'outline';
+  return 'destructive';
 }
 
 export function opSummary(op: LocalOp): string {
-  if (op.kind === "add") {
-    const pat = op.data.descriptionPattern || "(no pattern)";
-    const outcome = op.data.entityName ?? op.data.transactionType ?? "unclassified";
+  if (op.kind === 'add') {
+    const pat = op.data.descriptionPattern || '(no pattern)';
+    const outcome = op.data.entityName ?? op.data.transactionType ?? 'unclassified';
     return `${pat} → ${outcome}`;
   }
-  const pat = op.targetRule?.descriptionPattern ?? "(rule)";
-  if (op.kind === "edit") {
-    const outcome = op.data.entityName ?? op.data.transactionType ?? "edit";
+  const pat = op.targetRule?.descriptionPattern ?? '(rule)';
+  if (op.kind === 'edit') {
+    const outcome = op.data.entityName ?? op.data.transactionType ?? 'edit';
     return `${pat} → ${outcome}`;
   }
-  if (op.kind === "disable") return `${pat} (disable)`;
+  if (op.kind === 'disable') return `${pat} (disable)`;
   return `${pat} (remove)`;
 }
 
-export function matchTypeLabel(matchType: "exact" | "contains" | "regex"): string {
-  if (matchType === "exact") return "matches exactly";
-  if (matchType === "contains") return "contains";
-  return "matches regex";
+export function matchTypeLabel(matchType: 'exact' | 'contains' | 'regex'): string {
+  if (matchType === 'exact') return 'matches exactly';
+  if (matchType === 'contains') return 'contains';
+  return 'matches regex';
 }
 
 // ---------------------------------------------------------------------------
@@ -317,8 +317,8 @@ export function matchTypeLabel(matchType: "exact" | "contains" | "regex"): strin
 
 function newAddOpFromSignal(signal: CorrectionSignal): LocalOp {
   return {
-    kind: "add",
-    clientId: newClientId("add"),
+    kind: 'add',
+    clientId: newClientId('add'),
     data: {
       descriptionPattern: signal.descriptionPattern,
       matchType: signal.matchType,
@@ -349,7 +349,7 @@ export interface TriggeringTransactionContext {
   account: string;
   location?: string | null;
   previousEntityName?: string | null;
-  previousTransactionType?: "purchase" | "transfer" | "income" | null;
+  previousTransactionType?: 'purchase' | 'transfer' | 'income' | null;
 }
 
 export interface CorrectionProposalDialogProps {
@@ -367,7 +367,7 @@ export interface CorrectionProposalDialogProps {
   onApproved?: (changeSet: ServerChangeSet) => void;
   /** Dialog mode: 'proposal' (default) shows the AI proposal flow;
    *  'browse' shows all rules for manual CRUD management. */
-  mode?: "proposal" | "browse";
+  mode?: 'proposal' | 'browse';
   /** Called when browse mode closes with pending changes committed.
    *  The parent can trigger re-evaluation. */
   onBrowseClose?: (hadChanges: boolean) => void;
@@ -379,12 +379,12 @@ export interface CorrectionProposalDialogProps {
 
 export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const minConfidence = props.minConfidence ?? 0.7;
-  const isBrowseMode = props.mode === "browse";
+  const isBrowseMode = props.mode === 'browse';
 
   // ---- local state --------------------------------------------------------
   const [localOps, setLocalOps] = useState<LocalOp[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [previewView, setPreviewView] = useState<PreviewView>("selected");
+  const [previewView, setPreviewView] = useState<PreviewView>('selected');
 
   const [combinedPreview, setCombinedPreview] = useState<PreviewChangeSetOutput | null>(null);
   const [combinedPreviewError, setCombinedPreviewError] = useState<string | null>(null);
@@ -396,16 +396,16 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const selectedOpPreviewKey = useRef<string | null>(null);
 
   const [rejectMode, setRejectMode] = useState(false);
-  const [rejectFeedback, setRejectFeedback] = useState("");
+  const [rejectFeedback, setRejectFeedback] = useState('');
 
-  const [aiInstruction, setAiInstruction] = useState("");
+  const [aiInstruction, setAiInstruction] = useState('');
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
 
   const [rationale, setRationale] = useState<string | null>(null);
 
   // ---- browse mode state --------------------------------------------------
-  const [browseSearch, setBrowseSearch] = useState("");
+  const [browseSearch, setBrowseSearch] = useState('');
   const [browseSelectedRuleId, setBrowseSelectedRuleId] = useState<string | null>(null);
   /** Snapshot of pendingChangeSets length when browse mode opened — used to
    *  detect whether the user made changes during this session. */
@@ -442,7 +442,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     if (!needle) return browseMergedRules;
     return browseMergedRules.filter((r) => {
       const haystack =
-        `${r.descriptionPattern} ${r.entityName ?? ""} ${r.matchType} ${r.location ?? ""}`.toLowerCase();
+        `${r.descriptionPattern} ${r.entityName ?? ''} ${r.matchType} ${r.location ?? ''}`.toLowerCase();
       return haystack.includes(needle);
     });
   }, [browseMergedRules, browseSearch]);
@@ -469,7 +469,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   // ---- initial propose query ---------------------------------------------
 
   const disabledSignal: CorrectionSignal = useMemo(
-    () => ({ descriptionPattern: "_", matchType: "exact", tags: [] }),
+    () => ({ descriptionPattern: '_', matchType: 'exact', tags: [] }),
     []
   );
 
@@ -560,7 +560,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       return;
     }
     if (localOps.length === 0) return;
-    const sig = localOps.map((o) => o.clientId).join("|");
+    const sig = localOps.map((o) => o.clientId).join('|');
     // Skip if neither the structural sig nor the manual rerun token has
     // changed since we last ran. This guards against re-runs caused by
     // unrelated state updates while still letting Re-run preview force a
@@ -608,7 +608,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       })
       .catch((err) => {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : "Preview failed";
+        const message = err instanceof Error ? err.message : 'Preview failed';
         setCombinedPreviewError(message);
         setCombinedPreview(null);
       });
@@ -680,7 +680,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       .catch((err) => {
         if (cancelled) return;
         if (selectedOpPreviewKey.current !== previewKey) return;
-        const message = err instanceof Error ? err.message : "Preview failed";
+        const message = err instanceof Error ? err.message : 'Preview failed';
         setSelectedOpPreviewError(message);
         setSelectedOpPreview(null);
       });
@@ -703,12 +703,12 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const handleApplyLocal = useCallback(
     (changeSet: ServerChangeSet) => {
       try {
-        addPendingChangeSet({ changeSet, source: "correction-proposal" });
-        toast.success("Rules applied locally");
+        addPendingChangeSet({ changeSet, source: 'correction-proposal' });
+        toast.success('Rules applied locally');
         props.onApproved?.(changeSet);
         handleOpenChange(false);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to apply rules");
+        toast.error(err instanceof Error ? err.message : 'Failed to apply rules');
       }
     },
     [addPendingChangeSet, props, handleOpenChange]
@@ -716,7 +716,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const rejectMutation = trpc.core.corrections.rejectChangeSet.useMutation({
     onSuccess: () => {
-      toast.success("Proposal rejected — feedback recorded");
+      toast.success('Proposal rejected — feedback recorded');
       handleOpenChange(false);
     },
     onError: (err) => {
@@ -763,11 +763,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     if (isBrowseMode) {
       // In browse mode, create a blank add op
       const newOp: LocalOp = {
-        kind: "add",
-        clientId: newClientId("add"),
+        kind: 'add',
+        clientId: newClientId('add'),
         data: {
-          descriptionPattern: "",
-          matchType: "contains",
+          descriptionPattern: '',
+          matchType: 'contains',
           tags: [],
         },
         dirty: true,
@@ -783,12 +783,12 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   }, [props.signal, isBrowseMode]);
 
   const handleAddTargetedOp = useCallback(
-    (kind: "edit" | "disable" | "remove", rule: CorrectionRule) => {
+    (kind: 'edit' | 'disable' | 'remove', rule: CorrectionRule) => {
       let newOp: LocalOp;
-      if (kind === "edit") {
+      if (kind === 'edit') {
         newOp = {
-          kind: "edit",
-          clientId: newClientId("edit"),
+          kind: 'edit',
+          clientId: newClientId('edit'),
           targetRuleId: rule.id,
           targetRule: rule,
           data: {
@@ -802,22 +802,22 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
           },
           dirty: true,
         };
-      } else if (kind === "disable") {
+      } else if (kind === 'disable') {
         newOp = {
-          kind: "disable",
-          clientId: newClientId("disable"),
+          kind: 'disable',
+          clientId: newClientId('disable'),
           targetRuleId: rule.id,
           targetRule: rule,
-          rationale: "",
+          rationale: '',
           dirty: true,
         };
       } else {
         newOp = {
-          kind: "remove",
-          clientId: newClientId("remove"),
+          kind: 'remove',
+          clientId: newClientId('remove'),
           targetRuleId: rule.id,
           targetRule: rule,
-          rationale: "",
+          rationale: '',
           dirty: true,
         };
       }
@@ -868,14 +868,14 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     const currentChangeSet = localOpsToChangeSet(localOps);
     if (!currentChangeSet) {
       toast.error(
-        "ChangeSet is empty — add at least one operation before asking the AI to revise."
+        'ChangeSet is empty — add at least one operation before asking the AI to revise.'
       );
       return;
     }
 
     const userMsgId = `u-${Date.now()}`;
-    setAiMessages((prev) => [...prev, { id: userMsgId, role: "user", text: instruction }]);
-    setAiInstruction("");
+    setAiMessages((prev) => [...prev, { id: userMsgId, role: 'user', text: instruction }]);
+    setAiInstruction('');
     setAiBusy(true);
 
     reviseMutateAsync({
@@ -896,18 +896,18 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
           ...prev,
           {
             id: `a-${Date.now()}`,
-            role: "assistant",
-            text: res.rationale ?? "ChangeSet revised.",
+            role: 'assistant',
+            text: res.rationale ?? 'ChangeSet revised.',
           },
         ]);
       })
       .catch((err) => {
-        const message = err instanceof Error ? err.message : "AI helper failed";
+        const message = err instanceof Error ? err.message : 'AI helper failed';
         setAiMessages((prev) => [
           ...prev,
           {
             id: `a-${Date.now()}`,
-            role: "assistant",
+            role: 'assistant',
             text: `Error: ${message}`,
           },
         ]);
@@ -923,7 +923,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     (ruleId: string) => {
       setBrowseSelectedRuleId(ruleId);
       // If there's already a pending localOp editing this rule, select it
-      const existingOp = localOps.find((o) => o.kind !== "add" && o.targetRuleId === ruleId);
+      const existingOp = localOps.find((o) => o.kind !== 'add' && o.targetRuleId === ruleId);
       if (existingOp) {
         setSelectedClientId(existingOp.clientId);
       } else {
@@ -935,8 +935,8 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const handleBrowseEditRule = useCallback((rule: CorrectionRule) => {
     const newOp: LocalOp = {
-      kind: "edit",
-      clientId: newClientId("edit"),
+      kind: 'edit',
+      clientId: newClientId('edit'),
       targetRuleId: rule.id,
       targetRule: rule,
       data: {
@@ -956,11 +956,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const handleBrowseDisableRule = useCallback((rule: CorrectionRule) => {
     const newOp: LocalOp = {
-      kind: "disable",
-      clientId: newClientId("disable"),
+      kind: 'disable',
+      clientId: newClientId('disable'),
       targetRuleId: rule.id,
       targetRule: rule,
-      rationale: "",
+      rationale: '',
       dirty: true,
     };
     setLocalOps((prev) => [...prev, newOp]);
@@ -969,11 +969,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const handleBrowseRemoveRule = useCallback((rule: CorrectionRule) => {
     const newOp: LocalOp = {
-      kind: "remove",
-      clientId: newClientId("remove"),
+      kind: 'remove',
+      clientId: newClientId('remove'),
       targetRuleId: rule.id,
       targetRule: rule,
-      rationale: "",
+      rationale: '',
       dirty: true,
     };
     setLocalOps((prev) => [...prev, newOp]);
@@ -986,10 +986,10 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       handleOpenChange(false);
       return;
     }
-    const changeSet = localOpsToChangeSet(localOps, { source: "browse-rule-manager" });
+    const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
     if (changeSet) {
-      addPendingChangeSet({ changeSet, source: "browse-rule-manager" });
-      toast.success(`${localOps.length} rule change${localOps.length === 1 ? "" : "s"} saved`);
+      addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
+      toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
     }
     // handleOpenChange will detect the count change via onBrowseClose
     handleOpenChange(false);
@@ -1000,7 +1000,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       const currentCount = useImportStore.getState().pendingChangeSets.length;
       const hadChanges = currentCount !== browseInitialPendingCountRef.current;
       // Reset browse-specific state
-      setBrowseSearch("");
+      setBrowseSearch('');
       setBrowseSelectedRuleId(null);
       setLocalOps([]);
       setSelectedClientId(null);
@@ -1012,7 +1012,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     if (!open) {
       setLocalOps([]);
       setSelectedClientId(null);
-      setPreviewView("selected");
+      setPreviewView('selected');
       setCombinedPreview(null);
       setCombinedPreviewError(null);
       setCombinedPreviewTruncated(false);
@@ -1020,8 +1020,8 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       setSelectedOpPreviewError(null);
       setSelectedOpPreviewTruncated(false);
       setRejectMode(false);
-      setRejectFeedback("");
-      setAiInstruction("");
+      setRejectFeedback('');
+      setAiInstruction('');
       setAiMessages([]);
       setAiBusy(false);
       setRationale(null);
@@ -1040,13 +1040,13 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     if (!isBrowseMode || !props.open) return;
     function onKeyDown(e: KeyboardEvent) {
       // Escape is handled by Radix Dialog — only handle arrow keys here.
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         const list = browseFilteredRules;
         if (list.length === 0) return;
         const currentIdx = list.findIndex((r) => r.id === browseSelectedRuleId);
         let nextIdx: number;
-        if (e.key === "ArrowDown") {
+        if (e.key === 'ArrowDown') {
           nextIdx = currentIdx < list.length - 1 ? currentIdx + 1 : 0;
         } else {
           nextIdx = currentIdx > 0 ? currentIdx - 1 : list.length - 1;
@@ -1055,8 +1055,8 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
         if (nextRule) handleBrowseSelectRule(nextRule.id);
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [isBrowseMode, props.open, browseFilteredRules, browseSelectedRuleId]);
 
   // ---- render -------------------------------------------------------------
@@ -1101,7 +1101,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                   </div>
                 </div>
                 <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b">
-                  {browseFilteredRules.length} rule{browseFilteredRules.length === 1 ? "" : "s"}
+                  {browseFilteredRules.length} rule{browseFilteredRules.length === 1 ? '' : 's'}
                   {browseSearch && ` matching "${browseSearch}"`}
                 </div>
                 <div className="flex-1 overflow-auto">
@@ -1111,15 +1111,15 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                     <ul className="divide-y">
                       {browseFilteredRules.map((rule) => {
                         const selected = rule.id === browseSelectedRuleId;
-                        const isPending = rule.id.startsWith("temp:");
+                        const isPending = rule.id.startsWith('temp:');
                         const hasLocalOp = localOps.some(
-                          (o) => o.kind !== "add" && o.targetRuleId === rule.id
+                          (o) => o.kind !== 'add' && o.targetRuleId === rule.id
                         );
                         return (
                           <li
                             key={rule.id}
                             className={`px-3 py-2 cursor-pointer hover:bg-muted/50 ${
-                              selected ? "bg-muted" : ""
+                              selected ? 'bg-muted' : ''
                             }`}
                             onClick={() => handleBrowseSelectRule(rule.id)}
                           >
@@ -1154,7 +1154,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                                 <div className="text-[11px] text-muted-foreground truncate">
                                   {[rule.entityName, rule.location, rule.transactionType]
                                     .filter(Boolean)
-                                    .join(" · ") || "no outcome set"}
+                                    .join(' · ') || 'no outcome set'}
                                 </div>
                               </div>
                             </div>
@@ -1207,7 +1207,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
             <div className="flex-1 text-xs text-muted-foreground">
               {localOps.length > 0 && (
                 <span>
-                  {localOps.length} unsaved change{localOps.length === 1 ? "" : "s"}
+                  {localOps.length} unsaved change{localOps.length === 1 ? '' : 's'}
                 </span>
               )}
             </div>
@@ -1225,21 +1225,21 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   // ---- proposal mode render -----------------------------------------------
 
-  const previewResult = previewView === "combined" ? combinedPreview : selectedOpPreview;
-  const previewError = previewView === "combined" ? combinedPreviewError : selectedOpPreviewError;
+  const previewResult = previewView === 'combined' ? combinedPreview : selectedOpPreview;
+  const previewError = previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
   const previewTruncated =
-    previewView === "combined" ? combinedPreviewTruncated : selectedOpPreviewTruncated;
+    previewView === 'combined' ? combinedPreviewTruncated : selectedOpPreviewTruncated;
   const previewLabel =
-    previewView === "combined"
-      ? "Combined effect of entire ChangeSet"
+    previewView === 'combined'
+      ? 'Combined effect of entire ChangeSet'
       : selectedOp
         ? `Effect of selected operation`
-        : "No operation selected";
+        : 'No operation selected';
 
   const excludeIds = useMemo(() => {
     const set = new Set<string>();
     for (const op of localOps) {
-      if (op.kind !== "add") set.add(op.targetRuleId);
+      if (op.kind !== 'add') set.add(op.targetRuleId);
     }
     return set;
   }, [localOps]);
@@ -1317,7 +1317,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                 onFeedbackChange={setRejectFeedback}
                 onCancel={() => {
                   setRejectMode(false);
-                  setRejectFeedback("");
+                  setRejectFeedback('');
                 }}
                 onConfirm={handleConfirmReject}
                 busy={rejectMutation.isPending}

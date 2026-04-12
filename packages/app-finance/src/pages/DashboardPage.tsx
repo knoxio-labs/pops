@@ -1,7 +1,7 @@
 /**
  * Dashboard page - overview of finances
  */
-import { trpc } from "../lib/trpc";
+import { trpc } from '../lib/trpc';
 import {
   Card,
   StatCard,
@@ -11,7 +11,7 @@ import {
   Skeleton,
   Badge,
   PageHeader,
-} from "@pops/ui";
+} from '@pops/ui';
 
 export function DashboardPage() {
   // Fetch recent transactions
@@ -103,7 +103,7 @@ export function DashboardPage() {
               title="Net Balance"
               value={`$${(stats.totalIncome - stats.totalExpenses).toFixed(2)}`}
               description="Last 10 transactions"
-              color={stats.totalIncome > stats.totalExpenses ? "emerald" : "rose"}
+              color={stats.totalIncome > stats.totalExpenses ? 'emerald' : 'rose'}
             />
           </>
         ) : null}
@@ -131,7 +131,7 @@ export function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium truncate text-base">{transaction.description}</p>
-                      {transaction.tags.includes("Online") && (
+                      {transaction.tags.includes('Online') && (
                         <Badge
                           variant="secondary"
                           className="hidden sm:inline-flex text-2xs uppercase tracking-wider px-1.5 py-0"
@@ -142,7 +142,7 @@ export function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-muted-foreground">
-                        {new Date(transaction.date).toLocaleDateString("en-AU")}
+                        {new Date(transaction.date).toLocaleDateString('en-AU')}
                       </p>
                       {transaction.entityName && (
                         <>
@@ -164,11 +164,11 @@ export function DashboardPage() {
                     <p
                       className={`text-lg font-bold tabular-nums tracking-tight ${
                         transaction.amount < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-green-600 dark:text-green-400"
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-green-600 dark:text-green-400'
                       }`}
                     >
-                      {transaction.amount < 0 ? "-" : "+"}${Math.abs(transaction.amount).toFixed(2)}
+                      {transaction.amount < 0 ? '-' : '+'}${Math.abs(transaction.amount).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -201,15 +201,15 @@ export function DashboardPage() {
                       {budget.category}
                     </h3>
                     <Badge
-                      variant={budget.active ? "default" : "secondary"}
+                      variant={budget.active ? 'default' : 'secondary'}
                       className="text-2xs h-5"
                     >
-                      {budget.active ? "Active" : "Inactive"}
+                      {budget.active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold">
-                      ${budget.amount ? budget.amount.toFixed(2) : "0.00"}
+                      ${budget.amount ? budget.amount.toFixed(2) : '0.00'}
                     </span>
                     <span className="text-xs text-muted-foreground">/ {budget.period}</span>
                   </div>

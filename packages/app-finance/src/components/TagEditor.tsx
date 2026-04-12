@@ -5,12 +5,12 @@
  *
  * This component is tRPC-agnostic — callers wire up the API.
  */
-import { useState, useRef, useEffect } from "react";
-import { Button, Chip, Popover, PopoverContent, PopoverTrigger, Badge } from "@pops/ui";
-import { cn } from "../lib/utils";
+import { useState, useRef, useEffect } from 'react';
+import { Button, Chip, Popover, PopoverContent, PopoverTrigger, Badge } from '@pops/ui';
+import { cn } from '../lib/utils';
 
 /** Source attribution for a tag — from AI, correction rule, or entity defaults. */
-export type TagSource = "ai" | "rule" | "entity";
+export type TagSource = 'ai' | 'rule' | 'entity';
 
 export interface TagMetaEntry {
   source: TagSource;
@@ -53,9 +53,9 @@ export interface TagEditorProps {
  * ```
  */
 const SOURCE_ICONS: Record<TagSource, string> = {
-  ai: "🤖",
-  rule: "📋",
-  entity: "🏪",
+  ai: '🤖',
+  rule: '📋',
+  entity: '🏪',
 };
 
 /**
@@ -86,7 +86,7 @@ export function TagEditor({
 }: TagEditorProps) {
   const [open, setOpen] = useState(false);
   const [tags, setTags] = useState<string[]>(currentTags);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,7 +99,7 @@ export function TagEditor({
   }, [currentTags]);
 
   const filteredSuggestions = (() => {
-    if (inputValue === "") {
+    if (inputValue === '') {
       return allKnownTags.filter((tag) => !tags.includes(tag));
     }
     const lower = inputValue.toLowerCase();
@@ -119,7 +119,7 @@ export function TagEditor({
     if (trimmed && !tags.includes(trimmed)) {
       setTags((prev) => [...prev, trimmed]);
     }
-    setInputValue("");
+    setInputValue('');
     inputRef.current?.focus();
   }
 
@@ -128,23 +128,23 @@ export function TagEditor({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Tab" && filteredSuggestions.length > 0) {
+    if (e.key === 'Tab' && filteredSuggestions.length > 0) {
       e.preventDefault();
       const first = filteredSuggestions[0];
       if (first) addTag(first);
       return;
     }
-    if ((e.key === "Enter" || e.key === ",") && inputValue.trim()) {
+    if ((e.key === 'Enter' || e.key === ',') && inputValue.trim()) {
       e.preventDefault();
       addTag(inputValue);
       return;
     }
-    if (e.key === "Backspace" && !inputValue && tags.length > 0) {
+    if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
       const last = tags[tags.length - 1];
       if (last) removeTag(last);
       return;
     }
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       handleCancel();
     }
   }
@@ -173,7 +173,7 @@ export function TagEditor({
 
   function handleCancel() {
     setTags(currentTags);
-    setInputValue("");
+    setInputValue('');
     setOpen(false);
   }
 
@@ -183,8 +183,8 @@ export function TagEditor({
         <Button
           variant="ghost"
           className={cn(
-            "flex flex-wrap gap-1 min-h-10 text-left w-full rounded px-2 py-1.5 transition-colors items-center h-auto",
-            disabled ? "cursor-default" : "hover:bg-accent/50 cursor-pointer"
+            'flex flex-wrap gap-1 min-h-10 text-left w-full rounded px-2 py-1.5 transition-colors items-center h-auto',
+            disabled ? 'cursor-default' : 'hover:bg-accent/50 cursor-pointer'
           )}
           aria-label="Edit tags"
           disabled={disabled}
@@ -195,7 +195,7 @@ export function TagEditor({
             tags.slice(0, 3).map((tag) => {
               const meta = tagMeta?.get(tag);
               const tooltipText =
-                meta?.source === "rule" && meta?.pattern
+                meta?.source === 'rule' && meta?.pattern
                   ? `Rule: "${meta.pattern}"`
                   : meta?.source
                     ? `${meta.source} suggestion`
@@ -209,7 +209,7 @@ export function TagEditor({
                   style={style}
                   title={tooltipText}
                 >
-                  {meta ? `${SOURCE_ICONS[meta.source]} ` : ""}
+                  {meta ? `${SOURCE_ICONS[meta.source]} ` : ''}
                   {tag}
                 </Badge>
               );
@@ -290,7 +290,7 @@ export function TagEditor({
                 disabled={isSuggesting}
                 className="text-xs text-muted-foreground hover:text-foreground px-0 h-auto"
               >
-                {isSuggesting ? "Suggesting…" : "Suggest"}
+                {isSuggesting ? 'Suggesting…' : 'Suggest'}
               </Button>
             ) : (
               <span />
@@ -310,7 +310,7 @@ export function TagEditor({
                 disabled={isSaving}
                 className="text-xs px-3 h-auto py-2"
               >
-                {isSaving ? "Saving…" : "Save"}
+                {isSaving ? 'Saving…' : 'Save'}
               </Button>
             </div>
           </div>

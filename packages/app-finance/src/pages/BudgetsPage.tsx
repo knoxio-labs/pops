@@ -1,13 +1,13 @@
 /**
  * Budgets page - manage budgets with CRUD
  */
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { useSetPageContext } from "@pops/navigation";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useSetPageContext } from '@pops/navigation';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { trpc } from '../lib/trpc';
 import {
   DataTable,
   SortableHeader,
@@ -37,10 +37,10 @@ import {
   AlertDialogTitle,
   PageHeader,
   Label,
-} from "@pops/ui";
-import type { ColumnFilter } from "@pops/ui";
-import { MoreHorizontal, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+} from '@pops/ui';
+import type { ColumnFilter } from '@pops/ui';
+import { MoreHorizontal, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Budget {
   id: string;
@@ -53,7 +53,7 @@ interface Budget {
 }
 
 const BudgetFormSchema = z.object({
-  category: z.string().min(1, "Category is required"),
+  category: z.string().min(1, 'Category is required'),
   period: z.string(),
   amount: z.string(),
   active: z.boolean(),
@@ -63,21 +63,21 @@ const BudgetFormSchema = z.object({
 type BudgetFormValues = z.infer<typeof BudgetFormSchema>;
 
 const PERIOD_OPTIONS = [
-  { label: "None (One-time)", value: "" },
-  { label: "Monthly", value: "Monthly" },
-  { label: "Yearly", value: "Yearly" },
+  { label: 'None (One-time)', value: '' },
+  { label: 'Monthly', value: 'Monthly' },
+  { label: 'Yearly', value: 'Yearly' },
 ];
 
 const DEFAULT_FORM_VALUES: BudgetFormValues = {
-  category: "",
-  period: "",
-  amount: "",
+  category: '',
+  period: '',
+  amount: '',
   active: false,
-  notes: "",
+  notes: '',
 };
 
 export function BudgetsPage() {
-  useSetPageContext({ page: "budgets" });
+  useSetPageContext({ page: 'budgets' });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
@@ -90,7 +90,7 @@ export function BudgetsPage() {
 
   const createMutation = trpc.finance.budgets.create.useMutation({
     onSuccess: () => {
-      toast.success("Budget created");
+      toast.success('Budget created');
       utils.finance.budgets.list.invalidate();
       setIsDialogOpen(false);
     },
@@ -99,7 +99,7 @@ export function BudgetsPage() {
 
   const updateMutation = trpc.finance.budgets.update.useMutation({
     onSuccess: () => {
-      toast.success("Budget updated");
+      toast.success('Budget updated');
       utils.finance.budgets.list.invalidate();
       setIsDialogOpen(false);
       setEditingBudget(null);
@@ -109,7 +109,7 @@ export function BudgetsPage() {
 
   const deleteMutation = trpc.finance.budgets.delete.useMutation({
     onSuccess: () => {
-      toast.success("Budget deleted");
+      toast.success('Budget deleted');
       utils.finance.budgets.list.invalidate();
       setDeletingId(null);
     },
@@ -131,10 +131,10 @@ export function BudgetsPage() {
     setEditingBudget(budget);
     form.reset({
       category: budget.category,
-      period: budget.period || "",
-      amount: budget.amount !== null ? String(budget.amount) : "",
+      period: budget.period || '',
+      amount: budget.amount !== null ? String(budget.amount) : '',
       active: budget.active,
-      notes: budget.notes || "",
+      notes: budget.notes || '',
     });
     setIsDialogOpen(true);
   };
@@ -157,13 +157,13 @@ export function BudgetsPage() {
 
   const columns: ColumnDef<Budget>[] = [
     {
-      accessorKey: "category",
+      accessorKey: 'category',
       header: ({ column }) => <SortableHeader column={column}>Category</SortableHeader>,
       cell: ({ row }) => <div className="font-medium">{row.original.category}</div>,
     },
     {
-      accessorKey: "period",
-      header: "Period",
+      accessorKey: 'period',
+      header: 'Period',
       cell: ({ row }) => {
         const period = row.original.period;
         if (!period) return <span className="text-muted-foreground">—</span>;
@@ -171,9 +171,9 @@ export function BudgetsPage() {
           <Badge
             variant="outline"
             className={
-              period === "Monthly"
-                ? "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400"
-                : "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400"
+              period === 'Monthly'
+                ? 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400'
+                : 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400'
             }
           >
             {period}
@@ -182,7 +182,7 @@ export function BudgetsPage() {
       },
     },
     {
-      accessorKey: "amount",
+      accessorKey: 'amount',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Amount</SortableHeader>
@@ -199,25 +199,25 @@ export function BudgetsPage() {
       },
     },
     {
-      accessorKey: "active",
-      header: "Status",
+      accessorKey: 'active',
+      header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.active ? "default" : "secondary"} className="text-xs">
-          {row.original.active ? "Active" : "Inactive"}
+        <Badge variant={row.original.active ? 'default' : 'secondary'} className="text-xs">
+          {row.original.active ? 'Active' : 'Inactive'}
         </Badge>
       ),
       filterFn: (row, columnId, filterValue) => {
-        if (filterValue === undefined || filterValue === null || filterValue === "") {
+        if (filterValue === undefined || filterValue === null || filterValue === '') {
           return true;
         }
         const value = row.getValue<boolean>(columnId);
-        const filterBool = filterValue === "true";
+        const filterBool = filterValue === 'true';
         return value === filterBool;
       },
     },
     {
-      accessorKey: "notes",
-      header: "Notes",
+      accessorKey: 'notes',
+      header: 'Notes',
       cell: ({ row }) => {
         const notes = row.original.notes;
         if (!notes) {
@@ -227,7 +227,7 @@ export function BudgetsPage() {
       },
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => (
         <div className="text-right">
           <DropdownMenu
@@ -256,23 +256,23 @@ export function BudgetsPage() {
 
   const tableFilters: ColumnFilter[] = [
     {
-      id: "period",
-      type: "select",
-      label: "Period",
+      id: 'period',
+      type: 'select',
+      label: 'Period',
       options: [
-        { label: "All Periods", value: "" },
-        { label: "Monthly", value: "Monthly" },
-        { label: "Yearly", value: "Yearly" },
+        { label: 'All Periods', value: '' },
+        { label: 'Monthly', value: 'Monthly' },
+        { label: 'Yearly', value: 'Yearly' },
       ],
     },
     {
-      id: "active",
-      type: "select",
-      label: "Status",
+      id: 'active',
+      type: 'select',
+      label: 'Status',
       options: [
-        { label: "All", value: "" },
-        { label: "Active", value: "true" },
-        { label: "Inactive", value: "false" },
+        { label: 'All', value: '' },
+        { label: 'Active', value: 'true' },
+        { label: 'Inactive', value: 'false' },
       ],
     },
   ];
@@ -298,7 +298,7 @@ export function BudgetsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Budgets"
-        description={data ? `${data.pagination.total} total budgets` : "Manage spending targets"}
+        description={data ? `${data.pagination.total} total budgets` : 'Manage spending targets'}
         actions={
           <Button onClick={handleAdd}>
             <Plus className="mr-2 h-4 w-4" /> Add Budget
@@ -330,19 +330,19 @@ export function BudgetsPage() {
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>{editingBudget ? "Edit Budget" : "New Budget"}</DialogTitle>
+              <DialogTitle>{editingBudget ? 'Edit Budget' : 'New Budget'}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <TextInput
                 label="Category"
                 placeholder="e.g. Groceries, Entertainment"
-                {...form.register("category")}
+                {...form.register('category')}
                 error={form.formState.errors.category?.message}
               />
               <Select
                 label="Period"
                 options={PERIOD_OPTIONS}
-                {...form.register("period")}
+                {...form.register('period')}
                 error={form.formState.errors.period?.message}
               />
               <TextInput
@@ -352,7 +352,7 @@ export function BudgetsPage() {
                 prefix="$"
                 step="0.01"
                 min="0"
-                {...form.register("amount")}
+                {...form.register('amount')}
                 error={form.formState.errors.amount?.message}
               />
               <Controller
@@ -369,7 +369,7 @@ export function BudgetsPage() {
               />
               <div className="space-y-2">
                 <Label>Notes (Optional)</Label>
-                <Textarea placeholder="Additional details..." {...form.register("notes")} />
+                <Textarea placeholder="Additional details..." {...form.register('notes')} />
               </div>
             </div>
             <DialogFooter>
@@ -383,7 +383,7 @@ export function BudgetsPage() {
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingBudget ? "Update" : "Create"}
+                {editingBudget ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
           </form>
@@ -406,7 +406,7 @@ export function BudgetsPage() {
               onClick={() => deletingId && deleteMutation.mutate({ id: deletingId })}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,11 +2,11 @@
  * Item connections service — connect/disconnect inventory items using Drizzle ORM.
  * Enforces A<B ordering to prevent duplicate bidirectional pairs.
  */
-import { eq, and, or, count } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { itemConnections, homeInventory } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { ItemConnectionRow, TraceNode, GraphData, GraphNode, GraphEdge } from "./types.js";
+import { eq, and, or, count } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { itemConnections, homeInventory } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
+import type { ItemConnectionRow, TraceNode, GraphData, GraphNode, GraphEdge } from './types.js';
 
 /** Count + rows for a paginated list. */
 export interface ConnectionListResult {
@@ -22,7 +22,7 @@ export function connectItems(inputA: string, inputB: string): ItemConnectionRow 
   const db = getDrizzle();
 
   if (inputA === inputB) {
-    throw new ConflictError("Cannot connect an item to itself");
+    throw new ConflictError('Cannot connect an item to itself');
   }
 
   // Enforce A<B ordering
@@ -34,14 +34,14 @@ export function connectItems(inputA: string, inputB: string): ItemConnectionRow 
     .from(homeInventory)
     .where(eq(homeInventory.id, itemAId))
     .all();
-  if (!itemA) throw new NotFoundError("Inventory item", itemAId);
+  if (!itemA) throw new NotFoundError('Inventory item', itemAId);
 
   const [itemB] = db
     .select({ id: homeInventory.id })
     .from(homeInventory)
     .where(eq(homeInventory.id, itemBId))
     .all();
-  if (!itemB) throw new NotFoundError("Inventory item", itemBId);
+  if (!itemB) throw new NotFoundError('Inventory item', itemBId);
 
   // Check for existing connection
   const [existing] = db
@@ -63,7 +63,7 @@ export function connectItems(inputA: string, inputB: string): ItemConnectionRow 
     .where(and(eq(itemConnections.itemAId, itemAId), eq(itemConnections.itemBId, itemBId)))
     .all();
 
-  if (!created) throw new NotFoundError("Item connection", `${itemAId}-${itemBId}`);
+  if (!created) throw new NotFoundError('Item connection', `${itemAId}-${itemBId}`);
   return created;
 }
 
@@ -79,7 +79,7 @@ export function disconnectItems(id: number): void {
     .where(eq(itemConnections.id, id))
     .all();
 
-  if (!row) throw new NotFoundError("Item connection", String(id));
+  if (!row) throw new NotFoundError('Item connection', String(id));
 
   db.delete(itemConnections).where(eq(itemConnections.id, id)).run();
 }
@@ -123,7 +123,7 @@ export function traceConnections(itemId: string, maxDepth: number): TraceNode {
     .where(eq(homeInventory.id, itemId))
     .all();
 
-  if (!startItem) throw new NotFoundError("Inventory item", itemId);
+  if (!startItem) throw new NotFoundError('Inventory item', itemId);
 
   const root: TraceNode = {
     id: startItem.id,
@@ -221,7 +221,7 @@ export function getConnectionGraph(itemId: string, maxDepth: number): GraphData 
 
   // Validate starting item
   const startItem = itemMap.get(itemId);
-  if (!startItem) throw new NotFoundError("Inventory item", itemId);
+  if (!startItem) throw new NotFoundError('Inventory item', itemId);
 
   const nodes: GraphNode[] = [startItem];
   const edges: GraphEdge[] = [];

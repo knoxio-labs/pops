@@ -5,8 +5,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "../primitives/breadcrumb";
-import { cn } from "../lib/utils";
+} from '../primitives/breadcrumb';
+import { cn } from '../lib/utils';
 
 export interface LocationSegment {
   id: string;
@@ -25,7 +25,7 @@ export function LocationBreadcrumb({ segments, onNavigate, className }: Location
   }
 
   return (
-    <Breadcrumb className={cn("text-xs", className)}>
+    <Breadcrumb className={cn('text-xs', className)}>
       <BreadcrumbList className="flex-nowrap text-xs gap-1 sm:gap-1">
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1;

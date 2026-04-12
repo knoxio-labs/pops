@@ -1,21 +1,21 @@
 /**
  * Library tRPC router — high-level procedures for adding media to the library.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { getTmdbClient, TmdbClient, TmdbApiError, getImageCache } from "../tmdb/index.js";
-import { NotFoundError } from "../../../shared/errors.js";
-import { toMovie } from "../movies/types.js";
-import { toTvShow, toSeason } from "../tv-shows/types.js";
-import { RefreshMovieSchema, QuickPickSchema, LibraryListSchema } from "./types.js";
-import * as libraryService from "./service.js";
-import { getPlexClient } from "../plex/service.js";
-import { checkAndLogMovieWatch } from "../plex/sync-discover-watches.js";
-import { getTvdbClient } from "../thetvdb/index.js";
-import { TvdbApiError } from "../thetvdb/types.js";
-import { refreshTvShow } from "../thetvdb/service.js";
-import * as tvShowService from "./tv-show-service.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { getTmdbClient, TmdbClient, TmdbApiError, getImageCache } from '../tmdb/index.js';
+import { NotFoundError } from '../../../shared/errors.js';
+import { toMovie } from '../movies/types.js';
+import { toTvShow, toSeason } from '../tv-shows/types.js';
+import { RefreshMovieSchema, QuickPickSchema, LibraryListSchema } from './types.js';
+import * as libraryService from './service.js';
+import { getPlexClient } from '../plex/service.js';
+import { checkAndLogMovieWatch } from '../plex/sync-discover-watches.js';
+import { getTvdbClient } from '../thetvdb/index.js';
+import { TvdbApiError } from '../thetvdb/types.js';
+import { refreshTvShow } from '../thetvdb/service.js';
+import * as tvShowService from './tv-show-service.js';
 
 function requireTmdbClient(): TmdbClient {
   return getTmdbClient();
@@ -70,18 +70,18 @@ export const libraryRouter = router({
         return {
           data: movie,
           created,
-          message: created ? "Movie added to library" : "Movie already in library",
+          message: created ? 'Movie added to library' : 'Movie already in library',
         };
       } catch (err) {
         if (err instanceof TmdbApiError) {
           if (err.status === 404) {
             throw new TRPCError({
-              code: "NOT_FOUND",
+              code: 'NOT_FOUND',
               message: `Movie not found on TMDB (ID: ${input.tmdbId})`,
             });
           }
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `TMDB API error: ${err.message}`,
           });
         }
@@ -102,15 +102,15 @@ export const libraryRouter = router({
       );
       return {
         data: toMovie(row),
-        message: "Movie metadata refreshed",
+        message: 'Movie metadata refreshed',
       };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof TmdbApiError) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
+          code: 'INTERNAL_SERVER_ERROR',
           message: `TMDB API error: ${err.message}`,
         });
       }
@@ -132,12 +132,12 @@ export const libraryRouter = router({
             seasons: result.seasons.map(toSeason),
           },
           created: result.created,
-          message: result.created ? "TV show added to library" : "TV show already in library",
+          message: result.created ? 'TV show added to library' : 'TV show already in library',
         };
       } catch (err) {
         if (err instanceof TvdbApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `TheTVDB API error: ${err.message}`,
           });
         }
@@ -177,15 +177,15 @@ export const libraryRouter = router({
           episodesUpdated: result.episodesUpdated,
           seasonsAdded: result.seasonsAdded,
           seasonsUpdated: result.seasonsUpdated,
-          message: "TV show metadata refreshed",
+          message: 'TV show metadata refreshed',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof TvdbApiError) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
+            code: 'INTERNAL_SERVER_ERROR',
             message: `TheTVDB API error: ${err.message}`,
           });
         }

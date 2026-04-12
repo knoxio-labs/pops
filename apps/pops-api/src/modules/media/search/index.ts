@@ -1,1 +1,1 @@
-export { searchRouter } from "./router.js";
+export { searchRouter } from './router.js';

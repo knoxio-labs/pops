@@ -58,4 +58,3 @@ As a user, I want tag rule proposals to be understandable and safe, so that I ca
 - [x] Define proposal scopes for tag suggestions:
   - group scope (entity group in Tag Review)
   - transaction scope (single transaction)
-

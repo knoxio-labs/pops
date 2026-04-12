@@ -10,11 +10,11 @@ POPS needs a database for a single-user, self-hosted system running on a mini PC
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| PostgreSQL | Mature, scalable, rich query features | Separate process, connection management, heavier backups, overkill for one user |
-| SQLite | Zero dependencies, single file, synchronous reads, trivial backups, cross-domain joins for free | No horizontal scaling, write concurrency limited to one writer |
-| Cloud DB (Supabase, PlanetScale) | Managed, no ops | External dependency, latency, ongoing cost, defeats self-hosted goal |
+| Option                           | Pros                                                                                            | Cons                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| PostgreSQL                       | Mature, scalable, rich query features                                                           | Separate process, connection management, heavier backups, overkill for one user |
+| SQLite                           | Zero dependencies, single file, synchronous reads, trivial backups, cross-domain joins for free | No horizontal scaling, write concurrency limited to one writer                  |
+| Cloud DB (Supabase, PlanetScale) | Managed, no ops                                                                                 | External dependency, latency, ongoing cost, defeats self-hosted goal            |
 
 ## Decision
 

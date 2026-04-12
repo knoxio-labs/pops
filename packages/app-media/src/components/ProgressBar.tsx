@@ -1,4 +1,4 @@
-import { cn } from "@pops/ui";
+import { cn } from '@pops/ui';
 
 interface ProgressBarProps {
   watched: number;
@@ -14,12 +14,12 @@ export function ProgressBar({ watched, total, className, showLabel = true }: Pro
   const isComplete = watched >= total;
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn('flex items-center gap-2', className)}>
       <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
         <div
           className={cn(
-            "h-full rounded-full transition-all",
-            isComplete ? "bg-green-500" : "bg-primary"
+            'h-full rounded-full transition-all',
+            isComplete ? 'bg-green-500' : 'bg-primary'
           )}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />

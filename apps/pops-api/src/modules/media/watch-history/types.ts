@@ -1,9 +1,9 @@
-import { z } from "zod";
-import type { WatchHistoryRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { WatchHistoryRow } from '@pops/db-types';
 
 export type { WatchHistoryRow };
 
-const WATCH_MEDIA_TYPES = ["movie", "episode"] as const;
+const WATCH_MEDIA_TYPES = ['movie', 'episode'] as const;
 
 /** API response shape for a watch history entry. */
 export interface WatchHistoryEntry {
@@ -31,7 +31,7 @@ export const LogWatchSchema = z.object({
   mediaId: z.number().int().positive(),
   watchedAt: z.string().datetime().optional(),
   completed: z.number().int().min(0).max(1).optional().default(1),
-  source: z.enum(["manual", "plex_sync"]).optional().default("manual"),
+  source: z.enum(['manual', 'plex_sync']).optional().default('manual'),
 });
 export type LogWatchInput = z.input<typeof LogWatchSchema>;
 
@@ -45,7 +45,7 @@ export const WatchHistoryQuerySchema = z.object({
 export type WatchHistoryQueryRaw = z.infer<typeof WatchHistoryQuerySchema>;
 
 /** Zod schema for batch-logging watch events (whole season or show). */
-const BATCH_MEDIA_TYPES = ["season", "show"] as const;
+const BATCH_MEDIA_TYPES = ['season', 'show'] as const;
 
 export const BatchLogWatchSchema = z.object({
   mediaType: z.enum(BATCH_MEDIA_TYPES),

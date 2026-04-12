@@ -1,17 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { CheckboxInput } from "./CheckboxInput";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { CheckboxInput } from './CheckboxInput';
 
 const meta: Meta<typeof CheckboxInput> = {
-  title: "Inputs/Checkbox",
+  title: 'Inputs/Checkbox',
   component: CheckboxInput,
   parameters: {
-    layout: "centered",
+    layout: 'centered',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ width: "400px", padding: "2rem" }}>
+      <div style={{ width: '400px', padding: '2rem' }}>
         <Story />
       </div>
     ),

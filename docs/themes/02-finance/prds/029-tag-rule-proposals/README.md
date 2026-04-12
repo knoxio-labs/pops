@@ -8,10 +8,12 @@
 Build a tag learning system that proposes reusable **tag rules** based on user tag edits during import. Tag rules help the system suggest consistent categories over time, while remaining safe and user-controlled.
 
 This PRD is intentionally separate from classification corrections (PRD-024) so that:
+
 - entity/type matching remains stable and explainable
 - tagging can improve without risking incorrect entity assignments
 
 Tag rule changes follow the same proposal contract as PRD-028:
+
 - bundled ChangeSet proposals
 - deterministic impact preview
 - approve to apply, reject with feedback
@@ -47,46 +49,46 @@ The system must support high-quality tag suggestions even when the database cont
 
 The seed taxonomy is the default starting vocabulary for a new/empty database:
 
-| Tag |
-|-----|
-| Income |
-| Transfer |
-| Groceries |
-| Eat Out |
-| Coffee |
-| Transport |
-| Fuel |
-| Charging |
-| Novated Lease |
-| Parking |
-| Tolls |
+| Tag              |
+| ---------------- |
+| Income           |
+| Transfer         |
+| Groceries        |
+| Eat Out          |
+| Coffee           |
+| Transport        |
+| Fuel             |
+| Charging         |
+| Novated Lease    |
+| Parking          |
+| Tolls            |
 | Public Transport |
-| Shopping |
-| Home |
-| Online |
-| Utilities |
-| Internet |
-| Mobile |
-| Subscriptions |
-| Entertainment |
-| Pub |
-| Bar |
-| Club |
-| Restaurant |
-| Health |
-| Pharmacy |
-| Insurance |
-| Rent |
-| Mortgage |
-| Travel |
-| Education |
-| Gifts |
-| Donations |
-| Fees |
-| Interest |
-| Taxes |
-| Deductible |
-| Unknown |
+| Shopping         |
+| Home             |
+| Online           |
+| Utilities        |
+| Internet         |
+| Mobile           |
+| Subscriptions    |
+| Entertainment    |
+| Pub              |
+| Bar              |
+| Club             |
+| Restaurant       |
+| Health           |
+| Pharmacy         |
+| Insurance        |
+| Rent             |
+| Mortgage         |
+| Travel           |
+| Education        |
+| Gifts            |
+| Donations        |
+| Fees             |
+| Interest         |
+| Taxes            |
+| Deductible       |
+| Unknown          |
 
 ## Proposal scopes (group and transaction)
 
@@ -96,6 +98,7 @@ Tag suggestions and tag rule proposals can be produced at two scopes:
 - **Transaction scope**: a proposal targets a single transaction and includes an impact preview for just that transaction.
 
 The UI must support accepting/rejecting suggestions at either scope:
+
 - group-level accept/reject applies to all transactions in the group (with merge semantics and transaction-level overrides)
 - transaction-level accept/reject applies only to that transaction
 
@@ -108,14 +111,13 @@ The UI must support accepting/rejecting suggestions at either scope:
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-tag-rule-contract](us-01-tag-rule-contract.md) | Define tag rule model + ChangeSet operations + impact preview | Done | No (first) |
-| 02 | [us-02-generate-tag-proposal](us-02-generate-tag-proposal.md) | Generate bundled tag-rule proposal from tag edits | Done | Blocked by us-01 |
-| 03 | [us-03-approve-reject-tag-proposals](us-03-approve-reject-tag-proposals.md) | Approve/apply or reject-with-feedback tag rule ChangeSets | Done | Blocked by us-01 |
+| #   | Story                                                                       | Summary                                                       | Status | Parallelisable   |
+| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-tag-rule-contract](us-01-tag-rule-contract.md)                       | Define tag rule model + ChangeSet operations + impact preview | Done   | No (first)       |
+| 02  | [us-02-generate-tag-proposal](us-02-generate-tag-proposal.md)               | Generate bundled tag-rule proposal from tag edits             | Done   | Blocked by us-01 |
+| 03  | [us-03-approve-reject-tag-proposals](us-03-approve-reject-tag-proposals.md) | Approve/apply or reject-with-feedback tag rule ChangeSets     | Done   | Blocked by us-01 |
 
 ## Verification
 
 - Tag edits in the current import can produce a proposal that increases the quality of future tag suggestions.
 - Approving a tag rule proposal immediately improves suggested tags for remaining transactions in the current import without altering entity/type classification.
-

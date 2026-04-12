@@ -8,9 +8,9 @@ Set up the secrets pipeline: Ansible Vault for encrypted storage at rest, Docker
 
 ## PRDs
 
-| # | PRD | Summary | Status |
-|---|-----|---------|--------|
-| 015 | [Secrets Management](../prds/015-secrets-management/README.md) | Ansible Vault encryption, Docker secrets configuration, secret file deployment to host, container consumption via /run/secrets/ | Done |
+| #   | PRD                                                            | Summary                                                                                                                         | Status |
+| --- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 015 | [Secrets Management](../prds/015-secrets-management/README.md) | Ansible Vault encryption, Docker secrets configuration, secret file deployment to host, container consumption via /run/secrets/ | Done   |
 
 ## Dependencies
 

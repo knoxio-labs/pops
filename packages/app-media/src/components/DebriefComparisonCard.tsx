@@ -3,10 +3,10 @@
  * User taps one to select the winner. Calls recordDebriefComparison mutation,
  * then fires onResult with the outcome.
  */
-import { useState } from "react";
-import { Skeleton } from "@pops/ui";
-import { ImageOff } from "lucide-react";
-import { trpc } from "../lib/trpc";
+import { useState } from 'react';
+import { Skeleton } from '@pops/ui';
+import { ImageOff } from 'lucide-react';
+import { trpc } from '../lib/trpc';
 
 export interface DebriefMovie {
   id: number;
@@ -51,7 +51,7 @@ export function DebriefComparisonCard({
     mutation.mutate({
       sessionId,
       dimensionId,
-      opponentType: "movie" as const,
+      opponentType: 'movie' as const,
       opponentId: movieB.id,
       winnerId: pickedId,
     });
@@ -95,7 +95,7 @@ function PosterCard({
 
   const year =
     movie.year != null
-      ? typeof movie.year === "string"
+      ? typeof movie.year === 'string'
         ? movie.year.slice(0, 4)
         : movie.year
       : null;
@@ -107,11 +107,11 @@ function PosterCard({
       aria-label={`Pick ${movie.title}`}
       className={`flex flex-col items-center text-center rounded-lg border p-3 transition-all ${
         isWinner
-          ? "border-green-500 shadow-lg scale-[1.02]"
+          ? 'border-green-500 shadow-lg scale-[1.02]'
           : isLoser
-            ? "border-red-500/50 opacity-60"
-            : "border-border hover:border-primary hover:shadow-md hover:scale-[1.01]"
-      } ${disabled && !isWinner && !isLoser ? "cursor-default" : !disabled ? "cursor-pointer active:scale-[0.98]" : ""}`}
+            ? 'border-red-500/50 opacity-60'
+            : 'border-border hover:border-primary hover:shadow-md hover:scale-[1.01]'
+      } ${disabled && !isWinner && !isLoser ? 'cursor-default' : !disabled ? 'cursor-pointer active:scale-[0.98]' : ''}`}
     >
       {imgError || !posterSrc ? (
         <div className="w-full aspect-[2/3] rounded-md mb-2 bg-muted flex items-center justify-center">
@@ -146,4 +146,4 @@ export function DebriefComparisonCardSkeleton() {
   );
 }
 
-DebriefComparisonCard.displayName = "DebriefComparisonCard";
+DebriefComparisonCard.displayName = 'DebriefComparisonCard';

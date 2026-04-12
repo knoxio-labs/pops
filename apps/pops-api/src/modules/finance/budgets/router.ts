@@ -1,13 +1,13 @@
 /**
  * Budget tRPC router — CRUD procedures for budgets.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
-import { CreateBudgetSchema, UpdateBudgetSchema, BudgetQuerySchema, toBudget } from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
+import { CreateBudgetSchema, UpdateBudgetSchema, BudgetQuerySchema, toBudget } from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -20,7 +20,7 @@ export const budgetsRouter = router({
     const offset = input.offset ?? DEFAULT_OFFSET;
 
     const activeFilter =
-      input.active === "true" ? true : input.active === "false" ? false : undefined;
+      input.active === 'true' ? true : input.active === 'false' ? false : undefined;
 
     const { rows, total } = service.listBudgets(
       input.search,
@@ -43,7 +43,7 @@ export const budgetsRouter = router({
       return { data: toBudget(row) };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }
@@ -55,11 +55,11 @@ export const budgetsRouter = router({
       const row = service.createBudget(input);
       return {
         data: toBudget(row),
-        message: "Budget created",
+        message: 'Budget created',
       };
     } catch (err) {
       if (err instanceof ConflictError) {
-        throw new TRPCError({ code: "CONFLICT", message: err.message });
+        throw new TRPCError({ code: 'CONFLICT', message: err.message });
       }
       throw err;
     }
@@ -78,11 +78,11 @@ export const budgetsRouter = router({
         const row = service.updateBudget(input.id, input.data);
         return {
           data: toBudget(row),
-          message: "Budget updated",
+          message: 'Budget updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -92,10 +92,10 @@ export const budgetsRouter = router({
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
     try {
       service.deleteBudget(input.id);
-      return { message: "Budget deleted" };
+      return { message: 'Budget deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

@@ -6,9 +6,9 @@ on:
     branches:
       - main
     paths:
-      - "apps/pops-api/**"
-      - "packages/db-types/**"
-      - ".github/workflows/api-quality.yml"
+      - 'apps/pops-api/**'
+      - 'packages/db-types/**'
+      - '.github/workflows/api-quality.yml'
 
 jobs:
   changes:
@@ -51,7 +51,7 @@ jobs:
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: '22'
           cache: pnpm
 
       - name: Install dependencies

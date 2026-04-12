@@ -23,7 +23,7 @@ export interface SearchHit<T = unknown> {
   uri: string;
   score: number;
   matchField: string;
-  matchType: "exact" | "prefix" | "contains";
+  matchType: 'exact' | 'prefix' | 'contains';
   data: T;
 }
 

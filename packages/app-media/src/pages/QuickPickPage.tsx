@@ -1,8 +1,8 @@
-import { useNavigate, useSearchParams } from "react-router";
-import { Button, Skeleton } from "@pops/ui";
-import { RefreshCw, Sparkles } from "lucide-react";
-import { trpc } from "../lib/trpc";
-import { MediaCard } from "../components/MediaCard";
+import { useNavigate, useSearchParams } from 'react-router';
+import { Button, Skeleton } from '@pops/ui';
+import { RefreshCw, Sparkles } from 'lucide-react';
+import { trpc } from '../lib/trpc';
+import { MediaCard } from '../components/MediaCard';
 
 const COUNT_OPTIONS = [2, 3, 4, 5] as const;
 const DEFAULT_COUNT = 3;
@@ -16,7 +16,7 @@ function parseCount(raw: string | null): number {
 export function QuickPickPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const count = parseCount(searchParams.get("count"));
+  const count = parseCount(searchParams.get('count'));
 
   const { data, isLoading, refetch } = trpc.media.library.quickPick.useQuery(
     { count },
@@ -53,7 +53,7 @@ export function QuickPickPage() {
         <p className="text-muted-foreground text-sm max-w-xs">
           Add more movies to your library or mark some as unwatched to get picks.
         </p>
-        <Button onClick={() => navigate("/media/search")}>Search for movies</Button>
+        <Button onClick={() => navigate('/media/search')}>Search for movies</Button>
       </div>
     );
   }
@@ -79,8 +79,8 @@ export function QuickPickPage() {
                 onClick={() => setCount(n)}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
                   n === count
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
                 }`}
                 aria-pressed={n === count}
               >

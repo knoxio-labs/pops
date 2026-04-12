@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { ItemConnectionRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { ItemConnectionRow } from '@pops/db-types';
 
 export type { ItemConnectionRow };
 
@@ -23,14 +23,14 @@ export function toConnection(row: ItemConnectionRow): ItemConnection {
 
 /** Zod schema for connecting two items. */
 export const ConnectItemsSchema = z.object({
-  itemAId: z.string().min(1, "Item A ID is required"),
-  itemBId: z.string().min(1, "Item B ID is required"),
+  itemAId: z.string().min(1, 'Item A ID is required'),
+  itemBId: z.string().min(1, 'Item B ID is required'),
 });
 export type ConnectItemsInput = z.infer<typeof ConnectItemsSchema>;
 
 /** Zod schema for listing connections for an item. */
 export const ConnectionQuerySchema = z.object({
-  itemId: z.string().min(1, "Item ID is required"),
+  itemId: z.string().min(1, 'Item ID is required'),
   limit: z.coerce.number().positive().max(500).optional(),
   offset: z.coerce.number().nonnegative().optional(),
 });
@@ -47,7 +47,7 @@ export interface TraceNode {
 
 /** Zod schema for trace query. */
 export const TraceQuerySchema = z.object({
-  itemId: z.string().min(1, "Item ID is required"),
+  itemId: z.string().min(1, 'Item ID is required'),
   maxDepth: z.coerce.number().int().positive().max(10).optional().default(10),
 });
 export type TraceQuery = z.infer<typeof TraceQuerySchema>;
@@ -74,6 +74,6 @@ export interface GraphData {
 
 /** Zod schema for graph query. */
 export const GraphQuerySchema = z.object({
-  itemId: z.string().min(1, "Item ID is required"),
+  itemId: z.string().min(1, 'Item ID is required'),
   maxDepth: z.coerce.number().int().positive().max(10).optional().default(10),
 });

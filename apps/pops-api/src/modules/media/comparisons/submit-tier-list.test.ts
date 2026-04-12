@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { Database } from "better-sqlite3";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Database } from 'better-sqlite3';
 import {
   setupTestContext,
   seedDimension,
   seedMovie,
   seedWatchHistoryEntry,
-} from "../../../shared/test-utils.js";
-import { submitTierList, recordComparison } from "./service.js";
-import { getTierOverrideForMedia } from "./tier-overrides.js";
+} from '../../../shared/test-utils.js';
+import { submitTierList, recordComparison } from './service.js';
+import { getTierOverrideForMedia } from './tier-overrides.js';
 
 const ctx = setupTestContext();
 let db: Database;
@@ -27,7 +27,7 @@ function seedWatchedMovie(tmdbId: number, title: string): number {
     title,
     poster_path: `/${title.toLowerCase()}.jpg`,
   });
-  seedWatchHistoryEntry(db, { media_type: "movie", media_id: movieId });
+  seedWatchHistoryEntry(db, { media_type: 'movie', media_id: movieId });
   return movieId;
 }
 
@@ -62,19 +62,19 @@ function getComparison(id: number) {
   return db.prepare(`SELECT * FROM comparisons WHERE id = ?`).get(id) as Record<string, unknown>;
 }
 
-describe("submitTierList", () => {
-  it("records correct number of pairwise comparisons", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
-    const m3 = seedWatchedMovie(102, "Movie C");
+describe('submitTierList', () => {
+  it('records correct number of pairwise comparisons', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
+    const m3 = seedWatchedMovie(102, 'Movie C');
 
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "A" },
-        { movieId: m3, tier: "B" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'A' },
+        { movieId: m3, tier: 'B' },
       ],
     });
 
@@ -83,20 +83,20 @@ describe("submitTierList", () => {
     expect(result.scoreChanges).toHaveLength(3);
   });
 
-  it("records n*(n-1)/2 comparisons for 4 movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
-    const m3 = seedWatchedMovie(102, "Movie C");
-    const m4 = seedWatchedMovie(103, "Movie D");
+  it('records n*(n-1)/2 comparisons for 4 movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
+    const m3 = seedWatchedMovie(102, 'Movie C');
+    const m4 = seedWatchedMovie(103, 'Movie D');
 
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "A" },
-        { movieId: m3, tier: "C" },
-        { movieId: m4, tier: "D" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'A' },
+        { movieId: m3, tier: 'C' },
+        { movieId: m4, tier: 'D' },
       ],
     });
 
@@ -104,16 +104,16 @@ describe("submitTierList", () => {
     expect(result.comparisonsRecorded).toBe(6);
   });
 
-  it("higher tier movie gets higher score after submission", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Top Movie");
-    const m2 = seedWatchedMovie(101, "Bottom Movie");
+  it('higher tier movie gets higher score after submission', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Top Movie');
+    const m2 = seedWatchedMovie(101, 'Bottom Movie');
 
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "D" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'D' },
       ],
     });
 
@@ -125,16 +125,16 @@ describe("submitTierList", () => {
     expect((topChange?.newScore ?? 0) > (bottomChange?.newScore ?? 0)).toBe(true);
   });
 
-  it("same-tier movies get draw comparisons", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('same-tier movies get draw comparisons', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "A" },
-        { movieId: m2, tier: "A" },
+        { movieId: m1, tier: 'A' },
+        { movieId: m2, tier: 'A' },
       ],
     });
 
@@ -148,67 +148,67 @@ describe("submitTierList", () => {
     expect(Math.abs((s1?.newScore ?? 0) - (s2?.newScore ?? 0))).toBeLessThan(1);
   });
 
-  it("sets tier overrides for each placement", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('sets tier overrides for each placement', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "C" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'C' },
       ],
     });
 
-    const override1 = getTierOverrideForMedia("movie", m1, dimId);
-    const override2 = getTierOverrideForMedia("movie", m2, dimId);
+    const override1 = getTierOverrideForMedia('movie', m1, dimId);
+    const override2 = getTierOverrideForMedia('movie', m2, dimId);
 
-    expect(override1?.tier).toBe("S");
-    expect(override2?.tier).toBe("C");
+    expect(override1?.tier).toBe('S');
+    expect(override2?.tier).toBe('C');
   });
 
-  it("rejects inactive dimension", () => {
-    const dimId = seedDimension(db, { name: "Inactive", active: 0 });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('rejects inactive dimension', () => {
+    const dimId = seedDimension(db, { name: 'Inactive', active: 0 });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     expect(() =>
       submitTierList({
         dimensionId: dimId,
         placements: [
-          { movieId: m1, tier: "S" },
-          { movieId: m2, tier: "A" },
+          { movieId: m1, tier: 'S' },
+          { movieId: m2, tier: 'A' },
         ],
       })
-    ).toThrow("Validation failed");
+    ).toThrow('Validation failed');
   });
 
-  it("rejects non-existent dimension", () => {
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('rejects non-existent dimension', () => {
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     expect(() =>
       submitTierList({
         dimensionId: 999,
         placements: [
-          { movieId: m1, tier: "S" },
-          { movieId: m2, tier: "A" },
+          { movieId: m1, tier: 'S' },
+          { movieId: m2, tier: 'A' },
         ],
       })
     ).toThrow();
   });
 
-  it("returns score changes for all placed movies", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('returns score changes for all placed movies', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "D" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'D' },
       ],
     });
 
@@ -219,16 +219,16 @@ describe("submitTierList", () => {
     }
   });
 
-  it("sets source to tier_list on all recorded comparisons", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('sets source to tier_list on all recorded comparisons', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "D" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'D' },
       ],
     });
 
@@ -236,15 +236,15 @@ describe("submitTierList", () => {
       .prepare(`SELECT source FROM comparisons WHERE dimension_id = ?`)
       .all(dimId) as Array<{ source: string | null }>;
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.source).toBe("tier_list");
+    expect(rows[0]!.source).toBe('tier_list');
   });
 });
 
-describe("submitTierList — override/skip dedup", () => {
-  it("overrides null-source comparison with tier_list", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+describe('submitTierList — override/skip dedup', () => {
+  it('overrides null-source comparison with tier_list', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     // Seed a null-source comparison
     seedComparison(dimId, m1, m2, m1, null);
@@ -253,8 +253,8 @@ describe("submitTierList — override/skip dedup", () => {
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "D" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'D' },
       ],
     });
 
@@ -265,20 +265,20 @@ describe("submitTierList — override/skip dedup", () => {
     const rows = db
       .prepare(`SELECT source FROM comparisons WHERE dimension_id = ?`)
       .all(dimId) as Array<{ source: string | null }>;
-    expect(rows[0]!.source).toBe("tier_list");
+    expect(rows[0]!.source).toBe('tier_list');
   });
 
-  it("overrides tier_list with tier_list (latest opinion wins)", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('overrides tier_list with tier_list (latest opinion wins)', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     // First tier list submission
     submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "D" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'D' },
       ],
     });
     expect(countComparisons(dimId)).toBe(1);
@@ -287,8 +287,8 @@ describe("submitTierList — override/skip dedup", () => {
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "D" },
-        { movieId: m2, tier: "S" },
+        { movieId: m1, tier: 'D' },
+        { movieId: m2, tier: 'S' },
       ],
     });
 
@@ -297,13 +297,13 @@ describe("submitTierList — override/skip dedup", () => {
     expect(countComparisons(dimId)).toBe(1);
   });
 
-  it("skips tier_list when arena comparison exists", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('skips tier_list when arena comparison exists', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     // Seed an arena comparison
-    seedComparison(dimId, m1, m2, m1, "arena");
+    seedComparison(dimId, m1, m2, m1, 'arena');
     const origRow = db
       .prepare(`SELECT * FROM comparisons WHERE dimension_id = ?`)
       .get(dimId) as Record<string, unknown>;
@@ -311,8 +311,8 @@ describe("submitTierList — override/skip dedup", () => {
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "D" },
-        { movieId: m2, tier: "S" },
+        { movieId: m1, tier: 'D' },
+        { movieId: m2, tier: 'S' },
       ],
     });
 
@@ -321,24 +321,24 @@ describe("submitTierList — override/skip dedup", () => {
     // Arena comparison should be preserved
     expect(countComparisons(dimId)).toBe(1);
     const preserved = getComparison(origRow.id as number);
-    expect(preserved.source).toBe("arena");
+    expect(preserved.source).toBe('arena');
   });
 
-  it("returns skipped count reflecting skipped pairs", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
-    const m3 = seedWatchedMovie(102, "Movie C");
+  it('returns skipped count reflecting skipped pairs', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
+    const m3 = seedWatchedMovie(102, 'Movie C');
 
     // Seed arena comparison for m1 vs m2 only
-    seedComparison(dimId, m1, m2, m1, "arena");
+    seedComparison(dimId, m1, m2, m1, 'arena');
 
     const result = submitTierList({
       dimensionId: dimId,
       placements: [
-        { movieId: m1, tier: "S" },
-        { movieId: m2, tier: "A" },
-        { movieId: m3, tier: "B" },
+        { movieId: m1, tier: 'S' },
+        { movieId: m2, tier: 'A' },
+        { movieId: m3, tier: 'B' },
       ],
     });
 
@@ -348,94 +348,94 @@ describe("submitTierList — override/skip dedup", () => {
   });
 });
 
-describe("recordComparison — override/skip dedup", () => {
-  it("overrides tier_list comparison with arena", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+describe('recordComparison — override/skip dedup', () => {
+  it('overrides tier_list comparison with arena', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     // Seed tier_list comparison
-    seedComparison(dimId, m1, m2, m1, "tier_list");
+    seedComparison(dimId, m1, m2, m1, 'tier_list');
 
     const row = recordComparison({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m2,
     });
 
-    expect(row.source).toBe("arena");
+    expect(row.source).toBe('arena');
     expect(countComparisons(dimId)).toBe(1);
   });
 
-  it("overrides arena with arena (latest opinion wins)", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('overrides arena with arena (latest opinion wins)', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     // Seed arena comparison where m1 wins
-    seedComparison(dimId, m1, m2, m1, "arena");
+    seedComparison(dimId, m1, m2, m1, 'arena');
 
     // New arena comparison where m2 wins
     const row = recordComparison({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m2,
     });
 
-    expect(row.source).toBe("arena");
+    expect(row.source).toBe('arena');
     expect(row.winnerId).toBe(m2);
     expect(countComparisons(dimId)).toBe(1);
   });
 
-  it("overrides null-source comparison with arena", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('overrides null-source comparison with arena', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     seedComparison(dimId, m1, m2, m1, null);
 
     const row = recordComparison({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m2,
     });
 
-    expect(row.source).toBe("arena");
+    expect(row.source).toBe('arena');
     expect(countComparisons(dimId)).toBe(1);
   });
 
-  it("finds existing comparison regardless of A/B ordering", () => {
-    const dimId = seedDimension(db, { name: "Overall" });
-    const m1 = seedWatchedMovie(100, "Movie A");
-    const m2 = seedWatchedMovie(101, "Movie B");
+  it('finds existing comparison regardless of A/B ordering', () => {
+    const dimId = seedDimension(db, { name: 'Overall' });
+    const m1 = seedWatchedMovie(100, 'Movie A');
+    const m2 = seedWatchedMovie(101, 'Movie B');
 
     // Seed comparison as (m2, m1) — reversed order
-    seedComparison(dimId, m2, m1, m2, "tier_list");
+    seedComparison(dimId, m2, m1, m2, 'tier_list');
 
     // Record as (m1, m2) — should still find and override
     const row = recordComparison({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
 
-    expect(row.source).toBe("arena");
+    expect(row.source).toBe('arena');
     expect(countComparisons(dimId)).toBe(1);
   });
 });

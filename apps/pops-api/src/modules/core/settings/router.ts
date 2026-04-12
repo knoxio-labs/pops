@@ -1,13 +1,13 @@
 /**
  * Settings tRPC router — CRUD for key-value settings
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
-import { SetSettingSchema, SettingListSchema, toSetting } from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError } from "../../../shared/errors.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
+import { SetSettingSchema, SettingListSchema, toSetting } from './types.js';
+import * as service from './service.js';
+import { NotFoundError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -37,7 +37,7 @@ export const settingsRouter = router({
     const row = service.setSetting(input);
     return {
       data: toSetting(row),
-      message: "Setting saved",
+      message: 'Setting saved',
     };
   }),
 
@@ -45,10 +45,10 @@ export const settingsRouter = router({
   delete: protectedProcedure.input(z.object({ key: z.string() })).mutation(({ input }) => {
     try {
       service.deleteSetting(input.key);
-      return { message: "Setting deleted" };
+      return { message: 'Setting deleted' };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

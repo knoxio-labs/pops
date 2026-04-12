@@ -8,12 +8,12 @@
 import type {
   CorrectionRow,
   CorrectionMatchResult,
-} from "@pops/api/modules/core/corrections/types";
+} from '@pops/api/modules/core/corrections/types';
 import {
   normalizeDescription,
   classifyCorrectionMatch,
-} from "@pops/api/modules/core/corrections/types";
-import type { ProcessedTransaction } from "../store/importStore";
+} from '@pops/api/modules/core/corrections/types';
+import type { ProcessedTransaction } from '../store/importStore';
 
 export interface ReEvaluationResult {
   matched: ProcessedTransaction[];
@@ -36,7 +36,7 @@ function findMatchingRule(
   const eligible = rules.filter((r) => !!r.isActive && r.confidence >= minConfidence);
 
   const exactMatches = eligible
-    .filter((r) => r.matchType === "exact" && r.descriptionPattern === normalized)
+    .filter((r) => r.matchType === 'exact' && r.descriptionPattern === normalized)
     .sort((a, b) => b.confidence - a.confidence || b.timesApplied - a.timesApplied);
 
   if (exactMatches[0]) return classifyCorrectionMatch(exactMatches[0]);
@@ -44,7 +44,7 @@ function findMatchingRule(
   const containsMatches = eligible
     .filter(
       (r) =>
-        r.matchType === "contains" &&
+        r.matchType === 'contains' &&
         r.descriptionPattern.length > 0 &&
         normalized.includes(r.descriptionPattern)
     )
@@ -53,7 +53,7 @@ function findMatchingRule(
   if (containsMatches[0]) return classifyCorrectionMatch(containsMatches[0]);
 
   const regexMatches = eligible
-    .filter((r) => r.matchType === "regex" && r.descriptionPattern.length > 0)
+    .filter((r) => r.matchType === 'regex' && r.descriptionPattern.length > 0)
     .filter((r) => {
       try {
         return new RegExp(r.descriptionPattern).test(normalized);
@@ -86,19 +86,19 @@ export function reevaluateTransactions(
 
   for (const txn of uncertain) {
     const match = findMatchingRule(txn.description, mergedRules, minConfidence);
-    if (match && match.status === "matched") {
+    if (match && match.status === 'matched') {
       newMatched.push({
         ...txn,
         entity: {
           entityId: match.correction.entityId ?? undefined,
           entityName: match.correction.entityName ?? undefined,
-          matchType: "learned" as const,
+          matchType: 'learned' as const,
           confidence: match.correction.confidence,
         },
-        status: "matched",
+        status: 'matched',
         transactionType: match.correction.transactionType ?? txn.transactionType,
         ruleProvenance: {
-          source: "correction" as const,
+          source: 'correction' as const,
           ruleId: match.correction.id,
           pattern: match.correction.descriptionPattern,
           matchType: match.correction.matchType,
@@ -113,19 +113,19 @@ export function reevaluateTransactions(
 
   for (const txn of failed) {
     const match = findMatchingRule(txn.description, mergedRules, minConfidence);
-    if (match && match.status === "matched") {
+    if (match && match.status === 'matched') {
       newMatched.push({
         ...txn,
         entity: {
           entityId: match.correction.entityId ?? undefined,
           entityName: match.correction.entityName ?? undefined,
-          matchType: "learned" as const,
+          matchType: 'learned' as const,
           confidence: match.correction.confidence,
         },
-        status: "matched",
+        status: 'matched',
         transactionType: match.correction.transactionType ?? txn.transactionType,
         ruleProvenance: {
-          source: "correction" as const,
+          source: 'correction' as const,
           ruleId: match.correction.id,
           pattern: match.correction.descriptionPattern,
           matchType: match.correction.matchType,

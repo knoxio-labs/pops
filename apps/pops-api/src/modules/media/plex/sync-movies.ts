@@ -5,14 +5,14 @@
  * (via Plex Guid or title+year search), adds to the local library, and
  * logs watch history for watched items.
  */
-import type { PlexClient } from "./client.js";
-import type { PlexMediaItem } from "./types.js";
-import type { TmdbClient } from "../tmdb/client.js";
-import { getTmdbClient } from "../tmdb/index.js";
-import { getDb } from "../../../db.js";
-import { getMovieByTmdbId, createMovie } from "../movies/service.js";
-import { toMovie } from "../movies/types.js";
-import { logMovieWatch } from "./sync-helpers.js";
+import type { PlexClient } from './client.js';
+import type { PlexMediaItem } from './types.js';
+import type { TmdbClient } from '../tmdb/client.js';
+import { getTmdbClient } from '../tmdb/index.js';
+import { getDb } from '../../../db.js';
+import { getMovieByTmdbId, createMovie } from '../movies/service.js';
+import { toMovie } from '../movies/types.js';
+import { logMovieWatch } from './sync-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,7 +162,7 @@ async function syncSingleMovie(
  */
 async function resolveTmdbId(item: PlexMediaItem, tmdbClient: TmdbClient): Promise<number | null> {
   // Try Plex Guid array first
-  const plexTmdbId = item.externalIds.find((id) => id.source === "tmdb");
+  const plexTmdbId = item.externalIds.find((id) => id.source === 'tmdb');
   if (plexTmdbId) {
     const parsed = Number(plexTmdbId.id);
     if (!Number.isNaN(parsed)) return parsed;

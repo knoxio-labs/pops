@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useParams, Link } from "react-router";
-import { useSetPageContext } from "@pops/navigation";
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useParams, Link } from 'react-router';
+import { useSetPageContext } from '@pops/navigation';
 import {
   Alert,
   AlertTitle,
@@ -9,11 +9,11 @@ import {
   Button,
   Switch,
   Skeleton,
-} from "@pops/ui";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { EpisodeList } from "../components/EpisodeList";
-import { ProgressBar } from "../components/ProgressBar";
+} from '@pops/ui';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { EpisodeList } from '../components/EpisodeList';
+import { ProgressBar } from '../components/ProgressBar';
 
 function SeasonDetailSkeleton() {
   return (
@@ -68,7 +68,7 @@ export function SeasonDetailPage() {
 
   // Query watch history for all episodes in this season
   const { data: watchHistoryData } = trpc.media.watchHistory.list.useQuery(
-    { mediaType: "episode", limit: 500 },
+    { mediaType: 'episode', limit: 500 },
     { enabled: episodeIds.length > 0 }
   );
 
@@ -289,7 +289,7 @@ export function SeasonDetailPage() {
       setTogglingIds((prev) => new Set(prev).add(episodeId));
 
       if (watched) {
-        logMutation.mutate({ mediaType: "episode", mediaId: episodeId });
+        logMutation.mutate({ mediaType: 'episode', mediaId: episodeId });
       } else {
         // Find the watch history entry to delete
         const entry = watchHistoryData?.data?.find(
@@ -325,7 +325,7 @@ export function SeasonDetailPage() {
       await utils.media.watchHistory.list.cancel();
       progressSnapshot.current = utils.media.watchHistory.progress.getData({ tvShowId: showId });
       listSnapshot.current = utils.media.watchHistory.list.getData({
-        mediaType: "episode",
+        mediaType: 'episode',
         limit: 500,
       });
 
@@ -353,14 +353,14 @@ export function SeasonDetailPage() {
 
       // Optimistically add all unwatched episodes to watch history
       if (episodes.length > 0) {
-        utils.media.watchHistory.list.setData({ mediaType: "episode", limit: 500 }, (old) => {
+        utils.media.watchHistory.list.setData({ mediaType: 'episode', limit: 500 }, (old) => {
           if (!old?.data) return old;
           const existingIds = new Set(old.data.map((e: { mediaId: number }) => e.mediaId));
           const newEntries = episodes
             .filter((ep: { id: number }) => !existingIds.has(ep.id))
             .map((ep: { id: number }) => ({
               id: -ep.id,
-              mediaType: "episode" as const,
+              mediaType: 'episode' as const,
               mediaId: ep.id,
               watchedAt: new Date().toISOString(),
               completed: 1,
@@ -371,7 +371,7 @@ export function SeasonDetailPage() {
     },
     onSuccess: (result: { data: { logged: number } }) => {
       toast.success(
-        `Marked ${result.data.logged} episode${result.data.logged !== 1 ? "s" : ""} as watched`
+        `Marked ${result.data.logged} episode${result.data.logged !== 1 ? 's' : ''} as watched`
       );
     },
     onError: (err: { message: string }) => {
@@ -380,7 +380,7 @@ export function SeasonDetailPage() {
       }
       if (listSnapshot.current !== undefined) {
         utils.media.watchHistory.list.setData(
-          { mediaType: "episode", limit: 500 },
+          { mediaType: 'episode', limit: 500 },
           listSnapshot.current
         );
       }
@@ -399,12 +399,12 @@ export function SeasonDetailPage() {
   const seasonEntity = useMemo(
     () => ({
       uri: `pops:media/tv/${showId}/season/${seasonNum}`,
-      type: "season" as const,
-      title: showData?.data?.name ?? "",
+      type: 'season' as const,
+      title: showData?.data?.name ?? '',
     }),
     [showId, seasonNum, showData?.data?.name]
   );
-  useSetPageContext({ page: "season-detail", pageType: "drill-down", entity: seasonEntity });
+  useSetPageContext({ page: 'season-detail', pageType: 'drill-down', entity: seasonEntity });
 
   if (Number.isNaN(showId) || Number.isNaN(seasonNum)) {
     return (
@@ -422,11 +422,11 @@ export function SeasonDetailPage() {
   }
 
   if (showError) {
-    const is404 = showError.data?.code === "NOT_FOUND";
+    const is404 = showError.data?.code === 'NOT_FOUND';
     return (
       <div className="p-6">
         <Alert variant="destructive">
-          <AlertTitle>{is404 ? "Show not found" : "Error"}</AlertTitle>
+          <AlertTitle>{is404 ? 'Show not found' : 'Error'}</AlertTitle>
           <AlertDescription>
             {is404 ? "This TV show doesn't exist in your library." : showError.message}
           </AlertDescription>
@@ -460,7 +460,7 @@ export function SeasonDetailPage() {
     );
   }
 
-  const seasonLabel = seasonNum === 0 ? "Specials" : `Season ${seasonNum}`;
+  const seasonLabel = seasonNum === 0 ? 'Specials' : `Season ${seasonNum}`;
   const posterSrc = season.posterUrl ?? null;
 
   return (
@@ -469,7 +469,7 @@ export function SeasonDetailPage() {
         title={show.name}
         backHref={`/media/tv/${show.id}`}
         breadcrumbs={[
-          { label: "Media", href: "/media" },
+          { label: 'Media', href: '/media' },
           { label: show.name, href: `/media/tv/${show.id}` },
           { label: seasonLabel },
         ]}
@@ -526,7 +526,7 @@ export function SeasonDetailPage() {
                     }}
                   />
                   <span className="text-sm text-muted-foreground">
-                    {effectiveMonitored ? "Monitored" : "Unmonitored"}
+                    {effectiveMonitored ? 'Monitored' : 'Unmonitored'}
                   </span>
                 </div>
               );
@@ -540,7 +540,7 @@ export function SeasonDetailPage() {
                 onClick={handleBatchMonitorToggle}
                 disabled={episodeMonitorMutation.isPending}
               >
-                {allEpisodesMonitored ? "Unmonitor All" : "Monitor All"}
+                {allEpisodesMonitored ? 'Unmonitor All' : 'Monitor All'}
               </Button>
             </div>
           )}
@@ -553,7 +553,7 @@ export function SeasonDetailPage() {
                   size="sm"
                   onClick={() =>
                     batchLogMutation.mutate({
-                      mediaType: "season",
+                      mediaType: 'season',
                       mediaId: season.id,
                     })
                   }

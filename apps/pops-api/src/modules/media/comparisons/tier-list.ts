@@ -1,20 +1,20 @@
 /**
  * Tier list derivation — maps ELO scores to S/A/B/C/D/F tiers by percentile.
  */
-import { getDb } from "../../../db.js";
-import { resolvePosterUrl } from "./service.js";
+import { getDb } from '../../../db.js';
+import { resolvePosterUrl } from './service.js';
 
-export const TIERS = ["S", "A", "B", "C", "D", "F"] as const;
+export const TIERS = ['S', 'A', 'B', 'C', 'D', 'F'] as const;
 export type Tier = (typeof TIERS)[number];
 
 /** Cumulative percentile breakpoints for each tier (top → bottom). */
 const TIER_BREAKPOINTS: Array<{ tier: Tier; cumulativePercent: number }> = [
-  { tier: "S", cumulativePercent: 0.1 },
-  { tier: "A", cumulativePercent: 0.25 },
-  { tier: "B", cumulativePercent: 0.5 },
-  { tier: "C", cumulativePercent: 0.75 },
-  { tier: "D", cumulativePercent: 0.9 },
-  { tier: "F", cumulativePercent: 1.0 },
+  { tier: 'S', cumulativePercent: 0.1 },
+  { tier: 'A', cumulativePercent: 0.25 },
+  { tier: 'B', cumulativePercent: 0.5 },
+  { tier: 'C', cumulativePercent: 0.75 },
+  { tier: 'D', cumulativePercent: 0.9 },
+  { tier: 'F', cumulativePercent: 1.0 },
 ];
 
 export interface TierMovie {
@@ -33,12 +33,12 @@ export interface TierGroup {
 }
 
 function assignTier(index: number, total: number): Tier {
-  if (total <= 1) return "S";
+  if (total <= 1) return 'S';
   const percentile = index / (total - 1);
   for (const bp of TIER_BREAKPOINTS) {
     if (percentile <= bp.cumulativePercent) return bp.tier;
   }
-  return "F";
+  return 'F';
 }
 
 export function deriveTierList(dimensionId: number): TierGroup[] {

@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 
 const mockRankingsQuery = vi.fn();
 const mockDimensionsQuery = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       comparisons: {
@@ -17,9 +17,9 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-import { RankingsPage } from "./RankingsPage";
+import { RankingsPage } from './RankingsPage';
 
-function renderPage(initialRoute = "/media/rankings") {
+function renderPage(initialRoute = '/media/rankings') {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
       <RankingsPage />
@@ -30,22 +30,22 @@ function renderPage(initialRoute = "/media/rankings") {
 const rankedEntries = [
   {
     rank: 1,
-    mediaType: "movie",
+    mediaType: 'movie',
     mediaId: 1,
-    title: "Alpha Movie",
+    title: 'Alpha Movie',
     year: 2020,
-    posterUrl: "/a.jpg",
+    posterUrl: '/a.jpg',
     score: 1532,
     comparisonCount: 5,
     confidence: 0.59,
   },
   {
     rank: 2,
-    mediaType: "movie",
+    mediaType: 'movie',
     mediaId: 2,
-    title: "Beta Movie",
+    title: 'Beta Movie',
     year: 2021,
-    posterUrl: "/b.jpg",
+    posterUrl: '/b.jpg',
     score: 1468,
     comparisonCount: 5,
     confidence: 0.59,
@@ -55,19 +55,19 @@ const rankedEntries = [
 const dimensions = [
   {
     id: 1,
-    name: "Story",
+    name: 'Story',
     active: true,
     sortOrder: 0,
     description: null,
-    createdAt: "2026-01-01",
+    createdAt: '2026-01-01',
   },
   {
     id: 2,
-    name: "Visuals",
+    name: 'Visuals',
     active: true,
     sortOrder: 1,
     description: null,
-    createdAt: "2026-01-01",
+    createdAt: '2026-01-01',
   },
 ];
 
@@ -91,46 +91,46 @@ beforeEach(() => {
   setupDefaults();
 });
 
-describe("RankingsPage", () => {
-  it("renders the page heading", () => {
+describe('RankingsPage', () => {
+  it('renders the page heading', () => {
     renderPage();
-    expect(screen.getByRole("heading", { name: "Rankings" })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rankings' })).toBeInTheDocument();
   });
 
-  it("shows loading skeleton when dimensions are loading", () => {
+  it('shows loading skeleton when dimensions are loading', () => {
     mockDimensionsQuery.mockReturnValue({ data: undefined, isLoading: true });
     renderPage();
-    expect(screen.queryByRole("list", { name: "Rankings" })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Rankings' })).not.toBeInTheDocument();
   });
 
-  it("renders ranked items in order", () => {
+  it('renders ranked items in order', () => {
     renderPage();
-    const list = screen.getByRole("list", { name: "Rankings" });
+    const list = screen.getByRole('list', { name: 'Rankings' });
     const items = within(list).getAllByText(/Movie/);
     expect(items.length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("Alpha Movie")).toBeInTheDocument();
-    expect(screen.getByText("Beta Movie")).toBeInTheDocument();
+    expect(screen.getByText('Alpha Movie')).toBeInTheDocument();
+    expect(screen.getByText('Beta Movie')).toBeInTheDocument();
   });
 
-  it("displays dimension tabs", () => {
+  it('displays dimension tabs', () => {
     renderPage();
-    expect(screen.getByRole("tab", { name: "Overall" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Story" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Visuals" })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Overall' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Story' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Visuals' })).toBeInTheDocument();
   });
 
-  it("switches dimension on tab click", async () => {
+  it('switches dimension on tab click', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const storyTab = screen.getByRole("tab", { name: "Story" });
+    const storyTab = screen.getByRole('tab', { name: 'Story' });
     await user.click(storyTab);
 
     // After clicking Story, the rankings query should have been called with dimensionId: 1
     expect(mockRankingsQuery).toHaveBeenCalledWith(expect.objectContaining({ dimensionId: 1 }));
   });
 
-  it("shows empty state when no rankings", () => {
+  it('shows empty state when no rankings', () => {
     mockRankingsQuery.mockReturnValue({
       data: {
         data: [],
@@ -144,27 +144,27 @@ describe("RankingsPage", () => {
     expect(screen.getByText(/No rankings yet/)).toBeInTheDocument();
   });
 
-  it("shows error alert on query failure", () => {
+  it('shows error alert on query failure', () => {
     mockRankingsQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: new Error("fail"),
+      error: new Error('fail'),
     });
 
     renderPage();
-    expect(screen.getByText("Failed to load rankings.")).toBeInTheDocument();
+    expect(screen.getByText('Failed to load rankings.')).toBeInTheDocument();
   });
 
-  it("renders score and match count", () => {
+  it('renders score and match count', () => {
     renderPage();
-    expect(screen.getByText("1532")).toBeInTheDocument();
-    expect(screen.getAllByText("5 matches")).toHaveLength(2);
+    expect(screen.getByText('1532')).toBeInTheDocument();
+    expect(screen.getAllByText('5 matches')).toHaveLength(2);
   });
 
-  it("shows pagination when total exceeds page size", () => {
+  it('shows pagination when total exceeds page size', () => {
     const manyEntries = Array.from({ length: 25 }, (_, i) => ({
       rank: i + 1,
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: i + 1,
       title: `Movie ${i + 1}`,
       year: 2020,
@@ -185,36 +185,36 @@ describe("RankingsPage", () => {
 
     renderPage();
     expect(screen.getByText(/Showing 1–25 of 30/)).toBeInTheDocument();
-    expect(screen.getByText("Next")).toBeInTheDocument();
+    expect(screen.getByText('Next')).toBeInTheDocument();
   });
 
-  it("hides tabs when no active dimensions", () => {
+  it('hides tabs when no active dimensions', () => {
     mockDimensionsQuery.mockReturnValue({
       data: { data: [] },
       isLoading: false,
     });
 
     renderPage();
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
 
-  it("selects Visuals tab when URL has ?dimension=2", () => {
-    renderPage("/media/rankings?dimension=2");
+  it('selects Visuals tab when URL has ?dimension=2', () => {
+    renderPage('/media/rankings?dimension=2');
 
-    const visualsTab = screen.getByRole("tab", { name: "Visuals" });
-    expect(visualsTab).toHaveAttribute("aria-selected", "true");
+    const visualsTab = screen.getByRole('tab', { name: 'Visuals' });
+    expect(visualsTab).toHaveAttribute('aria-selected', 'true');
 
-    const overallTab = screen.getByRole("tab", { name: "Overall" });
-    expect(overallTab).toHaveAttribute("aria-selected", "false");
+    const overallTab = screen.getByRole('tab', { name: 'Overall' });
+    expect(overallTab).toHaveAttribute('aria-selected', 'false');
   });
 
-  it("displays medal colors for top 3 ranks", () => {
+  it('displays medal colors for top 3 ranks', () => {
     const top3 = [
       {
         rank: 1,
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 1,
-        title: "Gold",
+        title: 'Gold',
         year: null,
         posterUrl: null,
         score: 1600,
@@ -223,9 +223,9 @@ describe("RankingsPage", () => {
       },
       {
         rank: 2,
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 2,
-        title: "Silver",
+        title: 'Silver',
         year: null,
         posterUrl: null,
         score: 1550,
@@ -234,9 +234,9 @@ describe("RankingsPage", () => {
       },
       {
         rank: 3,
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 3,
-        title: "Bronze",
+        title: 'Bronze',
         year: null,
         posterUrl: null,
         score: 1500,
@@ -255,15 +255,15 @@ describe("RankingsPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("#1")).toBeInTheDocument();
-    expect(screen.getByText("#2")).toBeInTheDocument();
-    expect(screen.getByText("#3")).toBeInTheDocument();
+    expect(screen.getByText('#1')).toBeInTheDocument();
+    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.getByText('#3')).toBeInTheDocument();
   });
 
-  it("displays confidence percentage for items with comparisons", () => {
+  it('displays confidence percentage for items with comparisons', () => {
     renderPage();
     // Both entries have confidence 0.59 → 59% conf
-    const confLabels = screen.getAllByText("59% conf");
+    const confLabels = screen.getAllByText('59% conf');
     expect(confLabels).toHaveLength(2);
   });
 
@@ -273,9 +273,9 @@ describe("RankingsPage", () => {
         data: [
           {
             rank: 1,
-            mediaType: "movie",
+            mediaType: 'movie',
             mediaId: 999,
-            title: "Unknown",
+            title: 'Unknown',
             year: null,
             posterUrl: null,
             score: 1500,
@@ -290,7 +290,7 @@ describe("RankingsPage", () => {
     });
 
     renderPage();
-    const unknowns = screen.getAllByText("Unknown");
+    const unknowns = screen.getAllByText('Unknown');
     expect(unknowns.length).toBeGreaterThanOrEqual(1);
   });
 });

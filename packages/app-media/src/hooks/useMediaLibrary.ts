@@ -1,11 +1,11 @@
-import { trpc } from "../lib/trpc";
+import { trpc } from '../lib/trpc';
 
-export type MediaType = "all" | "movie" | "tv";
-export type SortOption = "title" | "dateAdded" | "releaseDate" | "rating";
+export type MediaType = 'all' | 'movie' | 'tv';
+export type SortOption = 'title' | 'dateAdded' | 'releaseDate' | 'rating';
 
 export interface MediaItem {
   id: number;
-  type: "movie" | "tv";
+  type: 'movie' | 'tv';
   title: string;
   year: number | null;
   posterUrl: string | null;

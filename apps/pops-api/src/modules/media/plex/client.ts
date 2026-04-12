@@ -18,7 +18,7 @@ import {
   type PlexExternalId,
   type RawPlexMediaItem,
   type RawPlexEpisode,
-} from "./types.js";
+} from './types.js';
 
 export class PlexClient {
   private readonly baseUrl: string;
@@ -26,20 +26,20 @@ export class PlexClient {
 
   constructor(baseUrl: string, token: string) {
     if (!baseUrl) {
-      throw new Error("Plex URL is required");
+      throw new Error('Plex URL is required');
     }
     if (!token) {
-      throw new Error("Plex token is required");
+      throw new Error('Plex token is required');
     }
     // Strip trailing slash
-    this.baseUrl = baseUrl.replace(/\/+$/, "");
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.token = token;
   }
 
   /** Get all libraries (sections) from the Plex server. */
   async getLibraries(): Promise<PlexLibrary[]> {
     const raw =
-      await this.get<RawPlexMediaContainer<RawPlexLibrariesContainer>>("/library/sections");
+      await this.get<RawPlexMediaContainer<RawPlexLibrariesContainer>>('/library/sections');
     const dirs = raw.MediaContainer.Directory ?? [];
     return dirs.map((d) => ({
       key: d.key,
@@ -171,8 +171,8 @@ export class PlexClient {
    * Returns items with ratingKeys but without external IDs (Guid arrays).
    * Use getDiscoverMetadata() to fetch Guids for a specific item.
    */
-  async searchDiscover(query: string, searchType: "movie" | "show"): Promise<PlexMediaItem[]> {
-    const typeParam = searchType === "movie" ? "movies" : "tv";
+  async searchDiscover(query: string, searchType: 'movie' | 'show'): Promise<PlexMediaItem[]> {
+    const typeParam = searchType === 'movie' ? 'movies' : 'tv';
     const url =
       `https://discover.provider.plex.tv/library/search` +
       `?query=${encodeURIComponent(query)}` +
@@ -269,7 +269,7 @@ export class PlexClient {
       const movieItems: PlexMediaItem[] = [];
       for (const hub of hubs) {
         for (const item of hub.Metadata ?? []) {
-          if (item.type === "movie") {
+          if (item.type === 'movie') {
             movieItems.push(this.mapMediaItem(item));
           }
           if (movieItems.length >= limit) break;
@@ -329,7 +329,7 @@ export class PlexClient {
   }
 
   /** Parse Plex Guid array into structured external IDs. */
-  private parseGuids(guids: RawPlexMediaItem["Guid"] | undefined): PlexExternalId[] {
+  private parseGuids(guids: RawPlexMediaItem['Guid'] | undefined): PlexExternalId[] {
     if (!guids) return [];
     return guids
       .map((g) => {
@@ -346,16 +346,16 @@ export class PlexClient {
 
   /** Generic GET with X-Plex-Token and error handling. */
   private async get<T>(path: string): Promise<T> {
-    const separator = path.includes("?") ? "&" : "?";
+    const separator = path.includes('?') ? '&' : '?';
     const url = `${this.baseUrl}${path}${separator}X-Plex-Token=${this.token}`;
 
     let response: Response;
 
     try {
       response = await fetch(url, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
     } catch (err) {
@@ -387,9 +387,9 @@ export class PlexClient {
 
     try {
       response = await fetch(absoluteUrl, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
     } catch (err) {
@@ -417,16 +417,16 @@ export class PlexClient {
 
   /** Generic PUT for cloud API endpoints (absolute URLs). */
   private async put(absoluteUrl: string): Promise<void> {
-    const separator = absoluteUrl.includes("?") ? "&" : "?";
+    const separator = absoluteUrl.includes('?') ? '&' : '?';
     const url = `${absoluteUrl}${separator}X-Plex-Token=${this.token}`;
 
     let response: Response;
 
     try {
       response = await fetch(url, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
     } catch (err) {

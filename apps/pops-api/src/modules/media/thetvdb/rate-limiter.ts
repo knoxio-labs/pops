@@ -4,7 +4,7 @@
  * Wraps a TokenBucketRateLimiter (20 tokens, 2/sec refill) with
  * exponential backoff retry on 429 responses (up to 3 retries).
  */
-import { TokenBucketRateLimiter } from "../../../shared/rate-limiter.js";
+import { TokenBucketRateLimiter } from '../../../shared/rate-limiter.js';
 
 const THETVDB_CAPACITY = 20;
 const THETVDB_REFILL_RATE = 2; // tokens per second
@@ -59,7 +59,7 @@ export async function fetchWithRetry(fn: () => Promise<Response>): Promise<Respo
   }
 
   // Unreachable, but TypeScript needs it
-  throw new Error("fetchWithRetry: unexpected code path");
+  throw new Error('fetchWithRetry: unexpected code path');
 }
 
 function sleep(ms: number): Promise<void> {

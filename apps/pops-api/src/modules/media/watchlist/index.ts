@@ -1,1 +1,1 @@
-export { watchlistRouter } from "./router.js";
+export { watchlistRouter } from './router.js';

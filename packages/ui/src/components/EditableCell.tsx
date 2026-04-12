@@ -2,15 +2,15 @@
  * EditableCell component - Editable table cell with different field types
  * Supports text, number, date, select, and custom editors
  */
-import { useState, useEffect, useRef } from "react";
-import { Check, X, Pencil } from "lucide-react";
-import { cn } from "../lib/utils";
-import { TextInput } from "./TextInput";
-import { NumberInput } from "./NumberInput";
-import { DateTimeInput } from "./DateTimeInput";
-import { Select, type SelectOption } from "./Select";
+import { useState, useEffect, useRef } from 'react';
+import { Check, X, Pencil } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { TextInput } from './TextInput';
+import { NumberInput } from './NumberInput';
+import { DateTimeInput } from './DateTimeInput';
+import { Select, type SelectOption } from './Select';
 
-export type CellType = "text" | "number" | "date" | "select" | "custom";
+export type CellType = 'text' | 'number' | 'date' | 'select' | 'custom';
 
 export interface EditableCellProps<T = unknown> {
   /**
@@ -91,7 +91,7 @@ export interface EditableCellProps<T = unknown> {
 export function EditableCell<T = unknown>({
   value: initialValue,
   onSave,
-  type = "text",
+  type = 'text',
   options = [],
   customEditor: CustomEditor,
   customDisplay: CustomDisplay,
@@ -125,7 +125,7 @@ export function EditableCell<T = unknown>({
     if (validate) {
       const validationResult = validate(value);
       if (validationResult !== true) {
-        setError(typeof validationResult === "string" ? validationResult : "Invalid value");
+        setError(typeof validationResult === 'string' ? validationResult : 'Invalid value');
         return;
       }
     }
@@ -137,7 +137,7 @@ export function EditableCell<T = unknown>({
       await onSave(value);
       setIsEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -150,10 +150,10 @@ export function EditableCell<T = unknown>({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSave();
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       e.preventDefault();
       handleCancel();
     }
@@ -161,13 +161,13 @@ export function EditableCell<T = unknown>({
 
   // Display mode
   if (!isEditing) {
-    const displayValue = formatDisplay ? formatDisplay(value) : String(value ?? "");
+    const displayValue = formatDisplay ? formatDisplay(value) : String(value ?? '');
 
     return (
       <div
         className={cn(
-          "group flex items-center gap-2 min-h-8",
-          editable && "cursor-pointer hover:bg-accent/50 rounded px-2 -mx-2",
+          'group flex items-center gap-2 min-h-8',
+          editable && 'cursor-pointer hover:bg-accent/50 rounded px-2 -mx-2',
           className
         )}
         onClick={() => editable && setIsEditing(true)}
@@ -186,7 +186,7 @@ export function EditableCell<T = unknown>({
 
   // Edit mode
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn('flex items-center gap-2', className)}>
       <div className="flex-1">
         {CustomEditor ? (
           <CustomEditor
@@ -195,7 +195,7 @@ export function EditableCell<T = unknown>({
             onSave={handleSave}
             onCancel={handleCancel}
           />
-        ) : type === "text" ? (
+        ) : type === 'text' ? (
           <TextInput
             ref={inputRef}
             value={value as string}
@@ -205,7 +205,7 @@ export function EditableCell<T = unknown>({
             className="h-8"
             disabled={saving}
           />
-        ) : type === "number" ? (
+        ) : type === 'number' ? (
           <NumberInput
             ref={inputRef}
             value={value as number}
@@ -215,7 +215,7 @@ export function EditableCell<T = unknown>({
             className="h-8"
             disabled={saving}
           />
-        ) : type === "date" ? (
+        ) : type === 'date' ? (
           <DateTimeInput
             value={value as string}
             onChange={(val) => setValue(val as T)}
@@ -224,7 +224,7 @@ export function EditableCell<T = unknown>({
             className="h-8"
             disabled={saving}
           />
-        ) : type === "select" ? (
+        ) : type === 'select' ? (
           <Select
             value={value as string}
             onChange={(e) => setValue(e.target.value as T)}

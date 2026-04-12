@@ -9,7 +9,7 @@ export class TmdbApiError extends Error {
     message: string
   ) {
     super(message);
-    this.name = "TmdbApiError";
+    this.name = 'TmdbApiError';
   }
 }
 

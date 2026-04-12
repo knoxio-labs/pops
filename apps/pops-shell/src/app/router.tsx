@@ -4,14 +4,14 @@
  * RootLayout provides the top bar + sidebar chrome.
  * Finance routes are lazily loaded from @pops/app-finance.
  */
-import { Suspense } from "react";
-import { createBrowserRouter, Link, Navigate } from "react-router";
-import { routes as financeRoutes } from "@pops/app-finance";
-import { routes as mediaRoutes } from "@pops/app-media";
-import { routes as inventoryRoutes } from "@pops/app-inventory";
-import { routes as aiRoutes } from "@pops/app-ai";
-import { RootLayout } from "./layout/RootLayout";
-import { NotFoundPage } from "./pages/NotFoundPage";
+import { Suspense } from 'react';
+import { createBrowserRouter, Link, Navigate } from 'react-router';
+import { routes as financeRoutes } from '@pops/app-finance';
+import { routes as mediaRoutes } from '@pops/app-media';
+import { routes as inventoryRoutes } from '@pops/app-inventory';
+import { routes as aiRoutes } from '@pops/app-ai';
+import { RootLayout } from './layout/RootLayout';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 /**
  * Wrap lazy-loaded routes with Suspense so React can show a fallback
@@ -35,7 +35,7 @@ const withSuspense = (routes: typeof financeRoutes) =>
 
 export const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     element: <RootLayout />,
     errorElement: (
       <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
@@ -52,22 +52,22 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/finance" replace /> },
       {
-        path: "finance",
+        path: 'finance',
         children: withSuspense(financeRoutes),
       },
       {
-        path: "media",
+        path: 'media',
         children: withSuspense(mediaRoutes),
       },
       {
-        path: "inventory",
+        path: 'inventory',
         children: withSuspense(inventoryRoutes),
       },
       {
-        path: "ai",
+        path: 'ai',
         children: withSuspense(aiRoutes),
       },
-      { path: "*", element: <NotFoundPage /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]);

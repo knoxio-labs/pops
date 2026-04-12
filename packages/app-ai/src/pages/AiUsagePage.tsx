@@ -1,15 +1,15 @@
 /**
  * AI Usage page - view AI categorization costs and usage
  */
-import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
-import { DataTable, SortableHeader, StatCard, DateInput } from "@pops/ui";
-import { Badge, Button, Input, Label } from "@pops/ui";
-import { Alert, PageHeader } from "@pops/ui";
-import { Skeleton } from "@pops/ui";
-import { Card } from "@pops/ui";
+import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+import { DataTable, SortableHeader, StatCard, DateInput } from '@pops/ui';
+import { Badge, Button, Input, Label } from '@pops/ui';
+import { Alert, PageHeader } from '@pops/ui';
+import { Skeleton } from '@pops/ui';
+import { Card } from '@pops/ui';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,12 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@pops/ui";
-import { Database, Trash2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+} from '@pops/ui';
+import { Database, Trash2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
+  if (bytes === 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -43,7 +43,7 @@ function CacheManagement() {
       void utils.core.aiUsage.cacheStats.invalidate();
     },
     onError: () => {
-      toast.error("Failed to clear stale cache");
+      toast.error('Failed to clear stale cache');
     },
   });
 
@@ -53,7 +53,7 @@ function CacheManagement() {
       void utils.core.aiUsage.cacheStats.invalidate();
     },
     onError: () => {
-      toast.error("Failed to clear cache");
+      toast.error('Failed to clear cache');
     },
   });
 
@@ -70,7 +70,7 @@ function CacheManagement() {
             <h3 className="font-semibold">AI Cache</h3>
             <p className="text-sm text-muted-foreground">
               {cacheStats?.totalEntries.toLocaleString() ?? 0} entries
-              {cacheStats ? ` (${formatBytes(cacheStats.diskSizeBytes)})` : ""}
+              {cacheStats ? ` (${formatBytes(cacheStats.diskSizeBytes)})` : ''}
             </p>
           </div>
         </div>
@@ -142,7 +142,7 @@ function DailyCostChart({ data }: { data: AiUsageRecord[] }) {
   const chartData = [...data]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((d) => ({
-      date: new Date(d.date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" }),
+      date: new Date(d.date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }),
       cost: d.cost,
       apiCalls: d.apiCalls,
     }));
@@ -200,8 +200,8 @@ interface AiUsageRecord {
 }
 
 export function AiUsagePage() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Fetch overall stats
   const {
@@ -245,7 +245,7 @@ export function AiUsagePage() {
         <Alert variant="destructive">
           <h3 className="font-semibold">Failed to load AI usage data</h3>
           <p className="text-sm mt-1">
-            {statsError?.message || historyError?.message || "Unknown error"}
+            {statsError?.message || historyError?.message || 'Unknown error'}
           </p>
         </Alert>
       </div>
@@ -255,19 +255,19 @@ export function AiUsagePage() {
   // Define table columns
   const columns: ColumnDef<AiUsageRecord>[] = [
     {
-      accessorKey: "date",
+      accessorKey: 'date',
       header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
       cell: ({ row }) => {
         const date = new Date(row.original.date);
-        return date.toLocaleDateString("en-AU", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
+        return date.toLocaleDateString('en-AU', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
         });
       },
     },
     {
-      accessorKey: "apiCalls",
+      accessorKey: 'apiCalls',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>API Calls</SortableHeader>
@@ -280,7 +280,7 @@ export function AiUsagePage() {
       ),
     },
     {
-      accessorKey: "cacheHits",
+      accessorKey: 'cacheHits',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Cache Hits</SortableHeader>
@@ -293,14 +293,14 @@ export function AiUsagePage() {
       ),
     },
     {
-      id: "cacheHitRate",
+      id: 'cacheHitRate',
       header: () => <div className="text-right">Cache Hit Rate</div>,
       cell: ({ row }) => {
         const total = row.original.apiCalls + row.original.cacheHits;
         const rate = total > 0 ? (row.original.cacheHits / total) * 100 : 0;
         return (
           <div className="text-right">
-            <Badge variant={rate > 80 ? "default" : rate > 50 ? "secondary" : "outline"}>
+            <Badge variant={rate > 80 ? 'default' : rate > 50 ? 'secondary' : 'outline'}>
               {rate.toFixed(1)}%
             </Badge>
           </div>
@@ -308,7 +308,7 @@ export function AiUsagePage() {
       },
     },
     {
-      accessorKey: "inputTokens",
+      accessorKey: 'inputTokens',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Input Tokens</SortableHeader>
@@ -321,7 +321,7 @@ export function AiUsagePage() {
       ),
     },
     {
-      accessorKey: "outputTokens",
+      accessorKey: 'outputTokens',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Output Tokens</SortableHeader>
@@ -334,7 +334,7 @@ export function AiUsagePage() {
       ),
     },
     {
-      accessorKey: "cost",
+      accessorKey: 'cost',
       header: ({ column }) => (
         <div className="flex justify-end">
           <SortableHeader column={column}>Cost</SortableHeader>
@@ -420,8 +420,8 @@ export function AiUsagePage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setStartDate("");
-              setEndDate("");
+              setStartDate('');
+              setEndDate('');
             }}
           >
             Clear

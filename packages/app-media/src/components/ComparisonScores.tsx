@@ -3,7 +3,7 @@
  * Queries scores and dimensions, merges them, and renders a recharts RadarChart.
  * Hidden when zero comparisons; shows "Not enough data" when 1–2 comparisons.
  */
-import { Skeleton } from "@pops/ui";
+import { Skeleton } from '@pops/ui';
 import {
   RadarChart,
   PolarGrid,
@@ -11,8 +11,8 @@ import {
   Radar,
   ResponsiveContainer,
   Tooltip,
-} from "recharts";
-import { trpc } from "../lib/trpc";
+} from 'recharts';
+import { trpc } from '../lib/trpc';
 
 /** Normalize an Elo score (typically 1000–2000) to a 0–100 scale. */
 export function normalizeScore(elo: number): number {
@@ -21,7 +21,7 @@ export function normalizeScore(elo: number): number {
 }
 
 export interface ComparisonScoresProps {
-  mediaType: "movie" | "tv_show";
+  mediaType: 'movie' | 'tv_show';
   mediaId: number;
 }
 
@@ -97,7 +97,7 @@ export function ComparisonScores({ mediaType, mediaId }: ComparisonScoresProps) 
             <PolarGrid stroke="var(--border)" />
             <PolarAngleAxis
               dataKey="dimension"
-              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
             />
             <Radar
               dataKey="score"

@@ -30,6 +30,7 @@ ansible/
 ## Playbooks
 
 ### site.yml
+
 Full provision and deployment. Run on a fresh Ubuntu 24.04 machine.
 
 ```bash
@@ -37,6 +38,7 @@ ansible-playbook ansible/playbooks/site.yml
 ```
 
 **Roles executed:**
+
 1. `common` - OS hardening, SSH lockdown, UFW firewall, fail2ban
 2. `docker` - Install Docker Engine and Docker Compose
 3. `secrets` - Deploy secret files from Ansible Vault to `/opt/pops/secrets/`
@@ -46,6 +48,7 @@ ansible-playbook ansible/playbooks/site.yml
 7. `monitoring` - Install health check scripts and monitoring
 
 ### deploy.yml
+
 Deploy or update services only. Skips OS hardening.
 
 ```bash
@@ -53,10 +56,12 @@ ansible-playbook ansible/playbooks/deploy.yml
 ```
 
 **Roles executed:**
+
 1. `secrets` - Update secret files
 2. `pops-deploy` - Update and restart Docker Compose stack
 
 ### bootstrap.yml
+
 Initial bootstrap playbook (if different from site.yml - create as needed).
 
 ## Local Development
@@ -174,9 +179,11 @@ ansible-vault view ansible/inventory/group_vars/pops_servers/vault.yml
 ## Roles
 
 ### common
+
 OS hardening and security baseline.
 
 **Tasks:**
+
 - Update apt cache
 - Install common packages (fail2ban, ufw, unattended-upgrades, etc.)
 - Set timezone
@@ -186,9 +193,11 @@ OS hardening and security baseline.
 - Enable automatic security updates
 
 ### docker
+
 Install Docker Engine and Docker Compose.
 
 **Tasks:**
+
 - Add Docker GPG key and repository
 - Install Docker Engine
 - Install Docker Compose (standalone)
@@ -196,17 +205,21 @@ Install Docker Engine and Docker Compose.
 - Enable Docker service
 
 ### secrets
+
 Deploy secret files from Ansible Vault to the target host.
 
 **Tasks:**
+
 - Create `/opt/pops/secrets/` directory
 - Deploy secret files (API keys, Cloudflare tokens, etc.)
 - Set restrictive permissions (600, root:root)
 
 ### pops-deploy
+
 Deploy and manage the POPS Docker Compose stack.
 
 **Tasks:**
+
 - Create `/opt/pops/` directory structure
 - Template `docker-compose.yml` from Jinja2
 - Pull latest Docker images
@@ -214,18 +227,22 @@ Deploy and manage the POPS Docker Compose stack.
 - Verify services are running
 
 ### cloudflare-tunnel
+
 Configure Cloudflare Tunnel for secure external access.
 
 **Tasks:**
+
 - Install cloudflared
 - Deploy tunnel configuration
 - Create systemd service for cloudflared
 - Enable and start tunnel
 
 ### backups
+
 Set up automated encrypted backups to Backblaze B2.
 
 **Tasks:**
+
 - Install rclone
 - Configure rclone with B2 credentials
 - Deploy backup script
@@ -233,9 +250,11 @@ Set up automated encrypted backups to Backblaze B2.
 - Set up backup rotation (30-day retention)
 
 ### monitoring
+
 Install health check scripts and monitoring.
 
 **Tasks:**
+
 - Deploy health check script
 - Create systemd timer for periodic checks
 - Configure alerting (optional)

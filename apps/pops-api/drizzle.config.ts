@@ -13,13 +13,13 @@
  * baseline to an existing prod DB — it will conflict. Drizzle migrations
  * are for new schema changes going forward.
  */
-import { defineConfig } from "drizzle-kit";
+import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  dialect: "sqlite",
-  schema: "../../packages/db-types/src/schema/*",
-  out: "./src/db/drizzle-migrations",
+  dialect: 'sqlite',
+  schema: '../../packages/db-types/src/schema/*',
+  out: './src/db/drizzle-migrations',
   dbCredentials: {
-    url: process.env["SQLITE_PATH"] ?? "./data/pops.db",
+    url: process.env['SQLITE_PATH'] ?? './data/pops.db',
   },
 });

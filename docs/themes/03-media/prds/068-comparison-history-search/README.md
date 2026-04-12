@@ -9,19 +9,19 @@ Add a search input to the comparison history page so users can filter the pagina
 
 ## Routes
 
-| Route | Page |
-|-------|------|
+| Route                    | Page                          |
+| ------------------------ | ----------------------------- |
 | `/media/compare/history` | Comparison History (existing) |
 
 ## UI
 
-| Element | Detail |
-|---------|--------|
-| Search input | Text input beside the existing dimension dropdown, placeholder "Search by movie title…" |
-| Debounce | 300 ms debounce before query fires |
-| Reset on change | Changing the search term resets pagination to page 0 |
-| Empty state | Existing "No comparisons yet" message reused when search yields no results |
-| Count label | Existing "N comparisons" count reflects filtered total |
+| Element         | Detail                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------- |
+| Search input    | Text input beside the existing dimension dropdown, placeholder "Search by movie title…" |
+| Debounce        | 300 ms debounce before query fires                                                      |
+| Reset on change | Changing the search term resets pagination to page 0                                    |
+| Empty state     | Existing "No comparisons yet" message reused when search yields no results              |
+| Count label     | Existing "N comparisons" count reflects filtered total                                  |
 
 ## API
 
@@ -37,6 +37,6 @@ Add `search?: string` to `ComparisonHistoryQuerySchema`. When provided, filter c
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-search-filter](us-01-search-filter.md) | Backend search param + frontend search input | In progress | Yes |
+| #   | Story                                         | Summary                                      | Status      | Parallelisable |
+| --- | --------------------------------------------- | -------------------------------------------- | ----------- | -------------- |
+| 01  | [us-01-search-filter](us-01-search-filter.md) | Backend search param + frontend search input | In progress | Yes            |

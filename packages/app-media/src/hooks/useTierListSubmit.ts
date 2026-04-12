@@ -4,10 +4,10 @@
  * Wraps the submitTierList tRPC mutation with cache invalidation
  * and title enrichment for the summary display.
  */
-import { useState, useCallback } from "react";
-import { trpc } from "../lib/trpc";
+import { useState, useCallback } from 'react';
+import { trpc } from '../lib/trpc';
 
-export type Tier = "S" | "A" | "B" | "C" | "D";
+export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
 
 export interface TierPlacement {
   movieId: number;

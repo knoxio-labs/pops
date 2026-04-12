@@ -16,12 +16,12 @@
  *   franchise-completions — unwatched library movies in genres of watched movies
  *                         (approximation; proper impl needs belongs_to_collection column)
  */
-import { sql, and, eq, isNotNull, lt, gt } from "drizzle-orm";
-import { getDrizzle } from "../../../../db.js";
-import { movies, watchHistory, mediaScores, comparisonDimensions } from "@pops/db-types";
-import { registerShelf } from "./registry.js";
-import type { ShelfDefinition, ShelfInstance } from "./types.js";
-import type { PreferenceProfile, DiscoverResult } from "../types.js";
+import { sql, and, eq, isNotNull, lt, gt } from 'drizzle-orm';
+import { getDrizzle } from '../../../../db.js';
+import { movies, watchHistory, mediaScores, comparisonDimensions } from '@pops/db-types';
+import { registerShelf } from './registry.js';
+import type { ShelfDefinition, ShelfInstance } from './types.js';
+import type { PreferenceProfile, DiscoverResult } from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,8 +49,8 @@ function toResult(row: {
   return {
     tmdbId: row.tmdbId,
     title: row.title,
-    overview: row.overview ?? "",
-    releaseDate: row.releaseDate ?? "",
+    overview: row.overview ?? '',
+    releaseDate: row.releaseDate ?? '',
     posterPath: row.posterPath,
     posterUrl: posterUrl(row.tmdbId, row.posterPath),
     backdropPath: row.backdropPath,
@@ -58,7 +58,7 @@ function toResult(row: {
     voteCount: row.voteCount ?? 0,
     genreIds: (() => {
       try {
-        return JSON.parse(row.genres ?? "[]") as number[];
+        return JSON.parse(row.genres ?? '[]') as number[];
       } catch {
         return [];
       }
@@ -89,16 +89,16 @@ const movieCols = {
 // ---------------------------------------------------------------------------
 
 export const shortWatchShelf: ShelfDefinition = {
-  id: "short-watch",
+  id: 'short-watch',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "short-watch",
-        title: "Short Watches",
-        subtitle: "Under 100 minutes, no commitment",
-        emoji: "⚡",
+        shelfId: 'short-watch',
+        title: 'Short Watches',
+        subtitle: 'Under 100 minutes, no commitment',
+        emoji: '⚡',
         score: 0.6,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -132,16 +132,16 @@ export const shortWatchShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const longEpicShelf: ShelfDefinition = {
-  id: "long-epic",
+  id: 'long-epic',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "long-epic",
-        title: "Epic Watches",
-        subtitle: "150+ minutes — set aside an evening",
-        emoji: "🎞️",
+        shelfId: 'long-epic',
+        title: 'Epic Watches',
+        subtitle: '150+ minutes — set aside an evening',
+        emoji: '🎞️',
         score: 0.55,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -175,16 +175,16 @@ export const longEpicShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const comfortPicksShelf: ShelfDefinition = {
-  id: "comfort-picks",
+  id: 'comfort-picks',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "comfort-picks",
-        title: "Comfort Picks",
-        subtitle: "Your most-rewatched movies",
-        emoji: "🛋️",
+        shelfId: 'comfort-picks',
+        title: 'Comfort Picks',
+        subtitle: 'Your most-rewatched movies',
+        emoji: '🛋️',
         score: 0.7,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -196,7 +196,7 @@ export const comfortPicksShelf: ShelfDefinition = {
             .from(movies)
             .innerJoin(
               watchHistory,
-              and(eq(watchHistory.mediaType, "movie"), eq(watchHistory.mediaId, movies.id))
+              and(eq(watchHistory.mediaType, 'movie'), eq(watchHistory.mediaId, movies.id))
             )
             .groupBy(movies.id)
             .having(sql`COUNT(${watchHistory.id}) >= 2`)
@@ -221,16 +221,16 @@ export const comfortPicksShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const undiscoveredShelf: ShelfDefinition = {
-  id: "undiscovered",
+  id: 'undiscovered',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "undiscovered",
-        title: "Undiscovered",
+        shelfId: 'undiscovered',
+        title: 'Undiscovered',
         subtitle: "Library movies you've never touched",
-        emoji: "🔍",
+        emoji: '🔍',
         score: 0.65,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -265,16 +265,16 @@ export const undiscoveredShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const polarizingShelf: ShelfDefinition = {
-  id: "polarizing",
+  id: 'polarizing',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "polarizing",
-        title: "Polarizing Picks",
-        subtitle: "Movies that split opinion across dimensions",
-        emoji: "⚡",
+        shelfId: 'polarizing',
+        title: 'Polarizing Picks',
+        subtitle: 'Movies that split opinion across dimensions',
+        emoji: '⚡',
         score: 0.5,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -286,7 +286,7 @@ export const polarizingShelf: ShelfDefinition = {
             .from(movies)
             .innerJoin(
               mediaScores,
-              and(eq(mediaScores.mediaType, "movie"), eq(mediaScores.mediaId, movies.id))
+              and(eq(mediaScores.mediaType, 'movie'), eq(mediaScores.mediaId, movies.id))
             )
             .groupBy(movies.id)
             .having(sql`MAX(${mediaScores.score}) - MIN(${mediaScores.score}) > 200`)
@@ -311,16 +311,16 @@ export const polarizingShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const friendProofShelf: ShelfDefinition = {
-  id: "friend-proof",
+  id: 'friend-proof',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "friend-proof",
-        title: "Friend-Proof",
-        subtitle: "High entertainment value for any crowd",
-        emoji: "🍿",
+        shelfId: 'friend-proof',
+        title: 'Friend-Proof',
+        subtitle: 'High entertainment value for any crowd',
+        emoji: '🍿',
         score: 0.75,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -335,7 +335,7 @@ export const friendProofShelf: ShelfDefinition = {
             .from(movies)
             .innerJoin(
               mediaScores,
-              and(eq(mediaScores.mediaType, "movie"), eq(mediaScores.mediaId, movies.id))
+              and(eq(mediaScores.mediaType, 'movie'), eq(mediaScores.mediaId, movies.id))
             )
             .innerJoin(
               comparisonDimensions,
@@ -369,16 +369,16 @@ export const friendProofShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const recentlyAddedShelf: ShelfDefinition = {
-  id: "recently-added",
+  id: 'recently-added',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "recently-added",
-        title: "Recently Added",
-        subtitle: "New to your library",
-        emoji: "✨",
+        shelfId: 'recently-added',
+        title: 'Recently Added',
+        subtitle: 'New to your library',
+        emoji: '✨',
         score: 0.8,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -414,16 +414,16 @@ export const recentlyAddedShelf: ShelfDefinition = {
 // ---------------------------------------------------------------------------
 
 export const franchiseCompletionsShelf: ShelfDefinition = {
-  id: "franchise-completions",
+  id: 'franchise-completions',
   template: false,
-  category: "local",
+  category: 'local',
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     return [
       {
-        shelfId: "franchise-completions",
-        title: "Complete the Series",
+        shelfId: 'franchise-completions',
+        title: 'Complete the Series',
         subtitle: "More movies in genres you've watched",
-        emoji: "🔗",
+        emoji: '🔗',
         score: 0.6,
         query: ({ limit, offset }) => {
           const db = getDrizzle();
@@ -434,7 +434,7 @@ export const franchiseCompletionsShelf: ShelfDefinition = {
             .from(movies)
             .innerJoin(
               watchHistory,
-              and(eq(watchHistory.mediaType, "movie"), eq(watchHistory.mediaId, movies.id))
+              and(eq(watchHistory.mediaType, 'movie'), eq(watchHistory.mediaId, movies.id))
             )
             .where(isNotNull(movies.genres))
             .all();

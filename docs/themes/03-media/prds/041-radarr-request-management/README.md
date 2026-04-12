@@ -11,11 +11,11 @@ Request movies from within POPS via Radarr. Add movies to Radarr with quality pr
 
 The request action surfaces on existing movie pages, not on a dedicated route.
 
-| Location | Action |
-|----------|--------|
-| Movie detail page | "Request" button in header area (if movie is not already in Radarr) |
-| Search results | "Request" action alongside "Add to Library" |
-| Discovery/recommendations | "Request" action on recommended movie cards |
+| Location                  | Action                                                              |
+| ------------------------- | ------------------------------------------------------------------- |
+| Movie detail page         | "Request" button in header area (if movie is not already in Radarr) |
+| Search results            | "Request" action alongside "Add to Library"                         |
+| Discovery/recommendations | "Request" action on recommended movie cards                         |
 
 ## Request Flow
 
@@ -28,37 +28,37 @@ The request action surfaces on existing movie pages, not on a dedicated route.
 
 ### RequestMovieModal
 
-| Element | Detail |
-|---------|--------|
-| Movie title + year | Confirmation header showing what is being requested |
-| Quality profile select | Dropdown populated from Radarr's quality profiles |
-| Root folder select | Dropdown populated from Radarr's root folders (shows path + free space) |
-| Confirm button | "Request" — triggers the add + search |
-| Cancel button | Closes modal without action |
-| Loading state | Spinner on confirm button while request is in flight |
-| Success state | Brief success message, then modal closes |
-| Error state | Inline error message (e.g., "Movie already exists in Radarr") |
+| Element                | Detail                                                                  |
+| ---------------------- | ----------------------------------------------------------------------- |
+| Movie title + year     | Confirmation header showing what is being requested                     |
+| Quality profile select | Dropdown populated from Radarr's quality profiles                       |
+| Root folder select     | Dropdown populated from Radarr's root folders (shows path + free space) |
+| Confirm button         | "Request" — triggers the add + search                                   |
+| Cancel button          | Closes modal without action                                             |
+| Loading state          | Spinner on confirm button while request is in flight                    |
+| Success state          | Brief success message, then modal closes                                |
+| Error state            | Inline error message (e.g., "Movie already exists in Radarr")           |
 
 ### Request Button
 
-| Element | Detail |
-|---------|--------|
-| Visibility | Hidden if movie already exists in Radarr (checked via TMDB ID lookup) |
-| Disabled state | Disabled if Radarr is not configured (from `media.arr.getConfig()`) |
-| Tooltip | "Radarr not configured" when disabled |
+| Element        | Detail                                                                |
+| -------------- | --------------------------------------------------------------------- |
+| Visibility     | Hidden if movie already exists in Radarr (checked via TMDB ID lookup) |
+| Disabled state | Disabled if Radarr is not configured (from `media.arr.getConfig()`)   |
+| Tooltip        | "Radarr not configured" when disabled                                 |
 
 ## API Surface
 
 ### media.radarr
 
-| Procedure | Input | Output | Notes |
-|-----------|-------|--------|-------|
-| `getQualityProfiles` | (none) | `{ data: QualityProfile[] }` | Proxies `GET /api/v3/qualityprofile` |
-| `getRootFolders` | (none) | `{ data: RootFolder[] }` | Proxies `GET /api/v3/rootfolder` — includes path and freeSpace |
-| `checkMovie` | tmdbId | `{ exists, radarrId?, monitored? }` | Proxies `GET /api/v3/movie?tmdbId=X` |
-| `addMovie` | tmdbId, title, qualityProfileId, rootFolderPath | `{ data: RadarrMovie }` | Proxies `POST /api/v3/movie` with `monitored: true`, `addOptions: { searchForMovie: true }` |
-| `updateMonitoring` | radarrId, monitored | `{ data: RadarrMovie }` | Proxies `PUT /api/v3/movie/:id` |
-| `triggerSearch` | radarrId | `{ message }` | Proxies `POST /api/v3/command` with `{ name: "MoviesSearch", movieIds: [id] }` |
+| Procedure            | Input                                           | Output                              | Notes                                                                                       |
+| -------------------- | ----------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `getQualityProfiles` | (none)                                          | `{ data: QualityProfile[] }`        | Proxies `GET /api/v3/qualityprofile`                                                        |
+| `getRootFolders`     | (none)                                          | `{ data: RootFolder[] }`            | Proxies `GET /api/v3/rootfolder` — includes path and freeSpace                              |
+| `checkMovie`         | tmdbId                                          | `{ exists, radarrId?, monitored? }` | Proxies `GET /api/v3/movie?tmdbId=X`                                                        |
+| `addMovie`           | tmdbId, title, qualityProfileId, rootFolderPath | `{ data: RadarrMovie }`             | Proxies `POST /api/v3/movie` with `monitored: true`, `addOptions: { searchForMovie: true }` |
+| `updateMonitoring`   | radarrId, monitored                             | `{ data: RadarrMovie }`             | Proxies `PUT /api/v3/movie/:id`                                                             |
+| `triggerSearch`      | radarrId                                        | `{ message }`                       | Proxies `POST /api/v3/command` with `{ name: "MoviesSearch", movieIds: [id] }`              |
 
 ## Business Rules
 
@@ -71,24 +71,24 @@ The request action surfaces on existing movie pages, not on a dedicated route.
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Movie already exists in Radarr | `checkMovie` returns `exists: true`; "Request" button not rendered |
-| Radarr not configured | "Request" button disabled with tooltip |
-| Radarr unreachable when modal opens | Modal shows error state, selectors empty, confirm disabled |
-| Quality profiles empty | Modal shows "No quality profiles found" — confirm disabled |
-| Root folders empty | Modal shows "No root folders found" — confirm disabled |
-| Add movie fails (Radarr returns error) | Modal shows inline error message from Radarr |
-| Add movie succeeds but search fails | Movie is added (success), search failure is logged but not shown to user — Radarr will retry automatically |
-| User clicks Request on search results before adding to POPS library | Movie is added to Radarr only; it is not automatically added to the POPS library |
+| Case                                                                | Behaviour                                                                                                  |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Movie already exists in Radarr                                      | `checkMovie` returns `exists: true`; "Request" button not rendered                                         |
+| Radarr not configured                                               | "Request" button disabled with tooltip                                                                     |
+| Radarr unreachable when modal opens                                 | Modal shows error state, selectors empty, confirm disabled                                                 |
+| Quality profiles empty                                              | Modal shows "No quality profiles found" — confirm disabled                                                 |
+| Root folders empty                                                  | Modal shows "No root folders found" — confirm disabled                                                     |
+| Add movie fails (Radarr returns error)                              | Modal shows inline error message from Radarr                                                               |
+| Add movie succeeds but search fails                                 | Movie is added (success), search failure is logged but not shown to user — Radarr will retry automatically |
+| User clicks Request on search results before adding to POPS library | Movie is added to Radarr only; it is not automatically added to the POPS library                           |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-radarr-api-client](us-01-radarr-api-client.md) | Radarr v3 API client — quality profiles, root folders, add movie, check existence, update monitoring, trigger search | Done | Yes |
-| 02 | [us-02-request-modal](us-02-request-modal.md) | Request modal with quality profile selector, root folder selector, confirm action, search trigger | Done | Blocked by us-01 |
-| 03 | [us-03-request-integration](us-03-request-integration.md) | "Request" button on movie detail, search results, and discovery; state-aware visibility | Done | Blocked by us-01, us-02 |
+| #   | Story                                                     | Summary                                                                                                              | Status | Parallelisable          |
+| --- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------- |
+| 01  | [us-01-radarr-api-client](us-01-radarr-api-client.md)     | Radarr v3 API client — quality profiles, root folders, add movie, check existence, update monitoring, trigger search | Done   | Yes                     |
+| 02  | [us-02-request-modal](us-02-request-modal.md)             | Request modal with quality profile selector, root folder selector, confirm action, search trigger                    | Done   | Blocked by us-01        |
+| 03  | [us-03-request-integration](us-03-request-integration.md) | "Request" button on movie detail, search results, and discovery; state-aware visibility                              | Done   | Blocked by us-01, us-02 |
 
 US-01 is the API layer. US-02 builds the modal component. US-03 integrates the button and modal into existing pages.
 

@@ -5,13 +5,13 @@
  * Mobile: compact list with up/down reorder buttons.
  * Desktop (md+): responsive poster card grid with priority badges.
  */
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
-import { Alert, AlertTitle, AlertDescription, Badge, Skeleton, Textarea } from "@pops/ui";
-import { Button } from "@pops/ui";
-import { ArrowUp, ArrowDown, Trash2, Film, GripVertical } from "lucide-react";
-import { toast } from "sonner";
-import { trpc } from "../lib/trpc";
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Alert, AlertTitle, AlertDescription, Badge, Skeleton, Textarea } from '@pops/ui';
+import { Button } from '@pops/ui';
+import { ArrowUp, ArrowDown, Trash2, Film, GripVertical } from 'lucide-react';
+import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
 import {
   DndContext,
   closestCenter,
@@ -23,26 +23,26 @@ import {
   type DragStartEvent,
   type DragEndEvent,
   type DraggableAttributes,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-type WatchlistFilter = "all" | "movie" | "tv_show";
+type WatchlistFilter = 'all' | 'movie' | 'tv_show';
 
 const FILTER_OPTIONS: { value: WatchlistFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "movie", label: "Movies" },
-  { value: "tv_show", label: "TV Shows" },
+  { value: 'all', label: 'All' },
+  { value: 'movie', label: 'Movies' },
+  { value: 'tv_show', label: 'TV Shows' },
 ];
 
 function parseTypeParam(param: string | null): WatchlistFilter {
-  if (param === "movie" || param === "tv_show") return param;
-  return "all";
+  if (param === 'movie' || param === 'tv_show') return param;
+  return 'all';
 }
 
 interface WatchlistEntry {
@@ -130,16 +130,16 @@ function WatchlistItem({
   updateError,
 }: WatchlistItemProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(entry.notes ?? "");
+  const [draft, setDraft] = useState(entry.notes ?? '');
   const savePending = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const href =
-    entry.mediaType === "movie" ? `/media/movies/${entry.mediaId}` : `/media/tv/${entry.mediaId}`;
+    entry.mediaType === 'movie' ? `/media/movies/${entry.mediaId}` : `/media/tv/${entry.mediaId}`;
   // Sync draft when server data changes
   useEffect(() => {
     if (!editing) {
-      setDraft(entry.notes ?? "");
+      setDraft(entry.notes ?? '');
     }
   }, [entry.notes, editing]);
 
@@ -167,14 +167,14 @@ function WatchlistItem({
   };
 
   const handleCancel = () => {
-    setDraft(entry.notes ?? "");
+    setDraft(entry.notes ?? '');
     setEditing(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       handleSave();
-    } else if (e.key === "Escape" && !isUpdating) {
+    } else if (e.key === 'Escape' && !isUpdating) {
       handleCancel();
     }
   };
@@ -231,7 +231,7 @@ function WatchlistItem({
                 {priority}
               </span>
               <Badge variant="secondary" className="text-xs">
-                {entry.mediaType === "movie" ? "Movie" : "TV"}
+                {entry.mediaType === 'movie' ? 'Movie' : 'TV'}
               </Badge>
               {year && <span className="text-xs text-muted-foreground">{year}</span>}
             </div>
@@ -271,7 +271,7 @@ function WatchlistItem({
                 aria-label="Save note"
                 className="text-xs h-auto p-0 text-primary"
               >
-                {isUpdating ? "Saving..." : "Save"}
+                {isUpdating ? 'Saving...' : 'Save'}
               </Button>
               <Button
                 variant="link"
@@ -340,7 +340,7 @@ function WatchlistCard({
   const [imageError, setImageError] = useState(false);
 
   const href =
-    entry.mediaType === "movie" ? `/media/movies/${entry.mediaId}` : `/media/tv/${entry.mediaId}`;
+    entry.mediaType === 'movie' ? `/media/movies/${entry.mediaId}` : `/media/tv/${entry.mediaId}`;
   const posterSrc = posterUrl;
 
   return (
@@ -352,7 +352,7 @@ function WatchlistCard({
         className="relative w-full overflow-hidden rounded-md bg-muted aspect-[2/3] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => navigate(href)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             navigate(href);
           }
@@ -380,10 +380,10 @@ function WatchlistCard({
 
         {/* Type badge */}
         <Badge
-          variant={entry.mediaType === "movie" ? "default" : "secondary"}
+          variant={entry.mediaType === 'movie' ? 'default' : 'secondary'}
           className="absolute top-2 right-2 z-10"
         >
-          {entry.mediaType === "movie" ? "Movie" : "TV"}
+          {entry.mediaType === 'movie' ? 'Movie' : 'TV'}
         </Badge>
 
         {/* Remove button (hover) */}
@@ -448,7 +448,7 @@ function SortableWatchlistCard(props: WatchlistCardProps) {
 
 export function WatchlistPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const filter = parseTypeParam(searchParams.get("type"));
+  const filter = parseTypeParam(searchParams.get('type'));
   const [isReordering, setIsReordering] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [updateErrorId, setUpdateErrorId] = useState<number | null>(null);
@@ -458,7 +458,7 @@ export function WatchlistPage() {
 
   const setFilter = useCallback(
     (value: WatchlistFilter) => {
-      setSearchParams(value === "all" ? {} : { type: value }, { replace: true });
+      setSearchParams(value === 'all' ? {} : { type: value }, { replace: true });
     },
     [setSearchParams]
   );
@@ -468,7 +468,7 @@ export function WatchlistPage() {
     isLoading,
     error: watchlistError,
   } = trpc.media.watchlist.list.useQuery({
-    ...(filter !== "all" ? { mediaType: filter } : {}),
+    ...(filter !== 'all' ? { mediaType: filter } : {}),
     limit: 500,
   });
 
@@ -485,7 +485,7 @@ export function WatchlistPage() {
   const removeMutation = trpc.media.watchlist.remove.useMutation({
     onSuccess: () => {
       setRemovingId(null);
-      toast.success("Removed from watchlist");
+      toast.success('Removed from watchlist');
       void utils.media.watchlist.list.invalidate();
     },
     onError: (err: { message: string }) => {
@@ -498,11 +498,11 @@ export function WatchlistPage() {
     onSuccess: () => {
       setUpdateErrorId(null);
       setUpdateErrorMsg(null);
-      toast.success("Notes saved");
+      toast.success('Notes saved');
       void utils.media.watchlist.list.invalidate();
     },
     onError: (error: { message: string }) => {
-      setUpdateErrorMsg(error.message ?? "Failed to save notes");
+      setUpdateErrorMsg(error.message ?? 'Failed to save notes');
       toast.error(`Failed to save notes: ${error.message}`);
     },
   });
@@ -574,9 +574,9 @@ export function WatchlistPage() {
   const hasManyItems = sortedEntries.length >= 2;
 
   const handleMove = useCallback(
-    (index: number, direction: "up" | "down") => {
+    (index: number, direction: 'up' | 'down') => {
       if (isReordering) return;
-      const newIndex = direction === "up" ? index - 1 : index + 1;
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
       if (newIndex < 0 || newIndex >= sortedEntries.length) return;
 
       // Build new priority list by swapping
@@ -653,7 +653,7 @@ export function WatchlistPage() {
   const getMetaForEntry = useCallback(
     (entry: WatchlistEntry) => {
       const mapMeta =
-        entry.mediaType === "movie" ? movieMap.get(entry.mediaId) : tvMap.get(entry.mediaId);
+        entry.mediaType === 'movie' ? movieMap.get(entry.mediaId) : tvMap.get(entry.mediaId);
       // Fall back to API-provided title/poster if map lookup fails
       if (mapMeta) return mapMeta;
       if (entry.title) {
@@ -686,7 +686,7 @@ export function WatchlistPage() {
         {FILTER_OPTIONS.map((opt) => (
           <Button
             key={opt.value}
-            variant={filter === opt.value ? "default" : "secondary"}
+            variant={filter === opt.value ? 'default' : 'secondary'}
             size="sm"
             role="tab"
             aria-selected={filter === opt.value}
@@ -703,11 +703,11 @@ export function WatchlistPage() {
       ) : entries.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">
-            {filter === "all"
-              ? "Your watchlist is empty. Browse your library or search for something to watch."
-              : filter === "movie"
-                ? "No movies on your watchlist."
-                : "No TV shows on your watchlist."}
+            {filter === 'all'
+              ? 'Your watchlist is empty. Browse your library or search for something to watch.'
+              : filter === 'movie'
+                ? 'No movies on your watchlist.'
+                : 'No TV shows on your watchlist.'}
           </p>
           <div className="flex justify-center gap-4 mt-4">
             <Link to="/media" className="text-sm text-primary underline">
@@ -729,14 +729,14 @@ export function WatchlistPage() {
                 <WatchlistItem
                   key={entry.id}
                   entry={entry}
-                  title={meta?.title ?? "Unknown"}
+                  title={meta?.title ?? 'Unknown'}
                   year={meta?.year ?? null}
                   posterUrl={meta?.posterUrl ?? null}
                   priority={index + 1}
                   isFirst={index === 0}
                   isLast={index === sortedEntries.length - 1}
-                  onMoveUp={() => handleMove(index, "up")}
-                  onMoveDown={() => handleMove(index, "down")}
+                  onMoveUp={() => handleMove(index, 'up')}
+                  onMoveDown={() => handleMove(index, 'down')}
                   onRemove={(id) => {
                     setRemovingId(id);
                     removeMutation.mutate({ id });
@@ -776,7 +776,7 @@ export function WatchlistPage() {
                     <SortableWatchlistCard
                       key={entry.id}
                       entry={entry}
-                      title={meta?.title ?? "Unknown"}
+                      title={meta?.title ?? 'Unknown'}
                       year={meta?.year ?? null}
                       posterUrl={meta?.posterUrl ?? null}
                       priority={index + 1}
@@ -790,7 +790,7 @@ export function WatchlistPage() {
                     <WatchlistCard
                       key={entry.id}
                       entry={entry}
-                      title={meta?.title ?? "Unknown"}
+                      title={meta?.title ?? 'Unknown'}
                       year={meta?.year ?? null}
                       posterUrl={meta?.posterUrl ?? null}
                       priority={index + 1}
@@ -816,7 +816,7 @@ export function WatchlistPage() {
                       <div className="opacity-80 w-48">
                         <WatchlistCard
                           entry={entry}
-                          title={meta?.title ?? "Unknown"}
+                          title={meta?.title ?? 'Unknown'}
                           year={meta?.year ?? null}
                           posterUrl={meta?.posterUrl ?? null}
                           priority={idx + 1}

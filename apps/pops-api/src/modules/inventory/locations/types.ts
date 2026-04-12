@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { LocationRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { LocationRow } from '@pops/db-types';
 
 export type { LocationRow };
 
@@ -28,7 +28,7 @@ export interface LocationTreeNode extends Location {
 
 /** Zod schema for creating a location. */
 export const CreateLocationSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
   parentId: z.string().nullable().optional(),
   sortOrder: z.number().int().nonnegative().optional().default(0),
 });
@@ -36,7 +36,7 @@ export type CreateLocationInput = z.infer<typeof CreateLocationSchema>;
 
 /** Zod schema for updating a location. */
 export const UpdateLocationSchema = z.object({
-  name: z.string().min(1, "Name cannot be empty").optional(),
+  name: z.string().min(1, 'Name cannot be empty').optional(),
   parentId: z.string().nullable().optional(),
   sortOrder: z.number().int().nonnegative().optional(),
 });

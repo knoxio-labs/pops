@@ -11,7 +11,7 @@
  *  - Tests do NOT call startTtlWatcher() — they invoke deleteExpiredEnvs() directly
  *    so no leaked intervals are created in the test process.
  */
-import { deleteExpiredEnvs } from "./registry.js";
+import { deleteExpiredEnvs } from './registry.js';
 
 const INTERVAL_MS = 30_000; // 30 seconds
 
@@ -24,10 +24,10 @@ export function startTtlWatcher(): ReturnType<typeof setInterval> {
     try {
       const deleted = deleteExpiredEnvs();
       if (deleted.length > 0) {
-        console.log(`[env-watcher] Purged expired environments: ${deleted.join(", ")}`);
+        console.log(`[env-watcher] Purged expired environments: ${deleted.join(', ')}`);
       }
     } catch (err) {
-      console.error("[env-watcher] Error purging expired environments:", err);
+      console.error('[env-watcher] Error purging expired environments:', err);
     }
   }, INTERVAL_MS);
 }

@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { MovieRow } from "@pops/db-types";
+import { z } from 'zod';
+import type { MovieRow } from '@pops/db-types';
 
 export type { MovieRow };
 
@@ -86,7 +86,7 @@ export function toMovie(row: MovieRow): Movie {
           try {
             const parsed = JSON.parse(row.genres) as unknown;
             if (Array.isArray(parsed)) {
-              return parsed.filter((item): item is string => typeof item === "string");
+              return parsed.filter((item): item is string => typeof item === 'string');
             }
             return [];
           } catch {
@@ -103,7 +103,7 @@ export function toMovie(row: MovieRow): Movie {
 export const CreateMovieSchema = z.object({
   tmdbId: z.number().int().positive(),
   imdbId: z.string().nullable().optional(),
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, 'Title is required'),
   originalTitle: z.string().nullable().optional(),
   overview: z.string().nullable().optional(),
   tagline: z.string().nullable().optional(),
@@ -127,7 +127,7 @@ export type CreateMovieInput = z.infer<typeof CreateMovieSchema>;
 export const UpdateMovieSchema = z.object({
   tmdbId: z.number().int().positive().optional(),
   imdbId: z.string().nullable().optional(),
-  title: z.string().min(1, "Title cannot be empty").optional(),
+  title: z.string().min(1, 'Title cannot be empty').optional(),
   originalTitle: z.string().nullable().optional(),
   overview: z.string().nullable().optional(),
   tagline: z.string().nullable().optional(),

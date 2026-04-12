@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
-import { TooltipProvider } from "@pops/ui";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { TooltipProvider } from '@pops/ui';
 
 // ── Mocks ──
 
@@ -15,7 +15,7 @@ const mockDismissMutate = vi.fn() as ReturnType<typeof vi.fn> & {
 const mockInvalidateDebrief = vi.fn();
 const mockInvalidatePending = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     media: {
       comparisons: {
@@ -50,11 +50,11 @@ vi.mock("../lib/trpc", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-import { DebriefPage } from "./DebriefPage";
+import { DebriefPage } from './DebriefPage';
 
 // ── Helpers ──
 
@@ -72,37 +72,37 @@ function renderWithMovie(movieId: string) {
 
 const mockDebrief = {
   sessionId: 42,
-  status: "active",
+  status: 'active',
   movie: {
-    mediaType: "movie",
+    mediaType: 'movie',
     mediaId: 10,
-    title: "Inception",
-    posterPath: "/poster.jpg",
-    posterUrl: "/media/images/movie/27205/poster.jpg",
+    title: 'Inception',
+    posterPath: '/poster.jpg',
+    posterUrl: '/media/images/movie/27205/poster.jpg',
   },
   dimensions: [
     {
       dimensionId: 1,
-      name: "Story",
-      status: "pending",
+      name: 'Story',
+      status: 'pending',
       comparisonId: null,
       opponent: {
         id: 20,
-        title: "The Matrix",
-        posterPath: "/matrix.jpg",
-        posterUrl: "/media/images/movie/603/poster.jpg",
+        title: 'The Matrix',
+        posterPath: '/matrix.jpg',
+        posterUrl: '/media/images/movie/603/poster.jpg',
       },
     },
     {
       dimensionId: 2,
-      name: "Visuals",
-      status: "pending",
+      name: 'Visuals',
+      status: 'pending',
       comparisonId: null,
       opponent: {
         id: 30,
-        title: "Avatar",
-        posterPath: "/avatar.jpg",
-        posterUrl: "/media/images/movie/19995/poster.jpg",
+        title: 'Avatar',
+        posterPath: '/avatar.jpg',
+        posterUrl: '/media/images/movie/19995/poster.jpg',
       },
     },
   ],
@@ -110,19 +110,19 @@ const mockDebrief = {
 
 const completedDebrief = {
   ...mockDebrief,
-  status: "complete",
+  status: 'complete',
   dimensions: [
     {
       dimensionId: 1,
-      name: "Story",
-      status: "complete",
+      name: 'Story',
+      status: 'complete',
       comparisonId: 100,
       opponent: null,
     },
     {
       dimensionId: 2,
-      name: "Visuals",
-      status: "complete",
+      name: 'Visuals',
+      status: 'complete',
       comparisonId: null,
       opponent: null,
     },
@@ -135,158 +135,158 @@ beforeEach(() => {
 
 // ── Tests ──
 
-describe("DebriefPage", () => {
-  it("shows loading skeleton while fetching", () => {
+describe('DebriefPage', () => {
+  it('shows loading skeleton while fetching', () => {
     mockDebriefQuery.mockReturnValue({ data: undefined, isLoading: true, error: null });
-    renderWithMovie("42");
-    expect(screen.getByTestId("debrief-loading")).toBeInTheDocument();
+    renderWithMovie('42');
+    expect(screen.getByTestId('debrief-loading')).toBeInTheDocument();
   });
 
-  it("renders movie title and poster header", () => {
+  it('renders movie title and poster header', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    const header = screen.getByTestId("debrief-header");
+    const header = screen.getByTestId('debrief-header');
     expect(header).toBeInTheDocument();
-    expect(header.querySelector("h1")).toHaveTextContent("Inception");
-    expect(header.querySelector("img")).toHaveAttribute("alt", "Inception poster");
+    expect(header.querySelector('h1')).toHaveTextContent('Inception');
+    expect(header.querySelector('img')).toHaveAttribute('alt', 'Inception poster');
   });
 
-  it("renders dimension progress badges", () => {
+  it('renders dimension progress badges', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    const progress = screen.getByTestId("dimension-progress");
+    const progress = screen.getByTestId('dimension-progress');
     expect(progress).toBeInTheDocument();
-    expect(progress).toHaveTextContent("Story");
-    expect(progress).toHaveTextContent("Visuals");
+    expect(progress).toHaveTextContent('Story');
+    expect(progress).toHaveTextContent('Visuals');
   });
 
-  it("renders comparison cards with movie and opponent", () => {
+  it('renders comparison cards with movie and opponent', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    expect(screen.getByTestId("comparison-cards")).toBeInTheDocument();
-    expect(screen.getByTestId("pick-a")).toBeInTheDocument();
-    expect(screen.getByTestId("pick-b")).toBeInTheDocument();
-    expect(screen.getByText("The Matrix")).toBeInTheDocument();
+    expect(screen.getByTestId('comparison-cards')).toBeInTheDocument();
+    expect(screen.getByTestId('pick-a')).toBeInTheDocument();
+    expect(screen.getByTestId('pick-b')).toBeInTheDocument();
+    expect(screen.getByText('The Matrix')).toBeInTheDocument();
   });
 
-  it("calls recordDebriefComparison when picking movie A", () => {
+  it('calls recordDebriefComparison when picking movie A', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    fireEvent.click(screen.getByTestId("pick-a"));
+    fireEvent.click(screen.getByTestId('pick-a'));
     expect(mockRecordMutate).toHaveBeenCalledWith({
       sessionId: 42,
       dimensionId: 1,
-      opponentType: "movie",
+      opponentType: 'movie',
       opponentId: 20,
       winnerId: 10,
     });
   });
 
-  it("calls recordDebriefComparison when picking opponent (movie B)", () => {
+  it('calls recordDebriefComparison when picking opponent (movie B)', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    fireEvent.click(screen.getByTestId("pick-b"));
+    fireEvent.click(screen.getByTestId('pick-b'));
     expect(mockRecordMutate).toHaveBeenCalledWith({
       sessionId: 42,
       dimensionId: 1,
-      opponentType: "movie",
+      opponentType: 'movie',
       opponentId: 20,
       winnerId: 20,
     });
   });
 
-  it("calls recordDebriefComparison with winnerId=0 for draw", () => {
+  it('calls recordDebriefComparison with winnerId=0 for draw', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    fireEvent.click(screen.getByTestId("draw-mid"));
+    fireEvent.click(screen.getByTestId('draw-mid'));
     expect(mockRecordMutate).toHaveBeenCalledWith({
       sessionId: 42,
       dimensionId: 1,
-      opponentType: "movie",
+      opponentType: 'movie',
       opponentId: 20,
       winnerId: 0,
-      drawTier: "mid",
+      drawTier: 'mid',
     });
   });
 
-  it("calls dismissDebriefDimension when skip button clicked", () => {
+  it('calls dismissDebriefDimension when skip button clicked', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: mockDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    fireEvent.click(screen.getByTestId("skip-dimension-btn"));
+    fireEvent.click(screen.getByTestId('skip-dimension-btn'));
     expect(mockDismissMutate).toHaveBeenCalledWith({
       sessionId: 42,
       dimensionId: 1,
     });
   });
 
-  it("shows completion summary when all dimensions are complete", () => {
+  it('shows completion summary when all dimensions are complete', () => {
     mockDebriefQuery.mockReturnValue({
       data: { data: completedDebrief },
       isLoading: false,
       error: null,
     });
-    renderWithMovie("42");
+    renderWithMovie('42');
 
-    expect(screen.getByTestId("completion-summary")).toBeInTheDocument();
-    expect(screen.getByText("Debrief Complete")).toBeInTheDocument();
-    expect(screen.queryByTestId("comparison-cards")).not.toBeInTheDocument();
+    expect(screen.getByTestId('completion-summary')).toBeInTheDocument();
+    expect(screen.getByText('Debrief Complete')).toBeInTheDocument();
+    expect(screen.queryByTestId('comparison-cards')).not.toBeInTheDocument();
   });
 
-  it("shows error state when session not found", () => {
+  it('shows error state when session not found', () => {
     mockDebriefQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: { message: "Session not found" },
+      error: { message: 'Session not found' },
     });
-    renderWithMovie("999");
+    renderWithMovie('999');
 
-    expect(screen.getByTestId("debrief-error")).toBeInTheDocument();
-    expect(screen.getByText("Could not load debrief")).toBeInTheDocument();
+    expect(screen.getByTestId('debrief-error')).toBeInTheDocument();
+    expect(screen.getByText('Could not load debrief')).toBeInTheDocument();
   });
 
-  it("shows invalid movie message for non-numeric ID", () => {
+  it('shows invalid movie message for non-numeric ID', () => {
     mockDebriefQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: null,
     });
-    renderWithMovie("abc");
+    renderWithMovie('abc');
 
-    expect(screen.getByText("Invalid movie ID.")).toBeInTheDocument();
+    expect(screen.getByText('Invalid movie ID.')).toBeInTheDocument();
   });
 });

@@ -3,9 +3,9 @@
  *
  * Stores up to MAX_RECENT queries (deduped, most-recent-first).
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
-const STORAGE_KEY = "pops:recent-searches";
+const STORAGE_KEY = 'pops:recent-searches';
 const MAX_RECENT = 10;
 
 function readFromStorage(): string[] {
@@ -14,7 +14,7 @@ function readFromStorage(): string[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((v): v is string => typeof v === "string");
+    return parsed.filter((v): v is string => typeof v === 'string');
   } catch {
     return [];
   }

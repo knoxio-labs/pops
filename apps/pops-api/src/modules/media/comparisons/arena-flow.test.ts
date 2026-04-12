@@ -3,15 +3,15 @@
  * via tRPC caller: pair selection → record → skip → stale → exclude →
  * blacklist → rankings verification.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { Database } from "better-sqlite3";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Database } from 'better-sqlite3';
 import {
   setupTestContext,
   seedDimension,
   seedMovie,
   seedWatchHistoryEntry,
   createCaller,
-} from "../../../shared/test-utils.js";
+} from '../../../shared/test-utils.js';
 
 const ctx = setupTestContext();
 let caller: ReturnType<typeof createCaller>;
@@ -28,27 +28,27 @@ afterEach(() => {
 function seedWatchedMovie(rawDb: Database, tmdbId: number, title: string): number {
   const movieId = seedMovie(rawDb, { tmdb_id: tmdbId, title });
   seedWatchHistoryEntry(rawDb, {
-    media_type: "movie",
+    media_type: 'movie',
     media_id: movieId,
     completed: 1,
   });
   return movieId;
 }
 
-describe("arena flow — full lifecycle", () => {
-  it("record comparison → updates rankings", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+describe('arena flow — full lifecycle', () => {
+  it('record comparison → updates rankings', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     // Record a comparison: m1 wins
     await caller.media.comparisons.record({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
 
@@ -61,25 +61,25 @@ describe("arena flow — full lifecycle", () => {
     expect(rankings.data[0]!.score).toBeGreaterThan(rankings.data[1]!.score);
   });
 
-  it("record draw → both scores adjust", async () => {
-    const dimId = seedDimension(db, { name: "Cinematography" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('record draw → both scores adjust', async () => {
+    const dimId = seedDimension(db, { name: 'Cinematography' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     await caller.media.comparisons.record({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: 0,
-      drawTier: "mid",
+      drawTier: 'mid',
     });
 
     // Both should have scores, both at 1500 (mid draw = 0.5)
     const scores = await caller.media.comparisons.scores({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
       dimensionId: dimId,
     });
@@ -87,78 +87,78 @@ describe("arena flow — full lifecycle", () => {
     expect(scores.data[0]!.score).toBe(1500); // mid draw doesn't change score
   });
 
-  it("skip → cooloff recorded in database", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('skip → cooloff recorded in database', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     // Skip this pair
     await caller.media.comparisons.recordSkip({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
     });
 
     // Verify cooloff row exists (skip_until = globalCompCount + 10)
     const cooloff = db
       .prepare(
-        "SELECT skip_until FROM comparison_skip_cooloffs WHERE dimension_id = ? AND media_a_id = ? AND media_b_id = ?"
+        'SELECT skip_until FROM comparison_skip_cooloffs WHERE dimension_id = ? AND media_a_id = ? AND media_b_id = ?'
       )
       .get(dimId, m1, m2) as { skip_until: number } | undefined;
     expect(cooloff).toBeDefined();
     expect(cooloff!.skip_until).toBe(10); // 0 comparisons + 10
   });
 
-  it("mark stale → staleness decreases", async () => {
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
+  it('mark stale → staleness decreases', async () => {
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
 
     // Initial staleness should be 1.0 (fresh)
     const initial = await caller.media.comparisons.getStaleness({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
     });
     expect(initial.data.staleness).toBe(1.0);
 
     // Mark stale once → 0.5
     const first = await caller.media.comparisons.markStale({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
     });
     expect(first.data.staleness).toBe(0.5);
 
     // Mark stale again → 0.25
     const second = await caller.media.comparisons.markStale({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
     });
     expect(second.data.staleness).toBe(0.25);
   });
 
-  it("exclude → purge comparisons → omit from rankings → include restores", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
-    const m3 = seedWatchedMovie(db, 552, "Inception");
+  it('exclude → purge comparisons → omit from rankings → include restores', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
+    const m3 = seedWatchedMovie(db, 552, 'Inception');
 
     // Record comparisons
     await caller.media.comparisons.record({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
     await caller.media.comparisons.record({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m3,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
 
@@ -170,7 +170,7 @@ describe("arena flow — full lifecycle", () => {
 
     // Exclude m1
     const excludeResult = await caller.media.comparisons.excludeFromDimension({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
       dimensionId: dimId,
     });
@@ -185,7 +185,7 @@ describe("arena flow — full lifecycle", () => {
 
     // Include m1 back
     await caller.media.comparisons.includeInDimension({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
       dimensionId: dimId,
     });
@@ -198,35 +198,35 @@ describe("arena flow — full lifecycle", () => {
     expect(afterInclude.data).toHaveLength(3);
   });
 
-  it("blacklist movie → purge all comparisons across dimensions + recalculate", async () => {
-    const dim1 = seedDimension(db, { name: "Entertainment" });
-    const dim2 = seedDimension(db, { name: "Cinematography" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('blacklist movie → purge all comparisons across dimensions + recalculate', async () => {
+    const dim1 = seedDimension(db, { name: 'Entertainment' });
+    const dim2 = seedDimension(db, { name: 'Cinematography' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     // Record comparisons in both dimensions
     await caller.media.comparisons.record({
       dimensionId: dim1,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
     await caller.media.comparisons.record({
       dimensionId: dim2,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m2,
     });
 
     // Blacklist m1
     const result = await caller.media.comparisons.blacklistMovie({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
     });
     expect(result.data.comparisonsDeleted).toBe(2);
@@ -238,13 +238,13 @@ describe("arena flow — full lifecycle", () => {
 
     // Watch history should be marked as blacklisted
     const wh = db
-      .prepare("SELECT blacklisted FROM watch_history WHERE media_type = ? AND media_id = ?")
-      .get("movie", m1) as { blacklisted: number };
+      .prepare('SELECT blacklisted FROM watch_history WHERE media_type = ? AND media_id = ?')
+      .get('movie', m1) as { blacklisted: number };
     expect(wh.blacklisted).toBe(1);
 
     // Scores for m1 should be reset to 1500 (recalculated with no comparisons)
     const scores = await caller.media.comparisons.scores({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
     });
     for (const s of scores.data) {
@@ -253,21 +253,21 @@ describe("arena flow — full lifecycle", () => {
     }
   });
 
-  it("getSmartPair returns null with insufficient movies (single movie)", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    seedWatchedMovie(db, 550, "Fight Club"); // only 1 movie
+  it('getSmartPair returns null with insufficient movies (single movie)', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    seedWatchedMovie(db, 550, 'Fight Club'); // only 1 movie
 
     const pair = await caller.media.comparisons.getSmartPair({
       dimensionId: dimId,
     });
     expect(pair.data).toBeNull();
-    expect(pair.reason).toBe("insufficient_watched_movies");
+    expect(pair.reason).toBe('insufficient_watched_movies');
   });
 
-  it("getSmartPair returns pair with sufficient movies (explicit dimension)", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('getSmartPair returns pair with sufficient movies (explicit dimension)', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     const pair = await caller.media.comparisons.getSmartPair({
       dimensionId: dimId,
@@ -279,31 +279,31 @@ describe("arena flow — full lifecycle", () => {
     expect(ids).toContain(m2);
   });
 
-  it("getSmartPair returns null with insufficient movies", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    seedWatchedMovie(db, 550, "Fight Club"); // only 1 movie
+  it('getSmartPair returns null with insufficient movies', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    seedWatchedMovie(db, 550, 'Fight Club'); // only 1 movie
 
     const pair = await caller.media.comparisons.getSmartPair({
       dimensionId: dimId,
     });
     expect(pair.data).toBeNull();
-    expect(pair.reason).toBe("insufficient_watched_movies");
+    expect(pair.reason).toBe('insufficient_watched_movies');
   });
 
-  it("multi-dimension flow: comparison in one does not affect another", async () => {
-    const dim1 = seedDimension(db, { name: "Entertainment" });
-    const dim2 = seedDimension(db, { name: "Cinematography" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('multi-dimension flow: comparison in one does not affect another', async () => {
+    const dim1 = seedDimension(db, { name: 'Entertainment' });
+    const dim2 = seedDimension(db, { name: 'Cinematography' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     // Record in dim1 only
     await caller.media.comparisons.record({
       dimensionId: dim1,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
 
@@ -321,23 +321,23 @@ describe("arena flow — full lifecycle", () => {
     expect(dim2Ranks.data).toHaveLength(0);
   });
 
-  it("scores endpoint returns confidence", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('scores endpoint returns confidence', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     await caller.media.comparisons.record({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
 
     const scores = await caller.media.comparisons.scores({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
       dimensionId: dimId,
     });
@@ -347,18 +347,18 @@ describe("arena flow — full lifecycle", () => {
     expect(scores.data[0]!.comparisonCount).toBe(1);
   });
 
-  it("delete comparison → scores recalculated to baseline", async () => {
-    const dimId = seedDimension(db, { name: "Entertainment" });
-    const m1 = seedWatchedMovie(db, 550, "Fight Club");
-    const m2 = seedWatchedMovie(db, 551, "The Matrix");
+  it('delete comparison → scores recalculated to baseline', async () => {
+    const dimId = seedDimension(db, { name: 'Entertainment' });
+    const m1 = seedWatchedMovie(db, 550, 'Fight Club');
+    const m2 = seedWatchedMovie(db, 551, 'The Matrix');
 
     await caller.media.comparisons.record({
       dimensionId: dimId,
-      mediaAType: "movie",
+      mediaAType: 'movie',
       mediaAId: m1,
-      mediaBType: "movie",
+      mediaBType: 'movie',
       mediaBId: m2,
-      winnerType: "movie",
+      winnerType: 'movie',
       winnerId: m1,
     });
 
@@ -372,7 +372,7 @@ describe("arena flow — full lifecycle", () => {
 
     // Both scores should be back to baseline 1500
     const scores1 = await caller.media.comparisons.scores({
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: m1,
       dimensionId: dimId,
     });

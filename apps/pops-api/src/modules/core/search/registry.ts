@@ -1,4 +1,4 @@
-import type { SearchAdapter } from "./types.js";
+import type { SearchAdapter } from './types.js';
 
 const adapters: SearchAdapter[] = [];
 

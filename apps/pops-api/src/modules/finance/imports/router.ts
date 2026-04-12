@@ -8,10 +8,10 @@
  * - createEntity: Create new entity in SQLite
  * - commitImport: Atomically create entities, apply changeSets, and write transactions
  */
-import { z } from "zod";
-import crypto from "crypto";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
+import { z } from 'zod';
+import crypto from 'crypto';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
 import {
   processImportInputSchema,
   executeImportInputSchema,
@@ -19,7 +19,7 @@ import {
   applyChangeSetAndReevaluateInputSchema,
   commitPayloadSchema,
   type ProcessImportOutput,
-} from "./types.js";
+} from './types.js';
 import {
   processImportWithProgress,
   executeImportWithProgress,
@@ -27,20 +27,20 @@ import {
   reevaluateImportSessionResult,
   reevaluateImportSessionWithRules,
   commitImport,
-} from "./service.js";
-import { setProgress, getProgress, updateProgress } from "./progress-store.js";
-import { applyChangeSet } from "../../core/corrections/service.js";
-import { ChangeSetSchema } from "../../core/corrections/types.js";
-import { NotFoundError, ValidationError } from "../../../shared/errors.js";
+} from './service.js';
+import { setProgress, getProgress, updateProgress } from './progress-store.js';
+import { applyChangeSet } from '../../core/corrections/service.js';
+import { ChangeSetSchema } from '../../core/corrections/types.js';
+import { NotFoundError, ValidationError } from '../../../shared/errors.js';
 
 function isProcessImportOutput(result: unknown): result is ProcessImportOutput {
   return (
-    typeof result === "object" &&
+    typeof result === 'object' &&
     result !== null &&
-    "matched" in result &&
-    "uncertain" in result &&
-    "failed" in result &&
-    "skipped" in result
+    'matched' in result &&
+    'uncertain' in result &&
+    'failed' in result &&
+    'skipped' in result
   );
 }
 
@@ -60,8 +60,8 @@ export const importsRouter = router({
     // Initialize progress
     setProgress(sessionId, {
       sessionId,
-      status: "processing",
-      currentStep: "deduplicating",
+      status: 'processing',
+      currentStep: 'deduplicating',
       totalTransactions: input.transactions.length,
       processedCount: 0,
       currentBatch: [],
@@ -71,7 +71,7 @@ export const importsRouter = router({
 
     // Process in background (don't await)
     processImportWithProgress(sessionId, input.transactions, input.account).catch((error) => {
-      console.error("[Import] Background processing failed:", error);
+      console.error('[Import] Background processing failed:', error);
     });
 
     // Return session ID immediately
@@ -90,8 +90,8 @@ export const importsRouter = router({
     // Initialize progress
     setProgress(sessionId, {
       sessionId,
-      status: "processing",
-      currentStep: "writing",
+      status: 'processing',
+      currentStep: 'writing',
       totalTransactions: input.transactions.length,
       processedCount: 0,
       currentBatch: [],
@@ -131,12 +131,12 @@ export const importsRouter = router({
     .mutation(({ input }) => {
       const progress = getProgress(input.sessionId);
       if (!progress) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Import session not found" });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Import session not found' });
       }
-      if (progress.status !== "completed" || !progress.result) {
+      if (progress.status !== 'completed' || !progress.result) {
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Import session is not ready for re-evaluation",
+          code: 'PRECONDITION_FAILED',
+          message: 'Import session is not ready for re-evaluation',
         });
       }
 
@@ -144,8 +144,8 @@ export const importsRouter = router({
       const result = progress.result;
       if (!isProcessImportOutput(result)) {
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Import session result is not a processImport result",
+          code: 'PRECONDITION_FAILED',
+          message: 'Import session result is not a processImport result',
         });
       }
 
@@ -155,7 +155,7 @@ export const importsRouter = router({
         applyChangeSet(input.changeSet);
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -178,10 +178,10 @@ export const importsRouter = router({
   commitImport: protectedProcedure.input(commitPayloadSchema).mutation(({ input }) => {
     try {
       const result = commitImport(input);
-      return { data: result, message: "Import committed" };
+      return { data: result, message: 'Import committed' };
     } catch (err) {
       if (err instanceof ValidationError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
       }
       throw err;
     }
@@ -203,20 +203,20 @@ export const importsRouter = router({
     .mutation(({ input }) => {
       const progress = getProgress(input.sessionId);
       if (!progress) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Import session not found" });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Import session not found' });
       }
-      if (progress.status !== "completed" || !progress.result) {
+      if (progress.status !== 'completed' || !progress.result) {
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Import session is not ready for re-evaluation",
+          code: 'PRECONDITION_FAILED',
+          message: 'Import session is not ready for re-evaluation',
         });
       }
 
       const result = progress.result;
       if (!isProcessImportOutput(result)) {
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Import session result is not a processImport result",
+          code: 'PRECONDITION_FAILED',
+          message: 'Import session result is not a processImport result',
         });
       }
 

@@ -2,10 +2,10 @@
  * Item create/edit form page.
  * Supports /inventory/items/new (create) and /inventory/items/:id/edit (edit).
  */
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import {
   Button,
   TextInput,
@@ -20,7 +20,7 @@ import {
   Badge,
   PageHeader,
   Label,
-} from "@pops/ui";
+} from '@pops/ui';
 import {
   Save,
   Link2,
@@ -32,14 +32,14 @@ import {
   Trash2,
   Eye,
   PenLine,
-} from "lucide-react";
-import Markdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
-import { trpc } from "../lib/trpc";
-import { PhotoUpload, type UploadedFile } from "../components/PhotoUpload";
-import { useImageProcessor } from "../hooks/useImageProcessor";
-import type { PhotoItem } from "../components/PhotoGallery";
-import { LocationPicker } from "../components/LocationPicker";
+} from 'lucide-react';
+import Markdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import { trpc } from '../lib/trpc';
+import { PhotoUpload, type UploadedFile } from '../components/PhotoUpload';
+import { useImageProcessor } from '../hooks/useImageProcessor';
+import type { PhotoItem } from '../components/PhotoGallery';
+import { LocationPicker } from '../components/LocationPicker';
 
 interface PendingConnection {
   id: string;
@@ -66,47 +66,47 @@ interface ItemFormValues {
 }
 
 const ITEM_TYPES = [
-  "Electronics",
-  "Furniture",
-  "Appliance",
-  "Clothing",
-  "Tools",
-  "Sports",
-  "Kitchen",
-  "Office",
-  "Other",
+  'Electronics',
+  'Furniture',
+  'Appliance',
+  'Clothing',
+  'Tools',
+  'Sports',
+  'Kitchen',
+  'Office',
+  'Other',
 ];
 
 const CONDITIONS = [
-  { value: "new", label: "New" },
-  { value: "good", label: "Good" },
-  { value: "fair", label: "Fair" },
-  { value: "poor", label: "Poor" },
-  { value: "broken", label: "Broken" },
+  { value: 'new', label: 'New' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+  { value: 'poor', label: 'Poor' },
+  { value: 'broken', label: 'Broken' },
 ];
 
 const defaultValues: ItemFormValues = {
-  itemName: "",
-  brand: "",
-  model: "",
-  itemId: "",
-  type: "",
-  condition: "good",
-  locationId: "",
+  itemName: '',
+  brand: '',
+  model: '',
+  itemId: '',
+  type: '',
+  condition: 'good',
+  locationId: '',
   inUse: false,
   deductible: false,
-  purchaseDate: "",
-  warrantyExpires: "",
-  purchasePrice: "",
-  replacementValue: "",
-  resaleValue: "",
-  assetId: "",
-  notes: "",
+  purchaseDate: '',
+  warrantyExpires: '',
+  purchasePrice: '',
+  replacementValue: '',
+  resaleValue: '',
+  assetId: '',
+  notes: '',
 };
 
 /** Extract a 4-6 character uppercase prefix from an item type for asset ID generation. */
 export function extractPrefix(type: string): string {
-  const firstWord = type.split(/\s+/)[0] ?? "";
+  const firstWord = type.split(/\s+/)[0] ?? '';
   const upper = firstWord.toUpperCase();
   // Truncate to 4 chars, unless the word is 5-6 chars — keep up to 6
   return upper.length <= 6 ? upper : upper.slice(0, 4);
@@ -145,7 +145,7 @@ export function ItemFormPage() {
     formState: { errors, isDirty },
   } = useForm<ItemFormValues>({ defaultValues });
 
-  const typeValue = watch("type");
+  const typeValue = watch('type');
 
   // Asset ID uniqueness validation
   const [assetIdError, setAssetIdError] = useState<string | null>(null);
@@ -185,13 +185,13 @@ export function ItemFormPage() {
       const prefix = extractPrefix(typeValue);
       const result = await utils.inventory.items.countByAssetPrefix.fetch({ prefix });
       const nextNum = result.data + 1;
-      const padded = nextNum >= 100 ? String(nextNum) : String(nextNum).padStart(2, "0");
+      const padded = nextNum >= 100 ? String(nextNum) : String(nextNum).padStart(2, '0');
       const newAssetId = `${prefix}${padded}`;
-      setValue("assetId", newAssetId, { shouldDirty: true });
+      setValue('assetId', newAssetId, { shouldDirty: true });
       setAssetIdError(null);
       void validateAssetIdUniqueness(newAssetId);
     } catch {
-      toast.error("Failed to generate asset ID");
+      toast.error('Failed to generate asset ID');
     } finally {
       setGenerating(false);
     }
@@ -230,8 +230,8 @@ export function ItemFormPage() {
       const pending: UploadedFile[] = files.map((file, i) => ({
         localId: `${Date.now()}-${i}`,
         file,
-        previewUrl: "",
-        status: "pending" as const,
+        previewUrl: '',
+        status: 'pending' as const,
       }));
       setUploadFiles((prev) => [...prev, ...pending]);
 
@@ -250,7 +250,7 @@ export function ItemFormPage() {
               previewUrl: match.previewUrl,
               originalSize: match.originalSize,
               processedSize: match.processedSize,
-              status: "uploading" as const,
+              status: 'uploading' as const,
               progress: 0,
             };
           })
@@ -267,7 +267,7 @@ export function ItemFormPage() {
               prev.map((f) => (f.localId === localId ? { ...f, progress: 50 } : f))
             );
 
-            const fileName = `${Date.now()}-${p.original.name.replace(/\.[^.]+$/, ".jpg")}`;
+            const fileName = `${Date.now()}-${p.original.name.replace(/\.[^.]+$/, '.jpg')}`;
 
             if (isEditMode && id) {
               await attachMutation.mutateAsync({
@@ -279,7 +279,7 @@ export function ItemFormPage() {
 
             setUploadFiles((prev) =>
               prev.map((f) =>
-                f.localId === localId ? { ...f, status: "done" as const, progress: 100 } : f
+                f.localId === localId ? { ...f, status: 'done' as const, progress: 100 } : f
               )
             );
           } catch (err: unknown) {
@@ -288,8 +288,8 @@ export function ItemFormPage() {
                 f.localId === localId
                   ? {
                       ...f,
-                      status: "error" as const,
-                      error: err instanceof Error ? err.message : "Upload failed",
+                      status: 'error' as const,
+                      error: err instanceof Error ? err.message : 'Upload failed',
                     }
                   : f
               )
@@ -302,11 +302,11 @@ export function ItemFormPage() {
         setUploadFiles((prev) =>
           prev.map((f) =>
             pending.some((p) => p.localId === f.localId)
-              ? { ...f, status: "error" as const, error: "Image processing failed" }
+              ? { ...f, status: 'error' as const, error: 'Image processing failed' }
               : f
           )
         );
-        toast.error("Failed to process images");
+        toast.error('Failed to process images');
       }
     },
     [processFiles, isEditMode, id, attachMutation, existingPhotos.length]
@@ -332,7 +332,7 @@ export function ItemFormPage() {
 
   // Pending connections for create mode
   const [pendingConnections, setPendingConnections] = useState<PendingConnection[]>([]);
-  const [connectionSearch, setConnectionSearch] = useState("");
+  const [connectionSearch, setConnectionSearch] = useState('');
 
   const { data: searchResults, isLoading: searchLoading } = trpc.inventory.items.list.useQuery(
     { search: connectionSearch, limit: 10 },
@@ -347,7 +347,7 @@ export function ItemFormPage() {
 
   const createLocationMutation = trpc.inventory.locations.create.useMutation({
     onSuccess: () => {
-      toast.success("Location created");
+      toast.success('Location created');
       void utils.inventory.locations.tree.invalidate();
     },
     onError: (err) => toast.error(`Failed to create location: ${err.message}`),
@@ -366,21 +366,21 @@ export function ItemFormPage() {
       const item = itemData.data;
       reset({
         itemName: item.itemName,
-        brand: item.brand ?? "",
-        model: item.model ?? "",
-        itemId: item.itemId ?? "",
-        type: item.type ?? "",
-        condition: item.condition ?? "",
-        locationId: item.locationId ?? "",
+        brand: item.brand ?? '',
+        model: item.model ?? '',
+        itemId: item.itemId ?? '',
+        type: item.type ?? '',
+        condition: item.condition ?? '',
+        locationId: item.locationId ?? '',
         inUse: item.inUse,
         deductible: item.deductible,
-        purchaseDate: item.purchaseDate ?? "",
-        warrantyExpires: item.warrantyExpires ?? "",
-        purchasePrice: item.purchasePrice?.toString() ?? "",
-        replacementValue: item.replacementValue?.toString() ?? "",
-        resaleValue: item.resaleValue?.toString() ?? "",
-        assetId: item.assetId ?? "",
-        notes: item.notes ?? "",
+        purchaseDate: item.purchaseDate ?? '',
+        warrantyExpires: item.warrantyExpires ?? '',
+        purchasePrice: item.purchasePrice?.toString() ?? '',
+        replacementValue: item.replacementValue?.toString() ?? '',
+        resaleValue: item.resaleValue?.toString() ?? '',
+        assetId: item.assetId ?? '',
+        notes: item.notes ?? '',
       });
     }
   }, [itemData, reset]);
@@ -391,8 +391,8 @@ export function ItemFormPage() {
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
   }, [isDirty]);
 
   const createMutation = trpc.inventory.items.create.useMutation({
@@ -414,16 +414,16 @@ export function ItemFormPage() {
           }
         }
         if (connected > 0) {
-          toast.success(`Item created with ${connected} connection${connected > 1 ? "s" : ""}`);
+          toast.success(`Item created with ${connected} connection${connected > 1 ? 's' : ''}`);
         } else {
-          toast.success("Item created");
+          toast.success('Item created');
         }
       } else {
-        toast.success("Item created");
+        toast.success('Item created');
       }
 
       void utils.inventory.items.list.invalidate();
-      navigate("/inventory");
+      navigate('/inventory');
     },
     onError: (err) => {
       toast.error(`Failed to create: ${err.message}`);
@@ -432,7 +432,7 @@ export function ItemFormPage() {
 
   const updateMutation = trpc.inventory.items.update.useMutation({
     onSuccess: () => {
-      toast.success("Item updated");
+      toast.success('Item updated');
       void utils.inventory.items.list.invalidate();
       void utils.inventory.items.get.invalidate({ id: id! });
       navigate(`/inventory/items/${id}`);
@@ -444,7 +444,7 @@ export function ItemFormPage() {
 
   const onSubmit = (values: ItemFormValues) => {
     if (!values.itemName.trim()) {
-      toast.error("Item name is required");
+      toast.error('Item name is required');
       return;
     }
 
@@ -489,11 +489,11 @@ export function ItemFormPage() {
   }
 
   if (isEditMode && error) {
-    const is404 = error.data?.code === "NOT_FOUND";
+    const is404 = error.data?.code === 'NOT_FOUND';
     return (
       <div className="p-6">
         <Alert variant="destructive">
-          <AlertTitle>{is404 ? "Item not found" : "Error"}</AlertTitle>
+          <AlertTitle>{is404 ? 'Item not found' : 'Error'}</AlertTitle>
           <AlertDescription>{is404 ? "This item doesn't exist." : error.message}</AlertDescription>
         </Alert>
         <Link
@@ -511,16 +511,16 @@ export function ItemFormPage() {
   return (
     <div className="p-6 max-w-2xl">
       <PageHeader
-        title={isEditMode ? "Edit Item" : "New Item"}
-        backHref={isEditMode && id ? `/inventory/items/${id}` : "/inventory"}
+        title={isEditMode ? 'Edit Item' : 'New Item'}
+        backHref={isEditMode && id ? `/inventory/items/${id}` : '/inventory'}
         breadcrumbs={
           isEditMode && editItemName
             ? [
-                { label: "Inventory", href: "/inventory" },
+                { label: 'Inventory', href: '/inventory' },
                 { label: editItemName, href: `/inventory/items/${id}` },
-                { label: "Edit" },
+                { label: 'Edit' },
               ]
-            : [{ label: "Inventory", href: "/inventory" }, { label: "New Item" }]
+            : [{ label: 'Inventory', href: '/inventory' }, { label: 'New Item' }]
         }
         renderLink={Link}
         className="mb-8"
@@ -536,8 +536,8 @@ export function ItemFormPage() {
 
           <FormField label="Item Name *" error={errors.itemName?.message}>
             <TextInput
-              {...register("itemName", {
-                required: "Item name is required",
+              {...register('itemName', {
+                required: 'Item name is required',
               })}
               placeholder="e.g. MacBook Pro 16-inch"
               className="font-semibold"
@@ -546,22 +546,22 @@ export function ItemFormPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Brand">
-              <TextInput {...register("brand")} placeholder="e.g. Apple" />
+              <TextInput {...register('brand')} placeholder="e.g. Apple" />
             </FormField>
             <FormField label="Model">
-              <TextInput {...register("model")} placeholder="e.g. M3 Max" />
+              <TextInput {...register('model')} placeholder="e.g. M3 Max" />
             </FormField>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Item ID / SKU">
-              <TextInput {...register("itemId")} />
+              <TextInput {...register('itemId')} />
             </FormField>
             <FormField label="Asset ID" error={assetIdError ?? undefined}>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <TextInput
-                    {...register("assetId")}
+                    {...register('assetId')}
                     className="font-mono"
                     onBlur={(e) => void validateAssetIdUniqueness(e.target.value)}
                   />
@@ -577,7 +577,7 @@ export function ItemFormPage() {
                   onClick={() => void handleAutoGenerate()}
                   className="shrink-0 whitespace-nowrap"
                   title={
-                    typeValue ? `Generate ${extractPrefix(typeValue)}XX` : "Select a type first"
+                    typeValue ? `Generate ${extractPrefix(typeValue)}XX` : 'Select a type first'
                   }
                 >
                   {generating ? (
@@ -602,17 +602,17 @@ export function ItemFormPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Type *" error={errors.type?.message}>
               <Select
-                {...register("type", { required: "Type is required" })}
+                {...register('type', { required: 'Type is required' })}
                 options={[
-                  { value: "", label: "Select type..." },
+                  { value: '', label: 'Select type...' },
                   ...ITEM_TYPES.map((t) => ({ value: t, label: t })),
                 ]}
               />
             </FormField>
             <FormField label="Condition">
               <Select
-                {...register("condition")}
-                options={[{ value: "", label: "Select condition..." }, ...CONDITIONS]}
+                {...register('condition')}
+                options={[{ value: '', label: 'Select condition...' }, ...CONDITIONS]}
               />
             </FormField>
           </div>
@@ -620,8 +620,8 @@ export function ItemFormPage() {
           <FormField label="Location">
             <LocationPicker
               locations={locationTree}
-              value={watch("locationId") || null}
-              onChange={(id) => setValue("locationId", id ?? "", { shouldDirty: true })}
+              value={watch('locationId') || null}
+              onChange={(id) => setValue('locationId', id ?? '', { shouldDirty: true })}
               onCreateLocation={(name, parentId) =>
                 createLocationMutation.mutate({ name, parentId })
               }
@@ -630,8 +630,8 @@ export function ItemFormPage() {
           </FormField>
 
           <div className="flex gap-6 p-4 rounded-xl bg-app-accent/5">
-            <CheckboxInput label="In Use" {...register("inUse")} />
-            <CheckboxInput label="Tax Deductible" {...register("deductible")} />
+            <CheckboxInput label="In Use" {...register('inUse')} />
+            <CheckboxInput label="Tax Deductible" {...register('deductible')} />
           </div>
         </section>
 
@@ -644,10 +644,10 @@ export function ItemFormPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Purchase Date">
-              <DateInput {...register("purchaseDate")} />
+              <DateInput {...register('purchaseDate')} />
             </FormField>
             <FormField label="Warranty Expires">
-              <DateInput {...register("warrantyExpires")} />
+              <DateInput {...register('warrantyExpires')} />
             </FormField>
           </div>
 
@@ -657,7 +657,7 @@ export function ItemFormPage() {
                 type="number"
                 step="0.01"
                 min="0"
-                {...register("purchasePrice")}
+                {...register('purchasePrice')}
                 placeholder="0.00"
               />
             </FormField>
@@ -666,7 +666,7 @@ export function ItemFormPage() {
                 type="number"
                 step="0.01"
                 min="0"
-                {...register("replacementValue")}
+                {...register('replacementValue')}
                 placeholder="0.00"
                 className="font-bold text-app-accent"
               />
@@ -676,7 +676,7 @@ export function ItemFormPage() {
                 type="number"
                 step="0.01"
                 min="0"
-                {...register("resaleValue")}
+                {...register('resaleValue')}
                 placeholder="0.00"
               />
             </FormField>
@@ -780,15 +780,15 @@ export function ItemFormPage() {
           </div>
           {notesPreview ? (
             <div className="prose prose-sm dark:prose-invert max-w-none min-h-[6.5rem] p-3 rounded-md border bg-muted/30">
-              {watch("notes") ? (
-                <Markdown rehypePlugins={[rehypeSanitize]}>{watch("notes")}</Markdown>
+              {watch('notes') ? (
+                <Markdown rehypePlugins={[rehypeSanitize]}>{watch('notes')}</Markdown>
               ) : (
                 <p className="text-muted-foreground italic">Nothing to preview</p>
               )}
             </div>
           ) : (
             <Textarea
-              {...register("notes")}
+              {...register('notes')}
               rows={4}
               placeholder="Add notes about this item... (supports markdown)"
               className="w-full bg-transparent"
@@ -865,14 +865,14 @@ export function ItemFormPage() {
                               ...prev,
                               { id: item.id, itemName: item.itemName },
                             ]);
-                            setConnectionSearch("");
+                            setConnectionSearch('');
                           }}
                         >
                           <div>
                             <div className="font-medium text-sm">{item.itemName}</div>
                             <div className="text-xs text-muted-foreground">
-                              {[item.brand, item.model, item.assetId].filter(Boolean).join(" · ") ||
-                                "No details"}
+                              {[item.brand, item.model, item.assetId].filter(Boolean).join(' · ') ||
+                                'No details'}
                             </div>
                           </div>
                           <Link2 className="h-4 w-4 text-app-accent/50 shrink-0 ml-2" />
@@ -893,10 +893,10 @@ export function ItemFormPage() {
             size="lg"
             className="flex-1 bg-app-accent hover:bg-app-accent/80 text-white font-bold transition-all shadow-md shadow-app-accent/20"
             loading={isMutating}
-            loadingText={isEditMode ? "Saving..." : "Creating..."}
+            loadingText={isEditMode ? 'Saving...' : 'Creating...'}
           >
             <Save className="h-5 w-5 mr-2" />
-            {isEditMode ? "Save Changes" : "Create Item"}
+            {isEditMode ? 'Save Changes' : 'Create Item'}
           </Button>
           <Link to="/inventory">
             <Button

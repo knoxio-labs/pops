@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
@@ -12,7 +12,7 @@ const mockSaveMutate = vi.fn();
 const mockTestRadarrMutate = vi.fn();
 const mockTestSonarrMutate = vi.fn();
 
-vi.mock("../lib/trpc", () => ({
+vi.mock('../lib/trpc', () => ({
   trpc: {
     useUtils: () => ({
       media: {
@@ -53,11 +53,11 @@ let mockTestSonarrData: {
   data: { configured: boolean; connected: boolean; version?: string; error?: string };
 } | null = null;
 
-import { ArrSettingsPage } from "./ArrSettingsPage";
+import { ArrSettingsPage } from './ArrSettingsPage';
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={["/media/arr"]}>
+    <MemoryRouter initialEntries={['/media/arr']}>
       <ArrSettingsPage />
     </MemoryRouter>
   );
@@ -70,11 +70,11 @@ beforeEach(() => {
   mockSettingsQuery.mockReturnValue({
     data: {
       data: {
-        radarrUrl: "http://192.168.1.100:7878",
-        radarrApiKey: "••••••••",
+        radarrUrl: 'http://192.168.1.100:7878',
+        radarrApiKey: '••••••••',
         radarrHasKey: true,
-        sonarrUrl: "http://192.168.1.100:8989",
-        sonarrApiKey: "••••••••",
+        sonarrUrl: 'http://192.168.1.100:8989',
+        sonarrApiKey: '••••••••',
         sonarrHasKey: true,
       },
     },
@@ -83,42 +83,42 @@ beforeEach(() => {
   });
 });
 
-describe("ArrSettingsPage", () => {
-  it("renders page heading", () => {
+describe('ArrSettingsPage', () => {
+  it('renders page heading', () => {
     renderPage();
-    expect(screen.getByRole("heading", { name: "Radarr & Sonarr Settings" })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Radarr & Sonarr Settings' })).toBeTruthy();
   });
 
-  it("renders Radarr and Sonarr sections", () => {
+  it('renders Radarr and Sonarr sections', () => {
     renderPage();
-    expect(screen.getByText("Radarr")).toBeTruthy();
-    expect(screen.getByText("Sonarr")).toBeTruthy();
+    expect(screen.getByText('Radarr')).toBeTruthy();
+    expect(screen.getByText('Sonarr')).toBeTruthy();
   });
 
-  it("API key inputs are type=password with no reveal toggle", () => {
+  it('API key inputs are type=password with no reveal toggle', () => {
     renderPage();
     const passwordInputs = document.querySelectorAll('input[type="password"]');
     expect(passwordInputs.length).toBe(2);
     // No Eye/EyeOff toggle buttons
-    expect(screen.queryByLabelText("Show API key")).toBeNull();
-    expect(screen.queryByLabelText("Hide API key")).toBeNull();
+    expect(screen.queryByLabelText('Show API key')).toBeNull();
+    expect(screen.queryByLabelText('Hide API key')).toBeNull();
   });
 
-  it("renders loading skeleton", () => {
+  it('renders loading skeleton', () => {
     mockSettingsQuery.mockReturnValue({ data: null, isLoading: true, refetch: vi.fn() });
     renderPage();
-    expect(document.querySelector(".animate-pulse")).toBeTruthy();
+    expect(document.querySelector('.animate-pulse')).toBeTruthy();
   });
 
-  it("auto-prepends https:// on blur for URLs without protocol", async () => {
+  it('auto-prepends https:// on blur for URLs without protocol', async () => {
     mockSettingsQuery.mockReturnValue({
       data: {
         data: {
-          radarrUrl: "",
-          radarrApiKey: "",
+          radarrUrl: '',
+          radarrApiKey: '',
           radarrHasKey: false,
-          sonarrUrl: "",
-          sonarrApiKey: "",
+          sonarrUrl: '',
+          sonarrApiKey: '',
           sonarrHasKey: false,
         },
       },
@@ -129,21 +129,21 @@ describe("ArrSettingsPage", () => {
     renderPage();
 
     const urlInputs = screen.getAllByPlaceholderText(/192\.168/);
-    await user.type(urlInputs[0]!, "192.168.1.100:7878");
+    await user.type(urlInputs[0]!, '192.168.1.100:7878');
     await user.tab(); // trigger onBlur → normalizeUrl
 
-    expect(urlInputs[0]).toHaveValue("https://192.168.1.100:7878");
+    expect(urlInputs[0]).toHaveValue('https://192.168.1.100:7878');
   });
 
-  it("preserves URL with http:// prefix on blur", async () => {
+  it('preserves URL with http:// prefix on blur', async () => {
     mockSettingsQuery.mockReturnValue({
       data: {
         data: {
-          radarrUrl: "",
-          radarrApiKey: "",
+          radarrUrl: '',
+          radarrApiKey: '',
           radarrHasKey: false,
-          sonarrUrl: "",
-          sonarrApiKey: "",
+          sonarrUrl: '',
+          sonarrApiKey: '',
           sonarrHasKey: false,
         },
       },
@@ -154,25 +154,25 @@ describe("ArrSettingsPage", () => {
     renderPage();
 
     const urlInputs = screen.getAllByPlaceholderText(/192\.168/);
-    await user.type(urlInputs[0]!, "http://localhost:7878");
+    await user.type(urlInputs[0]!, 'http://localhost:7878');
     await user.tab(); // trigger onBlur → normalizeUrl
 
-    expect(urlInputs[0]).toHaveValue("http://localhost:7878");
+    expect(urlInputs[0]).toHaveValue('http://localhost:7878');
   });
 
-  it("renders save and test connection buttons", () => {
+  it('renders save and test connection buttons', () => {
     renderPage();
-    const saveButtons = screen.getAllByText("Save");
+    const saveButtons = screen.getAllByText('Save');
     expect(saveButtons.length).toBe(2);
-    const testButtons = screen.getAllByText("Test Connection");
+    const testButtons = screen.getAllByText('Test Connection');
     expect(testButtons.length).toBe(2);
   });
 
-  it("saves Radarr independently without affecting Sonarr mutation", async () => {
+  it('saves Radarr independently without affecting Sonarr mutation', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const [radarrSave] = screen.getAllByText("Save");
+    const [radarrSave] = screen.getAllByText('Save');
     await user.click(radarrSave!);
 
     expect(mockSaveMutate).toHaveBeenCalledTimes(1);
@@ -184,11 +184,11 @@ describe("ArrSettingsPage", () => {
     );
   });
 
-  it("saves Sonarr independently without affecting Radarr mutation", async () => {
+  it('saves Sonarr independently without affecting Radarr mutation', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const [, sonarrSave] = screen.getAllByText("Save");
+    const [, sonarrSave] = screen.getAllByText('Save');
     await user.click(sonarrSave!);
 
     expect(mockSaveMutate).toHaveBeenCalledTimes(1);
@@ -200,24 +200,24 @@ describe("ArrSettingsPage", () => {
     );
   });
 
-  it("shows https suggestion when Radarr connection fails on http URL", () => {
+  it('shows https suggestion when Radarr connection fails on http URL', () => {
     mockTestRadarrData = {
-      data: { configured: true, connected: false, error: "Connection refused" },
+      data: { configured: true, connected: false, error: 'Connection refused' },
     };
     renderPage();
-    expect(screen.getByText("Connection refused")).toBeTruthy();
-    expect(screen.getByText("Try using https:// instead")).toBeTruthy();
+    expect(screen.getByText('Connection refused')).toBeTruthy();
+    expect(screen.getByText('Try using https:// instead')).toBeTruthy();
   });
 
-  it("does not show https suggestion when URL already uses https", () => {
+  it('does not show https suggestion when URL already uses https', () => {
     mockSettingsQuery.mockReturnValue({
       data: {
         data: {
-          radarrUrl: "https://192.168.1.100:7878",
-          radarrApiKey: "••••••••",
+          radarrUrl: 'https://192.168.1.100:7878',
+          radarrApiKey: '••••••••',
           radarrHasKey: true,
-          sonarrUrl: "https://192.168.1.100:8989",
-          sonarrApiKey: "••••••••",
+          sonarrUrl: 'https://192.168.1.100:8989',
+          sonarrApiKey: '••••••••',
           sonarrHasKey: true,
         },
       },
@@ -225,9 +225,9 @@ describe("ArrSettingsPage", () => {
       refetch: vi.fn(),
     });
     mockTestRadarrData = {
-      data: { configured: true, connected: false, error: "Connection refused" },
+      data: { configured: true, connected: false, error: 'Connection refused' },
     };
     renderPage();
-    expect(screen.queryByText("Try using https:// instead")).toBeNull();
+    expect(screen.queryByText('Try using https:// instead')).toBeNull();
   });
 });

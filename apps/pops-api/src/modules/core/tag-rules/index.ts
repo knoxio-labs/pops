@@ -1,1 +1,1 @@
-export { tagRulesRouter } from "./router.js";
+export { tagRulesRouter } from './router.js';

@@ -21,16 +21,16 @@
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
+| Case        | Behaviour                   |
+| ----------- | --------------------------- |
 | {Edge case} | {How the system handles it} |
 
 ## User Stories
 
-| # | Story | Summary | Parallelisable |
-|---|-------|---------|----------------|
-| 01 | [us-01-slug](us-01-slug.md) | {One-line summary} | {Yes / Blocked by us-NN} |
-| 02 | [us-02-slug](us-02-slug.md) | {One-line summary} | {Yes / Blocked by us-NN} |
+| #   | Story                       | Summary            | Parallelisable           |
+| --- | --------------------------- | ------------------ | ------------------------ |
+| 01  | [us-01-slug](us-01-slug.md) | {One-line summary} | {Yes / Blocked by us-NN} |
+| 02  | [us-02-slug](us-02-slug.md) | {One-line summary} | {Yes / Blocked by us-NN} |
 
 ## Out of Scope
 

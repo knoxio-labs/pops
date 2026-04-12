@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { PreferenceProfile } from "../types.js";
-import type { TmdbSearchResult } from "../../tmdb/types.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { PreferenceProfile } from '../types.js';
+import type { TmdbSearchResult } from '../../tmdb/types.js';
 
 // ── Mutable state for overridable mocks ──────────────────────────────────────
 const mockDismissedIds = vi.hoisted(() => ({ value: new Set<number>() }));
@@ -9,20 +9,20 @@ const mockWatchlistIds = vi.hoisted(() => ({ value: new Set<number>() }));
 const mockLibraryIds = vi.hoisted(() => ({ value: new Set<number>() }));
 const mockTmdbResults = vi.hoisted(() => ({ value: [] as TmdbSearchResult[] }));
 
-vi.mock("../../../../db.js", () => ({ getDrizzle: vi.fn() }));
+vi.mock('../../../../db.js', () => ({ getDrizzle: vi.fn() }));
 
-vi.mock("@pops/db-types", () => ({
-  movies: { id: "id", tmdbId: "tmdb_id", title: "title" },
+vi.mock('@pops/db-types', () => ({
+  movies: { id: 'id', tmdbId: 'tmdb_id', title: 'title' },
   mediaScores: {
-    mediaId: "media_id",
-    mediaType: "media_type",
-    dimensionId: "dimension_id",
-    score: "score",
+    mediaId: 'media_id',
+    mediaType: 'media_type',
+    dimensionId: 'dimension_id',
+    score: 'score',
   },
-  comparisonDimensions: { id: "id" },
+  comparisonDimensions: { id: 'id' },
 }));
 
-vi.mock("../../tmdb/index.js", () => ({
+vi.mock('../../tmdb/index.js', () => ({
   getTmdbClient: vi.fn(() => ({
     discoverMovies: vi.fn().mockImplementation(async () => ({
       results: mockTmdbResults.value,
@@ -39,7 +39,7 @@ vi.mock("../../tmdb/index.js", () => ({
   })),
 }));
 
-vi.mock("../tmdb-service.js", () => ({
+vi.mock('../tmdb-service.js', () => ({
   getLibraryTmdbIds: vi.fn(() => mockLibraryIds.value),
   toDiscoverResults: vi.fn(
     (
@@ -67,28 +67,28 @@ vi.mock("../tmdb-service.js", () => ({
   ),
 }));
 
-vi.mock("../flags.js", () => ({
+vi.mock('../flags.js', () => ({
   getDismissedTmdbIds: vi.fn(() => mockDismissedIds.value),
   getWatchedTmdbIds: vi.fn(() => mockWatchedIds.value),
   getWatchlistTmdbIds: vi.fn(() => mockWatchlistIds.value),
 }));
 
-vi.mock("../service.js", () => ({
+vi.mock('../service.js', () => ({
   scoreDiscoverResults: vi.fn((results: Record<string, unknown>[]) =>
-    results.map((r) => ({ ...r, matchPercentage: 75, matchReason: "Genre" }))
+    results.map((r) => ({ ...r, matchPercentage: 75, matchReason: 'Genre' }))
   ),
 }));
 
-vi.mock("./registry.js", () => ({ registerShelf: vi.fn() }));
+vi.mock('./registry.js', () => ({ registerShelf: vi.fn() }));
 
-import { getDrizzle } from "../../../../db.js";
+import { getDrizzle } from '../../../../db.js';
 import {
   bestInGenreShelf,
   genreCrossoverShelf,
   topDimensionShelf,
   dimensionInspiredShelf,
-} from "./genre-shelves.js";
-import { getTmdbClient } from "../../tmdb/index.js";
+} from './genre-shelves.js';
+import { getTmdbClient } from '../../tmdb/index.js';
 
 const mockGetDrizzle = vi.mocked(getDrizzle);
 const mockGetTmdbClient = vi.mocked(getTmdbClient);
@@ -100,14 +100,14 @@ function makeTmdbResult(tmdbId = 200): TmdbSearchResult {
     tmdbId,
     title: `Movie ${tmdbId}`,
     originalTitle: `Movie ${tmdbId}`,
-    overview: "A film",
-    releaseDate: "2024-01-01",
-    posterPath: "/poster.jpg",
+    overview: 'A film',
+    releaseDate: '2024-01-01',
+    posterPath: '/poster.jpg',
     backdropPath: null,
     voteAverage: 7.5,
     voteCount: 500,
     genreIds: [18],
-    originalLanguage: "en",
+    originalLanguage: 'en',
     popularity: 30,
   };
 }
@@ -132,13 +132,13 @@ function makeMockDb(rows: Record<string, unknown>[]) {
 
 const profileWithGenres: PreferenceProfile = {
   genreAffinities: [
-    { genre: "Drama", avgScore: 8.5, movieCount: 20, totalComparisons: 40 },
-    { genre: "Action", avgScore: 7.0, movieCount: 15, totalComparisons: 30 },
-    { genre: "Science Fiction", avgScore: 6.0, movieCount: 10, totalComparisons: 20 },
+    { genre: 'Drama', avgScore: 8.5, movieCount: 20, totalComparisons: 40 },
+    { genre: 'Action', avgScore: 7.0, movieCount: 15, totalComparisons: 30 },
+    { genre: 'Science Fiction', avgScore: 6.0, movieCount: 10, totalComparisons: 20 },
   ],
   dimensionWeights: [
-    { dimensionId: 1, name: "Cinematography", avgScore: 1800, comparisonCount: 10 },
-    { dimensionId: 2, name: "Story", avgScore: 1600, comparisonCount: 6 },
+    { dimensionId: 1, name: 'Cinematography', avgScore: 1800, comparisonCount: 10 },
+    { dimensionId: 2, name: 'Story', avgScore: 1600, comparisonCount: 6 },
   ],
   genreDistribution: [],
   totalMoviesWatched: 50,
@@ -163,36 +163,36 @@ beforeEach(() => {
 
 // ── best-in-genre ─────────────────────────────────────────────────────────────
 
-describe("bestInGenreShelf — definition", () => {
-  it("has id best-in-genre, template true, category seed", () => {
-    expect(bestInGenreShelf.id).toBe("best-in-genre");
+describe('bestInGenreShelf — definition', () => {
+  it('has id best-in-genre, template true, category seed', () => {
+    expect(bestInGenreShelf.id).toBe('best-in-genre');
     expect(bestInGenreShelf.template).toBe(true);
-    expect(bestInGenreShelf.category).toBe("seed");
+    expect(bestInGenreShelf.category).toBe('seed');
   });
 });
 
-describe("bestInGenreShelf — generate()", () => {
-  it("returns one instance per top genre (up to 5)", () => {
+describe('bestInGenreShelf — generate()', () => {
+  it('returns one instance per top genre (up to 5)', () => {
     const instances = bestInGenreShelf.generate(profileWithGenres);
     expect(instances).toHaveLength(3); // 3 genres in profile
   });
 
-  it("returns empty when profile has no genre affinities", () => {
+  it('returns empty when profile has no genre affinities', () => {
     const instances = bestInGenreShelf.generate(emptyProfile);
     expect(instances).toHaveLength(0);
   });
 
-  it("shelfId is best-in-genre:{genre-slug}", () => {
+  it('shelfId is best-in-genre:{genre-slug}', () => {
     const instances = bestInGenreShelf.generate(profileWithGenres);
-    expect(instances[0]!.shelfId).toBe("best-in-genre:drama");
+    expect(instances[0]!.shelfId).toBe('best-in-genre:drama');
   });
 
   it("title is 'Best in {Genre}'", () => {
     const instances = bestInGenreShelf.generate(profileWithGenres);
-    expect(instances[0]!.title).toBe("Best in Drama");
+    expect(instances[0]!.title).toBe('Best in Drama');
   });
 
-  it("instance score is between 0 and 1", () => {
+  it('instance score is between 0 and 1', () => {
     const instances = bestInGenreShelf.generate(profileWithGenres);
     for (const inst of instances) {
       expect(inst.score).toBeGreaterThan(0);
@@ -200,38 +200,38 @@ describe("bestInGenreShelf — generate()", () => {
     }
   });
 
-  it("caps at 5 genres even when more are available", () => {
+  it('caps at 5 genres even when more are available', () => {
     const manyGenresProfile: PreferenceProfile = {
       ...profileWithGenres,
       genreAffinities: [
-        { genre: "Drama", avgScore: 9.0, movieCount: 20, totalComparisons: 40 },
-        { genre: "Action", avgScore: 8.5, movieCount: 15, totalComparisons: 30 },
-        { genre: "Thriller", avgScore: 8.0, movieCount: 12, totalComparisons: 24 },
-        { genre: "Comedy", avgScore: 7.5, movieCount: 10, totalComparisons: 20 },
-        { genre: "Science Fiction", avgScore: 7.0, movieCount: 8, totalComparisons: 16 },
-        { genre: "Horror", avgScore: 6.5, movieCount: 6, totalComparisons: 12 },
+        { genre: 'Drama', avgScore: 9.0, movieCount: 20, totalComparisons: 40 },
+        { genre: 'Action', avgScore: 8.5, movieCount: 15, totalComparisons: 30 },
+        { genre: 'Thriller', avgScore: 8.0, movieCount: 12, totalComparisons: 24 },
+        { genre: 'Comedy', avgScore: 7.5, movieCount: 10, totalComparisons: 20 },
+        { genre: 'Science Fiction', avgScore: 7.0, movieCount: 8, totalComparisons: 16 },
+        { genre: 'Horror', avgScore: 6.5, movieCount: 6, totalComparisons: 12 },
       ],
     };
     const instances = bestInGenreShelf.generate(manyGenresProfile);
     expect(instances).toHaveLength(5);
   });
 
-  it("skips genres not in TMDB genre map", () => {
+  it('skips genres not in TMDB genre map', () => {
     const profileWithUnknownGenre: PreferenceProfile = {
       ...profileWithGenres,
       genreAffinities: [
-        { genre: "Drama", avgScore: 8.5, movieCount: 20, totalComparisons: 40 },
-        { genre: "NotARealGenre", avgScore: 7.0, movieCount: 5, totalComparisons: 10 },
+        { genre: 'Drama', avgScore: 8.5, movieCount: 20, totalComparisons: 40 },
+        { genre: 'NotARealGenre', avgScore: 7.0, movieCount: 5, totalComparisons: 10 },
       ],
     };
     const instances = bestInGenreShelf.generate(profileWithUnknownGenre);
     expect(instances).toHaveLength(1);
-    expect(instances[0]!.shelfId).toBe("best-in-genre:drama");
+    expect(instances[0]!.shelfId).toBe('best-in-genre:drama');
   });
 });
 
-describe("bestInGenreShelf — query()", () => {
-  it("calls discoverMovies with genre ID and vote_average.desc sort", async () => {
+describe('bestInGenreShelf — query()', () => {
+  it('calls discoverMovies with genre ID and vote_average.desc sort', async () => {
     const client = {
       discoverMovies: vi.fn().mockResolvedValue({
         results: [makeTmdbResult(201)],
@@ -248,13 +248,13 @@ describe("bestInGenreShelf — query()", () => {
     expect(client.discoverMovies).toHaveBeenCalledWith(
       expect.objectContaining({
         genreIds: [18], // Drama = 18
-        sortBy: "vote_average.desc",
+        sortBy: 'vote_average.desc',
         voteCountGte: 50,
       })
     );
   });
 
-  it("filters dismissed movies from results", async () => {
+  it('filters dismissed movies from results', async () => {
     const client = {
       discoverMovies: vi.fn().mockResolvedValue({
         results: [makeTmdbResult(201), makeTmdbResult(202)],
@@ -276,34 +276,34 @@ describe("bestInGenreShelf — query()", () => {
 
 // ── genre-crossover ───────────────────────────────────────────────────────────
 
-describe("genreCrossoverShelf — definition", () => {
-  it("has id genre-crossover, template true, category seed", () => {
-    expect(genreCrossoverShelf.id).toBe("genre-crossover");
+describe('genreCrossoverShelf — definition', () => {
+  it('has id genre-crossover, template true, category seed', () => {
+    expect(genreCrossoverShelf.id).toBe('genre-crossover');
     expect(genreCrossoverShelf.template).toBe(true);
-    expect(genreCrossoverShelf.category).toBe("seed");
+    expect(genreCrossoverShelf.category).toBe('seed');
   });
 });
 
-describe("genreCrossoverShelf — generate()", () => {
-  it("returns empty when fewer than 2 genres in profile", () => {
+describe('genreCrossoverShelf — generate()', () => {
+  it('returns empty when fewer than 2 genres in profile', () => {
     const singleGenreProfile: PreferenceProfile = {
       ...emptyProfile,
-      genreAffinities: [{ genre: "Drama", avgScore: 8.0, movieCount: 10, totalComparisons: 20 }],
+      genreAffinities: [{ genre: 'Drama', avgScore: 8.0, movieCount: 10, totalComparisons: 20 }],
     };
     const instances = genreCrossoverShelf.generate(singleGenreProfile);
     expect(instances).toHaveLength(0);
   });
 
-  it("returns at least one crossover instance for 2+ genres", () => {
+  it('returns at least one crossover instance for 2+ genres', () => {
     const instances = genreCrossoverShelf.generate(profileWithGenres);
     expect(instances.length).toBeGreaterThan(0);
   });
 
-  it("shelfId is genre-crossover:{g1}-{g2}", () => {
+  it('shelfId is genre-crossover:{g1}-{g2}', () => {
     const instances = genreCrossoverShelf.generate(profileWithGenres);
     expect(instances[0]!.shelfId).toMatch(/^genre-crossover:/);
-    const parts = instances[0]!.shelfId.split(":");
-    expect(parts[1]).toContain("-");
+    const parts = instances[0]!.shelfId.split(':');
+    expect(parts[1]).toContain('-');
   });
 
   it("title is '{G1} × {G2}'", () => {
@@ -311,19 +311,19 @@ describe("genreCrossoverShelf — generate()", () => {
     expect(instances[0]!.title).toMatch(/ × /);
   });
 
-  it("excludes related genre pairs (Action + Adventure)", () => {
+  it('excludes related genre pairs (Action + Adventure)', () => {
     const relatedProfile: PreferenceProfile = {
       ...emptyProfile,
       genreAffinities: [
-        { genre: "Action", avgScore: 9.0, movieCount: 15, totalComparisons: 30 },
-        { genre: "Adventure", avgScore: 8.5, movieCount: 12, totalComparisons: 24 },
+        { genre: 'Action', avgScore: 9.0, movieCount: 15, totalComparisons: 30 },
+        { genre: 'Adventure', avgScore: 8.5, movieCount: 12, totalComparisons: 24 },
       ],
     };
     const instances = genreCrossoverShelf.generate(relatedProfile);
     expect(instances).toHaveLength(0);
   });
 
-  it("score is between 0 and 1", () => {
+  it('score is between 0 and 1', () => {
     const instances = genreCrossoverShelf.generate(profileWithGenres);
     for (const inst of instances) {
       expect(inst.score).toBeGreaterThan(0);
@@ -332,8 +332,8 @@ describe("genreCrossoverShelf — generate()", () => {
   });
 });
 
-describe("genreCrossoverShelf — query()", () => {
-  it("calls discoverMovies with both genre IDs", async () => {
+describe('genreCrossoverShelf — query()', () => {
+  it('calls discoverMovies with both genre IDs', async () => {
     const client = {
       discoverMovies: vi.fn().mockResolvedValue({
         results: [makeTmdbResult(201)],
@@ -357,7 +357,7 @@ describe("genreCrossoverShelf — query()", () => {
     expect(callArg?.genreIds).toHaveLength(2);
   });
 
-  it("filters dismissed movies", async () => {
+  it('filters dismissed movies', async () => {
     const client = {
       discoverMovies: vi.fn().mockResolvedValue({
         results: [makeTmdbResult(201), makeTmdbResult(202)],
@@ -378,42 +378,42 @@ describe("genreCrossoverShelf — query()", () => {
 
 // ── top-dimension ─────────────────────────────────────────────────────────────
 
-describe("topDimensionShelf — definition", () => {
-  it("has id top-dimension, template true, category seed", () => {
-    expect(topDimensionShelf.id).toBe("top-dimension");
+describe('topDimensionShelf — definition', () => {
+  it('has id top-dimension, template true, category seed', () => {
+    expect(topDimensionShelf.id).toBe('top-dimension');
     expect(topDimensionShelf.template).toBe(true);
-    expect(topDimensionShelf.category).toBe("seed");
+    expect(topDimensionShelf.category).toBe('seed');
   });
 });
 
-describe("topDimensionShelf — generate()", () => {
-  it("returns one instance per active dimension (comparisonCount >= 5)", () => {
+describe('topDimensionShelf — generate()', () => {
+  it('returns one instance per active dimension (comparisonCount >= 5)', () => {
     const instances = topDimensionShelf.generate(profileWithGenres);
     expect(instances).toHaveLength(2); // both dims have comparisonCount >= 5
   });
 
-  it("returns empty when no dimensions meet the threshold", () => {
+  it('returns empty when no dimensions meet the threshold', () => {
     const lowCountProfile: PreferenceProfile = {
       ...emptyProfile,
       dimensionWeights: [
-        { dimensionId: 1, name: "Cinematography", avgScore: 1800, comparisonCount: 3 },
+        { dimensionId: 1, name: 'Cinematography', avgScore: 1800, comparisonCount: 3 },
       ],
     };
     const instances = topDimensionShelf.generate(lowCountProfile);
     expect(instances).toHaveLength(0);
   });
 
-  it("shelfId is top-dimension:{dimensionId}", () => {
+  it('shelfId is top-dimension:{dimensionId}', () => {
     const instances = topDimensionShelf.generate(profileWithGenres);
-    expect(instances[0]!.shelfId).toBe("top-dimension:1");
+    expect(instances[0]!.shelfId).toBe('top-dimension:1');
   });
 
   it("title is 'Top {Dimension} picks'", () => {
     const instances = topDimensionShelf.generate(profileWithGenres);
-    expect(instances[0]!.title).toBe("Top Cinematography picks");
+    expect(instances[0]!.title).toBe('Top Cinematography picks');
   });
 
-  it("score is between 0 and 1", () => {
+  it('score is between 0 and 1', () => {
     const instances = topDimensionShelf.generate(profileWithGenres);
     for (const inst of instances) {
       expect(inst.score).toBeGreaterThan(0);
@@ -421,7 +421,7 @@ describe("topDimensionShelf — generate()", () => {
     }
   });
 
-  it("caps at 5 dimensions", () => {
+  it('caps at 5 dimensions', () => {
     const manyDimsProfile: PreferenceProfile = {
       ...emptyProfile,
       dimensionWeights: Array.from({ length: 8 }, (_, i) => ({
@@ -436,12 +436,12 @@ describe("topDimensionShelf — generate()", () => {
   });
 });
 
-describe("topDimensionShelf — query()", () => {
-  it("queries local DB and returns DiscoverResult[]", async () => {
+describe('topDimensionShelf — query()', () => {
+  it('queries local DB and returns DiscoverResult[]', async () => {
     mockGetDrizzle.mockReturnValue(
       makeMockDb([
-        { movieId: 1, tmdbId: 101, title: "Inception", score: 1900 },
-        { movieId: 2, tmdbId: 102, title: "Dunkirk", score: 1750 },
+        { movieId: 1, tmdbId: 101, title: 'Inception', score: 1900 },
+        { movieId: 2, tmdbId: 102, title: 'Dunkirk', score: 1750 },
       ])
     );
 
@@ -453,11 +453,11 @@ describe("topDimensionShelf — query()", () => {
     expect(results[1]!.tmdbId).toBe(102);
   });
 
-  it("filters dismissed movies from local results", async () => {
+  it('filters dismissed movies from local results', async () => {
     mockGetDrizzle.mockReturnValue(
       makeMockDb([
-        { movieId: 1, tmdbId: 101, title: "Inception", score: 1900 },
-        { movieId: 2, tmdbId: 102, title: "Dunkirk", score: 1750 },
+        { movieId: 1, tmdbId: 101, title: 'Inception', score: 1900 },
+        { movieId: 2, tmdbId: 102, title: 'Dunkirk', score: 1750 },
       ])
     );
     mockDismissedIds.value = new Set([101]);
@@ -469,9 +469,9 @@ describe("topDimensionShelf — query()", () => {
     expect(results.map((r) => r.tmdbId)).toContain(102);
   });
 
-  it("marks library movies with posterUrl", async () => {
+  it('marks library movies with posterUrl', async () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 1, tmdbId: 101, title: "Inception", score: 1900 }])
+      makeMockDb([{ movieId: 1, tmdbId: 101, title: 'Inception', score: 1900 }])
     );
     mockLibraryIds.value = new Set([101]);
 
@@ -479,15 +479,15 @@ describe("topDimensionShelf — query()", () => {
     const results = await instances[0]!.query({ limit: 10, offset: 0 });
 
     expect(results[0]!.inLibrary).toBe(true);
-    expect(results[0]!.posterUrl).toBe("/media/images/movie/101/poster.jpg");
+    expect(results[0]!.posterUrl).toBe('/media/images/movie/101/poster.jpg');
   });
 
-  it("respects offset pagination", async () => {
+  it('respects offset pagination', async () => {
     mockGetDrizzle.mockReturnValue(
       makeMockDb([
-        { movieId: 1, tmdbId: 101, title: "Movie 1", score: 1900 },
-        { movieId: 2, tmdbId: 102, title: "Movie 2", score: 1800 },
-        { movieId: 3, tmdbId: 103, title: "Movie 3", score: 1700 },
+        { movieId: 1, tmdbId: 101, title: 'Movie 1', score: 1900 },
+        { movieId: 2, tmdbId: 102, title: 'Movie 2', score: 1800 },
+        { movieId: 3, tmdbId: 103, title: 'Movie 3', score: 1700 },
       ])
     );
 
@@ -501,46 +501,46 @@ describe("topDimensionShelf — query()", () => {
 
 // ── dimension-inspired ────────────────────────────────────────────────────────
 
-describe("dimensionInspiredShelf — definition", () => {
-  it("has id dimension-inspired, template true, category seed", () => {
-    expect(dimensionInspiredShelf.id).toBe("dimension-inspired");
+describe('dimensionInspiredShelf — definition', () => {
+  it('has id dimension-inspired, template true, category seed', () => {
+    expect(dimensionInspiredShelf.id).toBe('dimension-inspired');
     expect(dimensionInspiredShelf.template).toBe(true);
-    expect(dimensionInspiredShelf.category).toBe("seed");
+    expect(dimensionInspiredShelf.category).toBe('seed');
   });
 });
 
-describe("dimensionInspiredShelf — generate()", () => {
-  it("returns empty when no active dimensions", () => {
+describe('dimensionInspiredShelf — generate()', () => {
+  it('returns empty when no active dimensions', () => {
     const instances = dimensionInspiredShelf.generate(emptyProfile);
     expect(instances).toHaveLength(0);
   });
 
-  it("returns one instance per active dimension (up to 3)", () => {
+  it('returns one instance per active dimension (up to 3)', () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const instances = dimensionInspiredShelf.generate(profileWithGenres);
     expect(instances).toHaveLength(2); // 2 active dims in profileWithGenres
   });
 
-  it("shelfId is dimension-inspired:{movieId}:{dimensionId}", () => {
+  it('shelfId is dimension-inspired:{movieId}:{dimensionId}', () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const instances = dimensionInspiredShelf.generate(profileWithGenres);
-    expect(instances[0]!.shelfId).toBe("dimension-inspired:5:1");
+    expect(instances[0]!.shelfId).toBe('dimension-inspired:5:1');
   });
 
-  it("title includes movie title and dimension name", () => {
+  it('title includes movie title and dimension name', () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const instances = dimensionInspiredShelf.generate(profileWithGenres);
-    expect(instances[0]!.title).toContain("Interstellar");
-    expect(instances[0]!.title).toContain("Cinematography");
+    expect(instances[0]!.title).toContain('Interstellar');
+    expect(instances[0]!.title).toContain('Cinematography');
   });
 
-  it("skips dimension when no high-scoring seed movie found", () => {
+  it('skips dimension when no high-scoring seed movie found', () => {
     mockGetDrizzle.mockReturnValue(makeMockDb([]));
     const instances = dimensionInspiredShelf.generate(profileWithGenres);
     expect(instances).toHaveLength(0);
@@ -548,25 +548,25 @@ describe("dimensionInspiredShelf — generate()", () => {
 
   it("seedMovieId matches the seed movie's id", () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const instances = dimensionInspiredShelf.generate(profileWithGenres);
     expect(instances[0]!.seedMovieId).toBe(5);
   });
 
-  it("score is 0.75", () => {
+  it('score is 0.75', () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const instances = dimensionInspiredShelf.generate(profileWithGenres);
     expect(instances[0]!.score).toBe(0.75);
   });
 });
 
-describe("dimensionInspiredShelf — query()", () => {
-  it("calls getMovieRecommendations with seed tmdbId", async () => {
+describe('dimensionInspiredShelf — query()', () => {
+  it('calls getMovieRecommendations with seed tmdbId', async () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const client = {
       getMovieRecommendations: vi.fn().mockResolvedValue({
@@ -584,9 +584,9 @@ describe("dimensionInspiredShelf — query()", () => {
     expect(client.getMovieRecommendations).toHaveBeenCalledWith(500, 1);
   });
 
-  it("returns scored results", async () => {
+  it('returns scored results', async () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const client = {
       getMovieRecommendations: vi.fn().mockResolvedValue({
@@ -604,9 +604,9 @@ describe("dimensionInspiredShelf — query()", () => {
     expect(results).toHaveLength(2);
   });
 
-  it("filters dismissed movies", async () => {
+  it('filters dismissed movies', async () => {
     mockGetDrizzle.mockReturnValue(
-      makeMockDb([{ movieId: 5, tmdbId: 500, title: "Interstellar" }])
+      makeMockDb([{ movieId: 5, tmdbId: 500, title: 'Interstellar' }])
     );
     const client = {
       getMovieRecommendations: vi.fn().mockResolvedValue({

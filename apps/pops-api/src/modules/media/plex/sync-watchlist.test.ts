@@ -2,11 +2,11 @@
  * Tests for Plex watchlist sync — polling Plex Discover API and syncing
  * watchlist items into the POPS watchlist with source tracking.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { PlexMediaItem } from "./types.js";
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { PlexMediaItem } from './types.js';
 
 // Mock dependencies before imports
-vi.mock("../../../db.js", () => {
+vi.mock('../../../db.js', () => {
   const mockDb = {
     transaction: vi.fn((fn: () => unknown) => {
       const wrapper = () => fn();
@@ -25,38 +25,38 @@ vi.mock("../../../db.js", () => {
   };
 });
 
-vi.mock("./service.js", () => ({
-  getPlexClientId: vi.fn(() => "test-client-id"),
-  getPlexToken: vi.fn(() => "test-token"),
+vi.mock('./service.js', () => ({
+  getPlexClientId: vi.fn(() => 'test-client-id'),
+  getPlexToken: vi.fn(() => 'test-token'),
 }));
 
-vi.mock("../movies/service.js", () => ({
+vi.mock('../movies/service.js', () => ({
   getMovieByTmdbId: vi.fn(),
   createMovie: vi.fn(),
 }));
 
-vi.mock("../tv-shows/service.js", () => ({
+vi.mock('../tv-shows/service.js', () => ({
   getTvShowByTvdbId: vi.fn(),
 }));
 
-vi.mock("../tmdb/index.js", () => ({
+vi.mock('../tmdb/index.js', () => ({
   getTmdbClient: vi.fn(),
 }));
 
-vi.mock("../thetvdb/index.js", () => ({
+vi.mock('../thetvdb/index.js', () => ({
   getTvdbClient: vi.fn(),
 }));
 
-vi.mock("../library/tv-show-service.js", () => ({
+vi.mock('../library/tv-show-service.js', () => ({
   addTvShow: vi.fn(),
 }));
 
-import { fetchPlexWatchlist, syncWatchlistFromPlex } from "./sync-watchlist.js";
-import { getDrizzle } from "../../../db.js";
-import { getMovieByTmdbId } from "../movies/service.js";
-import { getTvShowByTvdbId } from "../tv-shows/service.js";
-import { getTmdbClient } from "../tmdb/index.js";
-import { getTvdbClient } from "../thetvdb/index.js";
+import { fetchPlexWatchlist, syncWatchlistFromPlex } from './sync-watchlist.js';
+import { getDrizzle } from '../../../db.js';
+import { getMovieByTmdbId } from '../movies/service.js';
+import { getTvShowByTvdbId } from '../tv-shows/service.js';
+import { getTmdbClient } from '../tmdb/index.js';
+import { getTvdbClient } from '../thetvdb/index.js';
 
 const mockGetMovieByTmdbId = vi.mocked(getMovieByTmdbId);
 const mockGetTvShowByTvdbId = vi.mocked(getTvShowByTvdbId);
@@ -69,9 +69,9 @@ const mockGetTvdbClient = vi.mocked(getTvdbClient);
 
 function makePlexWatchlistItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
   return {
-    ratingKey: "5d776830880197001ec955e8",
-    type: "movie",
-    title: "Inception",
+    ratingKey: '5d776830880197001ec955e8',
+    type: 'movie',
+    title: 'Inception',
     originalTitle: null,
     summary: null,
     tagline: null,
@@ -87,8 +87,8 @@ function makePlexWatchlistItem(overrides: Partial<PlexMediaItem> = {}): PlexMedi
     audienceRating: null,
     contentRating: null,
     externalIds: [
-      { source: "tmdb", id: "27205" },
-      { source: "imdb", id: "tt1375666" },
+      { source: 'tmdb', id: '27205' },
+      { source: 'imdb', id: 'tt1375666' },
     ],
     genres: [],
     directors: [],
@@ -101,9 +101,9 @@ function makePlexWatchlistItem(overrides: Partial<PlexMediaItem> = {}): PlexMedi
 
 function makeTvWatchlistItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
   return {
-    ratingKey: "5d776a3a880197001ec90ec5",
-    type: "show",
-    title: "Breaking Bad",
+    ratingKey: '5d776a3a880197001ec90ec5',
+    type: 'show',
+    title: 'Breaking Bad',
     originalTitle: null,
     summary: null,
     tagline: null,
@@ -119,8 +119,8 @@ function makeTvWatchlistItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaI
     audienceRating: null,
     contentRating: null,
     externalIds: [
-      { source: "tvdb", id: "81189" },
-      { source: "tmdb", id: "1396" },
+      { source: 'tvdb', id: '81189' },
+      { source: 'tmdb', id: '1396' },
     ],
     genres: [],
     directors: [],
@@ -133,7 +133,7 @@ function makeTvWatchlistItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaI
 
 // Mock global fetch for Plex Discover API calls
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+vi.stubGlobal('fetch', mockFetch);
 
 function mockPlexWatchlistResponse(items: PlexMediaItem[]) {
   mockFetch.mockResolvedValueOnce({
@@ -193,103 +193,103 @@ function setupDrizzleMock(existingWatchlistEntries: Array<Record<string, unknown
 // Tests: fetchPlexWatchlist
 // ---------------------------------------------------------------------------
 
-describe("fetchPlexWatchlist", () => {
+describe('fetchPlexWatchlist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("fetches and parses Plex watchlist items", async () => {
+  it('fetches and parses Plex watchlist items', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         MediaContainer: {
           Metadata: [
             {
-              ratingKey: "abc123",
-              guid: "plex://movie/abc123",
-              type: "movie",
-              title: "Inception",
+              ratingKey: 'abc123',
+              guid: 'plex://movie/abc123',
+              type: 'movie',
+              title: 'Inception',
               year: 2010,
-              Guid: [{ id: "tmdb://27205" }, { id: "imdb://tt1375666" }],
+              Guid: [{ id: 'tmdb://27205' }, { id: 'imdb://tt1375666' }],
             },
             {
-              ratingKey: "def456",
-              guid: "plex://show/def456",
-              type: "show",
-              title: "Breaking Bad",
+              ratingKey: 'def456',
+              guid: 'plex://show/def456',
+              type: 'show',
+              title: 'Breaking Bad',
               year: 2008,
-              Guid: [{ id: "tvdb://81189" }],
+              Guid: [{ id: 'tvdb://81189' }],
             },
           ],
         },
       }),
     });
 
-    const items = await fetchPlexWatchlist("test-token", "test-client-id");
+    const items = await fetchPlexWatchlist('test-token', 'test-client-id');
 
     expect(items).toHaveLength(2);
-    expect(items[0]!.title).toBe("Inception");
-    expect(items[0]!.type).toBe("movie");
-    expect(items[0]!.ratingKey).toBe("abc123");
+    expect(items[0]!.title).toBe('Inception');
+    expect(items[0]!.type).toBe('movie');
+    expect(items[0]!.ratingKey).toBe('abc123');
     expect(items[0]!.externalIds).toEqual([
-      { source: "tmdb", id: "27205" },
-      { source: "imdb", id: "tt1375666" },
+      { source: 'tmdb', id: '27205' },
+      { source: 'imdb', id: 'tt1375666' },
     ]);
-    expect(items[1]!.title).toBe("Breaking Bad");
-    expect(items[1]!.type).toBe("show");
-    expect(items[1]!.externalIds).toEqual([{ source: "tvdb", id: "81189" }]);
+    expect(items[1]!.title).toBe('Breaking Bad');
+    expect(items[1]!.type).toBe('show');
+    expect(items[1]!.externalIds).toEqual([{ source: 'tvdb', id: '81189' }]);
   });
 
-  it("returns empty array when no items on watchlist", async () => {
+  it('returns empty array when no items on watchlist', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ MediaContainer: {} }),
     });
 
-    const items = await fetchPlexWatchlist("test-token", "test-client-id");
+    const items = await fetchPlexWatchlist('test-token', 'test-client-id');
     expect(items).toHaveLength(0);
   });
 
-  it("throws PlexApiError on non-ok response", async () => {
+  it('throws PlexApiError on non-ok response', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
-      statusText: "Unauthorized",
+      statusText: 'Unauthorized',
     });
 
-    await expect(fetchPlexWatchlist("bad-token", "test-client-id")).rejects.toThrow(
-      "Plex Discover API error: 401 Unauthorized"
+    await expect(fetchPlexWatchlist('bad-token', 'test-client-id')).rejects.toThrow(
+      'Plex Discover API error: 401 Unauthorized'
     );
   });
 
-  it("throws PlexApiError on network error", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("fetch failed"));
+  it('throws PlexApiError on network error', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('fetch failed'));
 
-    await expect(fetchPlexWatchlist("test-token", "test-client-id")).rejects.toThrow(
-      "Network error fetching Plex watchlist: fetch failed"
+    await expect(fetchPlexWatchlist('test-token', 'test-client-id')).rejects.toThrow(
+      'Network error fetching Plex watchlist: fetch failed'
     );
   });
 
-  it("sends correct URL with token, client ID, and pagination params", async () => {
+  it('sends correct URL with token, client ID, and pagination params', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ MediaContainer: {} }),
     });
 
-    await fetchPlexWatchlist("my-token", "my-client-id");
+    await fetchPlexWatchlist('my-token', 'my-client-id');
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://discover.provider.plex.tv/library/sections/watchlist/all?X-Plex-Token=my-token&X-Plex-Client-Identifier=my-client-id&X-Plex-Container-Start=0&X-Plex-Container-Size=50",
-      { method: "GET", headers: { Accept: "application/json" } }
+      'https://discover.provider.plex.tv/library/sections/watchlist/all?X-Plex-Token=my-token&X-Plex-Client-Identifier=my-client-id&X-Plex-Container-Start=0&X-Plex-Container-Size=50',
+      { method: 'GET', headers: { Accept: 'application/json' } }
     );
   });
 
-  it("paginates through multiple pages to fetch all items", async () => {
+  it('paginates through multiple pages to fetch all items', async () => {
     // Page 1: 50 items (full page, triggers next fetch)
     const page1Items = Array.from({ length: 50 }, (_, i) => ({
       ratingKey: `key-${i}`,
       guid: `plex://movie/key-${i}`,
-      type: "movie",
+      type: 'movie',
       title: `Movie ${i}`,
       year: 2020,
       Guid: [{ id: `tmdb://${1000 + i}` }],
@@ -299,7 +299,7 @@ describe("fetchPlexWatchlist", () => {
     const page2Items = Array.from({ length: 10 }, (_, i) => ({
       ratingKey: `key-${50 + i}`,
       guid: `plex://movie/key-${50 + i}`,
-      type: "movie",
+      type: 'movie',
       title: `Movie ${50 + i}`,
       year: 2021,
       Guid: [{ id: `tmdb://${1050 + i}` }],
@@ -315,28 +315,28 @@ describe("fetchPlexWatchlist", () => {
         json: async () => ({ MediaContainer: { totalSize: 60, Metadata: page2Items } }),
       });
 
-    const items = await fetchPlexWatchlist("test-token", "test-client-id");
+    const items = await fetchPlexWatchlist('test-token', 'test-client-id');
 
     expect(items).toHaveLength(60);
-    expect(items[0]!.title).toBe("Movie 0");
-    expect(items[59]!.title).toBe("Movie 59");
+    expect(items[0]!.title).toBe('Movie 0');
+    expect(items[59]!.title).toBe('Movie 59');
 
     // Verify pagination params
     expect(mockFetch).toHaveBeenCalledTimes(2);
     const firstUrl = mockFetch.mock.calls[0]![0] as string;
     const secondUrl = mockFetch.mock.calls[1]![0] as string;
-    expect(firstUrl).toContain("X-Plex-Container-Start=0");
-    expect(firstUrl).toContain("X-Plex-Container-Size=50");
-    expect(secondUrl).toContain("X-Plex-Container-Start=50");
-    expect(secondUrl).toContain("X-Plex-Container-Size=50");
+    expect(firstUrl).toContain('X-Plex-Container-Start=0');
+    expect(firstUrl).toContain('X-Plex-Container-Size=50');
+    expect(secondUrl).toContain('X-Plex-Container-Start=50');
+    expect(secondUrl).toContain('X-Plex-Container-Size=50');
   });
 
-  it("stops pagination when totalSize is reached", async () => {
+  it('stops pagination when totalSize is reached', async () => {
     // Page 1: 50 items with totalSize=50 (no second page needed)
     const page1Items = Array.from({ length: 50 }, (_, i) => ({
       ratingKey: `key-${i}`,
       guid: `plex://movie/key-${i}`,
-      type: "movie",
+      type: 'movie',
       title: `Movie ${i}`,
       year: 2020,
       Guid: [{ id: `tmdb://${1000 + i}` }],
@@ -347,7 +347,7 @@ describe("fetchPlexWatchlist", () => {
       json: async () => ({ MediaContainer: { totalSize: 50, Metadata: page1Items } }),
     });
 
-    const items = await fetchPlexWatchlist("test-token", "test-client-id");
+    const items = await fetchPlexWatchlist('test-token', 'test-client-id');
 
     expect(items).toHaveLength(50);
     // Should only make 1 call since totalSize was reached
@@ -359,12 +359,12 @@ describe("fetchPlexWatchlist", () => {
 // Tests: syncWatchlistFromPlex
 // ---------------------------------------------------------------------------
 
-describe("syncWatchlistFromPlex", () => {
+describe('syncWatchlistFromPlex', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("adds a new movie to the watchlist", async () => {
+  it('adds a new movie to the watchlist', async () => {
     const movieItem = makePlexWatchlistItem();
     mockPlexWatchlistResponse([movieItem]);
 
@@ -374,7 +374,7 @@ describe("syncWatchlistFromPlex", () => {
     // No existing watchlist entry
     getMock.mockReturnValue(undefined);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.added).toBe(1);
     expect(result.skipped).toBe(0);
@@ -382,15 +382,15 @@ describe("syncWatchlistFromPlex", () => {
     expect(result.errors).toHaveLength(0);
     expect(valuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 42,
-        source: "plex",
-        plexRatingKey: "5d776830880197001ec955e8",
+        source: 'plex',
+        plexRatingKey: '5d776830880197001ec955e8',
       })
     );
   });
 
-  it("adds a TV show to the watchlist", async () => {
+  it('adds a TV show to the watchlist', async () => {
     const tvItem = makeTvWatchlistItem();
     mockPlexWatchlistResponse([tvItem]);
 
@@ -399,19 +399,19 @@ describe("syncWatchlistFromPlex", () => {
     const { getMock, valuesMock } = setupDrizzleMock();
     getMock.mockReturnValue(undefined);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.added).toBe(1);
     expect(valuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        mediaType: "tv_show",
+        mediaType: 'tv_show',
         mediaId: 7,
-        source: "plex",
+        source: 'plex',
       })
     );
   });
 
-  it("skips items already on watchlist with source=plex", async () => {
+  it('skips items already on watchlist with source=plex', async () => {
     const movieItem = makePlexWatchlistItem();
     mockPlexWatchlistResponse([movieItem]);
 
@@ -421,20 +421,20 @@ describe("syncWatchlistFromPlex", () => {
     // Existing entry with source=plex
     getMock.mockReturnValue({
       id: 1,
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: 42,
-      source: "plex",
-      plexRatingKey: "5d776830880197001ec955e8",
+      source: 'plex',
+      plexRatingKey: '5d776830880197001ec955e8',
     });
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.added).toBe(0);
     expect(result.skipped).toBe(1);
-    expect(result.skipReasons).toEqual([{ title: "Inception", reason: "Already on watchlist" }]);
+    expect(result.skipReasons).toEqual([{ title: 'Inception', reason: 'Already on watchlist' }]);
   });
 
-  it("escalates source from manual to both when item found in Plex", async () => {
+  it('escalates source from manual to both when item found in Plex', async () => {
     const movieItem = makePlexWatchlistItem();
     mockPlexWatchlistResponse([movieItem]);
 
@@ -444,26 +444,26 @@ describe("syncWatchlistFromPlex", () => {
     // Existing entry with source=manual
     getMock.mockReturnValue({
       id: 1,
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: 42,
-      source: "manual",
+      source: 'manual',
       plexRatingKey: null,
     });
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.skipped).toBe(1);
     expect(setMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        source: "both",
-        plexRatingKey: "5d776830880197001ec955e8",
+        source: 'both',
+        plexRatingKey: '5d776830880197001ec955e8',
       })
     );
   });
 
-  it("falls back to TMDB title search when no TMDB ID in metadata", async () => {
+  it('falls back to TMDB title search when no TMDB ID in metadata', async () => {
     const noIdItem = makePlexWatchlistItem({
-      externalIds: [{ source: "imdb", id: "tt1375666" }], // Only IMDB, no TMDB
+      externalIds: [{ source: 'imdb', id: 'tt1375666' }], // Only IMDB, no TMDB
     });
     mockPlexWatchlistResponse([noIdItem]);
 
@@ -471,7 +471,7 @@ describe("syncWatchlistFromPlex", () => {
     /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetTmdbClient.mockReturnValue({
       searchMovies: vi.fn().mockResolvedValue({
-        results: [{ tmdbId: 27205, title: "Inception", releaseDate: "2010-07-16" }],
+        results: [{ tmdbId: 27205, title: 'Inception', releaseDate: '2010-07-16' }],
       }),
     } as any);
     /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
@@ -480,18 +480,18 @@ describe("syncWatchlistFromPlex", () => {
     const { getMock, valuesMock } = setupDrizzleMock();
     getMock.mockReturnValue(undefined);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.added).toBe(1);
     expect(result.skipped).toBe(0);
     expect(valuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaType: "movie", mediaId: 42 })
+      expect.objectContaining({ mediaType: 'movie', mediaId: 42 })
     );
   });
 
-  it("skips movie when no TMDB ID and title search finds no match", async () => {
+  it('skips movie when no TMDB ID and title search finds no match', async () => {
     const noIdItem = makePlexWatchlistItem({
-      externalIds: [{ source: "imdb", id: "tt1375666" }], // Only IMDB, no TMDB
+      externalIds: [{ source: 'imdb', id: 'tt1375666' }], // Only IMDB, no TMDB
     });
     mockPlexWatchlistResponse([noIdItem]);
 
@@ -504,21 +504,21 @@ describe("syncWatchlistFromPlex", () => {
 
     setupDrizzleMock();
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.skipped).toBe(1);
     expect(result.added).toBe(0);
     expect(result.skipReasons).toEqual([
       {
-        title: "Inception",
-        reason: "No TMDB ID in Plex metadata and title search found no match",
+        title: 'Inception',
+        reason: 'No TMDB ID in Plex metadata and title search found no match',
       },
     ]);
   });
 
-  it("falls back to TVDB title search when no TVDB ID in metadata", async () => {
+  it('falls back to TVDB title search when no TVDB ID in metadata', async () => {
     const noIdItem = makeTvWatchlistItem({
-      externalIds: [{ source: "tmdb", id: "1396" }], // Only TMDB, no TVDB
+      externalIds: [{ source: 'tmdb', id: '1396' }], // Only TMDB, no TVDB
     });
     mockPlexWatchlistResponse([noIdItem]);
 
@@ -527,7 +527,7 @@ describe("syncWatchlistFromPlex", () => {
     mockGetTvdbClient.mockReturnValue({
       searchSeries: vi
         .fn()
-        .mockResolvedValue([{ tvdbId: 81189, name: "Breaking Bad", year: "2008" }]),
+        .mockResolvedValue([{ tvdbId: 81189, name: 'Breaking Bad', year: '2008' }]),
     } as any);
     /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
     mockGetTvShowByTvdbId.mockReturnValue({ id: 7 } as ReturnType<typeof getTvShowByTvdbId>);
@@ -535,41 +535,41 @@ describe("syncWatchlistFromPlex", () => {
     const { getMock, valuesMock } = setupDrizzleMock();
     getMock.mockReturnValue(undefined);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.added).toBe(1);
     expect(result.skipped).toBe(0);
     expect(valuesMock).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaType: "tv_show", mediaId: 7 })
+      expect.objectContaining({ mediaType: 'tv_show', mediaId: 7 })
     );
   });
 
-  it("skips items with unsupported media type and reports reason", async () => {
-    const unknownTypeItem = makePlexWatchlistItem({ type: "artist" });
+  it('skips items with unsupported media type and reports reason', async () => {
+    const unknownTypeItem = makePlexWatchlistItem({ type: 'artist' });
     mockPlexWatchlistResponse([unknownTypeItem]);
 
     setupDrizzleMock();
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.skipped).toBe(1);
     expect(result.skipReasons).toEqual([
-      { title: "Inception", reason: "Unsupported media type: artist" },
+      { title: 'Inception', reason: 'Unsupported media type: artist' },
     ]);
   });
 
-  it("handles empty Plex watchlist", async () => {
+  it('handles empty Plex watchlist', async () => {
     mockPlexWatchlistResponse([]);
     setupDrizzleMock();
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.total).toBe(0);
     expect(result.added).toBe(0);
     expect(result.removed).toBe(0);
   });
 
-  it("is idempotent — repeated sync produces same state", async () => {
+  it('is idempotent — repeated sync produces same state', async () => {
     const movieItem = makePlexWatchlistItem();
 
     // First sync: add item
@@ -577,7 +577,7 @@ describe("syncWatchlistFromPlex", () => {
     mockGetMovieByTmdbId.mockReturnValue({ id: 42 } as ReturnType<typeof getMovieByTmdbId>);
     const { getMock: getMock1 } = setupDrizzleMock();
     getMock1.mockReturnValue(undefined);
-    const result1 = await syncWatchlistFromPlex("test-token");
+    const result1 = await syncWatchlistFromPlex('test-token');
     expect(result1.added).toBe(1);
 
     // Second sync: item already exists
@@ -586,27 +586,27 @@ describe("syncWatchlistFromPlex", () => {
     const { getMock: getMock2 } = setupDrizzleMock();
     getMock2.mockReturnValue({
       id: 1,
-      mediaType: "movie",
+      mediaType: 'movie',
       mediaId: 42,
-      source: "plex",
-      plexRatingKey: "5d776830880197001ec955e8",
+      source: 'plex',
+      plexRatingKey: '5d776830880197001ec955e8',
     });
-    const result2 = await syncWatchlistFromPlex("test-token");
+    const result2 = await syncWatchlistFromPlex('test-token');
     expect(result2.added).toBe(0);
     expect(result2.skipped).toBe(1);
   });
 
-  it("removes plex-sourced items no longer in Plex watchlist", async () => {
+  it('removes plex-sourced items no longer in Plex watchlist', async () => {
     // Empty Plex watchlist (items were removed)
     mockPlexWatchlistResponse([]);
 
     const { allMock } = setupDrizzleMock([
       {
         id: 1,
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 42,
-        source: "plex",
-        plexRatingKey: "old-key",
+        source: 'plex',
+        plexRatingKey: 'old-key',
       },
     ]);
 
@@ -614,52 +614,52 @@ describe("syncWatchlistFromPlex", () => {
     allMock.mockReturnValue([
       {
         id: 1,
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 42,
-        source: "plex",
-        plexRatingKey: "old-key",
+        source: 'plex',
+        plexRatingKey: 'old-key',
       },
     ]);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.removed).toBe(1);
   });
 
-  it("downgrades source=both to source=manual when removed from Plex", async () => {
+  it('downgrades source=both to source=manual when removed from Plex', async () => {
     mockPlexWatchlistResponse([]);
 
     const { allMock, setMock } = setupDrizzleMock();
     allMock.mockReturnValue([
       {
         id: 1,
-        mediaType: "movie",
+        mediaType: 'movie',
         mediaId: 42,
-        source: "both",
-        plexRatingKey: "old-key",
+        source: 'both',
+        plexRatingKey: 'old-key',
       },
     ]);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     expect(result.removed).toBe(0); // Not removed, just downgraded
     expect(setMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        source: "manual",
+        source: 'manual',
         plexRatingKey: null,
       })
     );
   });
 
-  it("reports errors for individual items without failing the whole sync", async () => {
+  it('reports errors for individual items without failing the whole sync', async () => {
     const goodItem = makePlexWatchlistItem({
-      ratingKey: "good-key",
-      title: "Good Movie",
+      ratingKey: 'good-key',
+      title: 'Good Movie',
     });
     const badItem = makePlexWatchlistItem({
-      ratingKey: "bad-key",
-      title: "Bad Movie",
-      externalIds: [{ source: "tmdb", id: "999" }],
+      ratingKey: 'bad-key',
+      title: 'Bad Movie',
+      externalIds: [{ source: 'tmdb', id: '999' }],
     });
     mockPlexWatchlistResponse([goodItem, badItem]);
 
@@ -671,16 +671,16 @@ describe("syncWatchlistFromPlex", () => {
     const { getMock } = setupDrizzleMock();
     getMock.mockReturnValue(undefined);
 
-    const result = await syncWatchlistFromPlex("test-token");
+    const result = await syncWatchlistFromPlex('test-token');
 
     // Good movie added, bad movie skipped (no error — just returns null from resolve)
     expect(result.processed).toBe(2);
   });
 
-  it("calls onProgress callback after each item", async () => {
+  it('calls onProgress callback after each item', async () => {
     const items = [
-      makePlexWatchlistItem({ ratingKey: "key1", title: "Movie 1" }),
-      makePlexWatchlistItem({ ratingKey: "key2", title: "Movie 2" }),
+      makePlexWatchlistItem({ ratingKey: 'key1', title: 'Movie 1' }),
+      makePlexWatchlistItem({ ratingKey: 'key2', title: 'Movie 2' }),
     ];
     mockPlexWatchlistResponse(items);
 
@@ -689,7 +689,7 @@ describe("syncWatchlistFromPlex", () => {
     getMock.mockReturnValue(undefined);
 
     const progressCalls: number[] = [];
-    await syncWatchlistFromPlex("test-token", {
+    await syncWatchlistFromPlex('test-token', {
       onProgress: (p) => progressCalls.push(p.processed),
     });
 

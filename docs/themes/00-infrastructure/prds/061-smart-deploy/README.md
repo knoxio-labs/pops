@@ -10,6 +10,7 @@ Build a deploy pipeline that detects which services changed and only rebuilds/re
 ## Current State
 
 Every merge to main triggers a full Ansible deploy that:
+
 1. Git pulls the entire repo on the server
 2. Templates the docker-compose.yml
 3. Builds ALL custom Docker images (pops-api, pops-shell)
@@ -20,13 +21,13 @@ This takes ~5 minutes regardless of what changed.
 
 ## Target State
 
-| Change type | What happens | Expected time |
-|-------------|-------------|---------------|
-| Frontend only (pops-shell, app-*, ui, navigation, widgets) | Rebuild pops-shell image, restart pops-shell container | ~1 min |
-| Backend only (pops-api, db-types) | Rebuild pops-api image, restart pops-api container | ~1 min |
-| Both frontend + backend | Rebuild both images, restart both containers | ~2 min |
-| Infrastructure (docker-compose, ansible, nginx) | Full deploy (current behaviour) | ~5 min |
-| Docs, CI workflows, or test-only changes | No deploy | 0 |
+| Change type                                                 | What happens                                           | Expected time |
+| ----------------------------------------------------------- | ------------------------------------------------------ | ------------- |
+| Frontend only (pops-shell, app-\*, ui, navigation, widgets) | Rebuild pops-shell image, restart pops-shell container | ~1 min        |
+| Backend only (pops-api, db-types)                           | Rebuild pops-api image, restart pops-api container     | ~1 min        |
+| Both frontend + backend                                     | Rebuild both images, restart both containers           | ~2 min        |
+| Infrastructure (docker-compose, ansible, nginx)             | Full deploy (current behaviour)                        | ~5 min        |
+| Docs, CI workflows, or test-only changes                    | No deploy                                              | 0             |
 
 ## Architecture
 
@@ -34,12 +35,12 @@ This takes ~5 minutes regardless of what changed.
 
 The deploy workflow detects which paths changed between the merge commit and its parent:
 
-| Path pattern | Category |
-|-------------|----------|
-| `apps/pops-shell/**`, `packages/app-*/**`, `packages/ui/**`, `packages/widgets/**`, `packages/navigation/**` | `frontend` |
-| `apps/pops-api/**`, `packages/db-types/**`, `packages/types/**`, `packages/auth/**` | `backend` |
-| `infra/**`, `apps/pops-shell/nginx.conf`, `docker-compose*` | `infra` |
-| `docs/**`, `.github/**`, `*.md` | `skip` (no deploy) |
+| Path pattern                                                                                                 | Category           |
+| ------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `apps/pops-shell/**`, `packages/app-*/**`, `packages/ui/**`, `packages/widgets/**`, `packages/navigation/**` | `frontend`         |
+| `apps/pops-api/**`, `packages/db-types/**`, `packages/types/**`, `packages/auth/**`                          | `backend`          |
+| `infra/**`, `apps/pops-shell/nginx.conf`, `docker-compose*`                                                  | `infra`            |
+| `docs/**`, `.github/**`, `*.md`                                                                              | `skip` (no deploy) |
 
 Multiple categories can be active (e.g., a PR touching both `apps/pops-api/` and `packages/ui/` triggers both backend and frontend).
 
@@ -67,6 +68,7 @@ If the only changes are in `docs/`, `.github/workflows/`, `*.md`, or test files,
 ### Health Check
 
 After selective restart, verify the restarted service(s) are healthy:
+
 - pops-api: `GET /health` returns 200
 - pops-shell: nginx responds on port 80
 
@@ -90,25 +92,25 @@ None — this is a CI/CD pipeline change, not an application feature.
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Merge commit touches only docs | Deploy skipped entirely, job reports success |
-| PR touches frontend + infra | Full deploy (infra always wins) |
-| Selective restart fails health check | Falls back to full deploy |
-| Manual workflow_dispatch trigger | Always full deploy |
-| First deploy after runner setup | Full deploy (no previous state) |
-| Docker build cache miss | Build takes longer but still selective |
+| Case                                    | Behaviour                                                               |
+| --------------------------------------- | ----------------------------------------------------------------------- |
+| Merge commit touches only docs          | Deploy skipped entirely, job reports success                            |
+| PR touches frontend + infra             | Full deploy (infra always wins)                                         |
+| Selective restart fails health check    | Falls back to full deploy                                               |
+| Manual workflow_dispatch trigger        | Always full deploy                                                      |
+| First deploy after runner setup         | Full deploy (no previous state)                                         |
+| Docker build cache miss                 | Build takes longer but still selective                                  |
 | Multiple PRs merged in rapid succession | Each triggers its own deploy; Docker layer caching reduces rebuild time |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-path-detection](us-01-path-detection.md) | Detect changed paths in merge commit, categorise as frontend/backend/infra/skip | Done | Yes |
-| 02 | [us-02-selective-build](us-02-selective-build.md) | Build and restart only the changed service(s) via Docker commands | Done | Blocked by us-01 |
-| 03 | [us-03-skip-deploy](us-03-skip-deploy.md) | Skip deploy entirely for docs/CI-only changes | Done | Blocked by us-01 |
-| 04 | [us-04-health-check](us-04-health-check.md) | Verify restarted services are healthy, fallback to full deploy on failure | Done | Blocked by us-02 |
-| 05 | [us-05-ansible-runner-provisioning](us-05-ansible-runner-provisioning.md) | Add GitHub Actions runner setup to the Ansible provisioning playbook | Done | Yes |
+| #   | Story                                                                     | Summary                                                                         | Status | Parallelisable   |
+| --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-path-detection](us-01-path-detection.md)                           | Detect changed paths in merge commit, categorise as frontend/backend/infra/skip | Done   | Yes              |
+| 02  | [us-02-selective-build](us-02-selective-build.md)                         | Build and restart only the changed service(s) via Docker commands               | Done   | Blocked by us-01 |
+| 03  | [us-03-skip-deploy](us-03-skip-deploy.md)                                 | Skip deploy entirely for docs/CI-only changes                                   | Done   | Blocked by us-01 |
+| 04  | [us-04-health-check](us-04-health-check.md)                               | Verify restarted services are healthy, fallback to full deploy on failure       | Done   | Blocked by us-02 |
+| 05  | [us-05-ansible-runner-provisioning](us-05-ansible-runner-provisioning.md) | Add GitHub Actions runner setup to the Ansible provisioning playbook            | Done   | Yes              |
 
 US-01 and US-05 can start in parallel. US-02 and US-03 depend on US-01. US-04 depends on US-02.
 

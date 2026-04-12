@@ -51,6 +51,7 @@ Examples:
 ### Fresh Database Path
 
 Fresh databases (dev setup, test environments) use `initializeSchema()` which creates all tables directly with `CREATE TABLE IF NOT EXISTS`. An `INCLUDED_MIGRATIONS` array pre-marks all migrations as applied. This means when adding a new migration:
+
 1. Add the filename to `INCLUDED_MIGRATIONS`
 2. Update the `CREATE TABLE` statements in `initializeSchema()` to reflect the new schema
 
@@ -60,13 +61,13 @@ Production databases evolve incrementally via `ALTER TABLE` migrations.
 
 Entities have a `type` column distinguishing their category:
 
-| Type | Description | Examples |
-|------|-------------|---------|
-| `company` | Business, retailer, service provider | Woolworths, Netflix, Shell |
-| `person` | Individual | Friend, family, employer |
-| `place` | Location | Hotel, restaurant, airport |
-| `brand` | Manufacturer/studio | Sony, Apple, Warner Bros |
-| `organisation` | Non-profit, government, institution | ATO, Red Cross |
+| Type           | Description                          | Examples                   |
+| -------------- | ------------------------------------ | -------------------------- |
+| `company`      | Business, retailer, service provider | Woolworths, Netflix, Shell |
+| `person`       | Individual                           | Friend, family, employer   |
+| `place`        | Location                             | Hotel, restaurant, airport |
+| `brand`        | Manufacturer/studio                  | Sony, Apple, Warner Bros   |
+| `organisation` | Non-profit, government, institution  | ATO, Red Cross             |
 
 Single column, not a tags table — an entity is primarily one thing. Default is `company`. Extensible via new values, not schema changes.
 
@@ -108,6 +109,7 @@ CREATE TABLE settings (
 ```
 
 **Secrets vs Settings:**
+
 - **Secrets** (ENV/Docker secrets): Infrastructure-level keys (`CLAUDE_API_KEY`, `TMDB_API_KEY`) — static per deployment
 - **Settings** (DB): User-specific or dynamic data (`PLEX_TOKEN`, `PLEX_URL`, `LAST_SYNC_TIME`) — can change via UI
 
@@ -125,22 +127,22 @@ Comprehensive test dataset for local development and e2e testing. Includes repre
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Two migrations at the same second | One agent renames with +1 second offset. Runner applies in filename sort order |
-| New domain needs a table | Create migration with `YYYYMMDDHHMMSS_domain_tablename.sql`, update `initializeSchema()` |
-| Cross-domain FK target deleted | `ON DELETE SET NULL` — link becomes null, no cascade |
-| Legacy `notion_id` on entities | Nullable, preserved. Drop in a future cleanup when no import tooling references it |
+| Case                              | Behaviour                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| Two migrations at the same second | One agent renames with +1 second offset. Runner applies in filename sort order           |
+| New domain needs a table          | Create migration with `YYYYMMDDHHMMSS_domain_tablename.sql`, update `initializeSchema()` |
+| Cross-domain FK target deleted    | `ON DELETE SET NULL` — link becomes null, no cascade                                     |
+| Legacy `notion_id` on entities    | Nullable, preserved. Drop in a future cleanup when no import tooling references it       |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-migration-conventions](us-01-migration-conventions.md) | Establish migration naming, template file, runner, fresh DB path | Done | No (first) |
-| 02 | [us-02-entity-types](us-02-entity-types.md) | Add entity type system (type column, supported values) | Done | Blocked by us-01 |
-| 03 | [us-03-cross-domain-fks](us-03-cross-domain-fks.md) | Document FK patterns, formalise existing cross-domain links, create schema registry | Done | Blocked by us-01 |
-| 04 | [us-04-settings-table](us-04-settings-table.md) | Create core settings table for dynamic application configuration | Done | Blocked by us-01 |
-| 05 | [us-05-seed-data](us-05-seed-data.md) | Create comprehensive seed dataset for dev and e2e testing | Done | Blocked by us-01 |
+| #   | Story                                                         | Summary                                                                             | Status | Parallelisable   |
+| --- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-migration-conventions](us-01-migration-conventions.md) | Establish migration naming, template file, runner, fresh DB path                    | Done   | No (first)       |
+| 02  | [us-02-entity-types](us-02-entity-types.md)                   | Add entity type system (type column, supported values)                              | Done   | Blocked by us-01 |
+| 03  | [us-03-cross-domain-fks](us-03-cross-domain-fks.md)           | Document FK patterns, formalise existing cross-domain links, create schema registry | Done   | Blocked by us-01 |
+| 04  | [us-04-settings-table](us-04-settings-table.md)               | Create core settings table for dynamic application configuration                    | Done   | Blocked by us-01 |
+| 05  | [us-05-seed-data](us-05-seed-data.md)                         | Create comprehensive seed dataset for dev and e2e testing                           | Done   | Blocked by us-01 |
 
 US-02, US-03, US-04 can parallelise after US-01. US-05 depends on tables existing.
 

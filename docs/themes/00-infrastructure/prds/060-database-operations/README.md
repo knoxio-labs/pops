@@ -11,20 +11,20 @@ Make the database safe for production data. Today, the codebase has two migratio
 
 ### Two Migration Systems
 
-| System | Location | Applied by | Used for |
-|--------|----------|------------|----------|
-| Manual SQL | `src/db/migrations/*.sql` | `runMigrations()` on server startup | Production schema changes |
-| Drizzle | `src/db/drizzle-migrations/` | `drizzle-kit migrate` | New schema changes going forward |
+| System     | Location                     | Applied by                          | Used for                         |
+| ---------- | ---------------------------- | ----------------------------------- | -------------------------------- |
+| Manual SQL | `src/db/migrations/*.sql`    | `runMigrations()` on server startup | Production schema changes        |
+| Drizzle    | `src/db/drizzle-migrations/` | `drizzle-kit migrate`               | New schema changes going forward |
 
 Both systems track applied migrations separately (`schema_migrations` table vs Drizzle's `__drizzle_migrations` table). An agent adding a new table might use either system, leading to drift.
 
 ### Destructive Commands
 
-| Command | What it does | Guard |
-|---------|-------------|-------|
-| `mise db:init` | Deletes the entire SQLite file and recreates from scratch | None |
-| `mise db:seed` | Calls `db:clear` (deletes all data) then inserts test data | None |
-| `mise db:clear` | Deletes all rows from all tables (preserves schema) | None |
+| Command         | What it does                                               | Guard |
+| --------------- | ---------------------------------------------------------- | ----- |
+| `mise db:init`  | Deletes the entire SQLite file and recreates from scratch  | None  |
+| `mise db:seed`  | Calls `db:clear` (deletes all data) then inserts test data | None  |
+| `mise db:clear` | Deletes all rows from all tables (preserves schema)        | None  |
 
 Running any of these against a production database destroys real data with no warning.
 
@@ -53,25 +53,25 @@ Running any of these against a production database destroys real data with no wa
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| No pending migrations | Backup skipped, server starts normally |
-| Migration fails mid-transaction | SQLite transaction rolls back; pre-migration backup available as additional safety net |
-| `db:init` run with `NODE_ENV=production` | Command exits with error, does not delete the database |
-| `db:seed` run against DB with real transactions | Command exits with error explaining why |
-| Both old and new migration systems have pending migrations | Old migrations run first (backward compat), then Drizzle migrations run |
-| Drizzle schema drift (schema file doesn't match DB) | `drizzle-kit generate` detects drift and generates a corrective migration |
-| Agent creates a manual SQL migration file | CI lint step fails — manual migrations are frozen |
+| Case                                                       | Behaviour                                                                              |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| No pending migrations                                      | Backup skipped, server starts normally                                                 |
+| Migration fails mid-transaction                            | SQLite transaction rolls back; pre-migration backup available as additional safety net |
+| `db:init` run with `NODE_ENV=production`                   | Command exits with error, does not delete the database                                 |
+| `db:seed` run against DB with real transactions            | Command exits with error explaining why                                                |
+| Both old and new migration systems have pending migrations | Old migrations run first (backward compat), then Drizzle migrations run                |
+| Drizzle schema drift (schema file doesn't match DB)        | `drizzle-kit generate` detects drift and generates a corrective migration              |
+| Agent creates a manual SQL migration file                  | CI lint step fails — manual migrations are frozen                                      |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-unify-migrations](us-01-unify-migrations.md) | Freeze manual SQL migrations, make Drizzle the only path for new schema changes | Done | No (first) |
-| 02 | [us-02-production-guards](us-02-production-guards.md) | Add environment checks to db:init, db:seed, db:clear that refuse to run against production data | Done | Yes |
-| 03 | [us-03-pre-migration-backup](us-03-pre-migration-backup.md) | Automatic SQLite file backup before any pending migration runs, with auto-restore on failure | Done | Yes |
-| 04 | [us-04-migration-safety-tests](us-04-migration-safety-tests.md) | CI test that applies migrations to a seeded DB and verifies data integrity | Done | Blocked by us-01 |
-| 05 | [us-05-go-live-runbook](us-05-go-live-runbook.md) | Document the procedure for transitioning from dev database to production data | Done | Yes |
+| #   | Story                                                           | Summary                                                                                         | Status | Parallelisable   |
+| --- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-unify-migrations](us-01-unify-migrations.md)             | Freeze manual SQL migrations, make Drizzle the only path for new schema changes                 | Done   | No (first)       |
+| 02  | [us-02-production-guards](us-02-production-guards.md)           | Add environment checks to db:init, db:seed, db:clear that refuse to run against production data | Done   | Yes              |
+| 03  | [us-03-pre-migration-backup](us-03-pre-migration-backup.md)     | Automatic SQLite file backup before any pending migration runs, with auto-restore on failure    | Done   | Yes              |
+| 04  | [us-04-migration-safety-tests](us-04-migration-safety-tests.md) | CI test that applies migrations to a seeded DB and verifies data integrity                      | Done   | Blocked by us-01 |
+| 05  | [us-05-go-live-runbook](us-05-go-live-runbook.md)               | Document the procedure for transitioning from dev database to production data                   | Done   | Yes              |
 
 US-02, US-03, and US-05 can all parallelise. US-04 depends on US-01 (needs the unified migration system to test against).
 

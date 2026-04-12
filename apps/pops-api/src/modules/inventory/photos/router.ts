@@ -1,19 +1,19 @@
 /**
  * Item photos tRPC router — attach/remove/reorder photos per inventory item.
  */
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../../../trpc.js";
-import { paginationMeta } from "../../../shared/pagination.js";
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from '../../../trpc.js';
+import { paginationMeta } from '../../../shared/pagination.js';
 import {
   AttachPhotoSchema,
   UpdatePhotoSchema,
   PhotoQuerySchema,
   ReorderPhotosSchema,
   toPhoto,
-} from "./types.js";
-import * as service from "./service.js";
-import { NotFoundError, ValidationError } from "../../../shared/errors.js";
+} from './types.js';
+import * as service from './service.js';
+import { NotFoundError, ValidationError } from '../../../shared/errors.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -25,14 +25,14 @@ export const photosRouter = router({
       const row = service.attachPhoto(input);
       return {
         data: toPhoto(row),
-        message: "Photo attached",
+        message: 'Photo attached',
       };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof ValidationError) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err.message });
       }
       throw err;
     }
@@ -44,10 +44,10 @@ export const photosRouter = router({
     .mutation(({ input }) => {
       try {
         service.removePhoto(input.id);
-        return { message: "Photo removed" };
+        return { message: 'Photo removed' };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -61,11 +61,11 @@ export const photosRouter = router({
         const row = service.updatePhoto(input.id, input.data);
         return {
           data: toPhoto(row),
-          message: "Photo updated",
+          message: 'Photo updated',
         };
       } catch (err) {
         if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         throw err;
       }
@@ -90,11 +90,11 @@ export const photosRouter = router({
       const rows = service.reorderPhotos(input.itemId, input.orderedIds);
       return {
         data: rows.map(toPhoto),
-        message: "Photos reordered",
+        message: 'Photos reordered',
       };
     } catch (err) {
       if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       throw err;
     }

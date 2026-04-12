@@ -2,12 +2,12 @@
  * Entity service — CRUD operations using Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
  */
-import crypto from "crypto";
-import { eq, like, count, and, ne, sql } from "drizzle-orm";
-import { getDrizzle } from "../../../db.js";
-import { entities, transactions } from "@pops/db-types";
-import { NotFoundError, ConflictError } from "../../../shared/errors.js";
-import type { EntityRow, CreateEntityInput, UpdateEntityInput } from "./types.js";
+import crypto from 'crypto';
+import { eq, like, count, and, ne, sql } from 'drizzle-orm';
+import { getDrizzle } from '../../../db.js';
+import { entities, transactions } from '@pops/db-types';
+import { NotFoundError, ConflictError } from '../../../shared/errors.js';
+import type { EntityRow, CreateEntityInput, UpdateEntityInput } from './types.js';
 
 /** Entity row enriched with transaction count. */
 export interface EntityWithCount extends EntityRow {
@@ -99,7 +99,7 @@ export function getEntity(id: string): EntityRow {
   const db = getDrizzle();
   const [row] = db.select().from(entities).where(eq(entities.id, id)).all();
 
-  if (!row) throw new NotFoundError("Entity", id);
+  if (!row) throw new NotFoundError('Entity', id);
   return row;
 }
 
@@ -127,9 +127,9 @@ export function createEntity(input: CreateEntityInput): EntityRow {
     .values({
       id,
       name: input.name,
-      type: input.type ?? "company",
+      type: input.type ?? 'company',
       abn: input.abn ?? null,
-      aliases: input.aliases?.length ? input.aliases.join(", ") : null,
+      aliases: input.aliases?.length ? input.aliases.join(', ') : null,
       defaultTransactionType: input.defaultTransactionType ?? null,
       defaultTags: input.defaultTags?.length ? JSON.stringify(input.defaultTags) : null,
       notes: input.notes ?? null,
@@ -179,7 +179,7 @@ export function updateEntity(id: string, input: UpdateEntityInput): EntityRow {
     hasUpdates = true;
   }
   if (input.aliases !== undefined) {
-    updates.aliases = input.aliases.length ? input.aliases.join(", ") : null;
+    updates.aliases = input.aliases.length ? input.aliases.join(', ') : null;
     hasUpdates = true;
   }
   if (input.defaultTransactionType !== undefined) {
@@ -213,5 +213,5 @@ export function deleteEntity(id: string): void {
 
   const db = getDrizzle();
   const result = db.delete(entities).where(eq(entities.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError("Entity", id);
+  if (result.changes === 0) throw new NotFoundError('Entity', id);
 }

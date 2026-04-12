@@ -1,8 +1,8 @@
-import { useCallback, useContext, useLayoutEffect } from "react";
-import { useNavigate } from "react-router";
-import { AppContextCtx } from "./context.js";
-import type { AppContext, AppContextEntity, AppName } from "./types.js";
-import { resolveUri } from "./uri-resolver.js";
+import { useCallback, useContext, useLayoutEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { AppContextCtx } from './context.js';
+import type { AppContext, AppContextEntity, AppName } from './types.js';
+import { resolveUri } from './uri-resolver.js';
 
 /**
  * Returns the current AppContext.
@@ -16,7 +16,7 @@ export function useAppContext(): AppContext {
 /** Options accepted by useSetPageContext. */
 export interface SetPageContextOptions {
   page: string;
-  pageType?: AppContext["pageType"];
+  pageType?: AppContext['pageType'];
   entity?: AppContextEntity;
   filters?: Record<string, string>;
 }
@@ -34,13 +34,13 @@ export function useSetPageContext(options: SetPageContextOptions): void {
   useLayoutEffect(() => {
     setPageContext({
       page: options.page,
-      pageType: options.pageType ?? "top-level",
+      pageType: options.pageType ?? 'top-level',
       entity: options.entity,
       filters: options.filters,
     });
 
     return () => {
-      setPageContext({ page: null, pageType: "top-level", entity: undefined, filters: undefined });
+      setPageContext({ page: null, pageType: 'top-level', entity: undefined, filters: undefined });
     };
     // Re-run when any option value changes
   }, [options.page, options.pageType, options.entity, options.filters, setPageContext]);
@@ -54,7 +54,7 @@ export function useCurrentApp(): AppName | null {
 /** Returns the entity being viewed on a drill-down page, or null otherwise. */
 export function useCurrentEntity(): AppContextEntity | null {
   const { pageType, entity } = useAppContext();
-  return pageType === "drill-down" && entity ? entity : null;
+  return pageType === 'drill-down' && entity ? entity : null;
 }
 
 /**

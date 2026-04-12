@@ -9,4 +9,4 @@ export type {
   SearchAdapter,
   StructuredFilter,
   MatchType,
-} from "./search.js";
+} from './search.js';

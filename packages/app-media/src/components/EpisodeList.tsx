@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Check, ChevronDown, ChevronRight, HardDrive } from "lucide-react";
-import { Switch } from "@pops/ui";
-import { formatRuntime } from "../lib/utils";
+import { useState } from 'react';
+import { Check, ChevronDown, ChevronRight, HardDrive } from 'lucide-react';
+import { Switch } from '@pops/ui';
+import { formatRuntime } from '../lib/utils';
 
 interface Episode {
   id: number;
@@ -64,7 +64,7 @@ function EpisodeRow({
   const upcoming = isUpcoming(ep.airDate);
 
   return (
-    <div className={`px-4 py-3${upcoming ? " opacity-50" : ""}`}>
+    <div className={`px-4 py-3${upcoming ? ' opacity-50' : ''}`}>
       <div className="flex items-start gap-3">
         {onToggleWatched && (
           <button
@@ -80,10 +80,10 @@ function EpisodeRow({
             }
             className={`mt-0.5 shrink-0 flex items-center justify-center h-5 w-5 rounded border transition-colors ${
               isToggling || upcoming
-                ? "opacity-50 cursor-not-allowed border-muted"
+                ? 'opacity-50 cursor-not-allowed border-muted'
                 : isWatched
-                  ? "bg-primary border-primary text-primary-foreground"
-                  : "border-muted-foreground/40 hover:border-primary"
+                  ? 'bg-primary border-primary text-primary-foreground'
+                  : 'border-muted-foreground/40 hover:border-primary'
             }`}
           >
             {isWatched && <Check className="h-3.5 w-3.5" />}
@@ -111,7 +111,7 @@ function EpisodeRow({
               {ep.episodeNumber}
             </span>
             <span
-              className={`text-sm font-medium truncate ${isWatched ? "text-muted-foreground" : ""}`}
+              className={`text-sm font-medium truncate ${isWatched ? 'text-muted-foreground' : ''}`}
             >
               {ep.name ?? `Episode ${ep.episodeNumber}`}
             </span>

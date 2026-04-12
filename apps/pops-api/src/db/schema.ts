@@ -12,32 +12,32 @@
  * The schema_migrations table is populated so that runMigrations() is a no-op
  * when it later runs against a database initialized by this function.
  */
-import type BetterSqlite3 from "better-sqlite3";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { TAG_VOCABULARY_V1 } from "../shared/tag-vocabulary.js";
+import type BetterSqlite3 from 'better-sqlite3';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { TAG_VOCABULARY_V1 } from '../shared/tag-vocabulary.js';
 
 /** All migration filenames that this schema already incorporates. */
 const INCLUDED_MIGRATIONS = [
-  "007_transaction_corrections.sql",
-  "008_add_tags_to_transactions.sql",
-  "009_environments.sql",
-  "010_uuid_primary_keys.sql",
-  "011_add_checksum_raw_row.sql",
-  "20260320120000_core_entity_types.sql",
-  "20260320130000_core_inventory_fks.sql",
-  "20260320140000_inventory_new_columns.sql",
-  "20260321140000_item_documents.sql",
-  "20260322120000_settings.sql",
-  "20260324140000_watch_history_unique_index.sql",
-  "20260325150000_locations_last_edited_time.sql",
-  "20260326120000_transactions_entity_fk.sql",
-  "20260326150000_budgets_unique_category_period.sql",
-  "20260326160000_items_locations_schema.sql",
-  "20260327120000_sync_logs.sql",
-  "20260328120000_inventory_asset_id_unique_index.sql",
-  "20260328130000_watchlist_source_plex_key.sql",
+  '007_transaction_corrections.sql',
+  '008_add_tags_to_transactions.sql',
+  '009_environments.sql',
+  '010_uuid_primary_keys.sql',
+  '011_add_checksum_raw_row.sql',
+  '20260320120000_core_entity_types.sql',
+  '20260320130000_core_inventory_fks.sql',
+  '20260320140000_inventory_new_columns.sql',
+  '20260321140000_item_documents.sql',
+  '20260322120000_settings.sql',
+  '20260324140000_watch_history_unique_index.sql',
+  '20260325150000_locations_last_edited_time.sql',
+  '20260326120000_transactions_entity_fk.sql',
+  '20260326150000_budgets_unique_category_period.sql',
+  '20260326160000_items_locations_schema.sql',
+  '20260327120000_sync_logs.sql',
+  '20260328120000_inventory_asset_id_unique_index.sql',
+  '20260328130000_watchlist_source_plex_key.sql',
 ];
 
 /**
@@ -560,7 +560,7 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
   // Pre-mark all migrations this schema already incorporates so that
   // runMigrations() treats them as already applied.
   const insertMigration = db.prepare(
-    "INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)"
+    'INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)'
   );
   for (const migration of INCLUDED_MIGRATIONS) {
     insertMigration.run(migration);
@@ -570,10 +570,10 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
   try {
     const drizzleMigrationsDir = join(
       dirname(fileURLToPath(import.meta.url)),
-      "drizzle-migrations"
+      'drizzle-migrations'
     );
-    const journalPath = join(drizzleMigrationsDir, "meta", "_journal.json");
-    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
+    const journalPath = join(drizzleMigrationsDir, 'meta', '_journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
       entries: { idx: number; tag: string }[];
     };
 
@@ -586,7 +586,7 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
     `);
 
     const insertDrizzle = db.prepare(
-      "INSERT OR IGNORE INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)"
+      'INSERT OR IGNORE INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)'
     );
     for (const entry of journal.entries) {
       insertDrizzle.run(entry.tag, Date.now());

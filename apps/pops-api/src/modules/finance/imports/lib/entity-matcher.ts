@@ -11,7 +11,7 @@
  * Hit rate: ~95-100% with aliases.
  */
 
-import type { EntityEntry } from "./entity-lookup.js";
+import type { EntityEntry } from './entity-lookup.js';
 
 /** Map-based entity lookup: lowercase name → { id, name } */
 export type EntityLookupMap = Map<string, EntityEntry>;
@@ -22,7 +22,7 @@ export type AliasMap = Map<string, string>;
 export interface EntityMatch {
   entityName: string;
   entityId: string;
-  matchType: "alias" | "exact" | "prefix" | "contains";
+  matchType: 'alias' | 'exact' | 'prefix' | 'contains';
 }
 
 /**
@@ -40,7 +40,7 @@ export function matchEntity(
     if (normalized.includes(key.toUpperCase())) {
       const entry = findByName(entityName, entityLookup);
       if (entry) {
-        return { entityName: entry.name, entityId: entry.id, matchType: "alias" };
+        return { entityName: entry.name, entityId: entry.id, matchType: 'alias' };
       }
     }
   }
@@ -50,7 +50,7 @@ export function matchEntity(
   if (result) return result;
 
   // Stage 5: Strip punctuation and retry
-  const stripped = normalized.replace(/[''`]/g, "");
+  const stripped = normalized.replace(/[''`]/g, '');
   const strippedResult = tryMatch(stripped, entityLookup, true);
   if (strippedResult) return strippedResult;
 
@@ -66,20 +66,20 @@ function tryMatch(
 
   // Stage 2: Exact match (case-insensitive)
   for (const [key, entry] of entries) {
-    const matchKey = stripPunctuation ? key.replace(/[''`]/g, "") : key;
+    const matchKey = stripPunctuation ? key.replace(/[''`]/g, '') : key;
     if (normalized === matchKey.toUpperCase()) {
-      return { entityName: entry.name, entityId: entry.id, matchType: "exact" };
+      return { entityName: entry.name, entityId: entry.id, matchType: 'exact' };
     }
   }
 
   // Stage 3: Prefix match (longest entity name wins)
   let bestPrefix: EntityMatch | null = null;
   for (const [key, entry] of entries) {
-    const matchKey = stripPunctuation ? key.replace(/[''`]/g, "") : key;
+    const matchKey = stripPunctuation ? key.replace(/[''`]/g, '') : key;
     const upper = matchKey.toUpperCase();
     if (normalized.startsWith(upper)) {
       if (!bestPrefix || entry.name.length > bestPrefix.entityName.length) {
-        bestPrefix = { entityName: entry.name, entityId: entry.id, matchType: "prefix" };
+        bestPrefix = { entityName: entry.name, entityId: entry.id, matchType: 'prefix' };
       }
     }
   }
@@ -89,11 +89,11 @@ function tryMatch(
   let bestContains: EntityMatch | null = null;
   for (const [key, entry] of entries) {
     if (key.length < 4) continue;
-    const matchKey = stripPunctuation ? key.replace(/[''`]/g, "") : key;
+    const matchKey = stripPunctuation ? key.replace(/[''`]/g, '') : key;
     const upper = matchKey.toUpperCase();
     if (normalized.includes(upper)) {
       if (!bestContains || entry.name.length > bestContains.entityName.length) {
-        bestContains = { entityName: entry.name, entityId: entry.id, matchType: "contains" };
+        bestContains = { entityName: entry.name, entityId: entry.id, matchType: 'contains' };
       }
     }
   }

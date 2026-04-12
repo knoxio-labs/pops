@@ -1,15 +1,15 @@
-import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router";
-import { AppContextCtx } from "./context.js";
-import type { AppContext, AppName } from "./types.js";
-import { DEFAULT_APP_CONTEXT } from "./types.js";
+import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router';
+import { AppContextCtx } from './context.js';
+import type { AppContext, AppName } from './types.js';
+import { DEFAULT_APP_CONTEXT } from './types.js';
 
 /** Maps URL base paths to their app identifiers. */
 const APP_BASE_PATHS: Array<{ basePath: string; app: AppName }> = [
-  { basePath: "/finance", app: "finance" },
-  { basePath: "/media", app: "media" },
-  { basePath: "/inventory", app: "inventory" },
-  { basePath: "/ai", app: "ai" },
+  { basePath: '/finance', app: 'finance' },
+  { basePath: '/media', app: 'media' },
+  { basePath: '/inventory', app: 'inventory' },
+  { basePath: '/ai', app: 'ai' },
 ];
 
 /**
@@ -45,7 +45,7 @@ export function AppContextProvider({ children }: AppContextProviderProps) {
   const { pathname } = useLocation();
 
   const [pageContext, setPageContextState] = useState<
-    Partial<Pick<AppContext, "page" | "pageType" | "entity" | "filters">>
+    Partial<Pick<AppContext, 'page' | 'pageType' | 'entity' | 'filters'>>
   >({});
 
   // Reset page-level context when the user navigates to a new path.
@@ -70,7 +70,7 @@ export function AppContextProvider({ children }: AppContextProviderProps) {
   );
 
   const setPageContext = useCallback(
-    (partial: Partial<Pick<AppContext, "page" | "pageType" | "entity" | "filters">>) => {
+    (partial: Partial<Pick<AppContext, 'page' | 'pageType' | 'entity' | 'filters'>>) => {
       setPageContextState((prev) => ({ ...prev, ...partial }));
     },
     []

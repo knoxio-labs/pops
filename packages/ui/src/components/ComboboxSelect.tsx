@@ -2,11 +2,11 @@
  * ComboboxSelect - Advanced select with filtering using shadcn primitives
  * Built on Popover + Command for proper positioning and filtering
  */
-import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "../lib/utils";
-import { Button } from "./Button";
-import { Chip } from "./Chip";
+import { useState } from 'react';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { Button } from './Button';
+import { Chip } from './Chip';
 import {
   Command,
   CommandEmpty,
@@ -14,8 +14,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../primitives/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
+} from '../primitives/command';
+import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
 
 export interface ComboboxOption {
   label: string;
@@ -59,11 +59,11 @@ export interface ComboboxSelectProps {
   /**
    * Button variant
    */
-  variant?: "default" | "outline" | "ghost";
+  variant?: 'default' | 'outline' | 'ghost';
   /**
    * Button size
    */
-  size?: "default" | "sm" | "lg";
+  size?: 'default' | 'sm' | 'lg';
   /**
    * Container className
    */
@@ -98,12 +98,12 @@ export function ComboboxSelect({
   value,
   onChange,
   multiple = false,
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  emptyMessage = "No options found.",
+  placeholder = 'Select...',
+  searchPlaceholder = 'Search...',
+  emptyMessage = 'No options found.',
   disabled = false,
-  variant = "outline",
-  size = "default",
+  variant = 'outline',
+  size = 'default',
   className,
 }: ComboboxSelectProps) {
   const [open, setOpen] = useState(false);
@@ -140,7 +140,7 @@ export function ComboboxSelect({
       : placeholder;
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div className={cn('flex flex-col gap-2', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -149,7 +149,7 @@ export function ComboboxSelect({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className={cn("justify-between", className)}
+            className={cn('justify-between', className)}
           >
             <span className="truncate">{displayText}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -174,7 +174,7 @@ export function ComboboxSelect({
                     >
                       {multiple && (
                         <Check
-                          className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
+                          className={cn('mr-2 h-4 w-4', isSelected ? 'opacity-100' : 'opacity-0')}
                         />
                       )}
                       {option.label}

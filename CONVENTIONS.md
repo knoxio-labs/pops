@@ -49,11 +49,13 @@ src/
 For anything non-trivial (multiple queries/mutations, complex UI state, many subsections), follow this structure to keep pages readable and testable.
 
 **Goals**
+
 - Keep route components small and orchestration-only.
 - Keep data mapping close to data fetching (not buried in deep component trees).
 - Keep presentational sections reusable and easy to unit test.
 
 **Recommended structure**
+
 ```
 pages/
   SomePage.tsx                # route params + layout + wiring only
@@ -65,6 +67,7 @@ pages/
 ```
 
 **Rules of thumb**
+
 - **`Page.tsx` (the shell)**: read route params, own top-level layout, call `usePageModel()`, pass stable props down. Avoid building large derived objects inline.
 - **`usePageModel()`**: owns data fetching, mutation calls, derived state, and “domain view model” mapping (formatting, grouping, sorting).
 - **`sections/` components**: mostly presentational; allow local UI state (tabs, expanded rows, dialogs) but avoid firing network calls directly unless intentionally isolated.

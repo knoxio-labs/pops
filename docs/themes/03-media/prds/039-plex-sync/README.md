@@ -9,75 +9,75 @@ Build polling-based sync with Plex Media Server. Import library items and watch 
 
 ## Routes
 
-| Route | Page |
-|-------|------|
+| Route         | Page          |
+| ------------- | ------------- |
 | `/media/plex` | Plex Settings |
 
 ## UI Components
 
 ### Plex Settings Page
 
-| Section | Content |
-|---------|---------|
-| Connection | Server URL input, "Test Connection" button, connection status indicator |
-| Authentication | Auth status (connected/disconnected), connect/disconnect buttons |
-| Library Sections | Checkboxes for movie and TV sections to sync |
-| Sync Controls | Manual sync button, scheduler toggle with interval input |
-| Sync Status | Last sync time, items synced/skipped/errors from most recent run |
+| Section          | Content                                                                 |
+| ---------------- | ----------------------------------------------------------------------- |
+| Connection       | Server URL input, "Test Connection" button, connection status indicator |
+| Authentication   | Auth status (connected/disconnected), connect/disconnect buttons        |
+| Library Sections | Checkboxes for movie and TV sections to sync                            |
+| Sync Controls    | Manual sync button, scheduler toggle with interval input                |
+| Sync Status      | Last sync time, items synced/skipped/errors from most recent run        |
 
 ### Connection Section
 
-| Element | Detail |
-|---------|--------|
-| Server URL input | Text field for Plex server URL (e.g., `http://192.168.1.100:32400`) |
-| Test Connection button | Validates URL is reachable and returns Plex server info |
-| Connection status | Green check / red X with server name and version on success |
+| Element                | Detail                                                              |
+| ---------------------- | ------------------------------------------------------------------- |
+| Server URL input       | Text field for Plex server URL (e.g., `http://192.168.1.100:32400`) |
+| Test Connection button | Validates URL is reachable and returns Plex server info             |
+| Connection status      | Green check / red X with server name and version on success         |
 
 ### Authentication Section
 
-| Element | Detail |
-|---------|--------|
-| Connect button | Initiates PIN-based OAuth flow |
-| PIN display | Shows PIN code and link to plex.tv/link |
+| Element           | Detail                                                    |
+| ----------------- | --------------------------------------------------------- |
+| Connect button    | Initiates PIN-based OAuth flow                            |
+| PIN display       | Shows PIN code and link to plex.tv/link                   |
 | Polling indicator | Spinner while waiting for user to authenticate at plex.tv |
-| Auth status | "Connected as {username}" or "Not connected" |
-| Disconnect button | Removes stored token, shows "Not connected" |
+| Auth status       | "Connected as {username}" or "Not connected"              |
+| Disconnect button | Removes stored token, shows "Not connected"               |
 
 ### Sync Controls
 
-| Element | Detail |
-|---------|--------|
-| Manual sync button | Triggers immediate sync of selected sections |
-| Sync progress | Progress bar or count during active sync |
-| Scheduler toggle | On/off switch for automatic periodic sync |
-| Interval input | Numeric input for sync interval in hours (default: 6) |
-| Scheduler status | "Next sync in X hours" or "Scheduler off" |
+| Element            | Detail                                                |
+| ------------------ | ----------------------------------------------------- |
+| Manual sync button | Triggers immediate sync of selected sections          |
+| Sync progress      | Progress bar or count during active sync              |
+| Scheduler toggle   | On/off switch for automatic periodic sync             |
+| Interval input     | Numeric input for sync interval in hours (default: 6) |
+| Scheduler status   | "Next sync in X hours" or "Scheduler off"             |
 
 ### Sync Status
 
-| Element | Detail |
-|---------|--------|
-| Last sync time | Relative time ("2 hours ago") with full timestamp on hover |
-| Results | Synced: N, Skipped: N, Errors: N |
-| Skip details | Expandable list of skipped items with title and reason (e.g., "Breaking Bad — no TheTVDB ID in Plex metadata") |
-| Error details | Expandable list of error messages if errors > 0 |
+| Element        | Detail                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------- |
+| Last sync time | Relative time ("2 hours ago") with full timestamp on hover                                                     |
+| Results        | Synced: N, Skipped: N, Errors: N                                                                               |
+| Skip details   | Expandable list of skipped items with title and reason (e.g., "Breaking Bad — no TheTVDB ID in Plex metadata") |
+| Error details  | Expandable list of error messages if errors > 0                                                                |
 
 ## API Dependencies
 
-| Procedure | Usage |
-|-----------|-------|
-| `media.plex.getAuthPin` | Generate a PIN code and client ID for Plex OAuth |
-| `media.plex.checkAuthPin` | Poll for PIN authentication completion, save token |
-| `media.plex.disconnect` | Remove stored Plex auth token |
-| `media.plex.testConnection` | Validate server URL and return server info |
-| `media.plex.getSections` | List library sections from the Plex server |
-| `media.plex.syncMovies` | Sync movies from a Plex library section |
-| `media.plex.syncTvShows` | Sync TV shows from a Plex library section |
-| `media.plex.syncWatchHistory` | Re-sync watch history for already-imported media with detailed diagnostics |
-| `media.plex.syncDiscoverWatches` | Sync watch state from Plex Discover cloud for all library items |
-| `media.plex.startScheduler` | Start periodic sync with configured interval |
-| `media.plex.stopScheduler` | Stop periodic sync |
-| `media.plex.getSchedulerStatus` | Get scheduler state (running, interval, next run time) |
+| Procedure                        | Usage                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `media.plex.getAuthPin`          | Generate a PIN code and client ID for Plex OAuth                           |
+| `media.plex.checkAuthPin`        | Poll for PIN authentication completion, save token                         |
+| `media.plex.disconnect`          | Remove stored Plex auth token                                              |
+| `media.plex.testConnection`      | Validate server URL and return server info                                 |
+| `media.plex.getSections`         | List library sections from the Plex server                                 |
+| `media.plex.syncMovies`          | Sync movies from a Plex library section                                    |
+| `media.plex.syncTvShows`         | Sync TV shows from a Plex library section                                  |
+| `media.plex.syncWatchHistory`    | Re-sync watch history for already-imported media with detailed diagnostics |
+| `media.plex.syncDiscoverWatches` | Sync watch state from Plex Discover cloud for all library items            |
+| `media.plex.startScheduler`      | Start periodic sync with configured interval                               |
+| `media.plex.stopScheduler`       | Stop periodic sync                                                         |
+| `media.plex.getSchedulerStatus`  | Get scheduler state (running, interval, next run time)                     |
 
 ## Authentication Flow
 
@@ -129,6 +129,7 @@ Build polling-based sync with Plex Media Server. Import library items and watch 
 ### Watch History Re-sync (`syncWatchHistory`)
 
 Standalone re-sync for already-imported media. Returns detailed per-show diagnostics:
+
 - Episodes matched vs season/episode not found (with preview of missing items)
 - Gap detection: compares total tracked (new + already logged) against Plex viewedLeafCount
 - Movies: counts watched, logged, already logged, not in library
@@ -143,12 +144,12 @@ Checks all POPS library items against the Plex Discover cloud API (`metadata.pro
 
 ## Scheduler
 
-| Operation | Detail |
-|-----------|--------|
-| Start | `startScheduler(intervalHours)` — begins periodic sync at the specified interval |
-| Stop | `stopScheduler()` — cancels the periodic timer |
-| Status | `getSchedulerStatus()` — returns `{ running, intervalHours, nextRunAt, lastRunAt }` |
-| Execution | Each tick syncs all selected sections, logs results |
+| Operation   | Detail                                                                                  |
+| ----------- | --------------------------------------------------------------------------------------- |
+| Start       | `startScheduler(intervalHours)` — begins periodic sync at the specified interval        |
+| Stop        | `stopScheduler()` — cancels the periodic timer                                          |
+| Status      | `getSchedulerStatus()` — returns `{ running, intervalHours, nextRunAt, lastRunAt }`     |
+| Execution   | Each tick syncs all selected sections, logs results                                     |
 | Persistence | Scheduler state stored in settings table; restarts on server boot if previously enabled |
 
 ## Business Rules
@@ -163,25 +164,25 @@ Checks all POPS library items against the Plex Discover cloud API (`metadata.pro
 
 ## Edge Cases
 
-| Case | Behaviour |
-|------|-----------|
-| Plex server unreachable | Test connection fails with error message; sync operations fail gracefully |
-| Plex item missing TMDB/TheTVDB ID | Skipped with reason recorded (title + "no TheTVDB ID in Plex metadata"), visible in skip details UI |
-| Auth token expired | Sync fails with auth error; UI prompts to reconnect |
-| Sync interrupted mid-run | Partial results committed (each item is its own transaction); re-sync is safe |
-| Duplicate movie in Plex (two copies) | Both map to same TMDB ID — second is skipped (unique constraint) |
-| Plex show with missing episodes | Available episodes synced; missing ones ignored |
-| Scheduler running when server restarts | Scheduler re-reads config on boot and restarts if previously enabled |
-| PIN expires before user authenticates | `checkAuthPin` returns expired status; UI shows "PIN expired, try again" |
+| Case                                   | Behaviour                                                                                           |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Plex server unreachable                | Test connection fails with error message; sync operations fail gracefully                           |
+| Plex item missing TMDB/TheTVDB ID      | Skipped with reason recorded (title + "no TheTVDB ID in Plex metadata"), visible in skip details UI |
+| Auth token expired                     | Sync fails with auth error; UI prompts to reconnect                                                 |
+| Sync interrupted mid-run               | Partial results committed (each item is its own transaction); re-sync is safe                       |
+| Duplicate movie in Plex (two copies)   | Both map to same TMDB ID — second is skipped (unique constraint)                                    |
+| Plex show with missing episodes        | Available episodes synced; missing ones ignored                                                     |
+| Scheduler running when server restarts | Scheduler re-reads config on boot and restarts if previously enabled                                |
+| PIN expires before user authenticates  | `checkAuthPin` returns expired status; UI shows "PIN expired, try again"                            |
 
 ## User Stories
 
-| # | Story | Summary | Status | Parallelisable |
-|---|-------|---------|--------|----------------|
-| 01 | [us-01-plex-auth](us-01-plex-auth.md) | PIN-based OAuth flow (getAuthPin, checkAuthPin, disconnect), token storage in settings table | Done | Yes |
-| 02 | [us-02-plex-settings](us-02-plex-settings.md) | Settings page with URL input, connection test, section selector, sync controls, status display | Done | Blocked by us-01 |
-| 03 | [us-03-library-sync](us-03-library-sync.md) | Movie and TV show sync from Plex sections (match by TMDB/TheTVDB ID, add new, report results) | Done | Blocked by us-01 |
-| 04 | [us-04-watch-history-sync](us-04-watch-history-sync.md) | Watch status sync with source="plex_sync", skip watchlist auto-removal, scheduler for periodic sync | Done | Blocked by us-03 |
+| #   | Story                                                   | Summary                                                                                             | Status | Parallelisable   |
+| --- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-plex-auth](us-01-plex-auth.md)                   | PIN-based OAuth flow (getAuthPin, checkAuthPin, disconnect), token storage in settings table        | Done   | Yes              |
+| 02  | [us-02-plex-settings](us-02-plex-settings.md)           | Settings page with URL input, connection test, section selector, sync controls, status display      | Done   | Blocked by us-01 |
+| 03  | [us-03-library-sync](us-03-library-sync.md)             | Movie and TV show sync from Plex sections (match by TMDB/TheTVDB ID, add new, report results)       | Done   | Blocked by us-01 |
+| 04  | [us-04-watch-history-sync](us-04-watch-history-sync.md) | Watch status sync with source="plex_sync", skip watchlist auto-removal, scheduler for periodic sync | Done   | Blocked by us-03 |
 
 US-01 is the foundation (auth required for all Plex API calls). US-02 and US-03 both depend on US-01 but can run in parallel with each other. US-04 depends on US-03 (needs library sync to have items to sync watch status for).
 

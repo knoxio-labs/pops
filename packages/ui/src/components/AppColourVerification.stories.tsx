@@ -5,18 +5,18 @@
  * Use the Storybook toolbar colour picker to switch between colours,
  * or view the "AllColours" story to see every variant side-by-side.
  */
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button } from "./Button";
-import { Badge } from "../primitives/badge";
-import { Progress } from "../primitives/progress";
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Button } from './Button';
+import { Badge } from '../primitives/badge';
+import { Progress } from '../primitives/progress';
 
 const APP_COLOURS = [
-  { className: "app-emerald", label: "Finance (Emerald)" },
-  { className: "app-indigo", label: "Media (Indigo)" },
-  { className: "app-amber", label: "Inventory (Amber)" },
-  { className: "app-violet", label: "AI (Violet)" },
-  { className: "app-rose", label: "Rose" },
-  { className: "app-sky", label: "Sky" },
+  { className: 'app-emerald', label: 'Finance (Emerald)' },
+  { className: 'app-indigo', label: 'Media (Indigo)' },
+  { className: 'app-amber', label: 'Inventory (Amber)' },
+  { className: 'app-violet', label: 'AI (Violet)' },
+  { className: 'app-rose', label: 'Rose' },
+  { className: 'app-sky', label: 'Sky' },
 ] as const;
 
 function AccentShowcase() {
@@ -154,8 +154,8 @@ function AllColoursGrid() {
           <div
             className="rounded-lg border p-6 space-y-4"
             style={{
-              backgroundColor: "var(--background)",
-              color: "var(--foreground)",
+              backgroundColor: 'var(--background)',
+              color: 'var(--foreground)',
             }}
           >
             <h2 className="text-lg font-bold text-app-accent">{label}</h2>
@@ -168,10 +168,10 @@ function AllColoursGrid() {
 }
 
 const meta: Meta = {
-  title: "Verification/App Colours",
-  tags: ["autodocs"],
+  title: 'Verification/App Colours',
+  tags: ['autodocs'],
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
 };
 
@@ -192,11 +192,11 @@ export const AllColours: Story = {
 /** Dark mode — switch theme to dark in the toolbar to verify contrast. */
 export const DarkMode: Story = {
   render: () => <AccentShowcase />,
-  globals: { theme: "dark" },
+  globals: { theme: 'dark' },
 };
 
 /** All colours in dark mode for contrast verification. */
 export const AllColoursDark: Story = {
   render: () => <AllColoursGrid />,
-  globals: { theme: "dark" },
+  globals: { theme: 'dark' },
 };
