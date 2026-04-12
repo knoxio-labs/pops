@@ -105,8 +105,9 @@ export function ReviewStep() {
     prevChangeSetsRef.current = pendingChangeSets;
     if (!dbRulesData?.data) return;
 
+    // tags is string[] from tRPC but string in CorrectionRow (SQLite JSON) — cast through unknown
     const freshRules = computeMergedRules(
-      dbRulesData.data as Parameters<typeof computeMergedRules>[0],
+      dbRulesData.data as unknown as Parameters<typeof computeMergedRules>[0],
       pendingChangeSets
     );
     const current = localTxRef.current;
@@ -118,7 +119,7 @@ export function ReviewStep() {
     const reeval = reevaluateTransactions(
       candidateUncertain,
       current.failed,
-      freshRules as Parameters<typeof reevaluateTransactions>[2]
+      freshRules as unknown as Parameters<typeof reevaluateTransactions>[2]
     );
 
     const updated = {

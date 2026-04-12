@@ -64,7 +64,7 @@ export function EntityCreateDialog({
         setError(err instanceof Error ? err.message : "Failed to create entity");
       }
     },
-    [name, addPendingEntity, dbEntities, onEntityCreated, onOpenChange],
+    [name, addPendingEntity, dbEntities, onEntityCreated, onOpenChange]
   );
 
   const handleOpenChange = useCallback(
@@ -76,7 +76,7 @@ export function EntityCreateDialog({
         setError(null);
       }
     },
-    [onOpenChange],
+    [onOpenChange]
   );
 
   return (
