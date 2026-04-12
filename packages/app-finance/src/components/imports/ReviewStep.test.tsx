@@ -71,6 +71,13 @@ vi.mock("../../lib/trpc", () => ({
             isPending: false,
           }),
         },
+        reevaluateWithPendingRules: {
+          useMutation: () => ({
+            mutate: vi.fn(),
+            mutateAsync: vi.fn(),
+            isPending: false,
+          }),
+        },
       },
     },
     useUtils: () => ({
