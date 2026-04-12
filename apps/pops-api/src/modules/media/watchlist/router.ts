@@ -16,6 +16,7 @@ import * as service from './service.js';
 import { NotFoundError, ConflictError } from '../../../shared/errors.js';
 import { getPlexClient } from '../plex/service.js';
 import { pushToPlexWatchlist } from './plex-push.js';
+import { clearLeavingOnWatchlistAdd } from '../rotation/leaving-lifecycle.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -66,6 +67,11 @@ export const watchlistRouter = router({
   /** Add an item to the watchlist. Idempotent — returns existing entry if already present. */
   add: protectedProcedure.input(AddToWatchlistSchema).mutation(async ({ input }) => {
     const { row, created } = service.addToWatchlist(input);
+
+    // Clear leaving rotation status if the movie was in the leaving state
+    if (created) {
+      clearLeavingOnWatchlistAdd(input.mediaType, input.mediaId);
+    }
 
     // Best-effort push to Plex — failures do not block local operation
     if (created) {
