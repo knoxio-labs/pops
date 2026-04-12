@@ -1,7 +1,19 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronRight, Plus, Pencil, Ban, Trash2 } from "lucide-react";
+import {
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Pencil,
+  Ban,
+  Trash2,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@pops/ui";
 import { useImportStore } from "../../store/importStore";
+import { trpc } from "../../lib/trpc";
+import { buildCommitPayload } from "../../lib/commit-payload";
 
 type ChangeSetOp =
   | { op: "add"; data: { descriptionPattern: string; [k: string]: unknown } }
@@ -70,7 +82,7 @@ const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; className
 };
 
 // ---------------------------------------------------------------------------
-// FinalReviewStep — PRD-031 US-01+02
+// FinalReviewStep — PRD-031 US-01+02+05
 // ---------------------------------------------------------------------------
 
 /** Extract a human-readable label from a ChangeSet op. */
@@ -93,6 +105,28 @@ export function FinalReviewStep() {
   const processedTransactions = useImportStore((s) => s.processedTransactions);
   const prevStep = useImportStore((s) => s.prevStep);
   const nextStep = useImportStore((s) => s.nextStep);
+  const setCommitResult = useImportStore((s) => s.setCommitResult);
+  const commitResult = useImportStore((s) => s.commitResult);
+
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [committed, setCommitted] = useState(false);
+
+  const commitMutation = trpc.finance.imports.commitImport.useMutation({
+    onSuccess: (response) => {
+      setCommitResult(response.data);
+      setCommitted(true);
+      setCommitError(null);
+    },
+    onError: (err) => {
+      setCommitError(err.message);
+    },
+  });
+
+  const handleCommit = () => {
+    setCommitError(null);
+    const payload = buildCommitPayload(pendingEntities, pendingChangeSets, confirmedTransactions);
+    commitMutation.mutate(payload);
+  };
 
   // Transaction breakdown — labels match AC: matched / corrected / manual
   const txnBreakdown = useMemo(() => {
@@ -124,6 +158,7 @@ export function FinalReviewStep() {
   const hasRuleChanges = totalOps > 0;
   const hasTransactions = txnBreakdown.total > 0;
   const hasTags = tagAssignmentCount > 0;
+  const isCommitting = commitMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -231,11 +266,113 @@ export function FinalReviewStep() {
         )}
       </div>
 
+      {/* Commit error */}
+      {commitError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+          <div className="text-sm text-red-800 dark:text-red-200">
+            <p className="font-medium">Commit failed</p>
+            <p className="text-xs mt-1">{commitError}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Inline result after successful commit (US-05 AC-4) */}
+      {committed && commitResult && (
+        <div className="space-y-3 border rounded-lg p-4 bg-green-50/50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <h3 className="font-semibold text-green-900 dark:text-green-100">Commit Successful</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Entities created:</span>
+              <span className="font-medium">{commitResult.entitiesCreated}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Transactions imported:</span>
+              <span className="font-medium">{commitResult.transactionsImported}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Rules applied:</span>
+              <span className="font-medium">
+                {commitResult.rulesApplied.add +
+                  commitResult.rulesApplied.edit +
+                  commitResult.rulesApplied.disable +
+                  commitResult.rulesApplied.remove}
+              </span>
+            </div>
+            {commitResult.transactionsFailed > 0 && (
+              <div className="flex justify-between">
+                <span className="text-red-600 dark:text-red-400">Transactions failed:</span>
+                <span className="font-medium text-red-600 dark:text-red-400">
+                  {commitResult.transactionsFailed}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Reclassifications:</span>
+              <span className="font-medium">{commitResult.retroactiveReclassifications}</span>
+            </div>
+          </div>
+          {/* Rule breakdown by op type */}
+          {commitResult.rulesApplied.add +
+            commitResult.rulesApplied.edit +
+            commitResult.rulesApplied.disable +
+            commitResult.rulesApplied.remove >
+            0 && (
+            <div className="flex gap-3 text-xs text-muted-foreground pt-1 border-t">
+              {commitResult.rulesApplied.add > 0 && (
+                <span>{commitResult.rulesApplied.add} added</span>
+              )}
+              {commitResult.rulesApplied.edit > 0 && (
+                <span>{commitResult.rulesApplied.edit} edited</span>
+              )}
+              {commitResult.rulesApplied.disable > 0 && (
+                <span>{commitResult.rulesApplied.disable} disabled</span>
+              )}
+              {commitResult.rulesApplied.remove > 0 && (
+                <span>{commitResult.rulesApplied.remove} removed</span>
+              )}
+            </div>
+          )}
+          {/* Inline failure details */}
+          {commitResult.failedDetails && commitResult.failedDetails.length > 0 && (
+            <div className="pt-1 border-t">
+              <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+                Failed transactions:
+              </p>
+              <ul className="space-y-1">
+                {commitResult.failedDetails.map((detail, idx) => (
+                  <li key={idx} className="text-xs text-red-700 dark:text-red-300 flex gap-2">
+                    {detail.checksum && (
+                      <span className="font-mono shrink-0">{detail.checksum.slice(0, 12)}</span>
+                    )}
+                    <span className="truncate">{detail.error}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={prevStep}>
-          Back
-        </Button>
-        <Button onClick={nextStep}>Continue to Import</Button>
+        {!committed && (
+          <Button variant="outline" onClick={prevStep} disabled={isCommitting}>
+            Back
+          </Button>
+        )}
+        {committed ? (
+          <Button onClick={nextStep} className="ml-auto">
+            Continue
+          </Button>
+        ) : (
+          <Button onClick={handleCommit} disabled={isCommitting}>
+            {isCommitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isCommitting ? "Committing..." : "Approve & Commit All"}
+          </Button>
+        )}
       </div>
     </div>
   );

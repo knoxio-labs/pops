@@ -40,6 +40,7 @@ import type {
   SuggestedTag,
   CommitPayload,
   CommitResult,
+  FailedTransactionDetail,
 } from "./types.js";
 
 export function reevaluateImportSessionResult(args: {
@@ -1252,6 +1253,7 @@ export function commitImport(payload: CommitPayload): CommitResult {
     // Phase 3: Write transactions with resolved temp IDs
     let transactionsImported = 0;
     let transactionsFailed = 0;
+    const failedDetails: FailedTransactionDetail[] = [];
 
     for (const txn of payload.transactions) {
       const entityId = txn.entityId?.startsWith(TEMP_ENTITY_PREFIX)
@@ -1282,14 +1284,19 @@ export function commitImport(payload: CommitPayload): CommitResult {
 
         transactionsImported++;
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error(
           {
             description: txn.description.substring(0, 50),
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage,
           },
           "[CommitImport] Transaction write failed"
         );
         transactionsFailed++;
+        failedDetails.push({
+          checksum: txn.checksum ?? null,
+          error: errorMessage,
+        });
       }
     }
 
@@ -1305,6 +1312,7 @@ export function commitImport(payload: CommitPayload): CommitResult {
       rulesApplied,
       transactionsImported,
       transactionsFailed,
+      failedDetails,
       retroactiveReclassifications,
     };
   });
