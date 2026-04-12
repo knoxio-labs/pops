@@ -301,12 +301,19 @@ export const useImportStore = create<ImportStore>((set) => ({
   reset: () => set(initialState),
 
   // Pending entity management (PRD-030 US-01)
-  addPendingEntity: (input, dbEntities = []) => {
+  addPendingEntity: (
+    input: AddPendingEntityInput,
+    dbEntities: Array<{ name: string }> = []
+  ): PendingEntity => {
     const nameLower = input.name.toLowerCase();
 
     // Check uniqueness against pending list
     const state = useImportStore.getState();
-    if (state.pendingEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+    if (
+      state.pendingEntities.some(
+        (e: PendingEntity) => e.name.toLowerCase() === nameLower
+      )
+    ) {
       throw new Error(
         `Entity with name "${input.name}" already exists in pending list`
       );
@@ -328,14 +335,17 @@ export const useImportStore = create<ImportStore>((set) => ({
     set((prev) => ({ pendingEntities: [...prev.pendingEntities, entity] }));
     return entity;
   },
-  listPendingEntities: () => useImportStore.getState().pendingEntities,
-  removePendingEntity: (tempId) =>
+  listPendingEntities: (): PendingEntity[] =>
+    useImportStore.getState().pendingEntities,
+  removePendingEntity: (tempId: string) =>
     set((state) => ({
-      pendingEntities: state.pendingEntities.filter((e) => e.tempId !== tempId),
+      pendingEntities: state.pendingEntities.filter(
+        (e: PendingEntity) => e.tempId !== tempId
+      ),
     })),
 
   // Pending changeset management (PRD-030 US-02)
-  addPendingChangeSet: (input) => {
+  addPendingChangeSet: (input: AddPendingChangeSetInput): PendingChangeSet => {
     const entry: PendingChangeSet = {
       tempId: `temp:changeset:${crypto.randomUUID()}`,
       changeSet: input.changeSet,
@@ -346,11 +356,12 @@ export const useImportStore = create<ImportStore>((set) => ({
     set((prev) => ({ pendingChangeSets: [...prev.pendingChangeSets, entry] }));
     return entry;
   },
-  listPendingChangeSets: () => useImportStore.getState().pendingChangeSets,
-  removePendingChangeSet: (tempId) =>
+  listPendingChangeSets: (): PendingChangeSet[] =>
+    useImportStore.getState().pendingChangeSets,
+  removePendingChangeSet: (tempId: string) =>
     set((state) => ({
       pendingChangeSets: state.pendingChangeSets.filter(
-        (c) => c.tempId !== tempId
+        (c: PendingChangeSet) => c.tempId !== tempId
       ),
     })),
 
