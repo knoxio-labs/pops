@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { CheckCircle, AlertTriangle, XCircle, AlertCircle, List, Layers } from "lucide-react";
 import { useImportStore } from "../../store/importStore";
 import type { ProcessedTransaction } from "../../store/importStore";
@@ -83,6 +83,7 @@ export function ReviewStep() {
   const { data: dbRulesData } = trpc.core.corrections.list.useQuery({});
   const pendingEntities = useImportStore((s) => s.pendingEntities);
   const addPendingEntity = useImportStore((s) => s.addPendingEntity);
+  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
 
   const entities = useMemo(
     () =>
@@ -91,6 +92,44 @@ export function ReviewStep() {
         : undefined,
     [dbEntitiesData?.data, pendingEntities]
   );
+
+  // Re-evaluate transactions when pending changeSets change (US-07 AC-8).
+  // Covers both addPendingChangeSet and removePendingChangeSet.
+  // On removal, rule-promoted transactions are demoted back to uncertain/failed,
+  // then all are re-evaluated against the updated merged rules.
+  const prevChangeSetsRef = useRef(pendingChangeSets);
+  const localTxRef = useRef(localTransactions);
+  localTxRef.current = localTransactions;
+  useEffect(() => {
+    if (prevChangeSetsRef.current === pendingChangeSets) return;
+    prevChangeSetsRef.current = pendingChangeSets;
+    if (!dbRulesData?.data) return;
+
+    const freshRules = computeMergedRules(
+      dbRulesData.data as Parameters<typeof computeMergedRules>[0],
+      pendingChangeSets
+    );
+    const current = localTxRef.current;
+    // Demote rule-promoted transactions back to uncertain for re-evaluation
+    const rulePromoted = current.matched.filter((t) => t.ruleProvenance);
+    const manuallyMatched = current.matched.filter((t) => !t.ruleProvenance);
+    const candidateUncertain = [...current.uncertain, ...rulePromoted];
+
+    const reeval = reevaluateTransactions(
+      candidateUncertain,
+      current.failed,
+      freshRules as Parameters<typeof reevaluateTransactions>[2]
+    );
+
+    const updated = {
+      ...current,
+      matched: [...manuallyMatched, ...reeval.matched],
+      uncertain: reeval.uncertain,
+      failed: reeval.failed,
+    };
+    setLocalTransactions(updated);
+    useImportStore.getState().setProcessedTransactions(updated);
+  }, [pendingChangeSets, dbRulesData?.data]);
 
   // Count unresolved transactions
   const unresolvedCount = useMemo(
@@ -600,32 +639,9 @@ export function ReviewStep() {
           ...localTransactions.skipped,
         ].map((t) => ({ checksum: t.checksum, description: t.description }))}
         onApproved={() => {
-          // Read fresh pending changeSets from the store (the Zustand update
-          // from addPendingChangeSet is synchronous, but useMemo hasn't
-          // re-derived mergedRules yet because React hasn't re-rendered).
-          const freshPending = useImportStore.getState().pendingChangeSets;
-          const freshRules = dbRulesData?.data
-            ? computeMergedRules(
-                dbRulesData.data as Parameters<typeof computeMergedRules>[0],
-                freshPending
-              )
-            : [];
-          const reeval = reevaluateTransactions(
-            localTransactions.uncertain,
-            localTransactions.failed,
-            freshRules as Parameters<typeof reevaluateTransactions>[2]
-          );
-          setLocalTransactions((prev) => ({
-            ...prev,
-            matched: [...prev.matched, ...reeval.matched],
-            uncertain: reeval.uncertain,
-            failed: reeval.failed,
-          }));
-          if (reeval.affectedCount > 0) {
-            toast.success(
-              `Rules saved — ${reeval.affectedCount} transaction${reeval.affectedCount === 1 ? "" : "s"} re-evaluated`
-            );
-          }
+          // Re-evaluation is handled by the pendingChangeSets useEffect (US-07 AC-8).
+          // The effect fires on next render when pendingChangeSets ref changes.
+          toast.success("Rules saved locally");
         }}
       />
       <div>

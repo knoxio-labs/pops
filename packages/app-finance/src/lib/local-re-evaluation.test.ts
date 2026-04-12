@@ -97,9 +97,7 @@ describe("reevaluateTransactions", () => {
       makeTxn({ description: "WOOLWORTHS 1234", status: "uncertain" }),
       makeTxn({ description: "UNKNOWN MERCHANT", status: "uncertain" }),
     ];
-    const failed = [
-      makeTxn({ description: "COLES 5678", status: "failed" }),
-    ];
+    const failed = [makeTxn({ description: "COLES 5678", status: "failed" })];
     const rules = [
       makeRule({ id: "r1", descriptionPattern: "WOOLWORTHS" }),
       makeRule({ id: "r2", descriptionPattern: "COLES", entityId: "e2", entityName: "Coles" }),
@@ -125,7 +123,9 @@ describe("reevaluateTransactions", () => {
 
   it("populates ruleProvenance on matched transactions", () => {
     const uncertain = [makeTxn({ description: "WOOLWORTHS 1234", status: "uncertain" })];
-    const rules = [makeRule({ id: "rule-42", descriptionPattern: "WOOLWORTHS", matchType: "exact" })];
+    const rules = [
+      makeRule({ id: "rule-42", descriptionPattern: "WOOLWORTHS", matchType: "exact" }),
+    ];
 
     const result = reevaluateTransactions(uncertain, [], rules);
 
@@ -139,7 +139,9 @@ describe("reevaluateTransactions", () => {
   });
 
   it("uses contains matching", () => {
-    const uncertain = [makeTxn({ description: "WOOLWORTHS SUPERMARKET CITY", status: "uncertain" })];
+    const uncertain = [
+      makeTxn({ description: "WOOLWORTHS SUPERMARKET CITY", status: "uncertain" }),
+    ];
     const rules = [makeRule({ descriptionPattern: "WOOLWORTHS", matchType: "contains" })];
 
     const result = reevaluateTransactions(uncertain, [], rules);
@@ -166,5 +168,83 @@ describe("reevaluateTransactions", () => {
 
     expect(result.matched).toHaveLength(0);
     expect(result.uncertain).toHaveLength(1);
+  });
+
+  it("uses regex matching", () => {
+    const uncertain = [makeTxn({ description: "WOOLWORTHS SUPERMARKET 42", status: "uncertain" })];
+    const rules = [makeRule({ descriptionPattern: "WOOLWORTHS.*", matchType: "regex" })];
+
+    const result = reevaluateTransactions(uncertain, [], rules);
+
+    expect(result.matched).toHaveLength(1);
+    expect(result.affectedCount).toBe(1);
+  });
+
+  it("prefers exact match over contains and regex", () => {
+    const uncertain = [makeTxn({ description: "WOOLWORTHS 1234", status: "uncertain" })];
+    const rules = [
+      makeRule({
+        id: "r-regex",
+        descriptionPattern: "WOOLWORTHS.*",
+        matchType: "regex",
+        confidence: 0.99,
+        entityName: "Regex Match",
+      }),
+      makeRule({
+        id: "r-contains",
+        descriptionPattern: "WOOLWORTHS",
+        matchType: "contains",
+        confidence: 0.99,
+        entityName: "Contains Match",
+      }),
+      makeRule({
+        id: "r-exact",
+        descriptionPattern: "WOOLWORTHS",
+        matchType: "exact",
+        confidence: 0.95,
+        entityName: "Exact Match",
+      }),
+    ];
+
+    const result = reevaluateTransactions(uncertain, [], rules);
+
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0]!.entity.entityName).toBe("Exact Match");
+  });
+
+  it("breaks ties by confidence desc then timesApplied desc", () => {
+    const uncertain = [makeTxn({ description: "COLES 42", status: "uncertain" })];
+    const rules = [
+      makeRule({
+        id: "r-low",
+        descriptionPattern: "COLES",
+        matchType: "contains",
+        confidence: 0.8,
+        timesApplied: 100,
+        entityName: "Low Confidence",
+      }),
+      makeRule({
+        id: "r-high",
+        descriptionPattern: "COLES",
+        matchType: "contains",
+        confidence: 0.95,
+        timesApplied: 1,
+        entityName: "High Confidence",
+      }),
+    ];
+
+    const result = reevaluateTransactions(uncertain, [], rules);
+
+    expect(result.matched[0]!.entity.entityName).toBe("High Confidence");
+  });
+
+  it("normalizes descriptions (strips digits, uppercases, collapses whitespace)", () => {
+    const uncertain = [makeTxn({ description: "woolworths  1234  market", status: "uncertain" })];
+    // Pattern is already normalized (uppercase, no digits)
+    const rules = [makeRule({ descriptionPattern: "WOOLWORTHS MARKET", matchType: "exact" })];
+
+    const result = reevaluateTransactions(uncertain, [], rules);
+
+    expect(result.matched).toHaveLength(1);
   });
 });

@@ -110,6 +110,7 @@ vi.mock("../../store/importStore", () => {
   hook.getState = () => ({
     pendingChangeSets: mockPendingChangeSets,
     pendingEntities: mockPendingEntities,
+    setProcessedTransactions: vi.fn(),
   });
 
   return { useImportStore: hook };
@@ -511,9 +512,22 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
       affectedCount: 1,
     });
 
-    render(<ReviewStep />);
+    const { rerender } = render(<ReviewStep />);
 
     fireEvent.click(screen.getByTestId("proposal-approve"));
+
+    // Simulate what the real CorrectionProposalDialog does internally:
+    // addPendingChangeSet updates the store, causing pendingChangeSets ref to change.
+    // The mock dialog only calls onApproved, so we mutate directly before rerender.
+    mockPendingChangeSets = [
+      {
+        tempId: "temp:changeset:1",
+        changeSet: { ops: [] },
+        appliedAt: new Date().toISOString(),
+        source: "correction-proposal",
+      },
+    ];
+    rerender(<ReviewStep />);
 
     await vi.waitFor(() => {
       expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
@@ -521,9 +535,7 @@ describe("ReviewStep — Save & Learn proposal flow", () => {
     });
 
     expect(mockReevaluateTransactions).toHaveBeenCalled();
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringContaining("Rules saved — 1 transaction re-evaluated")
-    );
+    expect(mockToastSuccess).toHaveBeenCalledWith("Rules saved locally");
   });
 
   it("approval failure shows error toast and local state remains unchanged", async () => {
