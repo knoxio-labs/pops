@@ -12,7 +12,7 @@
  */
 import { createHash } from 'node:crypto';
 import { open, stat, unlink } from 'node:fs/promises';
-import { extname, join, resolve } from 'node:path';
+import { basename, extname, join, resolve } from 'node:path';
 
 import { type Router as ExpressRouter, Router } from 'express';
 
@@ -46,6 +46,19 @@ const TMDB_CDN_SIZES: Record<string, string> = {
 function getImagesDir(): string {
   const dir = process.env.MEDIA_IMAGES_DIR ?? './data/media/images';
   return resolve(dir); // Return absolute path
+}
+
+/**
+ * Join `filename` to `dir` safely. Uses `basename` to strip any directory
+ * components from `filename` (path traversal sanitizer), then verifies the
+ * result stays within `dir`. Returns the resolved absolute path, or null on
+ * failure.
+ */
+function safeJoin(dir: string, filename: string): string | null {
+  const safe = basename(filename); // strip any path separators — CodeQL sanitizer
+  if (!safe || safe === '.' || safe === '..') return null;
+  const resolved = resolve(dir, safe);
+  return resolved.startsWith(dir + '/') || resolved === dir ? resolved : null;
 }
 
 /**
@@ -144,13 +157,19 @@ router.get('/media/images/:mediaType/:id/:filename', async (req, res): Promise<v
 
   // Override resolution: if requesting poster.jpg, check for override.jpg first
   if (filename === 'poster.jpg') {
-    const overridePath = join(mediaDir, 'override.jpg');
-    const served = await tryServeFile(overridePath, res);
-    if (served) return;
+    const overridePath = safeJoin(resolvedDir, 'override.jpg');
+    if (overridePath) {
+      const served = await tryServeFile(overridePath, res);
+      if (served) return;
+    }
   }
 
   // Remove corrupted SVG placeholders so they don't block downloads or get served
-  const filePath = join(mediaDir, filename);
+  const filePath = safeJoin(resolvedDir, filename);
+  if (!filePath) {
+    res.status(400).json({ error: 'Invalid path' });
+    return;
+  }
   const wasCorrupted = await removeCorruptedPlaceholder(filePath);
   if (!wasCorrupted) {
     const served = await tryServeFile(filePath, res);

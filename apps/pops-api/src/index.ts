@@ -10,6 +10,10 @@ import { closeDb } from './db.js';
 import { startupCleanup } from './modules/core/envs/registry.js';
 import { startTtlWatcher } from './modules/core/envs/ttl-watcher.js';
 import { resumeSchedulerIfEnabled, stopScheduler } from './modules/media/plex/scheduler.js';
+import {
+  resumeRotationSchedulerIfEnabled,
+  stopRotationScheduler,
+} from './modules/media/rotation/scheduler.js';
 
 const port = Number(process.env['PORT'] ?? 3000);
 const app = createApp();
@@ -31,12 +35,19 @@ if (resumedScheduler) {
   console.warn(`[pops-api] Plex scheduler resumed (interval: ${resumedScheduler.intervalMs}ms)`);
 }
 
+// Auto-resume rotation scheduler if it was previously running
+const resumedRotation = resumeRotationSchedulerIfEnabled();
+if (resumedRotation) {
+  console.log(`[pops-api] Rotation scheduler resumed (cron: ${resumedRotation.cronExpression})`);
+}
+
 // Periodically purge expired named environments
 const ttlWatcher = startTtlWatcher();
 
 function shutdown(): void {
   console.warn('[pops-api] Shutting down...');
   stopScheduler();
+  stopRotationScheduler();
   clearInterval(ttlWatcher);
   server.close(() => {
     closeDb();
