@@ -372,6 +372,9 @@ interface AiMessage {
 export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const minConfidence = props.minConfidence ?? 0.7;
 
+  // ---- pending store (PRD-030 US-08: merged-rule preview) -----------------
+  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
+
   // ---- local state --------------------------------------------------------
   const [localOps, setLocalOps] = useState<LocalOp[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -527,7 +530,15 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     }
 
     let cancelled = false;
-    previewMutateAsync({ changeSet, transactions: txns, minConfidence })
+    previewMutateAsync({
+      changeSet,
+      transactions: txns,
+      minConfidence,
+      pendingChangeSets:
+        pendingChangeSets.length > 0
+          ? pendingChangeSets.map((pcs) => ({ changeSet: pcs.changeSet }))
+          : undefined,
+    })
       .then((res) => {
         if (cancelled) return;
         setCombinedPreview(res);
@@ -550,6 +561,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     props.previewTransactions,
     minConfidence,
     previewMutateAsync,
+    pendingChangeSets,
     EMPTY_PREVIEW_SUMMARY,
   ]);
 
@@ -589,7 +601,15 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
     let cancelled = false;
     const previewKey = op.clientId;
-    previewMutateAsync({ changeSet, transactions: txns, minConfidence })
+    previewMutateAsync({
+      changeSet,
+      transactions: txns,
+      minConfidence,
+      pendingChangeSets:
+        pendingChangeSets.length > 0
+          ? pendingChangeSets.map((pcs) => ({ changeSet: pcs.changeSet }))
+          : undefined,
+    })
       .then((res) => {
         if (cancelled) return;
         if (selectedOpPreviewKey.current !== previewKey) return;
@@ -613,6 +633,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     props.previewTransactions,
     minConfidence,
     previewMutateAsync,
+    pendingChangeSets,
     EMPTY_PREVIEW_SUMMARY,
   ]);
 

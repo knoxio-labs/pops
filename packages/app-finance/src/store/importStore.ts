@@ -104,7 +104,7 @@ interface ImportStore {
   };
   confirmedTransactions: ConfirmedTransaction[];
 
-  // Step 6: Summary
+  // Step 7: Summary
   importResult: {
     imported: number;
     failed: ImportResult[];

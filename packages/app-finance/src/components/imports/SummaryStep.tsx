@@ -4,7 +4,7 @@ import { Button } from "@pops/ui";
 import { useNavigate } from "react-router";
 
 /**
- * Step 5: Import summary and results
+ * Step 7: Import summary and results
  */
 export function SummaryStep() {
   const { importResult, processedTransactions, reset } = useImportStore();

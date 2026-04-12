@@ -51,6 +51,7 @@ interface Entity {
   defaultTags: string[];
   notes: string | null;
   lastEditedTime: string;
+  transactionCount?: number;
 }
 
 const ENTITY_TYPES = ["company", "person", "place", "brand", "organisation"] as const;
@@ -88,10 +89,12 @@ export function EntitiesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showOrphanedOnly, setShowOrphanedOnly] = useState(false);
 
   const utils = trpc.useUtils();
   const { data, isLoading, error, refetch } = trpc.core.entities.list.useQuery({
     limit: 100,
+    orphanedOnly: showOrphanedOnly || undefined,
   });
 
   const createMutation = trpc.core.entities.create.useMutation({
@@ -169,7 +172,19 @@ export function EntitiesPage() {
     {
       accessorKey: "name",
       header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
-      cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{row.original.name}</span>
+          {row.original.transactionCount === 0 && (
+            <Badge
+              variant="outline"
+              className="text-xs text-muted-foreground border-muted-foreground/30"
+            >
+              Orphaned
+            </Badge>
+          )}
+        </div>
+      ),
     },
     {
       accessorKey: "type",
@@ -326,7 +341,11 @@ export function EntitiesPage() {
       <PageHeader
         title="Entities"
         description={
-          data ? `${data.pagination.total} total entities` : "Manage merchants and payees"
+          data
+            ? showOrphanedOnly
+              ? `${data.pagination.total} orphaned entities`
+              : `${data.pagination.total} total entities`
+            : "Manage merchants and payees"
         }
         actions={
           <Button onClick={handleAdd}>
@@ -341,17 +360,28 @@ export function EntitiesPage() {
           <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={data?.data ?? []}
-          searchable
-          searchColumn="name"
-          searchPlaceholder="Search entities..."
-          paginated
-          defaultPageSize={50}
-          pageSizeOptions={[25, 50, 100]}
-          filters={tableFilters}
-        />
+        <>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showOrphanedOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowOrphanedOnly((prev) => !prev)}
+            >
+              {showOrphanedOnly ? "Showing orphaned only" : "Show orphaned only"}
+            </Button>
+          </div>
+          <DataTable
+            columns={columns}
+            data={data?.data ?? []}
+            searchable
+            searchColumn="name"
+            searchPlaceholder="Search entities..."
+            paginated
+            defaultPageSize={50}
+            pageSizeOptions={[25, 50, 100]}
+            filters={tableFilters}
+          />
+        </>
       )}
 
       {/* Add/Edit Dialog */}
