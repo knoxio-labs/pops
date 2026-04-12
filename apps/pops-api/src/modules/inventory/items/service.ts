@@ -2,13 +2,14 @@
  * Inventory service — CRUD operations using Drizzle ORM.
  * SQLite is the source of truth. All operations are local.
  */
-import crypto from 'crypto';
-import { eq, like, count, and, sum, inArray, sql, isNotNull } from 'drizzle-orm';
-import { getDrizzle } from '../../../db.js';
 import { homeInventory } from '@pops/db-types';
+import crypto from 'crypto';
+import { and, count, eq, inArray, isNotNull, like, sql, sum } from 'drizzle-orm';
+
+import { getDrizzle } from '../../../db.js';
 import { NotFoundError } from '../../../shared/errors.js';
 import { getDescendantLocationIds } from '../locations/service.js';
-import type { InventoryRow, CreateInventoryItemInput, UpdateInventoryItemInput } from './types.js';
+import type { CreateInventoryItemInput, InventoryRow, UpdateInventoryItemInput } from './types.js';
 
 /** Count + rows + value aggregates for a paginated list. */
 export interface InventoryListResult {
@@ -19,6 +20,7 @@ export interface InventoryListResult {
 }
 
 /** List inventory items with optional filters. */
+// eslint-disable-next-line max-params -- legacy filter API
 export function listInventoryItems(
   search: string | undefined,
   room: string | undefined,

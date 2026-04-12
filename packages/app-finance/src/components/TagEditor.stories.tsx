@@ -4,6 +4,7 @@
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
+
 import { TagEditor } from './TagEditor';
 
 const meta: Meta<typeof TagEditor> = {
@@ -71,6 +72,7 @@ export const WithSuggest: Story = {
 // Controlled — tracks state changes in the story
 export const Controlled: Story = {
   render: (args) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Storybook render function
     const [saved, setSaved] = useState<string[]>(['Groceries']);
 
     return (

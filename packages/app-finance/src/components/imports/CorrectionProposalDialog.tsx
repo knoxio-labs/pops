@@ -1,70 +1,71 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
 import {
+  Badge,
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Button,
-  Badge,
   Input,
 } from '@pops/ui';
+import { Plus, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+
+import { computeMergedRules } from '../../lib/merged-state';
 import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
-import type { CorrectionRule } from './RulePicker';
-import { computeMergedRules } from '../../lib/merged-state';
+import {
+  type AddRuleData,
+  type CorrectionSignal,
+  type EditRuleData,
+  type LocalOp,
+  matchTypeLabel,
+  normalizeForMatch,
+  type OpKind,
+  opKindBadgeVariant,
+  opKindLabel,
+  opSummary,
+  PREVIEW_CHANGESET_MAX_TRANSACTIONS,
+  type PreviewChangeSetOutput,
+  scopePreviewTransactions,
+  type ServerChangeSet,
+  type ServerChangeSetOp,
+  transactionMatchesSignal,
+  type TriggeringTransactionContext,
+} from './correction-proposal-shared';
 import {
   AiHelperPanel,
+  type AiMessage,
   BrowseRuleDetailPanel,
   ContextPanel,
   DetailPanel,
   ImpactPanel,
   OpsListPanel,
-  RejectPanel,
-  type AiMessage,
   type PreviewView,
+  RejectPanel,
 } from './CorrectionProposalDialogPanels';
-import {
-  type CorrectionSignal,
-  type PreviewChangeSetOutput,
-  type AddRuleData,
-  type EditRuleData,
-  type LocalOp,
-  type OpKind,
-  type TriggeringTransactionContext,
-  type ServerChangeSet,
-  type ServerChangeSetOp,
-  normalizeForMatch,
-  transactionMatchesSignal,
-  scopePreviewTransactions,
-  opKindLabel,
-  opKindBadgeVariant,
-  opSummary,
-  matchTypeLabel,
-  PREVIEW_CHANGESET_MAX_TRANSACTIONS,
-} from './correction-proposal-shared';
+import type { CorrectionRule } from './RulePicker';
 
 // Re-export shared symbols so existing consumers don't break
 export {
-  normalizeForMatch,
-  transactionMatchesSignal,
-  scopePreviewTransactions,
-  opKindLabel,
-  opKindBadgeVariant,
-  opSummary,
   matchTypeLabel,
+  normalizeForMatch,
+  opKindBadgeVariant,
+  opKindLabel,
+  opSummary,
   PREVIEW_CHANGESET_MAX_TRANSACTIONS,
+  scopePreviewTransactions,
+  transactionMatchesSignal,
 };
 export type {
-  CorrectionSignal,
-  PreviewChangeSetOutput,
   AddRuleData,
+  CorrectionSignal,
   EditRuleData,
   LocalOp,
   OpKind,
+  PreviewChangeSetOutput,
   TriggeringTransactionContext,
 };
 
@@ -1052,6 +1053,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
         ? `Effect of selected operation`
         : 'No operation selected';
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- called after early return for browse mode, always reached in proposal mode
   const excludeIds = useMemo(() => {
     const set = new Set<string>();
     for (const op of localOps) {

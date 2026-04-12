@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+
 import { LocationPicker, type LocationTreeNode } from './LocationPicker';
 
 const mockLocations: LocationTreeNode[] = [
@@ -87,6 +88,7 @@ export const WithSelection: Story = {
 
 export const Interactive: Story = {
   render: () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Storybook render function
     const [value, setValue] = useState<string | null>('6');
     return (
       <LocationPicker

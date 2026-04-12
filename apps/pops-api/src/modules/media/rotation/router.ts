@@ -4,7 +4,8 @@
  * PRD-070
  */
 import { z } from 'zod';
-import { router, protectedProcedure } from '../../../trpc.js';
+
+import { protectedProcedure, router } from '../../../trpc.js';
 import { cancelLeaving } from './leaving-lifecycle.js';
 
 export const rotationRouter = router({
