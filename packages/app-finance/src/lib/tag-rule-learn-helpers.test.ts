@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { computeLearnableTags, descriptionPatternFromGroup } from './tag-rule-learn-helpers';
 
-function txn(overrides: Partial<ConfirmedTransaction> & { checksum: string }): ConfirmedTransaction {
+function txn(
+  overrides: Partial<ConfirmedTransaction> & { checksum: string }
+): ConfirmedTransaction {
   return {
     date: '2026-01-01',
     description: 'X',

@@ -44,14 +44,13 @@ function firstAddOpFingerprint(cs: TagRuleChangeSet): string | null {
     return `non-add|${cs.ops.length}|${cs.ops.map((o) => o.op).join(',')}`;
   }
   const d = first.data;
-  const tags = [...(d.tags ?? [])].map((t) => t.trim()).filter(Boolean).sort();
-  return [
-    cs.ops.length,
-    d.descriptionPattern,
-    d.matchType,
-    d.entityId ?? '',
-    tags.join('\0'),
-  ].join('|');
+  const tags = [...(d.tags ?? [])]
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .sort();
+  return [cs.ops.length, d.descriptionPattern, d.matchType, d.entityId ?? '', tags.join('\0')].join(
+    '|'
+  );
 }
 
 function patchFirstAddOp(
