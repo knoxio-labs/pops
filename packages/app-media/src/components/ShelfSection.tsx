@@ -5,11 +5,10 @@
  * Once visible, renders a HorizontalScrollRow with DiscoverCard items. Supports
  * "Show more" pagination via the getShelfPage tRPC endpoint.
  */
+import { Button, Skeleton } from '@pops/ui';
+import { Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-
-import { Button, Skeleton } from '@pops/ui';
 
 import type { DiscoverActionResult } from '../hooks/useDiscoverCardActions';
 import { trpc } from '../lib/trpc';

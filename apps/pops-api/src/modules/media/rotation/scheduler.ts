@@ -6,13 +6,18 @@
  *
  * PRD-070 US-06
  */
-import { eq } from 'drizzle-orm';
+import { rotationLog, settings } from '@pops/db-types';
 import { CronExpressionParser } from 'cron-parser';
+import { eq } from 'drizzle-orm';
 import cron, { type ScheduledTask } from 'node-cron';
 
-import { rotationLog, settings } from '@pops/db-types';
-
 import { getDrizzle } from '../../../db.js';
+import {
+  addMoviesFromQueue,
+  getAdditionBudget,
+  getAvgMovieGb,
+  getDailyAdditions,
+} from './addition-gating.js';
 import {
   calculateRemovalDeficit,
   getDownloadingTmdbIds,
@@ -24,12 +29,6 @@ import {
   processExpiredMovies,
   selectMoviesForRemoval,
 } from './removal-selection.js';
-import {
-  getAdditionBudget,
-  addMoviesFromQueue,
-  getDailyAdditions,
-  getAvgMovieGb,
-} from './addition-gating.js';
 
 // ---------------------------------------------------------------------------
 // Settings keys

@@ -6,14 +6,13 @@
  *
  * PRD-070 US-05
  */
-import { eq } from 'drizzle-orm';
-
 import { rotationCandidates, settings } from '@pops/db-types';
+import { eq } from 'drizzle-orm';
 
 import { getDrizzle } from '../../../db.js';
 import { getRadarrClient } from '../arr/service.js';
 import { addMovie as addMovieToLibrary } from '../library/service.js';
-import { getTmdbClient, getImageCache } from '../tmdb/index.js';
+import { getImageCache, getTmdbClient } from '../tmdb/index.js';
 import { aggregateCandidates } from './selection-policy.js';
 
 // ---------------------------------------------------------------------------

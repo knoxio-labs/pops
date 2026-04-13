@@ -5,8 +5,8 @@
  * to scraping IMDB (which has no public API). Uses TMDB's discover
  * endpoint sorted by vote average with a minimum vote count threshold.
  */
-import { getTmdbClient } from '../tmdb/index.js';
 import { logger } from '../../../lib/logger.js';
+import { getTmdbClient } from '../tmdb/index.js';
 import type { CandidateMovie, RotationSourceAdapter } from './source-types.js';
 
 const DEFAULT_PAGES = 5;

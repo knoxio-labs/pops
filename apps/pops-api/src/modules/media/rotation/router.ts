@@ -3,9 +3,9 @@
  *
  * PRD-070 + PRD-071
  */
+import { movies, rotationLog, settings } from '@pops/db-types';
+import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { eq, asc, desc } from 'drizzle-orm';
-import { movies, settings, rotationLog } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
 import { protectedProcedure, router } from '../../../trpc.js';
