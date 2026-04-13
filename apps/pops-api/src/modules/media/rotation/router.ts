@@ -409,36 +409,52 @@ export const rotationRouter = router({
     .mutation(({ input }) => {
       const db = getDrizzle();
 
-      // Ensure a manual source exists (upsert)
-      let manualSource = db
-        .select()
-        .from(rotationSources)
-        .where(eq(rotationSources.type, 'manual'))
-        .get();
-
-      if (!manualSource) {
-        manualSource = db
-          .insert(rotationSources)
-          .values({ type: 'manual', name: 'Manual Queue', priority: 5, enabled: 1 })
-          .returning()
+      return db.transaction((tx) => {
+        // Reject if movie is excluded
+        const excluded = tx
+          .select({ id: rotationExclusions.id })
+          .from(rotationExclusions)
+          .where(eq(rotationExclusions.tmdbId, input.tmdbId))
           .get();
-      }
 
-      // Insert candidate (ignore if already exists)
-      db.insert(rotationCandidates)
-        .values({
-          sourceId: manualSource.id,
-          tmdbId: input.tmdbId,
-          title: input.title,
-          year: input.year ?? null,
-          rating: input.rating ?? null,
-          posterPath: input.posterPath ?? null,
-          status: 'pending',
-        })
-        .onConflictDoNothing()
-        .run();
+        if (excluded) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Movie is excluded from rotation',
+          });
+        }
 
-      return { success: true };
+        // Ensure a manual source exists (upsert inside transaction)
+        let manualSource = tx
+          .select()
+          .from(rotationSources)
+          .where(eq(rotationSources.type, 'manual'))
+          .get();
+
+        if (!manualSource) {
+          manualSource = tx
+            .insert(rotationSources)
+            .values({ type: 'manual', name: 'Manual Queue', priority: 5, enabled: 1 })
+            .returning()
+            .get();
+        }
+
+        // Insert candidate (ignore if already exists)
+        tx.insert(rotationCandidates)
+          .values({
+            sourceId: manualSource.id,
+            tmdbId: input.tmdbId,
+            title: input.title,
+            year: input.year ?? null,
+            rating: input.rating ?? null,
+            posterPath: input.posterPath ?? null,
+            status: 'pending',
+          })
+          .onConflictDoNothing()
+          .run();
+
+        return { success: true };
+      });
     }),
 
   /** Check candidate/exclusion status for a movie. PRD-072 US-05. */
@@ -467,14 +483,16 @@ export const rotationRouter = router({
       };
     }),
 
-  /** Remove a movie from the rotation queue. PRD-072 US-05. */
+  /** Remove a pending movie from the rotation queue. PRD-072 US-05. */
   removeFromQueue: protectedProcedure
     .input(z.object({ tmdbId: z.number().int().positive() }))
     .mutation(({ input }) => {
       const db = getDrizzle();
       const result = db
         .delete(rotationCandidates)
-        .where(eq(rotationCandidates.tmdbId, input.tmdbId))
+        .where(
+          sql`${rotationCandidates.tmdbId} = ${input.tmdbId} AND ${rotationCandidates.status} = 'pending'`
+        )
         .run();
       return { success: result.changes > 0 };
     }),

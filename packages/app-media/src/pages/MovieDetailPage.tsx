@@ -243,6 +243,8 @@ export function MovieDetailPage() {
                 tmdbId={movie.tmdbId}
                 title={movie.title}
                 year={year ?? new Date().getFullYear()}
+                rating={movie.voteAverage ?? undefined}
+                posterPath={movie.posterPath ?? undefined}
               />
               <FreshnessBadge daysSinceWatch={daysSinceWatch} staleness={staleness} />
               {pendingDebrief && (

@@ -174,7 +174,7 @@ function RotationButtons({
       <Button
         variant="outline"
         size="sm"
-        className="text-emerald-500 border-emerald-500/50 hover:text-red-400 hover:border-red-400/50"
+        className="group text-emerald-500 border-emerald-500/50 hover:text-red-400 hover:border-red-400/50"
         onClick={() => removeFromQueueMutation.mutate({ tmdbId })}
         disabled={removeFromQueueMutation.isPending}
       >
