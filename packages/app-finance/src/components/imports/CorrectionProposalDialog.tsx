@@ -17,27 +17,13 @@ import { computeMergedRules } from '../../lib/merged-state';
 import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
 import {
-  type AddRuleData,
   type CorrectionSignal,
-  type EditRuleData,
   type LocalOp,
-  matchTypeLabel,
-  normalizeForMatch,
-  type OpKind,
-  opKindBadgeVariant,
-  opKindLabel,
-  opSummary,
-  PREVIEW_CHANGESET_MAX_TRANSACTIONS,
-  type PreviewChangeSetOutput,
-  scopePreviewTransactions,
   type ServerChangeSet,
-  type ServerChangeSetOp,
-  transactionMatchesSignal,
   type TriggeringTransactionContext,
 } from './correction-proposal-shared';
 import {
   AiHelperPanel,
-  type AiMessage,
   BrowseRuleDetailPanel,
   ContextPanel,
   DetailPanel,
@@ -46,9 +32,21 @@ import {
   type PreviewView,
   RejectPanel,
 } from './CorrectionProposalDialogPanels';
+import { useApplyRejectMutations } from './hooks/useApplyRejectMutations';
+import { localOpsToChangeSet, newClientId, useLocalOps } from './hooks/useLocalOps';
+import { usePreviewEffects } from './hooks/usePreviewEffects';
 import type { CorrectionRule } from './RulePicker';
 
 // Re-export shared symbols so existing consumers don't break
+export type {
+  AddRuleData,
+  CorrectionSignal,
+  EditRuleData,
+  LocalOp,
+  OpKind,
+  PreviewChangeSetOutput,
+  TriggeringTransactionContext,
+} from './correction-proposal-shared';
 export {
   matchTypeLabel,
   normalizeForMatch,
@@ -58,112 +56,10 @@ export {
   PREVIEW_CHANGESET_MAX_TRANSACTIONS,
   scopePreviewTransactions,
   transactionMatchesSignal,
-};
-export type {
-  AddRuleData,
-  CorrectionSignal,
-  EditRuleData,
-  LocalOp,
-  OpKind,
-  PreviewChangeSetOutput,
-  TriggeringTransactionContext,
-};
+} from './correction-proposal-shared';
 
-let clientIdCounter = 0;
-function newClientId(prefix: OpKind): string {
-  clientIdCounter += 1;
-  return `${prefix}-${clientIdCounter}-${Date.now().toString(36)}`;
-}
-
-/**
- * Convert a server ChangeSet op into its client-side counterpart. For
- * `edit`/`disable`/`remove` ops we hydrate `targetRule` from the
- * `targetRules` map returned alongside the proposal (or revise) response
- * so the preview-scoping filter in the dialog can correctly match
- * existing-rule patterns against the current import's transactions.
- *
- * If the lookup misses (shouldn't happen for server-issued ops, but can
- * for forward-compatibility), we leave `targetRule` as `null` and the
- * preview-scoping effect downstream falls back to using the full
- * `previewTransactions` list for that op.
- */
-export function serverOpToLocalOp(
-  op: ServerChangeSetOp,
-  targetRules: Record<string, CorrectionRule>
-): LocalOp {
-  if (op.op === 'add') {
-    return { kind: 'add', clientId: newClientId('add'), data: op.data, dirty: false };
-  }
-  const hydrated = targetRules[op.id] ?? null;
-  if (op.op === 'edit') {
-    return {
-      kind: 'edit',
-      clientId: newClientId('edit'),
-      targetRuleId: op.id,
-      targetRule: hydrated,
-      data: op.data,
-      dirty: false,
-    };
-  }
-  if (op.op === 'disable') {
-    return {
-      kind: 'disable',
-      clientId: newClientId('disable'),
-      targetRuleId: op.id,
-      targetRule: hydrated,
-      rationale: '',
-      dirty: false,
-    };
-  }
-  return {
-    kind: 'remove',
-    clientId: newClientId('remove'),
-    targetRuleId: op.id,
-    targetRule: hydrated,
-    rationale: '',
-    dirty: false,
-  };
-}
-
-function localOpToServerOp(op: LocalOp): ServerChangeSetOp {
-  if (op.kind === 'add') return { op: 'add', data: op.data };
-  if (op.kind === 'edit') return { op: 'edit', id: op.targetRuleId, data: op.data };
-  if (op.kind === 'disable') return { op: 'disable', id: op.targetRuleId };
-  return { op: 'remove', id: op.targetRuleId };
-}
-
-function localOpsToChangeSet(
-  ops: LocalOp[],
-  extras?: { source?: string; reason?: string }
-): ServerChangeSet | null {
-  if (ops.length === 0) return null;
-  return {
-    source: extras?.source ?? 'correction-proposal-dialog',
-    reason: extras?.reason,
-    ops: ops.map(localOpToServerOp),
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Default op factory
-// ---------------------------------------------------------------------------
-
-function newAddOpFromSignal(signal: CorrectionSignal): LocalOp {
-  return {
-    kind: 'add',
-    clientId: newClientId('add'),
-    data: {
-      descriptionPattern: signal.descriptionPattern,
-      matchType: signal.matchType,
-      entityId: signal.entityId ?? undefined,
-      entityName: signal.entityName ?? undefined,
-      location: signal.location ?? undefined,
-      tags: signal.tags ?? [],
-      transactionType: signal.transactionType ?? undefined,
-    },
-    dirty: true,
-  };
-}
+// Re-export hook helpers for tests
+export { serverOpToLocalOp } from './hooks/useLocalOps';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -174,19 +70,11 @@ export interface CorrectionProposalDialogProps {
   onOpenChange: (open: boolean) => void;
   sessionId: string;
   signal: CorrectionSignal | null;
-  /** The transaction the user just corrected (raw description, amount, etc.) */
   triggeringTransaction: TriggeringTransactionContext | null;
-  /** Import-session descriptions used for deterministic previewChangeSet.
-   *  The dialog scopes previews to only those matching any rule in the
-   *  current ChangeSet before sending. */
   previewTransactions: Array<{ checksum?: string; description: string }>;
   minConfidence?: number;
   onApproved?: (changeSet: ServerChangeSet) => void;
-  /** Dialog mode: 'proposal' (default) shows the AI proposal flow;
-   *  'browse' shows all rules for manual CRUD management. */
   mode?: 'proposal' | 'browse';
-  /** Called when browse mode closes with pending changes committed.
-   *  The parent can trigger re-evaluation. */
   onBrowseClose?: (hadChanges: boolean) => void;
 }
 
@@ -198,41 +86,127 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const minConfidence = props.minConfidence ?? 0.7;
   const isBrowseMode = props.mode === 'browse';
 
-  // ---- local state --------------------------------------------------------
-  const [localOps, setLocalOps] = useState<LocalOp[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  // ---- initial propose query ---------------------------------------------
+
+  const disabledSignal: CorrectionSignal = useMemo(
+    () => ({ descriptionPattern: '_', matchType: 'exact', tags: [] }),
+    []
+  );
+
+  const proposeInput = useMemo(() => {
+    if (!props.signal) return null;
+    return { signal: props.signal, minConfidence, maxPreviewItems: 200 };
+  }, [props.signal, minConfidence]);
+
+  const proposeQuery = trpc.core.corrections.proposeChangeSet.useQuery(
+    proposeInput ?? { signal: disabledSignal, minConfidence, maxPreviewItems: 200 },
+    {
+      enabled: Boolean(!isBrowseMode && props.open && proposeInput),
+      staleTime: 0,
+      retry: false,
+    }
+  );
+
+  // ---- extracted hooks ---------------------------------------------------
+
+  const localOpsHook = useLocalOps({
+    open: props.open,
+    signal: props.signal,
+    isBrowseMode,
+    proposeData: proposeQuery.data,
+  });
+
+  const {
+    localOps,
+    setLocalOps,
+    selectedClientId,
+    setSelectedClientId,
+    selectedOp,
+    rationale,
+    setRationale,
+    updateOp,
+    handleDeleteOp,
+    handleAddNewRuleOp,
+    handleAddTargetedOp,
+    seededForSignalRef,
+  } = localOpsHook;
+
+  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
+
+  const previewHook = usePreviewEffects(
+    {
+      open: props.open,
+      localOps,
+      selectedOp,
+      minConfidence,
+      previewTransactions: props.previewTransactions,
+      pendingChangeSets,
+    },
+    setLocalOps
+  );
+
+  const {
+    combinedPreview,
+    combinedPreviewError,
+    combinedPreviewTruncated,
+    selectedOpPreview,
+    selectedOpPreviewError,
+    selectedOpPreviewTruncated,
+    previewMutationPending,
+    hasDirty,
+    handleRerunPreview,
+    resetPreviewState,
+    lastCombinedStructuralSigRef,
+    selectedOpPreviewKeyRef,
+  } = previewHook;
+
+  const handleCloseRef = useRef<() => void>(() => {});
+
+  const mutationsHook = useApplyRejectMutations({
+    signal: props.signal,
+    sessionId: props.sessionId,
+    localOps,
+    combinedPreview,
+    combinedPreviewError,
+    previewTransactions: props.previewTransactions,
+    isFetching: proposeQuery.isFetching,
+    previewMutationPending,
+    hasDirty,
+    onApproved: props.onApproved,
+    onClose: () => handleCloseRef.current(),
+    setLocalOps,
+    setSelectedClientId,
+    setRationale,
+    lastCombinedStructuralSigRef,
+    selectedOpPreviewKeyRef,
+  });
+
+  const {
+    rejectMode,
+    setRejectMode,
+    rejectFeedback,
+    setRejectFeedback,
+    aiInstruction,
+    setAiInstruction,
+    aiMessages,
+    aiBusy,
+    isBusy,
+    canApply,
+    handleApprove,
+    handleConfirmReject,
+    handleAiSubmit,
+    resetMutationState,
+  } = mutationsHook;
+
+  // ---- preview view state ------------------------------------------------
   const [previewView, setPreviewView] = useState<PreviewView>('selected');
-
-  const [combinedPreview, setCombinedPreview] = useState<PreviewChangeSetOutput | null>(null);
-  const [combinedPreviewError, setCombinedPreviewError] = useState<string | null>(null);
-  const [combinedPreviewTruncated, setCombinedPreviewTruncated] = useState(false);
-
-  const [selectedOpPreview, setSelectedOpPreview] = useState<PreviewChangeSetOutput | null>(null);
-  const [selectedOpPreviewError, setSelectedOpPreviewError] = useState<string | null>(null);
-  const [selectedOpPreviewTruncated, setSelectedOpPreviewTruncated] = useState(false);
-  const selectedOpPreviewKey = useRef<string | null>(null);
-
-  const [rejectMode, setRejectMode] = useState(false);
-  const [rejectFeedback, setRejectFeedback] = useState('');
-
-  const [aiInstruction, setAiInstruction] = useState('');
-  const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
-  const [aiBusy, setAiBusy] = useState(false);
-
-  const [rationale, setRationale] = useState<string | null>(null);
 
   // ---- browse mode state --------------------------------------------------
   const [browseSearch, setBrowseSearch] = useState('');
   const [browseSelectedRuleId, setBrowseSelectedRuleId] = useState<string | null>(null);
-  /** Snapshot of pendingChangeSets length when browse mode opened — used to
-   *  detect whether the user made changes during this session. */
   const browseInitialPendingCountRef = useRef<number>(0);
-
-  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
   const addPendingChangeSet = useImportStore((s) => s.addPendingChangeSet);
 
-  // Fetch all rules only in browse mode
-  // TODO: add pagination or "load more" if rule counts grow beyond 500
   const browseListQuery = trpc.core.corrections.list.useQuery(
     { limit: 500, offset: 0 },
     { enabled: isBrowseMode && props.open, staleTime: 30_000 }
@@ -240,11 +214,6 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const browseDbRules = browseListQuery.data?.data ?? [];
 
-  /** Merged rules: DB rules + pending ChangeSets applied in order.
-   *  CorrectionRule (tRPC output) and CorrectionRow are structurally
-   *  compatible for merge — the extra fields (isActive, priority) are
-   *  preserved through the fold. We cast to satisfy the function signature.
-   *  TODO: add a shared adapter or structural type test to catch silent drift. */
   const browseMergedRules: CorrectionRule[] = useMemo(() => {
     if (!isBrowseMode) return [];
     if (pendingChangeSets.length === 0) return browseDbRules;
@@ -269,554 +238,18 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     [browseMergedRules, browseSelectedRuleId]
   );
 
-  // Seed browseInitialPendingCount when dialog opens in browse mode
   useEffect(() => {
     if (isBrowseMode && props.open) {
       browseInitialPendingCountRef.current = useImportStore.getState().pendingChangeSets.length;
     }
   }, [isBrowseMode, props.open]);
 
-  const selectedOp = useMemo(
-    () => localOps.find((o) => o.clientId === selectedClientId) ?? null,
-    [localOps, selectedClientId]
-  );
-
-  const hasDirty = useMemo(() => localOps.some((o) => o.dirty), [localOps]);
-
-  // ---- initial propose query ---------------------------------------------
-
-  const disabledSignal: CorrectionSignal = useMemo(
-    () => ({ descriptionPattern: '_', matchType: 'exact', tags: [] }),
-    []
-  );
-
-  const proposeInput = useMemo(() => {
-    if (!props.signal) return null;
-    return { signal: props.signal, minConfidence, maxPreviewItems: 200 };
-  }, [props.signal, minConfidence]);
-
-  const proposeQuery = trpc.core.corrections.proposeChangeSet.useQuery(
-    proposeInput ?? { signal: disabledSignal, minConfidence, maxPreviewItems: 200 },
-    {
-      enabled: Boolean(!isBrowseMode && props.open && proposeInput),
-      staleTime: 0,
-      retry: false,
-    }
-  );
-
-  // Seed localOps from the initial proposal exactly once per open. We track
-  // a "seeded" ref so re-renders of the same query result don't wipe user
-  // edits.
-  const seededForSignalRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!props.open) {
-      seededForSignalRef.current = null;
-      return;
-    }
-    const data = proposeQuery.data;
-    if (!data) return;
-    const signalKey = JSON.stringify(props.signal);
-    if (seededForSignalRef.current === signalKey) return;
-    seededForSignalRef.current = signalKey;
-
-    const seeded = data.changeSet.ops.map((o) => serverOpToLocalOp(o, data.targetRules ?? {}));
-    // Mark all as clean because the combined preview we're about to run
-    // reflects exactly these ops.
-    const clean = seeded.map((o) => ({ ...o, dirty: false }));
-    setLocalOps(clean);
-    setSelectedClientId(clean[0]?.clientId ?? null);
-    setRationale(data.rationale ?? null);
-    setCombinedPreview(null);
-    setCombinedPreviewError(null);
-    setCombinedPreviewTruncated(false);
-    setSelectedOpPreview(null);
-    setSelectedOpPreviewError(null);
-    setSelectedOpPreviewTruncated(false);
-    selectedOpPreviewKey.current = null;
-  }, [props.open, props.signal, proposeQuery.data]);
-
-  // ---- preview mutation ---------------------------------------------------
-
-  const previewMutation = trpc.core.corrections.previewChangeSet.useMutation({
-    retry: false,
-  });
-  // Destructure the stable mutation function. react-query guarantees
-  // mutateAsync is reference-stable across renders, so depending on it in
-  // effects is safe; depending on the wrapping `previewMutation` object would
-  // re-trigger effects on every render and cause infinite loops.
-  const previewMutateAsync = previewMutation.mutateAsync;
-
-  const EMPTY_PREVIEW_SUMMARY = useMemo(
-    () => ({
-      total: 0,
-      newMatches: 0,
-      removedMatches: 0,
-      statusChanges: 0,
-      netMatchedDelta: 0,
-    }),
-    []
-  );
-
-  /**
-   * Force-rerun handle: bump this token to re-trigger the combined/selected
-   * preview effects without making a structural change to localOps. The
-   * Re-run preview button in the impact panel uses it.
-   */
-  const [rerunToken, setRerunToken] = useState(0);
-
-  // Auto-run combined preview on structural changes (op add/delete/wholesale
-  // replace) or when the user explicitly asks for a rerun. Intentionally does
-  // NOT run on every field edit — those mark the ChangeSet stale and require
-  // the user to click Re-run preview.
-  const lastCombinedStructuralSig = useRef<string | null>(null);
-  const lastCombinedRerunToken = useRef<number>(0);
-  const lastSelectedRerunToken = useRef<number>(0);
-  useEffect(() => {
-    if (!props.open) {
-      lastCombinedStructuralSig.current = null;
-      return;
-    }
-    if (localOps.length === 0) return;
-    const sig = localOps.map((o) => o.clientId).join('|');
-    // Skip if neither the structural sig nor the manual rerun token has
-    // changed since we last ran. This guards against re-runs caused by
-    // unrelated state updates while still letting Re-run preview force a
-    // refresh after the user has only edited fields.
-    if (
-      lastCombinedStructuralSig.current === sig &&
-      lastCombinedRerunToken.current === rerunToken
-    ) {
-      return;
-    }
-    lastCombinedStructuralSig.current = sig;
-    lastCombinedRerunToken.current = rerunToken;
-
-    const ops = localOps;
-    const changeSet = localOpsToChangeSet(ops);
-    if (!changeSet) return;
-
-    // Scope + cap via shared helper so we stay under the server's
-    // `.max(2000)` zod limit and reuse the hydrated-targetRule fallback.
-    const { txns, truncated } = scopePreviewTransactions(ops, props.previewTransactions);
-    setCombinedPreviewTruncated(truncated);
-
-    if (txns.length === 0) {
-      setCombinedPreview({ diffs: [], summary: EMPTY_PREVIEW_SUMMARY });
-      setCombinedPreviewError(null);
-      setLocalOps((prev) => prev.map((o) => (o.dirty ? { ...o, dirty: false } : o)));
-      return;
-    }
-
-    let cancelled = false;
-    previewMutateAsync({
-      changeSet,
-      transactions: txns,
-      minConfidence,
-      pendingChangeSets:
-        pendingChangeSets.length > 0
-          ? pendingChangeSets.map((pcs) => ({ changeSet: pcs.changeSet }))
-          : undefined,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        setCombinedPreview(res);
-        setCombinedPreviewError(null);
-        setLocalOps((prev) => prev.map((o) => (o.dirty ? { ...o, dirty: false } : o)));
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : 'Preview failed';
-        setCombinedPreviewError(message);
-        setCombinedPreview(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    props.open,
-    localOps,
-    rerunToken,
-    props.previewTransactions,
-    minConfidence,
-    previewMutateAsync,
-    pendingChangeSets,
-    EMPTY_PREVIEW_SUMMARY,
-  ]);
-
-  // Auto-run selected-op preview when the selected clientId changes to one we
-  // haven't previewed yet. We key the cache by clientId alone; field edits
-  // won't trigger a rerun (staleness is shown visually, and Re-run preview
-  // covers both panels).
-  useEffect(() => {
-    if (!props.open) return;
-    if (!selectedOp) {
-      setSelectedOpPreview(null);
-      setSelectedOpPreviewError(null);
-      selectedOpPreviewKey.current = null;
-      return;
-    }
-    if (
-      selectedOpPreviewKey.current === selectedOp.clientId &&
-      lastSelectedRerunToken.current === rerunToken
-    ) {
-      return;
-    }
-    selectedOpPreviewKey.current = selectedOp.clientId;
-    lastSelectedRerunToken.current = rerunToken;
-
-    const op = selectedOp;
-    const changeSet = localOpsToChangeSet([op]);
-    if (!changeSet) return;
-
-    const { txns, truncated } = scopePreviewTransactions([op], props.previewTransactions);
-    setSelectedOpPreviewTruncated(truncated);
-
-    if (txns.length === 0) {
-      setSelectedOpPreview({ diffs: [], summary: EMPTY_PREVIEW_SUMMARY });
-      setSelectedOpPreviewError(null);
-      return;
-    }
-
-    let cancelled = false;
-    const previewKey = op.clientId;
-    previewMutateAsync({
-      changeSet,
-      transactions: txns,
-      minConfidence,
-      pendingChangeSets:
-        pendingChangeSets.length > 0
-          ? pendingChangeSets.map((pcs) => ({ changeSet: pcs.changeSet }))
-          : undefined,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        if (selectedOpPreviewKey.current !== previewKey) return;
-        setSelectedOpPreview(res);
-        setSelectedOpPreviewError(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if (selectedOpPreviewKey.current !== previewKey) return;
-        const message = err instanceof Error ? err.message : 'Preview failed';
-        setSelectedOpPreviewError(message);
-        setSelectedOpPreview(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    props.open,
-    selectedOp,
-    rerunToken,
-    props.previewTransactions,
-    minConfidence,
-    previewMutateAsync,
-    pendingChangeSets,
-    EMPTY_PREVIEW_SUMMARY,
-  ]);
-
-  // ---- apply / reject mutations ------------------------------------------
-
-  const handleApplyLocal = useCallback(
-    (changeSet: ServerChangeSet) => {
-      try {
-        addPendingChangeSet({ changeSet, source: 'correction-proposal' });
-        toast.success('Rules applied locally');
-        props.onApproved?.(changeSet);
-        handleOpenChange(false);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to apply rules');
-      }
-    },
-    [addPendingChangeSet, props, handleOpenChange]
-  );
-
-  const rejectMutation = trpc.core.corrections.rejectChangeSet.useMutation({
-    onSuccess: () => {
-      toast.success('Proposal rejected — feedback recorded');
-      handleOpenChange(false);
-    },
-    onError: (err) => {
-      toast.error(err.message);
-    },
-  });
-
-  const reviseMutation = trpc.core.corrections.reviseChangeSet.useMutation({
-    retry: false,
-  });
-  const reviseMutateAsync = reviseMutation.mutateAsync;
-
-  const isBusy =
-    proposeQuery.isFetching || previewMutation.isPending || rejectMutation.isPending || aiBusy;
-
-  const canApply =
-    !isBusy &&
-    localOps.length > 0 &&
-    !hasDirty &&
-    Boolean(props.sessionId) &&
-    !combinedPreviewError;
-
   // ---- handlers -----------------------------------------------------------
-
-  const updateOp = useCallback((clientId: string, mutator: (op: LocalOp) => LocalOp) => {
-    setLocalOps((prev) =>
-      prev.map((o) => (o.clientId === clientId ? { ...mutator(o), dirty: true } : o))
-    );
-  }, []);
-
-  const handleDeleteOp = useCallback(
-    (clientId: string) => {
-      setLocalOps((prev) => prev.filter((o) => o.clientId !== clientId));
-      setSelectedClientId((prevSelected) => {
-        if (prevSelected !== clientId) return prevSelected;
-        const remaining = localOps.filter((o) => o.clientId !== clientId);
-        return remaining[0]?.clientId ?? null;
-      });
-    },
-    [localOps]
-  );
-
-  const handleAddNewRuleOp = useCallback(() => {
-    if (isBrowseMode) {
-      // In browse mode, create a blank add op
-      const newOp: LocalOp = {
-        kind: 'add',
-        clientId: newClientId('add'),
-        data: {
-          descriptionPattern: '',
-          matchType: 'contains',
-          tags: [],
-        },
-        dirty: true,
-      };
-      setLocalOps((prev) => [...prev, newOp]);
-      setSelectedClientId(newOp.clientId);
-      return;
-    }
-    if (!props.signal) return;
-    const newOp = newAddOpFromSignal(props.signal);
-    setLocalOps((prev) => [...prev, newOp]);
-    setSelectedClientId(newOp.clientId);
-  }, [props.signal, isBrowseMode]);
-
-  const handleAddTargetedOp = useCallback(
-    (kind: 'edit' | 'disable' | 'remove', rule: CorrectionRule) => {
-      let newOp: LocalOp;
-      if (kind === 'edit') {
-        newOp = {
-          kind: 'edit',
-          clientId: newClientId('edit'),
-          targetRuleId: rule.id,
-          targetRule: rule,
-          data: {
-            entityId: rule.entityId ?? undefined,
-            entityName: rule.entityName ?? undefined,
-            location: rule.location ?? undefined,
-            tags: rule.tags,
-            transactionType: rule.transactionType ?? undefined,
-            isActive: rule.isActive,
-            confidence: rule.confidence,
-          },
-          dirty: true,
-        };
-      } else if (kind === 'disable') {
-        newOp = {
-          kind: 'disable',
-          clientId: newClientId('disable'),
-          targetRuleId: rule.id,
-          targetRule: rule,
-          rationale: '',
-          dirty: true,
-        };
-      } else {
-        newOp = {
-          kind: 'remove',
-          clientId: newClientId('remove'),
-          targetRuleId: rule.id,
-          targetRule: rule,
-          rationale: '',
-          dirty: true,
-        };
-      }
-      setLocalOps((prev) => [...prev, newOp]);
-      setSelectedClientId(newOp.clientId);
-    },
-    []
-  );
-
-  const handleRerunPreview = useCallback(() => {
-    // Bumping rerunToken forces both auto-preview effects to re-execute even
-    // when their structural/selection signature hasn't changed (e.g. after a
-    // pure field edit). The effects compare the current token against a ref
-    // of the last token they processed.
-    setRerunToken((t) => t + 1);
-  }, []);
-
-  const handleApprove = useCallback(() => {
-    const changeSet = localOpsToChangeSet(localOps);
-    if (!changeSet) return;
-    handleApplyLocal(changeSet);
-  }, [localOps, handleApplyLocal]);
-
-  const handleConfirmReject = useCallback(() => {
-    if (!props.signal) return;
-    const changeSet = localOpsToChangeSet(localOps);
-    if (!changeSet) return;
-    const trimmed = rejectFeedback.trim();
-    if (!trimmed) return;
-    rejectMutation.mutate({
-      signal: props.signal,
-      changeSet,
-      feedback: trimmed,
-      impactSummary: combinedPreview?.summary ?? undefined,
-    });
-  }, [props.signal, localOps, rejectFeedback, combinedPreview, rejectMutation]);
-
-  /**
-   * AI helper submit. Sends the current ChangeSet, the triggering signal, and
-   * the user instruction to `core.corrections.reviseChangeSet`. The response is
-   * a fully revised ChangeSet which we splice back into local state — never
-   * applied automatically. The user must still click Apply.
-   */
-  const handleAiSubmit = useCallback(() => {
-    const instruction = aiInstruction.trim();
-    if (!instruction) return;
-    if (!props.signal) return;
-    const currentChangeSet = localOpsToChangeSet(localOps);
-    if (!currentChangeSet) {
-      toast.error(
-        'ChangeSet is empty — add at least one operation before asking the AI to revise.'
-      );
-      return;
-    }
-
-    const userMsgId = `u-${Date.now()}`;
-    setAiMessages((prev) => [...prev, { id: userMsgId, role: 'user', text: instruction }]);
-    setAiInstruction('');
-    setAiBusy(true);
-
-    reviseMutateAsync({
-      signal: props.signal,
-      currentChangeSet,
-      instruction,
-      triggeringTransactions: props.previewTransactions.slice(0, 100),
-    })
-      .then((res) => {
-        const revised = res.changeSet.ops.map((o) => serverOpToLocalOp(o, res.targetRules ?? {}));
-        setLocalOps(revised);
-        setSelectedClientId(revised[0]?.clientId ?? null);
-        setRationale(res.rationale ?? null);
-        // Force previews to re-run against the new ChangeSet structure.
-        lastCombinedStructuralSig.current = null;
-        selectedOpPreviewKey.current = null;
-        setAiMessages((prev) => [
-          ...prev,
-          {
-            id: `a-${Date.now()}`,
-            role: 'assistant',
-            text: res.rationale ?? 'ChangeSet revised.',
-          },
-        ]);
-      })
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : 'AI helper failed';
-        setAiMessages((prev) => [
-          ...prev,
-          {
-            id: `a-${Date.now()}`,
-            role: 'assistant',
-            text: `Error: ${message}`,
-          },
-        ]);
-        toast.error(message);
-      })
-      .finally(() => {
-        setAiBusy(false);
-      });
-  }, [aiInstruction, props.signal, props.previewTransactions, localOps, reviseMutateAsync]);
-
-  // ---- browse mode: load rule into editor ----------------------------------
-  const handleBrowseSelectRule = useCallback(
-    (ruleId: string) => {
-      setBrowseSelectedRuleId(ruleId);
-      // If there's already a pending localOp editing this rule, select it
-      const existingOp = localOps.find((o) => o.kind !== 'add' && o.targetRuleId === ruleId);
-      if (existingOp) {
-        setSelectedClientId(existingOp.clientId);
-      } else {
-        setSelectedClientId(null);
-      }
-    },
-    [localOps]
-  );
-
-  const handleBrowseEditRule = useCallback((rule: CorrectionRule) => {
-    const newOp: LocalOp = {
-      kind: 'edit',
-      clientId: newClientId('edit'),
-      targetRuleId: rule.id,
-      targetRule: rule,
-      data: {
-        entityId: rule.entityId ?? undefined,
-        entityName: rule.entityName ?? undefined,
-        location: rule.location ?? undefined,
-        tags: rule.tags,
-        transactionType: rule.transactionType ?? undefined,
-        isActive: rule.isActive,
-        confidence: rule.confidence,
-      },
-      dirty: true,
-    };
-    setLocalOps((prev) => [...prev, newOp]);
-    setSelectedClientId(newOp.clientId);
-  }, []);
-
-  const handleBrowseDisableRule = useCallback((rule: CorrectionRule) => {
-    const newOp: LocalOp = {
-      kind: 'disable',
-      clientId: newClientId('disable'),
-      targetRuleId: rule.id,
-      targetRule: rule,
-      rationale: '',
-      dirty: true,
-    };
-    setLocalOps((prev) => [...prev, newOp]);
-    setSelectedClientId(newOp.clientId);
-  }, []);
-
-  const handleBrowseRemoveRule = useCallback((rule: CorrectionRule) => {
-    const newOp: LocalOp = {
-      kind: 'remove',
-      clientId: newClientId('remove'),
-      targetRuleId: rule.id,
-      targetRule: rule,
-      rationale: '',
-      dirty: true,
-    };
-    setLocalOps((prev) => [...prev, newOp]);
-    setSelectedClientId(newOp.clientId);
-  }, []);
-
-  /** Commit current localOps as a PendingChangeSet and close. */
-  const handleBrowseSave = useCallback(() => {
-    if (localOps.length === 0) {
-      handleOpenChange(false);
-      return;
-    }
-    const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
-    if (changeSet) {
-      addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
-      toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
-    }
-    // handleOpenChange will detect the count change via onBrowseClose
-    handleOpenChange(false);
-  }, [localOps, addPendingChangeSet]);
 
   function handleOpenChange(open: boolean) {
     if (!open && isBrowseMode) {
       const currentCount = useImportStore.getState().pendingChangeSets.length;
       const hadChanges = currentCount !== browseInitialPendingCountRef.current;
-      // Reset browse-specific state
       setBrowseSearch('');
       setBrowseSelectedRuleId(null);
       setLocalOps([]);
@@ -830,33 +263,102 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       setLocalOps([]);
       setSelectedClientId(null);
       setPreviewView('selected');
-      setCombinedPreview(null);
-      setCombinedPreviewError(null);
-      setCombinedPreviewTruncated(false);
-      setSelectedOpPreview(null);
-      setSelectedOpPreviewError(null);
-      setSelectedOpPreviewTruncated(false);
-      setRejectMode(false);
-      setRejectFeedback('');
-      setAiInstruction('');
-      setAiMessages([]);
-      setAiBusy(false);
+      resetPreviewState();
+      resetMutationState();
       setRationale(null);
       seededForSignalRef.current = null;
-      lastCombinedStructuralSig.current = null;
-      lastCombinedRerunToken.current = 0;
-      lastSelectedRerunToken.current = 0;
-      selectedOpPreviewKey.current = null;
-      setRerunToken(0);
     }
   }
+
+  handleCloseRef.current = () => handleOpenChange(false);
+
+  const handleBrowseSelectRule = useCallback(
+    (ruleId: string) => {
+      setBrowseSelectedRuleId(ruleId);
+      const existingOp = localOps.find((o) => o.kind !== 'add' && o.targetRuleId === ruleId);
+      if (existingOp) {
+        setSelectedClientId(existingOp.clientId);
+      } else {
+        setSelectedClientId(null);
+      }
+    },
+    [localOps, setSelectedClientId]
+  );
+
+  const handleBrowseEditRule = useCallback(
+    (rule: CorrectionRule) => {
+      const newOp: LocalOp = {
+        kind: 'edit',
+        clientId: newClientId('edit'),
+        targetRuleId: rule.id,
+        targetRule: rule,
+        data: {
+          entityId: rule.entityId ?? undefined,
+          entityName: rule.entityName ?? undefined,
+          location: rule.location ?? undefined,
+          tags: rule.tags,
+          transactionType: rule.transactionType ?? undefined,
+          isActive: rule.isActive,
+          confidence: rule.confidence,
+        },
+        dirty: true,
+      };
+      setLocalOps((prev) => [...prev, newOp]);
+      setSelectedClientId(newOp.clientId);
+    },
+    [setLocalOps, setSelectedClientId]
+  );
+
+  const handleBrowseDisableRule = useCallback(
+    (rule: CorrectionRule) => {
+      const newOp: LocalOp = {
+        kind: 'disable',
+        clientId: newClientId('disable'),
+        targetRuleId: rule.id,
+        targetRule: rule,
+        rationale: '',
+        dirty: true,
+      };
+      setLocalOps((prev) => [...prev, newOp]);
+      setSelectedClientId(newOp.clientId);
+    },
+    [setLocalOps, setSelectedClientId]
+  );
+
+  const handleBrowseRemoveRule = useCallback(
+    (rule: CorrectionRule) => {
+      const newOp: LocalOp = {
+        kind: 'remove',
+        clientId: newClientId('remove'),
+        targetRuleId: rule.id,
+        targetRule: rule,
+        rationale: '',
+        dirty: true,
+      };
+      setLocalOps((prev) => [...prev, newOp]);
+      setSelectedClientId(newOp.clientId);
+    },
+    [setLocalOps, setSelectedClientId]
+  );
+
+  const handleBrowseSave = useCallback(() => {
+    if (localOps.length === 0) {
+      handleOpenChange(false);
+      return;
+    }
+    const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
+    if (changeSet) {
+      addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
+      toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
+    }
+    handleOpenChange(false);
+  }, [localOps, addPendingChangeSet]);
 
   // ---- browse mode keyboard nav -------------------------------------------
   const browseListRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isBrowseMode || !props.open) return;
     function onKeyDown(e: KeyboardEvent) {
-      // Escape is handled by Radix Dialog — only handle arrow keys here.
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         const list = browseFilteredRules;
@@ -1122,7 +624,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                 label={previewLabel}
                 previewResult={previewResult}
                 previewError={previewError}
-                isPending={previewMutation.isPending}
+                isPending={previewMutationPending}
                 stale={hasDirty}
                 truncated={previewTruncated}
                 onRerun={handleRerunPreview}
@@ -1139,7 +641,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                   setRejectFeedback('');
                 }}
                 onConfirm={handleConfirmReject}
-                busy={rejectMutation.isPending}
+                busy={mutationsHook.rejectMutationPending}
               />
             ) : (
               <AiHelperPanel
