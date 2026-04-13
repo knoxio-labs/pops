@@ -567,6 +567,7 @@ export function applyChangeSetToRules(
         isActive:
           op.data.isActive !== undefined ? Boolean(op.data.isActive) : Boolean(existing.isActive),
         confidence: op.data.confidence !== undefined ? op.data.confidence : existing.confidence,
+        priority: op.data.priority !== undefined ? op.data.priority : existing.priority,
       });
     } else if (op.op === 'disable') {
       replace({ ...existing, isActive: false });
