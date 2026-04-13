@@ -113,7 +113,7 @@ export function TagReviewStep() {
   const previewTransactionsForRules = useMemo(
     () =>
       confirmedTransactions.map((t) => ({
-        transactionId: t.checksum,
+        checksum: t.checksum,
         description: t.description,
         entityId: t.entityId ?? null,
       })),

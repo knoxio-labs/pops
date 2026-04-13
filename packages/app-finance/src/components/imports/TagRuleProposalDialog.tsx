@@ -1,7 +1,7 @@
-import type { TagRuleChangeSet } from '@pops/api/modules/core/tag-rules/types';
+import type { AppRouter } from '@pops/api-client';
 import {
-  Badge,
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -10,13 +10,15 @@ import {
   DialogTitle,
   Input,
   Label,
+  Textarea,
 } from '@pops/ui';
-import { Loader2 } from 'lucide-react';
+import type { inferRouterOutputs } from '@trpc/server';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { trpc } from '../../lib/trpc';
-import { useImportStore } from '../../store/importStore';
+
+type ProposeOutput = inferRouterOutputs<AppRouter>['core']['tagRules']['proposeTagRuleChangeSet'];
 
 export interface TagRuleLearnSignal {
   descriptionPattern: string;
@@ -29,84 +31,63 @@ export interface TagRuleProposalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   signal: TagRuleLearnSignal | null;
+  /** All import rows to evaluate for impact preview (checksum = transactionId). */
   previewTransactions: Array<{
-    transactionId: string;
+    checksum: string;
     description: string;
     entityId?: string | null;
   }>;
-}
-
-/** Stable comparison for v1 single-`add` proposals (avoids JSON key-order drift). */
-function firstAddOpFingerprint(cs: TagRuleChangeSet): string | null {
-  if (cs.ops.length === 0) return null;
-  const first = cs.ops[0];
-  if (!first || first.op !== 'add') {
-    return `non-add|${cs.ops.length}|${cs.ops.map((o) => o.op).join(',')}`;
-  }
-  const d = first.data;
-  const tags = [...(d.tags ?? [])]
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .sort();
-  return [cs.ops.length, d.descriptionPattern, d.matchType, d.entityId ?? '', tags.join('\0')].join(
-    '|'
-  );
-}
-
-function patchFirstAddOp(
-  changeSet: TagRuleChangeSet,
-  patch: Partial<{
-    descriptionPattern: string;
-    matchType: 'exact' | 'contains' | 'regex';
-    entityId: string | null;
-    tags: string[];
-  }>
-): TagRuleChangeSet {
-  const first = changeSet.ops[0];
-  if (!first || first.op !== 'add') return changeSet;
-  return {
-    ...changeSet,
-    ops: [{ ...first, data: { ...first.data, ...patch } }, ...changeSet.ops.slice(1)],
-  };
+  onApplied?: () => void;
 }
 
 export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
-  const addPendingTagRuleChangeSet = useImportStore((s) => s.addPendingTagRuleChangeSet);
-
-  const disabledSignal = useMemo(
-    () => ({
-      descriptionPattern: '_',
-      matchType: 'contains' as const,
-      entityId: null as string | null,
-      tags: ['_'],
-    }),
-    []
-  );
+  const utils = trpc.useUtils();
+  const [pattern, setPattern] = useState('');
+  const [matchType, setMatchType] = useState<'exact' | 'contains' | 'regex'>('contains');
+  const [tagsText, setTagsText] = useState('');
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectFeedback, setRejectFeedback] = useState('');
+  const [acceptedNewTags, setAcceptedNewTags] = useState<Set<string>>(new Set());
 
   const proposeInput = useMemo(() => {
     if (!props.signal) return null;
+    const tags = parseTags(tagsText.trim() ? tagsText : props.signal.tags.join(', '));
+    if (tags.length === 0) return null;
+    const descriptionPattern = pattern.trim() || props.signal.descriptionPattern;
+    if (!descriptionPattern) return null;
     return {
       signal: {
-        descriptionPattern: props.signal.descriptionPattern,
-        matchType: props.signal.matchType,
+        descriptionPattern,
+        matchType,
         entityId: props.signal.entityId,
-        tags: props.signal.tags,
+        tags,
       },
       transactions: props.previewTransactions.map((t) => ({
-        transactionId: t.transactionId,
+        transactionId: t.checksum,
         description: t.description,
         entityId: t.entityId ?? null,
       })),
       maxPreviewItems: 200,
     };
-  }, [props.signal, props.previewTransactions]);
+  }, [props.signal, props.previewTransactions, pattern, matchType, tagsText]);
+
+  const disabledInput = {
+    signal: {
+      descriptionPattern: '_',
+      matchType: 'exact' as const,
+      entityId: null as string | null,
+      tags: ['_'],
+    },
+    transactions: [] as Array<{
+      transactionId: string;
+      description: string;
+      entityId: string | null;
+    }>,
+    maxPreviewItems: 200,
+  };
 
   const proposeQuery = trpc.core.tagRules.proposeTagRuleChangeSet.useQuery(
-    proposeInput ?? {
-      signal: disabledSignal,
-      transactions: [],
-      maxPreviewItems: 200,
-    },
+    proposeInput ?? disabledInput,
     {
       enabled: Boolean(props.open && proposeInput),
       staleTime: 0,
@@ -114,128 +95,76 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
     }
   );
 
-  const [draft, setDraft] = useState<TagRuleChangeSet | null>(null);
-  const [tagsText, setTagsText] = useState('');
-  const [rejectMode, setRejectMode] = useState(false);
-  const [rejectFeedback, setRejectFeedback] = useState('');
+  const proposal: ProposeOutput | undefined = proposeQuery.data;
 
   useEffect(() => {
-    if (!props.open) {
-      setDraft(null);
-      setTagsText('');
-      setRejectMode(false);
-      setRejectFeedback('');
-      return;
-    }
-    const data = proposeQuery.data;
-    if (!data) return;
-    setDraft(data.changeSet);
-    const first = data.changeSet.ops[0];
-    if (first && first.op === 'add') {
-      setTagsText(first.data.tags.join(', '));
-    }
-  }, [props.open, proposeQuery.data]);
+    if (!props.open || !props.signal) return;
+    setPattern(props.signal.descriptionPattern);
+    setMatchType(props.signal.matchType);
+    setTagsText(props.signal.tags.join(', '));
+    setRejectOpen(false);
+    setRejectFeedback('');
+    setAcceptedNewTags(new Set());
+  }, [props.open, props.signal]);
 
-  const previewInput = useMemo(() => {
-    if (!props.open || !draft) return null;
-    return {
-      changeSet: draft,
-      transactions: props.previewTransactions.map((t) => ({
-        transactionId: t.transactionId,
-        description: t.description,
-        entityId: t.entityId ?? null,
-      })),
-      maxPreviewItems: 200,
-    };
-  }, [props.open, draft, props.previewTransactions]);
+  const newTagNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const row of proposal?.preview.affected ?? []) {
+      for (const s of row.after.suggestedTags) {
+        if (s.isNew) names.add(s.tag);
+      }
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [proposal]);
 
-  const previewQuery = trpc.core.tagRules.previewTagRuleChangeSet.useQuery(
-    previewInput ?? {
-      changeSet: { ops: [{ op: 'add' as const, data: { descriptionPattern: '_', tags: ['_'] } }] },
-      transactions: [],
-      maxPreviewItems: 200,
+  useEffect(() => {
+    if (!proposal) return;
+    const names = new Set<string>();
+    for (const row of proposal.preview.affected) {
+      for (const s of row.after.suggestedTags) {
+        if (s.isNew) names.add(s.tag);
+      }
+    }
+    setAcceptedNewTags(names);
+  }, [proposal]);
+
+  const applyMutation = trpc.core.tagRules.applyTagRuleChangeSet.useMutation({
+    onSuccess: async () => {
+      await utils.core.tagRules.listVocabulary.invalidate();
+      toast.success('Tag rule saved');
+      props.onApplied?.();
+      props.onOpenChange(false);
     },
-    {
-      enabled: Boolean(previewInput),
-      staleTime: 0,
-      retry: false,
-    }
-  );
+    onError: (e) => toast.error(e.message),
+  });
 
   const rejectMutation = trpc.core.tagRules.rejectTagRuleChangeSet.useMutation({
     onSuccess: () => {
-      toast.success('Proposal rejected — feedback recorded');
+      toast.message('Proposal dismissed');
       props.onOpenChange(false);
     },
-    onError: (err) => {
-      toast.error(err.message);
-    },
+    onError: (e) => toast.error(e.message),
   });
 
-  const baseline = proposeQuery.data?.changeSet;
-  const hasStructuralEdits = useMemo(() => {
-    if (!draft || !baseline) return false;
-    const a = firstAddOpFingerprint(draft);
-    const b = firstAddOpFingerprint(baseline);
-    if (!a || !b) return true;
-    return a !== b;
-  }, [draft, baseline]);
+  const handleApply = useCallback(() => {
+    if (!proposal) return;
+    applyMutation.mutate({
+      changeSet: proposal.changeSet,
+      acceptedNewTags: [...acceptedNewTags],
+    });
+  }, [proposal, applyMutation, acceptedNewTags]);
 
-  const isBusy = proposeQuery.isFetching || previewQuery.isFetching || rejectMutation.isPending;
-
-  const canApply =
-    !isBusy &&
-    Boolean(draft) &&
-    !proposeQuery.isError &&
-    !previewQuery.isError &&
-    !previewQuery.isFetching &&
-    draft !== null;
-
-  const handlePatternChange = useCallback((value: string) => {
-    setDraft((prev) => (prev ? patchFirstAddOp(prev, { descriptionPattern: value }) : prev));
-  }, []);
-
-  const handleMatchTypeChange = useCallback((value: 'exact' | 'contains' | 'regex') => {
-    setDraft((prev) => (prev ? patchFirstAddOp(prev, { matchType: value }) : prev));
-  }, []);
-
-  const handleTagsBlur = useCallback(() => {
-    const tags = tagsText
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-    if (tags.length === 0) return;
-    setDraft((prev) => (prev ? patchFirstAddOp(prev, { tags }) : prev));
-  }, [tagsText]);
-
-  const handleApprove = useCallback(() => {
-    if (!draft) return;
-    const tags = tagsText
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-    if (tags.length === 0) {
-      toast.error('Add at least one tag before saving this rule.');
+  const handleReject = useCallback(() => {
+    if (!proposal) return;
+    const fb = rejectFeedback.trim();
+    if (fb.length < 1) {
+      toast.error('Please add a short note explaining why you are rejecting this proposal.');
       return;
     }
-    const finalDraft = patchFirstAddOp(draft, { tags });
-    try {
-      addPendingTagRuleChangeSet({ changeSet: finalDraft, source: 'tag-rule-proposal' });
-      toast.success('Tag rule saved locally — it will apply when you commit the import');
-      props.onOpenChange(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save tag rule');
-    }
-  }, [addPendingTagRuleChangeSet, draft, props, tagsText]);
+    rejectMutation.mutate({ changeSet: proposal.changeSet, feedback: fb });
+  }, [proposal, rejectMutation, rejectFeedback]);
 
-  const handleConfirmReject = useCallback(() => {
-    if (!draft) return;
-    const trimmed = rejectFeedback.trim();
-    if (!trimmed) return;
-    rejectMutation.mutate({ changeSet: draft, feedback: trimmed });
-  }, [draft, rejectFeedback, rejectMutation]);
-
-  const firstAdd = draft?.ops[0]?.op === 'add' ? draft.ops[0].data : null;
+  const busy = applyMutation.isPending || rejectMutation.isPending;
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
@@ -243,158 +172,154 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
         <DialogHeader>
           <DialogTitle>Save tag rule</DialogTitle>
           <DialogDescription>
-            Preview how a new tag rule would affect this import batch, then approve it into your
-            pending changes (same flow as classification rules).
+            Create a reusable tag rule from this group. Rules apply as <strong>suggestions</strong>{' '}
+            on future imports and never overwrite tags you set manually.
           </DialogDescription>
         </DialogHeader>
 
-        {proposeQuery.isLoading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Building proposal…
-          </div>
-        )}
-
-        {proposeQuery.isError && (
-          <p className="text-sm text-destructive">{proposeQuery.error.message}</p>
-        )}
-
-        {draft && firstAdd && !proposeQuery.isLoading && (
-          <div className="space-y-4">
+        {!props.signal ? null : (
+          <div className="space-y-4 text-sm">
             <div className="space-y-2">
-              <Label htmlFor="tag-rule-pattern">Description pattern</Label>
+              <Label htmlFor="tr-pattern">Description pattern</Label>
               <Input
-                id="tag-rule-pattern"
-                value={firstAdd.descriptionPattern}
-                onChange={(e) => handlePatternChange(e.target.value)}
+                id="tr-pattern"
+                value={pattern}
+                onChange={(e) => setPattern(e.target.value)}
+                placeholder="e.g. WOOLWORTHS"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="tag-rule-match">Match type</Label>
+              <Label htmlFor="tr-match">Match type</Label>
               <select
-                id="tag-rule-match"
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={firstAdd.matchType}
-                onChange={(e) =>
-                  handleMatchTypeChange(e.target.value as 'exact' | 'contains' | 'regex')
-                }
+                id="tr-match"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                value={matchType}
+                onChange={(e) => setMatchType(e.target.value as 'exact' | 'contains' | 'regex')}
               >
                 <option value="contains">Contains</option>
                 <option value="exact">Exact</option>
                 <option value="regex">Regex</option>
               </select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="tag-rule-tags">Tags (comma-separated)</Label>
+              <Label htmlFor="tr-tags">Tags (comma-separated)</Label>
               <Input
-                id="tag-rule-tags"
+                id="tr-tags"
                 value={tagsText}
                 onChange={(e) => setTagsText(e.target.value)}
-                onBlur={handleTagsBlur}
+                placeholder="Groceries, Transport"
               />
             </div>
 
-            {proposeQuery.data?.rationale && (
-              <p className="text-xs text-muted-foreground">{proposeQuery.data.rationale}</p>
+            {proposeQuery.isLoading && <p className="text-muted-foreground">Generating preview…</p>}
+            {proposeQuery.isError && (
+              <p className="text-destructive text-xs">{proposeQuery.error.message}</p>
             )}
 
-            <div className="rounded-md border p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Impact preview</p>
-                {previewQuery.isFetching && <Loader2 className="h-4 w-4 animate-spin" />}
-              </div>
-              {previewQuery.isError && (
-                <p className="text-xs text-destructive">{previewQuery.error.message}</p>
-              )}
-              {previewQuery.data && (
-                <>
+            {proposal && (
+              <>
+                <p className="text-muted-foreground text-xs">{proposal.rationale}</p>
+                <div className="rounded-md border p-3 space-y-1">
+                  <p className="font-medium text-xs">Impact preview</p>
                   <p className="text-xs text-muted-foreground">
-                    {previewQuery.data.counts.affected} transaction
-                    {previewQuery.data.counts.affected === 1 ? '' : 's'} would receive new tag
-                    suggestions from this rule in this batch.
+                    {proposal.preview.counts.affected} matching row
+                    {proposal.preview.counts.affected === 1 ? '' : 's'} in this import would receive
+                    tag suggestions (simulated without per-row tag locks).
                   </p>
-                  {previewQuery.data.counts.newTagProposals > 0 && (
-                    <p className="text-xs text-amber-700 dark:text-amber-300">
-                      Includes {previewQuery.data.counts.newTagProposals} new vocabulary tag
-                      proposal{previewQuery.data.counts.newTagProposals === 1 ? '' : 's'}.
-                    </p>
-                  )}
-                  <ul className="max-h-40 overflow-y-auto space-y-1 text-xs">
-                    {previewQuery.data.affected.slice(0, 50).map((row) => (
-                      <li key={row.transactionId} className="truncate">
-                        <span className="font-mono text-muted-foreground">
-                          {row.transactionId.slice(0, 10)}…
-                        </span>{' '}
-                        <span className="text-foreground">{row.description}</span>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {row.after.suggestedTags.map((s) => (
-                            <Badge key={`${row.transactionId}-${s.tag}`} variant="secondary">
-                              {s.tag}
-                              {s.isNew ? ' (new)' : ''}
-                            </Badge>
-                          ))}
-                        </div>
+                  <ul className="text-xs max-h-28 overflow-y-auto space-y-0.5 font-mono">
+                    {proposal.preview.affected.slice(0, 12).map((a) => (
+                      <li key={a.transactionId} className="truncate" title={a.description}>
+                        {a.description.slice(0, 56)}
+                        {a.description.length > 56 ? '…' : ''}
                       </li>
                     ))}
                   </ul>
-                </>
-              )}
-            </div>
+                  {proposal.preview.affected.length > 12 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{proposal.preview.affected.length - 12} more
+                    </p>
+                  )}
+                </div>
 
-            {hasStructuralEdits && (
-              <p className="text-xs text-muted-foreground">
-                You edited the proposed rule. Review the impact preview above, then reset to the
-                server proposal or keep your edits in sync (preview updates automatically).
-              </p>
+                {newTagNames.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium">
+                      New vocabulary tags — accept before saving
+                    </p>
+                    <div className="space-y-2">
+                      {newTagNames.map((tag) => (
+                        <label key={tag} className="flex items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={acceptedNewTags.has(tag)}
+                            onCheckedChange={(v) => {
+                              setAcceptedNewTags((prev) => {
+                                const next = new Set(prev);
+                                if (v === true) next.add(tag);
+                                else next.delete(tag);
+                                return next;
+                              });
+                            }}
+                          />
+                          <span>{tag}</span>
+                          <span className="text-muted-foreground">(new)</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </div>
-        )}
 
-        {rejectMode && draft && (
-          <div className="space-y-2">
-            <Label htmlFor="tag-rule-reject-feedback">Feedback</Label>
-            <textarea
-              id="tag-rule-reject-feedback"
-              className="w-full min-h-[88px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={rejectFeedback}
-              onChange={(e) => setRejectFeedback(e.target.value)}
-              placeholder="Why should this rule not be learned?"
-            />
+            {rejectOpen && (
+              <div className="space-y-2">
+                <Label htmlFor="tr-reject">Feedback (required)</Label>
+                <Textarea
+                  id="tr-reject"
+                  value={rejectFeedback}
+                  onChange={(e) => setRejectFeedback(e.target.value)}
+                  rows={3}
+                  placeholder="What should change about this rule?"
+                />
+              </div>
+            )}
           </div>
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          {!rejectMode ? (
-            <>
-              <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setRejectMode(true)}>
-                Reject…
-              </Button>
-              <Button type="button" onClick={handleApprove} disabled={!canApply}>
-                Approve (save locally)
-              </Button>
-            </>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => props.onOpenChange(false)}
+            disabled={busy}
+          >
+            Cancel
+          </Button>
+          {!rejectOpen ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRejectOpen(true)}
+              disabled={busy || !proposal}
+            >
+              Reject…
+            </Button>
           ) : (
-            <>
-              <Button type="button" variant="outline" onClick={() => setRejectMode(false)}>
-                Back
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={handleConfirmReject}
-                disabled={!rejectFeedback.trim() || !draft}
-              >
-                Confirm reject
-              </Button>
-            </>
+            <Button type="button" variant="destructive" onClick={handleReject} disabled={busy}>
+              Confirm reject
+            </Button>
           )}
+          <Button type="button" onClick={handleApply} disabled={busy || !proposal}>
+            {busy ? 'Saving…' : 'Save rule'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function parseTags(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
 }

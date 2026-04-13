@@ -77,13 +77,13 @@ packages/ui/
 
 ```typescript
 // Composite components
-import { DataTable, TextInput, Button, ViewToggleGroup } from '@pops/ui';
+import { DataTable, TextInput, Button, ViewToggleGroup } from "@pops/ui";
 
 // Primitives (if needed directly)
-import { Card, CardHeader, CardContent } from '@pops/ui';
+import { Card, CardHeader, CardContent } from "@pops/ui";
 
 // Utility
-import { cn } from '@pops/ui';
+import { cn } from "@pops/ui";
 ```
 
 ## Action Icon Standards

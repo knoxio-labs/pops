@@ -1,8 +1,10 @@
 import { logger } from '../../../../lib/logger.js';
 import {
   applyChangeSetToRules,
-  findAllMatchingCorrectionFromDB,
   findAllMatchingCorrectionFromRules,
+} from '../../../core/corrections/pure-service.js';
+import {
+  findAllMatchingCorrectionFromDB,
   listCorrections,
 } from '../../../core/corrections/service.js';
 import type { ChangeSet, CorrectionRow } from '../../../core/corrections/types.js';
@@ -41,7 +43,7 @@ export function applyLearnedCorrection(args: {
   const entityId = correction.entityId;
 
   // Build the matchedRules array for override indicators (US-07).
-  const matchedRules: MatchedRule[] = allMatchingRules.map((rule) => ({
+  const matchedRules: MatchedRule[] = allMatchingRules.map((rule: CorrectionRow) => ({
     ruleId: rule.id,
     pattern: rule.descriptionPattern,
     matchType: rule.matchType,

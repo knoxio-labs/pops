@@ -1,9 +1,9 @@
-import js from '@eslint/js';
-import eslintConfigPrettier from 'eslint-config-prettier';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import tseslint from 'typescript-eslint';
+import js from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier";
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
+import tseslint from "typescript-eslint";
 
 /**
  * Shared ESLint base configuration for the POPS monorepo.
@@ -20,32 +20,32 @@ import tseslint from 'typescript-eslint';
 
 /** Default complexity limits for most packages. */
 const defaultComplexityRules = {
-  'max-lines': ['error', { max: 1200, skipBlankLines: true, skipComments: true }],
-  'max-lines-per-function': [
-    'error',
+  "max-lines": ["error", { max: 1200, skipBlankLines: true, skipComments: true }],
+  "max-lines-per-function": [
+    "error",
     { max: 600, skipBlankLines: true, skipComments: true, IIFEs: true },
   ],
-  complexity: ['error', 45],
-  'max-statements': ['error', 160],
-  'max-params': ['error', 6],
-  'max-depth': ['error', 5],
+  complexity: ["error", 45],
+  "max-statements": ["error", 160],
+  "max-params": ["error", 6],
+  "max-depth": ["error", 5],
 };
 
 /** Shared TypeScript rules applied to all TS/TSX files. */
 const sharedTsRules = {
-  '@typescript-eslint/no-explicit-any': 'error',
-  '@typescript-eslint/no-unused-vars': [
-    'error',
+  "@typescript-eslint/no-explicit-any": "error",
+  "@typescript-eslint/no-unused-vars": [
+    "error",
     {
-      argsIgnorePattern: '^_',
-      varsIgnorePattern: '^_',
-      caughtErrorsIgnorePattern: '^_',
+      argsIgnorePattern: "^_",
+      varsIgnorePattern: "^_",
+      caughtErrorsIgnorePattern: "^_",
       ignoreRestSiblings: true,
     },
   ],
-  '@typescript-eslint/consistent-type-imports': [
-    'error',
-    { prefer: 'type-imports', disallowTypeAnnotations: false },
+  "@typescript-eslint/consistent-type-imports": [
+    "error",
+    { prefer: "type-imports", disallowTypeAnnotations: false },
   ],
 };
 
@@ -65,12 +65,12 @@ export function createBaseConfig({
   react: enableReact = false,
 } = {}) {
   const defaultIgnores = [
-    'node_modules',
-    'dist',
-    'coverage',
-    '*.config.js',
-    '*.config.mjs',
-    '*.config.ts',
+    "node_modules",
+    "dist",
+    "coverage",
+    "*.config.js",
+    "*.config.mjs",
+    "*.config.ts",
   ];
   const mergedIgnores = [...new Set([...defaultIgnores, ...ignores])];
 
@@ -84,14 +84,14 @@ export function createBaseConfig({
     ...tsConfigs,
     {
       plugins: {
-        'simple-import-sort': simpleImportSort,
+        "simple-import-sort": simpleImportSort,
       },
       rules: {
         ...defaultComplexityRules,
         ...sharedTsRules,
-        'no-console': ['error', { allow: ['warn', 'error'] }],
-        'simple-import-sort/imports': 'error',
-        'simple-import-sort/exports': 'error',
+        "no-console": ["error", { allow: ["warn", "error"] }],
+        "simple-import-sort/imports": "error",
+        "simple-import-sort/exports": "error",
       },
     },
   ];
@@ -105,9 +105,9 @@ export function createBaseConfig({
         },
       },
       rules: {
-        '@typescript-eslint/no-floating-promises': 'error',
-        '@typescript-eslint/explicit-function-return-type': [
-          'warn',
+        "@typescript-eslint/no-floating-promises": "error",
+        "@typescript-eslint/explicit-function-return-type": [
+          "warn",
           {
             allowExpressions: true,
             allowTypedFunctionExpressions: true,
@@ -122,20 +122,20 @@ export function createBaseConfig({
     configs.push({
       plugins: {
         react,
-        'react-hooks': reactHooks,
+        "react-hooks": reactHooks,
       },
       rules: {
-        'react/jsx-key': 'error',
-        'react/no-array-index-key': 'warn',
-        'react/no-children-prop': 'error',
-        'react/no-danger': 'warn',
-        'react/self-closing-comp': 'error',
-        'react-hooks/rules-of-hooks': 'error',
-        'react-hooks/exhaustive-deps': 'warn',
+        "react/jsx-key": "error",
+        "react/no-array-index-key": "warn",
+        "react/no-children-prop": "error",
+        "react/no-danger": "warn",
+        "react/self-closing-comp": "error",
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
       },
       settings: {
         react: {
-          version: 'detect',
+          version: "detect",
         },
       },
     });
@@ -143,9 +143,9 @@ export function createBaseConfig({
 
   // Relax rules in story files — console.log is used for action logging
   configs.push({
-    files: ['**/*.stories.{ts,tsx}'],
+    files: ["**/*.stories.{ts,tsx}"],
     rules: {
-      'no-console': 'off',
+      "no-console": "off",
     },
   });
 

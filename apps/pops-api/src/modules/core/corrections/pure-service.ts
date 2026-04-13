@@ -1,5 +1,5 @@
-import { parseJsonStringArray } from '../../../shared/json.js';
 import { NotFoundError } from '../../../shared/errors.js';
+import { parseJsonStringArray } from '../../../shared/json.js';
 import type {
   ChangeSet,
   ChangeSetImpactCounts,
@@ -17,6 +17,26 @@ import { classifyCorrectionMatch, normalizeDescription, toCorrection } from './t
 
 /**
  * Pure in-memory matcher used for previews and determinism tests.
+ * Returns ALL matching correction rules in priority order (priority ASC, id ASC).
+ * The first entry is the winner; subsequent entries are overridden alternatives.
+ * Reuses the same eligibility filtering and ruleMatchesDescription logic as
+ * findMatchingCorrectionFromRules — no separate matching pass.
+ */
+export function findAllMatchingCorrectionFromRules(
+  description: string,
+  rules: CorrectionRow[],
+  minConfidence: number = 0.7
+): CorrectionRow[] {
+  const normalized = normalizeDescription(description);
+  const eligible = rules
+    .filter((r) => r.isActive && r.confidence >= minConfidence)
+    .sort((a, b) => a.priority - b.priority || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+  return eligible.filter((rule) => ruleMatchesDescription(rule, normalized));
+}
+
+/**
+ * Pure in-memory matcher used for previews and determinism tests.
  * Mirrors production semantics:
  * - normalizeDescription on input
  * - rules sorted by priority ASC (lower = higher priority), id ASC tie-breaker
@@ -29,18 +49,10 @@ export function findMatchingCorrectionFromRules(
   rules: CorrectionRow[],
   minConfidence: number = 0.7
 ): CorrectionMatchResult | null {
-  const normalized = normalizeDescription(description);
-  const eligible = rules
-    .filter((r) => r.isActive && r.confidence >= minConfidence)
-    .sort((a, b) => a.priority - b.priority || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-
-  for (const rule of eligible) {
-    if (ruleMatchesDescription(rule, normalized)) {
-      return classifyCorrectionMatch(rule);
-    }
-  }
-
-  return null;
+  const allMatches = findAllMatchingCorrectionFromRules(description, rules, minConfidence);
+  const first = allMatches[0];
+  if (!first) return null;
+  return classifyCorrectionMatch(first);
 }
 
 /** Test whether a single rule's pattern matches a normalized description. */
