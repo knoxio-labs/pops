@@ -141,6 +141,13 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
 
+  // ---- browse mode: fetch DB transactions for impact preview (PRD-032 US-06) ---
+
+  const dbTxnsQuery = trpc.finance.transactions.listDescriptionsForPreview.useQuery(undefined, {
+    enabled: isBrowseMode && props.open,
+    staleTime: 60_000,
+  });
+
   const previewHook = usePreviewEffects(
     {
       open: props.open,
@@ -148,6 +155,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       selectedOp,
       minConfidence,
       previewTransactions: props.previewTransactions,
+      dbTransactions: isBrowseMode ? (dbTxnsQuery.data?.data ?? []) : undefined,
       pendingChangeSets,
     },
     setLocalOps
@@ -157,9 +165,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     combinedPreview,
     combinedPreviewError,
     combinedPreviewTruncated,
+    combinedDbPreview,
     selectedOpPreview,
     selectedOpPreviewError,
     selectedOpPreviewTruncated,
+    selectedOpDbPreview,
     previewMutationPending,
     hasDirty,
     handleRerunPreview,
@@ -425,7 +435,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
           ) : browseListQuery.isLoading ? (
             <div className="px-6 pb-6 text-sm text-muted-foreground">Loading rules…</div>
           ) : (
-            <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-0 border-y flex-1 min-h-0">
+            <div className="grid grid-cols-[300px_minmax(0,1fr)_360px] gap-0 border-y flex-1 min-h-0">
               {/* Sidebar: rule list with search */}
               <div className="flex flex-col min-h-0 border-r">
                 <div className="px-3 py-2 border-b">
@@ -502,6 +512,43 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                   </div>
                 )}
               </div>
+
+              {/* Impact preview (PRD-032 US-06) */}
+              {(() => {
+                const browsePreviewResult =
+                  previewView === 'combined' ? combinedPreview : selectedOpPreview;
+                const browseDbPreviewResult =
+                  previewView === 'combined' ? combinedDbPreview : selectedOpDbPreview;
+                const browsePreviewError =
+                  previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
+                const browseTruncated =
+                  previewView === 'combined'
+                    ? combinedPreviewTruncated
+                    : selectedOpPreviewTruncated;
+                const browseLabel =
+                  previewView === 'combined'
+                    ? 'Combined effect of all pending changes'
+                    : selectedOp
+                      ? 'Effect of selected operation'
+                      : 'No operation selected';
+                return (
+                  <ImpactPanel
+                    view={previewView}
+                    onViewChange={setPreviewView}
+                    label={browseLabel}
+                    previewResult={browsePreviewResult}
+                    dbPreviewResult={browseDbPreviewResult}
+                    dbTruncated={dbTxnsQuery.data?.truncated}
+                    dbTotal={dbTxnsQuery.data?.total}
+                    previewError={browsePreviewError}
+                    isPending={previewMutationPending}
+                    stale={hasDirty}
+                    truncated={browseTruncated}
+                    onRerun={handleRerunPreview}
+                    disabled={localOps.length === 0}
+                  />
+                );
+              })()}
             </div>
           )}
 
