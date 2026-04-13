@@ -84,6 +84,12 @@ export function ImpactPanel(props: {
   onViewChange: (v: PreviewView) => void;
   label: string;
   previewResult: PreviewChangeSetOutput | null;
+  /** DB-transaction portion of the preview (browse mode, PRD-032 US-06). */
+  dbPreviewResult?: PreviewChangeSetOutput | null;
+  /** Whether DB transactions were truncated at fetch time. */
+  dbTruncated?: boolean;
+  /** Total DB transaction count when truncated. */
+  dbTotal?: number;
   previewError: string | null;
   isPending: boolean;
   stale: boolean;
@@ -91,7 +97,8 @@ export function ImpactPanel(props: {
   onRerun: () => void;
   disabled: boolean;
 }) {
-  const { previewResult, previewError } = props;
+  const { previewResult, dbPreviewResult, previewError } = props;
+  const hasTwoSections = dbPreviewResult !== undefined;
   return (
     <div className="flex flex-col min-h-0 border-l">
       <div className="px-4 py-2 border-b flex items-center gap-2">
@@ -145,6 +152,36 @@ export function ImpactPanel(props: {
           <div className="text-sm text-muted-foreground">Computing preview…</div>
         ) : !previewResult ? (
           <div className="text-sm text-muted-foreground">No preview yet.</div>
+        ) : hasTwoSections ? (
+          <div className="space-y-4">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Import transactions
+              </div>
+              <ImpactContent result={previewResult} />
+            </div>
+            <div className="border-t pt-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+                Existing transactions
+                {props.dbTruncated && props.dbTotal !== undefined && (
+                  <span
+                    className="text-amber-600 normal-case font-normal"
+                    title={`Preview truncated — showing first ${PREVIEW_CHANGESET_MAX_TRANSACTIONS} of ${props.dbTotal} existing transactions.`}
+                  >
+                    (preview truncated — first {PREVIEW_CHANGESET_MAX_TRANSACTIONS} of{' '}
+                    {props.dbTotal})
+                  </span>
+                )}
+              </div>
+              {dbPreviewResult ? (
+                <ImpactContent result={dbPreviewResult} />
+              ) : props.isPending ? (
+                <div className="text-xs text-muted-foreground">Computing…</div>
+              ) : (
+                <div className="text-xs text-muted-foreground">No existing transactions match.</div>
+              )}
+            </div>
+          </div>
         ) : (
           <ImpactContent result={previewResult} />
         )}
