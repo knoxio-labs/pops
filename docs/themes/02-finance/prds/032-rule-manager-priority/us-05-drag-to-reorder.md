@@ -1,7 +1,7 @@
 # US-05: Drag-to-reorder priority
 
 > PRD: [032 — Global Rule Manager & Priority Ordering](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,13 +9,13 @@ As a user, I want to drag rules in the browse-mode sidebar to reorder them so th
 
 ## Acceptance Criteria
 
-- [ ] Each rule row in the browse-mode sidebar has a visible drag handle on the left.
-- [ ] Dragging a rule to a new position produces `edit` ChangeSet ops that update the `priority` field for all affected rules.
-- [ ] After a drop, priorities are renumbered using gaps of 10 (e.g. 10, 20, 30...) so that future insertions between rules don't require renumbering the entire list.
-- [ ] The sidebar list order reflects priority order (`priority ASC`, `id ASC` tie-break) at all times, including after a reorder.
-- [ ] Drag-and-drop works correctly when the list contains a mix of DB rules and pending rules.
-- [ ] A reorder followed by Cancel discards all priority changes from that dialog session.
-- [ ] The drag interaction provides visual feedback: a ghost element follows the cursor and a drop indicator marks the target position.
+- [x] Each rule row in the browse-mode sidebar has a visible drag handle on the left.
+- [x] Dragging a rule to a new position produces `edit` ChangeSet ops that update the `priority` field for all affected rules.
+- [x] After a drop, priorities are renumbered using gaps of 10 (e.g. 10, 20, 30...) so that future insertions between rules don't require renumbering the entire list.
+- [x] The sidebar list order reflects priority order (`priority ASC`, `id ASC` tie-break) at all times, including after a reorder.
+- [x] Drag-and-drop works correctly when the list contains a mix of DB rules and pending rules.
+- [x] A reorder followed by Cancel discards all priority changes from that dialog session.
+- [x] The drag interaction provides visual feedback: a ghost element follows the cursor and a drop indicator marks the target position.
 
 ## Notes
 
