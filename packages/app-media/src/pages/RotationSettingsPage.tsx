@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 
+import { SourceManagementSection } from '../components/SourceManagementSection';
 import { trpc } from '../lib/trpc';
 
 const SCHEDULE_PRESETS = [
@@ -321,6 +322,9 @@ export function RotationSettingsPage() {
           Save Settings
         </Button>
       </fieldset>
+
+      {/* Sources */}
+      <SourceManagementSection />
 
       {/* Disk space */}
       <div className="rounded-lg border bg-card p-6 space-y-4">
