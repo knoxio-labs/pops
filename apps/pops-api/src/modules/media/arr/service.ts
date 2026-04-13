@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 
 import { getDrizzle } from '../../../db.js';
 import { getEnv } from '../../../env.js';
-import { type SettingsKey, SETTINGS_KEYS } from '../../core/settings/keys.js';
+import { SETTINGS_KEYS, type SettingsKey } from '../../core/settings/keys.js';
 import { RadarrClient } from './radarr-client.js';
 import { SonarrClient } from './sonarr-client.js';
 import type {
