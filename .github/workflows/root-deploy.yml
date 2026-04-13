@@ -95,7 +95,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
@@ -110,7 +110,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
@@ -125,7 +125,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
@@ -140,7 +140,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.deploy_needed == 'true'
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
