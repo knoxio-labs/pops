@@ -14,6 +14,7 @@ interface UncertainTabProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   onEntitySelect: (t: ProcessedTransaction, entityId: string, entityName: string) => void;
+  onBulkEntitySelect?: (ts: ProcessedTransaction[], entityId: string, entityName: string) => void;
   onCreateEntity: (t: ProcessedTransaction) => void;
   onAcceptAiSuggestion: (t: ProcessedTransaction) => void;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
@@ -34,6 +35,7 @@ export function UncertainTab({
   viewMode,
   onViewModeChange,
   onEntitySelect,
+  onBulkEntitySelect,
   onCreateEntity,
   onAcceptAiSuggestion,
   onAcceptAll,
@@ -82,6 +84,7 @@ export function UncertainTab({
               onAcceptAll={onAcceptAll}
               onCreateAndAssignAll={onCreateAndAssignAll}
               onEntitySelect={onEntitySelect}
+              onBulkEntitySelect={onBulkEntitySelect}
               onCreateEntity={onCreateEntity}
               onAcceptAiSuggestion={onAcceptAiSuggestion}
               onEdit={onEdit}

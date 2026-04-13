@@ -13,6 +13,19 @@ import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { logger } from '../../../lib/logger.js';
 import { NotFoundError } from '../../../shared/errors.js';
 import { parseJsonStringArray } from '../../../shared/json.js';
+export * from './pure-service.js';
+import {
+  applyChangeSetToRules,
+  buildTargetRulesMap,
+  computeImpactCounts,
+  findMatchingCorrectionFromRules,
+  mergeTags,
+  outcomeChanged,
+  outcomeFromMatch,
+  previewChangeSetImpact,
+  summarizeMatch,
+  ruleMatchesDescription,
+} from './pure-service.js';
 import type {
   ChangeSet,
   ChangeSetImpactCounts,
@@ -408,6 +421,7 @@ Return ONLY a single JSON object, no markdown, no explanation:
   };
 }
 
+<<<<<<< HEAD
 export function summarizeMatch(match: CorrectionMatchResult | null): CorrectionMatchSummary {
   if (!match) return { matched: false, status: null, ruleId: null, confidence: null };
   return {
@@ -714,6 +728,8 @@ function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCount
   };
 }
 
+=======
+>>>>>>> d7713190 (feat(finance): improve import review rule generation and refactor correction services)
 /**
  * Generate a bundled ChangeSet proposal from a single correction signal.
  *

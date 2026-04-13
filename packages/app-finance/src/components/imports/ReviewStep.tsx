@@ -57,6 +57,51 @@ export function ReviewStep() {
     autoSaveRuleAndReEvaluate,
   } = useProposalGeneration();
 
+  const handleBulkEntitySelect = useCallback(
+    (transactions: ProcessedTransaction[], entityId: string, entityName: string) => {
+      if (transactions.length === 0) return;
+
+      setLocalTransactions((prev) => {
+        let updated = { ...prev };
+        for (const transaction of transactions) {
+          updated = {
+            ...updated,
+            uncertain: updated.uncertain.filter((t: ProcessedTransaction) => t !== transaction),
+            failed: updated.failed.filter((t: ProcessedTransaction) => t !== transaction),
+            matched: [
+              ...updated.matched,
+              {
+                ...transaction,
+                entity: {
+                  entityId,
+                  entityName,
+                  matchType: 'manual' as never,
+                  confidence: 1,
+                },
+                status: 'matched' as const,
+              } as ProcessedTransaction,
+            ],
+          };
+        }
+        return updated;
+      });
+
+      // Route through proposal dialog using the first transaction in the group
+      // to seed the pattern analysis.
+      const firstTx = transactions[0];
+      if (firstTx) {
+        void generateProposal({
+          triggeringTransaction: firstTx,
+          entityId,
+          entityName,
+          location: firstTx.location ?? null,
+          transactionType: firstTx.transactionType ?? null,
+        });
+      }
+    },
+    [generateProposal, setLocalTransactions]
+  );
+
   /**
    * Handle entity selection. Always resolves the one transaction the user
    * picked for, then — if there are similar transactions in the session —
@@ -309,6 +354,7 @@ export function ReviewStep() {
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             onEntitySelect={handleEntitySelect}
+            onBulkEntitySelect={handleBulkEntitySelect}
             onCreateEntity={handleCreateEntity}
             onAcceptAiSuggestion={handleAcceptAiSuggestion}
             onAcceptAll={handleAcceptAll}
@@ -328,6 +374,7 @@ export function ReviewStep() {
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             onEntitySelect={handleEntitySelect}
+            onBulkEntitySelect={handleBulkEntitySelect}
             onCreateEntity={handleCreateEntity}
             onAcceptAiSuggestion={handleAcceptAiSuggestion}
             onAcceptAll={handleAcceptAll}

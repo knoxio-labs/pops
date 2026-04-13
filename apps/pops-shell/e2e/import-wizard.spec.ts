@@ -446,7 +446,7 @@ const verifyTransactionInTab = async (page: Page, tabName: string, description: 
 // TEST SUITES
 // ============================================================================
 
-test.describe.skip('Import Wizard - Complete Flow', () => {
+test.describe('Import Wizard - Complete Flow', () => {
   test.beforeEach(async ({ page }) => {
     await setupMockAPIs(page);
     await page.goto('/finance/import');

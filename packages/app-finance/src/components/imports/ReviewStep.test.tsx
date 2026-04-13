@@ -231,10 +231,12 @@ vi.mock('./TransactionGroup', async () => {
       group,
       onAcceptAll,
       onAcceptAiSuggestion,
+      onBulkEntitySelect,
     }: {
       group: { entityName: string; transactions: unknown[] };
       onAcceptAll: (txs: unknown[]) => void;
       onAcceptAiSuggestion: (t: unknown) => void;
+      onBulkEntitySelect?: (ts: unknown[], id: string, name: string) => void;
     }) =>
       React.createElement(
         'div',
@@ -248,6 +250,15 @@ vi.mock('./TransactionGroup', async () => {
           },
           'Accept All'
         ),
+        onBulkEntitySelect &&
+          React.createElement(
+            'button',
+            {
+              'data-testid': `bulk-assign-${group.entityName}`,
+              onClick: () => onBulkEntitySelect(group.transactions, 'ent-1', 'Woolworths'),
+            },
+            'Assign Bulk'
+          ),
         ...(group.transactions as { description: string }[]).map((t) =>
           React.createElement(
             'button',
@@ -833,6 +844,36 @@ describe('ReviewStep — AI correction analysis', () => {
     await vi.waitFor(() => {
       expect(mockToastInfo).toHaveBeenCalledWith(
         expect.stringContaining('Proposal generated (fallback) — review and approve to learn')
+      );
+    });
+  });
+
+  it('triggers a proposal when using bulk entity selection on a group', async () => {
+    const tx1 = makeTx('WOOLWORTHS 1');
+    const tx2 = makeTx('WOOLWORTHS 2');
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [tx1, tx2],
+      failed: [],
+      skipped: [],
+    };
+
+    render(<ReviewStep />);
+
+    const bulkBtn = screen.getByTestId('bulk-assign-Woolworths');
+    fireEvent.click(bulkBtn);
+
+    await vi.waitFor(() => {
+      expect(mockAnalyzeCorrectionMutateAsync).toHaveBeenCalled();
+    });
+    await vi.waitFor(() => {
+      expect(lastProposalDialogProps).not.toBeNull();
+      const props = lastProposalDialogProps as { signal?: unknown };
+      expect(props.signal).toEqual(
+        expect.objectContaining({
+          entityId: 'ent-1',
+          entityName: 'Woolworths',
+        })
       );
     });
   });
