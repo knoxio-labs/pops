@@ -41,20 +41,6 @@ function seedScore(
     .run(mediaType, mediaId, dimensionId, score, comparisonCount, excluded);
 }
 
-function seedComparison(
-  rawDb: Database,
-  dimensionId: number,
-  mediaAId: number,
-  mediaBId: number,
-  winnerId: number
-) {
-  rawDb
-    .prepare(
-      'INSERT INTO comparisons (dimension_id, media_a_type, media_a_id, media_b_type, media_b_id, winner_type, winner_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    )
-    .run(dimensionId, 'movie', mediaAId, 'movie', mediaBId, 'movie', winnerId);
-}
-
 function getScore(rawDb: Database, mediaId: number, dimensionId: number) {
   return rawDb
     .prepare('SELECT * FROM media_scores WHERE media_id = ? AND dimension_id = ?')
