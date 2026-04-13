@@ -14,6 +14,11 @@ interface TransactionGroupProps {
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
   onCreateAndAssignAll: (transactions: ProcessedTransaction[], entityName: string) => void;
   onEntitySelect: (transaction: ProcessedTransaction, entityId: string, entityName: string) => void;
+  onBulkEntitySelect?: (
+    transactions: ProcessedTransaction[],
+    entityId: string,
+    entityName: string
+  ) => void;
   onCreateEntity: (transaction: ProcessedTransaction) => void;
   onAcceptAiSuggestion: (transaction: ProcessedTransaction) => void;
   onEdit: (transaction: ProcessedTransaction) => void;
@@ -35,6 +40,7 @@ export function TransactionGroup({
   onAcceptAll,
   onCreateAndAssignAll,
   onEntitySelect,
+  onBulkEntitySelect,
   onCreateEntity,
   onAcceptAiSuggestion,
   onEdit,
@@ -159,9 +165,13 @@ export function TransactionGroup({
               onChange={(e) => {
                 const selectedEntity = entities.find((ent) => ent.id === e.target.value);
                 if (selectedEntity) {
-                  group.transactions.forEach((t) => {
-                    onEntitySelect(t, selectedEntity.id, selectedEntity.name);
-                  });
+                  if (onBulkEntitySelect) {
+                    onBulkEntitySelect(group.transactions, selectedEntity.id, selectedEntity.name);
+                  } else {
+                    group.transactions.forEach((t) => {
+                      onEntitySelect(t, selectedEntity.id, selectedEntity.name);
+                    });
+                  }
                   setShowEntitySelector(false);
                 }
               }}

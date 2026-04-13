@@ -29,9 +29,6 @@ export function findSimilarTransactions(
   candidates: ProcessedTransaction[]
 ): ProcessedTransaction[] {
   return candidates.filter((candidate) => {
-    // Skip already resolved transactions
-    if (candidate.entity?.entityId) return false;
-
     // Skip the reference transaction itself
     if (candidate === reference) return false;
 

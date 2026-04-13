@@ -1,4 +1,4 @@
-import { applyChangeSetToRules } from '@pops/api/modules/core/corrections/service';
+import { applyChangeSetToRules } from '@pops/api/modules/core/corrections/pure-service';
 import type { CorrectionRow } from '@pops/api/modules/core/corrections/types';
 import type { Entity } from '@pops/api/modules/core/entities/types';
 

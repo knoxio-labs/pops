@@ -333,7 +333,7 @@ export const useImportStore = create<ImportStore>((set) => ({
     }
 
     const entity: PendingEntity = {
-      tempId: `temp:entity:${crypto.randomUUID()}`,
+      tempId: `temp:entity:${globalThis.crypto.randomUUID()}`,
       name: input.name,
       type: input.type,
     };
@@ -350,7 +350,7 @@ export const useImportStore = create<ImportStore>((set) => ({
   // Pending changeset management (PRD-030 US-02)
   addPendingChangeSet: (input: AddPendingChangeSetInput): PendingChangeSet => {
     const entry: PendingChangeSet = {
-      tempId: `temp:changeset:${crypto.randomUUID()}`,
+      tempId: `temp:changeset:${globalThis.crypto.randomUUID()}`,
       changeSet: input.changeSet,
       appliedAt: new Date().toISOString(),
       source: input.source,

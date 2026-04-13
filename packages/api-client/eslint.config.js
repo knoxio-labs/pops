@@ -1,3 +1,3 @@
-import { createBaseConfig } from '../../eslint.config.base.mjs';
+import { createBaseConfig } from "../../eslint.config.base.mjs";
 
 export default createBaseConfig();

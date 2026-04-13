@@ -16,6 +16,10 @@
       "types": "./src/modules/core/corrections/service.ts",
       "default": "./src/modules/core/corrections/service.ts"
     },
+    "./modules/core/corrections/pure-service": {
+      "types": "./src/modules/core/corrections/pure-service.ts",
+      "default": "./src/modules/core/corrections/pure-service.ts"
+    },
     "./modules/core/corrections/types": {
       "types": "./src/modules/core/corrections/types.ts",
       "default": "./src/modules/core/corrections/types.ts"

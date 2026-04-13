@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/app-inventory/**'
-      - 'packages/ui/**'
-      - 'packages/db-types/**'
-      - 'packages/api-client/**'
-      - '.github/workflows/inventory-quality.yml'
-      - '.github/workflows/_pkg-check.yml'
+      - "packages/app-inventory/**"
+      - "packages/ui/**"
+      - "packages/db-types/**"
+      - "packages/api-client/**"
+      - ".github/workflows/inventory-quality.yml"
+      - ".github/workflows/_pkg-check.yml"
   pull_request:
 
 jobs:

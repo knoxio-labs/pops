@@ -117,8 +117,8 @@ The system must distinguish between:
 
 ## User Stories
 
-| #   | Story                                         | Summary                                                 | Status    | Parallelisable   |
-| --- | --------------------------------------------- | ------------------------------------------------------- | --------- | ---------------- |
+| #   | Story                                         | Summary                                                 | Status | Parallelisable   |
+| --- | --------------------------------------------- | ------------------------------------------------------- | ------ | ---------------- |
 | 01  | [us-01-schema-api](us-01-schema-api.md)       | Corrections storage and matching primitives             | Done   | No (first)       |
 | 02  | [us-02-upsert-logic](us-02-upsert-logic.md)   | Rule create/update semantics consistent with ChangeSets | Done   | Blocked by us-01 |
 | 03  | [us-03-auto-cleanup](us-03-auto-cleanup.md)   | Rule lifecycle management (deactivation / removal)      | Done   | Blocked by us-01 |

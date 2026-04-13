@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/**'
+      - ".github/workflows/**"
   pull_request:
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
     needs: [changes]
     if: always()
     steps:
-      - name: 'Skip — no relevant changes'
+      - name: "Skip — no relevant changes"
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no workflow changes"
       - uses: actions/checkout@v6

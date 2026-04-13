@@ -1,3 +1,4 @@
+import { PageHeader } from '@pops/ui';
 import { useEffect } from 'react';
 
 import { ImportWizard } from '../components/imports/ImportWizard';
@@ -16,12 +17,10 @@ export function ImportPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Import Transactions</h1>
-        <p className="text-muted-foreground">
-          Import transactions from your bank CSV files into POPS
-        </p>
-      </div>
+      <PageHeader
+        title="Import Transactions"
+        description="Import transactions from your bank CSV files into POPS"
+      />
 
       <ImportWizard />
     </div>
