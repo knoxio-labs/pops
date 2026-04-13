@@ -1,6 +1,7 @@
-import { inArray } from 'drizzle-orm';
-import { getDrizzle } from '../../../../db.js';
 import { transactions } from '@pops/db-types';
+import { inArray } from 'drizzle-orm';
+
+import { getDrizzle } from '../../../../db.js';
 
 /**
  * Query SQLite for existing checksums.

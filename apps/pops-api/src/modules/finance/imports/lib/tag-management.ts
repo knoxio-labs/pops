@@ -1,6 +1,7 @@
-import { and, isNotNull, ne, eq } from 'drizzle-orm';
+import { tagVocabulary, transactions } from '@pops/db-types';
+import { and, eq, isNotNull, ne } from 'drizzle-orm';
+
 import { getDrizzle } from '../../../../db.js';
-import { transactions, tagVocabulary } from '@pops/db-types';
 import { suggestTags } from '../../../../shared/tag-suggester.js';
 import type { SuggestedTag } from '../types.js';
 

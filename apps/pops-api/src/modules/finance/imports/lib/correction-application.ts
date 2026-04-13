@@ -1,15 +1,15 @@
 import { logger } from '../../../../lib/logger.js';
-import { matchEntity } from './entity-matcher.js';
-import { loadEntityMaps } from './entity-lookup.js';
 import {
+  applyChangeSetToRules,
   findMatchingCorrection,
   findMatchingCorrectionFromRules,
   listCorrections,
-  applyChangeSetToRules,
 } from '../../../core/corrections/service.js';
-import type { CorrectionRow, ChangeSet } from '../../../core/corrections/types.js';
-import { parseCorrectionTags, buildSuggestedTags, loadKnownTags } from './tag-management.js';
+import type { ChangeSet, CorrectionRow } from '../../../core/corrections/types.js';
 import type { ParsedTransaction, ProcessedTransaction, ProcessImportOutput } from '../types.js';
+import { loadEntityMaps } from './entity-lookup.js';
+import { matchEntity } from './entity-matcher.js';
+import { buildSuggestedTags, loadKnownTags, parseCorrectionTags } from './tag-management.js';
 
 export function applyLearnedCorrection(args: {
   transaction: ParsedTransaction;
