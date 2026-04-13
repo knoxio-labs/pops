@@ -6,10 +6,11 @@ import { count, eq, like } from 'drizzle-orm';
 
 import { getDrizzle } from '../../../db.js';
 import { NotFoundError } from '../../../shared/errors.js';
+import type { SettingsKey } from './keys.js';
 import type { SetSettingInput, SettingRow } from './types.js';
 
 /** Get a single setting by key */
-export function getSetting(key: string): SettingRow {
+export function getSetting(key: SettingsKey): SettingRow {
   const db = getDrizzle();
   const [row] = db.select().from(settings).where(eq(settings.key, key)).all();
 
@@ -21,7 +22,7 @@ export function getSetting(key: string): SettingRow {
 }
 
 /** Get a single setting by key, returning null if not found */
-export function getSettingOrNull(key: string): SettingRow | null {
+export function getSettingOrNull(key: SettingsKey): SettingRow | null {
   const db = getDrizzle();
   const [row] = db.select().from(settings).where(eq(settings.key, key)).all();
   return row ?? null;
@@ -67,7 +68,7 @@ export function setSetting(input: SetSettingInput): SettingRow {
 }
 
 /** Delete a setting by key */
-export function deleteSetting(key: string): void {
+export function deleteSetting(key: SettingsKey): void {
   const db = getDrizzle();
   const result = db.delete(settings).where(eq(settings.key, key)).run();
 

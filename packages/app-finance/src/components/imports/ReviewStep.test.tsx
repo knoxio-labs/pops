@@ -63,6 +63,11 @@ vi.mock('../../lib/trpc', () => ({
           }),
         },
       },
+      transactions: {
+        listDescriptionsForPreview: {
+          useQuery: () => ({ data: { data: [], total: 0, truncated: false }, isLoading: false }),
+        },
+      },
     },
   },
 }));

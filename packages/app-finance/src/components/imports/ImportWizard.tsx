@@ -1,13 +1,15 @@
 import { Progress } from '@pops/ui';
+import { lazy, Suspense } from 'react';
 
 import { useImportStore } from '../../store/importStore';
 import { ColumnMapStep } from './ColumnMapStep';
 import { FinalReviewStep } from './FinalReviewStep';
 import { ProcessingStep } from './ProcessingStep';
-import { ReviewStep } from './ReviewStep';
 import { SummaryStep } from './SummaryStep';
 import { TagReviewStep } from './TagReviewStep';
 import { UploadStep } from './UploadStep';
+
+const ReviewStep = lazy(() => import('./ReviewStep').then((m) => ({ default: m.ReviewStep })));
 
 /**
  * Import wizard orchestrator - manages 7-step flow
@@ -67,7 +69,15 @@ export function ImportWizard() {
 
       {/* Current step content */}
       <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm p-6">
-        {CurrentStepComponent ? <CurrentStepComponent /> : <div>Unknown step</div>}
+        {currentStep === 4 ? (
+          <Suspense fallback={<div className="text-sm text-muted-foreground">Loading review…</div>}>
+            <ReviewStep />
+          </Suspense>
+        ) : CurrentStepComponent ? (
+          <CurrentStepComponent />
+        ) : (
+          <div>Unknown step</div>
+        )}
       </div>
     </div>
   );

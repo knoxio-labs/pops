@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -10,9 +9,13 @@ import {
   Input,
 } from '@pops/ui';
 import { Plus, Search } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import {
+  applyBrowsePriorityReorder,
+  sortRulesForBrowseDisplay,
+} from '../../lib/correction-browse-reorder';
 import { computeMergedRules } from '../../lib/merged-state';
 import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
@@ -36,6 +39,10 @@ import { useApplyRejectMutations } from './hooks/useApplyRejectMutations';
 import { localOpsToChangeSet, newClientId, useLocalOps } from './hooks/useLocalOps';
 import { usePreviewEffects } from './hooks/usePreviewEffects';
 import type { CorrectionRule } from './RulePicker';
+
+const BrowseRulesSidebar = lazy(() =>
+  import('./BrowseRulesSidebar').then((m) => ({ default: m.BrowseRulesSidebar }))
+);
 
 // Re-export shared symbols so existing consumers don't break
 export type {
@@ -85,6 +92,7 @@ export interface CorrectionProposalDialogProps {
 export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const minConfidence = props.minConfidence ?? 0.7;
   const isBrowseMode = props.mode === 'browse';
+  const { onOpenChange, onBrowseClose } = props;
 
   // ---- initial propose query ---------------------------------------------
 
@@ -133,6 +141,13 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
 
+  // ---- browse mode: fetch DB transactions for impact preview (PRD-032 US-06) ---
+
+  const dbTxnsQuery = trpc.finance.transactions.listDescriptionsForPreview.useQuery(undefined, {
+    enabled: isBrowseMode && props.open,
+    staleTime: 60_000,
+  });
+
   const previewHook = usePreviewEffects(
     {
       open: props.open,
@@ -140,6 +155,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       selectedOp,
       minConfidence,
       previewTransactions: props.previewTransactions,
+      dbTransactions: isBrowseMode ? (dbTxnsQuery.data?.data ?? []) : undefined,
       pendingChangeSets,
     },
     setLocalOps
@@ -149,9 +165,11 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     combinedPreview,
     combinedPreviewError,
     combinedPreviewTruncated,
+    combinedDbPreview,
     selectedOpPreview,
     selectedOpPreviewError,
     selectedOpPreviewTruncated,
+    selectedOpDbPreview,
     previewMutationPending,
     hasDirty,
     handleRerunPreview,
@@ -212,26 +230,39 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     { enabled: isBrowseMode && props.open, staleTime: 30_000 }
   );
 
-  const browseDbRules = browseListQuery.data?.data ?? [];
-
   const browseMergedRules: CorrectionRule[] = useMemo(() => {
     if (!isBrowseMode) return [];
+    const browseDbRules = browseListQuery.data?.data ?? [];
     if (pendingChangeSets.length === 0) return browseDbRules;
     return computeMergedRules(
       browseDbRules as unknown as Parameters<typeof computeMergedRules>[0],
       pendingChangeSets
     ) as unknown as CorrectionRule[];
-  }, [isBrowseMode, browseDbRules, pendingChangeSets]);
+  }, [isBrowseMode, browseListQuery.data?.data, pendingChangeSets]);
 
-  const browseFilteredRules = useMemo(() => {
+  const browseOrderedMerged = useMemo(
+    () => sortRulesForBrowseDisplay(browseMergedRules, localOps),
+    [browseMergedRules, localOps]
+  );
+
+  const browseOrderedFiltered = useMemo(() => {
     const needle = browseSearch.trim().toLowerCase();
-    if (!needle) return browseMergedRules;
-    return browseMergedRules.filter((r) => {
+    if (!needle) return browseOrderedMerged;
+    return browseOrderedMerged.filter((r) => {
       const haystack =
         `${r.descriptionPattern} ${r.entityName ?? ''} ${r.matchType} ${r.location ?? ''}`.toLowerCase();
       return haystack.includes(needle);
     });
-  }, [browseMergedRules, browseSearch]);
+  }, [browseOrderedMerged, browseSearch]);
+
+  const browseCanDragReorder = browseSearch.trim() === '' && browseOrderedMerged.length >= 2;
+
+  const handleBrowseReorderFullList = useCallback(
+    (reordered: CorrectionRule[]) => {
+      setLocalOps((prev) => applyBrowsePriorityReorder(reordered, prev));
+    },
+    [setLocalOps]
+  );
 
   const browseSelectedRule = useMemo(
     () => browseMergedRules.find((r) => r.id === browseSelectedRuleId) ?? null,
@@ -246,29 +277,42 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
 
   // ---- handlers -----------------------------------------------------------
 
-  function handleOpenChange(open: boolean) {
-    if (!open && isBrowseMode) {
-      const currentCount = useImportStore.getState().pendingChangeSets.length;
-      const hadChanges = currentCount !== browseInitialPendingCountRef.current;
-      setBrowseSearch('');
-      setBrowseSelectedRuleId(null);
-      setLocalOps([]);
-      setSelectedClientId(null);
-      props.onOpenChange(false);
-      props.onBrowseClose?.(hadChanges);
-      return;
-    }
-    props.onOpenChange(open);
-    if (!open) {
-      setLocalOps([]);
-      setSelectedClientId(null);
-      setPreviewView('selected');
-      resetPreviewState();
-      resetMutationState();
-      setRationale(null);
-      seededForSignalRef.current = null;
-    }
-  }
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && isBrowseMode) {
+        const currentCount = useImportStore.getState().pendingChangeSets.length;
+        const hadChanges = currentCount !== browseInitialPendingCountRef.current;
+        setBrowseSearch('');
+        setBrowseSelectedRuleId(null);
+        setLocalOps([]);
+        setSelectedClientId(null);
+        onOpenChange(false);
+        onBrowseClose?.(hadChanges);
+        return;
+      }
+      onOpenChange(open);
+      if (!open) {
+        setLocalOps([]);
+        setSelectedClientId(null);
+        setPreviewView('selected');
+        resetPreviewState();
+        resetMutationState();
+        setRationale(null);
+        seededForSignalRef.current = null;
+      }
+    },
+    [
+      isBrowseMode,
+      onOpenChange,
+      onBrowseClose,
+      resetPreviewState,
+      resetMutationState,
+      setLocalOps,
+      setSelectedClientId,
+      setRationale,
+      seededForSignalRef,
+    ]
+  );
 
   handleCloseRef.current = () => handleOpenChange(false);
 
@@ -352,31 +396,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
     }
     handleOpenChange(false);
-  }, [localOps, addPendingChangeSet]);
-
-  // ---- browse mode keyboard nav -------------------------------------------
-  const browseListRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!isBrowseMode || !props.open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        const list = browseFilteredRules;
-        if (list.length === 0) return;
-        const currentIdx = list.findIndex((r) => r.id === browseSelectedRuleId);
-        let nextIdx: number;
-        if (e.key === 'ArrowDown') {
-          nextIdx = currentIdx < list.length - 1 ? currentIdx + 1 : 0;
-        } else {
-          nextIdx = currentIdx > 0 ? currentIdx - 1 : list.length - 1;
-        }
-        const nextRule = list[nextIdx];
-        if (nextRule) handleBrowseSelectRule(nextRule.id);
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isBrowseMode, props.open, browseFilteredRules, browseSelectedRuleId]);
+  }, [localOps, addPendingChangeSet, handleOpenChange]);
 
   // ---- shared memos (must be above any early return) ----------------------
 
@@ -415,9 +435,9 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
           ) : browseListQuery.isLoading ? (
             <div className="px-6 pb-6 text-sm text-muted-foreground">Loading rules…</div>
           ) : (
-            <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-0 border-y flex-1 min-h-0">
+            <div className="grid grid-cols-[300px_minmax(0,1fr)_360px] gap-0 border-y flex-1 min-h-0">
               {/* Sidebar: rule list with search */}
-              <div className="flex flex-col min-h-0 border-r" ref={browseListRef}>
+              <div className="flex flex-col min-h-0 border-r">
                 <div className="px-3 py-2 border-b">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -429,69 +449,32 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                     />
                   </div>
                 </div>
-                <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b">
-                  {browseFilteredRules.length} rule{browseFilteredRules.length === 1 ? '' : 's'}
-                  {browseSearch && ` matching "${browseSearch}"`}
+                <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b space-y-0.5">
+                  <div>
+                    {browseOrderedFiltered.length} rule
+                    {browseOrderedFiltered.length === 1 ? '' : 's'}
+                    {browseSearch && ` matching "${browseSearch}"`}
+                  </div>
+                  {browseSearch.trim() !== '' && (
+                    <div className="text-[10px] text-muted-foreground/90">
+                      Clear search to drag rules into priority order.
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 overflow-auto">
-                  {browseFilteredRules.length === 0 ? (
-                    <div className="p-4 text-sm text-muted-foreground">No rules found.</div>
-                  ) : (
-                    <ul className="divide-y">
-                      {browseFilteredRules.map((rule) => {
-                        const selected = rule.id === browseSelectedRuleId;
-                        const isPending = rule.id.startsWith('temp:');
-                        const hasLocalOp = localOps.some(
-                          (o) => o.kind !== 'add' && o.targetRuleId === rule.id
-                        );
-                        return (
-                          <li
-                            key={rule.id}
-                            className={`px-3 py-2 cursor-pointer hover:bg-muted/50 ${
-                              selected ? 'bg-muted' : ''
-                            }`}
-                            onClick={() => handleBrowseSelectRule(rule.id)}
-                          >
-                            <div className="flex items-start gap-2">
-                              <div className="flex-1 min-w-0 space-y-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <code className="text-xs truncate max-w-[180px]">
-                                    {rule.descriptionPattern}
-                                  </code>
-                                  <Badge variant="outline" className="text-[10px] h-4 px-1.5">
-                                    {rule.matchType}
-                                  </Badge>
-                                  {isPending && (
-                                    <Badge
-                                      variant="default"
-                                      className="text-[10px] h-4 px-1.5 bg-amber-500"
-                                    >
-                                      pending
-                                    </Badge>
-                                  )}
-                                  {hasLocalOp && (
-                                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                                      edited
-                                    </Badge>
-                                  )}
-                                  {!rule.isActive && (
-                                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                                      disabled
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground truncate">
-                                  {[rule.entityName, rule.location, rule.transactionType]
-                                    .filter(Boolean)
-                                    .join(' · ') || 'no outcome set'}
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                  <Suspense
+                    fallback={<div className="p-3 text-xs text-muted-foreground">Loading…</div>}
+                  >
+                    <BrowseRulesSidebar
+                      canDragReorder={browseCanDragReorder}
+                      orderedMerged={browseOrderedMerged}
+                      orderedFiltered={browseOrderedFiltered}
+                      selectedRuleId={browseSelectedRuleId}
+                      localOps={localOps}
+                      onSelectRule={handleBrowseSelectRule}
+                      onReorderFullList={handleBrowseReorderFullList}
+                    />
+                  </Suspense>
                 </div>
                 <div className="border-t p-2">
                   <Button
@@ -529,6 +512,43 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
                   </div>
                 )}
               </div>
+
+              {/* Impact preview (PRD-032 US-06) */}
+              {(() => {
+                const browsePreviewResult =
+                  previewView === 'combined' ? combinedPreview : selectedOpPreview;
+                const browseDbPreviewResult =
+                  previewView === 'combined' ? combinedDbPreview : selectedOpDbPreview;
+                const browsePreviewError =
+                  previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
+                const browseTruncated =
+                  previewView === 'combined'
+                    ? combinedPreviewTruncated
+                    : selectedOpPreviewTruncated;
+                const browseLabel =
+                  previewView === 'combined'
+                    ? 'Combined effect of all pending changes'
+                    : selectedOp
+                      ? 'Effect of selected operation'
+                      : 'No operation selected';
+                return (
+                  <ImpactPanel
+                    view={previewView}
+                    onViewChange={setPreviewView}
+                    label={browseLabel}
+                    previewResult={browsePreviewResult}
+                    dbPreviewResult={browseDbPreviewResult}
+                    dbTruncated={dbTxnsQuery.data?.truncated}
+                    dbTotal={dbTxnsQuery.data?.total}
+                    previewError={browsePreviewError}
+                    isPending={previewMutationPending}
+                    stale={hasDirty}
+                    truncated={browseTruncated}
+                    onRerun={handleRerunPreview}
+                    disabled={localOps.length === 0}
+                  />
+                );
+              })()}
             </div>
           )}
 

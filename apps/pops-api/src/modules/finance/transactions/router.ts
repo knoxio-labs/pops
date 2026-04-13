@@ -1,10 +1,11 @@
 /**
  * Transaction tRPC router — CRUD procedures for transactions.
  */
+import { transactions as transactionsTable } from '@pops/db-types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { getDb } from '../../../db.js';
+import { getDb, getDrizzle } from '../../../db.js';
 import { NotFoundError } from '../../../shared/errors.js';
 import { paginationMeta } from '../../../shared/pagination.js';
 import { suggestTags } from '../../../shared/tag-suggester.js';
@@ -17,6 +18,9 @@ import {
   TransactionQuerySchema,
   UpdateTransactionSchema,
 } from './types.js';
+
+/** Cap on transactions returned for rule-preview purposes (mirrors PREVIEW_CHANGESET_MAX_TRANSACTIONS on the client). */
+const PREVIEW_DESCRIPTIONS_LIMIT = 2000;
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -121,6 +125,49 @@ export const transactionsRouter = router({
         entityId: input.entityId ?? null,
       });
       return { tags: suggested.map((s) => s.tag) };
+    }),
+
+  /**
+   * Fetch descriptions (and checksums) of existing DB transactions for
+   * in-memory rule-preview computation in browse mode (PRD-032 US-06).
+   *
+   * Returns at most PREVIEW_DESCRIPTIONS_LIMIT rows. When the DB contains
+   * more, `truncated` is true and `total` reflects the actual count so the
+   * client can show a "preview truncated" hint.
+   */
+  listDescriptionsForPreview: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z
+            .number()
+            .positive()
+            .max(PREVIEW_DESCRIPTIONS_LIMIT)
+            .default(PREVIEW_DESCRIPTIONS_LIMIT),
+        })
+        .optional()
+    )
+    .query(({ input }) => {
+      const limit = input?.limit ?? PREVIEW_DESCRIPTIONS_LIMIT;
+      const db = getDrizzle();
+      const rows = db
+        .select({
+          description: transactionsTable.description,
+          checksum: transactionsTable.checksum,
+        })
+        .from(transactionsTable)
+        .limit(limit + 1)
+        .all();
+      const truncated = rows.length > limit;
+      const data = truncated ? rows.slice(0, limit) : rows;
+      const totalCount = getDb().prepare('SELECT COUNT(*) as c FROM transactions').get() as {
+        c: number;
+      };
+      return {
+        data,
+        total: totalCount.c,
+        truncated,
+      };
     }),
 
   /**
