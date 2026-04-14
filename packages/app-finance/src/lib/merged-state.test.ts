@@ -1,4 +1,4 @@
-import type { CorrectionRow } from '@pops/api/modules/core/corrections/types';
+import type { Correction } from '@pops/api/modules/core/corrections/types';
 import type { Entity } from '@pops/api/modules/core/entities/types';
 import { describe, expect, it } from 'vitest';
 
@@ -9,7 +9,7 @@ import { computeMergedEntities, computeMergedRules } from './merged-state';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeRule(overrides: Partial<CorrectionRow> = {}): CorrectionRow {
+function makeRule(overrides: Partial<Correction> = {}): Correction {
   return {
     id: 'rule-1',
     descriptionPattern: 'WOOLWORTHS',
@@ -17,7 +17,7 @@ function makeRule(overrides: Partial<CorrectionRow> = {}): CorrectionRow {
     entityId: 'entity-1',
     entityName: 'Woolworths',
     location: null,
-    tags: '[]',
+    tags: [],
     transactionType: 'purchase',
     isActive: true,
     confidence: 0.95,
@@ -26,7 +26,7 @@ function makeRule(overrides: Partial<CorrectionRow> = {}): CorrectionRow {
     createdAt: '2026-01-01T00:00:00Z',
     lastUsedAt: '2026-03-01T00:00:00Z',
     ...overrides,
-  } as CorrectionRow;
+  };
 }
 
 function makePendingChangeSet(
@@ -112,7 +112,7 @@ describe('computeMergedRules', () => {
   });
 
   it('applies multiple sequential ChangeSets (add then edit same rule)', () => {
-    const dbRules: CorrectionRow[] = [];
+    const dbRules: Correction[] = [];
 
     const cs1 = makePendingChangeSet({
       ops: [
@@ -223,6 +223,19 @@ describe('computeMergedRules', () => {
     expect(result1).not.toBe(result2);
     expect(result1[0].confidence).toBe(0.8);
     expect(result2[0].confidence).toBe(0.9);
+  });
+
+  it('preserves tags as string[] (not a JSON-encoded string) after applying ops', () => {
+    // Regression guard: the previous implementation leaked CorrectionRow (tags: string)
+    // out of the merge, which caused downstream edit ops to send `tags: "[\"grocery\"]"`
+    // and fail server-side Zod validation.
+    const dbRules = [makeRule({ id: 'r1', tags: ['grocery'] })];
+    const cs = makePendingChangeSet({
+      ops: [{ op: 'edit', id: 'r1', data: { confidence: 0.9 } }],
+    });
+    const [merged] = computeMergedRules(dbRules, [cs]);
+    expect(Array.isArray(merged?.tags)).toBe(true);
+    expect(merged?.tags).toEqual(['grocery']);
   });
 });
 

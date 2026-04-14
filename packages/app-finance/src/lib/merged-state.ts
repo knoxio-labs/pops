@@ -1,5 +1,6 @@
 import { applyChangeSetToRules } from '@pops/api/modules/core/corrections/pure-service';
-import type { CorrectionRow } from '@pops/api/modules/core/corrections/types';
+import type { Correction, CorrectionRow } from '@pops/api/modules/core/corrections/types';
+import { correctionToRow, toCorrection } from '@pops/api/modules/core/corrections/types';
 import type { Entity } from '@pops/api/modules/core/entities/types';
 
 import type { PendingChangeSet, PendingEntity } from '../store/importStore';
@@ -8,18 +9,21 @@ import type { PendingChangeSet, PendingEntity } from '../store/importStore';
 // computeMergedRules — PRD-030 US-03
 // ---------------------------------------------------------------------------
 
-let _cachedRulesInput: { dbRules: CorrectionRow[]; pending: PendingChangeSet[] } | null = null;
-let _cachedRulesOutput: CorrectionRow[] | null = null;
+let _cachedRulesInput: { dbRules: Correction[]; pending: PendingChangeSet[] } | null = null;
+let _cachedRulesOutput: Correction[] | null = null;
 
 /**
  * Fold `applyChangeSetToRules` over each pending ChangeSet in insertion order,
  * starting from the DB rules as the base. Memoized by reference equality on
  * both input arrays.
+ *
+ * Operates on the API `Correction` shape (tags: string[]) at the boundary so
+ * the frontend never has to juggle the DB's JSON-encoded tags string.
  */
 export function computeMergedRules(
-  dbRules: CorrectionRow[],
+  dbRules: Correction[],
   pendingChangeSets: PendingChangeSet[]
-): CorrectionRow[] {
+): Correction[] {
   // Memoization: same input refs → same output ref
   if (
     _cachedRulesInput &&
@@ -30,15 +34,17 @@ export function computeMergedRules(
     return _cachedRulesOutput;
   }
 
-  let result: CorrectionRow[];
+  let result: Correction[];
 
   if (pendingChangeSets.length === 0) {
     result = dbRules;
   } else {
-    result = pendingChangeSets.reduce<CorrectionRow[]>(
+    const baseRows = dbRules.map(correctionToRow);
+    const mergedRows = pendingChangeSets.reduce<CorrectionRow[]>(
       (acc, pcs) => applyChangeSetToRules(acc, pcs.changeSet),
-      dbRules
+      baseRows
     );
+    result = mergedRows.map(toCorrection);
   }
 
   _cachedRulesInput = { dbRules, pending: pendingChangeSets };
