@@ -9,6 +9,7 @@ import { trpc } from '../../lib/trpc';
 import { cn } from '../../lib/utils';
 import { useImportStore } from '../../store/importStore';
 import { TagEditor, type TagMetaEntry } from '../TagEditor';
+import { TagRuleProposalDialog } from './TagRuleProposalDialog';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -166,9 +167,14 @@ export function TagReviewStep() {
 
       {/* Top-level bulk action */}
       {confirmedTransactions.length > 0 && (
-        <Button variant="outline" size="sm" onClick={handleAcceptAll}>
-          Accept All Suggestions
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleAcceptAll}>
+            Accept All Suggestions
+          </Button>
+          <Button variant="outline" size="sm">
+            Learn from Tag Edits
+          </Button>
+        </div>
       )}
 
       {/* Entity groups */}

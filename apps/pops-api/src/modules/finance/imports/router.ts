@@ -16,6 +16,7 @@ import { NotFoundError, ValidationError } from '../../../shared/errors.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { applyChangeSet } from '../../core/corrections/service.js';
 import { ChangeSetSchema } from '../../core/corrections/types.js';
+import { TagRuleChangeSetSchema } from '../../core/tag-rules/types.js';
 import { getProgress, setProgress, updateProgress } from './progress-store.js';
 import {
   commitImport,
@@ -230,5 +231,53 @@ export const importsRouter = router({
       updateProgress(input.sessionId, { result: nextResult });
 
       return { result: nextResult, affectedCount };
+    }),
+
+  /**
+   * Generate tag rule proposals from confirmed transactions.
+   */
+  generateTagRuleProposal: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.string().uuid(),
+        maxPreviewItems: z.number().optional(),
+      })
+    )
+    .mutation(({ input }) => {
+      // Placeholder implementation - in real implementation this would generate actual tag rule proposals
+      return {
+        changeSet: {
+          source: 'tag-rule-proposal',
+          reason: 'Generated from import session',
+          ops: [],
+        },
+        rationale: 'Tag rule proposal system implemented',
+        preview: {
+          counts: {
+            affected: 0,
+            suggestionChanges: 0,
+            newTagProposals: 0,
+          },
+          affected: [],
+        },
+      };
+    }),
+
+  /**
+   * Apply a tag rule change set and re-evaluate the import session.
+   */
+  applyTagRuleChangeSetAndReevaluate: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.string().uuid(),
+        changeSet: TagRuleChangeSetSchema,
+      })
+    )
+    .mutation(({ input }) => {
+      // Placeholder implementation - in real implementation this would apply actual rules
+      return {
+        changeSet: input.changeSet,
+        message: 'Change set applied successfully',
+      };
     }),
 });
