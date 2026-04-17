@@ -23,14 +23,22 @@ export function RootLayout() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const pageNavOpen = useUIStore((state) => state.pageNavOpen);
   const setPageNavOpen = useUIStore((state) => state.setPageNavOpen);
+  const skipNextPageNavClose = useUIStore((state) => state.skipNextPageNavClose);
+  const setSkipNextPageNavClose = useUIStore((state) => state.setSkipNextPageNavClose);
   const location = useLocation();
   const activeApp = findActiveApp(location.pathname, registeredApps);
   const appColorClass = activeApp?.color ? `app-${activeApp.color}` : undefined;
 
-  // Close tablet overlay on navigation
+  // Close tablet overlay on navigation, unless AppRail requested we skip one
+  // cycle (it sets skipNextPageNavClose before calling navigate so the overlay
+  // it is about to open is not immediately collapsed by this effect).
   useEffect(() => {
+    if (skipNextPageNavClose) {
+      setSkipNextPageNavClose(false);
+      return;
+    }
     setPageNavOpen(false);
-  }, [location.pathname, setPageNavOpen]);
+  }, [location.pathname, setPageNavOpen, skipNextPageNavClose, setSkipNextPageNavClose]);
 
   return (
     <AppContextProvider>
