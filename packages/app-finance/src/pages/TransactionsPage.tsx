@@ -106,11 +106,7 @@ export function TransactionsPage() {
         const isNegative = amount < 0;
         return (
           <div className="text-right font-mono font-medium tabular-nums">
-            <span
-              className={
-                isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-              }
-            >
+            <span className={isNegative ? 'text-destructive' : 'text-success'}>
               {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}
             </span>
           </div>

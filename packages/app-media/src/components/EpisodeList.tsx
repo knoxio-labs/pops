@@ -117,7 +117,7 @@ function EpisodeRow({
               {ep.name ?? `Episode ${ep.episodeNumber}`}
             </span>
             {upcoming && (
-              <span className="text-xs text-yellow-500 font-medium shrink-0">Upcoming</span>
+              <span className="text-xs text-warning font-medium shrink-0">Upcoming</span>
             )}
           </div>
 
@@ -130,7 +130,7 @@ function EpisodeRow({
 
         {hasFile && (
           <span
-            className="shrink-0 text-green-500"
+            className="shrink-0 text-success"
             title="Downloaded"
             aria-label={`Episode ${ep.episodeNumber} downloaded`}
           >

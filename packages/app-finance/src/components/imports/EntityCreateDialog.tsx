@@ -107,12 +107,12 @@ export function EntityCreateDialog({
                 autoFocus
               />
               {touched && !name.trim() && (
-                <p className="text-xs text-red-600 dark:text-red-400 mt-1">Name is required</p>
+                <p className="text-xs text-destructive mt-1">Name is required</p>
               )}
             </div>
 
             {error && (
-              <div className="p-3 text-sm text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-200 rounded-md">
+              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
                 <p>{error}</p>
               </div>
             )}

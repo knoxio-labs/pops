@@ -123,7 +123,7 @@ export function ProcessingStep() {
   if (hasAlreadyProcessed) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-6">
-        <CheckCircle className="w-16 h-16 text-green-500" />
+        <CheckCircle className="w-16 h-16 text-success" />
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-semibold">Already processed</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -137,7 +137,7 @@ export function ProcessingStep() {
 
   return (
     <div className="flex flex-col items-center justify-center py-12 space-y-6">
-      <Loader2 className="w-16 h-16 animate-spin text-blue-500" />
+      <Loader2 className="w-16 h-16 animate-spin text-info" />
 
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold">Processing</h2>
@@ -157,7 +157,7 @@ export function ProcessingStep() {
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              className="bg-info h-2 rounded-full transition-all duration-300"
               style={{
                 width: `${(progress.processedCount / progress.totalTransactions) * 100}%`,
               }}
@@ -205,8 +205,8 @@ export function ProcessingStep() {
                 className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
               >
                 {item.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin" />}
-                {item.status === 'success' && <CheckCircle className="w-3 h-3 text-green-500" />}
-                {item.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                {item.status === 'success' && <CheckCircle className="w-3 h-3 text-success" />}
+                {item.status === 'failed' && <XCircle className="w-3 h-3 text-destructive" />}
                 <span className="truncate">{item.description}</span>
               </div>
             ))}
@@ -281,7 +281,7 @@ export function ProcessingStep() {
 
       {/* Fatal errors */}
       {(processImportMutation.isError || progressQuery.data?.status === 'failed') && (
-        <div className="p-4 max-w-md text-sm text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-200 rounded-lg">
+        <div className="p-4 max-w-md text-sm text-destructive bg-destructive/10 rounded-lg">
           <p className="font-medium mb-1">Processing Failed</p>
           <p>{processImportMutation.error?.message || 'An unexpected error occurred'}</p>
           {progressQuery.data?.errors && progressQuery.data.errors.length > 0 && (

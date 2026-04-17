@@ -14,10 +14,10 @@ interface FreshnessBadgeProps {
 type FreshnessLevel = 'Fresh' | 'Recent' | 'Fading' | 'Stale';
 
 const LEVEL_STYLES: Record<FreshnessLevel, string> = {
-  Fresh: 'bg-green-500/20 text-green-700 dark:text-green-400',
-  Recent: 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
-  Fading: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400',
-  Stale: 'bg-red-500/20 text-red-700 dark:text-red-400',
+  Fresh: 'bg-success/20 text-success',
+  Recent: 'bg-info/20 text-info',
+  Fading: 'bg-warning/20 text-warning',
+  Stale: 'bg-destructive/20 text-destructive',
 };
 
 function getLevel(daysSinceWatch: number, staleness: number): FreshnessLevel {

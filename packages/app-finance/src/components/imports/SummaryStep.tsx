@@ -34,7 +34,7 @@ export function SummaryStep() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+        <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
         <h2 className="text-2xl font-semibold mb-2">Import Complete</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           All changes have been committed successfully.
@@ -43,48 +43,44 @@ export function SummaryStep() {
 
       <div className="grid grid-cols-2 gap-4">
         {/* Entities created */}
-        <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+        <div className="bg-success/5 border border-success/20 rounded-lg p-4 text-center">
           <div className="flex items-center justify-center mb-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
+            <CheckCircle className="w-5 h-5 text-success" />
           </div>
-          <div className="text-2xl font-semibold text-green-900 dark:text-green-100">
-            {commitResult.entitiesCreated}
-          </div>
-          <div className="text-xs text-green-700 dark:text-green-300">Entities Created</div>
+          <div className="text-2xl font-semibold text-success">{commitResult.entitiesCreated}</div>
+          <div className="text-xs text-success">Entities Created</div>
         </div>
 
         {/* Rules applied */}
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-center">
+        <div className="bg-info/5 border border-info/20 rounded-lg p-4 text-center">
           <div className="flex items-center justify-center mb-2">
-            <CheckCircle className="w-5 h-5 text-blue-600" />
+            <CheckCircle className="w-5 h-5 text-info" />
           </div>
-          <div className="text-2xl font-semibold text-blue-900 dark:text-blue-100">
-            {totalRules}
-          </div>
-          <div className="text-xs text-blue-700 dark:text-blue-300">Rules Applied</div>
+          <div className="text-2xl font-semibold text-info">{totalRules}</div>
+          <div className="text-xs text-info">Rules Applied</div>
         </div>
 
         {/* Transactions imported */}
-        <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+        <div className="bg-success/5 border border-success/20 rounded-lg p-4 text-center">
           <div className="flex items-center justify-center mb-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
+            <CheckCircle className="w-5 h-5 text-success" />
           </div>
-          <div className="text-2xl font-semibold text-green-900 dark:text-green-100">
+          <div className="text-2xl font-semibold text-success">
             {commitResult.transactionsImported}
           </div>
-          <div className="text-xs text-green-700 dark:text-green-300">Transactions Imported</div>
+          <div className="text-xs text-success">Transactions Imported</div>
         </div>
 
         {/* Transactions failed */}
         {commitResult.transactionsFailed > 0 ? (
-          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 text-center">
             <div className="flex items-center justify-center mb-2">
-              <XCircle className="w-5 h-5 text-red-600" />
+              <XCircle className="w-5 h-5 text-destructive" />
             </div>
-            <div className="text-2xl font-semibold text-red-900 dark:text-red-100">
+            <div className="text-2xl font-semibold text-destructive">
               {commitResult.transactionsFailed}
             </div>
-            <div className="text-xs text-red-700 dark:text-red-300">Transactions Failed</div>
+            <div className="text-xs text-destructive">Transactions Failed</div>
           </div>
         ) : (
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
@@ -99,25 +95,23 @@ export function SummaryStep() {
 
       {/* Failure details (US-06 AC-5) */}
       {commitResult.failedDetails && commitResult.failedDetails.length > 0 && (
-        <div className="border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className="border border-destructive/20 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
-            <XCircle className="h-4 w-4 text-red-600" />
-            <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">
-              Failed Transactions
-            </h3>
+            <XCircle className="h-4 w-4 text-destructive" />
+            <h3 className="text-sm font-semibold text-destructive">Failed Transactions</h3>
           </div>
           <div className="space-y-2">
             {commitResult.failedDetails.map((detail, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-3 text-sm py-1 border-b border-red-100 dark:border-red-900 last:border-0"
+                className="flex items-start gap-3 text-sm py-1 border-b border-destructive/10 last:border-0"
               >
                 {detail.checksum && (
-                  <span className="font-mono text-xs text-red-600 dark:text-red-400 shrink-0">
+                  <span className="font-mono text-xs text-destructive shrink-0">
                     {detail.checksum.slice(0, 12)}
                   </span>
                 )}
-                <span className="text-red-700 dark:text-red-300 text-xs">{detail.error}</span>
+                <span className="text-destructive text-xs">{detail.error}</span>
               </div>
             ))}
           </div>

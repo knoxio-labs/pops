@@ -40,9 +40,9 @@ export function ImportWizard() {
               key={step.number}
               className={`flex items-center gap-2 ${
                 step.number === currentStep
-                  ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                  ? 'text-info font-semibold'
                   : step.number < currentStep
-                    ? 'text-green-600 dark:text-green-400'
+                    ? 'text-success'
                     : 'text-gray-400 dark:text-gray-600'
               }`}
             >
@@ -51,9 +51,9 @@ export function ImportWizard() {
                   w-8 h-8 rounded-full flex items-center justify-center text-sm
                   ${
                     step.number === currentStep
-                      ? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-600'
+                      ? 'bg-info/10 border-2 border-info'
                       : step.number < currentStep
-                        ? 'bg-green-100 dark:bg-green-900 border-2 border-green-600'
+                        ? 'bg-success/10 border-2 border-success'
                         : 'bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700'
                   }
                 `}

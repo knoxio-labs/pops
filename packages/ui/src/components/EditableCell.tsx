@@ -244,7 +244,7 @@ export function EditableCell<T = unknown>({
           className="p-1 rounded hover:bg-accent disabled:opacity-50"
           title="Save"
         >
-          <Check className="h-4 w-4 text-green-600" />
+          <Check className="h-4 w-4 text-success" />
         </button>
         <button
           onClick={handleCancel}
