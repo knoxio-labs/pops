@@ -81,4 +81,4 @@ PRD-007 propagation is only effective when PRD-002 US-02 (define `--app-accent` 
 
 ## Drift Check
 
-last checked: never
+last checked: 2026-04-17
