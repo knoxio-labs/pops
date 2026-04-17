@@ -16,11 +16,11 @@ interface ArrStatusBadgeProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  available: 'bg-success text-white',
-  complete: 'bg-success text-white',
-  monitored: 'bg-warning text-white',
-  downloading: 'bg-warning text-white',
-  partial: 'bg-warning text-white',
+  available: 'bg-success text-success-foreground',
+  complete: 'bg-success text-success-foreground',
+  monitored: 'bg-warning text-warning-foreground',
+  downloading: 'bg-warning text-warning-foreground',
+  partial: 'bg-warning text-warning-foreground',
   unmonitored: 'bg-muted text-muted-foreground',
   not_found: 'bg-muted text-muted-foreground',
 };

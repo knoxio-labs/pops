@@ -242,7 +242,7 @@ export function DiscoverCard({
                 matchPercentage >= 85
                   ? 'text-success'
                   : matchPercentage >= 70
-                    ? 'text-emerald-500'
+                    ? 'text-success/70'
                     : 'text-muted-foreground'
               )}
             >

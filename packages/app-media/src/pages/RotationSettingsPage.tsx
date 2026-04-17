@@ -365,7 +365,7 @@ export function RotationSettingsPage() {
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full transition-all ${usedPct > 90 ? 'bg-destructive/50' : usedPct > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      className={`h-full rounded-full transition-all ${usedPct > 90 ? 'bg-destructive' : usedPct > 70 ? 'bg-amber-500' : 'bg-success'}`}
                       style={{ width: `${Math.min(usedPct, 100)}%` }}
                     />
                   </div>
