@@ -17,7 +17,6 @@ Rules are learned through an explicit proposal flow (PRD-028): rule changes are 
 
 Tag rule learning is specified separately (PRD-029) and must not be coupled to classification rules.
 
-
 ## Data Model
 
 ### transaction_corrections

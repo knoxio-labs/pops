@@ -96,12 +96,12 @@ Each import makes the system smarter:
 
 ## User Stories
 
-| #   | Story                                                     | Summary                                                                        | Parallelisable   | Status    |
-| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------- | --------- |
-| 01  | [us-01-correction-analysis](us-01-correction-analysis.md) | Send correction signal to AI, receive proposal inputs for ChangeSet generation | No (first)       | Done      |
-| 02  | [us-02-auto-apply-rules](us-02-auto-apply-rules.md)       | Replace auto-apply with ChangeSet proposal + approval + re-evaluation loop     | Blocked by us-01 | Partial   |
-| 03  | [us-03-confirmation-flow](us-03-confirmation-flow.md)     | Proposal UI for approve/reject with required feedback on reject                | Blocked by us-01 | Done      |
-| 04  | [us-04-batch-analysis](us-04-batch-analysis.md)           | Batch context to improve proposals (still requires approval)                   | Blocked by us-01 | Done      |
+| #   | Story                                                     | Summary                                                                        | Parallelisable   | Status  |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------- | ------- |
+| 01  | [us-01-correction-analysis](us-01-correction-analysis.md) | Send correction signal to AI, receive proposal inputs for ChangeSet generation | No (first)       | Done    |
+| 02  | [us-02-auto-apply-rules](us-02-auto-apply-rules.md)       | Replace auto-apply with ChangeSet proposal + approval + re-evaluation loop     | Blocked by us-01 | Partial |
+| 03  | [us-03-confirmation-flow](us-03-confirmation-flow.md)     | Proposal UI for approve/reject with required feedback on reject                | Blocked by us-01 | Done    |
+| 04  | [us-04-batch-analysis](us-04-batch-analysis.md)           | Batch context to improve proposals (still requires approval)                   | Blocked by us-01 | Done    |
 
 US-02 and US-03 can parallelise after US-01.
 
@@ -112,7 +112,6 @@ US-02 and US-03 can parallelise after US-01.
 - AI unavailability still yields a deterministic fallback proposal signal.
 - Cost tracked per AI call where Claude is invoked.
 - Rules persist across imports once committed (next import benefits from rules written in a prior commit).
-
 
 ## Out of Scope
 
