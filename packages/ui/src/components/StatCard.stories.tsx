@@ -1,6 +1,7 @@
 import { StatCard } from './StatCard';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
+
 import type { StatCardColor } from './StatCard';
 
 const meta: Meta<typeof StatCard> = {
@@ -13,7 +14,15 @@ const meta: Meta<typeof StatCard> = {
   argTypes: {
     color: {
       control: 'select',
-      options: ['slate', 'emerald', 'rose', 'indigo', 'amber', 'sky', 'violet'] satisfies StatCardColor[],
+      options: [
+        'slate',
+        'emerald',
+        'rose',
+        'indigo',
+        'amber',
+        'sky',
+        'violet',
+      ] satisfies StatCardColor[],
     },
   },
 };
@@ -44,7 +53,13 @@ export const AllColourVariants: Story = {
           { color: 'violet', title: 'Violet', value: '99.9%' },
         ] satisfies { color: StatCardColor; title: string; value: string }[]
       ).map(({ color, title, value }) => (
-        <StatCard key={color} color={color} title={title} value={value} description="Last 30 days" />
+        <StatCard
+          key={color}
+          color={color}
+          title={title}
+          value={value}
+          description="Last 30 days"
+        />
       ))}
     </div>
   ),
@@ -125,12 +140,7 @@ export const AllVariantsWithTrend: Story = {
         description="Last 30 days"
         trend={{ value: 0.1, direction: 'up' }}
       />
-      <StatCard
-        color="slate"
-        title="Storage"
-        value="48 GB"
-        description="Used of 100 GB"
-      />
+      <StatCard color="slate" title="Storage" value="48 GB" description="Used of 100 GB" />
     </div>
   ),
 };
