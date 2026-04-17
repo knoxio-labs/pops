@@ -92,14 +92,17 @@ export function SearchPage() {
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   // Track compound "add to watchlist" pending state (by tmdbId)
   const [addingToWatchlistIds, setAddingToWatchlistIds] = useState<Set<number>>(new Set());
-  // Track compound "mark watched" pending state (by tmdbId or mediaId)
-  const [markingWatchedIds, setMarkingWatchedIds] = useState<Set<number>>(new Set());
+  // Track compound "mark watched" pending state (by tmdbId — not-yet-in-library flow)
+  const [markingWatchedTmdbIds, setMarkingWatchedTmdbIds] = useState<Set<number>>(new Set());
+  // Track in-library "mark watched" pending state (by local DB mediaId)
+  const [markingWatchedMediaIds, setMarkingWatchedMediaIds] = useState<Set<number>>(new Set());
   /**
    * Cache tmdbId → local DB id for movies added this session via compound
    * actions. The library query cache won't reflect newly added items until
    * it's refetched, so we store the mapping from the addMovie response.
    */
   const [sessionMovieLocalIds, setSessionMovieLocalIds] = useState<Map<number, number>>(new Map());
+  const [sessionTvLocalIds, setSessionTvLocalIds] = useState<Map<number, number>>(new Map());
 
   const shouldSearchMovies = debouncedQuery.length > 0 && (mode === 'movies' || mode === 'both');
   const shouldSearchTv = debouncedQuery.length > 0 && (mode === 'tv' || mode === 'both');
@@ -187,8 +190,9 @@ export function SearchPage() {
       addTvShowMutation.mutate(
         { tvdbId },
         {
-          onSuccess: () => {
+          onSuccess: (result) => {
             setAddedIds((prev) => new Set(prev).add(key));
+            setSessionTvLocalIds((prev) => new Map(prev).set(tvdbId, result.data.show.id));
             toast.success('TV show added to library');
           },
           onError: (err: { message: string }) => {
@@ -204,7 +208,7 @@ export function SearchPage() {
         }
       );
     },
-    [addTvShowMutation]
+    [addTvShowMutation, setSessionTvLocalIds]
   );
 
   /**
@@ -270,7 +274,7 @@ export function SearchPage() {
   const handleMarkWatchedAndLibrary = useCallback(
     (tmdbId: number) => {
       const key = makeKey('movie', tmdbId);
-      setMarkingWatchedIds((prev) => new Set(prev).add(tmdbId));
+      setMarkingWatchedTmdbIds((prev) => new Set(prev).add(tmdbId));
       setAddingIds((prev) => new Set(prev).add(key));
       addMovieMutation.mutate(
         { tmdbId },
@@ -289,7 +293,7 @@ export function SearchPage() {
                   toast.error(`Movie added to library but watch log failed: ${err.message}`);
                 },
                 onSettled: () => {
-                  setMarkingWatchedIds((prev) => {
+                  setMarkingWatchedTmdbIds((prev) => {
                     const next = new Set(prev);
                     next.delete(tmdbId);
                     return next;
@@ -300,7 +304,7 @@ export function SearchPage() {
           },
           onError: (err: { message: string }) => {
             toast.error(`Failed to add movie: ${err.message}`);
-            setMarkingWatchedIds((prev) => {
+            setMarkingWatchedTmdbIds((prev) => {
               const next = new Set(prev);
               next.delete(tmdbId);
               return next;
@@ -324,7 +328,7 @@ export function SearchPage() {
    */
   const handleMarkWatched = useCallback(
     (mediaId: number) => {
-      setMarkingWatchedIds((prev) => new Set(prev).add(mediaId));
+      setMarkingWatchedMediaIds((prev) => new Set(prev).add(mediaId));
       watchHistoryLogMutation.mutate(
         { mediaType: 'movie', mediaId },
         {
@@ -335,7 +339,7 @@ export function SearchPage() {
             toast.error(`Failed to log watch: ${err.message}`);
           },
           onSettled: () => {
-            setMarkingWatchedIds((prev) => {
+            setMarkingWatchedMediaIds((prev) => {
               const next = new Set(prev);
               next.delete(mediaId);
               return next;
@@ -486,7 +490,7 @@ export function SearchPage() {
                             handleMarkWatchedAndLibrary(movie.tmdbId);
                           }
                     }
-                    isMarkingWatchedAndLibrary={markingWatchedIds.has(movie.tmdbId)}
+                    isMarkingWatchedAndLibrary={markingWatchedTmdbIds.has(movie.tmdbId)}
                     onMarkWatched={
                       localId != null
                         ? () => {
@@ -494,7 +498,7 @@ export function SearchPage() {
                           }
                         : undefined
                     }
-                    isMarkingWatched={localId != null && markingWatchedIds.has(localId)}
+                    isMarkingWatched={localId != null && markingWatchedMediaIds.has(localId)}
                     href={localId != null ? `/media/movies/${localId}` : undefined}
                   />
                 );
@@ -544,7 +548,8 @@ export function SearchPage() {
               {tvResults.map((show: TvSearchResult) => {
                 const key = makeKey('tv', show.tvdbId);
                 const inLibrary = tvTvdbIds.has(show.tvdbId) || addedIds.has(key);
-                const localId = tvTvdbToLocalId.get(show.tvdbId);
+                const localId =
+                  tvTvdbToLocalId.get(show.tvdbId) ?? sessionTvLocalIds.get(show.tvdbId);
                 return (
                   <SearchResultCard
                     key={show.tvdbId}

@@ -298,18 +298,8 @@ export function SearchResultCard({
           </div>
         )}
 
-        {/* Action buttons — stop propagation so card link doesn't navigate on button click */}
-        <div
-          className="mt-auto flex flex-wrap items-center gap-2 pt-1"
-          onClick={
-            href
-              ? (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-              : undefined
-          }
-        >
+        {/* Action buttons — z-index above the overlay link so clicks reach the buttons */}
+        <div className="relative z-10 mt-auto flex flex-wrap items-center gap-2 pt-1">
           {inLibrary ? (
             <InLibraryActionButtons
               type={type}
@@ -347,22 +337,22 @@ export function SearchResultCard({
   );
 
   const baseClasses = cn(
-    'flex gap-4 rounded-lg border bg-card p-3 text-card-foreground',
+    'relative flex gap-4 rounded-lg border bg-card p-3 text-card-foreground',
     href && 'transition-colors hover:bg-accent/50',
     className
   );
 
-  if (href) {
-    return (
-      <Link
-        to={href}
-        className={baseClasses}
-        aria-label={`${title} (${type === 'movie' ? 'Movie' : 'TV'})`}
-      >
-        {cardContent}
-      </Link>
-    );
-  }
-
-  return <div className={baseClasses}>{cardContent}</div>;
+  return (
+    <div className={baseClasses}>
+      {href && (
+        <Link
+          to={href}
+          className="absolute inset-0 rounded-lg"
+          aria-label={`${title} (${type === 'movie' ? 'Movie' : 'TV'})`}
+          tabIndex={-1}
+        />
+      )}
+      {cardContent}
+    </div>
+  );
 }
