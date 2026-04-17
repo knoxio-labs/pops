@@ -238,6 +238,101 @@ describe('assembleSession', () => {
     expect(contextCount).toBeGreaterThanOrEqual(15);
   });
 
+  it('pinned shelves are always included when they generate results', () => {
+    // 15 regular tmdb shelves + 1 pinned shelf with very low score — pinned must still appear
+    const pinnedInstance = makeInstance('leaving-soon', 0.01);
+    const pinnedDef = makeDefinition('leaving-soon', 'local', [pinnedInstance]);
+    pinnedDef.pinned = true;
+
+    const tmdbDefs = Array.from({ length: 15 }, (_, i) =>
+      makeDefinition(`tmdb-${i}`, 'tmdb', [makeInstance(`tmdb-${i}`, 0.9)])
+    );
+    mockGetRegisteredShelves.mockReturnValue([...tmdbDefs, pinnedDef]);
+
+    // Run 10 times — pinned shelf must be present every time
+    for (let i = 0; i < 10; i++) {
+      const result = assembleSession(profile, new Map());
+      expect(result.some((s) => s.shelfId === 'leaving-soon')).toBe(true);
+    }
+  });
+
+  it('pinned shelves appear at the start of the session before random shelves', () => {
+    const pinnedInstance = makeInstance('leaving-soon', 0.01);
+    const pinnedDef = makeDefinition('leaving-soon', 'local', [pinnedInstance]);
+    pinnedDef.pinned = true;
+
+    const tmdbDefs = Array.from({ length: 15 }, (_, i) =>
+      makeDefinition(`tmdb-${i}`, 'tmdb', [makeInstance(`tmdb-${i}`, 0.9)])
+    );
+    mockGetRegisteredShelves.mockReturnValue([pinnedDef, ...tmdbDefs]);
+
+    const result = assembleSession(profile, new Map());
+    expect(result[0]!.shelfId).toBe('leaving-soon');
+  });
+
+  it('pinned shelves are not subject to MAX_LOCAL_PER_WINDOW constraint', () => {
+    // 4 local pinned shelves + 10 tmdb shelves — all pinned locals should appear
+    const pinnedDefs = Array.from({ length: 4 }, (_, i) => {
+      const def = makeDefinition(`leaving-${i}`, 'local', [makeInstance(`leaving-${i}`, 0.9)]);
+      def.pinned = true;
+      return def;
+    });
+    const tmdbDefs = Array.from({ length: 10 }, (_, i) =>
+      makeDefinition(`tmdb-${i}`, 'tmdb', [makeInstance(`tmdb-${i}`, 0.9)])
+    );
+    mockGetRegisteredShelves.mockReturnValue([...pinnedDefs, ...tmdbDefs]);
+
+    const result = assembleSession(profile, new Map());
+    const pinnedIds = new Set(['leaving-0', 'leaving-1', 'leaving-2', 'leaving-3']);
+    const presentPinned = result.filter((s) => pinnedIds.has(s.shelfId));
+    expect(presentPinned).toHaveLength(4);
+  });
+
+  it('returns pinned shelves even when no non-pinned candidates exist', () => {
+    const pinnedInstance = makeInstance('leaving-soon', 0.95);
+    const pinnedDef = makeDefinition('leaving-soon', 'local', [pinnedInstance]);
+    pinnedDef.pinned = true;
+
+    mockGetRegisteredShelves.mockReturnValue([pinnedDef]);
+
+    const result = assembleSession(profile, new Map());
+    expect(result).toHaveLength(1);
+    expect(result[0]!.shelfId).toBe('leaving-soon');
+  });
+
+  it('returns empty when pinned shelf generates no instances and no other shelves exist', () => {
+    const pinnedDef: ShelfDefinition = {
+      id: 'leaving-soon',
+      template: false,
+      category: 'local',
+      pinned: true,
+      generate: () => [],
+    };
+
+    mockGetRegisteredShelves.mockReturnValue([pinnedDef]);
+
+    const result = assembleSession(profile, new Map());
+    expect(result).toHaveLength(0);
+  });
+
+  it('total session length does not exceed SESSION_TARGET_MAX (15) when pinned instances are present', () => {
+    // 3 pinned shelves + 20 regular tmdb shelves — total must still be ≤ 15
+    const pinnedDefs = Array.from({ length: 3 }, (_, i) => {
+      const def = makeDefinition(`pinned-${i}`, 'local', [makeInstance(`pinned-${i}`, 0.9)]);
+      def.pinned = true;
+      return def;
+    });
+    const tmdbDefs = Array.from({ length: 20 }, (_, i) =>
+      makeDefinition(`tmdb-${i}`, 'tmdb', [makeInstance(`tmdb-${i}`, 0.8)])
+    );
+    mockGetRegisteredShelves.mockReturnValue([...pinnedDefs, ...tmdbDefs]);
+
+    for (let i = 0; i < 5; i++) {
+      const result = assembleSession(profile, new Map());
+      expect(result.length).toBeLessThanOrEqual(15);
+    }
+  });
+
   it('does not include duplicate shelf IDs in result', () => {
     const definitions = Array.from({ length: 15 }, (_, i) =>
       makeDefinition(`shelf-${i}`, 'tmdb', [makeInstance(`shelf-${i}`, 0.8)])

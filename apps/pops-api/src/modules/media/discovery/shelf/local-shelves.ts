@@ -501,6 +501,7 @@ export const leavingSoonShelf: ShelfDefinition = {
   id: 'leaving-soon',
   template: false,
   category: 'local',
+  pinned: true,
   generate(_profile: PreferenceProfile): ShelfInstance[] {
     const db = getDrizzle();
     // Only generate the shelf when there are leaving movies

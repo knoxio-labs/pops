@@ -26,6 +26,8 @@ vi.mock('@pops/db-types', () => ({
     genres: 'genres',
     runtime: 'runtime',
     createdAt: 'created_at',
+    rotationStatus: 'rotation_status',
+    rotationExpiresAt: 'rotation_expires_at',
   },
   watchHistory: {
     id: 'id',
@@ -58,6 +60,7 @@ import {
   comfortPicksShelf,
   franchiseCompletionsShelf,
   friendProofShelf,
+  leavingSoonShelf,
   longEpicShelf,
   polarizingShelf,
   recentlyAddedShelf,
@@ -478,6 +481,69 @@ describe('franchiseCompletionsShelf', () => {
 
   it('has id=franchise-completions', () => {
     expect(franchiseCompletionsShelf.id).toBe('franchise-completions');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// leaving-soon
+// ---------------------------------------------------------------------------
+
+describe('leavingSoonShelf', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns empty and no instances when no leaving movies', () => {
+    // generate() checks DB before returning instances; empty result → no instances
+    const { db } = makeChainMock([]);
+    mockGetDrizzle.mockReturnValue(db);
+
+    const instances = leavingSoonShelf.generate(profile);
+    expect(instances).toHaveLength(0);
+  });
+
+  it('returns one instance when leaving movies exist', () => {
+    const { db } = makeChainMock([{ id: 1 }]); // existence check returns a row
+    mockGetDrizzle.mockReturnValue(db);
+
+    const instances = leavingSoonShelf.generate(profile);
+    expect(instances).toHaveLength(1);
+    expect(instances[0]!.shelfId).toBe('leaving-soon');
+  });
+
+  it('instance query returns leaving movies with rotationExpiresAt', async () => {
+    const leavingRow = {
+      ...makeMovieRow(),
+      rotationExpiresAt: '2026-05-01T00:00:00Z',
+    };
+    // First call (existence check) and second call (query) both return rows
+    const chain = makeChainMock([{ id: 1 }]);
+    const queryChain = makeChainMock([leavingRow]);
+
+    let selectCount = 0;
+    const db = {
+      select: vi.fn().mockImplementation(() => {
+        selectCount++;
+        return selectCount === 1 ? chain.db.select() : queryChain.db.select();
+      }),
+    } as unknown as ReturnType<typeof getDrizzle>;
+    mockGetDrizzle.mockReturnValue(db);
+
+    const instances = leavingSoonShelf.generate(profile);
+    expect(instances).toHaveLength(1);
+
+    // Mock DB for query call
+    const queryDb = makeChainMock([leavingRow]);
+    mockGetDrizzle.mockReturnValue(queryDb.db);
+
+    const results = await instances[0]!.query({ limit: 10, offset: 0 });
+    expect(results).toHaveLength(1);
+    expect(results[0]!.inLibrary).toBe(true);
+  });
+
+  it('has id=leaving-soon, category=local, template=false, pinned=true', () => {
+    expect(leavingSoonShelf.id).toBe('leaving-soon');
+    expect(leavingSoonShelf.category).toBe('local');
+    expect(leavingSoonShelf.template).toBe(false);
+    expect(leavingSoonShelf.pinned).toBe(true);
   });
 });
 

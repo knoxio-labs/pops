@@ -9,7 +9,7 @@ As a user, I want to see which movies are about to leave my library — on both 
 ## Acceptance Criteria
 
 - [x] A "Leaving Soon" shelf appears on the movie library page when there are movies with `rotation_status = 'leaving'`
-- [ ] The same "Leaving Soon" shelf appears on the Discover page, registered in the shelf registry (PRD-065 pattern). Category: `local`. It is pinned (always shown when leaving movies exist, not subject to random shelf assembly) — shelf is registered but subject to random assembly and `MAX_LOCAL_PER_WINDOW` constraint; not truly pinned
+- [x] The same "Leaving Soon" shelf appears on the Discover page, registered in the shelf registry (PRD-065 pattern). Category: `local`. It is pinned (`pinned: true` in `ShelfDefinition`) — always shown when leaving movies exist, not subject to random shelf assembly or `MAX_LOCAL_PER_WINDOW` constraint; prepended before randomly assembled shelves
 - [x] On both pages, movies are sorted by `rotation_expires_at` ASC (soonest departures first)
 - [x] Each card shows a countdown badge: "Leaving in X days", "Last day" (< 24h), or "Leaving tomorrow" (< 48h)
 - [x] Badge colour: red when ≤ 3 days, amber when ≤ 7 days, neutral when > 7 days
