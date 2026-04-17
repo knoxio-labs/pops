@@ -145,3 +145,7 @@ US-02 and US-01 can parallelise (page shell has no runtime dependency on the reg
 - Per-user settings (single-user system)
 - Settings search across sections (future enhancement)
 - Theme/appearance settings (the existing `theme` key remains as-is, not migrated to the unified page in v1)
+
+## Drift Check
+
+last checked: 2026-04-17
