@@ -10,13 +10,23 @@
  */
 import { type RefObject, useEffect } from 'react';
 
-/** CSS selector that matches all natively focusable elements. */
+/**
+ * CSS selector that matches all natively tabbable elements.
+ *
+ * Intentional exclusions:
+ * - `input[type="hidden"]` — not focusable by the browser
+ * - `[disabled]` — removed from tab order by the browser
+ * - `[tabindex="-1"]` — reachable via script/click but not via Tab key;
+ *   the `:not([tabindex="-1"])` guard is applied to every element-level rule
+ *   so that an explicit `tabindex="-1"` on a normally-tabbable element (e.g.
+ *   a `<button tabindex="-1">`) is also excluded.
+ */
 const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
+  'a[href]:not([tabindex="-1"])',
+  'button:not([disabled]):not([tabindex="-1"])',
+  'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
@@ -52,15 +62,21 @@ export function useFocusTrap({ containerRef, active }: UseFocusTrapOptions): voi
 
       const currentFocus = document.activeElement as HTMLElement | null;
 
+      // Determine whether the currently focused element is a known tabbable
+      // descendant. If focus is outside the container, on the container itself,
+      // or on an element not in the computed focusable list (e.g. tabindex="-1"
+      // child), we treat it as a boundary and wrap unconditionally.
+      const focusIndex = currentFocus ? focusable.indexOf(currentFocus) : -1;
+
       if (event.shiftKey) {
-        // Shift+Tab: if focus is on or before the first element, wrap to last
-        if (!currentFocus || currentFocus === first || !container.contains(currentFocus)) {
+        // Shift+Tab: wrap to last when focus is on/before first, or not in the list
+        if (!currentFocus || focusIndex <= 0) {
           event.preventDefault();
           last.focus();
         }
       } else {
-        // Tab: if focus is on or after the last element, wrap to first
-        if (!currentFocus || currentFocus === last || !container.contains(currentFocus)) {
+        // Tab: wrap to first when focus is on/after last, or not in the list
+        if (!currentFocus || focusIndex === -1 || focusIndex === focusable.length - 1) {
           event.preventDefault();
           first.focus();
         }

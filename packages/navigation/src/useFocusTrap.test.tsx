@@ -206,4 +206,149 @@ describe('useFocusTrap', () => {
 
     expect(event.preventDefault).not.toHaveBeenCalled();
   });
+
+  it('does not intercept Shift+Tab when focus is on a middle element', () => {
+    const container = createContainer(3);
+
+    renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useFocusTrap({ containerRef: ref, active: true });
+    });
+
+    act(() => {
+      btn(container, 1).focus();
+    });
+
+    const event = fireTab(true);
+    // middle element — Shift+Tab should pass through normally
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('excludes input[type="hidden"] from the focusable list', () => {
+    const container = document.createElement('div');
+    const visible = document.createElement('input');
+    visible.type = 'text';
+    visible.tabIndex = 0;
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    container.append(visible, hidden);
+    document.body.append(container);
+
+    renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useFocusTrap({ containerRef: ref, active: true });
+    });
+
+    // Focus the visible input (only tabbable element) — Tab should wrap back to it
+    act(() => {
+      visible.focus();
+    });
+
+    act(() => {
+      fireTab(false);
+    });
+
+    // If the hidden input were included, focus would move to it instead.
+    // Since it is excluded, the trap wraps back to the only tabbable element.
+    expect(document.activeElement).toBe(visible);
+  });
+
+  it('excludes tabindex="-1" elements from the focusable list', () => {
+    const container = document.createElement('div');
+    const tabbable = document.createElement('button');
+    tabbable.textContent = 'Tabbable';
+    tabbable.tabIndex = 0;
+    const scriptOnly = document.createElement('button');
+    scriptOnly.textContent = 'Script-only';
+    scriptOnly.tabIndex = -1;
+    container.append(tabbable, scriptOnly);
+    document.body.append(container);
+
+    renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useFocusTrap({ containerRef: ref, active: true });
+    });
+
+    act(() => {
+      tabbable.focus();
+    });
+
+    act(() => {
+      fireTab(false);
+    });
+
+    // tabindex="-1" button is excluded; trap wraps back to the only tabbable element.
+    expect(document.activeElement).toBe(tabbable);
+  });
+
+  it('wraps Tab to first when focus is on a tabindex="-1" child (not in focusable list)', () => {
+    const container = createContainer(2);
+    const scriptOnly = document.createElement('button');
+    scriptOnly.tabIndex = -1;
+    container.append(scriptOnly);
+    document.body.append(container);
+
+    renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useFocusTrap({ containerRef: ref, active: true });
+    });
+
+    // Move focus to the script-only element inside the container
+    act(() => {
+      scriptOnly.focus();
+    });
+
+    act(() => {
+      fireTab(false);
+    });
+
+    // focusIndex is -1 (not in tabbable list) → should wrap to first tabbable
+    expect(document.activeElement).toBe(btn(container, 0));
+  });
+
+  it('wraps Shift+Tab to last when focus is on a tabindex="-1" child (not in focusable list)', () => {
+    const container = createContainer(2);
+    const scriptOnly = document.createElement('button');
+    scriptOnly.tabIndex = -1;
+    container.append(scriptOnly);
+    document.body.append(container);
+
+    renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useFocusTrap({ containerRef: ref, active: true });
+    });
+
+    act(() => {
+      scriptOnly.focus();
+    });
+
+    act(() => {
+      fireTab(true);
+    });
+
+    // focusIndex is -1 (not in tabbable list) → Shift+Tab wraps to last tabbable
+    expect(document.activeElement).toBe(btn(container, 1));
+  });
+
+  it('wraps Tab to first when focus is on the container itself', () => {
+    const container = createContainer(2);
+    container.tabIndex = -1; // make container programmatically focusable
+    document.body.append(container);
+
+    renderHook(() => {
+      const ref = useRef<HTMLElement>(container);
+      return useFocusTrap({ containerRef: ref, active: true });
+    });
+
+    act(() => {
+      container.focus();
+    });
+
+    act(() => {
+      fireTab(false);
+    });
+
+    // Container itself is not in the tabbable list → wraps to first
+    expect(document.activeElement).toBe(btn(container, 0));
+  });
 });
