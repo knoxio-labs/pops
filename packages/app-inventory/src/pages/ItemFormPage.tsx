@@ -1,15 +1,4 @@
-import {
-  Eye,
-  ImageIcon,
-  Link2,
-  Loader2,
-  PenLine,
-  Save,
-  Search,
-  Trash2,
-  Wand2,
-  X,
-} from 'lucide-react';
+import { Eye, ImageIcon, Link2, Loader2, PenLine, Save, Search, Wand2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Markdown from 'react-markdown';
@@ -39,6 +28,7 @@ import {
 
 import { LocationPicker } from '../components/LocationPicker';
 import { PhotoUpload, type UploadedFile } from '../components/PhotoUpload';
+import { SortablePhotoGrid } from '../components/SortablePhotoGrid';
 import { useImageProcessor } from '../hooks/useImageProcessor';
 import { trpc } from '../lib/trpc';
 
@@ -225,7 +215,11 @@ export function ItemFormPage() {
     },
   });
 
-  const _reorderMutation = trpc.inventory.photos.reorder.useMutation();
+  const reorderMutation = trpc.inventory.photos.reorder.useMutation({
+    onSuccess: () => {
+      void refetchPhotos();
+    },
+  });
 
   const handleFilesSelected = useCallback(
     async (files: File[]) => {
@@ -699,33 +693,14 @@ export function ItemFormPage() {
 
           {/* Existing photos grid (edit mode) */}
           {isEditMode && existingPhotos.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-              {existingPhotos
-                .toSorted((a, b) => a.sortOrder - b.sortOrder)
-                .map((photo) => (
-                  <div key={photo.id} className="group relative">
-                    <div className="w-full aspect-square rounded-md overflow-hidden border border-border bg-muted">
-                      <img
-                        src={`/api/inventory/photos/${encodeURIComponent(photo.filePath)}`}
-                        alt={photo.caption ?? `Photo ${photo.id}`}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        handleDeletePhoto(photo.id);
-                      }}
-                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
-                      aria-label={`Delete photo ${photo.caption ?? photo.id}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-            </div>
+            <SortablePhotoGrid
+              photos={existingPhotos}
+              onReorder={(orderedIds) => {
+                reorderMutation.mutate({ itemId: id!, orderedIds });
+              }}
+              onDelete={handleDeletePhoto}
+              isReordering={reorderMutation.isPending}
+            />
           )}
 
           {/* Delete confirmation */}

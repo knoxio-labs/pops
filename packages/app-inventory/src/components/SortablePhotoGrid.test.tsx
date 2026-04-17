@@ -39,14 +39,30 @@ describe('SortablePhotoGrid', () => {
     expect(items[2]).toHaveAttribute('aria-label', 'Photo 3: Third');
   });
 
-  it('does not render when only one photo', () => {
-    const { container } = render(<SortablePhotoGrid photos={[photos[0]!]} onReorder={vi.fn()} />);
-    expect(container.innerHTML).toBe('');
+  it('renders a single photo without drag affordance', () => {
+    render(<SortablePhotoGrid photos={[photos[0]!]} onReorder={vi.fn()} />);
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveAttribute('draggable', 'false');
   });
 
   it('does not render when no photos', () => {
     const { container } = render(<SortablePhotoGrid photos={[]} onReorder={vi.fn()} />);
     expect(container.innerHTML).toBe('');
+  });
+
+  it('calls onDelete when delete button is clicked', () => {
+    const onDelete = vi.fn();
+    render(<SortablePhotoGrid photos={photos} onReorder={vi.fn()} onDelete={onDelete} />);
+    const deleteButtons = screen.getAllByRole('button', { name: /delete photo/i });
+    expect(deleteButtons).toHaveLength(3);
+    fireEvent.click(deleteButtons[0]!);
+    expect(onDelete).toHaveBeenCalledWith(1);
+  });
+
+  it('does not render delete buttons when onDelete is not provided', () => {
+    render(<SortablePhotoGrid photos={photos} onReorder={vi.fn()} />);
+    expect(screen.queryAllByRole('button', { name: /delete photo/i })).toHaveLength(0);
   });
 
   it('calls onReorder when an item is dropped on a new position', () => {
