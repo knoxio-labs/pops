@@ -11,6 +11,7 @@
       "types": "./src/theme/globals.d.ts",
       "default": "./src/theme/globals.css"
     },
+    "./theme/graph-colors": "./src/theme/graph-colors.ts",
     "./primitives/*": "./src/primitives/*"
   },
   "scripts": {

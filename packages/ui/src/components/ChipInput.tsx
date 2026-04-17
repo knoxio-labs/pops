@@ -246,7 +246,6 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
           }}
           type="text"
           className={cn(inputVariants({ className }))}
-          style={{ outline: 'none', boxShadow: 'none' }}
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}

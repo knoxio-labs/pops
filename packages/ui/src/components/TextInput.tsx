@@ -198,7 +198,6 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
           <input
             ref={ref}
             className={cn(inputVariants({ size, centered, className }))}
-            style={{ outline: 'none', boxShadow: 'none' }}
             value={value}
             onChange={handleChange}
             onFocus={handleFocus}
