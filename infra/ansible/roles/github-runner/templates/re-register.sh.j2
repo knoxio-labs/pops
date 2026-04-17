@@ -20,25 +20,52 @@ if [ ! -f "${PAT_FILE}" ] || [ ! -s "${PAT_FILE}" ]; then
   exit 1
 fi
 
+PAT_PERMS=$(stat -c '%a' "${PAT_FILE}")
+if [ $((10#${PAT_PERMS} % 100)) -ne 0 ]; then
+  echo "re-register: PAT file has insecure permissions (${PAT_PERMS}), expected owner-only access: ${PAT_FILE}" >&2
+  exit 1
+fi
+
 REPO_PATH="${REPO_URL#https://github.com/}"
 
+# Read PAT into variable; pass to curl via -K (config) + process substitution
+# so the token never appears in curl's /proc/*/cmdline.
+GITHUB_PAT=$(<"${PAT_FILE}")
+
 TOKEN=$(curl -fsS -X POST \
-  -H "Authorization: Bearer $(cat "${PAT_FILE}")" \
   -H "Accept: application/vnd.github+json" \
+  -K <(printf 'header = "Authorization: Bearer %s"\n' "${GITHUB_PAT}") \
   "https://api.github.com/repos/${REPO_PATH}/actions/runners/registration-token" \
   | jq -r '.token')
+
+unset GITHUB_PAT
 
 if [ -z "${TOKEN}" ] || [ "${TOKEN}" = "null" ]; then
   echo "re-register: failed to obtain registration token from GitHub API" >&2
   exit 1
 fi
 
+# Back up existing config so we can restore on failure
+if [ -f .runner ]; then
+  cp -a .runner .runner.bak
+fi
+if [ -f .credentials ]; then
+  cp -a .credentials .credentials.bak
+fi
+
 rm -f .runner .credentials
 
-runuser -u "${RUNNER_USER}" -- ./config.sh \
+if ! runuser -u "${RUNNER_USER}" -- ./config.sh \
   --url "${REPO_URL}" \
   --token "${TOKEN}" \
   --name "${RUNNER_NAME}" \
   --labels "${RUNNER_LABELS}" \
   --unattended \
-  --replace
+  --replace; then
+  echo "re-register: config.sh failed, restoring previous configuration" >&2
+  [ -f .runner.bak ] && mv .runner.bak .runner
+  [ -f .credentials.bak ] && mv .credentials.bak .credentials
+  exit 1
+fi
+
+rm -f .runner.bak .credentials.bak
