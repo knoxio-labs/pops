@@ -139,7 +139,7 @@ export function RotationSettingsPage() {
       <PageHeader
         title="Rotation Settings"
         backHref="/media"
-        breadcrumbs={[{ label: 'Media', href: '/media' }, { label: 'Rotation Settings' }]}
+        breadcrumbs={[{ label: 'Media', href: '/media' }, { label: 'Rotation' }]}
         renderLink={Link}
       />
 
