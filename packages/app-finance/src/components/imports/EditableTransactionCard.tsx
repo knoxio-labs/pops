@@ -1,13 +1,15 @@
-import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
+import { ChevronRight, Save, X } from 'lucide-react';
+import { useState } from 'react';
+
 import { Button } from '@pops/ui';
 import { Input } from '@pops/ui';
 import { Label } from '@pops/ui';
 import { Select as UiSelect } from '@pops/ui';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
-import { ChevronRight, Save, X } from 'lucide-react';
-import { useState } from 'react';
 
 import { EntitySelect } from './EntitySelect';
+
+import type { ProcessedTransaction } from '@pops/api/modules/finance/imports';
 
 interface EditableTransactionCardProps {
   transaction: ProcessedTransaction;
@@ -68,13 +70,21 @@ export function EditableTransactionCard({
           <Button
             variant="default"
             size="sm"
-            onClick={() => handleSave(true)}
+            onClick={() => {
+              handleSave(true);
+            }}
             className="bg-purple-600 hover:bg-purple-700"
           >
             <Save className="w-4 h-4 mr-1" />
             Save & Learn
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleSave(false)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              handleSave(false);
+            }}
+          >
             <Save className="w-4 h-4 mr-1" />
             Save Once
           </Button>
@@ -94,12 +104,12 @@ export function EditableTransactionCard({
           id="transactionType"
           name="type"
           value={transactionType}
-          onChange={(e) =>
+          onChange={(e) => {
             setEditedFields({
               ...editedFields,
               transactionType: e.target.value as 'purchase' | 'transfer' | 'income',
-            })
-          }
+            });
+          }}
           options={[
             { label: 'Purchase (requires entity)', value: 'purchase' },
             { label: 'Transfer (between accounts, no entity)', value: 'transfer' },
@@ -122,7 +132,9 @@ export function EditableTransactionCard({
             id="description"
             autoFocus
             value={editedFields.description || ''}
-            onChange={(e) => setEditedFields({ ...editedFields, description: e.target.value })}
+            onChange={(e) => {
+              setEditedFields({ ...editedFields, description: e.target.value });
+            }}
             className="bg-white dark:bg-gray-800"
           />
         </div>
@@ -134,12 +146,12 @@ export function EditableTransactionCard({
             type="number"
             step="0.01"
             value={editedFields.amount || 0}
-            onChange={(e) =>
+            onChange={(e) => {
               setEditedFields({
                 ...editedFields,
                 amount: parseFloat(e.target.value),
-              })
-            }
+              });
+            }}
             className="bg-white dark:bg-gray-800"
           />
         </div>
@@ -150,7 +162,9 @@ export function EditableTransactionCard({
             id="date"
             type="date"
             value={editedFields.date || ''}
-            onChange={(e) => setEditedFields({ ...editedFields, date: e.target.value })}
+            onChange={(e) => {
+              setEditedFields({ ...editedFields, date: e.target.value });
+            }}
             className="bg-white dark:bg-gray-800"
           />
         </div>
@@ -160,7 +174,9 @@ export function EditableTransactionCard({
           <Input
             id="account"
             value={editedFields.account || ''}
-            onChange={(e) => setEditedFields({ ...editedFields, account: e.target.value })}
+            onChange={(e) => {
+              setEditedFields({ ...editedFields, account: e.target.value });
+            }}
             className="bg-white dark:bg-gray-800"
           />
         </div>
@@ -170,7 +186,9 @@ export function EditableTransactionCard({
           <Input
             id="location"
             value={editedFields.location || ''}
-            onChange={(e) => setEditedFields({ ...editedFields, location: e.target.value })}
+            onChange={(e) => {
+              setEditedFields({ ...editedFields, location: e.target.value });
+            }}
             placeholder="Optional"
             className="bg-white dark:bg-gray-800"
           />

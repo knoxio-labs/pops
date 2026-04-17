@@ -1,6 +1,7 @@
-import type { ResultComponentProps } from '@pops/navigation';
 import { registerResultComponent } from '@pops/navigation';
 import { Badge } from '@pops/ui';
+
+import type { ResultComponentProps } from '@pops/navigation';
 
 interface EntityHitData {
   name: string;

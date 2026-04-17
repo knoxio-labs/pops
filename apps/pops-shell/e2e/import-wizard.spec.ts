@@ -1,9 +1,5 @@
-import { test, expect, Page } from '@playwright/test';
-import {
-  createMockData,
-  createWarningMockData,
-  type MockScenario,
-} from './fixtures/import-test-data';
+import { test, expect } from '@playwright/test';
+
 import {
   simpleCSV,
   realisticCSV,
@@ -11,6 +7,9 @@ import {
   duplicatesCSV,
   generateLargeCSV,
 } from './fixtures/csv-samples';
+import { createMockData, type MockScenario } from './fixtures/import-test-data';
+
+import type { Page } from '@playwright/test';
 
 /**
  * E2E tests for Import Wizard (7-step flow)
@@ -427,7 +426,7 @@ const navigateToTagReviewStep = async (page: Page, csvContent: string = simpleCS
 /**
  * Helper: Resolve uncertain transaction by selecting entity
  */
-const resolveUncertainTransaction = async (page: Page, description: string, entityId: string) => {
+const _resolveUncertainTransaction = async (page: Page, description: string, entityId: string) => {
   // Find the transaction card and its entity selector
   const transactionCard = page.locator(`[data-testid*="${description}"]`).first();
   const entitySelect = transactionCard.locator('select').first();
@@ -437,7 +436,7 @@ const resolveUncertainTransaction = async (page: Page, description: string, enti
 /**
  * Helper: Verify transaction is in specific tab
  */
-const verifyTransactionInTab = async (page: Page, tabName: string, description: string) => {
+const _verifyTransactionInTab = async (page: Page, tabName: string, description: string) => {
   await page.getByRole('tab', { name: new RegExp(tabName, 'i') }).click();
   await expect(page.getByText(description)).toBeVisible();
 };

@@ -15,8 +15,8 @@ export interface TransactionGroup {
  */
 export function cleanDescription(desc: string): string {
   return desc
-    .replace(/\d+/g, '') // Remove numbers
-    .replace(/\s+/g, ' ') // Normalize spaces
+    .replaceAll(/\d+/g, '') // Remove numbers
+    .replaceAll(/\s+/g, ' ') // Normalize spaces
     .trim()
     .toUpperCase();
 }
@@ -64,7 +64,7 @@ export function groupTransactionsByEntity(
   }
 
   // Sort: AI suggestions first, then by transaction count descending
-  return Array.from(groups.values()).sort((a, b) => {
+  return Array.from(groups.values()).toSorted((a, b) => {
     if (a.aiSuggestion !== b.aiSuggestion) return a.aiSuggestion ? -1 : 1;
     return b.transactions.length - a.transactions.length;
   });

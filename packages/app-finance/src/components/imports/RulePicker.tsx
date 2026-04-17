@@ -1,4 +1,6 @@
-import type { AppRouter } from '@pops/api-client';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
 import {
   Badge,
   Button,
@@ -12,11 +14,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@pops/ui';
-import type { inferRouterOutputs } from '@trpc/server';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { useMemo, useState } from 'react';
 
 import { trpc } from '../../lib/trpc';
+
+import type { inferRouterOutputs } from '@trpc/server';
+
+import type { AppRouter } from '@pops/api-client';
 
 type CorrectionListOutput = inferRouterOutputs<AppRouter>['core']['corrections']['list'];
 export type CorrectionRule = CorrectionListOutput['data'][number];

@@ -1,3 +1,5 @@
+import { and, asc, eq, inArray } from 'drizzle-orm';
+
 /**
  * Debrief service — auto-queue and manage post-watch debrief sessions.
  */
@@ -9,7 +11,6 @@ import {
   movies,
   watchHistory,
 } from '@pops/db-types';
-import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import { getDrizzle } from '../../../db.js';
 import { NotFoundError } from '../../../shared/errors.js';

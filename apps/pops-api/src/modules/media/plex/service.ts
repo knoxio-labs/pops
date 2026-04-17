@@ -4,8 +4,9 @@
  */
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID, scryptSync } from 'node:crypto';
 
-import { settings } from '@pops/db-types';
 import { eq } from 'drizzle-orm';
+
+import { settings } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
 import { getEnv } from '../../../env.js';

@@ -1,14 +1,16 @@
+import { eq } from 'drizzle-orm';
+
 /**
  * Arr service — factory functions and in-memory status cache for Radarr/Sonarr.
  */
 import { settings } from '@pops/db-types';
-import { eq } from 'drizzle-orm';
 
 import { getDrizzle } from '../../../db.js';
 import { getEnv } from '../../../env.js';
 import { SETTINGS_KEYS, type SettingsKey } from '../../core/settings/keys.js';
 import { RadarrClient } from './radarr-client.js';
 import { SonarrClient } from './sonarr-client.js';
+
 import type {
   ArrConfig,
   ArrStatusResult,

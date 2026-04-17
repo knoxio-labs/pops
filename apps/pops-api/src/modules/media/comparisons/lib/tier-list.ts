@@ -1,11 +1,15 @@
-import { comparisons, mediaScores } from '@pops/db-types';
 import { and, eq } from 'drizzle-orm';
+
+import { comparisons, mediaScores } from '@pops/db-types';
 
 import { getDb, getDrizzle } from '../../../../db.js';
 import { ValidationError } from '../../../../shared/errors.js';
 import { getDimension } from '../dimensions.service.js';
 import { convertTierPlacements } from '../tier-conversion.js';
 import { setTierOverride } from '../tier-overrides.js';
+import { findExistingComparison, normalizePairOrder } from './comparison-queries.js';
+import { recalcDimensionElo, updateEloScores } from './score-management.js';
+
 import type {
   BatchComparisonItem,
   BatchRecordResult,
@@ -15,8 +19,6 @@ import type {
   SubmitTierListResult,
   TierListMovie,
 } from '../types.js';
-import { findExistingComparison, normalizePairOrder } from './comparison-queries.js';
-import { recalcDimensionElo, updateEloScores } from './score-management.js';
 
 // ── Tier List Movie Selection ──
 

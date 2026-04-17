@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join } from 'node:path';
 
 import Anthropic from '@anthropic-ai/sdk';
+
 import { aiUsage } from '@pops/db-types';
 
 import { getDrizzle, isNamedEnvContext } from '../../../../db.js';
@@ -130,7 +131,7 @@ export async function categorizeWithAi(
   importBatchId?: string
 ): Promise<{ result: AiCacheEntry | null; usage?: AiUsageStats }> {
   const key = rawRow.toUpperCase().trim();
-  const sanitizedDescription = rawRow.trim().substring(0, 100); // Limit for logging
+  const sanitizedDescription = rawRow.trim().slice(0, 100); // Limit for logging
 
   // Named envs are isolated test databases — no point calling the Claude API
   // against synthetic data. Skip immediately and let callers route to uncertain.
@@ -209,8 +210,8 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
     // Strip markdown code fences if present (Claude sometimes wraps JSON in ```json...```)
     const cleanedText = text
       .trim()
-      .replace(/^```(?:json)?\s*\n?/gm, '')
-      .replace(/\n?```\s*$/gm, '');
+      .replaceAll(/^```(?:json)?\s*\n?/gm, '')
+      .replaceAll(/\n?```\s*$/gm, '');
     const parsed = JSON.parse(cleanedText) as { entityName: string; category: string };
     const entry: AiCacheEntry = {
       description: rawRow.trim(),

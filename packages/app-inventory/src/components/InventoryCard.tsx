@@ -1,3 +1,15 @@
+import { MapPin, Package } from 'lucide-react';
+import { useState } from 'react';
+
+import {
+  AssetIdBadge,
+  cn,
+  ConditionBadge,
+  LocationBreadcrumb,
+  Skeleton,
+  TypeBadge,
+} from '@pops/ui';
+
 /**
  * InventoryCard — card for an inventory item in a grid or list view.
  * Shows photo (or placeholder), item name, brand/model,
@@ -8,16 +20,6 @@
  * - "vertical": photo on top with consistent aspect ratio — used in grid views
  */
 import type { Condition, LocationSegment } from '@pops/ui';
-import {
-  AssetIdBadge,
-  cn,
-  ConditionBadge,
-  LocationBreadcrumb,
-  Skeleton,
-  TypeBadge,
-} from '@pops/ui';
-import { MapPin, Package } from 'lucide-react';
-import { useState } from 'react';
 
 export interface InventoryCardProps {
   id: string;
@@ -86,8 +88,12 @@ export function InventoryCard({
                 'group-hover:opacity-90',
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               )}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
+              onLoad={() => {
+                setImageLoaded(true);
+              }}
+              onError={() => {
+                setImageError(true);
+              }}
             />
           )}
 
@@ -159,8 +165,12 @@ export function InventoryCard({
               'h-full w-full object-cover transition-opacity duration-200',
               imageLoaded ? 'opacity-100' : 'opacity-0'
             )}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
+            onLoad={() => {
+              setImageLoaded(true);
+            }}
+            onError={() => {
+              setImageError(true);
+            }}
           />
         )}
 

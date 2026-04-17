@@ -1,3 +1,5 @@
+import { and, asc, count, desc, eq, or } from 'drizzle-orm';
+
 import {
   comparisonDimensions,
   comparisons,
@@ -8,11 +10,11 @@ import {
   movies,
   watchHistory,
 } from '@pops/db-types';
-import { and, asc, count, desc, eq, or } from 'drizzle-orm';
 
 import { getDb, getDrizzle } from '../../../../db.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors.js';
 import { getDimension } from '../dimensions.service.js';
+
 import type {
   ComparisonRow,
   DebriefOpponent,
