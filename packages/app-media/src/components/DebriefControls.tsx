@@ -170,7 +170,7 @@ export function CompletionSummary({ data, onDoAnother }: CompletionSummaryProps)
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate('/media/compare/rankings')}
+            onClick={() => navigate('/media/rankings')}
             data-testid="done-btn"
           >
             Done
