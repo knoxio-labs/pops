@@ -18,6 +18,11 @@ describe('transformIng', () => {
       Debit: '8.00',
       Balance: '987.09',
     };
+    const sortedRow = Object.fromEntries(
+      Object.keys(row)
+        .toSorted()
+        .map((k) => [k, row[k as keyof typeof row]])
+    );
 
     const result = transformIng(row);
 
@@ -26,9 +31,9 @@ describe('transformIng', () => {
     expect(result.amount).toBe(-8);
     expect(result.account).toBe('ING Savings');
     expect(result.location).toBeUndefined();
-    expect(result.rawRow).toBe(JSON.stringify(row));
+    expect(result.rawRow).toBe(JSON.stringify(sortedRow));
     expect(result.checksum).toBe(
-      crypto.createHash('sha256').update(JSON.stringify(row)).digest('hex')
+      crypto.createHash('sha256').update(JSON.stringify(sortedRow)).digest('hex')
     );
   });
 
@@ -101,6 +106,29 @@ describe('transformIng', () => {
 
     const expected = crypto.createHash('sha256').update(result.rawRow).digest('hex');
     expect(result.checksum).toBe(expected);
+  });
+
+  it('rawRow contains key-sorted JSON regardless of input key order', () => {
+    const rowAbc = {
+      Balance: '100.00',
+      Credit: '50.00',
+      Date: '10/04/2026',
+      Debit: '',
+      Description: 'TEST',
+    };
+    const rowZyx = {
+      Description: 'TEST',
+      Debit: '',
+      Date: '10/04/2026',
+      Credit: '50.00',
+      Balance: '100.00',
+    };
+
+    const result1 = transformIng(rowAbc);
+    const result2 = transformIng(rowZyx);
+
+    expect(result1.rawRow).toBe(result2.rawRow);
+    expect(result1.checksum).toBe(result2.checksum);
   });
 
   it('account is always "ING Savings"', () => {
@@ -419,9 +447,9 @@ describe('transformIng — cleanDescription', () => {
     expect(transformIng(row).description).toBe('MERCHANT');
   });
 
-  it('handles empty string', () => {
+  it('throws for empty description', () => {
     const row = { Date: '10/04/2026', Description: '', Credit: '50.00', Debit: '', Balance: '' };
-    expect(transformIng(row).description).toBe('');
+    expect(() => transformIng(row)).toThrow('empty Description');
   });
 
   it('preserves single spaces between words', () => {
@@ -435,8 +463,8 @@ describe('transformIng — cleanDescription', () => {
     expect(transformIng(row).description).toBe('To my account Internal Transfer');
   });
 
-  it('handles whitespace-only string', () => {
+  it('throws for whitespace-only description', () => {
     const row = { Date: '10/04/2026', Description: '   ', Credit: '50.00', Debit: '', Balance: '' };
-    expect(transformIng(row).description).toBe('');
+    expect(() => transformIng(row)).toThrow('empty Description');
   });
 });

@@ -16,17 +16,22 @@ describe('transformAnz', () => {
       Amount: '-5000.00',
       Description: 'ANZ M-BANKING FUNDS TFER TRANSFER 685361  TO 4564XXXXXXXX7373',
     };
+    const sortedRow = Object.fromEntries(
+      Object.keys(row)
+        .toSorted()
+        .map((k) => [k, row[k as keyof typeof row]])
+    );
 
     const result = transformAnz(row);
 
     expect(result.date).toBe('2026-04-07');
     expect(result.description).toBe('ANZ M-BANKING FUNDS TFER TRANSFER 685361 TO 4564XXXXXXXX7373');
     expect(result.amount).toBe(-5000);
-    expect(result.account).toBe('ANZ');
+    expect(result.account).toBe('ANZ Everyday');
     expect(result.location).toBeUndefined();
-    expect(result.rawRow).toBe(JSON.stringify(row));
+    expect(result.rawRow).toBe(JSON.stringify(sortedRow));
     expect(result.checksum).toBe(
-      crypto.createHash('sha256').update(JSON.stringify(row)).digest('hex')
+      crypto.createHash('sha256').update(JSON.stringify(sortedRow)).digest('hex')
     );
   });
 
@@ -105,15 +110,15 @@ describe('transformAnz', () => {
       Date: '07/04/2026',
       Amount: '-50.00',
       Description: 'TEST',
-      Account: 'ANZ Everyday',
+      Account: 'ANZ Savings',
     };
 
     const result = transformAnz(row);
 
-    expect(result.account).toBe('ANZ Everyday');
+    expect(result.account).toBe('ANZ Savings');
   });
 
-  it('defaults account to "ANZ" when Account field is absent', () => {
+  it('defaults account to "ANZ Everyday" when Account field is absent', () => {
     const row = {
       Date: '07/04/2026',
       Amount: '-50.00',
@@ -122,7 +127,18 @@ describe('transformAnz', () => {
 
     const result = transformAnz(row);
 
-    expect(result.account).toBe('ANZ');
+    expect(result.account).toBe('ANZ Everyday');
+  });
+
+  it('rawRow contains key-sorted JSON regardless of input key order', () => {
+    const rowAbc = { Amount: '-50.00', Date: '07/04/2026', Description: 'TEST' };
+    const rowZyx = { Description: 'TEST', Date: '07/04/2026', Amount: '-50.00' };
+
+    const result1 = transformAnz(rowAbc);
+    const result2 = transformAnz(rowZyx);
+
+    expect(result1.rawRow).toBe(result2.rawRow);
+    expect(result1.checksum).toBe(result2.checksum);
   });
 
   it('throws for invalid date format', () => {
@@ -270,9 +286,9 @@ describe('transformAnz — cleanDescription', () => {
     expect(transformAnz(row).description).toBe('MERCHANT');
   });
 
-  it('handles empty string', () => {
+  it('throws for empty description', () => {
     const row = { Date: '07/04/2026', Amount: '-50.00', Description: '' };
-    expect(transformAnz(row).description).toBe('');
+    expect(() => transformAnz(row)).toThrow('empty Description');
   });
 
   it('preserves single spaces between words', () => {
@@ -280,8 +296,8 @@ describe('transformAnz — cleanDescription', () => {
     expect(transformAnz(row).description).toBe('ANZ M-BANKING FUNDS TFER');
   });
 
-  it('handles whitespace-only string', () => {
+  it('throws for whitespace-only description', () => {
     const row = { Date: '07/04/2026', Amount: '-50.00', Description: '   ' };
-    expect(transformAnz(row).description).toBe('');
+    expect(() => transformAnz(row)).toThrow('empty Description');
   });
 });

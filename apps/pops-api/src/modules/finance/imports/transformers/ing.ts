@@ -79,15 +79,27 @@ function cleanDescription(description: string): string {
  * (rawRow), so checksum == SHA-256(rawRow) holds deterministically.
  */
 export function transformIng(row: Record<string, string>): ParsedTransaction {
+  const description = cleanDescription(row['Description'] ?? '');
+  if (!description) {
+    throw new Error('Row has an empty Description');
+  }
+
+  // Key-sort the row so rawRow and checksum are stable regardless of CSV column order
+  const sortedRow = Object.fromEntries(
+    Object.keys(row)
+      .toSorted()
+      .map((k) => [k, row[k] ?? ''])
+  );
+
   // Store full row as JSON for audit trail and AI context
-  const rawRow = JSON.stringify(row);
+  const rawRow = JSON.stringify(sortedRow);
 
   // Generate checksum for reliable deduplication
   const checksum = crypto.createHash('sha256').update(rawRow).digest('hex');
 
   return {
     date: normaliseDate(row['Date'] ?? ''),
-    description: cleanDescription(row['Description'] ?? ''),
+    description,
     amount: normaliseAmount(row['Credit'] ?? '', row['Debit'] ?? ''),
     account: 'ING Savings',
     rawRow,

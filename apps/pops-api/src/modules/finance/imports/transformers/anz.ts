@@ -41,23 +41,36 @@ function cleanDescription(description: string): string {
  * - Amount:      Signed float — expenses already negative, income positive
  * - Description: Merchant / transfer description
  *
- * Account defaults to "ANZ" when not present in the row.
+ * Account defaults to "ANZ Everyday" when not present in the row.
  *
  * The checksum is a SHA-256 of the key-sorted JSON representation of the row
- * (rawRow), so checksum == SHA-256(rawRow) holds deterministically.
+ * (rawRow), so checksum == SHA-256(rawRow) holds deterministically regardless
+ * of the key insertion order in the input object.
  */
 export function transformAnz(row: Record<string, string>): ParsedTransaction {
+  const description = cleanDescription(row['Description'] ?? '');
+  if (!description) {
+    throw new Error('Row has an empty Description');
+  }
+
+  // Key-sort the row so rawRow and checksum are stable regardless of CSV column order
+  const sortedRow = Object.fromEntries(
+    Object.keys(row)
+      .toSorted()
+      .map((k) => [k, row[k] ?? ''])
+  );
+
   // Store full row as JSON for audit trail and AI context
-  const rawRow = JSON.stringify(row);
+  const rawRow = JSON.stringify(sortedRow);
 
   // Generate checksum for reliable deduplication
   const checksum = crypto.createHash('sha256').update(rawRow).digest('hex');
 
   return {
     date: normaliseDate(row['Date'] ?? ''),
-    description: cleanDescription(row['Description'] ?? ''),
+    description,
     amount: normaliseAmount(row['Amount'] ?? ''),
-    account: row['Account'] ?? 'ANZ',
+    account: row['Account'] ?? 'ANZ Everyday',
     rawRow,
     checksum,
   };
