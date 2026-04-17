@@ -186,7 +186,7 @@ packages/
 ├── types/                 # Shared: Cross-package type definitions
 ├── test-utils/            # Shared: Test helpers
 ├── api-client/            # Shared: tRPC client setup
-└── import-tools/          # Standalone: Bank import scripts (not in pnpm workspace)
+└── import-tools/          # Bank import scripts
 
 infra/
 ├── ansible/               # Infrastructure as code (Ansible playbooks + roles)
