@@ -274,7 +274,6 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           ref={ref}
           type="number"
           className={cn(inputVariants({ size, centered, className }))}
-          style={{ outline: 'none', boxShadow: 'none' }}
           value={value}
           onChange={handleChange}
           onFocus={handleFocus}

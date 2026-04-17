@@ -168,7 +168,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           <select
             ref={ref}
             className={cn(selectVariants({ size, centered, className }))}
-            style={{ outline: 'none', boxShadow: 'none' }}
             onFocus={handleFocus}
             onBlur={handleBlur}
             disabled={disabled}

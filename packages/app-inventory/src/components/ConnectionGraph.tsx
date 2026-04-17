@@ -5,6 +5,7 @@
  * Nodes are colored by item type. Click navigates to item detail. Zoom/pan supported.
  */
 import { Skeleton } from '@pops/ui';
+import { GRAPH_COLORS } from '@pops/ui/theme/graph-colors';
 import {
   forceCenter,
   forceCollide,
@@ -39,42 +40,23 @@ interface GraphLink extends SimulationLinkDatum<GraphNode> {
 // Constants
 // ---------------------------------------------------------------------------
 
-/**
- * Graph color tokens — centralised palette for the connection graph canvas.
- * Type colors are intentionally hardcoded hex (Canvas 2D doesn't resolve CSS vars).
- * Structural colors use getComputedStyle at render time for dark-mode support.
- */
-const TYPE_COLORS: Record<string, string> = {
-  electronics: '#6366f1', // indigo-500
-  furniture: '#f59e0b', // amber-500
-  appliance: '#10b981', // emerald-500
-  tool: '#ef4444', // red-500
-  clothing: '#8b5cf6', // violet-500
-  kitchenware: '#ec4899', // pink-500
-  sport: '#14b8a6', // teal-500
-  vehicle: '#f97316', // orange-500
-  other: '#64748b', // slate-500
-};
-
-const DEFAULT_COLOR = '#94a3b8'; // slate-400
-const CURRENT_COLOR = '#3b82f6'; // blue-500
-
 function getStructuralColors() {
   const s = getComputedStyle(document.documentElement);
+  const mutedForeground = s.getPropertyValue('--color-muted-foreground').trim();
   return {
-    edge: s.getPropertyValue('--color-border').trim() || '#cbd5e1',
-    currentBorder: '#1d4ed8', // blue-700 — always high-contrast
-    iconText: '#ffffff', // always white on filled node
-    label: s.getPropertyValue('--color-muted-foreground').trim() || '#334155',
-    legendText: s.getPropertyValue('--color-muted-foreground').trim() || '#475569',
+    edge: s.getPropertyValue('--color-border').trim() || GRAPH_COLORS.fallbacks.edge,
+    currentBorder: GRAPH_COLORS.node.currentBorder,
+    iconText: GRAPH_COLORS.node.iconText,
+    label: mutedForeground || GRAPH_COLORS.fallbacks.label,
+    legendText: mutedForeground || GRAPH_COLORS.fallbacks.legendText,
   };
 }
 const NODE_RADIUS = 24;
 const LABEL_OFFSET = NODE_RADIUS + 10;
 
 function getNodeColor(type: string | null): string {
-  if (!type) return DEFAULT_COLOR;
-  return TYPE_COLORS[type.toLowerCase()] ?? DEFAULT_COLOR;
+  if (!type) return GRAPH_COLORS.node.default;
+  return GRAPH_COLORS.types[type.toLowerCase()] ?? GRAPH_COLORS.node.default;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +145,7 @@ export function ConnectionGraph({ itemId }: ConnectionGraphProps): React.ReactEl
       const nx = node.x ?? 0;
       const ny = node.y ?? 0;
       const isCurrent = node.id === itemId;
-      const color = isCurrent ? CURRENT_COLOR : getNodeColor(node.type);
+      const color = isCurrent ? GRAPH_COLORS.node.current : getNodeColor(node.type);
 
       // Circle
       ctx.beginPath();

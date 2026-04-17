@@ -118,7 +118,7 @@ These patterns must be eliminated and replaced with token-based classes:
 | 03  | [us-03-eliminate-arbitrary-values](us-03-eliminate-arbitrary-values.md)   | Replace all arbitrary Tailwind values with token-based classes across all components                              | Partial     | Blocked by us-01 |
 | 04  | [us-04-eliminate-hardcoded-colours](us-04-eliminate-hardcoded-colours.md) | Replace all hardcoded app colour classes (bg-indigo-600, text-emerald-400, etc.) with app-accent token references | Not started | Blocked by us-02 |
 | 05  | [us-05-semantic-status-tokens](us-05-semantic-status-tokens.md)           | Define semantic status colour tokens (success, warning, info) and replace hardcoded red/green/yellow/blue         | Partial     | Blocked by us-01 |
-| 06  | [us-06-eliminate-inline-styles](us-06-eliminate-inline-styles.md)         | Replace inline style={{}} hardcoded values and JS/TS colour constants with tokens                                 | Partial     | Yes              |
+| 06  | [us-06-eliminate-inline-styles](us-06-eliminate-inline-styles.md)         | Replace inline style={{}} hardcoded values and JS/TS colour constants with tokens                                 | Done        | Yes              |
 
 ## Verification
 
