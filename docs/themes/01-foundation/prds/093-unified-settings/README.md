@@ -43,7 +43,7 @@ type SettingsField = {
     pattern?: string            // Regex for text/url types
     message?: string            // Custom validation error message
   }
-  envFallback?: string          // Environment variable that provides a default (display-only — not editable)
+  envFallback?: string          // Environment variable name that provides a fallback value when no database value is set
   sensitive?: boolean           // True for passwords/tokens — masks display, requires confirmation to reveal
   requiresRestart?: boolean     // True if changing this setting requires a server restart
   testAction?: {                // Optional connectivity test button

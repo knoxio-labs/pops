@@ -35,39 +35,48 @@ Build a multi-provider observability layer that tracks every AI inference call a
 
 ### ai_providers (SQLite)
 
-| Column           | Type    | Constraints           | Description                                              |
-| ---------------- | ------- | --------------------- | -------------------------------------------------------- |
-| id               | TEXT    | PK                    | Provider ID: `claude`, `ollama`, `llama-cpp`             |
-| name             | TEXT    | NOT NULL              | Display name                                             |
-| type             | TEXT    | NOT NULL              | `cloud` or `local`                                       |
-| base_url         | TEXT    |                       | API endpoint — null for Claude (uses SDK default), required for local models |
-| status           | TEXT    | NOT NULL DEFAULT 'active' | `active`, `disabled`, `error`                         |
-| config           | TEXT    |                       | JSON — provider-specific config (timeout, max retries, concurrent limit) |
-| created_at       | TEXT    | NOT NULL              | ISO 8601                                                 |
+| Column            | Type    | Constraints               | Description                                              |
+| ----------------- | ------- | ------------------------- | -------------------------------------------------------- |
+| id                | TEXT    | PK                        | Provider ID: `claude`, `ollama`, `llama-cpp`             |
+| name              | TEXT    | NOT NULL                  | Display name                                             |
+| type              | TEXT    | NOT NULL                  | `cloud` or `local`                                       |
+| base_url          | TEXT    |                           | API endpoint — null for Claude (uses SDK default), required for local models |
+| api_key_ref       | TEXT    |                           | Settings key storing the actual API key (e.g., `anthropic.apiKey`) |
+| status            | TEXT    | NOT NULL DEFAULT 'active' | `active`, `error`                                        |
+| last_health_check | TEXT    |                           | ISO 8601 — last health check timestamp                   |
+| last_latency_ms   | INTEGER |                           | Latency from last health check                           |
+| created_at        | TEXT    | NOT NULL                  | ISO 8601                                                 |
+| updated_at        | TEXT    | NOT NULL                  | ISO 8601                                                 |
 
 ### ai_model_pricing (SQLite)
 
-| Column           | Type    | Constraints                        | Description                                |
-| ---------------- | ------- | ---------------------------------- | ------------------------------------------ |
-| id               | TEXT    | PK                                 | `{provider}:{model}`                       |
-| provider_id      | TEXT    | FK → ai_providers.id, NOT NULL     | Parent provider                            |
-| model            | TEXT    | NOT NULL                           | Model identifier                           |
-| input_cost_per_mtok  | REAL | NOT NULL DEFAULT 0                | USD per million input tokens               |
-| output_cost_per_mtok | REAL | NOT NULL DEFAULT 0                | USD per million output tokens              |
-| embedding_cost_per_mtok | REAL | NOT NULL DEFAULT 0             | USD per million tokens (embedding models)  |
-| capabilities     | TEXT    |                                    | JSON array: `["chat", "embedding", "vision"]` |
-| context_window   | INTEGER |                                    | Max context size in tokens                 |
-| active           | INTEGER | NOT NULL DEFAULT 1                 | Whether this model is available for use    |
+| Column               | Type    | Constraints                    | Description                                              |
+| -------------------- | ------- | ------------------------------ | -------------------------------------------------------- |
+| id                   | INTEGER | PK, auto-increment             | Row ID                                                   |
+| provider_id          | TEXT    | FK → ai_providers.id, NOT NULL | Parent provider                                          |
+| model_id             | TEXT    | NOT NULL                       | Model identifier                                         |
+| display_name         | TEXT    |                                | Human-readable model name                                |
+| input_cost_per_mtok  | REAL    | NOT NULL DEFAULT 0             | USD per million input tokens                             |
+| output_cost_per_mtok | REAL    | NOT NULL DEFAULT 0             | USD per million output tokens                            |
+| context_window       | INTEGER |                                | Max context size in tokens                               |
+| is_default           | INTEGER | NOT NULL DEFAULT 0             | Whether this is the default model for its provider       |
+| created_at           | TEXT    | NOT NULL                       | ISO 8601                                                 |
+| updated_at           | TEXT    | NOT NULL                       | ISO 8601                                                 |
+
+**Unique constraint** on `(provider_id, model_id)`
 
 ### ai_budgets (SQLite)
 
-| Column           | Type    | Constraints           | Description                                              |
-| ---------------- | ------- | --------------------- | -------------------------------------------------------- |
-| id               | TEXT    | PK                    | Budget scope: `global`, `provider:{id}`, `operation:{type}` |
-| monthly_limit_usd | REAL   |                       | USD spending cap per calendar month — null means unlimited |
-| monthly_limit_tokens | INTEGER |                    | Token cap per calendar month — null means unlimited       |
-| exceeded_action  | TEXT    | NOT NULL DEFAULT 'block' | `block` (reject calls), `warn` (log + allow), `fallback` (try local model) |
-| created_at       | TEXT    | NOT NULL              | ISO 8601                                                 |
+| Column              | Type    | Constraints              | Description                                              |
+| ------------------- | ------- | ------------------------ | -------------------------------------------------------- |
+| id                  | TEXT    | PK                       | Budget scope: `global`, `provider:{id}`, `operation:{type}` |
+| scope_type          | TEXT    | NOT NULL                 | `global`, `provider`, `operation`                        |
+| scope_value         | TEXT    |                          | Provider ID or operation name — null for global scope    |
+| monthly_token_limit | INTEGER |                          | Token cap per calendar month — null means unlimited      |
+| monthly_cost_limit  | REAL    |                          | USD spending cap per calendar month — null means unlimited |
+| action              | TEXT    | NOT NULL DEFAULT 'warn'  | `block` (reject calls), `warn` (log + allow), `fallback` (try local model) |
+| created_at          | TEXT    | NOT NULL                 | ISO 8601                                                 |
+| updated_at          | TEXT    | NOT NULL                 | ISO 8601                                                 |
 
 ## API Surface
 
@@ -83,7 +92,7 @@ Build a multi-provider observability layer that tracks every AI inference call a
 | `core.aiProviders.upsert`               | id, name, type, baseUrl?, config?                              | `{ provider: Provider }`                                | Register or update a provider                  |
 | `core.aiProviders.healthCheck`           | providerId                                                     | `{ status, latency, error? }`                           | Test provider connectivity                     |
 | `core.aiBudgets.list`                    | —                                                              | `{ budgets: Budget[] }`                                 | All budget rules                               |
-| `core.aiBudgets.upsert`                 | id, monthlyLimitUsd?, monthlyLimitTokens?, exceededAction?     | `{ budget: Budget }`                                    | Create or update a budget rule                 |
+| `core.aiBudgets.upsert`                 | id, monthlyTokenLimit?, monthlyCostLimit?, action?             | `{ budget: Budget }`                                    | Create or update a budget rule                 |
 | `core.aiAlerts.list`                     | acknowledged?                                                  | `{ alerts: Alert[] }`                                   | Active and historical alerts                   |
 | `core.aiAlerts.acknowledge`              | alertId                                                        | `{ success: boolean }`                                  | Mark alert as seen                             |
 
@@ -92,7 +101,7 @@ Build a multi-provider observability layer that tracks every AI inference call a
 - Every AI inference call — cloud API, local model, cache hit — is logged to `ai_inference_log` with provider, model, operation, domain, latency, and token counts
 - The inference middleware wraps all AI calls transparently — callers (entity matching, rule generation, Ego, Glia, embedding pipeline) do not log manually
 - Cost is calculated using `ai_model_pricing` rates at log time — local models have 0 cost but still track tokens and latency for performance comparison
-- Budget enforcement runs before every non-cached inference call: the middleware checks the applicable budget rules (global, per-provider, per-operation) against current-month spend. If a budget is exceeded, the `exceeded_action` determines behaviour: `block` rejects with a `budget-blocked` status, `warn` logs a warning and proceeds, `fallback` attempts a local model if available
+- Budget enforcement runs before every non-cached inference call: the middleware checks the applicable budget rules (global, per-provider, per-operation) against current-month spend. If a budget is exceeded, the `action` determines behaviour: `block` rejects with a `budget-blocked` status, `warn` logs a warning and proceeds, `fallback` attempts a local model if available
 - The existing `ai.monthlyTokenBudget` and `ai.budgetExceededFallback` settings are migrated to `ai_budgets` rows with `id: 'global'`
 - Provider health checks test connectivity and measure latency — failing providers transition to `error` status and are excluded from inference routing until manually re-enabled or a subsequent health check passes
 - Local model providers (Ollama, llama.cpp) are configured with a `base_url` pointing to the local inference server — the middleware uses the same request/response contract regardless of provider type
