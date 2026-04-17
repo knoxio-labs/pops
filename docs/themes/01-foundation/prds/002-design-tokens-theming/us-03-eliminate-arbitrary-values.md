@@ -9,7 +9,7 @@ As a developer, I want all arbitrary Tailwind values replaced with token-based c
 
 ## Acceptance Criteria
 
-- [x] All `w-[Npx]`, `h-[Npx]`, `min-w-[Npx]`, `max-h-[Npx]` replaced with Tailwind scale values — all files listed in issue #1783 are clean
+- [x] All `w-[Npx]`, `h-[Npx]`, `min-w-[Npx]`, `max-h-[Npx]` replaced with Tailwind scale values or theme tokens — all files listed in issue #1783 are clean
 - [ ] All centering hacks (`top-[50%]`, `translate-x-[-50%]`) replaced with built-in utilities
 - [ ] Arbitrary padding/margin (`p-[3px]`, `bottom-[-5px]`) replaced with closest token or custom token added to `@theme`
 - [x] Radix CSS variable bindings (`w-[var(--radix-*)]`) documented as permitted exception and left in place

@@ -224,7 +224,7 @@ describe('InsuranceReportPage', () => {
     renderPage();
     const img = screen.getByAltText('Photo of Television');
     expect(img).toBeInTheDocument();
-    expect(img.className).toContain('print:max-w-[200px]');
+    expect(img.className).toContain('print:max-w-50');
   });
 
   it('renders photo thumbnails with break-inside-avoid for print', () => {
