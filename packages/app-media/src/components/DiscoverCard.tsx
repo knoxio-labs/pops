@@ -240,9 +240,9 @@ export function DiscoverCard({
               className={cn(
                 'text-xs font-semibold',
                 matchPercentage >= 85
-                  ? 'text-green-500'
+                  ? 'text-success'
                   : matchPercentage >= 70
-                    ? 'text-emerald-500'
+                    ? 'text-success/70'
                     : 'text-muted-foreground'
               )}
             >

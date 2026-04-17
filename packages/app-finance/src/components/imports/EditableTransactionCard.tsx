@@ -60,13 +60,10 @@ export function EditableTransactionCard({
   };
 
   return (
-    <div
-      className="border-2 border-blue-500 rounded-lg p-4 bg-blue-50 dark:bg-blue-950"
-      onKeyDown={handleKeyDown}
-    >
+    <div className="border-2 border-info rounded-lg p-4 bg-info/5" onKeyDown={handleKeyDown}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 pb-2 border-b border-blue-200 dark:border-blue-800">
-        <h3 className="font-semibold text-blue-900 dark:text-blue-100">Edit Transaction</h3>
+      <div className="flex justify-between items-center mb-4 pb-2 border-b border-info/20">
+        <h3 className="font-semibold text-info">Edit Transaction</h3>
         <div className="flex gap-2">
           <Button
             variant="default"
@@ -89,7 +86,7 @@ export function EditableTransactionCard({
       </div>
 
       {/* Transaction Type */}
-      <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+      <div className="mb-4 p-3 bg-info/10 rounded-lg">
         <Label htmlFor="transactionType" className="block mb-2 font-semibold">
           Transaction Type
         </Label>
@@ -109,7 +106,7 @@ export function EditableTransactionCard({
             { label: 'Income (salary, refund, etc.)', value: 'income' },
           ]}
         />
-        <p className="text-xs mt-1 text-blue-700 dark:text-blue-300">
+        <p className="text-xs mt-1 text-info">
           {transactionType === 'transfer' &&
             "Transfers don't need an entity - they move money between accounts"}
           {transactionType === 'income' && 'Income transactions: salary, interest, refunds, etc.'}

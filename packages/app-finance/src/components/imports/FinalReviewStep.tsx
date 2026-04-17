@@ -69,12 +69,12 @@ const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; className
   add: {
     label: 'Add',
     icon: <Plus className="h-3 w-3" />,
-    className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    className: 'bg-success/10 text-success dark:bg-success/10 dark:text-success/60',
   },
   edit: {
     label: 'Edit',
     icon: <Pencil className="h-3 w-3" />,
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    className: 'bg-info/10 text-info dark:bg-info/10 dark:text-info/60',
   },
   disable: {
     label: 'Disable',
@@ -84,7 +84,7 @@ const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; className
   remove: {
     label: 'Remove',
     icon: <Trash2 className="h-3 w-3" />,
-    className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    className: 'bg-destructive/10 text-destructive dark:bg-destructive/10 dark:text-destructive/60',
   },
 };
 
@@ -342,9 +342,9 @@ export function FinalReviewStep() {
 
       {/* Commit error */}
       {commitError && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
-          <div className="text-sm text-red-800 dark:text-red-200">
+        <div className="flex items-start gap-2 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+          <div className="text-sm text-destructive">
             <p className="font-medium">Commit failed</p>
             <p className="text-xs mt-1">{commitError}</p>
           </div>
@@ -353,10 +353,10 @@ export function FinalReviewStep() {
 
       {/* Inline result after successful commit (US-05 AC-4) */}
       {committed && commitResult && (
-        <div className="space-y-3 border rounded-lg p-4 bg-green-50/50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+        <div className="space-y-3 border rounded-lg p-4 bg-success/5 border-success/20">
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <h3 className="font-semibold text-green-900 dark:text-green-100">Commit Successful</h3>
+            <CheckCircle className="h-5 w-5 text-success" />
+            <h3 className="font-semibold text-success">Commit Successful</h3>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
             <div className="flex justify-between">
@@ -382,8 +382,8 @@ export function FinalReviewStep() {
             </div>
             {commitResult.transactionsFailed > 0 && (
               <div className="flex justify-between">
-                <span className="text-red-600 dark:text-red-400">Transactions failed:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">
+                <span className="text-destructive">Transactions failed:</span>
+                <span className="font-medium text-destructive">
                   {commitResult.transactionsFailed}
                 </span>
               </div>
@@ -417,14 +417,12 @@ export function FinalReviewStep() {
           {/* Inline failure details */}
           {commitResult.failedDetails && commitResult.failedDetails.length > 0 && (
             <div className="pt-1 border-t">
-              <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
-                Failed transactions:
-              </p>
+              <p className="text-xs font-medium text-destructive mb-1">Failed transactions:</p>
               <ul className="space-y-1">
                 {commitResult.failedDetails.map((detail) => (
                   <li
                     key={`${detail.checksum ?? 'no-chk'}-${detail.error}`}
-                    className="text-xs text-red-700 dark:text-red-300 flex gap-2"
+                    className="text-xs text-destructive flex gap-2"
                   >
                     {detail.checksum && (
                       <span className="font-mono shrink-0">{detail.checksum.slice(0, 12)}</span>

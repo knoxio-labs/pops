@@ -58,9 +58,9 @@ export function TierListSummary({
                 <span
                   className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${
                     isPositive
-                      ? 'bg-green-500/20 text-green-700 dark:text-green-400'
+                      ? 'bg-success/20 text-success'
                       : isNegative
-                        ? 'bg-red-500/20 text-red-700 dark:text-red-400'
+                        ? 'bg-destructive/20 text-destructive'
                         : 'bg-muted text-muted-foreground'
                   }`}
                   data-testid={`delta-${change.movieId}`}

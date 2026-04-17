@@ -481,7 +481,7 @@ export function CompareArenaPage() {
                     tier: 'high' as const,
                     icon: ChevronUp,
                     label: 'Equally great',
-                    hoverColor: 'hover:border-green-500 hover:text-green-500',
+                    hoverColor: 'hover:border-success hover:text-success',
                   },
                   {
                     tier: 'mid' as const,
@@ -493,7 +493,7 @@ export function CompareArenaPage() {
                     tier: 'low' as const,
                     icon: ChevronDown,
                     label: 'Equally poor',
-                    hoverColor: 'hover:border-red-500 hover:text-red-500',
+                    hoverColor: 'hover:border-destructive hover:text-destructive',
                   },
                 ] as const
               ).map(({ tier, icon: Icon, label, hoverColor }) => (
@@ -649,9 +649,9 @@ function MovieCard({
       <div
         className={`group relative rounded-lg overflow-hidden transition-all ${
           isWinner
-            ? 'ring-2 ring-green-500 shadow-lg scale-[1.02]'
+            ? 'ring-2 ring-success shadow-lg scale-[1.02]'
             : isWinner === false && scoreDelta != null
-              ? 'ring-2 ring-red-500/50 opacity-75'
+              ? 'ring-2 ring-destructive/50 opacity-75'
               : ''
         }`}
       >
@@ -687,7 +687,7 @@ function MovieCard({
                 disabled={watchlistPending}
                 className={`absolute top-2 left-2 p-1.5 rounded-full backdrop-blur-sm transition-colors ${
                   isOnWatchlist
-                    ? 'bg-app-accent/90 text-app-accent-foreground hover:bg-red-500/90 hover:text-white'
+                    ? 'bg-app-accent/90 text-app-accent-foreground hover:bg-destructive/90 hover:text-white'
                     : 'bg-black/50 text-white/80 hover:text-white hover:bg-black/70'
                 }`}
                 aria-label={
@@ -709,7 +709,7 @@ function MovieCard({
         {scoreDelta != null && (
           <div
             className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold tabular-nums animate-bounce ${
-              scoreDelta > 0 ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'
+              scoreDelta > 0 ? 'bg-success/90 text-white' : 'bg-destructive/90 text-white'
             }`}
           >
             {scoreDelta > 0 ? '+' : ''}
@@ -765,7 +765,7 @@ function MovieCard({
                     onBlacklist();
                   }}
                   disabled={blacklistPending}
-                  className="p-2 rounded-full bg-black/40 text-white/80 hover:text-red-400 hover:bg-black/60 backdrop-blur-sm transition-colors"
+                  className="p-2 rounded-full bg-black/40 text-white/80 hover:text-destructive/80 hover:bg-black/60 backdrop-blur-sm transition-colors"
                   aria-label={`Not watched ${movie.title}`}
                 >
                   <EyeOff className="h-4 w-4" />

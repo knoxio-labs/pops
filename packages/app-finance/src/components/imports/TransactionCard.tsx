@@ -69,16 +69,16 @@ export function TransactionCard({
   // Border and background colors based on variant
   const borderColor =
     variant === 'uncertain'
-      ? 'border-yellow-200 dark:border-yellow-800'
+      ? 'border-warning/20'
       : variant === 'failed'
-        ? 'border-red-200 dark:border-red-800'
+        ? 'border-destructive/20'
         : 'border-gray-200 dark:border-gray-700';
 
   const bgColor =
     variant === 'uncertain'
-      ? 'bg-yellow-50 dark:bg-yellow-950'
+      ? 'bg-warning/5'
       : variant === 'failed'
-        ? 'bg-red-50 dark:bg-red-950'
+        ? 'bg-destructive/5'
         : 'bg-white dark:bg-gray-800';
 
   return (
@@ -283,7 +283,7 @@ export function TransactionCard({
 
       {/* Error display */}
       {transaction.error && (
-        <div className="text-sm text-red-700 dark:text-red-300 mb-3">{transaction.error}</div>
+        <div className="text-sm text-destructive mb-3">{transaction.error}</div>
       )}
 
       {/* Collapsible raw data section */}

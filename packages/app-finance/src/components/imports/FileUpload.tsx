@@ -115,19 +115,15 @@ export function FileUpload({
           className={`
             relative border-2 border-dashed rounded-lg p-12
             transition-colors duration-200 ease-in-out
-            ${
-              isDragging
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                : 'border-gray-300 dark:border-gray-700'
-            }
-            ${error ? 'border-red-500 bg-red-50 dark:bg-red-950' : ''}
+            ${isDragging ? 'border-info bg-info/5' : 'border-gray-300 dark:border-gray-700'}
+            ${error ? 'border-destructive bg-destructive/5' : ''}
           `}
         >
           <Label
             htmlFor="file-upload"
             className="flex flex-col items-center justify-center cursor-pointer"
           >
-            <Upload className={`w-12 h-12 mb-4 ${error ? 'text-red-500' : 'text-gray-400'}`} />
+            <Upload className={`w-12 h-12 mb-4 ${error ? 'text-destructive' : 'text-gray-400'}`} />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Drop CSV file here or click to browse
             </span>
@@ -146,9 +142,9 @@ export function FileUpload({
           </Label>
         </div>
       ) : (
-        <div className="flex items-center justify-between p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950 rounded-lg">
+        <div className="flex items-center justify-between p-4 border-2 border-success bg-success/5 rounded-lg">
           <div className="flex items-center gap-3">
-            <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
+            <FileText className="w-8 h-8 text-success" />
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {selectedFile.name}
@@ -162,7 +158,7 @@ export function FileUpload({
             variant="ghost"
             size="icon"
             onClick={handleRemove}
-            className="text-gray-500 hover:text-red-600"
+            className="text-gray-500 hover:text-destructive"
             aria-label="Remove file"
           >
             <X className="w-5 h-5" />
@@ -171,7 +167,7 @@ export function FileUpload({
       )}
 
       {error && (
-        <div className="p-3 text-sm text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-200 rounded-md">
+        <div className="p-3 text-sm text-destructive bg-destructive/10 dark:text-destructive/40 rounded-md">
           {error}
         </div>
       )}

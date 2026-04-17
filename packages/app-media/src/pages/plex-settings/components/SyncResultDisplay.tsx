@@ -18,10 +18,10 @@ export function SyncResultDisplay({ result, label }: SyncResultDisplayProps) {
     <div className="rounded-md border bg-muted/30 p-3 space-y-2 text-sm">
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-medium">{label} Results:</span>
-        <span className="text-emerald-400">{result.synced} synced</span>
+        <span className="text-success">{result.synced} synced</span>
         <span className="text-muted-foreground">{result.skipped} skipped</span>
         {result.errors.length > 0 && (
-          <span className="text-red-400">{result.errors.length} errors</span>
+          <span className="text-destructive/80">{result.errors.length} errors</span>
         )}
       </div>
       {skipReasons.length > 0 && (
@@ -52,13 +52,13 @@ export function SyncResultDisplay({ result, label }: SyncResultDisplayProps) {
             variant="ghost"
             size="sm"
             onClick={() => setShowErrors(!showErrors)}
-            className="flex items-center gap-1 text-xs h-auto p-0 text-red-400 hover:text-red-300"
+            className="flex items-center gap-1 text-xs h-auto p-0 text-destructive/80 hover:text-destructive/60"
           >
             {showErrors ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {showErrors ? 'Hide' : 'Show'} error details
           </Button>
           {showErrors && (
-            <div className="mt-2 space-y-1 text-xs text-red-400/80">
+            <div className="mt-2 space-y-1 text-xs text-destructive/80">
               {result.errors.map((err, i) => (
                 <p key={i}>
                   <span className="font-medium">{err.title}:</span> {err.reason}

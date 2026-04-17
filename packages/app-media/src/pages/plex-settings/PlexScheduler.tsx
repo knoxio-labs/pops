@@ -96,7 +96,7 @@ export function PlexScheduler({
       <div className="text-sm text-muted-foreground space-y-1">
         {isSchedulerRunning ? (
           <>
-            <p className="text-emerald-400">
+            <p className="text-success">
               Scheduler active — syncing every{' '}
               {Math.round((scheduler?.intervalMs ?? 0) / (60 * 60 * 1000))} hours
             </p>
@@ -111,7 +111,7 @@ export function PlexScheduler({
           <p>Last sync: {new Date(scheduler.lastSyncAt).toLocaleString()}</p>
         )}
         {scheduler?.lastSyncError && (
-          <p className="text-red-400">Last error: {scheduler.lastSyncError}</p>
+          <p className="text-destructive/80">Last error: {scheduler.lastSyncError}</p>
         )}
         {(scheduler?.moviesSynced ?? 0) > 0 && (
           <p>Total movies synced: {scheduler?.moviesSynced}</p>

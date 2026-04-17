@@ -142,7 +142,7 @@ export function ColumnMapStep() {
             <div key={field.key} className="flex items-center gap-4">
               <Label className="w-40">
                 {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
               </Label>
               <UiSelect
                 name={field.key}
@@ -189,11 +189,11 @@ export function ColumnMapStep() {
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         {parsedDate ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <CheckCircle className="w-4 h-4 text-success" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 text-red-500" />
+                          <AlertCircle className="w-4 h-4 text-destructive" />
                         )}
-                        <span className={parsedDate ? '' : 'text-red-600'}>{dateStr}</span>
+                        <span className={parsedDate ? '' : 'text-destructive'}>{dateStr}</span>
                         {parsedDate && (
                           <span className="text-xs text-gray-500">→ {parsedDate}</span>
                         )}
@@ -203,11 +203,11 @@ export function ColumnMapStep() {
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         {parsedAmount !== null ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <CheckCircle className="w-4 h-4 text-success" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 text-red-500" />
+                          <AlertCircle className="w-4 h-4 text-destructive" />
                         )}
-                        <span className={parsedAmount !== null ? '' : 'text-red-600'}>
+                        <span className={parsedAmount !== null ? '' : 'text-destructive'}>
                           {amountStr}
                         </span>
                         {parsedAmount !== null && (
@@ -227,11 +227,11 @@ export function ColumnMapStep() {
       </div>
 
       {validationErrors.length > 0 && (
-        <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-          <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+        <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+          <h3 className="text-sm font-semibold text-destructive mb-2">
             Validation Errors ({validationErrors.length})
           </h3>
-          <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+          <ul className="text-sm text-destructive space-y-1">
             {validationErrors.map((error, idx) => (
               <li key={idx}>• {error}</li>
             ))}

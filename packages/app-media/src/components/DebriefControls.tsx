@@ -121,7 +121,7 @@ export function CompletionSummary({ data, onDoAnother }: CompletionSummaryProps)
     <Card data-testid="completion-summary">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-warning" />
           <CardTitle className="text-lg">Debrief Complete</CardTitle>
         </div>
         <p className="text-muted-foreground text-sm">

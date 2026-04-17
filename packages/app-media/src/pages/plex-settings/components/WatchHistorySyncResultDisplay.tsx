@@ -22,10 +22,10 @@ export function WatchHistorySyncResultDisplay({ result }: WatchHistorySyncResult
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-medium">Watch History Results:</span>
         {result.movies && result.movies.logged > 0 && (
-          <span className="text-emerald-400">{result.movies.logged} movies logged</span>
+          <span className="text-success">{result.movies.logged} movies logged</span>
         )}
         {result.summary.episodesLogged > 0 && (
-          <span className="text-emerald-400">{result.summary.episodesLogged} episodes logged</span>
+          <span className="text-success">{result.summary.episodesLogged} episodes logged</span>
         )}
         {result.summary.episodesAlreadyLogged > 0 && (
           <span className="text-muted-foreground">
