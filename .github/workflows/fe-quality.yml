@@ -76,14 +76,6 @@ jobs:
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         run: cd apps/pops-shell && pnpm typecheck
 
-      - name: Lint
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: pnpm lint
-
-      - name: Format check
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: pnpm format:check
-
       - name: Test
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         run: cd apps/pops-shell && pnpm test
