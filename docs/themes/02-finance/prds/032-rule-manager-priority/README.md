@@ -1,7 +1,7 @@
 # PRD-032: Global Rule Manager & Priority Ordering
 
 > Epic: [03 — Corrections](../../epics/03-corrections.md)
-> Status: In progress
+> Status: Done
 
 ## Overview
 
@@ -66,7 +66,7 @@ No new endpoints. Existing endpoints change:
 | 03  | [us-03-browse-all-mode](us-03-browse-all-mode.md)                               | Browse-all mode for CorrectionProposalDialog              | Done        | Blocked by PRD-030 us-03                  |
 | 04  | [us-04-manage-rules-button](us-04-manage-rules-button.md)                       | "Manage Rules" button in ReviewStep                       | Done        | Blocked by us-03                          |
 | 05  | [us-05-drag-to-reorder](us-05-drag-to-reorder.md)                               | Drag-to-reorder priority in browse-mode sidebar           | Done        | Blocked by us-01, us-03; knoxio/pops#1742 |
-| 06  | [us-06-impact-preview-db-transactions](us-06-impact-preview-db-transactions.md) | Impact preview includes existing DB transactions          | Not started | Blocked by us-03; knoxio/pops#1743        |
+| 06  | [us-06-impact-preview-db-transactions](us-06-impact-preview-db-transactions.md) | Impact preview includes existing DB transactions          | Done        | —                                         |
 | 07  | [us-07-override-indicators](us-07-override-indicators.md)                       | Override indicators when multiple rules match             | Done        | Blocked by us-02; knoxio/pops#1744        |
 | 08  | [us-08-orphaned-entity-indicators](us-08-orphaned-entity-indicators.md)         | Orphaned entity badges on /finance/entities               | Done        | Yes                                       |
 
@@ -79,4 +79,4 @@ No new endpoints. Existing endpoints change:
 
 ## Drift Check
 
-last checked: never
+last checked: 2026-04-17
