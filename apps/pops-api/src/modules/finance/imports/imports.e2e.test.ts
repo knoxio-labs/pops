@@ -448,7 +448,13 @@ describe('E2E: CSV Transformer Accuracy', () => {
     expect(result.account).toBe('Amex');
     expect(result.location).toBe('North Sydney'); // Title-cased, first line only
     expect(result.checksum).toHaveLength(64); // SHA-256
-    expect(result.rawRow).toBe(JSON.stringify(row));
+    // rawRow uses key-sorted JSON so checksum == SHA-256(rawRow)
+    const sortedRow = Object.fromEntries(
+      Object.keys(row)
+        .toSorted()
+        .map((k) => [k, row[k as keyof typeof row]])
+    );
+    expect(result.rawRow).toBe(JSON.stringify(sortedRow));
   });
 
   it('handles refunds (negative amounts)', () => {
