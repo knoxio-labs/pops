@@ -9,6 +9,11 @@
  *   - max 1 'local' shelf per window of 3 shelves
  *   - at least 1 personal shelf (shelfId starts with 'recommendations' or 'because-you-watched')
  *
+ * Pinned shelves (PRD-072):
+ *   - Definitions with `pinned: true` are always included when they generate results.
+ *   - Pinned instances are prepended to the session before random assembly begins.
+ *   - They are excluded from variety constraints (MAX_LOCAL_PER_WINDOW, etc.).
+ *
  * Scoring:
  *   score = instance.score × freshness × (1 + varietyBonus + contextBonus)
  *   varietyBonus = 0.2 if category !== previous selected category, else 0
@@ -79,26 +84,32 @@ export function assembleSession(
 ): ShelfInstance[] {
   // Step 1: Generate all candidate instances from registered shelves
   const definitions = getRegisteredShelves();
+  const pinnedInstances: ShelfInstance[] = [];
   const allCandidates: ScoredCandidate[] = [];
 
   for (const def of definitions) {
     const instances = def.generate(profile);
-    for (const instance of instances) {
-      const count = impressions.get(instance.shelfId) ?? 0;
-      const freshness = getShelfFreshness(count);
-      allCandidates.push({
-        instance,
-        category: def.category,
-        baseScore: instance.score * freshness,
-      });
+    if (def.pinned) {
+      // Pinned shelves are always included — bypass random assembly entirely.
+      pinnedInstances.push(...instances);
+    } else {
+      for (const instance of instances) {
+        const count = impressions.get(instance.shelfId) ?? 0;
+        const freshness = getShelfFreshness(count);
+        allCandidates.push({
+          instance,
+          category: def.category,
+          baseScore: instance.score * freshness,
+        });
+      }
     }
   }
 
-  if (allCandidates.length === 0) {
+  if (pinnedInstances.length === 0 && allCandidates.length === 0) {
     return [];
   }
 
-  // Step 2: Weighted random sampling with variety constraints
+  // Step 2: Weighted random sampling with variety constraints (non-pinned only)
   const selected: ShelfInstance[] = [];
   const remaining = [...allCandidates];
   let seedCount = 0;
@@ -154,5 +165,6 @@ export function assembleSession(
     }
   }
 
-  return selected;
+  // Step 4: Prepend pinned shelves — they always appear before randomly assembled shelves.
+  return [...pinnedInstances, ...selected];
 }
