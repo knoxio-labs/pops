@@ -1,0 +1,35 @@
+#!/bin/bash
+# Fetches a fresh GitHub Actions runner registration token and re-registers
+# this runner before the service starts. Called via systemd ExecStartPre.
+set -euo pipefail
+
+RUNNER_DIR="{{ github_runner_dir }}"
+REPO_URL="{{ github_repo_url }}"
+RUNNER_NAME="{{ github_runner_name }}"
+RUNNER_LABELS="{{ github_runner_labels }}"
+PAT_FILE="${RUNNER_DIR}/.github_pat"
+
+cd "${RUNNER_DIR}"
+
+REPO_PATH="${REPO_URL#https://github.com/}"
+
+TOKEN=$(curl -sf -X POST \
+  -H "Authorization: Bearer $(cat "${PAT_FILE}")" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/${REPO_PATH}/actions/runners/registration-token" \
+  | jq -r '.token')
+
+if [ -z "${TOKEN}" ] || [ "${TOKEN}" = "null" ]; then
+  echo "re-register: failed to obtain registration token from GitHub API" >&2
+  exit 1
+fi
+
+rm -f .runner .credentials
+
+./config.sh \
+  --url "${REPO_URL}" \
+  --token "${TOKEN}" \
+  --name "${RUNNER_NAME}" \
+  --labels "${RUNNER_LABELS}" \
+  --unattended \
+  --replace
