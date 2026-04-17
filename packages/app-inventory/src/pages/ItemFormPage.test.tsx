@@ -499,13 +499,48 @@ describe('ItemFormPage — Photos section', () => {
   });
 });
 
-describe('ItemFormPage — Form gaps (tb-581)', () => {
+describe('ItemFormPage — Form gaps (#1851)', () => {
   it('renders Purchase Price field in Dates & Values section', () => {
     renderCreate();
     expect(screen.getByText(/purchase price/i)).toBeInTheDocument();
     // The input is rendered via TextInput with register("purchasePrice")
     const input = document.querySelector('input[name="purchasePrice"]');
     expect(input).toBeInTheDocument();
+  });
+
+  it('includes purchasePrice in the create payload when set', async () => {
+    renderCreate();
+    const nameInput = document.querySelector('input[name="itemName"]') as HTMLInputElement;
+    const typeSelect = document.querySelector('select[name="type"]') as HTMLSelectElement;
+    const priceInput = document.querySelector('input[name="purchasePrice"]') as HTMLInputElement;
+
+    fireEvent.change(nameInput, { target: { value: 'Test Item' } });
+    fireEvent.change(typeSelect, { target: { value: 'Electronics' } });
+    fireEvent.change(priceInput, { target: { value: '149.99' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /create item/i }));
+
+    await vi.waitFor(() => {
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ purchasePrice: 149.99 })
+      );
+    });
+  });
+
+  it('sends null purchasePrice when field is empty', async () => {
+    renderCreate();
+    const nameInput = document.querySelector('input[name="itemName"]') as HTMLInputElement;
+    const typeSelect = document.querySelector('select[name="type"]') as HTMLSelectElement;
+    fireEvent.change(nameInput, { target: { value: 'Test Item' } });
+    fireEvent.change(typeSelect, { target: { value: 'Electronics' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /create item/i }));
+
+    await vi.waitFor(() => {
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ purchasePrice: null })
+      );
+    });
   });
 
   it("defaults condition to 'good' in create mode", () => {
@@ -528,9 +563,22 @@ describe('ItemFormPage — Form gaps (tb-581)', () => {
     expect(options).not.toContain('Excellent');
   });
 
-  it('marks Type as required', () => {
+  it('marks Type as required with asterisk label', () => {
     renderCreate();
     expect(screen.getByText('Type *')).toBeInTheDocument();
+  });
+
+  it('shows inline error when Type is empty on submit', async () => {
+    renderCreate();
+    const nameInput = document.querySelector('input[name="itemName"]') as HTMLInputElement;
+    fireEvent.change(nameInput, { target: { value: 'Test Item' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /create item/i }));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Type is required')).toBeInTheDocument();
+    });
+    expect(mockCreateMutate).not.toHaveBeenCalled();
   });
 
   it('shows notes preview toggle button', () => {
@@ -538,11 +586,32 @@ describe('ItemFormPage — Form gaps (tb-581)', () => {
     expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
   });
 
-  it('toggles notes between edit and preview mode', () => {
+  it('toggles notes to preview — shows "Nothing to preview" when notes empty', () => {
     renderCreate();
     const previewBtn = screen.getByRole('button', { name: /preview/i });
     fireEvent.click(previewBtn);
     expect(screen.getByText(/nothing to preview/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+  });
+
+  it('toggles notes to preview — renders markdown content when notes present', () => {
+    renderCreate();
+    const notesTextarea = document.querySelector('textarea[name="notes"]') as HTMLTextAreaElement;
+    fireEvent.change(notesTextarea, { target: { value: '**bold text**' } });
+
+    const previewBtn = screen.getByRole('button', { name: /preview/i });
+    fireEvent.click(previewBtn);
+
+    expect(screen.getByTestId('markdown-preview')).toBeInTheDocument();
+    expect(document.querySelector('textarea[name="notes"]')).not.toBeInTheDocument();
+  });
+
+  it('switches back from preview to edit mode', () => {
+    renderCreate();
+    const previewBtn = screen.getByRole('button', { name: /preview/i });
+    fireEvent.click(previewBtn);
+    const editBtn = screen.getByRole('button', { name: /edit/i });
+    fireEvent.click(editBtn);
+    expect(document.querySelector('textarea[name="notes"]')).toBeInTheDocument();
   });
 });
