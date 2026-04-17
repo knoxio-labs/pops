@@ -1,7 +1,7 @@
 # US-02: Generate tag rule proposal from tag edits
 
 > PRD: [029 — Tag Rule Proposals](README.md)
-> Status: Partial
+> Status: Done
 
 ## Description
 
@@ -15,4 +15,4 @@ As a user, I want the system to propose tag rules based on my tag edits during i
 - [x] Each operation includes rationale and an impact preview for the current import session **in the import UI flow**.
 - [x] Proposal scope is bounded to relevant rules and the current import context **in the import UI flow** — all confirmed transactions are passed as preview scope.
 - [ ] In an empty database (no existing tag vocabulary), tag suggestions are still generated using the seed taxonomy (v1) as the starting vocabulary **through the wizard**.
-- [ ] Proposals can be generated from transaction scope signals (single-transaction tag edit) — only group scope is wired; transaction-level signal is not yet connected.
+- [x] Proposals can be generated from transaction scope signals (single-transaction tag edit) — "Save rule…" button appears per transaction row in Tag Review (knoxio/pops#1928).

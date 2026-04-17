@@ -200,6 +200,27 @@ export function TagReviewStep() {
   );
 
   /**
+   * Called when the user clicks "Save rule…" on a single transaction row.
+   * Builds a signal from that transaction's description and current tags.
+   */
+  const handleOpenTagRuleDialogForTransaction = useCallback(
+    (transaction: ConfirmedTransaction, tags: string[]) => {
+      if (tags.length === 0) {
+        toast.info('Add at least one tag to this transaction before saving a rule.');
+        return;
+      }
+      const signal: TagRuleLearnSignal = {
+        descriptionPattern: transaction.description,
+        matchType: 'contains',
+        entityId: transaction.entityId ?? null,
+        tags,
+      };
+      setTagRuleDialog({ signal, groupEntityName: transaction.description });
+    },
+    []
+  );
+
+  /**
    * Capture the entity name at dialog-open time in a ref so it is stable
    * inside handleTagRuleApplied even when tagRuleDialog state has been cleared.
    */
@@ -265,6 +286,7 @@ export function TagReviewStep() {
             onUpdateTag={updateTag}
             onApplyGroupTags={handleApplyGroupTags}
             onSaveTagRule={handleOpenTagRuleDialog}
+            onSaveTagRuleForTransaction={handleOpenTagRuleDialogForTransaction}
           />
         ))}
 
@@ -318,6 +340,8 @@ interface EntityGroupProps {
   onApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
   /** Opens the TagRuleProposalDialog pre-populated with this group's signal. */
   onSaveTagRule: (group: ConfirmedGroup) => void;
+  /** Opens the TagRuleProposalDialog pre-populated from a single transaction's description + tags. */
+  onSaveTagRuleForTransaction: (transaction: ConfirmedTransaction, tags: string[]) => void;
 }
 
 /**
@@ -334,6 +358,7 @@ function EntityGroup({
   onUpdateTag,
   onApplyGroupTags,
   onSaveTagRule,
+  onSaveTagRuleForTransaction,
 }: EntityGroupProps) {
   const [expanded, setExpanded] = useState(true);
 
@@ -473,6 +498,7 @@ function EntityGroup({
                 onSave={(tags) => {
                   onUpdateTag(t.checksum, tags);
                 }}
+                onSaveTagRule={onSaveTagRuleForTransaction}
               />
             ))}
           </div>
@@ -661,6 +687,7 @@ interface TransactionTagRowProps {
   originalSuggestedTags: SuggestedTag[];
   availableTags: string[];
   onSave: (tags: string[]) => void;
+  onSaveTagRule?: (transaction: ConfirmedTransaction, tags: string[]) => void;
 }
 
 /**
@@ -674,6 +701,7 @@ function TransactionTagRow({
   originalSuggestedTags,
   availableTags,
   onSave,
+  onSaveTagRule,
 }: TransactionTagRowProps) {
   const amount = transaction.amount;
   const isNegative = amount < 0;
@@ -682,7 +710,7 @@ function TransactionTagRow({
   const tagMeta = useMemo(() => buildTagMetaMap(originalSuggestedTags), [originalSuggestedTags]);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 hover:bg-muted/20 transition-colors">
+    <div className="flex items-center gap-3 px-4 py-2 hover:bg-muted/20 transition-colors group/txrow">
       {/* Transaction metadata */}
       <div className="flex-1 min-w-0">
         <p className="text-sm truncate">{transaction.description}</p>
@@ -698,6 +726,21 @@ function TransactionTagRow({
       >
         {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}
       </span>
+
+      {/* Save tag rule button — visible on hover */}
+      {onSaveTagRule && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onSaveTagRule(transaction, tags)}
+          className="text-xs px-2 py-1 h-auto whitespace-nowrap text-muted-foreground hover:text-foreground opacity-0 group-hover/txrow:opacity-100 transition-opacity flex-shrink-0"
+          title="Save a reusable tag rule for this transaction"
+          aria-label={`Save tag rule for ${transaction.description}`}
+        >
+          <BookmarkPlus className="w-3.5 h-3.5 mr-1" />
+          Save rule…
+        </Button>
+      )}
 
       {/* Inline tag editor — with source badge display in trigger */}
       <div className="flex-shrink-0 w-44">
