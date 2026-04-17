@@ -9,10 +9,11 @@ import { createApp } from './app.js';
 import { closeDb } from './db.js';
 import { startupCleanup } from './modules/core/envs/registry.js';
 import { startTtlWatcher } from './modules/core/envs/ttl-watcher.js';
-import { resumeSchedulerIfEnabled, stopScheduler } from './modules/media/plex/scheduler.js';
+import { resumeSchedulerIfEnabled, stopPlexSchedulerTask } from './modules/media/plex/scheduler.js';
 import {
   resumeRotationSchedulerIfEnabled,
-  stopRotationScheduler,
+  stopRotationTask,
+  waitForCycleEnd,
 } from './modules/media/rotation/scheduler.js';
 
 const port = Number(process.env['PORT'] ?? 3000);
@@ -44,16 +45,34 @@ if (resumedRotation) {
 // Periodically purge expired named environments
 const ttlWatcher = startTtlWatcher();
 
-function shutdown(): void {
-  console.warn('[pops-api] Shutting down...');
-  stopScheduler();
-  stopRotationScheduler();
+async function shutdown(signal: string): Promise<void> {
+  console.warn(`[pops-api] ${signal} — shutting down`);
+  // 1. Stop accepting new requests
+  server.close();
+  // 2. Stop schedulers (task-only, preserve settings for auto-resume on restart)
+  stopRotationTask();
+  stopPlexSchedulerTask();
+  // 3. Wait for any in-progress rotation cycle to finish
+  if (process.env['NODE_ENV'] !== 'test') {
+    await waitForCycleEnd();
+  }
+  // 4. Stop TTL watcher
   clearInterval(ttlWatcher);
-  server.close(() => {
-    closeDb();
-    process.exit(0);
-  });
+  // 5. Close DB
+  closeDb();
+  // 6. Exit
+  process.exit(0);
 }
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.once('SIGTERM', () => {
+  shutdown('SIGTERM').catch((err) => {
+    console.error('[pops-api] Shutdown error:', err);
+    process.exit(1);
+  });
+});
+process.once('SIGINT', () => {
+  shutdown('SIGINT').catch((err) => {
+    console.error('[pops-api] Shutdown error:', err);
+    process.exit(1);
+  });
+});

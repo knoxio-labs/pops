@@ -403,6 +403,40 @@ function writeRotationLog(result: RotationCycleResult): void {
 }
 
 // ---------------------------------------------------------------------------
+// Graceful shutdown helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Stop the in-memory cron task without touching persisted settings.
+ * Use this during graceful shutdown so the scheduler auto-resumes on restart.
+ * For user-initiated disable (which should prevent auto-resume), use
+ * `stopRotationScheduler()` instead.
+ */
+export function stopRotationTask(): void {
+  if (task) {
+    void task.stop();
+    task = null;
+  }
+  console.warn('[Rotation] Scheduler task stopped (settings preserved)');
+}
+
+/**
+ * Returns a promise that resolves once any in-progress rotation cycle finishes.
+ * Resolves immediately if no cycle is running.
+ */
+export function waitForCycleEnd(): Promise<void> {
+  if (!isCycleRunning) return Promise.resolve();
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (!isCycleRunning) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 250);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
