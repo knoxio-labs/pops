@@ -114,4 +114,4 @@ With only one app registered, the switcher should not feel empty:
 
 ## Drift Check
 
-last checked: never
+last checked: 2026-04-17
