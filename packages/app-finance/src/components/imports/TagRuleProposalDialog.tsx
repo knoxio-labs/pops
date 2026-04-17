@@ -40,10 +40,15 @@ export interface TagRuleProposalDialogProps {
     description: string;
     entityId?: string | null;
   }>;
-  onApplied?: () => void;
+  /**
+   * Called after the ChangeSet is applied successfully.
+   * Receives the applied ChangeSet so callers can store it (e.g. import store).
+   */
+  onApplied?: (changeSet: ProposeOutput['changeSet']) => void;
 }
 
 export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
+  const { onApplied, onOpenChange } = props;
   const utils = trpc.useUtils();
   const [pattern, setPattern] = useState('');
   const [matchType, setMatchType] = useState<'exact' | 'contains' | 'regex'>('contains');
@@ -132,30 +137,33 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
   }, [proposal]);
 
   const applyMutation = trpc.core.tagRules.applyTagRuleChangeSet.useMutation({
-    onSuccess: async () => {
-      await utils.core.tagRules.listVocabulary.invalidate();
-      toast.success('Tag rule saved');
-      props.onApplied?.();
-      props.onOpenChange(false);
-    },
     onError: (e) => toast.error(e.message),
   });
 
   const rejectMutation = trpc.core.tagRules.rejectTagRuleChangeSet.useMutation({
     onSuccess: () => {
       toast.message('Proposal dismissed');
-      props.onOpenChange(false);
+      onOpenChange(false);
     },
     onError: (e) => toast.error(e.message),
   });
 
-  const handleApply = useCallback(() => {
+  /**
+   * Apply the proposed ChangeSet. Uses `mutateAsync` so the captured `changeSet`
+   * from the current proposal is passed through the async call — no ref needed.
+   */
+  const handleApply = useCallback(async () => {
     if (!proposal) return;
-    applyMutation.mutate({
-      changeSet: proposal.changeSet,
+    const changeSet = proposal.changeSet;
+    await applyMutation.mutateAsync({
+      changeSet,
       acceptedNewTags: [...acceptedNewTags],
     });
-  }, [proposal, applyMutation, acceptedNewTags]);
+    await utils.core.tagRules.listVocabulary.invalidate();
+    toast.success('Tag rule saved');
+    onApplied?.(changeSet);
+    onOpenChange(false);
+  }, [proposal, applyMutation, acceptedNewTags, utils, onApplied, onOpenChange]);
 
   const handleReject = useCallback(() => {
     if (!proposal) return;
@@ -170,7 +178,7 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
   const busy = applyMutation.isPending || rejectMutation.isPending;
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+    <Dialog open={props.open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Save tag rule</DialogTitle>
@@ -301,7 +309,7 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
             type="button"
             variant="outline"
             onClick={() => {
-              props.onOpenChange(false);
+              onOpenChange(false);
             }}
             disabled={busy}
           >
