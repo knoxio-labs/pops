@@ -17,6 +17,8 @@ import { basename, extname, join, resolve } from 'node:path';
 import { type Router as ExpressRouter, Router } from 'express';
 
 import { getDb } from '../../db.js';
+import { logger } from '../../lib/logger.js';
+import { getMovieByTmdbId, updateMovie } from '../../modules/media/movies/service.js';
 import { MEDIA_DIR_NAMES } from '../../modules/media/tmdb/image-cache.js';
 import { getImageCache, getTmdbClient } from '../../modules/media/tmdb/index.js';
 
@@ -198,9 +200,16 @@ router.get('/media/images/:mediaType/:id/:filename', async (req, res): Promise<v
     // For movies with null poster_path, fetch from TMDB API to get the current path
     let resolvedPath = record?.path ?? null;
     if (!resolvedPath && mediaType === 'movie' && imageType === 'poster' && record !== undefined) {
-      const tmdbPath = await fetchPosterPathFromTmdb(Number(id));
+      const tmdbId = Number(id);
+      const tmdbPath = await fetchPosterPathFromTmdb(tmdbId);
       if (tmdbPath) {
         resolvedPath = tmdbPath;
+        // Persist back to DB so future requests don't need to re-fetch from TMDB.
+        // Fire-and-forget: don't block the response on a write that isn't critical.
+        const movieRow = getMovieByTmdbId(tmdbId);
+        if (movieRow) {
+          updateMovie(movieRow.id, { posterPath: tmdbPath });
+        }
       }
     }
 
@@ -225,7 +234,7 @@ router.get('/media/images/:mediaType/:id/:filename', async (req, res): Promise<v
       }
     }
   } catch (err) {
-    console.error('[Images] Fallback failed:', err);
+    logger.error(`[Images] Fallback failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // No image source at all
@@ -242,7 +251,7 @@ async function fetchPosterPathFromTmdb(tmdbId: number): Promise<string | null> {
     const detail = await client.getMovie(tmdbId);
     return detail.posterPath ?? null;
   } catch (err) {
-    console.warn(`[Images] TMDB lookup for ${tmdbId} failed:`, err);
+    logger.warn(`[Images] TMDB lookup for ${tmdbId} failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -277,7 +286,7 @@ async function downloadAndServe(
     // Serve the freshly downloaded file
     return await tryServeFile(filePath, res);
   } catch (err) {
-    console.warn(`[Images] On-demand download failed for ${mediaType}/${id}:`, err);
+    logger.warn(`[Images] On-demand download failed for ${mediaType}/${id}: ${err instanceof Error ? err.message : String(err)}`);
     return false;
   }
 }

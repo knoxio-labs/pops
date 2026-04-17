@@ -41,6 +41,14 @@ vi.mock('../../modules/media/tmdb/index.js', () => ({
   })),
 }));
 
+// Mock movies service (used for fire-and-forget poster_path persistence)
+const mockGetMovieByTmdbId = vi.fn(() => ({ id: 1 }));
+const mockUpdateMovie = vi.fn();
+vi.mock('../../modules/media/movies/service.js', () => ({
+  getMovieByTmdbId: mockGetMovieByTmdbId,
+  updateMovie: mockUpdateMovie,
+}));
+
 /** Create a mock FileHandle that reads the given bytes. */
 function createMockFileHandle(
   content: Buffer
@@ -101,6 +109,8 @@ beforeEach(() => {
   mockDownloadMovieImages.mockResolvedValue(undefined);
   mockDownloadTvShowImages.mockResolvedValue(undefined);
   mockGetMovie.mockResolvedValue({ posterPath: null });
+  mockGetMovieByTmdbId.mockReturnValue({ id: 1 });
+  mockUpdateMovie.mockReturnValue(undefined);
 });
 
 afterEach(() => {
@@ -352,6 +362,7 @@ describe('GET /media/images/:mediaType/:id/:filename', () => {
       const app = createTestApp();
       mockGet.mockReturnValue({ path: null });
       mockGetMovie.mockResolvedValue({ posterPath: '/tmdb-fetched.jpg' });
+      mockGetMovieByTmdbId.mockReturnValue({ id: 42 });
       // Download resolves but no file written — should fall through to CDN redirect
       mockDownloadMovieImages.mockResolvedValue(undefined);
 
@@ -361,6 +372,9 @@ describe('GET /media/images/:mediaType/:id/:filename', () => {
       expect(mockDownloadMovieImages).toHaveBeenCalledWith(550, '/tmdb-fetched.jpg', null, null);
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe('https://image.tmdb.org/t/p/w780/tmdb-fetched.jpg');
+      // Verify the fetched path is persisted back to the DB (fire-and-forget)
+      expect(mockGetMovieByTmdbId).toHaveBeenCalledWith(550);
+      expect(mockUpdateMovie).toHaveBeenCalledWith(42, { posterPath: '/tmdb-fetched.jpg' });
     });
 
     it('does not call TMDB when DB record does not exist at all', async () => {
