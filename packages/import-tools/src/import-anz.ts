@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * ANZ CSV import script.
  * Imports transactions from ANZ Everyday and ANZ Frequent Flyer Black accounts.

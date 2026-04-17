@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 import type { EntityLookup, EntityMatch } from './types.js';
 
 /**

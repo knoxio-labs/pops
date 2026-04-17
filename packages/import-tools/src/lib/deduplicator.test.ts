@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 

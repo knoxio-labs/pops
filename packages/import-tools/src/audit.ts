@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Audit SQLite database — print statistics and data quality checks.
  *

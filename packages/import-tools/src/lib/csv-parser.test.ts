@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';

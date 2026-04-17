@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 import type Database from 'better-sqlite3';
 
 import type { ParsedTransaction } from './types.js';

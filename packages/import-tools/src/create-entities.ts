@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Batch create entities in the entities table.
  * Also regenerates entity_lookup.json after creation.

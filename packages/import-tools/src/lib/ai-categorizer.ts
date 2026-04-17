@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 import Anthropic from '@anthropic-ai/sdk';

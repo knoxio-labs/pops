@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /** A parsed transaction from any bank source */
 export interface ParsedTransaction {
   date: string;

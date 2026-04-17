@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Up Bank API batch import script.
  * Fetches transactions from Up Bank API and imports to SQLite.

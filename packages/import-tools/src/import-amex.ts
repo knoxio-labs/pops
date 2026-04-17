@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Amex CSV import script.
  * Handles Amex's multiline field format and Town/City, Country extraction.

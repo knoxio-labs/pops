@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Rebuild entity_lookup.json from the entities table.
  * Maps entity name -> entity ID for use by import scripts.

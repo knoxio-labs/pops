@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * ING CSV import script.
  * New for Phase 1 — covers ING Everyday and ING Loan accounts.

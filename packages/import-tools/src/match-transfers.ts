@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Match inter-account transfer pairs in the transactions table.
  * Links matching debit/credit transactions across accounts via related_transaction_id.

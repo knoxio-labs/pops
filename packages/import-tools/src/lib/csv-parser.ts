@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 

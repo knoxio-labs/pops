@@ -1,3 +1,4 @@
+// LEGACY: import-tools is deprecated reference-only code. Do not import from this package.
 /**
  * Match novated lease reimbursement pairs in the transactions table.
  * Links payroll deductions to the original lease charges.
