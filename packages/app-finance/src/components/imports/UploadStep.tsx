@@ -81,17 +81,15 @@ export function UploadStep() {
         initialFile={file}
       />
 
-      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-          Bank: American Express (Amex)
-        </h3>
-        <p className="text-xs text-blue-700 dark:text-blue-300">
+      <div className="bg-info/5 border border-info/20 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-info mb-2">Bank: American Express (Amex)</h3>
+        <p className="text-xs text-info">
           Download your Amex transactions as CSV from your online banking portal.
         </p>
       </div>
 
       {error && (
-        <div className="p-4 text-sm text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-200 rounded-lg">
+        <div className="p-4 text-sm text-destructive bg-destructive/10 dark:text-destructive/40 rounded-lg">
           {error}
         </div>
       )}

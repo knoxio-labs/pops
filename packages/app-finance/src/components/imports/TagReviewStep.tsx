@@ -569,7 +569,7 @@ function TransactionTagRow({
       <span
         className={cn(
           'text-sm font-mono tabular-nums flex-shrink-0',
-          isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+          isNegative ? 'text-destructive' : 'text-success'
         )}
       >
         {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}

@@ -129,7 +129,7 @@ function WarrantyRow({
       {!showUrgency && daysRemaining >= 0 && (
         <Badge
           variant="outline"
-          className="text-xs whitespace-nowrap text-green-600 border-green-200"
+          className="text-xs whitespace-nowrap text-success border-success/20"
         >
           {formatDaysRemaining(daysRemaining)}
         </Badge>
@@ -162,23 +162,23 @@ interface TierConfig {
 const TIER_STYLES: Record<string, TierConfig> = {
   critical: {
     label: 'Critical — Under 30 Days',
-    borderColor: 'border-red-500/20',
-    bgColor: 'bg-red-500/5',
-    headerBg: 'bg-red-500/10',
-    dotColor: 'bg-red-500',
-    badgeBg: 'bg-red-500/20',
-    badgeText: 'text-red-600 dark:text-red-400',
-    badgeBorder: 'border-red-500/30',
+    borderColor: 'border-destructive/20',
+    bgColor: 'bg-destructive/50/5',
+    headerBg: 'bg-destructive/50/10',
+    dotColor: 'bg-destructive/50',
+    badgeBg: 'bg-destructive/50/20',
+    badgeText: 'text-destructive',
+    badgeBorder: 'border-destructive/30',
   },
   warning: {
     label: 'Warning — 30 to 60 Days',
-    borderColor: 'border-yellow-500/20',
-    bgColor: 'bg-yellow-500/5',
-    headerBg: 'bg-yellow-500/10',
-    dotColor: 'bg-yellow-500',
-    badgeBg: 'bg-yellow-500/20',
-    badgeText: 'text-yellow-600 dark:text-yellow-400',
-    badgeBorder: 'border-yellow-500/30',
+    borderColor: 'border-warning/20',
+    bgColor: 'bg-warning/50/5',
+    headerBg: 'bg-warning/50/10',
+    dotColor: 'bg-warning/50',
+    badgeBg: 'bg-warning/50/20',
+    badgeText: 'text-warning',
+    badgeBorder: 'border-warning/30',
   },
   caution: {
     label: 'Caution — 60 to 90 Days',

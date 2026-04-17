@@ -156,7 +156,7 @@ function RotationButtons({
         <Button
           size="icon"
           variant="ghost"
-          className="h-7 w-7 text-emerald-500 hover:bg-red-500/20 hover:text-red-400"
+          className="h-7 w-7 text-emerald-500 hover:bg-destructive/50/20 hover:text-destructive/80"
           onClick={() => removeFromQueueMutation.mutate({ tmdbId })}
           disabled={removeFromQueueMutation.isPending}
           title="In Queue — click to remove"
@@ -174,7 +174,7 @@ function RotationButtons({
       <Button
         variant="outline"
         size="sm"
-        className="group text-emerald-500 border-emerald-500/50 hover:text-red-400 hover:border-red-400/50"
+        className="group text-emerald-500 border-emerald-500/50 hover:text-destructive/80 hover:border-red-400/50"
         onClick={() => removeFromQueueMutation.mutate({ tmdbId })}
         disabled={removeFromQueueMutation.isPending}
       >

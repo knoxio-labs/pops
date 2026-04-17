@@ -35,11 +35,11 @@ export interface SearchResultsPanelProps {
 
 const COLOR_CLASSES: Record<string, string> = {
   purple: 'text-purple-600 dark:text-purple-400',
-  green: 'text-green-600 dark:text-green-400',
-  blue: 'text-blue-600 dark:text-blue-400',
-  red: 'text-red-600 dark:text-red-400',
+  green: 'text-success',
+  blue: 'text-info',
+  red: 'text-destructive',
   orange: 'text-orange-600 dark:text-orange-400',
-  yellow: 'text-yellow-600 dark:text-yellow-400',
+  yellow: 'text-warning',
   pink: 'text-pink-600 dark:text-pink-400',
   cyan: 'text-cyan-600 dark:text-cyan-400',
 };

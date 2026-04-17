@@ -250,9 +250,7 @@ export function PhotoUpload({
                 )}
                 {f.status !== 'uploading' && (
                   <div className="flex items-center gap-2">
-                    {f.status === 'done' && (
-                      <span className="text-xs text-green-600">Uploaded</span>
-                    )}
+                    {f.status === 'done' && <span className="text-xs text-success">Uploaded</span>}
                     {f.status === 'error' && (
                       <span className="text-xs text-destructive">{f.error ?? 'Upload failed'}</span>
                     )}

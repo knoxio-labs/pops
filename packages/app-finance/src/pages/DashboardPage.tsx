@@ -164,9 +164,7 @@ export function DashboardPage() {
                     </Badge>
                     <p
                       className={`text-lg font-bold tabular-nums tracking-tight ${
-                        transaction.amount < 0
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-green-600 dark:text-green-400'
+                        transaction.amount < 0 ? 'text-destructive' : 'text-success'
                       }`}
                     >
                       {transaction.amount < 0 ? '-' : '+'}${Math.abs(transaction.amount).toFixed(2)}
