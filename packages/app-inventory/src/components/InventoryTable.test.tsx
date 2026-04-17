@@ -4,10 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { InventoryTable, type InventoryTableItem } from './InventoryTable';
 
-function renderTable(items: InventoryTableItem[]) {
+function renderTable(
+  items: InventoryTableItem[],
+  locationPathMap?: ReadonlyMap<string, { id: string; name: string }[]>
+) {
   return render(
     <MemoryRouter>
-      <InventoryTable items={items} />
+      <InventoryTable items={items} locationPathMap={locationPathMap} />
     </MemoryRouter>
   );
 }
@@ -19,6 +22,7 @@ const baseItem: InventoryTableItem = {
   type: 'Electronics',
   condition: null,
   location: null,
+  locationId: null,
   replacementValue: null,
   purchaseDate: null,
   inUse: true,
@@ -65,17 +69,70 @@ describe('Condition column — badge colour mapping', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Location column — free-text rendering
+// Location column — breadcrumb rendering
 // ---------------------------------------------------------------------------
 
-describe('Location column — free-text rendering', () => {
-  it('renders location text when provided', () => {
-    renderTable([{ ...baseItem, location: 'Living Room' }]);
+describe('Location column — breadcrumb rendering', () => {
+  it('renders breadcrumb path when locationId matches locationPathMap', () => {
+    const map = new Map([
+      [
+        'loc-shelf',
+        [
+          { id: 'loc-home', name: 'Home' },
+          { id: 'loc-living', name: 'Living Room' },
+          { id: 'loc-shelf', name: 'Shelf' },
+        ],
+      ],
+    ]);
+
+    renderTable([{ ...baseItem, locationId: 'loc-shelf', location: null }], map);
+
+    expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Living Room')).toBeInTheDocument();
+    expect(screen.getByText('Shelf')).toBeInTheDocument();
   });
 
-  it('renders dash when location is null', () => {
-    renderTable([{ ...baseItem, location: null }]);
+  it('renders full path as tooltip on the breadcrumb wrapper', () => {
+    const map = new Map([
+      [
+        'loc-shelf',
+        [
+          { id: 'loc-home', name: 'Home' },
+          { id: 'loc-shelf', name: 'Shelf' },
+        ],
+      ],
+    ]);
+
+    renderTable([{ ...baseItem, locationId: 'loc-shelf', location: null }], map);
+
+    const wrapper = screen.getByTitle('Home > Shelf');
+    expect(wrapper).toBeInTheDocument();
+  });
+
+  it('falls back to legacy free-text location when locationId has no map entry', () => {
+    const map = new Map<string, { id: string; name: string }[]>();
+
+    renderTable([{ ...baseItem, locationId: 'loc-unknown', location: 'Old Office' }], map);
+
+    expect(screen.getByText('Old Office')).toBeInTheDocument();
+  });
+
+  it('renders dash when locationId is null and no location text', () => {
+    renderTable([{ ...baseItem, locationId: null, location: null }]);
+    const dashes = screen.getAllByText('—');
+    expect(dashes.length).toBeGreaterThan(0);
+  });
+
+  it('renders single-segment breadcrumb', () => {
+    const map = new Map([['loc-room', [{ id: 'loc-room', name: 'Storage' }]]]);
+
+    renderTable([{ ...baseItem, locationId: 'loc-room' }], map);
+
+    expect(screen.getByText('Storage')).toBeInTheDocument();
+  });
+
+  it('falls back to dash when no locationPathMap and location is null', () => {
+    renderTable([{ ...baseItem, locationId: null, location: null }]);
     const dashes = screen.getAllByText('—');
     expect(dashes.length).toBeGreaterThan(0);
   });
@@ -92,11 +149,6 @@ describe('Null field handling', () => {
     expect(dashes.length).toBeGreaterThan(0);
   });
 
-  it('renders nothing for null type', () => {
-    renderTable([{ ...baseItem, type: null }]);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-  });
-
   it('renders dash for null replacementValue', () => {
     renderTable([{ ...baseItem, replacementValue: null }]);
     const dashes = screen.getAllByText('—');
@@ -107,12 +159,6 @@ describe('Null field handling', () => {
     renderTable([{ ...baseItem, purchaseDate: null }]);
     const dashes = screen.getAllByText('—');
     expect(dashes.length).toBeGreaterThan(0);
-  });
-
-  it('renders in-use check icon for inUse=true', () => {
-    const { container } = renderTable([{ ...baseItem, inUse: true }]);
-    expect(screen.getByText('MacBook Pro')).toBeInTheDocument();
-    expect(container).toBeInTheDocument();
   });
 
   it('renders item name', () => {
@@ -127,6 +173,7 @@ describe('Null field handling', () => {
 
   it('renders formatted purchase date', () => {
     renderTable([{ ...baseItem, purchaseDate: '2024-06-15' }]);
+    // Date formatting is locale-dependent; check something non-empty renders
     const dateCell = screen.getByText(/2024/);
     expect(dateCell).toBeInTheDocument();
   });

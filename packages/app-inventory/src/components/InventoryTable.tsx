@@ -7,12 +7,17 @@ import { useNavigate } from 'react-router';
  *
  * Columns: Asset ID, Name, Brand, Type, Condition, Location, Value, In Use.
  * Click row navigates to detail page.
+ *
+ * The `locationPathMap` prop maps each `locationId` to its breadcrumb path
+ * segments (root-first). Build this from the location tree in the parent page.
  */
 import {
   AssetIdBadge,
   type Condition,
   ConditionBadge,
   DataTable,
+  LocationBreadcrumb,
+  type LocationSegment,
   SortableHeader,
   TypeBadge,
 } from '@pops/ui';
@@ -26,13 +31,26 @@ export interface InventoryTableItem {
   type: string | null;
   condition: string | null;
   location: string | null;
+  locationId: string | null;
   replacementValue: number | null;
   purchaseDate: string | null;
   inUse: boolean;
   assetId: string | null;
 }
 
-const VALID_CONDITIONS = new Set<string>(['Excellent', 'Good', 'Fair', 'Poor']);
+/** Known condition values (lowercase canonical + legacy Title Case). */
+const VALID_CONDITIONS = new Set<string>([
+  'new',
+  'good',
+  'fair',
+  'poor',
+  'broken',
+  // Legacy Title Case values from seed data / Notion import
+  'Excellent',
+  'Good',
+  'Fair',
+  'Poor',
+]);
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-AU', {
@@ -43,7 +61,9 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function createColumns(): ColumnDef<InventoryTableItem>[] {
+function createColumns(
+  locationPathMap: ReadonlyMap<string, LocationSegment[]>
+): ColumnDef<InventoryTableItem>[] {
   return [
     {
       accessorKey: 'assetId',
@@ -76,16 +96,31 @@ function createColumns(): ColumnDef<InventoryTableItem>[] {
       header: 'Condition',
       cell: ({ row }) => {
         const condition = row.original.condition;
-        if (!condition || !VALID_CONDITIONS.has(condition)) return condition ?? '—';
+        if (!condition || !VALID_CONDITIONS.has(condition)) {
+          return <span className="text-muted-foreground">—</span>;
+        }
         return <ConditionBadge condition={condition as Condition} />;
       },
     },
     {
       accessorKey: 'location',
       header: ({ column }) => <SortableHeader column={column}>Location</SortableHeader>,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.original.location ?? '—'}</span>
-      ),
+      cell: ({ row }) => {
+        const { locationId, location } = row.original;
+        const segments = locationId ? locationPathMap.get(locationId) : undefined;
+
+        if (segments && segments.length > 0) {
+          return (
+            <span title={segments.map((s) => s.name).join(' > ')}>
+              <LocationBreadcrumb segments={segments} />
+            </span>
+          );
+        }
+
+        // Fall back to legacy free-text location string
+        const fallback = location ?? '—';
+        return <span className="text-muted-foreground">{fallback}</span>;
+      },
     },
     {
       accessorKey: 'replacementValue',
@@ -119,14 +154,27 @@ function createColumns(): ColumnDef<InventoryTableItem>[] {
 
 export interface InventoryTableProps {
   items: InventoryTableItem[];
+  /**
+   * Map from locationId → ordered breadcrumb segments (root-first).
+   * Build this from the location tree in the parent page and pass it down so
+   * the table does not need to fire per-row queries.
+   */
+  locationPathMap?: ReadonlyMap<string, LocationSegment[]>;
   loading?: boolean;
   /** Show the built-in search bar (default false — parent page handles search). */
   searchable?: boolean;
 }
 
-export function InventoryTable({ items, loading, searchable = false }: InventoryTableProps) {
+const EMPTY_LOCATION_MAP: ReadonlyMap<string, LocationSegment[]> = new Map();
+
+export function InventoryTable({
+  items,
+  locationPathMap = EMPTY_LOCATION_MAP,
+  loading,
+  searchable = false,
+}: InventoryTableProps) {
   const navigate = useNavigate();
-  const columns = useMemo(() => createColumns(), []);
+  const columns = useMemo(() => createColumns(locationPathMap), [locationPathMap]);
 
   return (
     <DataTable

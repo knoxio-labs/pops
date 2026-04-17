@@ -12,29 +12,39 @@ const meta: Meta<typeof ConditionBadge> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Excellent: Story = {
-  args: { condition: 'Excellent' },
+export const New: Story = {
+  args: { condition: 'new' },
 };
 
 export const Good: Story = {
-  args: { condition: 'Good' },
+  args: { condition: 'good' },
 };
 
 export const Fair: Story = {
-  args: { condition: 'Fair' },
+  args: { condition: 'fair' },
 };
 
 export const Poor: Story = {
-  args: { condition: 'Poor' },
+  args: { condition: 'poor' },
+};
+
+export const Broken: Story = {
+  args: { condition: 'broken' },
+};
+
+export const LegacyExcellent: Story = {
+  name: 'Legacy: Excellent (alias for good)',
+  args: { condition: 'Excellent' },
 };
 
 export const AllConditions: Story = {
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <ConditionBadge condition="Excellent" />
-      <ConditionBadge condition="Good" />
-      <ConditionBadge condition="Fair" />
-      <ConditionBadge condition="Poor" />
+      <ConditionBadge condition="new" />
+      <ConditionBadge condition="good" />
+      <ConditionBadge condition="fair" />
+      <ConditionBadge condition="poor" />
+      <ConditionBadge condition="broken" />
     </div>
   ),
 };
