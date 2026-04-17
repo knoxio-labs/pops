@@ -12,7 +12,7 @@ import { Card, CardContent, Skeleton, TypeBadge } from '@pops/ui';
 
 import { trpc } from '../lib/trpc';
 import { formatCurrency } from '../lib/utils';
-import { ValueByTypeCard } from './ValueBreakdown';
+import { ValueByLocationCard, ValueByTypeCard } from './ValueBreakdown';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -48,6 +48,12 @@ export function DashboardWidgets() {
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-6 w-full" />
             ))}
+          </CardContent>
+        </Card>
+        <Card className="col-span-full">
+          <CardContent className="p-4 space-y-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-24 w-full" />
           </CardContent>
         </Card>
         <Card className="col-span-full">
@@ -167,6 +173,7 @@ export function DashboardWidgets() {
         </CardContent>
       </Card>
 
+      <ValueByLocationCard className="col-span-full" />
       <ValueByTypeCard className="col-span-full" />
     </div>
   );
