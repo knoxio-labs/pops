@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { useSetPageContext } from '@pops/navigation';
 import {
   Button,
+  type LocationSegment,
   PageHeader,
   Select,
   type SelectOption,
@@ -45,10 +46,11 @@ function getInitialView(): ViewMode {
 
 const CONDITION_OPTIONS: SelectOption[] = [
   { value: '', label: 'All Conditions' },
-  { value: 'Excellent', label: 'Excellent' },
-  { value: 'Good', label: 'Good' },
-  { value: 'Fair', label: 'Fair' },
-  { value: 'Poor', label: 'Poor' },
+  { value: 'new', label: 'New' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+  { value: 'poor', label: 'Poor' },
+  { value: 'broken', label: 'Broken' },
 ];
 
 const IN_USE_OPTIONS: SelectOption[] = [
@@ -148,6 +150,28 @@ export function ItemsPage() {
     }
     flatten(locationsData?.data ?? [], 0);
     return opts;
+  }, [locationsData]);
+
+  /**
+   * locationPathMap — derived from the tree, maps every locationId to its
+   * root-first breadcrumb segments. Used by InventoryTable for the Location
+   * column so the table renders breadcrumbs without per-row queries.
+   */
+  const locationPathMap = useMemo<ReadonlyMap<string, LocationSegment[]>>(() => {
+    const map = new Map<string, LocationSegment[]>();
+
+    type TreeNode = { id: string; name: string; children: TreeNode[] };
+
+    function walk(nodes: TreeNode[], ancestors: LocationSegment[]) {
+      for (const node of nodes) {
+        const path = [...ancestors, { id: node.id, name: node.name }];
+        map.set(node.id, path);
+        walk(node.children, path);
+      }
+    }
+
+    walk((locationsData?.data ?? []) as TreeNode[], []);
+    return map;
   }, [locationsData]);
 
   /** Asset ID exact-match search on Enter key. */
@@ -303,7 +327,7 @@ export function ItemsPage() {
           )}
         </div>
       ) : viewMode === 'table' ? (
-        <InventoryTable items={items} />
+        <InventoryTable items={items} locationPathMap={locationPathMap} />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((item) => (

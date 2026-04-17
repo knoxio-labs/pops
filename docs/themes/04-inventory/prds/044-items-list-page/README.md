@@ -66,14 +66,14 @@ Build the inventory items list — a dual-mode view (table and grid) of all inve
 | Search matches an asset ID exactly | Navigate directly to item detail page                   |
 | Search matches asset ID and name   | Asset ID match takes precedence — navigate to detail    |
 | Filters return no results          | "No items match your filters" with clear filters button |
-| Location with long breadcrumb      | Truncated with ellipsis, full path in tooltip           |
+| Location with long breadcrumb      | Full path in tooltip                                    |
 | Item has no photo (grid view)      | Placeholder icon displayed in card                      |
 
 ## User Stories
 
 | #   | Story                                           | Summary                                                                           | Status  | Parallelisable |
 | --- | ----------------------------------------------- | --------------------------------------------------------------------------------- | ------- | -------------- |
-| 01  | [us-01-table-view](us-01-table-view.md)         | DataTable with sortable columns, row click navigation                             | Partial | Yes            |
+| 01  | [us-01-table-view](us-01-table-view.md)         | DataTable with sortable columns, row click navigation                             | Done    | Yes            |
 | 02  | [us-02-grid-view](us-02-grid-view.md)           | Responsive card grid with photo/metadata, view toggle persisted in localStorage   | Partial | Yes            |
 | 03  | [us-03-filters-search](us-03-filters-search.md) | Search input with asset ID redirect, type/location/condition selects, empty state | Partial | Yes            |
 
@@ -89,4 +89,4 @@ All three stories can be built in parallel. US-01 and US-02 are independent view
 
 ## Drift Check
 
-last checked: 2026-04-17
+last checked: 2026-04-18

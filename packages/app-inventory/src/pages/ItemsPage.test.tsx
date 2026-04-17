@@ -107,10 +107,10 @@ describe('ItemsPage', () => {
       renderPage();
 
       const selects = screen.getAllByRole('combobox');
-      // Condition select: placeholder + All Conditions + Excellent + Good + Fair + Poor = 6
+      // Condition select: placeholder + All Conditions + New + Good + Fair + Poor + Broken = 7
       const conditionSelect = selects[1]!; // second select
       const options = conditionSelect.querySelectorAll('option');
-      expect(options.length).toBe(6);
+      expect(options.length).toBe(7);
     });
 
     it('shows Clear filters button when a filter is active', () => {
@@ -142,11 +142,11 @@ describe('ItemsPage', () => {
     });
 
     it('reads condition filter from URL params', () => {
-      renderPage('/inventory?condition=Good');
+      renderPage('/inventory?condition=good');
 
       const selects = screen.getAllByRole('combobox');
       const conditionSelect = selects[1];
-      expect(conditionSelect).toHaveValue('Good');
+      expect(conditionSelect).toHaveValue('good');
     });
   });
 
