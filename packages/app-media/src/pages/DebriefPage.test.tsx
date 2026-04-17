@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TooltipProvider } from '@pops/ui';
@@ -65,6 +66,25 @@ function renderWithMovie(movieId: string) {
       <TooltipProvider>
         <Routes>
           <Route path="/media/debrief/:movieId" element={<DebriefPage />} />
+        </Routes>
+      </TooltipProvider>
+    </MemoryRouter>
+  );
+}
+
+/** Renders the debrief page with a catch-all route that exposes the
+ *  current pathname so post-navigation assertions can be made. */
+function renderWithMovieAndSpy(movieId: string) {
+  function PathDisplay() {
+    const loc = useLocation();
+    return <div data-testid="current-path">{loc.pathname}</div>;
+  }
+  return render(
+    <MemoryRouter initialEntries={[`/media/debrief/${movieId}`]}>
+      <TooltipProvider>
+        <Routes>
+          <Route path="/media/debrief/:movieId" element={<DebriefPage />} />
+          <Route path="*" element={<PathDisplay />} />
         </Routes>
       </TooltipProvider>
     </MemoryRouter>
@@ -289,5 +309,20 @@ describe('DebriefPage', () => {
     renderWithMovie('abc');
 
     expect(screen.getByText('Invalid movie ID.')).toBeInTheDocument();
+  });
+
+  it('"Do another" button navigates to /media/compare', async () => {
+    const user = userEvent.setup();
+    mockDebriefQuery.mockReturnValue({
+      data: { data: completedDebrief },
+      isLoading: false,
+      error: null,
+    });
+    renderWithMovieAndSpy('42');
+
+    // The completion summary shows when all dimensions are done
+    expect(screen.getByTestId('completion-summary')).toBeInTheDocument();
+    await user.click(screen.getByText('Do another'));
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/media/compare');
   });
 });

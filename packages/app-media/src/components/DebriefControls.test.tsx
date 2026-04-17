@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Capture mutation options
@@ -45,6 +45,23 @@ import {
 
 function renderWithRouter(ui: React.ReactElement) {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
+/** Renders ui inside a MemoryRouter that also mounts a catch-all route
+ *  displaying the current pathname, so navigation can be asserted. */
+function renderWithRouterAndSpy(ui: React.ReactElement, initialPath = '/') {
+  function PathDisplay() {
+    const loc = useLocation();
+    return <div data-testid="current-path">{loc.pathname}</div>;
+  }
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Routes>
+        <Route path={initialPath} element={ui} />
+        <Route path="*" element={<PathDisplay />} />
+      </Routes>
+    </MemoryRouter>
+  );
 }
 
 describe('SkipDimensionButton', () => {
@@ -145,6 +162,13 @@ describe('CompletionSummary', () => {
   it('hides Do Another button when no callback', () => {
     renderWithRouter(<CompletionSummary data={summaryData} />);
     expect(screen.queryByText('Do another')).not.toBeInTheDocument();
+  });
+
+  it('Done button navigates to /media/rankings', async () => {
+    const user = userEvent.setup();
+    renderWithRouterAndSpy(<CompletionSummary data={summaryData} />, '/start');
+    await user.click(screen.getByTestId('done-btn'));
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/media/rankings');
   });
 });
 

@@ -98,7 +98,7 @@ export function DebriefPage() {
   };
 
   const handleDoAnother = () => {
-    navigate('/media/history');
+    navigate('/media/compare');
   };
 
   // ── Loading / Error states ──
