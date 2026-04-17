@@ -537,4 +537,3 @@ describe('404 cases — locations', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
-
