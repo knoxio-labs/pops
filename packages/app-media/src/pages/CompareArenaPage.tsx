@@ -621,4 +621,3 @@ export function CompareArenaPage() {
     </div>
   );
 }
-
