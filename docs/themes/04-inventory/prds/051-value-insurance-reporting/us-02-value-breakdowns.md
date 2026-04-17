@@ -9,16 +9,16 @@ As a user, I want to see asset value broken down by location and type so that I 
 
 ## Acceptance Criteria
 
-- [x] "Value by Location" section on the report page — fetched via `inventory.report.breakdownByLocation`
+- [x] "Value by Location" section on the report page — fetched via `inventory.reports.valueByLocation`
 - [x] Each location row shows: location name, total replacement value (formatted as currency), item count
 - [x] Rows sorted by total value descending (highest value location first)
 - [x] Items with no location grouped under "Unassigned"
 - [x] Clicking a location row navigates to the items list filtered by that location
-- [x] "Value by Type" section — fetched via `inventory.report.breakdownByType`
+- [x] "Value by Type" section — fetched via `inventory.reports.valueByType`
 - [x] Each type row shows: type name, total replacement value (formatted as currency), item count
 - [x] Rows sorted by total value descending
 - [x] Clicking a type row navigates to the items list filtered by that type
-- [x] Both sections support bar chart or table display (table is the default; bar chart is a progressive enhancement)
+- [x] Both sections render a horizontal bar chart (each row shows name, value bar, currency total, and item count)
 - [x] Loading skeleton for each section while data fetches
 - [x] Empty section: "No items with replacement values" when no items have `replacementValue` set
 - [x] Locations/types with items but no replacement values show count only, value as "—"

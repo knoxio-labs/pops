@@ -56,6 +56,12 @@ export function DashboardWidgets() {
             <Skeleton className="h-24 w-full" />
           </CardContent>
         </Card>
+        <Card className="col-span-full">
+          <CardContent className="p-4 space-y-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
