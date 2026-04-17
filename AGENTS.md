@@ -460,11 +460,13 @@ Documentation standards status flows upward: US → PRD → Epic → Theme → R
 **Any implementation gap discovered during a US or PRD must become a GitHub issue before the PR is merged.**
 
 A gap is any of:
+
 - An acceptance criterion that cannot be checked `[x]` because the code doesn't satisfy it
 - A feature described in the PRD that was skipped or deferred
 - Behaviour in the spec that differs from what was built
 
 **The rules:**
+
 1. Create a GitHub issue for each gap: title format `drift-check(PRD-NNN) US-NN — <what's missing>`
 2. Add a `## Gaps (tracked)` section to the PR description with links to all gap issues
 3. Never list gaps in a PR description without linked issues
