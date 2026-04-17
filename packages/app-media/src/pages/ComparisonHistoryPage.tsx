@@ -14,7 +14,6 @@ import { trpc } from '../lib/trpc';
 const PAGE_SIZE = 20;
 const UNDO_DELAY_MS = 5000;
 
-
 export function ComparisonHistoryPage() {
   const [page, setPage] = useState(0);
   const [dimensionFilter, setDimensionFilter] = useState<string>('');

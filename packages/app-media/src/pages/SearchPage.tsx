@@ -17,7 +17,15 @@ import { toast } from 'sonner';
  * "Watched + Library" buttons that add the item then trigger the secondary
  * action in a single click.
  */
-import { Button, Skeleton, Tabs, TabsList, TabsTrigger, TextInput, useDebouncedValue } from '@pops/ui';
+import {
+  Button,
+  Skeleton,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TextInput,
+  useDebouncedValue,
+} from '@pops/ui';
 
 import {
   buildPosterUrl,
@@ -49,8 +57,6 @@ interface TvSearchResult {
   genres: string[];
   year: string | null;
 }
-
-
 
 export function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();

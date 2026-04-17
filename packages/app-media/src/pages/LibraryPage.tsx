@@ -36,7 +36,6 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 
 const PAGE_SIZE_OPTIONS = [24, 48, 96] as const;
 
-
 function LibrarySkeleton({ count = 24 }: { count?: number }) {
   return (
     <MediaGrid>
