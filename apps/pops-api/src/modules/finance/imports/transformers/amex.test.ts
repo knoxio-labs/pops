@@ -1,8 +1,19 @@
-import crypto from 'crypto';
+import { createHash } from 'crypto';
 
 import { describe, expect, it } from 'vitest';
 
 import { transformAmex } from './amex.js';
+
+/** Build the key-sorted JSON string that generateChecksum uses internally. */
+function sortedJson(row: Record<string, string>): string {
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.keys(row)
+        .toSorted()
+        .map((k) => [k, row[k]])
+    )
+  );
+}
 
 /**
  * Unit tests for Amex CSV transformer functions.
@@ -20,16 +31,15 @@ describe('transformAmex', () => {
     };
 
     const result = transformAmex(row);
+    const expectedRaw = sortedJson(row);
 
     expect(result.date).toBe('2026-02-13');
     expect(result.description).toBe('WOOLWORTHS 1234'); // Double space removed
     expect(result.amount).toBe(-125.5); // Inverted
     expect(result.account).toBe('Amex');
     expect(result.location).toBe('North Sydney'); // Title-cased first line
-    expect(result.rawRow).toBe(JSON.stringify(row));
-    expect(result.checksum).toBe(
-      crypto.createHash('sha256').update(JSON.stringify(row)).digest('hex')
-    );
+    expect(result.rawRow).toBe(expectedRaw);
+    expect(result.checksum).toBe(createHash('sha256').update(expectedRaw).digest('hex'));
   });
 
   it('generates consistent checksum for same CSV row', () => {
@@ -195,7 +205,7 @@ describe('normaliseAmount', () => {
 
   it('handles zero correctly', () => {
     const row = { Date: '13/02/2026', Description: 'TEST', Amount: '0' };
-    expect(transformAmex(row).amount).toBe(-0);
+    expect(transformAmex(row).amount).toBe(0);
   });
 
   it('handles decimal amounts', () => {
