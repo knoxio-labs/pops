@@ -1,7 +1,7 @@
 # PRD-024: Corrections (Classification Rules)
 
 > Epic: [03 — Corrections](../../epics/03-corrections.md)
-> Status: Partial
+> Status: Done
 
 ## Overview
 
@@ -17,7 +17,6 @@ Rules are learned through an explicit proposal flow (PRD-028): rule changes are 
 
 Tag rule learning is specified separately (PRD-029) and must not be coupled to classification rules.
 
-**Open gap:** `v_active_corrections` view ordering in SQL may not match **priority-first** runtime matching (PRD-032). Tracked in GitHub knoxio/pops#1745.
 
 ## Data Model
 
@@ -137,4 +136,4 @@ The system must distinguish between:
 
 ## Drift Check
 
-last checked: never
+last checked: 2026-04-17
