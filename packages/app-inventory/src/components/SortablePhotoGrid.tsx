@@ -2,9 +2,10 @@
  * SortablePhotoGrid — Drag-and-drop reorderable photo thumbnail grid.
  *
  * Uses native HTML5 drag-and-drop. On drop, calls onReorder with the
- * new ordered array of photo IDs.
+ * new ordered array of photo IDs. When onDelete is provided, each photo
+ * shows a delete button on hover.
  */
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 
 import type { PhotoItem } from './PhotoGallery';
@@ -12,6 +13,7 @@ import type { PhotoItem } from './PhotoGallery';
 interface SortablePhotoGridProps {
   photos: PhotoItem[];
   onReorder: (orderedIds: number[]) => void;
+  onDelete?: (photoId: number) => void;
   baseUrl?: string;
   isReordering?: boolean;
 }
@@ -19,6 +21,7 @@ interface SortablePhotoGridProps {
 export function SortablePhotoGrid({
   photos,
   onReorder,
+  onDelete,
   baseUrl = '/api/inventory/photos',
   isReordering = false,
 }: SortablePhotoGridProps) {
@@ -74,7 +77,8 @@ export function SortablePhotoGrid({
     dragRef.current = null;
   }, []);
 
-  if (photos.length <= 1) return null;
+  if (photos.length === 0) return null;
+  const canReorder = photos.length > 1;
 
   return (
     <div
@@ -86,12 +90,12 @@ export function SortablePhotoGrid({
         <div
           key={photo.id}
           role="listitem"
-          draggable
-          onDragStart={() => handleDragStart(index)}
-          onDragOver={(e) => handleDragOver(e, index)}
-          onDrop={(e) => handleDrop(e, index)}
-          onDragEnd={handleDragEnd}
-          className={`relative group cursor-grab active:cursor-grabbing rounded-md overflow-hidden border transition-all ${
+          draggable={canReorder}
+          onDragStart={canReorder ? () => handleDragStart(index) : undefined}
+          onDragOver={canReorder ? (e) => handleDragOver(e, index) : undefined}
+          onDrop={canReorder ? (e) => handleDrop(e, index) : undefined}
+          onDragEnd={canReorder ? handleDragEnd : undefined}
+          className={`relative group rounded-md overflow-hidden border transition-all ${canReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${
             dragIndex === index ? 'opacity-40 scale-95' : ''
           } ${overIndex === index && dragIndex !== index ? 'ring-2 ring-app-accent' : ''} ${
             isReordering ? 'pointer-events-none opacity-60' : ''
@@ -107,9 +111,21 @@ export function SortablePhotoGrid({
               draggable={false}
             />
           </div>
-          <div className="absolute top-1 left-1 p-0.5 rounded bg-background/70 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-            <GripVertical className="h-3.5 w-3.5" />
-          </div>
+          {canReorder && (
+            <div className="absolute top-1 left-1 p-0.5 rounded bg-background/70 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+              <GripVertical className="h-3.5 w-3.5" />
+            </div>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(photo.id)}
+              className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-background/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+              aria-label={`Delete photo ${photo.caption ?? photo.id}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
           {index === 0 && (
             <span className="absolute bottom-1 left-1 text-2xs font-bold bg-app-accent text-white px-1.5 py-0.5 rounded">
               Primary
