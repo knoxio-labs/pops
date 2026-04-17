@@ -19,4 +19,4 @@ As an operator, I want a deploy workflow that runs quality gates then deploys to
 
 ## Notes
 
-The self-hosted runner runs on the production server — used only for the final deploy step. PR-triggered quality workflows run on GitHub-hosted runners. Push-to-main is safe because forks cannot merge to main without owner approval; only owner-merged commits trigger the deploy.
+The self-hosted runner runs on the production server — used only for the final deploy step. PR-triggered quality workflows run on GitHub-hosted runners. Push-to-main triggers the deploy for any actor with push access to main — branch protection and required review rules control who can reach that state.
