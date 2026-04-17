@@ -211,7 +211,7 @@ export function TierListPage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3">
-        <LayoutGrid className="h-6 w-6 text-indigo-500" />
+        <LayoutGrid className="h-6 w-6 text-app-accent" />
         <h1 className="text-2xl font-bold">Tier List</h1>
       </div>
 

@@ -1,7 +1,7 @@
 # US-04: Eliminate hardcoded app colours
 
 > PRD: [002 — Design Tokens & Theming](README.md)
-> Status: Not started
+> Status: Partial
 
 ## Description
 
@@ -9,7 +9,7 @@ As a developer, I want all hardcoded app colour classes (e.g., `bg-indigo-600`, 
 
 ## Acceptance Criteria
 
-- [ ] All hardcoded colour classes in `packages/app-media/` replaced with `app-accent` variants (e.g., `bg-indigo-600` → `bg-app-accent`, `text-indigo-400` → `text-app-accent`)
+- [x] All hardcoded colour classes in `packages/app-media/` replaced with `app-accent` variants (e.g., `bg-indigo-600` → `bg-app-accent`, `text-indigo-400` → `text-app-accent`) — `TierListPage` header icon was the last violation (knoxio/pops#1784)
 - [ ] All hardcoded colour classes in `packages/app-finance/` replaced similarly
 - [ ] All hardcoded colour classes in `packages/app-inventory/` replaced similarly
 - [ ] All hardcoded colour classes in `packages/app-ai/` replaced similarly
