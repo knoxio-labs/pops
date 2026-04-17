@@ -11,16 +11,17 @@ As a user, I want to import ANZ PDF credit card statements so that transactions 
 
 ANZ Frequent Flyer Black (and other ANZ credit card) PDF statements. Transaction table columns:
 
-| Column               | Notes                                                                  |
-| -------------------- | ---------------------------------------------------------------------- |
-| Date Processed       | DD/MM/YYYY — when ANZ posted it; ignored in favour of transaction date |
-| Date of Transaction  | DD/MM/YYYY — actual merchant date; use this as `date`                  |
-| Card Used            | Last 4 digits; absent on supplementary rows                            |
-| Transaction Details  | Merchant name + location string                                        |
-| Amount ($A)          | Positive float; `CR` suffix denotes credits (payments, refunds)        |
-| Balance              | Running balance after row; ignored                                     |
+| Column              | Notes                                                                  |
+| ------------------- | ---------------------------------------------------------------------- |
+| Date Processed      | DD/MM/YYYY — when ANZ posted it; ignored in favour of transaction date |
+| Date of Transaction | DD/MM/YYYY — actual merchant date; use this as `date`                  |
+| Card Used           | Last 4 digits; absent on supplementary rows                            |
+| Transaction Details | Merchant name + location string                                        |
+| Amount ($A)         | Positive float; `CR` suffix denotes credits (payments, refunds)        |
+| Balance             | Running balance after row; ignored                                     |
 
 **Supplementary rows** (skip entirely — no card number, no amount):
+
 - Foreign currency equivalent lines (e.g. `3.99 USD`, `182.00 EUR`)
 - Overseas transaction fee lines (e.g. `INCL OVERSEAS TXN FEE 1.20 AUD`)
 

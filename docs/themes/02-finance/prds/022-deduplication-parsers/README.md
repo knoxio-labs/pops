@@ -54,11 +54,11 @@ Account: "ANZ Everyday" or "ANZ Savings" (from CSV or user selection)
 
 ### ANZ PDF (credit card statements)
 
-| PDF Column          | Mapping     | Transformation                                                |
-| ------------------- | ----------- | ------------------------------------------------------------- |
-| Date of Transaction | date        | DD/MM/YYYY → YYYY-MM-DD                                       |
-| Transaction Details | description | Clean whitespace                                              |
-| Amount ($A)         | amount      | Parse float; invert sign (purchases negative, CR → positive)  |
+| PDF Column          | Mapping     | Transformation                                               |
+| ------------------- | ----------- | ------------------------------------------------------------ |
+| Date of Transaction | date        | DD/MM/YYYY → YYYY-MM-DD                                      |
+| Transaction Details | description | Clean whitespace                                             |
+| Amount ($A)         | amount      | Parse float; invert sign (purchases negative, CR → positive) |
 
 Account: "ANZ Frequent Flyer Black" (hardcoded per statement type)
 
