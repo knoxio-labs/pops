@@ -1,7 +1,7 @@
 # PRD-057: Search Engine
 
 > Epic: [07 — Search](../../epics/07-search.md)
-> Status: Done
+> Status: Partial
 
 ## Overview
 
@@ -70,7 +70,7 @@ v1 is plain text only. Structured syntax added as v2 USs.
 | #   | Story                                                                                 | Summary                                                                         | Status                    | Parallelisable |
 | --- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------- | -------------- |
 | 01  | [us-01-adapter-interface](us-01-adapter-interface.md)                                 | SearchAdapter, SearchHit, Query, SearchContext interfaces and adapter registry  | Done                      | No (first)     |
-| 02  | [us-02-movies-adapter](us-02-movies-adapter.md)                                       | Movies backend adapter: search by title                                         | Done                      | —              |
+| 02  | [us-02-movies-adapter](us-02-movies-adapter.md)                                       | Movies backend adapter: search by title                                         | Partial                   | —              |
 | 02b | [us-02b-movies-result-component](us-02b-movies-result-component.md)                   | Movies ResultComponent: poster + title + year + rating                          | Done                      | —              |
 | 03  | [us-03-tv-shows-adapter](us-03-tv-shows-adapter.md)                                   | TV shows backend adapter: search by name                                        | Done                      | —              |
 | 03b | [us-03b-tv-shows-result-component](us-03b-tv-shows-result-component.md)               | TV shows ResultComponent: poster + name + status + seasons                      | Done                      | —              |
@@ -109,4 +109,4 @@ All 6 backend adapters (us-02 through us-07) can parallelise. All 6 frontend com
 
 ## Drift Check
 
-last checked: never
+last checked: 2026-04-17
