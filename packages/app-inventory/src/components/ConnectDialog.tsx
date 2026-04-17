@@ -119,15 +119,19 @@ export function ConnectDialog({ currentItemId, onConnected }: ConnectDialogProps
               >
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{item.itemName}</div>
-                  <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                    {(item.brand || item.model) && (
-                      <span className="text-xs text-muted-foreground">
-                        {[item.brand, item.model].filter(Boolean).join(' · ')}
-                      </span>
-                    )}
-                    {item.assetId && <AssetIdBadge assetId={item.assetId} />}
-                    {item.type && <TypeBadge type={item.type} />}
-                  </div>
+                  {item.brand || item.model || item.assetId || item.type ? (
+                    <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                      {(item.brand || item.model) && (
+                        <span className="text-xs text-muted-foreground">
+                          {[item.brand, item.model].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                      {item.assetId && <AssetIdBadge assetId={item.assetId} />}
+                      {item.type && <TypeBadge type={item.type} />}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground mt-0.5">No details</span>
+                  )}
                 </div>
                 <Link2 className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
               </Button>

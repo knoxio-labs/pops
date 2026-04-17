@@ -714,10 +714,12 @@ function ConnectionRow({
       <Link to={`/inventory/items/${connectedItemId}`} className="flex-1 min-w-0 hover:underline">
         <span className="font-medium">{itemName}</span>
         {item?.brand && <span className="text-muted-foreground text-sm ml-2">{item.brand}</span>}
-        <div className="flex flex-wrap items-center gap-1 mt-0.5">
-          {item?.assetId && <AssetIdBadge assetId={item.assetId} />}
-          {item?.type && <TypeBadge type={item.type} />}
-        </div>
+        {(item?.assetId || item?.type) && (
+          <div className="flex flex-wrap items-center gap-1 mt-0.5">
+            {item.assetId && <AssetIdBadge assetId={item.assetId} />}
+            {item.type && <TypeBadge type={item.type} />}
+          </div>
+        )}
       </Link>
       <AlertDialog>
         <AlertDialogTrigger asChild>
