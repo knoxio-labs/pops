@@ -132,9 +132,11 @@ export function getDebrief(sessionId: number): DebriefResponse {
     throw new NotFoundError('Movie', String(watchEntry.mediaId));
   }
 
-  const posterUrl =
-    movieRow.posterOverridePath ??
-    (movieRow.posterPath ? `/media/images/movie/${movieRow.tmdbId}/poster.jpg` : null);
+  const posterUrl = movieRow.posterOverridePath
+    ? movieRow.posterOverridePath
+    : movieRow.posterPath
+      ? `/media/images/movie/${movieRow.tmdbId}/poster.jpg`
+      : null;
 
   // Get active dimensions
   const dims = db

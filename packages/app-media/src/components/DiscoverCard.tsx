@@ -163,7 +163,7 @@ export function DiscoverCard({
             onClick={() =>
               onWatchlist ? onRemoveFromWatchlist?.(tmdbId) : onAddToWatchlist?.(tmdbId)
             }
-            disabled={isAddingToWatchlist ?? isRemovingFromWatchlist}
+            disabled={isAddingToWatchlist || isRemovingFromWatchlist}
             title={onWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
             aria-label={onWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
           >

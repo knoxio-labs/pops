@@ -256,7 +256,7 @@ export function AiUsagePage() {
         <Alert variant="destructive">
           <h3 className="font-semibold">Failed to load AI usage data</h3>
           <p className="text-sm mt-1">
-            {statsError?.message ?? historyError?.message ?? 'Unknown error'}
+            {statsError?.message || historyError?.message || 'Unknown error'}
           </p>
         </Alert>
       </div>

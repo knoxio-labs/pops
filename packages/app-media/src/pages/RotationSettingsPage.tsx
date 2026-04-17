@@ -71,7 +71,7 @@ export function RotationSettingsPage() {
     if (settingsQuery.data) {
       const s = settingsQuery.data;
       setEnabled(s.enabled === 'true');
-      const cron = s.cronExpression ?? '0 3 * * *';
+      const cron = s.cronExpression || '0 3 * * *';
       const isPreset = SCHEDULE_PRESETS.some((p) => p.value === cron && p.value !== 'custom');
       setSchedulePreset(isPreset ? cron : 'custom');
       setCustomCron(isPreset ? '' : cron);

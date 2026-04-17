@@ -42,7 +42,7 @@ function highlightMatch(text: string, query?: string): React.ReactNode {
 export function EntitiesResultComponent({ data }: ResultComponentProps) {
   const { name, type, aliases, query } = data as unknown as EntityHitData;
 
-  const style = entityTypeStyles[type] ?? 'bg-muted text-muted-foreground border-transparent';
+  const style = entityTypeStyles[type] || 'bg-muted text-muted-foreground border-transparent';
 
   return (
     <div className="flex items-center gap-2 min-w-0">

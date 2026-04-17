@@ -47,7 +47,7 @@ storage.media-notes
 - Every engram has at least one scope — the ingestion pipeline assigns a default scope if none is provided
 - Ego (the chat agent) filters output based on inferred or explicit scope context: if the user says "at work," Ego filters to `work.*`; if the user references personal topics, Ego broadens accordingly
 - Any scope containing `.secret.` is hard-blocked from shared outputs (reports, presentations, external documents) unless the user explicitly opts in per output
-- Scope rules are defined in `engrams/.config/scope-rules.toml` — pattern-based rules like "source:github → work.\*", "source:moltbot → personal.captures"
+- Scope rules are defined in `engrams/.config/scope-rules.toml` — pattern-based rules like `source:github → work.*`, `source:moltbot → personal.captures`
 - Thalamus indexes scopes in SQLite for fast prefix-match queries (`WHERE scope LIKE 'work.%'`)
 - Glia workers respect scope boundaries when consolidating — engrams in different top-level scopes are never merged
 - The scope model is not access control — there is no concept of "this user can't see this scope." It's output filtering for a single user who owns everything

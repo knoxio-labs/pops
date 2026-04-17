@@ -279,8 +279,8 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
       // Insufficient credits - special handling
       if (apiError.status === 400) {
         const errorMessage =
-          apiError.error?.error?.message ??
-          (apiError as { message?: string }).message ??
+          apiError.error?.error?.message ||
+          (apiError as { message?: string }).message ||
           'Unknown API error';
 
         if (errorMessage.toLowerCase().includes('credit balance')) {
@@ -293,7 +293,7 @@ Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopp
 
       // Other API errors
       throw new AiCategorizationError(
-        `Anthropic API error: ${apiError.message ?? 'Unknown error'}`,
+        `Anthropic API error: ${apiError.message || 'Unknown error'}`,
         'API_ERROR'
       );
     }

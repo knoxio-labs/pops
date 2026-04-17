@@ -36,7 +36,7 @@ interface TextFilterProps {
 export function TextFilter({ column, placeholder }: TextFilterProps) {
   return (
     <TextInput
-      placeholder={placeholder ?? 'Filter...'}
+      placeholder={placeholder || 'Filter...'}
       value={(column.getFilterValue() as string) ?? ''}
       onChange={(e) => {
         column.setFilterValue(e.target.value);
@@ -64,7 +64,7 @@ export function SelectFilter({ column, options, placeholder }: SelectFilterProps
         column.setFilterValue(e.target.value || undefined);
       }}
       options={options}
-      placeholder={placeholder ?? 'Select...'}
+      placeholder={placeholder || 'Select...'}
       className="w-full sm:w-45"
     />
   );
@@ -87,7 +87,7 @@ export function MultiSelectFilter({ column, options, placeholder }: MultiSelectF
         column.setFilterValue(Array.isArray(value) && value.length > 0 ? value : undefined);
       }}
       multiple
-      placeholder={placeholder ?? 'Select...'}
+      placeholder={placeholder || 'Select...'}
       className="w-full sm:min-w-50"
     />
   );

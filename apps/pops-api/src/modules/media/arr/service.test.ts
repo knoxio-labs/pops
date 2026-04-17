@@ -9,7 +9,7 @@ vi.mock('../../../db.js', () => ({
     select: () => ({
       from: () => ({
         where: () => ({
-          get: () => {},
+          get: () => undefined,
         }),
       }),
     }),

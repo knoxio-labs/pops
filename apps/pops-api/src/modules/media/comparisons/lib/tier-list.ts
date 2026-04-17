@@ -164,11 +164,11 @@ function toTierListMovie(row: {
   return {
     id: row.mediaId,
     title: row.title,
-    posterUrl:
-      row.moviePosterOverride ??
-      (row.moviePosterPath && row.movieTmdbId
+    posterUrl: row.moviePosterOverride
+      ? row.moviePosterOverride
+      : row.moviePosterPath && row.movieTmdbId
         ? `/media/images/movie/${row.movieTmdbId}/poster.jpg`
-        : null),
+        : null,
     score: Math.round(row.score * 10) / 10,
     comparisonCount: row.comparisonCount,
   };

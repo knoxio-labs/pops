@@ -48,7 +48,7 @@ function getSetting(key: SettingsKey): string | null {
 }
 
 function getArrSetting(key: SettingsKey, envName: string): string | null {
-  return getSetting(key) ?? getEnv(envName) ?? null;
+  return getSetting(key) || getEnv(envName) || null;
 }
 
 function saveSetting(key: SettingsKey, value: string): void {

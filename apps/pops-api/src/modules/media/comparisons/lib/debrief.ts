@@ -142,9 +142,11 @@ export function getDebriefOpponent(
 
   if (!movieRow) return null;
 
-  const posterUrl =
-    movieRow.posterOverridePath ??
-    (movieRow.posterPath ? `/media/images/movie/${movieRow.tmdbId}/poster.jpg` : null);
+  const posterUrl = movieRow.posterOverridePath
+    ? movieRow.posterOverridePath
+    : movieRow.posterPath
+      ? `/media/images/movie/${movieRow.tmdbId}/poster.jpg`
+      : null;
 
   return {
     id: movieRow.id,
@@ -227,9 +229,11 @@ export function getPendingDebriefs(): PendingDebrief[] {
 
     const pendingDimensionCount = Math.max(0, activeDimCount - completedCount);
 
-    const posterUrl =
-      movieRow.posterOverridePath ??
-      (movieRow.posterPath ? `/media/images/movie/${movieRow.tmdbId}/poster.jpg` : null);
+    const posterUrl = movieRow.posterOverridePath
+      ? movieRow.posterOverridePath
+      : movieRow.posterPath
+        ? `/media/images/movie/${movieRow.tmdbId}/poster.jpg`
+        : null;
 
     results.push({
       sessionId: session.sessionId,

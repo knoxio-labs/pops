@@ -159,7 +159,7 @@ export function ItemDetailPage() {
             <span className="text-2xl md:text-3xl font-extrabold tracking-tight">
               {item.itemName}
             </span>
-            {(item.brand ?? item.model) && (
+            {(item.brand || item.model) && (
               <p className="text-muted-foreground font-medium uppercase text-xs tracking-widest opacity-80 mt-1">
                 {[item.brand, item.model].filter(Boolean).join(' • ')}
               </p>

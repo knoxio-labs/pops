@@ -148,7 +148,7 @@ export function SearchResultCard({
               size="sm"
               variant="outline"
               className="h-7 gap-1 text-xs"
-              disabled={addDisabled ?? isAdding}
+              disabled={addDisabled || isAdding}
               title={addDisabledReason}
               onClick={onAdd}
             >

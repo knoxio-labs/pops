@@ -144,12 +144,12 @@ export function EntitiesPage() {
     setEditingEntity(entity);
     form.reset({
       name: entity.name,
-      type: entity.type ?? 'company',
-      abn: entity.abn ?? '',
+      type: entity.type || 'company',
+      abn: entity.abn || '',
       aliases: entity.aliases,
-      defaultTransactionType: entity.defaultTransactionType ?? '',
+      defaultTransactionType: entity.defaultTransactionType || '',
       defaultTags: entity.defaultTags,
-      notes: entity.notes ?? '',
+      notes: entity.notes || '',
     });
     setIsDialogOpen(true);
   };
@@ -210,7 +210,7 @@ export function EntitiesPage() {
       header: 'ABN',
       cell: ({ row }) => (
         <span className="text-sm font-mono">
-          {row.original.abn ?? <span className="text-muted-foreground">—</span>}
+          {row.original.abn || <span className="text-muted-foreground">—</span>}
         </span>
       ),
     },

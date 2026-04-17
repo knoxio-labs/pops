@@ -148,7 +148,7 @@ export function LibraryPage() {
   const rawSort = searchParams.get('sort');
   const typeFilter: MediaType = isValidMediaType(rawType) ? rawType : 'all';
   const sortBy: SortOption = isValidSort(rawSort) ? rawSort : 'title';
-  const genreFilter = searchParams.get('genre') ?? null;
+  const genreFilter = searchParams.get('genre') || null;
   const searchQuery = searchParams.get('q') ?? '';
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
   const pageSize = PAGE_SIZE_OPTIONS.find((s) => s === Number(searchParams.get('pageSize'))) ?? 24;

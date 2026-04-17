@@ -154,7 +154,7 @@ export function RulePicker(props: RulePickerProps) {
                           </Badge>
                         )}
                       </div>
-                      {(rule.entityName ?? rule.location ?? rule.transactionType) && (
+                      {(rule.entityName || rule.location || rule.transactionType) && (
                         <div className="text-[11px] text-muted-foreground truncate">
                           {[rule.entityName, rule.location, rule.transactionType]
                             .filter(Boolean)

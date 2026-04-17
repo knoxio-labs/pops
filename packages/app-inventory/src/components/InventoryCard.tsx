@@ -60,7 +60,7 @@ export function InventoryCard({
   const [imageError, setImageError] = useState(false);
 
   const showPlaceholder = !photoUrl || imageError;
-  const hasBadges = assetId ?? type ?? condition;
+  const hasBadges = assetId || type || condition;
   const hasLocation = locationSegments.length > 0 || locationName;
 
   if (layout === 'vertical') {
@@ -190,7 +190,7 @@ export function InventoryCard({
         {/* Item name + subtitle */}
         <div>
           <h3 className="text-sm font-semibold leading-tight line-clamp-1">{itemName}</h3>
-          {(brand ?? model) && (
+          {(brand || model) && (
             <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground mt-0.5 opacity-80 line-clamp-1">
               {brand}
               {brand && model && <span className="mx-1 opacity-50">&bull;</span>}

@@ -36,7 +36,7 @@ export function EditableTransactionCard({
     description: transaction.description,
     amount: transaction.amount,
     date: transaction.date,
-    location: transaction.location ?? '',
+    location: transaction.location || '',
     account: transaction.account,
     transactionType: transaction.transactionType ?? 'purchase',
   });
@@ -131,7 +131,7 @@ export function EditableTransactionCard({
           <Input
             id="description"
             autoFocus
-            value={editedFields.description ?? ''}
+            value={editedFields.description || ''}
             onChange={(e) => {
               setEditedFields({ ...editedFields, description: e.target.value });
             }}
@@ -145,7 +145,7 @@ export function EditableTransactionCard({
             id="amount"
             type="number"
             step="0.01"
-            value={editedFields.amount ?? 0}
+            value={editedFields.amount || 0}
             onChange={(e) => {
               setEditedFields({
                 ...editedFields,
@@ -161,7 +161,7 @@ export function EditableTransactionCard({
           <Input
             id="date"
             type="date"
-            value={editedFields.date ?? ''}
+            value={editedFields.date || ''}
             onChange={(e) => {
               setEditedFields({ ...editedFields, date: e.target.value });
             }}
@@ -173,7 +173,7 @@ export function EditableTransactionCard({
           <Label htmlFor="account">Account</Label>
           <Input
             id="account"
-            value={editedFields.account ?? ''}
+            value={editedFields.account || ''}
             onChange={(e) => {
               setEditedFields({ ...editedFields, account: e.target.value });
             }}
@@ -185,7 +185,7 @@ export function EditableTransactionCard({
           <Label htmlFor="location">Location</Label>
           <Input
             id="location"
-            value={editedFields.location ?? ''}
+            value={editedFields.location || ''}
             onChange={(e) => {
               setEditedFields({ ...editedFields, location: e.target.value });
             }}
@@ -201,7 +201,7 @@ export function EditableTransactionCard({
           <Label htmlFor="entity">Entity (Merchant/Payee)</Label>
           <EntitySelect
             entities={entities}
-            value={transaction.entity?.entityId ?? ''}
+            value={transaction.entity?.entityId || ''}
             placeholder="Select entity..."
           />
         </div>

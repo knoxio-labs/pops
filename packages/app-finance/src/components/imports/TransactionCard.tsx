@@ -266,7 +266,7 @@ export function TransactionCard({
 
           <EntitySelect
             entities={entities ?? []}
-            value={transaction.entity?.entityId ?? ''}
+            value={transaction.entity?.entityId || ''}
             onChange={(entityId, entityName) => {
               if (onEntitySelect) {
                 onEntitySelect(transaction, entityId, entityName);
