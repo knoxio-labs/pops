@@ -288,13 +288,44 @@ describe('TagReviewStep — Save tag rule wiring (PRD-029 US-02 / US-03)', () =>
     expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders one "Save tag rule…" button per group even with multiple groups', () => {
+  it('renders one "Save tag rule…" button per group and one "Save rule…" per transaction', () => {
     seedTransactions([woolworthsTx1, netflixTx, noTagTx]);
     renderTagReviewStep();
 
-    // Three entity groups: Woolworths, Netflix, Unknown
+    // 3 group-level buttons + 3 transaction-level buttons = 6 total
     const saveButtons = screen.getAllByRole('button', { name: /Save tag rule/i });
-    expect(saveButtons).toHaveLength(3);
+    expect(saveButtons).toHaveLength(6);
+    // Group-level buttons use the entity name
+    expect(screen.getByLabelText('Save tag rule for Woolworths')).toBeInTheDocument();
+    expect(screen.getByLabelText('Save tag rule for Netflix')).toBeInTheDocument();
+    // Transaction-level buttons use the raw description
+    expect(screen.getByLabelText('Save tag rule for WOOLWORTHS METRO')).toBeInTheDocument();
+    expect(screen.getByLabelText('Save tag rule for NETFLIX.COM')).toBeInTheDocument();
+  });
+
+  it('opens TagRuleProposalDialog when "Save rule…" is clicked on a transaction row with tags', async () => {
+    seedTransactions([woolworthsTx1]);
+    renderTagReviewStep();
+
+    const saveBtn = screen.getByLabelText('Save tag rule for WOOLWORTHS METRO');
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('shows a toast and does not open dialog when transaction row has no tags', async () => {
+    seedTransactions([noTagTx]);
+    renderTagReviewStep();
+
+    const saveBtn = screen.getByLabelText('Save tag rule for UNKNOWN VENDOR');
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(mockToastInfo).toHaveBeenCalledWith(expect.stringContaining('Add at least one tag'));
+    });
+    expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
   });
 
   it('shows empty state when there are no confirmed transactions', () => {
