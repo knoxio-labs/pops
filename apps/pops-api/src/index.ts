@@ -12,7 +12,7 @@ import { startTtlWatcher } from './modules/core/envs/ttl-watcher.js';
 import { resumeSchedulerIfEnabled, stopScheduler } from './modules/media/plex/scheduler.js';
 import {
   resumeRotationSchedulerIfEnabled,
-  stopRotationScheduler,
+  setupGracefulShutdown,
 } from './modules/media/rotation/scheduler.js';
 
 const port = Number(process.env['PORT'] ?? 3000);
@@ -41,19 +41,19 @@ if (resumedRotation) {
   console.warn(`[pops-api] Rotation scheduler resumed (cron: ${resumedRotation.cronExpression})`);
 }
 
+// Register SIGTERM/SIGINT handlers: stops the rotation scheduler and waits for
+// any in-progress cycle to complete before exiting.
+setupGracefulShutdown();
+
 // Periodically purge expired named environments
 const ttlWatcher = startTtlWatcher();
 
-function shutdown(): void {
-  console.warn('[pops-api] Shutting down...');
+// Synchronous cleanup on every process exit (including process.exit(0) triggered
+// by setupGracefulShutdown). server.close() stops accepting new connections;
+// closeDb() flushes and releases the SQLite handle.
+process.on('exit', () => {
   stopScheduler();
-  stopRotationScheduler();
   clearInterval(ttlWatcher);
-  server.close(() => {
-    closeDb();
-    process.exit(0);
-  });
-}
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+  server.close();
+  closeDb();
+});
