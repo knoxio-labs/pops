@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,7 +13,7 @@ vi.mock('../lib/trpc', () => ({
   trpc: {
     inventory: {
       items: {
-        list: { useQuery: () => mocks.itemsQuery() },
+        list: { useQuery: (input: unknown) => mocks.itemsQuery(input) },
         distinctTypes: { useQuery: () => mocks.typesQuery() },
         searchByAssetId: { fetch: mocks.searchByAssetId },
       },
@@ -147,6 +147,42 @@ describe('ItemsPage', () => {
       const selects = screen.getAllByRole('combobox');
       const conditionSelect = selects[1];
       expect(conditionSelect).toHaveValue('good');
+    });
+
+    it('debounces the search query — API receives the term only after 300ms', async () => {
+      vi.useFakeTimers();
+      try {
+        renderPage();
+
+        const searchInput = screen.getByPlaceholderText('Search items or asset IDs...');
+
+        // Clear call history so we start from a clean slate after initial render.
+        mocks.itemsQuery.mockClear();
+
+        const hasSearchTermCall = () =>
+          (mocks.itemsQuery.mock.calls as Array<[{ search?: string }]>).some(
+            ([input]) => input?.search === 'MacBook'
+          );
+
+        fireEvent.change(searchInput, { target: { value: 'MacBook' } });
+
+        // Immediately after typing, debounce has not fired — term must not appear.
+        expect(hasSearchTermCall()).toBe(false);
+
+        // Still before 300ms — term must still be absent.
+        await act(async () => {
+          vi.advanceTimersByTime(299);
+        });
+        expect(hasSearchTermCall()).toBe(false);
+
+        // Exactly at 300ms the debounce fires — term must appear.
+        await act(async () => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(hasSearchTermCall()).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

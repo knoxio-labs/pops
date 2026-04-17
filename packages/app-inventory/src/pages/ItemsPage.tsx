@@ -15,6 +15,7 @@ import {
   type SelectOption,
   Skeleton,
   TextInput,
+  useDebouncedValue,
   ViewToggleGroup,
 } from '@pops/ui';
 
@@ -82,6 +83,7 @@ export function ItemsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialView);
 
   const search = searchParams.get('q') ?? '';
+  const debouncedSearch = useDebouncedValue(search, 300);
   const typeFilter = searchParams.get('type') ?? '';
   const conditionFilter = searchParams.get('condition') ?? '';
   const inUseFilter = searchParams.get('inUse') ?? '';
@@ -197,14 +199,14 @@ export function ItemsPage() {
 
   const queryInput = useMemo(
     () => ({
-      search: search || undefined,
+      search: debouncedSearch || undefined,
       type: typeFilter || undefined,
       condition: conditionFilter || undefined,
       inUse: (inUseFilter || undefined) as 'true' | 'false' | undefined,
       locationId: locationFilter || undefined,
       limit: 200,
     }),
-    [search, typeFilter, conditionFilter, inUseFilter, locationFilter]
+    [debouncedSearch, typeFilter, conditionFilter, inUseFilter, locationFilter]
   );
 
   const { data, isLoading } = trpc.inventory.items.list.useQuery(queryInput);

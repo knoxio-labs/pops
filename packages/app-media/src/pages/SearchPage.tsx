@@ -17,7 +17,15 @@ import { toast } from 'sonner';
  * "Watched + Library" buttons that add the item then trigger the secondary
  * action in a single click.
  */
-import { Button, Skeleton, Tabs, TabsList, TabsTrigger, TextInput } from '@pops/ui';
+import {
+  Button,
+  Skeleton,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TextInput,
+  useDebouncedValue,
+} from '@pops/ui';
 
 import {
   buildPosterUrl,
@@ -48,20 +56,6 @@ interface TvSearchResult {
   posterPath: string | null;
   genres: string[];
   year: string | null;
-}
-
-/** Hook: debounce a string value by `delay` ms. */
-function useDebouncedValue(value: string, delay: number): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounced(value);
-    }, delay);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delay]);
-  return debounced;
 }
 
 export function SearchPage() {
