@@ -222,6 +222,22 @@ description = "Run import tool via Docker (e.g., mise docker:import src/import-a
 run = "docker compose -f infra/docker-compose.yml --profile tools run --rm tools $@"
 
 # ============================================================================
+# Redis (local development)
+# ============================================================================
+
+[tasks."redis:start"]
+description = "Start local Redis container for development"
+run = "docker run -d --name pops-redis -p 6379:6379 redis:7-alpine redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru"
+
+[tasks."redis:stop"]
+description = "Stop and remove local Redis container"
+run = "docker stop pops-redis && docker rm pops-redis"
+
+[tasks."redis:cli"]
+description = "Open redis-cli against the local development instance"
+run = "docker exec -it pops-redis redis-cli"
+
+# ============================================================================
 # Ansible Operations (must run from infra/ansible/ directory)
 # ============================================================================
 

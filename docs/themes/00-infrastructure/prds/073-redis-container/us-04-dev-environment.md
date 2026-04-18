@@ -1,7 +1,7 @@
 # US-04: Development Environment
 
 > PRD: [Redis Container & Connection](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,12 +9,12 @@ As a developer, I start Redis locally with a single command so that I can develo
 
 ## Acceptance Criteria
 
-- [ ] `mise redis:start` runs `docker run -d --name pops-redis -p 6379:6379 redis:7-alpine redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru`
-- [ ] `mise redis:stop` stops and removes the container
-- [ ] `mise redis:cli` opens `redis-cli` against the local instance
-- [ ] `.env.example` updated with `REDIS_URL=redis://localhost:6379`
-- [ ] `mise dev` continues to work without Redis (API starts in degraded mode)
-- [ ] README or AGENTS.md updated with Redis dev setup instructions
+- [x] `mise redis:start` runs `docker run -d --name pops-redis -p 6379:6379 redis:7-alpine redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru`
+- [x] `mise redis:stop` stops and removes the container
+- [x] `mise redis:cli` opens `redis-cli` against the local instance
+- [x] `.env.example` updated with `REDIS_URL=redis://localhost:6379`
+- [x] `mise dev` continues to work without Redis (API starts in degraded mode)
+- [x] README or AGENTS.md updated with Redis dev setup instructions
 
 ## Notes
 

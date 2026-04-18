@@ -15,6 +15,7 @@ import {
   stopRotationTask,
   waitForCycleEnd,
 } from './modules/media/rotation/scheduler.js';
+import { shutdownRedis } from './redis.js';
 
 const port = Number(process.env['PORT'] ?? 3000);
 const app = createApp();
@@ -58,9 +59,11 @@ async function shutdown(signal: string): Promise<void> {
   }
   // 4. Stop TTL watcher
   clearInterval(ttlWatcher);
-  // 5. Close DB
+  // 5. Close Redis
+  await shutdownRedis();
+  // 6. Close DB
   closeDb();
-  // 6. Exit
+  // 7. Exit
   process.exit(0);
 }
 

@@ -54,6 +54,18 @@ mise entities:lookup  # Rebuild entity cache
 mise audit            # Show DB stats
 ```
 
+**Redis (local development):**
+
+Redis is optional for development. The API starts without it (degraded mode: queues and cache disabled). Only start Redis when working on job queue or cache features.
+
+```bash
+mise redis:start      # Start local Redis on localhost:6379
+mise redis:stop       # Stop and remove the local Redis container
+mise redis:cli        # Open redis-cli against the local instance
+```
+
+Set `REDIS_URL=redis://localhost:6379` in `apps/pops-api/.env` (already in `.env.example`). In production, `REDIS_URL=redis://redis:6379` is set via Docker Compose.
+
 **Docker:**
 
 ```bash
