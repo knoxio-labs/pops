@@ -71,9 +71,9 @@ Live status of every theme and epic. Updated as work completes.
 | Area                                          | Status  | Notes                                                                                                    |
 | --------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
 | Transaction ledger (CRUD, filtering, tagging) | Done    | 6 pages, inline editing                                                                                  |
-| Import pipeline (CSV wizard, entity matching) | Partial | 7-step wizard; atomic `commitImport` path still blocked by Tag Review `executeImport` (knoxio/pops#1740) |
+| Import pipeline (CSV wizard, entity matching) | Partial | 6 of 7 PRDs done; ANZ PDF parser (PRD-022 US-07) not started                                            |
 | Entity registry                               | Done    | Aliases, default tags, AI fallback                                                                       |
-| Corrections (learned rules)                   | Partial | Classification + proposals + tag-rule wizard (PRD-029 Done); rule manager gaps #1742–#1744               |
+| Corrections (learned rules)                   | Done    | Classification, proposals, tag-rule wizard, global rule manager — all 4 PRDs complete                   |
 | Budgets                                       | Done    | Monthly/yearly, active/inactive                                                                          |
 | Wishlist                                      | Done    | Savings goals with progress                                                                              |
 | AI categorisation                             | Done    | Claude Haiku, disk-cached, cost-tracked                                                                  |
