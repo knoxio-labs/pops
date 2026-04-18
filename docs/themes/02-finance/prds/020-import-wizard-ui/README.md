@@ -1,7 +1,7 @@
 # PRD-020: Import Wizard UI
 
 > Epic: [01 — Import Pipeline](../../epics/01-import-pipeline.md)
-> Status: Partial
+> Status: Done
 
 ## Overview
 
