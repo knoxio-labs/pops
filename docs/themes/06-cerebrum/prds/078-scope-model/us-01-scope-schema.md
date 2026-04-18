@@ -1,7 +1,7 @@
 # US-01: Scope Schema & Validation
 
 > PRD: [Scope Model](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,14 +9,14 @@ As a system, I need a scope format specification with parsing and validation uti
 
 ## Acceptance Criteria
 
-- [ ] A Zod schema validates scope strings against the format: lowercase alphanumeric segments separated by dots, 2-6 segments deep, 1-32 characters per segment, hyphens allowed within segments
-- [ ] Validation rejects invalid inputs: trailing dots, consecutive dots, uppercase (after normalisation), single-segment scopes, empty strings, segments exceeding 32 characters, scopes exceeding 6 segments
-- [ ] A `parseScope` utility splits a scope string into its segment array and returns a typed `Scope` object with `segments`, `depth`, `topLevel`, and `isSecret` properties
-- [ ] A `matchesPrefix` utility returns `true` when a scope matches a given prefix — `matchesPrefix("work.projects.karbon", "work")` and `matchesPrefix("work.projects.karbon", "work.projects")` both return `true`
-- [ ] The `.secret.` segment is detected reliably — `isSecretScope("personal.secret.therapy")` returns `true`, `isSecretScope("personal.journal")` returns `false`, `isSecretScope("work.secret.jobsearch")` returns `true`
-- [ ] A `normaliseScope` utility lowercases and trims the input before validation, so `" Work.Projects.Karbon "` becomes `"work.projects.karbon"`
-- [ ] The `scopes` array in engram frontmatter is validated using the scope schema — an engram with an invalid scope is rejected at creation/update time
-- [ ] All utilities are exported from a single module (`scope-schema.ts` or equivalent) with full JSDoc documentation
+- [x] A Zod schema validates scope strings against the format: lowercase alphanumeric segments separated by dots, 2-6 segments deep, 1-32 characters per segment, hyphens allowed within segments
+- [x] Validation rejects invalid inputs: trailing dots, consecutive dots, uppercase (after normalisation), single-segment scopes, empty strings, segments exceeding 32 characters, scopes exceeding 6 segments
+- [x] A `parseScope` utility splits a scope string into its segment array and returns a typed `Scope` object with `segments`, `depth`, `topLevel`, and `isSecret` properties
+- [x] A `matchesPrefix` utility returns `true` when a scope matches a given prefix — `matchesPrefix("work.projects.karbon", "work")` and `matchesPrefix("work.projects.karbon", "work.projects")` both return `true`
+- [x] The `.secret.` segment is detected reliably — `isSecretScope("personal.secret.therapy")` returns `true`, `isSecretScope("personal.journal")` returns `false`, `isSecretScope("work.secret.jobsearch")` returns `true`
+- [x] A `normaliseScope` utility lowercases and trims the input before validation, so `" Work.Projects.Karbon "` becomes `"work.projects.karbon"`
+- [x] The `scopes` array in engram frontmatter is validated using the scope schema — an engram with an invalid scope is rejected at creation/update time
+- [x] All utilities are exported from a single module (`scope-schema.ts` or equivalent) with full JSDoc documentation
 
 ## Notes
 

@@ -1,7 +1,7 @@
 # PRD-078: Scope Model
 
 > Epic: [00 — Engram Storage](../../epics/00-engram-storage.md)
-> Status: Not started
+> Status: Done
 
 ## Overview
 
@@ -122,12 +122,12 @@ Defined in PRD-077. Junction table linking engrams to their scopes:
 
 ## User Stories
 
-| #   | Story                                                       | Summary                                                                            | Status      | Parallelisable                 |
-| --- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------- | ------------------------------ |
-| 01  | [us-01-scope-schema](us-01-scope-schema.md)                 | Scope format validation, hierarchy parsing, prefix matching utilities              | Not started | No (first)                     |
-| 02  | [us-02-scope-rules](us-02-scope-rules.md)                   | Rule engine reading scope-rules.toml — pattern matching, auto-assignment, defaults | Not started | Blocked by us-01               |
-| 03  | [us-03-scope-filtering](us-03-scope-filtering.md)           | Query-time scope filtering with prefix matching and secret scope hard-blocking     | Not started | Blocked by us-01               |
-| 04  | [us-04-scope-management-api](us-04-scope-management-api.md) | tRPC procedures for scope CRUD, reclassify, listing, and validation                | Not started | Blocked by us-01, us-02, us-03 |
+| #   | Story                                                       | Summary                                                                            | Status | Parallelisable                 |
+| --- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------ | ------------------------------ |
+| 01  | [us-01-scope-schema](us-01-scope-schema.md)                 | Scope format validation, hierarchy parsing, prefix matching utilities              | Done   | No (first)                     |
+| 02  | [us-02-scope-rules](us-02-scope-rules.md)                   | Rule engine reading scope-rules.toml — pattern matching, auto-assignment, defaults | Done   | Blocked by us-01               |
+| 03  | [us-03-scope-filtering](us-03-scope-filtering.md)           | Query-time scope filtering with prefix matching and secret scope hard-blocking     | Done   | Blocked by us-01               |
+| 04  | [us-04-scope-management-api](us-04-scope-management-api.md) | tRPC procedures for scope CRUD, reclassify, listing, and validation                | Done   | Blocked by us-01, us-02, us-03 |
 
 US-02 and US-03 can parallelise with each other after US-01 is complete. US-04 depends on all three prior stories.
 

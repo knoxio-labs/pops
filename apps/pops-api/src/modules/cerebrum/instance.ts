@@ -9,6 +9,7 @@
 import { join } from 'node:path';
 
 import { getDrizzle } from '../../db.js';
+import { ScopeRuleEngine } from './engrams/scope-rules.js';
 import { EngramService } from './engrams/service.js';
 import { TemplateRegistry } from './templates/registry.js';
 import { seedDefaultTemplates } from './templates/seed.js';
@@ -19,6 +20,7 @@ function resolveRoot(): string {
 
 let cachedRoot: string | null = null;
 let cachedRegistry: TemplateRegistry | null = null;
+let cachedScopeRuleEngine: ScopeRuleEngine | null = null;
 
 /** Return the engram root directory. Cached after first resolve. */
 export function getEngramRoot(): string {
@@ -45,12 +47,21 @@ export function getTemplateRegistry(): TemplateRegistry {
   return cachedRegistry;
 }
 
+/** Return the shared ScopeRuleEngine singleton. */
+export function getScopeRuleEngine(): ScopeRuleEngine {
+  if (!cachedScopeRuleEngine) {
+    cachedScopeRuleEngine = new ScopeRuleEngine(getEngramRoot());
+  }
+  return cachedScopeRuleEngine;
+}
+
 /** Build an EngramService bound to the current request's drizzle context. */
 export function getEngramService(): EngramService {
   return new EngramService({
     root: getEngramRoot(),
     db: getDrizzle(),
     templates: getTemplateRegistry(),
+    scopeRuleEngine: getScopeRuleEngine(),
   });
 }
 
@@ -58,4 +69,5 @@ export function getEngramService(): EngramService {
 export function resetCerebrumCache(): void {
   cachedRoot = null;
   cachedRegistry = null;
+  cachedScopeRuleEngine = null;
 }
