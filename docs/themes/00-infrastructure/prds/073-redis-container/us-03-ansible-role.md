@@ -1,7 +1,7 @@
 # US-03: Ansible Provisioning
 
 > PRD: [Redis Container & Connection](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,12 +9,12 @@ As a platform operator, I deploy Redis alongside the rest of the POPS stack via 
 
 ## Acceptance Criteria
 
-- [ ] `pops-deploy` role's docker-compose template includes the Redis service definition
-- [ ] Redis volume (`pops-redis-data`) is created by Docker Compose (no separate Ansible task needed)
-- [ ] Monitoring health check script updated to include Redis status (`redis-cli -h redis ping`)
-- [ ] `.env` on the server includes `REDIS_URL=redis://redis:6379`
-- [ ] `deploy.sh` quality gates unchanged (Redis is infrastructure, not application code)
-- [ ] Recovery documentation (`infra/recovery.md`) updated with Redis section (note: ephemeral, no backup needed, auto-recreated on deploy)
+- [x] `pops-deploy` role's docker-compose template includes the Redis service definition
+- [x] Redis volume (`pops-redis-data`) is created by Docker Compose (no separate Ansible task needed)
+- [x] Monitoring health check script updated to include Redis status (`redis-cli -h redis ping`)
+- [x] `.env` on the server includes `REDIS_URL=redis://redis:6379`
+- [x] `deploy.sh` quality gates unchanged (Redis is infrastructure, not application code)
+- [x] Recovery documentation (`infra/recovery.md`) updated with Redis section (note: ephemeral, no backup needed, auto-recreated on deploy)
 
 ## Notes
 

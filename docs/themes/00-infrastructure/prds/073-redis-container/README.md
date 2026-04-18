@@ -1,7 +1,7 @@
 # PRD-073: Redis Container & Connection
 
 > Epic: [08 — Cortex Infrastructure](../../epics/08-cortex-infrastructure.md)
-> Status: Not started
+> Status: Done
 
 ## Overview
 
@@ -45,12 +45,12 @@ No new tRPC procedures. Redis is internal infrastructure consumed by other modul
 
 ## User Stories
 
-| #   | Story                                                 | Summary                                                                   | Status      | Parallelisable   |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------- | ----------- | ---------------- |
-| 01  | [us-01-docker-compose](us-01-docker-compose.md)       | Add Redis 7 Alpine container to Docker Compose on pops-backend network    | Not started | No (first)       |
-| 02  | [us-02-connection-module](us-02-connection-module.md) | ioredis connection module with health check, graceful shutdown, reconnect | Not started | Blocked by us-01 |
-| 03  | [us-03-ansible-role](us-03-ansible-role.md)           | Ansible provisioning for Redis volume, health check, maxmemory config     | Not started | Yes              |
-| 04  | [us-04-dev-environment](us-04-dev-environment.md)     | mise task for local Redis, .env.example update, dev documentation         | Not started | Yes              |
+| #   | Story                                                 | Summary                                                                   | Status | Parallelisable   |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-docker-compose](us-01-docker-compose.md)       | Add Redis 7 Alpine container to Docker Compose on pops-backend network    | Done   | No (first)       |
+| 02  | [us-02-connection-module](us-02-connection-module.md) | ioredis connection module with health check, graceful shutdown, reconnect | Done   | Blocked by us-01 |
+| 03  | [us-03-ansible-role](us-03-ansible-role.md)           | Ansible provisioning for Redis volume, health check, maxmemory config     | Done   | Yes              |
+| 04  | [us-04-dev-environment](us-04-dev-environment.md)     | mise task for local Redis, .env.example update, dev documentation         | Done   | Yes              |
 
 US-03 and US-04 can parallelise after US-01. US-02 depends on US-01 (needs a running Redis to connect to).
 

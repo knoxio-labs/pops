@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { type Router as ExpressRouter, Router } from 'express';
 
 import { getDrizzle } from '../db.js';
+import { getRedisStatus } from '../redis.js';
 
 const router: ExpressRouter = Router();
 
@@ -15,7 +16,12 @@ router.get('/health', (_req, res) => {
     const db = getDrizzle();
     const rows = db.all<{ ok: number }>(sql`SELECT 1 AS ok`);
     if (rows[0]?.ok === 1) {
-      res.json({ status: 'ok', version: apiVersion });
+      const redisStatus = getRedisStatus();
+      res.json({
+        status: 'ok',
+        version: apiVersion,
+        redis: redisStatus === 'ready' ? 'ok' : 'down',
+      });
     } else {
       res.status(503).json({ status: 'unhealthy', reason: 'sqlite check failed' });
     }

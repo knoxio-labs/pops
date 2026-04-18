@@ -83,6 +83,12 @@ rsync -av /tmp/pops-restore/extracted/metabase/ /opt/pops/data/metabase/
 | Paperless media | (included in paperless data)    | `pops-paperless-media` |
 | Metabase data   | `/opt/pops/data/metabase/`      | `pops-metabase-data`   |
 
+### Redis
+
+Redis (`pops-redis`) is **ephemeral by design** — it holds job queue state and cache only. No backup is needed or taken. RDB snapshots and AOF persistence are explicitly disabled (`--save "" --appendonly no`), so the volume holds no persistent data.
+
+On any restart or fresh deploy, Redis starts with an empty dataset. Source-of-truth data in SQLite is unaffected. The API starts in degraded mode if Redis is temporarily unavailable and reconnects automatically once Redis is ready.
+
 ## Step 6: Restore Secrets (if full rebuild)
 
 If the server was rebuilt from scratch, secrets must be restored from Ansible Vault before services can start.
@@ -113,7 +119,7 @@ cd /opt/pops
 docker compose up -d
 ```
 
-Docker Compose handles service ordering. The only dependency is `paperless-redis` starting before `paperless-ngx`.
+Docker Compose handles service ordering. `redis` starts before `pops-api` (health-check dependency); `paperless-redis` starts before `paperless-ngx`.
 
 ## Step 8: Verify
 
