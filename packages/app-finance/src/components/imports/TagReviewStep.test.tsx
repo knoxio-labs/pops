@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
@@ -151,12 +151,58 @@ vi.mock('@pops/ui', async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Mock TagEditor — stub to avoid complex sub-component rendering
+// Mock TagRuleProposalDialog — captures onApplied for handleTagRuleApplied tests
 // ---------------------------------------------------------------------------
 
-vi.mock('../TagEditor', () => ({
-  TagEditor: () => null,
-}));
+// eslint-disable-next-line prefer-const
+let mockOnAppliedFn: ((...args: unknown[]) => void) | null = null;
+
+vi.mock('./TagRuleProposalDialog', async () => {
+  const React = await import('react');
+  return {
+    TagRuleProposalDialog: ({
+      onApplied,
+      open,
+    }: {
+      onApplied?: (...args: unknown[]) => void;
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+      signal: unknown;
+      previewTransactions: unknown[];
+    }) => {
+      if (onApplied) {
+        mockOnAppliedFn = onApplied;
+      }
+      if (!open) return null;
+      return React.createElement('div', { 'data-testid': 'dialog' });
+    },
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Mock TagEditor — stub that exposes a trigger to simulate user edits
+// ---------------------------------------------------------------------------
+
+vi.mock('../TagEditor', async () => {
+  const React = await import('react');
+  return {
+    TagEditor: ({
+      onSave,
+      currentTags,
+    }: {
+      onSave: (tags: string[]) => void;
+      currentTags: string[];
+    }) =>
+      React.createElement(
+        'button',
+        {
+          'data-testid': 'tag-editor-trigger-edit',
+          onClick: () => onSave([...currentTags, 'EditedByUser']),
+        },
+        'Simulate Edit'
+      ),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Mock lib/utils — cn is used by GroupTagBar
@@ -172,6 +218,7 @@ vi.mock('../../lib/utils', () => ({
 
 import { TagReviewStep } from './TagReviewStep';
 
+import type { TagRuleChangeSet, TagRuleImpactItem } from '@pops/api/modules/core/tag-rules/types';
 import type { ConfirmedTransaction } from '@pops/api/modules/finance/imports';
 
 // ---------------------------------------------------------------------------
@@ -246,6 +293,7 @@ function renderTagReviewStep() {
 
 beforeEach(() => {
   mockConfirmedTransactions.length = 0;
+  mockOnAppliedFn = null;
   mockAddPendingTagRuleChangeSet.mockReset();
   mockUpdateTransactionTags.mockReset();
   mockNextStep.mockReset();
@@ -377,5 +425,146 @@ describe('TagReviewStep — Accept All Suggestions', () => {
     expect(
       screen.queryByRole('button', { name: /Accept All Suggestions/i })
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('TagReviewStep — handleTagRuleApplied live re-suggestion (PRD-029 US-03)', () => {
+  const CHECKSUM_A = 'test-checksum-aaa';
+  const CHECKSUM_B = 'test-checksum-bbb';
+
+  const txA = makeTransaction({
+    description: 'SUPERMARKET TX',
+    amount: -45.0,
+    entityName: 'Supermarket',
+    entityId: 'super-id',
+    checksum: CHECKSUM_A,
+    tags: ['Groceries'],
+    suggestedTags: [{ tag: 'Groceries', source: 'ai' }],
+  });
+
+  const txB = makeTransaction({
+    description: 'PHARMACY TX',
+    amount: -20.0,
+    entityName: 'Pharmacy',
+    entityId: 'pharma-id',
+    checksum: CHECKSUM_B,
+    tags: ['Health'],
+    suggestedTags: [{ tag: 'Health', source: 'entity' }],
+  });
+
+  function makeChangeSet(): TagRuleChangeSet {
+    return {
+      ops: [
+        {
+          op: 'add',
+          data: { descriptionPattern: 'test', matchType: 'contains', tags: ['NewTag'] },
+        },
+      ],
+    };
+  }
+
+  function makeAffected(checksum: string, tags: string[]): TagRuleImpactItem[] {
+    return [
+      {
+        transactionId: checksum,
+        description: 'SUPERMARKET TX',
+        before: { suggestedTags: [] },
+        after: { suggestedTags: tags.map((tag) => ({ tag, source: 'tag_rule' as const })) },
+      },
+    ];
+  }
+
+  it('merges rule-suggested tags into non-edited transaction tags', () => {
+    seedTransactions([txA]);
+    renderTagReviewStep();
+
+    act(() => {
+      mockOnAppliedFn!(makeChangeSet(), makeAffected(CHECKSUM_A, ['Transport']));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    expect(mockUpdateTransactionTags).toHaveBeenCalledWith(
+      CHECKSUM_A,
+      expect.arrayContaining(['Groceries', 'Transport'])
+    );
+  });
+
+  it('does not replace existing tags — only adds missing ones', () => {
+    seedTransactions([txA]);
+    renderTagReviewStep();
+
+    // Rule suggests both an existing tag and a new tag
+    act(() => {
+      mockOnAppliedFn!(makeChangeSet(), makeAffected(CHECKSUM_A, ['Groceries', 'Food']));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    const call = mockUpdateTransactionTags.mock.calls.find(([cs]) => cs === CHECKSUM_A);
+    const tags = call?.[1] as string[] | undefined;
+    expect(tags).toEqual(expect.arrayContaining(['Groceries', 'Food']));
+    // Groceries should not be duplicated (Set dedup)
+    expect(tags?.filter((t) => t === 'Groceries')).toHaveLength(1);
+  });
+
+  it('skips transactions that the user has manually edited', () => {
+    seedTransactions([txA]);
+    renderTagReviewStep();
+
+    // Simulate user editing the transaction (adds 'EditedByUser', marks checksum as edited)
+    fireEvent.click(screen.getByTestId('tag-editor-trigger-edit'));
+
+    act(() => {
+      mockOnAppliedFn!(makeChangeSet(), makeAffected(CHECKSUM_A, ['Transport']));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    const call = mockUpdateTransactionTags.mock.calls.find(([cs]) => cs === CHECKSUM_A);
+    expect(call?.[1]).not.toContain('Transport');
+    expect(call?.[1]).toContain('EditedByUser');
+  });
+
+  it('only updates matching transactions, not unrelated ones', () => {
+    seedTransactions([txA, txB]);
+    renderTagReviewStep();
+
+    act(() => {
+      mockOnAppliedFn!(makeChangeSet(), makeAffected(CHECKSUM_A, ['Transport']));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+
+    const callA = mockUpdateTransactionTags.mock.calls.find(([cs]) => cs === CHECKSUM_A);
+    const callB = mockUpdateTransactionTags.mock.calls.find(([cs]) => cs === CHECKSUM_B);
+    expect(callA?.[1]).toContain('Transport');
+    expect(callB?.[1]).not.toContain('Transport');
+  });
+
+  it('calls addPendingTagRuleChangeSet with the change set and source', () => {
+    seedTransactions([txA]);
+    renderTagReviewStep();
+
+    const changeSet = makeChangeSet();
+    act(() => {
+      mockOnAppliedFn!(changeSet, []);
+    });
+
+    expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        changeSet,
+        source: expect.stringContaining('tag-review:'),
+      })
+    );
+  });
+
+  it('handles empty affected list without mutating any tags', () => {
+    seedTransactions([txA]);
+    renderTagReviewStep();
+
+    act(() => {
+      mockOnAppliedFn!(makeChangeSet(), []);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    expect(mockUpdateTransactionTags).toHaveBeenCalledWith(CHECKSUM_A, ['Groceries']);
   });
 });
