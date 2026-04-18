@@ -1,7 +1,7 @@
 # US-03: Job Management API
 
 > PRD: [Job Queue Infrastructure](README.md)
-> Status: Done
+> Status: Partial
 
 ## Description
 

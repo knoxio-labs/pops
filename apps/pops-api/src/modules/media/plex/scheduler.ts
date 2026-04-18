@@ -196,14 +196,15 @@ export function stopPlexSchedulerTask(): void {
 
 /** Get current scheduler status. Last-sync info is read from the sync_logs table. */
 export function getSchedulerStatus(): SchedulerStatus {
+  const counts = getLastSyncCounts();
   return {
     isRunning,
     intervalMs,
     lastSyncAt: getLastSyncAt(),
     lastSyncError: getLastSyncError(),
     nextSyncAt,
-    moviesSynced: 0,
-    tvShowsSynced: 0,
+    moviesSynced: counts.moviesSynced,
+    tvShowsSynced: counts.tvShowsSynced,
   };
 }
 
@@ -260,6 +261,24 @@ function getLastSyncAt(): string | null {
     return row?.syncedAt ?? null;
   } catch {
     return null;
+  }
+}
+
+function getLastSyncCounts(): { moviesSynced: number; tvShowsSynced: number } {
+  try {
+    const db = getDrizzle();
+    const row = db
+      .select({ moviesSynced: syncLogs.moviesSynced, tvShowsSynced: syncLogs.tvShowsSynced })
+      .from(syncLogs)
+      .orderBy(desc(syncLogs.syncedAt))
+      .limit(1)
+      .get();
+    return {
+      moviesSynced: row?.moviesSynced ?? 0,
+      tvShowsSynced: row?.tvShowsSynced ?? 0,
+    };
+  } catch {
+    return { moviesSynced: 0, tvShowsSynced: 0 };
   }
 }
 

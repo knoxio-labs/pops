@@ -24,6 +24,7 @@ import {
   getDeadLetterQueue,
 } from './jobs/queues.js';
 import { createRedisConnection } from './jobs/redis.js';
+import { writeSyncLog } from './modules/media/plex/scheduler.js';
 
 import type {
   CurationQueueJobData,
@@ -68,7 +69,27 @@ const defaultWorker = new Worker<DefaultQueueJobData>(DEFAULT_QUEUE, processDefa
 
 syncWorker.on('completed', (job, result) => {
   logger.info({ jobId: job.id, jobName: job.name }, 'Sync job completed');
-  persistSyncResult(job.id, job.data, 'completed', result, null, job.processedOn, job.finishedOn);
+  persistSyncResult(
+    job.id,
+    job.data,
+    'completed',
+    result,
+    null,
+    job.processedOn,
+    job.finishedOn,
+    job.progress
+  );
+
+  if (job.data.type === 'plexScheduledSync') {
+    const r = result as { movieCount: number; tvCount: number; errors: string[] } | null;
+    writeSyncLog(
+      job.finishedOn ? new Date(job.finishedOn).toISOString() : new Date().toISOString(),
+      r?.movieCount ?? 0,
+      r?.tvCount ?? 0,
+      r?.errors?.length ? r.errors : null,
+      job.processedOn && job.finishedOn ? job.finishedOn - job.processedOn : null
+    );
+  }
 });
 
 syncWorker.on('failed', (job, err) => {
@@ -91,9 +112,12 @@ syncWorker.on('failed', (job, err) => {
       null,
       err.message,
       job.processedOn,
-      job.finishedOn
+      job.finishedOn,
+      job.progress
     );
-    moveToDeadLetter(SYNC_QUEUE, job.id, job.name, job.data, job.attemptsMade, err);
+    moveToDeadLetter(SYNC_QUEUE, job.id, job.name, job.data, job.attemptsMade, err, () =>
+      job.remove()
+    );
   }
 });
 
@@ -114,7 +138,9 @@ for (const [worker, queue] of [
     );
     const exhausted = job.attemptsMade >= (job.opts.attempts ?? 1);
     if (exhausted) {
-      moveToDeadLetter(queue, job.id, job.name, job.data, job.attemptsMade, err);
+      moveToDeadLetter(queue, job.id, job.name, job.data, job.attemptsMade, err, () =>
+        job.remove()
+      );
     }
   });
 }
@@ -169,7 +195,8 @@ function persistSyncResult(
   result: unknown,
   error: string | null,
   processedOn: number | null | undefined,
-  finishedOn: number | null | undefined
+  finishedOn: number | null | undefined,
+  progress?: unknown
 ): void {
   if (!jobId || !PERSISTED_SYNC_TYPES.has(data.type)) return;
   try {
@@ -186,7 +213,8 @@ function persistSyncResult(
         startedAt,
         completedAt,
         durationMs,
-        progress: JSON.stringify({ processed: 0, total: 0 }),
+        progress:
+          progress != null ? JSON.stringify(progress) : JSON.stringify({ processed: 0, total: 0 }),
         result: result != null ? JSON.stringify(result) : null,
         error,
       })
@@ -212,7 +240,8 @@ function moveToDeadLetter(
   jobName: string,
   data: unknown,
   attemptsMade: number,
-  err: Error
+  err: Error,
+  removeOriginal?: () => Promise<void>
 ): void {
   void getDeadLetterQueue()
     .add(DEAD_LETTER_QUEUE, {
@@ -225,6 +254,7 @@ function moveToDeadLetter(
       finalError: err.message,
       finalErrorStack: err.stack,
     })
+    .then(() => removeOriginal?.())
     .catch((addErr: unknown) => {
       logger.error({ addErr }, 'Failed to move job to dead-letter queue');
     });

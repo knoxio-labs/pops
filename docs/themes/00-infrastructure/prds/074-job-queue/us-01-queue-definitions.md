@@ -1,7 +1,7 @@
 # US-01: Queue Definitions
 
 > PRD: [Job Queue Infrastructure](README.md)
-> Status: Done
+> Status: Partial
 
 ## Description
 

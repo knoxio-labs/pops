@@ -200,10 +200,18 @@ export const plexRouter = router({
       }
 
       try {
-        // Use jobType as jobId for deduplication — prevents double-queueing the same sync type.
-        const job = await getSyncQueue().add(jobType, jobData, {
-          jobId: jobType,
-        });
+        const queue = getSyncQueue();
+        // Check for an already-running or queued job of this type — prevents duplicates
+        // without using a fixed jobId (which would block reruns after failure).
+        const [active, waiting] = await Promise.all([
+          queue.getJobs(['active']),
+          queue.getJobs(['waiting']),
+        ]);
+        const existing = [...active, ...waiting].find((j) => j.data.type === jobType);
+        if (existing) {
+          return { data: { jobId: existing.id ?? jobType } };
+        }
+        const job = await queue.add(jobType, jobData);
         return { data: { jobId: job.id ?? jobType } };
       } catch (err) {
         throw new TRPCError({

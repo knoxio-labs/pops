@@ -1,7 +1,7 @@
 # US-04: Failure Handling
 
 > PRD: [Job Queue Infrastructure](README.md)
-> Status: Done
+> Status: Partial
 
 ## Description
 

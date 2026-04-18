@@ -167,9 +167,9 @@ export const jobsRouter = router({
     .input(z.object({ queue: z.string().min(1), confirm: z.literal(true) }))
     .mutation(async ({ input }) => {
       const q = await getQueueOrThrow(input.queue);
-      await q.drain();
       const counts = await q.getJobCounts('waiting');
       const drained = counts.waiting ?? 0;
+      await q.drain();
       return { drained };
     }),
 
