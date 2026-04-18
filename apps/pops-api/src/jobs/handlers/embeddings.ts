@@ -6,8 +6,6 @@
  */
 import { and, eq, gt } from 'drizzle-orm';
 
-import type { Job } from 'bullmq';
-
 import { aiUsage, embeddings } from '@pops/db-types';
 
 import { getDrizzle, getDb, isVecAvailable } from '../../db.js';
@@ -18,6 +16,8 @@ import {
   estimateEmbeddingCost,
 } from '../../shared/embedding-client.js';
 import { getRedis, isRedisAvailable, redisKey } from '../../shared/redis-client.js';
+
+import type { Job } from 'bullmq';
 
 import type { EmbeddingsQueueJobData } from '../types.js';
 
