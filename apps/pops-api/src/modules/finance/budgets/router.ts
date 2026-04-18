@@ -5,10 +5,16 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { ConflictError, NotFoundError } from '../../../shared/errors.js';
-import { paginationMeta } from '../../../shared/pagination.js';
+import { paginationMeta, PaginationMetaSchema } from '../../../shared/pagination.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import * as service from './service.js';
-import { BudgetQuerySchema, CreateBudgetSchema, toBudget, UpdateBudgetSchema } from './types.js';
+import {
+  BudgetQuerySchema,
+  BudgetSchema,
+  CreateBudgetSchema,
+  toBudget,
+  UpdateBudgetSchema,
+} from './types.js';
 
 /** Default pagination values. */
 const DEFAULT_LIMIT = 50;
@@ -16,39 +22,61 @@ const DEFAULT_OFFSET = 0;
 
 export const budgetsRouter = router({
   /** List budgets with optional search/period/active filters and pagination. */
-  list: protectedProcedure.input(BudgetQuerySchema).query(({ input }) => {
-    const limit = input.limit ?? DEFAULT_LIMIT;
-    const offset = input.offset ?? DEFAULT_OFFSET;
+  list: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/finance/budgets',
+        summary: 'List budgets',
+        tags: ['budgets'],
+      },
+    })
+    .input(BudgetQuerySchema)
+    .output(z.object({ data: z.array(BudgetSchema), pagination: PaginationMetaSchema }))
+    .query(({ input }) => {
+      const limit = input.limit ?? DEFAULT_LIMIT;
+      const offset = input.offset ?? DEFAULT_OFFSET;
 
-    const activeFilter =
-      input.active === 'true' ? true : input.active === 'false' ? false : undefined;
+      const activeFilter =
+        input.active === 'true' ? true : input.active === 'false' ? false : undefined;
 
-    const { rows, total } = service.listBudgets(
-      input.search,
-      input.period,
-      activeFilter,
-      limit,
-      offset
-    );
+      const { rows, total } = service.listBudgets(
+        input.search,
+        input.period,
+        activeFilter,
+        limit,
+        offset
+      );
 
-    return {
-      data: rows.map(toBudget),
-      pagination: paginationMeta(total, limit, offset),
-    };
-  }),
+      return {
+        data: rows.map(toBudget),
+        pagination: paginationMeta(total, limit, offset),
+      };
+    }),
 
   /** Get a single budget by ID. */
-  get: protectedProcedure.input(z.object({ id: z.string() })).query(({ input }) => {
-    try {
-      const row = service.getBudget(input.id);
-      return { data: toBudget(row) };
-    } catch (err) {
-      if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
+  get: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/finance/budgets/{id}',
+        summary: 'Get budget by ID',
+        tags: ['budgets'],
+      },
+    })
+    .input(z.object({ id: z.string() }))
+    .output(z.object({ data: BudgetSchema }))
+    .query(({ input }) => {
+      try {
+        const row = service.getBudget(input.id);
+        return { data: toBudget(row) };
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
+        }
+        throw err;
       }
-      throw err;
-    }
-  }),
+    }),
 
   /** Create a new budget. */
   create: protectedProcedure.input(CreateBudgetSchema).mutation(({ input }) => {

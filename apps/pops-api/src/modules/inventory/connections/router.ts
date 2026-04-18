@@ -2,9 +2,10 @@
  * Item connections tRPC router — connect/disconnect inventory items.
  */
 import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
 
 import { ConflictError, NotFoundError } from '../../../shared/errors.js';
-import { paginationMeta } from '../../../shared/pagination.js';
+import { paginationMeta, PaginationMetaSchema } from '../../../shared/pagination.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import * as service from './service.js';
 import {
@@ -12,6 +13,7 @@ import {
   ConnectItemsSchema,
   DisconnectItemsSchema,
   GraphQuerySchema,
+  ItemConnectionSchema,
   toConnection,
   TraceQuerySchema,
 } from './types.js';
@@ -53,17 +55,28 @@ export const connectionsRouter = router({
   }),
 
   /** List all connections for an item (appears in either A or B column). */
-  listForItem: protectedProcedure.input(ConnectionQuerySchema).query(({ input }) => {
-    const limit = input.limit ?? DEFAULT_LIMIT;
-    const offset = input.offset ?? DEFAULT_OFFSET;
+  listForItem: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/inventory/connections',
+        summary: 'List connections for an item',
+        tags: ['connections'],
+      },
+    })
+    .input(ConnectionQuerySchema)
+    .output(z.object({ data: z.array(ItemConnectionSchema), pagination: PaginationMetaSchema }))
+    .query(({ input }) => {
+      const limit = input.limit ?? DEFAULT_LIMIT;
+      const offset = input.offset ?? DEFAULT_OFFSET;
 
-    const { rows, total } = service.listConnectionsForItem(input.itemId, limit, offset);
+      const { rows, total } = service.listConnectionsForItem(input.itemId, limit, offset);
 
-    return {
-      data: rows.map(toConnection),
-      pagination: paginationMeta(total, limit, offset),
-    };
-  }),
+      return {
+        data: rows.map(toConnection),
+        pagination: paginationMeta(total, limit, offset),
+      };
+    }),
 
   /** Trace the connection chain from an item as a tree. */
   trace: protectedProcedure.input(TraceQuerySchema).query(({ input }) => {

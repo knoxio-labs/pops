@@ -7,6 +7,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { verifyCloudflareJWT } from './middleware/cloudflare-jwt.js';
 
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
+import type { OpenApiMeta } from 'trpc-to-openapi';
 
 /**
  * User context extracted from Cloudflare Access JWT
@@ -65,7 +66,7 @@ export async function createContext({ req }: CreateExpressContextOptions): Promi
 
 export type ContextType = Awaited<ReturnType<typeof createContext>>;
 
-const t = initTRPC.context<Context>().create();
+const t = initTRPC.context<Context>().meta<OpenApiMeta>().create();
 
 /** Base router for composing routers. */
 export const router = t.router;
