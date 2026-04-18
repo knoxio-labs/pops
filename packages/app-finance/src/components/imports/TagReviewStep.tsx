@@ -257,8 +257,14 @@ export function TagReviewStep() {
       setLocalTags((prev) => {
         const next = { ...prev };
         for (const item of affected) {
-          if (!editedChecksumsRef.current.has(item.transactionId)) {
-            next[item.transactionId] = item.after.suggestedTags.map((s) => s.tag);
+          // transactionId is the checksum — same key used throughout localTags/suggestedTagMeta
+          const checksum = item.transactionId;
+          if (!editedChecksumsRef.current.has(checksum)) {
+            // Merge rule tags additively — the preview only returns rule-sourced tags,
+            // so we must keep AI/entity suggestions rather than replacing them.
+            const newRuleTags = item.after.suggestedTags.map((s) => s.tag);
+            const existingTags = prev[checksum] ?? [];
+            next[checksum] = [...new Set([...existingTags, ...newRuleTags])];
           }
         }
         return next;
@@ -267,11 +273,20 @@ export function TagReviewStep() {
       setSuggestedTagMeta((prev) => {
         const next = { ...prev };
         for (const item of affected) {
-          next[item.transactionId] = item.after.suggestedTags.map((s) => ({
+          const checksum = item.transactionId;
+          const ruleSuggestedTags = item.after.suggestedTags.map((s) => ({
             tag: s.tag,
             source: (s.source === 'tag_rule' ? 'rule' : s.source) as SuggestedTag['source'],
             pattern: s.pattern,
           }));
+          // Merge: keep existing AI/entity entries for tags not covered by the rule,
+          // replace entries for tags the rule now owns (rule takes precedence for badges).
+          const ruleSuggestedTagSet = new Set(ruleSuggestedTags.map((s) => s.tag));
+          const existingMeta = prev[checksum] ?? [];
+          next[checksum] = [
+            ...existingMeta.filter((entry) => !ruleSuggestedTagSet.has(entry.tag)),
+            ...ruleSuggestedTags,
+          ];
         }
         return next;
       });
@@ -399,7 +414,7 @@ function EntityGroup({
   const currentTagsPerTx = group.transactions.map((t) => localTags[t.checksum] ?? []);
   const currentUnion = unionTags(currentTagsPerTx);
 
-  // Suggested union from original suggestions (for "apply suggestions to all" button)
+  // Suggested union from current suggestion metadata (for "apply suggestions to all" button)
   const suggestedUnion = useMemo(() => {
     return unionTags(
       group.transactions.map((t) => (suggestedTagMeta[t.checksum] ?? []).map((s) => s.tag))
