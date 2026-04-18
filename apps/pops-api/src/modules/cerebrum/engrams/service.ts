@@ -42,6 +42,7 @@ import { buildEngram, type Engram } from './types.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 import type { TemplateRegistry } from '../templates/registry.js';
+import type { ScopeRuleEngine } from './scope-rules.js';
 
 const ARCHIVE_DIR = '.archive';
 const TEMPLATES_DIR = '.templates';
@@ -121,6 +122,8 @@ export interface EngramServiceOptions {
   root: string;
   db: BetterSQLite3Database;
   templates: TemplateRegistry;
+  /** Optional rule engine for auto-assigning scopes during create. */
+  scopeRuleEngine?: ScopeRuleEngine;
   /** Override for deterministic tests. Defaults to `new Date()`. */
   now?: () => Date;
 }
@@ -129,12 +132,14 @@ export class EngramService {
   private readonly root: string;
   private readonly db: BetterSQLite3Database;
   private readonly templates: TemplateRegistry;
+  private readonly scopeRuleEngine: ScopeRuleEngine | undefined;
   private readonly now: () => Date;
 
   constructor(options: EngramServiceOptions) {
     this.root = options.root;
     this.db = options.db;
     this.templates = options.templates;
+    this.scopeRuleEngine = options.scopeRuleEngine;
     this.now = options.now ?? (() => new Date());
   }
 
@@ -145,7 +150,7 @@ export class EngramService {
 
     if (scopes.length === 0) {
       // A template may supply default_scopes — defer the min-1 check until after applyTemplate.
-      if (!input.template) {
+      if (!input.template && !this.scopeRuleEngine) {
         throw new ValidationError({ message: 'at least one scope is required' });
       }
     }
@@ -177,6 +182,16 @@ export class EngramService {
         mergedScopes = applied.scopes;
         customFields = applied.customFields;
       }
+    }
+
+    // Tier 2: rule-based inference — only when no explicit scopes and no template supplied them.
+    if (mergedScopes.length === 0 && this.scopeRuleEngine) {
+      mergedScopes = this.scopeRuleEngine.inferScopes({
+        source,
+        type,
+        tags,
+        explicitScopes: [],
+      });
     }
 
     if (mergedScopes.length === 0) {

@@ -1,7 +1,7 @@
 # US-02: Scope Rules Engine
 
 > PRD: [Scope Model](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,14 +9,14 @@ As a system, I need a rule engine that reads `scope-rules.toml` and automaticall
 
 ## Acceptance Criteria
 
-- [ ] The rule engine parses `engrams/.config/scope-rules.toml` and validates each rule's structure: `match` conditions (any combination of `source`, `type`, `tags`), `assign` array (validated against the scope schema from US-01), and `priority` number
-- [ ] A `resolveScopes` function accepts an engram's metadata (source, type, tags, explicit scopes) and returns the final scopes array — explicit scopes take precedence, then matching rules add their scopes, then fallback applies if the result is empty
-- [ ] All matching rules are applied additively — if both `source:github` and `type:meeting` match, both rules' scopes are assigned
-- [ ] When no rules match and no explicit scopes are provided, the `defaults.fallback_scope` from the config is assigned
-- [ ] The `assign` values in rules are validated against the scope schema at config load time — invalid scopes in the config cause a logged warning and the rule is skipped
-- [ ] The rule engine handles a missing or malformed `scope-rules.toml` gracefully: logs a warning and falls back to `personal.captures` as the default scope
-- [ ] Rules are evaluated in priority order (highest first) but all matching rules contribute scopes — priority is used to resolve contradictions when documented in the config
-- [ ] The rule engine is a pure function with no side effects — it receives metadata and the parsed config, and returns scopes. Config loading is a separate concern
+- [x] The rule engine parses `engrams/.config/scope-rules.toml` and validates each rule's structure: `match` conditions (any combination of `source`, `type`, `tags`), `assign` array (validated against the scope schema from US-01), and `priority` number
+- [x] A `resolveScopes` function accepts an engram's metadata (source, type, tags, explicit scopes) and returns the final scopes array — explicit scopes take precedence, then matching rules add their scopes, then fallback applies if the result is empty
+- [x] All matching rules are applied additively — if both `source:github` and `type:meeting` match, both rules' scopes are assigned
+- [x] When no rules match and no explicit scopes are provided, the `defaults.fallback_scope` from the config is assigned
+- [x] The `assign` values in rules are validated against the scope schema at config load time — invalid scopes in the config cause a logged warning and the rule is skipped
+- [x] The rule engine handles a missing or malformed `scope-rules.toml` gracefully: logs a warning and falls back to `personal.captures` as the default scope
+- [x] Rules are evaluated in priority order (highest first) but all matching rules contribute scopes — priority is used to resolve contradictions when documented in the config
+- [x] The rule engine is a pure function with no side effects — it receives metadata and the parsed config, and returns scopes. Config loading is a separate concern
 
 ## Notes
 

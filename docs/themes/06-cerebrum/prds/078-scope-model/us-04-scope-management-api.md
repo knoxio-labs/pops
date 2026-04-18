@@ -1,7 +1,7 @@
 # US-04: Scope Management API
 
 > PRD: [Scope Model](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,14 +9,14 @@ As a user, I want tRPC procedures for managing scopes on engrams so that I can a
 
 ## Acceptance Criteria
 
-- [ ] `cerebrum.scopes.assign` adds one or more scopes to an engram — validates each scope string (US-01), updates the engram's frontmatter `scopes` array, writes the file, and updates the `engram_scopes` index table
-- [ ] `cerebrum.scopes.remove` removes one or more scopes from an engram — rejects the operation if it would leave the engram with zero scopes, updates file and index
-- [ ] `cerebrum.scopes.reclassify` performs a bulk scope rename: replaces `fromScope` prefix with `toScope` across all matching engrams, updates every affected file's frontmatter and the index, and is atomic (rolls back all changes if any single file write fails)
-- [ ] `cerebrum.scopes.reclassify` supports a `dryRun` flag that returns the count and list of affected engram IDs without modifying anything
-- [ ] `cerebrum.scopes.list` returns all distinct scopes from the `engram_scopes` table with the count of engrams per scope, optionally filtered by a prefix parameter
-- [ ] `cerebrum.scopes.validate` accepts a scope string and returns `{ valid: true }` or `{ valid: false, errors: [...] }` with specific validation error messages (uses the schema from US-01)
-- [ ] `cerebrum.scopes.filter` accepts scope prefixes and an optional `includeSecret` flag, delegates to the filtering service (US-03), and returns matching engrams
-- [ ] All procedures use Zod input validation with the scope schema from US-01 — malformed scope strings are rejected before any database or file operations
+- [x] `cerebrum.scopes.assign` adds one or more scopes to an engram — validates each scope string (US-01), updates the engram's frontmatter `scopes` array, writes the file, and updates the `engram_scopes` index table
+- [x] `cerebrum.scopes.remove` removes one or more scopes from an engram — rejects the operation if it would leave the engram with zero scopes, updates file and index
+- [x] `cerebrum.scopes.reclassify` performs a bulk scope rename: replaces `fromScope` prefix with `toScope` across all matching engrams, updates every affected file's frontmatter and the index, and is atomic (rolls back all changes if any single file write fails)
+- [x] `cerebrum.scopes.reclassify` supports a `dryRun` flag that returns the count and list of affected engram IDs without modifying anything
+- [x] `cerebrum.scopes.list` returns all distinct scopes from the `engram_scopes` table with the count of engrams per scope, optionally filtered by a prefix parameter
+- [x] `cerebrum.scopes.validate` accepts a scope string and returns `{ valid: true }` or `{ valid: false, errors: [...] }` with specific validation error messages (uses the schema from US-01)
+- [x] `cerebrum.scopes.filter` accepts scope prefixes and an optional `includeSecret` flag, delegates to the filtering service (US-03), and returns matching engrams
+- [x] All procedures use Zod input validation with the scope schema from US-01 — malformed scope strings are rejected before any database or file operations
 
 ## Notes
 
