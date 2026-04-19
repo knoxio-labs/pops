@@ -1,12 +1,6 @@
-import { Ban, Clock, EyeOff, MoreHorizontal } from "lucide-react";
+import { Ban, Clock, EyeOff, MoreHorizontal } from 'lucide-react';
 
-import {
-  Button,
-  DropdownMenu,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@pops/ui";
+import { Button, DropdownMenu, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
 /**
  * ResponsiveActionBar — a two-tier action bar for comparison screens.
@@ -51,10 +45,7 @@ export function ResponsiveActionBar({
   blacklistPending,
 }: ResponsiveActionBarProps) {
   return (
-    <div
-      className="flex flex-col items-center gap-3"
-      data-testid="arena-action-bar"
-    >
+    <div className="flex flex-col items-center gap-3" data-testid="arena-action-bar">
       {/* Primary row: always visible */}
       <div className="flex flex-wrap justify-center gap-2">
         <Button
@@ -64,7 +55,7 @@ export function ResponsiveActionBar({
           disabled={skipPending}
           data-testid="skip-button"
         >
-          {skipPending ? "Skipping…" : "Skip this pair"}
+          {skipPending ? 'Skipping…' : 'Skip this pair'}
         </Button>
 
         <Tooltip>
@@ -111,12 +102,7 @@ export function ResponsiveActionBar({
           </TooltipContent>
         </Tooltip>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDone}
-          data-testid="done-button"
-        >
+        <Button variant="ghost" size="sm" onClick={onDone} data-testid="done-button">
           Done
         </Button>
 
@@ -132,8 +118,8 @@ export function ResponsiveActionBar({
               {
                 items: [
                   {
-                    label: "N/A (exclude both)",
-                    value: "na",
+                    label: 'N/A (exclude both)',
+                    value: 'na',
                     icon: <Ban className="h-4 w-4" />,
                     disabled: naPending,
                     onSelect: onNA,
@@ -141,12 +127,12 @@ export function ResponsiveActionBar({
                 ],
               },
               {
-                label: "Destructive",
+                label: 'Destructive',
                 items: [
                   {
                     label: `Not Watched: ${movieA.title}`,
-                    value: "blacklist-a",
-                    variant: "destructive" as const,
+                    value: 'blacklist-a',
+                    variant: 'destructive' as const,
                     icon: <EyeOff className="h-4 w-4" />,
                     disabled: blacklistPending,
                     onSelect: () => {
@@ -155,8 +141,8 @@ export function ResponsiveActionBar({
                   },
                   {
                     label: `Not Watched: ${movieB.title}`,
-                    value: "blacklist-b",
-                    variant: "destructive" as const,
+                    value: 'blacklist-b',
+                    variant: 'destructive' as const,
                     icon: <EyeOff className="h-4 w-4" />,
                     disabled: blacklistPending,
                     onSelect: () => {
@@ -181,7 +167,7 @@ export function ResponsiveActionBar({
           data-testid="na-button"
         >
           <Ban className="h-3.5 w-3.5 mr-1.5" />
-          {naPending ? "Excluding…" : "N/A"}
+          {naPending ? 'Excluding…' : 'N/A'}
         </Button>
 
         <Button

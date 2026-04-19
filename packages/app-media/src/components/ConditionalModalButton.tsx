@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState } from 'react';
 
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 /**
  * ConditionalModalButton — renders a trigger only when a condition is met,
@@ -28,11 +28,7 @@ export interface ConditionalModalButtonProps {
   modal: (props: { open: boolean; onClose: () => void }) => ReactNode;
 }
 
-export function ConditionalModalButton({
-  show,
-  trigger,
-  modal,
-}: ConditionalModalButtonProps) {
+export function ConditionalModalButton({ show, trigger, modal }: ConditionalModalButtonProps) {
   const [open, setOpen] = useState(false);
 
   if (!show) return null;

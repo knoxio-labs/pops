@@ -1,4 +1,4 @@
-import { CheckCircle2, RefreshCw } from "lucide-react";
+import { CheckCircle2, RefreshCw } from 'lucide-react';
 
 import {
   Button,
@@ -7,9 +7,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@pops/ui";
+} from '@pops/ui';
 
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 /**
  * RequestDialog — shared modal shell for Radarr/Sonarr request flows.
@@ -44,9 +44,9 @@ export function RequestDialog({
   canSubmit,
   isPending,
   isSuccess,
-  submitLabel = "Request",
-  successLabel = "Added",
-  pendingLabel = "Adding...",
+  submitLabel = 'Request',
+  successLabel = 'Added',
+  pendingLabel = 'Adding...',
   onSubmit,
   children,
 }: RequestDialogProps) {
@@ -75,11 +75,7 @@ export function RequestDialog({
           {error && <p className="text-sm text-destructive/80">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isPending}
-            >
+            <Button variant="outline" onClick={handleClose} disabled={isPending}>
               Cancel
             </Button>
             <Button onClick={onSubmit} disabled={!canSubmit}>

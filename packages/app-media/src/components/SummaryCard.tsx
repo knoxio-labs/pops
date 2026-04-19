@@ -1,5 +1,5 @@
-import { ArrowRight, CheckCircle, Clock, Trophy, XCircle } from "lucide-react";
-import { useNavigate } from "react-router";
+import { ArrowRight, CheckCircle, Clock, Trophy, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 /**
  * SummaryCard — completion summary for a debrief session.
@@ -7,19 +7,12 @@ import { useNavigate } from "react-router";
  * Displays compared vs. skipped dimensions, with "Do another" and "Done" CTAs.
  * Extracted from DebriefControls so it can be reused independently.
  */
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@pops/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@pops/ui';
 
 interface DimensionResult {
   dimensionId: number;
   name: string;
-  status: "complete" | "pending";
+  status: 'complete' | 'pending';
   comparisonId: number | null;
 }
 
@@ -30,19 +23,11 @@ export interface SummaryCardProps {
   onDoAnother?: () => void;
 }
 
-export function SummaryCard({
-  movieTitle,
-  dimensions,
-  onDoAnother,
-}: SummaryCardProps) {
+export function SummaryCard({ movieTitle, dimensions, onDoAnother }: SummaryCardProps) {
   const navigate = useNavigate();
 
-  const completed = dimensions.filter(
-    (d) => d.status === "complete" && d.comparisonId !== null,
-  );
-  const skipped = dimensions.filter(
-    (d) => d.status === "complete" && d.comparisonId === null,
-  );
+  const completed = dimensions.filter((d) => d.status === 'complete' && d.comparisonId !== null);
+  const skipped = dimensions.filter((d) => d.status === 'complete' && d.comparisonId === null);
 
   return (
     <Card data-testid="completion-summary">
@@ -58,17 +43,14 @@ export function SummaryCard({
       <CardContent className="space-y-3">
         <div className="space-y-2">
           {dimensions.map((dim) => (
-            <div
-              key={dim.dimensionId}
-              className="flex items-center justify-between text-sm"
-            >
+            <div key={dim.dimensionId} className="flex items-center justify-between text-sm">
               <span>{dim.name}</span>
-              {dim.status === "complete" && dim.comparisonId !== null ? (
+              {dim.status === 'complete' && dim.comparisonId !== null ? (
                 <Badge variant="default" className="gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Compared
                 </Badge>
-              ) : dim.status === "complete" && dim.comparisonId === null ? (
+              ) : dim.status === 'complete' && dim.comparisonId === null ? (
                 <Badge variant="secondary" className="gap-1">
                   <XCircle className="h-3 w-3" />
                   Skipped
@@ -97,7 +79,7 @@ export function SummaryCard({
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate("/media/rankings")}
+            onClick={() => navigate('/media/rankings')}
             data-testid="done-btn"
           >
             Done

@@ -1,13 +1,13 @@
-import { ChevronDown, ChevronUp, Minus, SkipForward } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, SkipForward } from 'lucide-react';
 
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@pops/ui";
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
 /**
  * DrawTierButtons — center column of the CompareArena grid.
  * Renders draw (high/mid/low) and skip actions between two movie cards.
  */
 export interface DrawTierButtonsProps {
-  onDraw: (tier: "high" | "mid" | "low") => void;
+  onDraw: (tier: 'high' | 'mid' | 'low') => void;
   onSkip: () => void;
   disabled: boolean;
   skipPending: boolean;
@@ -15,31 +15,26 @@ export interface DrawTierButtonsProps {
 
 const DRAW_TIERS = [
   {
-    tier: "high" as const,
+    tier: 'high' as const,
     icon: ChevronUp,
-    label: "Equally great",
-    hoverColor: "hover:border-success hover:text-success",
+    label: 'Equally great',
+    hoverColor: 'hover:border-success hover:text-success',
   },
   {
-    tier: "mid" as const,
+    tier: 'mid' as const,
     icon: Minus,
-    label: "Equally average",
-    hoverColor: "hover:border-muted-foreground",
+    label: 'Equally average',
+    hoverColor: 'hover:border-muted-foreground',
   },
   {
-    tier: "low" as const,
+    tier: 'low' as const,
     icon: ChevronDown,
-    label: "Equally poor",
-    hoverColor: "hover:border-destructive hover:text-destructive",
+    label: 'Equally poor',
+    hoverColor: 'hover:border-destructive hover:text-destructive',
   },
 ] as const;
 
-export function DrawTierButtons({
-  onDraw,
-  onSkip,
-  disabled,
-  skipPending,
-}: DrawTierButtonsProps) {
+export function DrawTierButtons({ onDraw, onSkip, disabled, skipPending }: DrawTierButtonsProps) {
   return (
     <div className="flex flex-col items-center gap-1.5">
       {DRAW_TIERS.map(({ tier, icon: Icon, label, hoverColor }) => (
