@@ -145,7 +145,7 @@ export * from './components/SummaryCard';
 export * from './components/WorkflowDialog';
 export * from './components/CRUDManagementSection';
 export * from './components/CompletionSummary';
-export * from './components/ConditionalActionGroup';
+export * from './components/ActionGroup';
 export * from './components/ConditionalModalButton';
 export * from './components/RequestDialog';
 export * from './components/ResponsiveActionBar';

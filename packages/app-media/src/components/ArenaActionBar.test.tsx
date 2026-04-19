@@ -27,6 +27,16 @@ function renderBar(props = {}) {
 }
 
 describe('ArenaActionBar', () => {
+  it('uses arena-action-bar root test id by default', () => {
+    renderBar();
+    expect(screen.getByTestId('arena-action-bar')).toBeInTheDocument();
+  });
+
+  it('allows overriding root data-testid', () => {
+    renderBar({ dataTestId: 'custom-compare-bar' });
+    expect(screen.getByTestId('custom-compare-bar')).toBeInTheDocument();
+  });
+
   it('renders all primary buttons', () => {
     renderBar();
     expect(screen.getByTestId('skip-button')).toBeInTheDocument();

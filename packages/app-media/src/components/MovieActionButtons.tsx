@@ -12,7 +12,7 @@ import { trpc } from '@pops/api-client';
  *
  * PRD-072 US-05
  */
-import { Button, ConditionalActionGroup, ConditionalModalButton } from '@pops/ui';
+import { ActionGroup, Button, ConditionalModalButton } from '@pops/ui';
 
 import { RequestMovieButton } from './RequestMovieButton';
 import { RequestMovieModal } from './RequestMovieModal';
@@ -211,7 +211,7 @@ function RotationButtons({
           />
         }
       >
-        <ConditionalActionGroup>
+        <ActionGroup>
           <Button
             size="icon"
             variant="ghost"
@@ -239,7 +239,7 @@ function RotationButtons({
               <Download className="h-3.5 w-3.5" />
             </Button>
           )}
-        </ConditionalActionGroup>
+        </ActionGroup>
       </ConditionalModalButton>
     );
   }
@@ -257,7 +257,7 @@ function RotationButtons({
         />
       }
     >
-      <ConditionalActionGroup className="gap-2">
+      <ActionGroup className="gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -277,7 +277,7 @@ function RotationButtons({
             Download
           </Button>
         )}
-      </ConditionalActionGroup>
+      </ActionGroup>
     </ConditionalModalButton>
   );
 }

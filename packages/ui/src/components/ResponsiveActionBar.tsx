@@ -25,6 +25,8 @@ export interface ResponsiveActionBarProps {
   stalePending?: boolean;
   naPending?: boolean;
   blacklistPending?: boolean;
+  /** Root wrapper `data-testid` (compare/arena pages may override). */
+  dataTestId?: string;
 }
 
 export function ResponsiveActionBar({
@@ -39,9 +41,10 @@ export function ResponsiveActionBar({
   stalePending,
   naPending,
   blacklistPending,
+  dataTestId = 'responsive-action-bar',
 }: ResponsiveActionBarProps) {
   return (
-    <div className="flex flex-col items-center gap-3" data-testid="arena-action-bar">
+    <div className="flex flex-col items-center gap-3" data-testid={dataTestId}>
       <div className="flex flex-wrap justify-center gap-2">
         <Button
           variant="outline"
