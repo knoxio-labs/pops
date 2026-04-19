@@ -58,41 +58,41 @@ export function WatchlistPage() {
 
       <WatchlistFilterTabs filter={filter} onFilterChange={setFilter} />
 
-      {loading ? (
-        <WatchlistSkeleton />
-      ) : entries.length === 0 ? (
-        <WatchlistEmptyState filter={filter} />
-      ) : (
-        <>
-          <WatchlistMobileList
-            sortedEntries={sortedEntries}
-            hasManyItems={hasManyItems}
-            isReordering={isReordering}
-            removingId={removingId}
-            updateErrorId={updateErrorId}
-            updateErrorMsg={updateErrorMsg}
-            getMetaForEntry={getMetaForEntry}
-            onMove={handleMove}
-            onRemove={onRemove}
-            onUpdateNotes={onUpdateNotes}
-            isUpdatingEntry={isUpdatingEntry}
-          />
+      {(() => {
+        if (loading) return <WatchlistSkeleton />;
+        if (entries.length === 0) return <WatchlistEmptyState filter={filter} />;
+        return (
+          <>
+            <WatchlistMobileList
+              sortedEntries={sortedEntries}
+              hasManyItems={hasManyItems}
+              isReordering={isReordering}
+              removingId={removingId}
+              updateErrorId={updateErrorId}
+              updateErrorMsg={updateErrorMsg}
+              getMetaForEntry={getMetaForEntry}
+              onMove={handleMove}
+              onRemove={onRemove}
+              onUpdateNotes={onUpdateNotes}
+              isUpdatingEntry={isUpdatingEntry}
+            />
 
-          <WatchlistDesktopDnd
-            sensors={sensors}
-            collisionDetection={collisionDetection}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-            sortedEntries={sortedEntries}
-            hasManyItems={hasManyItems}
-            removingId={removingId}
-            activeId={activeId}
-            getMetaForEntry={getMetaForEntry}
-            onRemove={onRemove}
-          />
-        </>
-      )}
+            <WatchlistDesktopDnd
+              sensors={sensors}
+              collisionDetection={collisionDetection}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+              sortedEntries={sortedEntries}
+              hasManyItems={hasManyItems}
+              removingId={removingId}
+              activeId={activeId}
+              getMetaForEntry={getMetaForEntry}
+              onRemove={onRemove}
+            />
+          </>
+        );
+      })()}
     </div>
   );
 }

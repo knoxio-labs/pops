@@ -74,17 +74,26 @@ export function DiscoverCard({
       </Badge>
     ) : undefined;
 
-  const topRight = isWatched ? (
-    <Badge variant="secondary" className="gap-0.5 text-xs">
-      <Eye className="h-3 w-3" />
-      Watched
-    </Badge>
-  ) : inLibrary ? (
-    <Badge variant="secondary" className="gap-0.5 text-xs">
-      <Check className="h-3 w-3" />
-      Owned
-    </Badge>
-  ) : undefined;
+  const renderTopRight = () => {
+    if (isWatched) {
+      return (
+        <Badge variant="secondary" className="gap-0.5 text-xs">
+          <Eye className="h-3 w-3" />
+          Watched
+        </Badge>
+      );
+    }
+    if (inLibrary) {
+      return (
+        <Badge variant="secondary" className="gap-0.5 text-xs">
+          <Check className="h-3 w-3" />
+          Owned
+        </Badge>
+      );
+    }
+    return undefined;
+  };
+  const topRight = renderTopRight();
 
   const overlay = (
     <div className="flex gap-1">
@@ -114,13 +123,13 @@ export function DiscoverCard({
         title={onWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
         aria-label={onWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
       >
-        {isAddingToWatchlist || isRemovingFromWatchlist ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : onWatchlist ? (
-          <BookmarkCheck className="h-3.5 w-3.5" />
-        ) : (
-          <Bookmark className="h-3.5 w-3.5" />
-        )}
+        {(() => {
+          if (isAddingToWatchlist || isRemovingFromWatchlist) {
+            return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
+          }
+          if (onWatchlist) return <BookmarkCheck className="h-3.5 w-3.5" />;
+          return <Bookmark className="h-3.5 w-3.5" />;
+        })()}
       </Button>
       {isWatched ? (
         <Button
@@ -201,11 +210,11 @@ export function DiscoverCard({
             <span
               className={cn(
                 'text-xs font-semibold',
-                matchPercentage >= 85
-                  ? 'text-success'
-                  : matchPercentage >= 70
-                    ? 'text-success/70'
-                    : 'text-muted-foreground'
+                (() => {
+                  if (matchPercentage >= 85) return 'text-success';
+                  if (matchPercentage >= 70) return 'text-success/70';
+                  return 'text-muted-foreground';
+                })()
               )}
             >
               {matchPercentage}% Match

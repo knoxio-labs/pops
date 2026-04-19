@@ -346,85 +346,95 @@ export function LibraryPage() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
-        <LibrarySkeleton count={pageSize} />
-      ) : error ? (
-        <div className="text-center py-16">
-          <AlertCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">Something went wrong loading your library.</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : isLibraryEmpty ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">
-            Your library is empty. Search for movies and shows to get started.
-          </p>
-          <Link to="/media/search" className="mt-4 inline-block text-sm text-primary underline">
-            Search for media
-          </Link>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-16">
-          {debouncedSearch ? (
-            <>
-              <p className="text-muted-foreground">
-                No results for &ldquo;{debouncedSearch}&rdquo;
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => {
-                  setLocalSearch('');
-                }}
-              >
-                Clear search
+      {(() => {
+        if (isLoading) return <LibrarySkeleton count={pageSize} />;
+        if (error) {
+          return (
+            <div className="text-center py-16">
+              <AlertCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">Something went wrong loading your library.</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => void refetch()}>
+                Retry
               </Button>
-            </>
-          ) : (
-            <p className="text-muted-foreground">No results match your filters.</p>
-          )}
-        </div>
-      ) : (
-        <>
-          <MediaGrid>
-            {items.map((item) => (
-              <MediaCard
-                key={`${item.type}-${item.id}`}
-                id={item.id}
-                type={item.type}
-                title={item.title}
-                year={item.year}
-                posterUrl={item.cdnPosterUrl ?? item.posterUrl}
-                fallbackPosterUrl={item.cdnPosterUrl ? item.posterUrl : undefined}
-                showTypeBadge={showTypeBadge}
-              />
-            ))}
-          </MediaGrid>
-          <PaginationControls
-            page={clampedPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            onPageChange={(p) => {
-              setParam('page', String(p));
-            }}
-            onPageSizeChange={(s) => {
-              setSearchParams(
-                (prev) => {
-                  const next = new URLSearchParams(prev);
-                  next.set('pageSize', String(s));
-                  next.set('page', '1');
-                  return next;
-                },
-                { replace: true }
-              );
-            }}
-          />
-        </>
-      )}
+            </div>
+          );
+        }
+        if (isLibraryEmpty) {
+          return (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground">
+                Your library is empty. Search for movies and shows to get started.
+              </p>
+              <Link to="/media/search" className="mt-4 inline-block text-sm text-primary underline">
+                Search for media
+              </Link>
+            </div>
+          );
+        }
+        if (items.length === 0) {
+          return (
+            <div className="text-center py-16">
+              {debouncedSearch ? (
+                <>
+                  <p className="text-muted-foreground">
+                    No results for &ldquo;{debouncedSearch}&rdquo;
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      setLocalSearch('');
+                    }}
+                  >
+                    Clear search
+                  </Button>
+                </>
+              ) : (
+                <p className="text-muted-foreground">No results match your filters.</p>
+              )}
+            </div>
+          );
+        }
+        return (
+          <>
+            <MediaGrid>
+              {items.map((item) => (
+                <MediaCard
+                  key={`${item.type}-${item.id}`}
+                  id={item.id}
+                  type={item.type}
+                  title={item.title}
+                  year={item.year}
+                  posterUrl={item.cdnPosterUrl ?? item.posterUrl}
+                  fallbackPosterUrl={item.cdnPosterUrl ? item.posterUrl : undefined}
+                  showTypeBadge={showTypeBadge}
+                />
+              ))}
+            </MediaGrid>
+            <PaginationControls
+              page={clampedPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={(p) => {
+                setParam('page', String(p));
+              }}
+              onPageSizeChange={(s) => {
+                setSearchParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set('pageSize', String(s));
+                    next.set('page', '1');
+                    return next;
+                  },
+                  { replace: true }
+                );
+              }}
+            />
+          </>
+        );
+      })()}
 
       {/* Quick Pick FAB */}
       <Link

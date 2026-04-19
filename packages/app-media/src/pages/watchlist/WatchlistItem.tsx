@@ -167,67 +167,75 @@ export function WatchlistItem({
           </Button>
         </div>
 
-        {editing ? (
-          <div className="mt-1.5 space-y-1">
-            <Textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Add a note..."
-              rows={2}
-              maxLength={500}
-              aria-label={`Notes for ${title}`}
-              className="text-xs min-h-0 resize-none"
-            />
-            <div className="flex items-center gap-2">
+        {(() => {
+          if (editing) {
+            return (
+              <div className="mt-1.5 space-y-1">
+                <Textarea
+                  ref={textareaRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Add a note..."
+                  rows={2}
+                  maxLength={500}
+                  aria-label={`Notes for ${title}`}
+                  className="text-xs min-h-0 resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isUpdating}
+                    aria-label="Save note"
+                    className="text-xs text-primary"
+                  >
+                    {isUpdating ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={isUpdating}
+                    aria-label="Cancel editing"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Cancel
+                  </Button>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {draft.length}/500 · Ctrl+Enter to save
+                  </span>
+                </div>
+                {updateError && <p className="text-xs text-destructive">{updateError}</p>}
+              </div>
+            );
+          }
+          if (entry.notes) {
+            return (
               <Button
-                variant="link"
+                variant="ghost"
                 size="sm"
-                onClick={handleSave}
-                disabled={isUpdating}
-                aria-label="Save note"
-                className="text-xs text-primary"
+                onClick={() => setEditing(true)}
+                aria-label={`Edit notes for ${title}`}
+                className="mt-1.5 text-xs text-muted-foreground line-clamp-2 text-left hover:text-foreground justify-start"
               >
-                {isUpdating ? 'Saving...' : 'Save'}
+                {entry.notes}
               </Button>
-              <Button
-                variant="link"
-                size="sm"
-                onClick={handleCancel}
-                disabled={isUpdating}
-                aria-label="Cancel editing"
-                className="text-xs text-muted-foreground"
-              >
-                Cancel
-              </Button>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {draft.length}/500 · Ctrl+Enter to save
-              </span>
-            </div>
-            {updateError && <p className="text-xs text-destructive">{updateError}</p>}
-          </div>
-        ) : entry.notes ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setEditing(true)}
-            aria-label={`Edit notes for ${title}`}
-            className="mt-1.5 text-xs text-muted-foreground line-clamp-2 text-left hover:text-foreground justify-start"
-          >
-            {entry.notes}
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setEditing(true)}
-            aria-label={`Add notes for ${title}`}
-            className="mt-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground"
-          >
-            Add note...
-          </Button>
-        )}
+            );
+          }
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditing(true)}
+              aria-label={`Add notes for ${title}`}
+              className="mt-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground"
+            >
+              Add note...
+            </Button>
+          );
+        })()}
       </div>
     </div>
   );

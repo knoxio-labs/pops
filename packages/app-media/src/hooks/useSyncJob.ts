@@ -160,7 +160,11 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
     error: job?.status === 'failed' ? job.error : null,
     durationMs: job?.durationMs ?? null,
     completedAt: job?.completedAt ?? null,
-    status: isRestoring ? 'running' : !job ? 'idle' : job.status,
+    status: (() => {
+      if (isRestoring) return 'running';
+      if (!job) return 'idle';
+      return job.status;
+    })(),
   };
 }
 

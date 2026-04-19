@@ -100,22 +100,30 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
                     {score != null && (
                       <span className="text-xs text-muted-foreground">{Math.round(score)}</span>
                     )}
-                    {dim.status === 'complete' && dim.comparisonId !== null ? (
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Compared
-                      </Badge>
-                    ) : dim.status === 'complete' && dim.comparisonId === null ? (
-                      <Badge variant="secondary" className="gap-1">
-                        <XCircle className="h-3 w-3" />
-                        Skipped
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="gap-1">
-                        <Clock className="h-3 w-3" />
-                        Pending
-                      </Badge>
-                    )}
+                    {(() => {
+                      if (dim.status === 'complete' && dim.comparisonId !== null) {
+                        return (
+                          <Badge variant="default" className="gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Compared
+                          </Badge>
+                        );
+                      }
+                      if (dim.status === 'complete' && dim.comparisonId === null) {
+                        return (
+                          <Badge variant="secondary" className="gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Skipped
+                          </Badge>
+                        );
+                      }
+                      return (
+                        <Badge variant="outline" className="gap-1">
+                          <Clock className="h-3 w-3" />
+                          Pending
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -140,22 +148,18 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium">{Math.round(s.score)}</span>
                         <span
-                          className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${
-                            isPositive
-                              ? 'bg-success/20 text-success'
-                              : isNegative
-                                ? 'bg-destructive/20 text-destructive'
-                                : 'bg-muted text-muted-foreground'
-                          }`}
+                          className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${(() => {
+                            if (isPositive) return 'bg-success/20 text-success';
+                            if (isNegative) return 'bg-destructive/20 text-destructive';
+                            return 'bg-muted text-muted-foreground';
+                          })()}`}
                           data-testid={`score-delta-${s.dimensionId}`}
                         >
-                          {isPositive ? (
-                            <ArrowUpRight className="h-3 w-3" />
-                          ) : isNegative ? (
-                            <ArrowDownRight className="h-3 w-3" />
-                          ) : (
-                            <Minus className="h-3 w-3" />
-                          )}
+                          {(() => {
+                            if (isPositive) return <ArrowUpRight className="h-3 w-3" />;
+                            if (isNegative) return <ArrowDownRight className="h-3 w-3" />;
+                            return <Minus className="h-3 w-3" />;
+                          })()}
                           {isPositive ? '+' : ''}
                           {delta}
                         </span>

@@ -164,13 +164,12 @@ export function ComparisonMovieCard({
   return (
     <div className="flex flex-col gap-2" data-testid={`comparison-movie-card-${movie.id}`}>
       <div
-        className={`relative rounded-lg overflow-hidden transition-all ${
-          isWinner
-            ? 'ring-2 ring-success shadow-lg scale-[1.02]'
-            : isWinner === false && scoreDelta != null
-              ? 'ring-2 ring-destructive/50 opacity-75'
-              : ''
-        }`}
+        className={`relative rounded-lg overflow-hidden transition-all ${(() => {
+          if (isWinner) return 'ring-2 ring-success shadow-lg scale-[1.02]';
+          if (isWinner === false && scoreDelta != null)
+            return 'ring-2 ring-destructive/50 opacity-75';
+          return '';
+        })()}`}
       >
         <CardWithActionOverlay
           src={movie.posterUrl}

@@ -162,11 +162,11 @@ export function RequestSeriesModal({
     profileList.length === 0 || folderList.length === 0 || languageList.length === 0 ? (
       <div className="text-center py-4 space-y-2">
         <p className="text-sm text-destructive/80">
-          {profileList.length === 0
-            ? 'No quality profiles found'
-            : folderList.length === 0
-              ? 'No root folders found'
-              : 'No language profiles found'}
+          {(() => {
+            if (profileList.length === 0) return 'No quality profiles found';
+            if (folderList.length === 0) return 'No root folders found';
+            return 'No language profiles found';
+          })()}
           .
         </p>
         <Button

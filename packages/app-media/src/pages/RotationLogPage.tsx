@@ -76,64 +76,78 @@ export function RotationLogPage() {
       />
 
       {/* Summary stats */}
-      {statsLoading ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : stats ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <RotateCw className="h-4 w-4" />
-              Total Rotated
+      {(() => {
+        if (statsLoading) {
+          return (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              ))}
             </div>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{stats.totalRotated}</p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
-              Avg / Day
+          );
+        }
+        if (!stats) return null;
+        return (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <RotateCw className="h-4 w-4" />
+                Total Rotated
+              </div>
+              <p className="mt-1 text-2xl font-bold tabular-nums">{stats.totalRotated}</p>
             </div>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{stats.avgPerDay}</p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <ScrollText className="h-4 w-4" />
-              Streak
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp className="h-4 w-4" />
+                Avg / Day
+              </div>
+              <p className="mt-1 text-2xl font-bold tabular-nums">{stats.avgPerDay}</p>
             </div>
-            <p className="mt-1 text-2xl font-bold tabular-nums">
-              {stats.streak} cycle{stats.streak !== 1 ? 's' : ''}
-            </p>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ScrollText className="h-4 w-4" />
+                Streak
+              </div>
+              <p className="mt-1 text-2xl font-bold tabular-nums">
+                {stats.streak} cycle{stats.streak !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
-        </div>
-      ) : null}
+        );
+      })()}
 
       {/* Log entries */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            No rotation cycles have run yet. Enable rotation in{' '}
-            <Link to="/media/rotation" className="text-primary underline">
-              Settings
-            </Link>{' '}
-            to get started.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {items.map((entry) => (
-            <LogEntry key={entry.id} entry={entry} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        if (isLoading) {
+          return (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              ))}
+            </div>
+          );
+        }
+        if (items.length === 0) {
+          return (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                No rotation cycles have run yet. Enable rotation in{' '}
+                <Link to="/media/rotation" className="text-primary underline">
+                  Settings
+                </Link>{' '}
+                to get started.
+              </CardContent>
+            </Card>
+          );
+        }
+        return (
+          <div className="space-y-2">
+            {items.map((entry) => (
+              <LogEntry key={entry.id} entry={entry} />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -188,7 +202,9 @@ function LogEntry({
   const hasError = entry.removalsFailed > 0;
   const wasSkipped = !!entry.skippedReason;
 
-  const borderClass = hasError ? 'border-destructive/50' : wasSkipped ? 'border-amber-500/50' : '';
+  let borderClass = '';
+  if (hasError) borderClass = 'border-destructive/50';
+  else if (wasSkipped) borderClass = 'border-amber-500/50';
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>

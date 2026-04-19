@@ -93,36 +93,48 @@ export function QuickPickDialog() {
         </DialogHeader>
 
         <div className="px-6 pb-6 pt-4">
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="aspect-[2/3] w-full rounded-lg" />
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          ) : movies.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                No picks available — all movies are watched or on your watchlist.
-              </p>
-            </div>
-          ) : isFinished ? (
-            <div className="text-center py-8 space-y-4">
-              <Sparkles className="h-10 w-10 mx-auto text-app-accent" />
-              <p className="text-muted-foreground">You&apos;ve seen all the picks!</p>
-              <Button onClick={handleRefresh} variant="outline">
-                Get More Picks
-              </Button>
-            </div>
-          ) : currentMovie ? (
-            <PickCard
-              movie={currentMovie}
-              index={currentIndex}
-              total={movies.length}
-              onSkip={handleSkip}
-              onWatch={handleWatch}
-              isAdding={addToWatchlist.isPending}
-            />
-          ) : null}
+          {(() => {
+            if (isLoading) {
+              return (
+                <div className="space-y-3">
+                  <Skeleton className="aspect-[2/3] w-full rounded-lg" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              );
+            }
+            if (movies.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    No picks available — all movies are watched or on your watchlist.
+                  </p>
+                </div>
+              );
+            }
+            if (isFinished) {
+              return (
+                <div className="text-center py-8 space-y-4">
+                  <Sparkles className="h-10 w-10 mx-auto text-app-accent" />
+                  <p className="text-muted-foreground">You&apos;ve seen all the picks!</p>
+                  <Button onClick={handleRefresh} variant="outline">
+                    Get More Picks
+                  </Button>
+                </div>
+              );
+            }
+            if (!currentMovie) return null;
+            return (
+              <PickCard
+                movie={currentMovie}
+                index={currentIndex}
+                total={movies.length}
+                onSkip={handleSkip}
+                onWatch={handleWatch}
+                isAdding={addToWatchlist.isPending}
+              />
+            );
+          })()}
         </div>
       </DialogContent>
     </Dialog>

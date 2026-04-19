@@ -119,56 +119,65 @@ export function RequestMovieModal({
     }
   };
 
-  const formContent = isDownloadMode ? (
-    <p className="text-sm text-muted-foreground">
-      This movie will be added to Radarr using your rotation settings and marked as protected.
-    </p>
-  ) : profileList.length === 0 || folderList.length === 0 ? (
-    <div className="text-center py-4 space-y-2">
-      <p className="text-sm text-destructive/80">
-        {profileList.length === 0 ? 'No quality profiles found' : 'No root folders found'}.
-      </p>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          void profiles.refetch();
-          void folders.refetch();
-        }}
-      >
-        Retry
-      </Button>
-    </div>
-  ) : (
-    <>
-      <Select
-        label="Quality Profile"
-        id="quality-profile"
-        value={String(qualityProfileId ?? '')}
-        onChange={(e) => {
-          setQualityProfileId(Number(e.target.value));
-        }}
-        disabled={isPending || success}
-        options={profileList.map((p) => ({
-          value: String(p.id),
-          label: p.name,
-        }))}
-      />
-      <Select
-        label="Root Folder"
-        id="root-folder"
-        value={rootFolderPath}
-        onChange={(e) => {
-          setRootFolderPath(e.target.value);
-        }}
-        disabled={isPending || success}
-        options={folderList.map((f) => ({
-          value: f.path,
-          label: `${f.path} (${formatBytes(f.freeSpace)} free)`,
-        }))}
-      />
-    </>
-  );
+  const renderFormContent = () => {
+    if (isDownloadMode) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          This movie will be added to Radarr using your rotation settings and marked as protected.
+        </p>
+      );
+    }
+    if (profileList.length === 0 || folderList.length === 0) {
+      return (
+        <div className="text-center py-4 space-y-2">
+          <p className="text-sm text-destructive/80">
+            {profileList.length === 0 ? 'No quality profiles found' : 'No root folders found'}.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void profiles.refetch();
+              void folders.refetch();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <>
+        <Select
+          label="Quality Profile"
+          id="quality-profile"
+          value={String(qualityProfileId ?? '')}
+          onChange={(e) => {
+            setQualityProfileId(Number(e.target.value));
+          }}
+          disabled={isPending || success}
+          options={profileList.map((p) => ({
+            value: String(p.id),
+            label: p.name,
+          }))}
+        />
+        <Select
+          label="Root Folder"
+          id="root-folder"
+          value={rootFolderPath}
+          onChange={(e) => {
+            setRootFolderPath(e.target.value);
+          }}
+          disabled={isPending || success}
+          options={folderList.map((f) => ({
+            value: f.path,
+            label: `${f.path} (${formatBytes(f.freeSpace)} free)`,
+          }))}
+        />
+      </>
+    );
+  };
+  const formContent = renderFormContent();
 
   return (
     <RequestDialog

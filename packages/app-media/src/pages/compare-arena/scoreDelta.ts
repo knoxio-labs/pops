@@ -11,7 +11,11 @@ export function computeDrawDelta(
   scoreB: number,
   tier: DrawTier | null | undefined
 ): number {
-  const drawOutcome = tier === 'high' ? 0.7 : tier === 'low' ? 0.3 : 0.5;
+  const drawOutcome = (() => {
+    if (tier === 'high') return 0.7;
+    if (tier === 'low') return 0.3;
+    return 0.5;
+  })();
   return Math.round(ELO_K * (drawOutcome - expectedScore(scoreA, scoreB)));
 }
 
