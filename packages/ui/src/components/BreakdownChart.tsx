@@ -95,7 +95,7 @@ export function BreakdownChart({
   return (
     <ul className={cn('flex flex-col gap-1.5', className)}>
       {rows.map((row) => {
-        const pct = max === 0 ? 0 : Math.max(2, Math.round((row.value / max) * 100));
+        const pct = max === 0 ? 0 : Math.round((row.value / max) * 100);
         const interactive = typeof onBarClick === 'function';
         return (
           <li key={row.label}>
@@ -114,6 +114,8 @@ export function BreakdownChart({
                   className="h-full rounded-sm transition-all"
                   style={{
                     width: `${pct}%`,
+                    // Keep tiny non-zero bars visible without inflating the %.
+                    minWidth: row.value > 0 ? '2px' : 0,
                     background: row.color ?? 'var(--chart-1, oklch(0.65 0.2 240))',
                   }}
                 />

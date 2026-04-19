@@ -237,6 +237,22 @@ export function ForceGraph({
     return () => ro.disconnect();
   }, [height]);
 
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper || !enableZoom) return;
+    // Native non-passive wheel listener so preventDefault stops page scroll.
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = -e.deltaY * 0.001;
+      setTransform((t) => ({
+        ...t,
+        k: Math.min(4, Math.max(0.25, t.k * (1 + delta))),
+      }));
+    };
+    wrapper.addEventListener('wheel', onWheel, { passive: false });
+    return () => wrapper.removeEventListener('wheel', onWheel);
+  }, [enableZoom]);
+
   const toWorld = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -286,11 +302,15 @@ export function ForceGraph({
         if (nextId !== hoverRef.current) {
           hoverRef.current = nextId;
           onNodeHover?.(nextId);
+          const canvas = canvasRef.current;
+          if (canvas) canvas.style.cursor = nextId ? 'pointer' : 'default';
         }
       }}
       onMouseLeave={() => {
         hoverRef.current = null;
         onNodeHover?.(null);
+        const canvas = canvasRef.current;
+        if (canvas) canvas.style.cursor = 'default';
       }}
       onMouseDown={(e) => {
         const hit = pickNode(e.clientX, e.clientY);
@@ -319,20 +339,8 @@ export function ForceGraph({
         const hit = pickNode(e.clientX, e.clientY);
         if (hit && onNodeClick) onNodeClick(hit.id);
       }}
-      onWheel={(e) => {
-        if (!enableZoom) return;
-        const delta = -e.deltaY * 0.001;
-        setTransform((t) => ({
-          ...t,
-          k: Math.min(4, Math.max(0.25, t.k * (1 + delta))),
-        }));
-      }}
     >
-      <canvas
-        ref={canvasRef}
-        className="block"
-        style={{ cursor: hoverRef.current ? 'pointer' : 'default' }}
-      />
+      <canvas ref={canvasRef} className="block" style={{ cursor: 'default' }} />
     </div>
   );
 }

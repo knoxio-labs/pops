@@ -67,8 +67,29 @@ export function FileUpload({
 
   const validate = useCallback(
     (list: File[]): File[] => {
+      const patterns = accept
+        ? accept
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean)
+        : [];
+      const matches = (file: File): boolean => {
+        if (patterns.length === 0) return true;
+        const name = file.name.toLowerCase();
+        const type = file.type.toLowerCase();
+        return patterns.some((p) => {
+          const pat = p.toLowerCase();
+          if (pat.startsWith('.')) return name.endsWith(pat);
+          if (pat.endsWith('/*')) return type.startsWith(pat.slice(0, -1));
+          return type === pat;
+        });
+      };
       const out: File[] = [];
       for (const file of list) {
+        if (!matches(file)) {
+          onError?.(`${file.name} is not an accepted file type`);
+          continue;
+        }
         if (typeof maxSize === 'number' && file.size > maxSize) {
           onError?.(`${file.name} exceeds max size of ${formatBytes(maxSize)}`);
           continue;
@@ -81,7 +102,7 @@ export function FileUpload({
       }
       return out;
     },
-    [maxSize, maxFiles, onError]
+    [accept, maxSize, maxFiles, onError]
   );
 
   const handleFiles = useCallback(
@@ -155,7 +176,7 @@ export function FileUpload({
         <ul className="flex flex-col gap-1.5 text-sm">
           {files.map((file, i) => (
             <li
-              key={`${file.name}-${i}`}
+              key={`${file.name}-${file.size}-${file.lastModified}`}
               className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2"
             >
               <div className="min-w-0 flex-1">

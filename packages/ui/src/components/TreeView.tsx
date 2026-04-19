@@ -1,8 +1,9 @@
 /**
  * TreeView — recursive read-only tree with expand/collapse and keyboard nav.
  *
- * Generic over the node data shape. Consumers pass a `getChildren` resolver
- * and a `renderNode` renderer. Selection and expansion are controlled or
+ * Generic over the node data shape. Consumers pass pre-built `TreeNode<T>`
+ * objects via `nodes`, where each node includes its `children`, along with a
+ * `renderNode` renderer. Selection and expansion are controlled or
  * uncontrolled via `defaultExpandedIds` / `expandedIds` + `onExpandedChange`.
  */
 import { ChevronRight } from 'lucide-react';

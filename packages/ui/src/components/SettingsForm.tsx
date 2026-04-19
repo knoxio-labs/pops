@@ -104,6 +104,27 @@ export function SettingsForm({
     {}
   );
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Cancel any pending autosave when the save handler or mode changes so we
+    // don't fire a stale callback with old values.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+  }, [onSave, autoSave]);
 
   useEffect(() => {
     for (const field of section.fields) {
@@ -150,11 +171,12 @@ export function SettingsForm({
       if (autoSave && onSave && valid) {
         if (saveTimer.current) clearTimeout(saveTimer.current);
         saveTimer.current = setTimeout(async () => {
+          if (!mountedRef.current) return;
           setSaving(true);
           try {
             await onSave(next);
           } finally {
-            setSaving(false);
+            if (mountedRef.current) setSaving(false);
           }
         }, 400);
       }

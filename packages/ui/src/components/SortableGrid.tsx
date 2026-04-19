@@ -36,6 +36,9 @@ export function SortableGrid<T>({
     if (disabled) return;
     setDragIndex(i);
     e.dataTransfer.effectAllowed = 'move';
+    // Firefox requires some data payload for the drag to initiate.
+    const item = items[i];
+    if (item !== undefined) e.dataTransfer.setData('text/plain', String(getKey(item, i)));
   };
 
   const handleDragOver = (i: number) => (e: React.DragEvent<HTMLDivElement>) => {

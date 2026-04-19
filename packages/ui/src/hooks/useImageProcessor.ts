@@ -8,8 +8,10 @@
  *
  * External packages (`heic2any`, `browser-image-compression`) are loaded
  * dynamically so consumers only pay for them when this hook is used.
- * If those packages are not installed, calls fall back to raw resize +
- * re-encode via canvas, which strips EXIF as a side-effect.
+ * If `browser-image-compression` is not installed, processing falls back
+ * to raw resize + re-encode via canvas, which strips EXIF as a
+ * side-effect. HEIC/HEIF inputs do not have a canvas fallback: they
+ * require `heic2any`, and processing throws when that package is missing.
  */
 import { useCallback } from 'react';
 

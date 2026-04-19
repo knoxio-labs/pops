@@ -3,7 +3,7 @@
  * with conversion logic. Stores the canonical value in milliseconds and
  * renders a user-friendly unit.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { Input } from '../primitives/input';
@@ -65,7 +65,11 @@ export function DurationFieldInput({
   id,
   'aria-label': ariaLabel,
 }: DurationFieldInputProps) {
-  const [unit, setUnit] = useState<DurationUnit>(() => defaultUnit ?? inferUnit(value));
+  const clampUnit = useCallback(
+    (u: DurationUnit): DurationUnit => (units.includes(u) ? u : (units[0] ?? 'ms')),
+    [units]
+  );
+  const [unit, setUnit] = useState<DurationUnit>(() => clampUnit(defaultUnit ?? inferUnit(value)));
   const displayValue = useMemo(() => {
     const multiplier = UNIT_MULTIPLIERS[unit];
     if (value === 0) return '';
@@ -76,8 +80,13 @@ export function DurationFieldInput({
     // Keep unit selection consistent if the value is changed externally.
     if (value === 0) return;
     const multiplier = UNIT_MULTIPLIERS[unit];
-    if (value % multiplier !== 0) setUnit(inferUnit(value));
-  }, [value, unit]);
+    if (value % multiplier !== 0) setUnit(clampUnit(inferUnit(value)));
+  }, [value, unit, clampUnit]);
+
+  useEffect(() => {
+    // Re-clamp if the allowed units change and the current one is no longer valid.
+    if (!units.includes(unit)) setUnit(clampUnit(unit));
+  }, [units, unit, clampUnit]);
 
   const handleNumberChange = (raw: string) => {
     if (raw === '') {

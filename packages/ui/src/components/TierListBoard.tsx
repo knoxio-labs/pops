@@ -19,7 +19,10 @@ export interface TierDefinition {
 
 export interface TierListBoardProps<T> {
   tiers: TierDefinition[];
-  /** Current assignment of items to tiers. `null` = unranked pool. */
+  /**
+   * Current assignment of items to tiers. Keyed by tier id; the reserved
+   * `__pool` key holds unranked items that render in the bottom pool row.
+   */
   assignments: Record<string, string[]>;
   /** All items, keyed by id used inside `assignments`. */
   items: Record<string, T>;
@@ -32,7 +35,9 @@ export interface TierListBoardProps<T> {
   className?: string;
 }
 
-const POOL = '__pool';
+/** Reserved key in `assignments` for unranked items. */
+export const UNRANKED_POOL_KEY = '__pool';
+const POOL = UNRANKED_POOL_KEY;
 const DISMISS = '__dismiss';
 
 export function TierListBoard<T>({
@@ -108,7 +113,12 @@ export function TierListBoard<T>({
                   <div
                     key={id}
                     draggable
-                    onDragStart={() => setDragId(id)}
+                    onDragStart={(e) => {
+                      // Firefox requires some data payload for the drag to initiate.
+                      e.dataTransfer.setData('text/plain', id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDragId(id);
+                    }}
                     onDragEnd={() => setDragId(null)}
                     className={cn(
                       'cursor-grab active:cursor-grabbing transition-opacity',
