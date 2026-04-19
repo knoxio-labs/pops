@@ -21,6 +21,7 @@ export const engramIndex = sqliteTable(
     modifiedAt: text('modified_at').notNull(),
     title: text('title').notNull(),
     contentHash: text('content_hash').notNull(),
+    bodyHash: text('body_hash'),
     wordCount: integer('word_count').notNull(),
     customFields: text('custom_fields'),
   },

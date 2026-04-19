@@ -81,9 +81,9 @@ export class IngestService {
       explicitScopes: input.scopes,
     });
 
-    // Stage 5: deduplication (hash is body-only; full-file hash checked post-write by EngramService)
-    const contentHash = hashContent(body);
-    const duplicate = findDuplicate(contentHash);
+    // Stage 5: deduplication by body hash (body-only; full-file content_hash is separate)
+    const bodyHash = hashContent(body);
+    const duplicate = findDuplicate(bodyHash);
     if (duplicate) {
       logger.warn(
         { duplicateId: duplicate },
@@ -229,13 +229,13 @@ function hashContent(body: string): string {
   return createHash('sha256').update(body, 'utf8').digest('hex');
 }
 
-function findDuplicate(contentHash: string): string | null {
+function findDuplicate(bodyHash: string): string | null {
   try {
     const db = getDrizzle();
     const row = db
       .select({ id: engramIndex.id })
       .from(engramIndex)
-      .where(and(eq(engramIndex.contentHash, contentHash), eq(engramIndex.status, 'active')))
+      .where(and(eq(engramIndex.bodyHash, bodyHash), eq(engramIndex.status, 'active')))
       .get();
     return row?.id ?? null;
   } catch {
