@@ -2,6 +2,7 @@ import { Trophy } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * RankingsPage — leaderboard of media items ranked by Elo score.
  *
@@ -18,8 +19,6 @@ import {
   Tabs,
   TabsContent,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 const PAGE_SIZE = 25;
 

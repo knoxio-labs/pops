@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * ConnectionGraph — force-directed graph visualization of connected items.
  *
@@ -18,8 +19,6 @@ import { useNavigate } from 'react-router';
  */
 import { Skeleton } from '@pops/ui';
 import { GRAPH_COLORS } from '@pops/ui/theme/graph-colors';
-
-import { trpc } from '../lib/trpc';
 
 // ---------------------------------------------------------------------------
 // Types

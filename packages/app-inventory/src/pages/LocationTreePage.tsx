@@ -42,6 +42,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import {
   Badge,
   Button,
@@ -59,7 +60,6 @@ import {
 } from '@pops/ui';
 
 import { LocationContentsPanel } from '../components/LocationContentsPanel';
-import { trpc } from '../lib/trpc';
 
 interface LocationTreeNode {
   id: string;

@@ -1,6 +1,7 @@
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 /**
  * RequestSeriesModal — Modal for adding a TV series to Sonarr.
  *
@@ -8,17 +9,16 @@ import { useEffect, useMemo, useState } from 'react';
  * season monitoring checkboxes with smart defaults, then submits to Sonarr.
  */
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  formatBytes,
   Label,
   Select,
 } from '@pops/ui';
-import { Button } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 export interface SeasonInfo {
   seasonNumber: number;
@@ -33,11 +33,6 @@ interface RequestSeriesModalProps {
   title: string;
   year: number;
   seasons: SeasonInfo[];
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 /** Determine if a season is "future" (should be monitored by default). */

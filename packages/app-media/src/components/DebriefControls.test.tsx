@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 let dismissOpts: Record<string, (...args: unknown[]) => unknown> = {};
 const mockDismissMutate = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       comparisons: {

@@ -16,7 +16,7 @@ const mockSetData = vi.fn();
 
 const mockStatusQuery = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       watchlist: {

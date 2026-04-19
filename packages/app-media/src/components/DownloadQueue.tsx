@@ -1,3 +1,4 @@
+import { trpc } from '@pops/api-client';
 /**
  * DownloadQueue — shows active downloads from Radarr + Sonarr.
  *
@@ -5,8 +6,6 @@
  * or when neither service is configured.
  */
 import { Badge } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 export function DownloadQueue() {
   const { data: configData } = trpc.media.arr.getConfig.useQuery();

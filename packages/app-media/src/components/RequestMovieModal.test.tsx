@@ -10,7 +10,7 @@ const mockDownloadAndProtectMutate = vi.fn();
 let addMovieOpts: Record<string, unknown> = {};
 let downloadAndProtectOpts: Record<string, unknown> = {};
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       arr: {

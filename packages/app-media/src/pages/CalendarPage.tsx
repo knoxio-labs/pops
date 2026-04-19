@@ -2,6 +2,7 @@ import { Calendar, CheckCircle, Clock, Film } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * CalendarPage — upcoming episodes calendar from Sonarr.
  *
@@ -9,8 +10,6 @@ import { Link } from 'react-router';
  * with today highlighted, episode cards with poster/title/S##E##/status.
  */
 import { Alert, AlertDescription, AlertTitle, Badge, Skeleton } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 function formatEpisodeCode(season: number, episode: number): string {
   return `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;

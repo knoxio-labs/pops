@@ -14,7 +14,7 @@ vi.mock('react-router', async () => {
   };
 });
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       reports: {

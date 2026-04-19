@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * Debrief page — post-watch comparison flow for a debrief session.
  *
@@ -36,7 +37,6 @@ import {
 
 import { ComparisonMovieCard } from '../components/ComparisonMovieCard';
 import { DebriefActionBar } from '../components/DebriefControls';
-import { trpc } from '../lib/trpc';
 
 export function DebriefPage() {
   const { movieId: rawId } = useParams<{ movieId: string }>();

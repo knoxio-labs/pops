@@ -30,7 +30,7 @@ const mockInvalidateRankings = vi.fn();
 const mockRefetch = vi.fn();
 let deleteMutationOpts: Record<string, (...args: unknown[]) => unknown> = {};
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       comparisons: {

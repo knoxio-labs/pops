@@ -1,41 +1,9 @@
 import { registerResultComponent, type ResultComponentProps } from '@pops/navigation';
-
-/**
- * Highlight the matched portion of text based on query and matchType.
- * Returns a React fragment with the matched portion wrapped in <mark>.
- */
-function highlightMatch(text: string, query: string, matchType: string): React.ReactNode {
-  if (!query) return text;
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-
-  let start = -1;
-  if (matchType === 'exact') {
-    start = 0;
-  } else if (matchType === 'prefix') {
-    start = 0;
-  } else if (matchType === 'contains') {
-    start = lowerText.indexOf(lowerQuery);
-  }
-
-  if (start === -1) return text;
-
-  const end = start + query.length;
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className="rounded-sm bg-warning/20 px-0.5 dark:bg-warning/30">
-        {text.slice(start, end)}
-      </mark>
-      {text.slice(end)}
-    </>
-  );
-}
+import { formatCurrency, highlightMatch } from '@pops/ui';
 
 function formatAmount(amount: number | null | undefined): string {
   if (amount == null) return '—';
-  return `$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return formatCurrency(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function formatPeriod(period: string | null | undefined): string {

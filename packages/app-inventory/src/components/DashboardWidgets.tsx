@@ -1,6 +1,7 @@
 import { Clock, DollarSign, Package, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * DashboardWidgets — summary statistics for the inventory report dashboard.
  *
@@ -8,24 +9,9 @@ import { useNavigate } from 'react-router';
  * expiring warranties) plus a recently-added items list. Data is fetched
  * via a single aggregation query. PRD-051/US-01.
  */
-import { Card, CardContent, Skeleton, TypeBadge } from '@pops/ui';
+import { Card, CardContent, formatAUD, formatRelativeTime, Skeleton, TypeBadge } from '@pops/ui';
 
-import { trpc } from '../lib/trpc';
-import { formatCurrency } from '../lib/utils';
 import { ValueByLocationCard, ValueByTypeCard } from './ValueBreakdown';
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-}
 
 export function DashboardWidgets() {
   const navigate = useNavigate();
@@ -94,9 +80,7 @@ export function DashboardWidgets() {
             <DollarSign className="h-4 w-4" />
             <span className="text-xs font-medium">Replacement</span>
           </div>
-          <div className="text-2xl font-bold tabular-nums">
-            {formatCurrency(totalReplacementValue)}
-          </div>
+          <div className="text-2xl font-bold tabular-nums">{formatAUD(totalReplacementValue)}</div>
         </CardContent>
       </Card>
 
@@ -106,7 +90,7 @@ export function DashboardWidgets() {
             <DollarSign className="h-4 w-4" />
             <span className="text-xs font-medium">Resale</span>
           </div>
-          <div className="text-2xl font-bold tabular-nums">{formatCurrency(totalResaleValue)}</div>
+          <div className="text-2xl font-bold tabular-nums">{formatAUD(totalResaleValue)}</div>
         </CardContent>
       </Card>
 
@@ -162,7 +146,7 @@ export function DashboardWidgets() {
                     <span className="text-xs text-muted-foreground shrink-0">{item.assetId}</span>
                   )}
                   <span className="text-xs text-muted-foreground shrink-0 ml-auto">
-                    {timeAgo(item.lastEditedTime)}
+                    {formatRelativeTime(item.lastEditedTime)}
                   </span>
                 </li>
               ))}

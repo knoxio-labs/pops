@@ -134,10 +134,4 @@ export function formatEpisodeCode(season: number, episode: number): string {
   return `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
 }
 
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+export { formatUSD as formatCurrency } from '@pops/ui';

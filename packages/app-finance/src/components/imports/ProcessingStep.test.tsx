@@ -6,7 +6,7 @@ const mockReset = vi.fn();
 const mockMutation = vi.fn();
 const mockProgressQuery = vi.fn();
 
-vi.mock('../../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     finance: {
       imports: {

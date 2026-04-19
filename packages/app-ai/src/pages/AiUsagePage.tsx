@@ -11,12 +11,9 @@ import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 
-import { DataTable, DateInput, PageHeader, SortableHeader, StatCard } from '@pops/ui';
-import { Badge, Button, Input, Label } from '@pops/ui';
-import { Alert } from '@pops/ui';
-import { Skeleton } from '@pops/ui';
-import { Card } from '@pops/ui';
+import { trpc } from '@pops/api-client';
 import {
+  Alert,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -26,18 +23,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  DateInput,
+  formatBytes,
+  Input,
+  Label,
+  PageHeader,
+  Skeleton,
+  SortableHeader,
+  StatCard,
 } from '@pops/ui';
 
-import { trpc } from '../lib/trpc';
-
 import type { ColumnDef } from '@tanstack/react-table';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function CacheManagement() {
   const utils = trpc.useUtils();

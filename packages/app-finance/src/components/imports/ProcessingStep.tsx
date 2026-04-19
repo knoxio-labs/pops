@@ -1,9 +1,9 @@
 import { AlertTriangle, ArrowRight, CheckCircle, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 import { Button } from '@pops/ui';
 
-import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
 
 import type { ImportWarning, ProcessImportOutput } from '@pops/api/modules/finance/imports';

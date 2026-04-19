@@ -1,6 +1,7 @@
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 /**
  * RequestMovieButton — requests a movie via Radarr.
  *
@@ -10,7 +11,6 @@ import { useState } from 'react';
  */
 import { Button } from '@pops/ui';
 
-import { trpc } from '../lib/trpc';
 import { RequestMovieModal } from './RequestMovieModal';
 
 type ButtonVariant = 'standard' | 'compact';

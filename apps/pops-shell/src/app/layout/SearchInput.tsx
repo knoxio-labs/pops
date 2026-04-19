@@ -14,7 +14,7 @@ import {
   useSearchKeyboardNav,
   useSearchResultNavigation,
 } from '@pops/navigation';
-import { Button, Input } from '@pops/ui';
+import { Button, Input, useDebouncedCallback } from '@pops/ui';
 
 import type { ReactNode } from 'react';
 
@@ -41,7 +41,6 @@ function domainToLabel(domain: string): string {
 export function SearchInput() {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const query = useSearchStore((s) => s.query);
   const isOpen = useSearchStore((s) => s.isOpen);
   const setQuery = useSearchStore((s) => s.setQuery);
@@ -147,15 +146,13 @@ export function SearchInput() {
     onClose: handleClose,
   });
 
+  const debouncedSetQuery = useDebouncedCallback(setQuery, DEBOUNCE_MS);
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setQuery(value);
-      }, DEBOUNCE_MS);
+      debouncedSetQuery(e.target.value);
     },
-    [setQuery]
+    [debouncedSetQuery]
   );
 
   const handleClear = useCallback(() => {
@@ -177,13 +174,6 @@ export function SearchInput() {
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
-  // Clean up debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 

@@ -1,4 +1,4 @@
-import { trpc } from '../lib/trpc';
+import { trpc } from '@pops/api-client';
 
 export type MediaType = 'all' | 'movie' | 'tv';
 export type SortOption = 'title' | 'dateAdded' | 'releaseDate' | 'rating';

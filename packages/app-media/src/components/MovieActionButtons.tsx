@@ -2,6 +2,7 @@ import { Ban, Check, Download, ListPlus, Loader2, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * MovieActionButtons — conditional action buttons for non-library movies.
  *
@@ -13,7 +14,6 @@ import { toast } from 'sonner';
  */
 import { Button } from '@pops/ui';
 
-import { trpc } from '../lib/trpc';
 import { RequestMovieButton } from './RequestMovieButton';
 import { RequestMovieModal } from './RequestMovieModal';
 

@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 import {
   Badge,
   Button,
@@ -14,8 +15,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@pops/ui';
-
-import { trpc } from '../../lib/trpc';
 
 import type { inferRouterOutputs } from '@trpc/server';
 

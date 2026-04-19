@@ -2,10 +2,10 @@ import { BookmarkPlus, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import { Button } from '@pops/ui';
 import { Badge } from '@pops/ui';
 
-import { trpc } from '../../lib/trpc';
 import { cn } from '../../lib/utils';
 import { useImportStore } from '../../store/importStore';
 import { TagEditor, type TagMetaEntry } from '../TagEditor';

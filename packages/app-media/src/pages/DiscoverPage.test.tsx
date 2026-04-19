@@ -9,7 +9,7 @@ const mockAssembleSessionRefetch = vi.fn();
 const mockProfileQuery = vi.fn();
 const mockGetDismissedQuery = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       discovery: {

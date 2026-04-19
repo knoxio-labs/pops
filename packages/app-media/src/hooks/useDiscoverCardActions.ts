@@ -7,7 +7,7 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
-import { trpc } from '../lib/trpc';
+import { trpc } from '@pops/api-client';
 
 export type DiscoverActionResult =
   | {

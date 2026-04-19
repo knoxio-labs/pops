@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * DebriefResultsSummary — shows per-dimension results and ELO score
  * changes after completing a debrief session.
@@ -17,8 +18,6 @@ import { useNavigate } from 'react-router';
  * Fetches session data via getDebrief and current scores for the movie.
  */
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 interface DebriefResultsSummaryProps {
   mediaType: 'movie' | 'episode';

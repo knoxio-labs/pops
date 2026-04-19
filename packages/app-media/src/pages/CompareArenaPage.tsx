@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,6 @@ import {
   ComparisonMovieCardSkeleton,
 } from '../components/ComparisonMovieCard';
 import { DimensionManager } from '../components/DimensionManager';
-import { trpc } from '../lib/trpc';
 
 interface ScoreDelta {
   winnerId: number;

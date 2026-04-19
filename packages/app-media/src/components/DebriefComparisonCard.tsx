@@ -1,14 +1,13 @@
 import { ImageOff } from 'lucide-react';
 import { useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 /**
  * DebriefComparisonCard — two movie posters side by side for debrief comparison.
  * User taps one to select the winner. Calls recordDebriefComparison mutation,
  * then fires onResult with the outcome.
  */
 import { Skeleton } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 export interface DebriefMovie {
   id: number;

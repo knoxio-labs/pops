@@ -2,13 +2,13 @@ import { AlertCircle, MapPin, RefreshCw, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
+import { trpc } from '@pops/api-client';
 /**
  * Value breakdown cards — horizontal bar charts showing replacement value
  * grouped by item type or location.
  */
 import { Alert, AlertDescription, Button, Card, CardContent, Skeleton } from '@pops/ui';
 
-import { trpc } from '../lib/trpc';
 import { formatCurrency } from '../lib/utils';
 
 const BAR_COLORS = [

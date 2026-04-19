@@ -1,6 +1,6 @@
 import { Tv } from 'lucide-react';
 
-import { Badge, cn } from '@pops/ui';
+import { Badge, cn, highlightMatch } from '@pops/ui';
 
 /**
  * TvShowSearchResult — ResultComponent for tv-shows search hits.
@@ -17,29 +17,6 @@ interface TvShowHitData {
   status: string | null;
   numberOfSeasons: number | null;
   voteAverage: number | null;
-}
-
-/**
- * Highlight the matched portion of text based on query and match type.
- * Returns React nodes with the matched text wrapped in a <mark>.
- */
-export function highlightMatch(text: string, query: string, matchType: string): React.ReactNode {
-  if (!query) return text;
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  const start = matchType === 'exact' || matchType === 'prefix' ? 0 : lowerText.indexOf(lowerQuery);
-
-  if (start === -1) return text;
-
-  const end = start + query.length;
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className="bg-warning/20 rounded-sm px-0.5">{text.slice(start, end)}</mark>
-      {text.slice(end)}
-    </>
-  );
 }
 
 function StatusBadge({ status }: { status: string | null }) {

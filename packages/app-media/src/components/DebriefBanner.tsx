@@ -2,14 +2,13 @@ import { ClipboardList, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * DebriefBanner — shows a notification when movies are pending debrief.
  *
  * Dismissible (session-scoped via useState). Hidden when no pending debriefs.
  */
 import { Alert, AlertDescription, AlertTitle } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 export function DebriefBanner() {
   const [dismissed, setDismissed] = useState(false);

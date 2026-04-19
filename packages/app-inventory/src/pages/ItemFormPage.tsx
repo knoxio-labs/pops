@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import rehypeSanitize from 'rehype-sanitize';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * Item create/edit form page.
  * Supports /inventory/items/new (create) and /inventory/items/:id/edit (edit).
@@ -30,7 +31,6 @@ import { LocationPicker } from '../components/LocationPicker';
 import { PhotoUpload, type UploadedFile } from '../components/PhotoUpload';
 import { SortablePhotoGrid } from '../components/SortablePhotoGrid';
 import { useImageProcessor } from '../hooks/useImageProcessor';
-import { trpc } from '../lib/trpc';
 
 import type { InventoryItem } from '@pops/api/modules/inventory/items/types';
 

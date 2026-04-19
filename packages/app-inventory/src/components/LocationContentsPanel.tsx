@@ -2,6 +2,7 @@ import { Package, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * LocationContentsPanel — shows inventory items at a selected location.
  *
@@ -9,9 +10,7 @@ import { useNavigate } from 'react-router';
  * Supports "Include sub-locations" toggle, shows item count + total value,
  * and provides navigation to item detail and item creation.
  */
-import { AssetIdBadge, Button, Label, Skeleton, Switch, TypeBadge } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
+import { AssetIdBadge, Button, formatAUD, Label, Skeleton, Switch, TypeBadge } from '@pops/ui';
 
 import type { InventoryItem } from '@pops/api/modules/inventory/items/types';
 
@@ -31,15 +30,6 @@ function collectDescendantIds(node: LocationTreeNode): string[] {
     ids.push(...collectDescendantIds(child));
   }
   return ids;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export interface LocationContentsPanelProps {
@@ -124,7 +114,7 @@ export function LocationContentsPanel({
         ) : (
           <>
             {allItems.length} {allItems.length === 1 ? 'item' : 'items'}
-            {totalValue > 0 && <span> · {formatCurrency(totalValue)}</span>}
+            {totalValue > 0 && <span> · {formatAUD(totalValue)}</span>}
           </>
         )}
       </div>

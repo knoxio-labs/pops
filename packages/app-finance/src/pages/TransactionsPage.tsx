@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { trpc } from '@pops/api-client';
 /**
  * Transactions page - list and manage transactions
  */
@@ -10,7 +11,6 @@ import { Alert, Button, PageHeader } from '@pops/ui';
 import { Skeleton } from '@pops/ui';
 
 import { TagEditor } from '../components/TagEditor';
-import { trpc } from '../lib/trpc';
 
 import type { ColumnDef } from '@tanstack/react-table';
 

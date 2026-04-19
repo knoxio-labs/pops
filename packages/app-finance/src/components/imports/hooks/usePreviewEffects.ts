@@ -5,7 +5,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { trpc } from '../../../lib/trpc';
+import { trpc } from '@pops/api-client';
+
 import {
   PREVIEW_CHANGESET_MAX_TRANSACTIONS,
   scopePreviewTransactions,

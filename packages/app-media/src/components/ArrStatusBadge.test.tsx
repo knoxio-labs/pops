@@ -7,7 +7,7 @@ const mockGetConfig = vi.fn();
 const mockGetMovieStatus = vi.fn();
 const mockGetShowStatus = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       arr: {

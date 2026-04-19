@@ -2,7 +2,7 @@ import { useSearchStore } from '@/store/searchStore';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
 
-import { Button, Input } from '@pops/ui';
+import { Button, Input, useDebouncedCallback } from '@pops/ui';
 
 const DEBOUNCE_MS = 300;
 
@@ -13,20 +13,17 @@ interface MobileSearchOverlayProps {
 
 export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const query = useSearchStore((s) => s.query);
   const setQuery = useSearchStore((s) => s.setQuery);
   const clear = useSearchStore((s) => s.clear);
 
+  const debouncedSetQuery = useDebouncedCallback(setQuery, DEBOUNCE_MS);
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setQuery(value);
-      }, DEBOUNCE_MS);
+      debouncedSetQuery(e.target.value);
     },
-    [setQuery]
+    [debouncedSetQuery]
   );
 
   const handleClear = useCallback(() => {
@@ -69,13 +66,6 @@ export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps)
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [open, handleClose]);
-
-  // Clean up debounce timer
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   if (!open) return null;
 

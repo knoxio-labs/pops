@@ -19,6 +19,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import rehypeSanitize from 'rehype-sanitize';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * Item detail page — shows item info and connected items.
  * Route: /inventory/items/:id
@@ -50,7 +51,6 @@ import {
 
 import { PhotoGallery } from '../components/PhotoGallery';
 import { SortablePhotoGrid } from '../components/SortablePhotoGrid';
-import { trpc } from '../lib/trpc';
 
 import type { ItemConnection } from '@pops/api/modules/inventory/connections/types';
 

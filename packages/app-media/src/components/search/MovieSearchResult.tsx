@@ -1,5 +1,7 @@
 import { Film, Star } from 'lucide-react';
 
+import { highlightMatch } from '@pops/ui';
+
 /**
  * MovieSearchResult — ResultComponent for movies search hits.
  *
@@ -14,29 +16,6 @@ interface MovieHitData {
   posterUrl: string | null;
   voteAverage: number | null;
   runtime: number | null;
-}
-
-/**
- * Highlight the matched portion of text based on query and match type.
- * Returns React nodes with the matched text wrapped in a <mark>.
- */
-export function highlightMatch(text: string, query: string, matchType: string): React.ReactNode {
-  if (!query) return text;
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  const start = matchType === 'exact' || matchType === 'prefix' ? 0 : lowerText.indexOf(lowerQuery);
-
-  if (start === -1) return text;
-
-  const end = start + query.length;
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className="bg-warning/20 rounded-sm px-0.5">{text.slice(start, end)}</mark>
-      {text.slice(end)}
-    </>
-  );
 }
 
 function Rating({ value }: { value: number | null }) {

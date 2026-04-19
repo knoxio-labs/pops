@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * CacheManagementPage — View and manage the AI entity cache.
  *
@@ -28,21 +29,13 @@ import {
   BreadcrumbSeparator,
   Button,
   Card,
+  formatBytes,
   Input,
   Label,
   PageHeader,
   Skeleton,
   StatCard,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function CacheManagementPage() {
   const utils = trpc.useUtils();

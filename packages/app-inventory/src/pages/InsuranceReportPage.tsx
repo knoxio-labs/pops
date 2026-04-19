@@ -2,6 +2,7 @@ import { Download, FileText, Printer } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * InsuranceReportPage — print-friendly insurance report for inventory items.
  *
@@ -16,6 +17,8 @@ import {
   CheckboxInput,
   type Condition,
   ConditionBadge,
+  formatAUD,
+  formatDate,
   Label,
   PageHeader,
   Select,
@@ -23,26 +26,8 @@ import {
 } from '@pops/ui';
 
 import { LocationPicker } from '../components/LocationPicker';
-import { trpc } from '../lib/trpc';
 
 type SortBy = 'value' | 'name' | 'type';
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function warrantyStatus(expiryStr: string | null): {
   label: string;
@@ -290,7 +275,7 @@ export function InsuranceReportPage(): React.ReactElement {
             Total Replacement Value
           </p>
           <p className="text-3xl font-black text-app-accent dark:text-app-accent">
-            {formatCurrency(report.totalValue)}
+            {formatAUD(report.totalValue)}
           </p>
         </div>
       </div>
@@ -387,9 +372,7 @@ export function InsuranceReportPage(): React.ReactElement {
                         </Badge>
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums print:border print:border-gray-300 print:p-1">
-                        {item.replacementValue != null
-                          ? formatCurrency(item.replacementValue)
-                          : '—'}
+                        {item.replacementValue != null ? formatAUD(item.replacementValue) : '—'}
                       </td>
                       <td className="py-2 pr-3 text-sm text-muted-foreground print:border print:border-gray-300 print:p-1">
                         {item.receiptDocumentIds.length > 0
@@ -407,7 +390,7 @@ export function InsuranceReportPage(): React.ReactElement {
                       Subtotal
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
-                      {formatCurrency(
+                      {formatAUD(
                         group.items.reduce((sum, i) => sum + (i.replacementValue ?? 0), 0)
                       )}
                     </td>

@@ -6,7 +6,7 @@
  */
 import { useCallback, useState } from 'react';
 
-import { trpc } from '../lib/trpc';
+import { trpc } from '@pops/api-client';
 
 export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
 

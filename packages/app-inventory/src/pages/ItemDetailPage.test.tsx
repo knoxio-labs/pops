@@ -16,7 +16,7 @@ const mockDocumentsUnlinkMutation = vi.fn();
 const mockPhotosReorderMutation = vi.fn();
 const mockUseUtils = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       items: {
