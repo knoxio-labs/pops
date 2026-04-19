@@ -63,7 +63,7 @@ describe('BudgetResult', () => {
   });
 
   it('hides period when null', () => {
-    const { container } = render(
+    render(
       <BudgetResult
         data={{
           category: 'Misc',
@@ -73,8 +73,9 @@ describe('BudgetResult', () => {
       />
     );
 
-    // Only category and amount shown — no period element
-    expect(container.querySelectorAll('.text-sm')).toHaveLength(1); // just the amount
+    expect(screen.queryByText('Monthly')).not.toBeInTheDocument();
+    expect(screen.queryByText('Yearly')).not.toBeInTheDocument();
+    expect(screen.getByText('$100.00')).toBeInTheDocument();
   });
 
   it('renders date-like period as-is', () => {
