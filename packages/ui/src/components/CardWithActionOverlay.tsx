@@ -1,43 +1,26 @@
 import { ImageOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { cn, Skeleton } from '@pops/ui';
+import { cn } from '../lib/utils';
+import { Skeleton } from '../primitives/skeleton';
 
 import type { ReactNode } from 'react';
 
 /**
- * CardWithActionOverlay — poster card with hover-revealed action overlay.
- *
- * Provides:
- *  - Poster image with lazy loading, skeleton placeholder, and fallback.
- *  - A bottom-gradient overlay revealed on hover / focus-within.
- *  - Optional top-left and top-right badge slots (always visible).
- *
- * Used by ComparisonMovieCard and DiscoverCard to share the poster+overlay
- * shell without duplicating image-loading logic or hover CSS.
+ * Poster card with hover-revealed bottom overlay and optional corner badges.
  */
-
 export interface CardWithActionOverlayProps {
   src: string | null;
   alt: string;
-  /** Extra classes on the root container. */
   className?: string;
-  /** Aspect ratio class, default "aspect-[2/3]". */
   aspectClass?: string;
-  /** Content rendered in the bottom hover overlay. */
   overlay?: ReactNode;
-  /** Badge pinned to top-left corner. */
   topLeft?: ReactNode;
-  /** Badge pinned to top-right corner. */
   topRight?: ReactNode;
-  /** Whether to use lazy loading. Defaults to true. */
   lazy?: boolean;
-  /** Called when the poster area itself is clicked (optional). */
   onClick?: () => void;
   disabled?: boolean;
-  /** Accessible label for the clickable container (overrides using alt). */
   ariaLabel?: string;
-  /** Gradient style for the overlay. Defaults to from-black/80. */
   overlayGradient?: string;
   'data-testid'?: string;
 }
@@ -176,3 +159,5 @@ export function CardWithActionOverlay({
     </div>
   );
 }
+
+CardWithActionOverlay.displayName = 'CardWithActionOverlay';

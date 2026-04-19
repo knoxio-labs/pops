@@ -1,9 +1,17 @@
+import { ResponsiveActionBar, type ResponsiveActionBarProps } from '@pops/ui';
+
 /**
- * ArenaActionBar — backwards-compatible re-export of ResponsiveActionBar.
- * @deprecated Import from ResponsiveActionBar instead.
+ * Compare-arena wrapper around `ResponsiveActionBar` from `@pops/ui`.
+ * Defaults the root `data-testid` to `arena-action-bar`; pass `dataTestId` to override.
  */
 export type {
-  ResponsiveActionBarProps as ArenaActionBarProps,
   ResponsiveActionBarMovie as ArenaMovie,
-} from './ResponsiveActionBar';
-export { ResponsiveActionBar as ArenaActionBar } from './ResponsiveActionBar';
+  ResponsiveActionBarProps as ArenaActionBarProps,
+} from '@pops/ui';
+
+export function ArenaActionBar({
+  dataTestId = 'arena-action-bar',
+  ...rest
+}: ResponsiveActionBarProps) {
+  return <ResponsiveActionBar dataTestId={dataTestId} {...rest} />;
+}

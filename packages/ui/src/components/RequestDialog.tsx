@@ -1,21 +1,18 @@
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@pops/ui';
+} from '../primitives/dialog';
+import { Button } from './Button';
 
 import type { ReactNode } from 'react';
 
 /**
- * RequestDialog — shared modal shell for Radarr/Sonarr request flows.
- *
- * Handles the Dialog wrapper, header, loading/error states, and action buttons.
- * Callers supply form fields as children.
+ * Shared modal shell for Radarr/Sonarr-style request flows.
  */
 export interface RequestDialogProps {
   open: boolean;
@@ -99,3 +96,5 @@ export function RequestDialog({
     </Dialog>
   );
 }
+
+RequestDialog.displayName = 'RequestDialog';

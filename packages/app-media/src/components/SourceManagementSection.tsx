@@ -8,9 +8,7 @@ import { trpc } from '@pops/api-client';
  *
  * PRD-072 US-03
  */
-import { Button, Label, NumberInput, Select, Switch } from '@pops/ui';
-
-import { CRUDManagementSection } from './CRUDManagementSection';
+import { Button, CRUDManagementSection, Label, NumberInput, Select, Switch } from '@pops/ui';
 
 // ---------------------------------------------------------------------------
 // Type icons for source types

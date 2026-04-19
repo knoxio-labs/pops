@@ -12,9 +12,7 @@ import { Ban, Bookmark, Clock, EyeOff } from 'lucide-react';
  *
  * Uses CardWithActionOverlay for the poster shell.
  */
-import { Skeleton, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
-
-import { CardWithActionOverlay } from './CardWithActionOverlay';
+import { CardWithActionOverlay, Skeleton, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
 export interface ComparisonMovieCardMovie {
   id: number;
