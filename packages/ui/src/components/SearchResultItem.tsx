@@ -2,19 +2,21 @@ import { Fragment } from 'react';
 
 import { cn } from '../lib/utils';
 
-interface SearchResultItemProps extends React.HTMLAttributes<HTMLDivElement> {
+import type { HTMLAttributes, ReactNode } from 'react';
+
+interface SearchResultItemProps extends HTMLAttributes<HTMLDivElement> {
   /** Icon, thumbnail, or avatar displayed before the text content. */
-  leading?: React.ReactNode;
+  leading?: ReactNode;
   /** Primary title line — pass a highlighted node or plain string. */
-  title: React.ReactNode;
+  title: ReactNode;
   /**
    * Metadata chips rendered below the title.
    * Falsy items are filtered out; a `·` separator is inserted between the
    * remaining items automatically.
    */
-  meta?: React.ReactNode[];
+  meta?: ReactNode[];
   /** Value, badge, or any trailing node anchored to the right. */
-  trailing?: React.ReactNode;
+  trailing?: ReactNode;
 }
 
 export function SearchResultItem({

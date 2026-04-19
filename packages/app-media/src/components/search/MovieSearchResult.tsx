@@ -70,7 +70,11 @@ export function MovieSearchResult({ data }: ResultComponentProps) {
       meta={[
         year && <span key="year">{year}</span>,
         voteAverage != null && <Rating key="rating" value={voteAverage} />,
-        runtimeLabel && <span key="runtime" data-testid="runtime">{runtimeLabel}</span>,
+        runtimeLabel && (
+          <span key="runtime" data-testid="runtime">
+            {runtimeLabel}
+          </span>
+        ),
       ]}
     />
   );

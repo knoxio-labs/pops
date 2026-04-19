@@ -37,9 +37,9 @@ import {
   StatCard,
 } from '@pops/ui';
 
-import type { ColumnDef } from '@tanstack/react-table';
-
 import { BreakdownTable } from '../components/BreakdownTable';
+
+import type { ColumnDef } from '@tanstack/react-table';
 
 function CacheManagement() {
   const utils = trpc.useUtils();

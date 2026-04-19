@@ -44,10 +44,7 @@ export function InventoryItemSearchResult({ data }: ResultComponentProps) {
       ]}
       trailing={
         replacementValue != null ? (
-          <span
-            className="shrink-0 text-xs font-medium text-muted-foreground"
-            data-testid="value"
-          >
+          <span className="shrink-0 text-xs font-medium text-muted-foreground" data-testid="value">
             {formatAUD(replacementValue)}
           </span>
         ) : undefined

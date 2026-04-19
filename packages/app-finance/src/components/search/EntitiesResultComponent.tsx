@@ -30,7 +30,11 @@ export function EntitiesResultComponent({ data }: ResultComponentProps) {
       title={highlightMatch(name, query ?? '')}
       meta={
         aliases.length > 0
-          ? [<span key="aliases" className="truncate">{aliases.join(', ')}</span>]
+          ? [
+              <span key="aliases" className="truncate">
+                {aliases.join(', ')}
+              </span>,
+            ]
           : undefined
       }
       trailing={
