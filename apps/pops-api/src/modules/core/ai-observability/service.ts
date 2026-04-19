@@ -22,7 +22,11 @@ function buildWhere(filters: ObservabilityFilters): ReturnType<typeof and> | und
     conditions.push(sql`${aiInferenceLog.model} = ${filters.model}`);
   }
   if (filters.domain) {
-    conditions.push(sql`${aiInferenceLog.domain} = ${filters.domain}`);
+    if (filters.domain === 'general') {
+      conditions.push(sql`${aiInferenceLog.domain} IS NULL`);
+    } else {
+      conditions.push(sql`${aiInferenceLog.domain} = ${filters.domain}`);
+    }
   }
   if (filters.operation) {
     conditions.push(sql`${aiInferenceLog.operation} = ${filters.operation}`);
@@ -193,7 +197,13 @@ export function getLatencyStats(filters: ObservabilityFilters = {}): LatencyStat
     })
     .from(aiInferenceLog)
     .where(
-      and(where, sql`${aiInferenceLog.latencyMs} > ${p95 * 2}`, sql`${aiInferenceLog.cached} = 0`)
+      and(
+        where,
+        sql`${aiInferenceLog.latencyMs} > 0`,
+        sql`${aiInferenceLog.status} = 'success'`,
+        sql`${aiInferenceLog.latencyMs} > ${p95 * 2}`,
+        sql`${aiInferenceLog.cached} = 0`
+      )
     )
     .orderBy(desc(aiInferenceLog.createdAt))
     .limit(20)

@@ -28,18 +28,21 @@ function lookupPricing(provider: string, model: string): { input: number; output
     return { input: cached.inputCostPerMtok, output: cached.outputCostPerMtok };
   }
   try {
+    const now = Date.now();
     const rows = getDrizzle()
       .select({
+        providerId: aiModelPricing.providerId,
+        modelId: aiModelPricing.modelId,
         inputCostPerMtok: aiModelPricing.inputCostPerMtok,
         outputCostPerMtok: aiModelPricing.outputCostPerMtok,
       })
       .from(aiModelPricing)
       .all();
     for (const row of rows) {
-      pricingCache.set(key, {
+      pricingCache.set(`${row.providerId}:${row.modelId}`, {
         inputCostPerMtok: row.inputCostPerMtok,
         outputCostPerMtok: row.outputCostPerMtok,
-        cachedAt: Date.now(),
+        cachedAt: now,
       });
     }
     const entry = pricingCache.get(key);
@@ -88,22 +91,44 @@ export async function trackInference<T>(
   const contextId = params.contextId ?? null;
 
   if (isCached) {
-    const result = await fn();
-    insertLog({
-      provider: params.provider,
-      model: params.model,
-      operation: params.operation,
-      domain,
-      inputTokens: 0,
-      outputTokens: 0,
-      costUsd: 0,
-      latencyMs: 0,
-      status: 'success',
-      cached: 1,
-      contextId,
-      errorMessage: null,
-    });
-    return result;
+    try {
+      const result = await fn();
+      insertLog({
+        provider: params.provider,
+        model: params.model,
+        operation: params.operation,
+        domain,
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        latencyMs: 0,
+        status: 'success',
+        cached: 1,
+        contextId,
+        errorMessage: null,
+      });
+      return result;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const isTimeout =
+        error instanceof Error &&
+        (error.name === 'AbortError' || msg.toLowerCase().includes('timeout'));
+      insertLog({
+        provider: params.provider,
+        model: params.model,
+        operation: params.operation,
+        domain,
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        latencyMs: 0,
+        status: isTimeout ? 'timeout' : 'error',
+        cached: 1,
+        contextId,
+        errorMessage: msg.slice(0, 1000),
+      });
+      throw error;
+    }
   }
 
   const start = Date.now();

@@ -33,7 +33,7 @@ export interface UpsertBudgetInput {
 
 function monthStart(): string {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0)).toISOString();
 }
 
 function computeProjectedExhaustion(

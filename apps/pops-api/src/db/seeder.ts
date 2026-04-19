@@ -1681,7 +1681,7 @@ export function seedDatabase(db: BetterSqlite3.Database): void {
       // AI Usage
       // -------------------------------------------------------------------------
       const insertAiUsage = db.prepare(`
-      INSERT INTO ai_usage (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
+      INSERT INTO ai_inference_log (description, entity_name, category, input_tokens, output_tokens, cost_usd, cached, import_batch_id, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
