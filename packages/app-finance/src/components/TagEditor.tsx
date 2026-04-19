@@ -7,7 +7,15 @@ import { useEffect, useRef, useState } from 'react';
  *
  * This component is tRPC-agnostic — callers wire up the API.
  */
-import { Badge, Button, Chip, hashToColor, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+import {
+  Badge,
+  Button,
+  Chip,
+  hashToColor,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@pops/ui';
 
 import { cn } from '../lib/utils';
 
@@ -59,7 +67,6 @@ const SOURCE_ICONS: Record<TagSource, string> = {
   rule: '📋',
   entity: '🏪',
 };
-
 
 export function TagEditor({
   currentTags,
