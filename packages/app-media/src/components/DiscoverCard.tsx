@@ -6,9 +6,8 @@ import { Bookmark, BookmarkCheck, Check, Eye, Loader2, Plus, RotateCw, X } from 
  *
  * Uses CardWithActionOverlay for the poster shell.
  */
-import { Badge, Button, cn } from '@pops/ui';
+import { Badge, Button, CardWithActionOverlay, cn } from '@pops/ui';
 
-import { CardWithActionOverlay } from './CardWithActionOverlay';
 import { MovieActionButtons } from './MovieActionButtons';
 
 export interface DiscoverCardProps {

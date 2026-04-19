@@ -12,7 +12,7 @@ import { trpc } from '@pops/api-client';
  *
  * PRD-072 US-05
  */
-import { Button } from '@pops/ui';
+import { Button, ConditionalActionGroup, ConditionalModalButton } from '@pops/ui';
 
 import { RequestMovieButton } from './RequestMovieButton';
 import { RequestMovieModal } from './RequestMovieModal';
@@ -199,24 +199,35 @@ function RotationButtons({
 
   if (variant === 'compact') {
     return (
-      <>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-white hover:bg-white/20"
-          onClick={handleAddToQueue}
-          disabled={addToQueueMutation.isPending}
-          title="Add to Rotation Queue"
-          aria-label="Add to Rotation Queue"
-        >
-          {addToQueueMutation.isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <ListPlus className="h-3.5 w-3.5" />
-          )}
-        </Button>
-        {radarrConfigured && (
-          <>
+      <ConditionalModalButton
+        modal={
+          <RequestMovieModal
+            open={downloadModalOpen}
+            onClose={() => setDownloadModalOpen(false)}
+            tmdbId={tmdbId}
+            title={title}
+            year={year}
+            mode="download"
+          />
+        }
+      >
+        <ConditionalActionGroup>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-white hover:bg-white/20"
+            onClick={handleAddToQueue}
+            disabled={addToQueueMutation.isPending}
+            title="Add to Rotation Queue"
+            aria-label="Add to Rotation Queue"
+          >
+            {addToQueueMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ListPlus className="h-3.5 w-3.5" />
+            )}
+          </Button>
+          {radarrConfigured && (
             <Button
               size="icon"
               variant="ghost"
@@ -227,51 +238,46 @@ function RotationButtons({
             >
               <Download className="h-3.5 w-3.5" />
             </Button>
-            <RequestMovieModal
-              open={downloadModalOpen}
-              onClose={() => setDownloadModalOpen(false)}
-              tmdbId={tmdbId}
-              title={title}
-              year={year}
-              mode="download"
-            />
-          </>
-        )}
-      </>
+          )}
+        </ConditionalActionGroup>
+      </ConditionalModalButton>
     );
   }
 
   return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleAddToQueue}
-        disabled={addToQueueMutation.isPending}
-      >
-        {addToQueueMutation.isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <ListPlus className="h-4 w-4" />
-        )}
-        Add to Queue
-      </Button>
-      {radarrConfigured && (
-        <>
+    <ConditionalModalButton
+      modal={
+        <RequestMovieModal
+          open={downloadModalOpen}
+          onClose={() => setDownloadModalOpen(false)}
+          tmdbId={tmdbId}
+          title={title}
+          year={year}
+          mode="download"
+        />
+      }
+    >
+      <ConditionalActionGroup className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddToQueue}
+          disabled={addToQueueMutation.isPending}
+        >
+          {addToQueueMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ListPlus className="h-4 w-4" />
+          )}
+          Add to Queue
+        </Button>
+        {radarrConfigured && (
           <Button variant="outline" size="sm" onClick={() => setDownloadModalOpen(true)}>
             <Download className="h-4 w-4" />
             Download
           </Button>
-          <RequestMovieModal
-            open={downloadModalOpen}
-            onClose={() => setDownloadModalOpen(false)}
-            tmdbId={tmdbId}
-            title={title}
-            year={year}
-            mode="download"
-          />
-        </>
-      )}
-    </>
+        )}
+      </ConditionalActionGroup>
+    </ConditionalModalButton>
   );
 }

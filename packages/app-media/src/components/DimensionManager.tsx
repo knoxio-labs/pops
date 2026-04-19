@@ -12,6 +12,7 @@ import { trpc } from '@pops/api-client';
 import {
   Badge,
   Button,
+  CRUDManagementSection,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -22,8 +23,6 @@ import {
   Switch,
   Textarea,
 } from '@pops/ui';
-
-import { CRUDManagementSection } from './CRUDManagementSection';
 
 interface Dimension {
   id: number;

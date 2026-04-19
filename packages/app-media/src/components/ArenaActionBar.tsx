@@ -5,5 +5,5 @@
 export type {
   ResponsiveActionBarProps as ArenaActionBarProps,
   ResponsiveActionBarMovie as ArenaMovie,
-} from './ResponsiveActionBar';
-export { ResponsiveActionBar as ArenaActionBar } from './ResponsiveActionBar';
+} from '@pops/ui';
+export { ResponsiveActionBar as ArenaActionBar } from '@pops/ui';

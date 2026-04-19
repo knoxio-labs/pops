@@ -7,9 +7,7 @@ import { trpc } from '@pops/api-client';
  * Presents quality profile, root folder, and language profile dropdowns,
  * season monitoring checkboxes with smart defaults, then submits to Sonarr.
  */
-import { Button, formatBytes, Label, Select } from '@pops/ui';
-
-import { RequestDialog } from './RequestDialog';
+import { Button, formatBytes, Label, RequestDialog, Select } from '@pops/ui';
 
 export interface SeasonInfo {
   seasonNumber: number;

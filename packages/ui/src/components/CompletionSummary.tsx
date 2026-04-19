@@ -1,47 +1,58 @@
 import { ArrowRight, CheckCircle, Clock, Trophy, XCircle } from 'lucide-react';
-import { useNavigate } from 'react-router';
 
-/**
- * SummaryCard — completion summary for a debrief session.
- *
- * Displays compared vs. skipped dimensions, with "Do another" and "Done" CTAs.
- * Extracted from DebriefControls so it can be reused independently.
- */
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@pops/ui';
+import { cn } from '../lib/utils';
+import { Badge } from '../primitives/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../primitives/card';
+import { Button } from './Button';
 
-interface DimensionResult {
+export interface CompletionSummaryDimension {
   dimensionId: number;
   name: string;
   status: 'complete' | 'pending';
   comparisonId: number | null;
 }
 
-export interface SummaryCardProps {
+export interface CompletionSummaryData {
+  sessionId: number;
   movieTitle: string;
-  dimensions: DimensionResult[];
-  onDoAnother?: () => void;
+  dimensions: CompletionSummaryDimension[];
 }
 
-export function SummaryCard({ movieTitle, dimensions, onDoAnother }: SummaryCardProps) {
-  const navigate = useNavigate();
+export interface CompletionSummaryProps {
+  data: CompletionSummaryData;
+  onDoAnother?: () => void;
+  onDone: () => void;
+  className?: string;
+}
 
-  const completed = dimensions.filter((d) => d.status === 'complete' && d.comparisonId !== null);
-  const skipped = dimensions.filter((d) => d.status === 'complete' && d.comparisonId === null);
+/**
+ * Post-session debrief summary: per-dimension outcome badges and exit actions.
+ */
+export function CompletionSummary({
+  data,
+  onDoAnother,
+  onDone,
+  className,
+}: CompletionSummaryProps) {
+  const completed = data.dimensions.filter(
+    (d) => d.status === 'complete' && d.comparisonId !== null
+  );
+  const skipped = data.dimensions.filter((d) => d.status === 'complete' && d.comparisonId === null);
 
   return (
-    <Card data-testid="completion-summary">
+    <Card data-testid="completion-summary" className={cn(className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-warning" />
           <CardTitle className="text-lg">Debrief Complete</CardTitle>
         </div>
         <p className="text-muted-foreground text-sm">
-          Finished debrief for <strong>{movieTitle}</strong>
+          Finished debrief for <strong>{data.movieTitle}</strong>
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-2">
-          {dimensions.map((dim) => (
+          {data.dimensions.map((dim) => (
             <div key={dim.dimensionId} className="flex items-center justify-between text-sm">
               <span>{dim.name}</span>
               {dim.status === 'complete' && dim.comparisonId !== null ? (
@@ -75,12 +86,7 @@ export function SummaryCard({ movieTitle, dimensions, onDoAnother }: SummaryCard
               Do another
             </Button>
           )}
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => navigate('/media/rankings')}
-            data-testid="done-btn"
-          >
+          <Button variant="default" size="sm" onClick={onDone} data-testid="done-btn">
             Done
           </Button>
         </div>
@@ -88,3 +94,5 @@ export function SummaryCard({ movieTitle, dimensions, onDoAnother }: SummaryCard
     </Card>
   );
 }
+
+CompletionSummary.displayName = 'CompletionSummary';

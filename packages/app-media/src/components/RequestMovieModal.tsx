@@ -11,9 +11,7 @@ import { trpc } from '@pops/api-client';
  * POPS library entry, and sets rotation_status = 'protected'. No profile or
  * folder selection is shown because those are read from server settings.
  */
-import { Button, formatBytes, Select } from '@pops/ui';
-
-import { RequestDialog } from './RequestDialog';
+import { Button, formatBytes, RequestDialog, Select } from '@pops/ui';
 
 interface RequestMovieModalProps {
   open: boolean;

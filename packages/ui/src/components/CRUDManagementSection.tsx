@@ -1,19 +1,13 @@
 import { Plus } from 'lucide-react';
 
-import { Button } from '@pops/ui';
+import { Button } from './Button';
 
 import type { ReactNode } from 'react';
 
 /**
- * CRUDManagementSection — generic section wrapper for list-based CRUD UIs.
- *
- * Renders a consistent header (title + description + optional add button)
- * followed by an inline form slot (when showForm) and a list slot.
- *
- * Used by SourceManagementSection and DimensionManager to share the
- * section chrome without coupling to their specific domain logic.
+ * Generic section wrapper for list-based CRUD UIs: header, optional add,
+ * optional inline form, and list body.
  */
-
 export interface CRUDManagementSectionProps {
   title: string;
   description?: string;
@@ -56,3 +50,5 @@ export function CRUDManagementSection({
     </div>
   );
 }
+
+CRUDManagementSection.displayName = 'CRUDManagementSection';

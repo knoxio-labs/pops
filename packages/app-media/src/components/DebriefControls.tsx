@@ -9,27 +9,15 @@ import { trpc } from '@pops/api-client';
  *
  * Designed as composable components for integration into the DebriefPage.
  */
-import { Button } from '@pops/ui';
-
-import { SummaryCard } from './SummaryCard';
-
-export type { SummaryCardProps } from './SummaryCard';
-export { SummaryCard };
+import {
+  Button,
+  CompletionSummary as CompletionSummaryCard,
+  type CompletionSummaryData,
+} from '@pops/ui';
 
 // ── Types ──
 
-interface DimensionResult {
-  dimensionId: number;
-  name: string;
-  status: 'complete' | 'pending';
-  comparisonId: number | null;
-}
-
-interface DebriefSummaryData {
-  sessionId: number;
-  movieTitle: string;
-  dimensions: DimensionResult[];
-}
+export type DebriefSummaryData = CompletionSummaryData;
 
 // ── Skip Dimension Button ──
 
@@ -100,15 +88,24 @@ export function DoneForNowButton({ onExit }: DoneForNowButtonProps) {
   );
 }
 
-// ── Completion Summary (legacy alias — prefer SummaryCard) ──
+// ── Completion Summary (router-aware wrapper) ──
 
 interface CompletionSummaryProps {
-  data: DebriefSummaryData;
+  data: CompletionSummaryData;
   onDoAnother?: () => void;
 }
 
 export function CompletionSummary({ data, onDoAnother }: CompletionSummaryProps) {
-  return <SummaryCard {...data} onDoAnother={onDoAnother} />;
+  const navigate = useNavigate();
+  return (
+    <CompletionSummaryCard
+      data={data}
+      onDoAnother={onDoAnother}
+      onDone={() => {
+        navigate('/media/rankings');
+      }}
+    />
+  );
 }
 
 // ── Debrief Action Bar ──
@@ -117,7 +114,7 @@ interface DebriefActionBarProps {
   sessionId: number;
   currentDimension: { id: number; name: string } | null;
   allComplete: boolean;
-  summaryData: DebriefSummaryData | null;
+  summaryData: CompletionSummaryData | null;
   onDimensionSkipped?: () => void;
   onDoAnother?: () => void;
 }
@@ -134,8 +131,18 @@ export function DebriefActionBar({
   onDimensionSkipped,
   onDoAnother,
 }: DebriefActionBarProps) {
+  const navigate = useNavigate();
+
   if (allComplete && summaryData) {
-    return <SummaryCard {...summaryData} onDoAnother={onDoAnother} />;
+    return (
+      <CompletionSummaryCard
+        data={summaryData}
+        onDoAnother={onDoAnother}
+        onDone={() => {
+          navigate('/media/rankings');
+        }}
+      />
+    );
   }
 
   return (

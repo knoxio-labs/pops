@@ -1,17 +1,13 @@
 import { Ban, Clock, EyeOff, MoreHorizontal } from 'lucide-react';
 
-import { Button, DropdownMenu, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../primitives/tooltip';
+import { Button } from './Button';
+import { DropdownMenu } from './DropdownMenu';
 
 /**
- * ResponsiveActionBar — a two-tier action bar for comparison screens.
- *
- * Primary actions (skip, stale, done) are always visible.
- * Secondary actions (N/A, not-watched) appear in a dropdown on mobile
- * and as buttons on desktop (md+).
- *
- * Renamed from ArenaActionBar to reflect its generic responsive layout.
+ * Two-tier action bar: primary row always visible; secondary on md+;
+ * overflow menu on small screens.
  */
-
 export interface ResponsiveActionBarMovie {
   id: number;
   title: string;
@@ -46,7 +42,6 @@ export function ResponsiveActionBar({
 }: ResponsiveActionBarProps) {
   return (
     <div className="flex flex-col items-center gap-3" data-testid="arena-action-bar">
-      {/* Primary row: always visible */}
       <div className="flex flex-wrap justify-center gap-2">
         <Button
           variant="outline"
@@ -106,7 +101,6 @@ export function ResponsiveActionBar({
           Done
         </Button>
 
-        {/* Overflow menu for secondary/destructive actions on mobile */}
         <div className="md:hidden">
           <DropdownMenu
             trigger={
@@ -156,7 +150,6 @@ export function ResponsiveActionBar({
         </div>
       </div>
 
-      {/* Secondary row: visible on desktop only */}
       <div className="hidden md:flex justify-center gap-2">
         <Button
           variant="outline"
@@ -201,3 +194,5 @@ export function ResponsiveActionBar({
     </div>
   );
 }
+
+ResponsiveActionBar.displayName = 'ResponsiveActionBar';
