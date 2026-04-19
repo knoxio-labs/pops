@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import {
   Button,
   Checkbox,
@@ -14,8 +15,6 @@ import {
   Label,
   Textarea,
 } from '@pops/ui';
-
-import { trpc } from '../../lib/trpc';
 
 import type { inferRouterOutputs } from '@trpc/server';
 

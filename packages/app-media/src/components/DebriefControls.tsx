@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * Debrief session controls: skip dimension, bail out (done for now),
  * and completion summary.
@@ -17,8 +18,6 @@ import { toast } from 'sonner';
  * Designed as composable components for integration into the DebriefPage.
  */
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 // ── Types ──
 

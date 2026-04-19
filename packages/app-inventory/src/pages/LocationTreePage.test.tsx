@@ -11,7 +11,7 @@ const mockUpdateMutate = vi.fn();
 const mockDeleteMutate = vi.fn();
 const mockInvalidate = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       locations: {

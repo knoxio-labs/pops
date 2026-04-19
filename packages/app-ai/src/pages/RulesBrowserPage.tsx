@@ -1,6 +1,7 @@
 import { BookOpen, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 /**
  * RulesBrowserPage — browse, filter, adjust, and delete AI categorisation rules.
  * PRD-053/US-02 (tb-542).
@@ -18,6 +19,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  formatDate,
   PageHeader,
   Select,
   type SelectOption,
@@ -25,9 +27,8 @@ import {
   Slider,
   SortableHeader,
   TextInput,
+  useDebouncedCallback,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -57,14 +58,6 @@ const MATCH_TYPE_OPTIONS: SelectOption[] = [
 
 const PAGE_SIZE = 50;
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 function ConfidenceSlider({
   ruleId,
   initial,
@@ -75,7 +68,6 @@ function ConfidenceSlider({
   onAutoDelete: (id: string) => void;
 }) {
   const [value, setValue] = useState(initial);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialRef = useRef(initial);
   const utils = trpc.useUtils();
 
@@ -109,20 +101,13 @@ function ConfidenceSlider({
     [ruleId, adjustMutation, onAutoDelete]
   );
 
+  const debouncedCommit = useDebouncedCallback(commit, 400);
+
   const handleChange = (values: number[]) => {
     const next = values[0] ?? value;
     setValue(next);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      commit(next);
-    }, 400);
+    debouncedCommit(next);
   };
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   return (
     <div className="flex items-center gap-2 min-w-35">

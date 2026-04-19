@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 import { useSetPageContext } from '@pops/navigation';
 import {
   Alert,
@@ -26,7 +27,6 @@ import { MarkAsWatchedButton } from '../components/MarkAsWatchedButton';
 import { MovieActionButtons } from '../components/MovieActionButtons';
 import { WatchlistToggle } from '../components/WatchlistToggle';
 import { formatCurrency, formatLanguage, formatRuntime } from '../lib/format';
-import { trpc } from '../lib/trpc';
 
 function MovieDetailSkeleton() {
   return (

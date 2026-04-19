@@ -2,14 +2,13 @@ import { Clock, Database, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * SourceManagementSection — CRUD UI for rotation source management.
  *
  * PRD-072 US-03
  */
 import { Button, Label, NumberInput, Select, Switch } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 // ---------------------------------------------------------------------------
 // Type icons for source types

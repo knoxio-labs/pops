@@ -2,6 +2,7 @@ import { Compass, Loader2, RefreshCw, Swords } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * DiscoverPage — dynamic shelf-based movie discovery.
  *
@@ -14,7 +15,6 @@ import { Button, Skeleton } from '@pops/ui';
 import { PreferenceProfile } from '../components/PreferenceProfile';
 import { ShelfSection } from '../components/ShelfSection';
 import { useDiscoverCardActions } from '../hooks/useDiscoverCardActions';
-import { trpc } from '../lib/trpc';
 
 const COMPARISON_THRESHOLD = 5;
 

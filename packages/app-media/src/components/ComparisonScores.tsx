@@ -7,14 +7,13 @@ import {
   Tooltip,
 } from 'recharts';
 
+import { trpc } from '@pops/api-client';
 /**
  * ComparisonScores — radar chart showing Elo scores across comparison dimensions.
  * Queries scores and dimensions, merges them, and renders a recharts RadarChart.
  * Hidden when zero comparisons; shows "Not enough data" when 1–2 comparisons.
  */
 import { Skeleton } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 /** Normalize an Elo score (typically 1000–2000) to a 0–100 scale. */
 export function normalizeScore(elo: number): number {

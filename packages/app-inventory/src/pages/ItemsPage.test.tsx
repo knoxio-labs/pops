@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   searchByAssetId: vi.fn(),
 }));
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       items: {

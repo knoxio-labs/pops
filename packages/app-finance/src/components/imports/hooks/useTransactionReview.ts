@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
+
 import { reevaluateTransactions } from '../../../lib/local-re-evaluation';
 import { computeMergedRules } from '../../../lib/merged-state';
 import { groupTransactionsByEntity } from '../../../lib/transaction-utils';
-import { trpc } from '../../../lib/trpc';
 import { useImportStore } from '../../../store/importStore';
 
 export type ViewMode = 'list' | 'grouped';

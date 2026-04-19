@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { _clearRegistry, getResultComponent, registerResultComponent } from '@pops/navigation';
+import { highlightMatch } from '@pops/ui';
 
-import { highlightMatch, InventoryItemSearchResult } from './InventoryItemSearchResult';
+import { InventoryItemSearchResult } from './InventoryItemSearchResult';
 
 beforeEach(() => {
   _clearRegistry();

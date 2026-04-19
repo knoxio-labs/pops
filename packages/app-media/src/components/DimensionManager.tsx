@@ -2,6 +2,7 @@ import { Check, ChevronDown, ChevronUp, Pencil, Plus, Settings, X } from 'lucide
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * DimensionManager — CRUD panel for comparison dimensions.
  *
@@ -22,8 +23,6 @@ import {
   Switch,
   Textarea,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 interface Dimension {
   id: number;

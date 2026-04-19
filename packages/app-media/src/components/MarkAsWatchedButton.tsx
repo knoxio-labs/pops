@@ -2,9 +2,8 @@ import { CalendarDays, CircleCheck, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Button, DateInput } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
+import { trpc } from '@pops/api-client';
+import { Button, DateInput, formatDate } from '@pops/ui';
 
 export interface MarkAsWatchedButtonProps {
   mediaId: number;
@@ -94,14 +93,6 @@ export function MarkAsWatchedButton({ mediaId, className }: MarkAsWatchedButtonP
       mediaId,
       watchedAt: new Date(customDate).toISOString(),
       completed: 1,
-    });
-  };
-
-  const formatDate = (iso: string) => {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
     });
   };
 

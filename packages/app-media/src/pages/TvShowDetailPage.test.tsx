@@ -33,7 +33,7 @@ const {
 // Store batchLog opts so tests can invoke callbacks
 let batchLogOpts: Record<string, unknown> = {};
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       tvShows: {

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockAnalyzeCorrectionMutateAsync = vi.fn();
 const mockEntitiesQuery = vi.fn();
 
-vi.mock('../../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
       entities: {

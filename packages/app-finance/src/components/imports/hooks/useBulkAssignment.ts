@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
+
 import { computeMergedEntities } from '../../../lib/merged-state';
-import { trpc } from '../../../lib/trpc';
 import { useImportStore } from '../../../store/importStore';
 
 import type { Dispatch, SetStateAction } from 'react';

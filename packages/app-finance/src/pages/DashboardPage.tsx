@@ -1,3 +1,4 @@
+import { trpc } from '@pops/api-client';
 /**
  * Dashboard page - overview of finances
  */
@@ -11,8 +12,6 @@ import {
   Skeleton,
   StatCard,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 import type { Budget } from '@pops/api/modules/finance/budgets/types';
 import type { Transaction } from '@pops/api/modules/finance/transactions/types';

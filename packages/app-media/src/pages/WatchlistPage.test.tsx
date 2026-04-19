@@ -12,7 +12,7 @@ const mockUpdateMutate = vi.fn();
 const mockInvalidate = vi.fn();
 const capturedOpts: Record<string, Record<string, unknown>> = {};
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       watchlist: {

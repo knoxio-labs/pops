@@ -23,7 +23,7 @@ vi.mock('recharts', () => ({
 const mockScoresQuery = vi.fn();
 const mockDimensionsQuery = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       comparisons: {

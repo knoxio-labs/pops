@@ -12,7 +12,7 @@ const mockClearStaleMutate = vi.fn();
 const mockClearAllMutate = vi.fn();
 const mockInvalidateCacheStats = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
       aiObservability: {

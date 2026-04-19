@@ -58,7 +58,7 @@ vi.mock('react-router', async () => {
 const mockValueByTypeQuery = vi.fn();
 const mockValueByLocationQuery = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       reports: {

@@ -23,7 +23,7 @@ let mutationCallbacks: {
 } = {};
 let mockIsPending = false;
 
-vi.mock('../../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     finance: {
       imports: {

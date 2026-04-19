@@ -31,7 +31,7 @@ const mockListForMediaQuery = vi.fn();
 const mockInvalidateRandomPair = vi.fn();
 const mockInvalidateWatchlistList = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       comparisons: {
@@ -266,8 +266,8 @@ describe('CompareArenaPage', () => {
     unmount();
 
     const originalMock = vi.fn();
-    vi.doMock('../lib/trpc', async () => {
-      const mod = await vi.importActual('../lib/trpc');
+    vi.doMock('@pops/api-client', async () => {
+      const mod = await vi.importActual('@pops/api-client');
       return {
         ...mod,
         trpc: {

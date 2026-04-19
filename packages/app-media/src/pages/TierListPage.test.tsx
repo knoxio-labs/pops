@@ -60,7 +60,7 @@ const mockTierListQuery = vi.fn();
 const mockRefetch = vi.fn();
 const mockMutate = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     useUtils: () => ({
       media: {

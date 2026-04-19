@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * SearchPage — search TMDB (movies) and TheTVDB (TV shows) and add to library.
  *
@@ -32,7 +33,6 @@ import {
   SearchResultCard,
   type SearchResultType,
 } from '../components/SearchResultCard';
-import { trpc } from '../lib/trpc';
 
 type SearchMode = 'movies' | 'tv' | 'both';
 

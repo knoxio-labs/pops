@@ -1,11 +1,10 @@
+import { trpc } from '@pops/api-client';
 /**
  * ArrStatusBadge — shows Radarr/Sonarr monitoring and download status.
  *
  * Hidden when the respective service is not configured.
  */
 import { Badge } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 type MediaKind = 'movie' | 'show';
 

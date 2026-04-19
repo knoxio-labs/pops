@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   valueByTypeQuery: vi.fn(),
 }));
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       reports: {

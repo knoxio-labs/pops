@@ -11,10 +11,10 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 import { Button } from '@pops/ui';
 
 import { buildCommitPayload } from '../../lib/commit-payload';
-import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
 
 type ChangeSetOp =

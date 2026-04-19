@@ -36,7 +36,7 @@ const mockInvalidateDebrief = vi.fn();
 const mockInvalidatePending = vi.fn();
 const mockInvalidateWatchlist = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       comparisons: {

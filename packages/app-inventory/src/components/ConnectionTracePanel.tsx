@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * ConnectionTracePanel — displays connection chain as an expandable tree.
  *
@@ -17,8 +18,6 @@ import {
   Skeleton,
   TypeBadge,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 interface TraceNode {
   id: string;

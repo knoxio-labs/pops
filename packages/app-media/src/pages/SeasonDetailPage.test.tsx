@@ -44,7 +44,7 @@ const {
 
 let _batchLogOpts: Record<string, unknown> = {};
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       tvShows: {

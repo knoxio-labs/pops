@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import { useSetPageContext } from '@pops/navigation';
 import {
   Alert,
@@ -22,7 +23,6 @@ import {
 import { ArrStatusBadge } from '../components/ArrStatusBadge';
 import { ProgressBar } from '../components/ProgressBar';
 import { formatYearRange } from '../lib/format';
-import { trpc } from '../lib/trpc';
 
 function TvShowDetailSkeleton() {
   return (

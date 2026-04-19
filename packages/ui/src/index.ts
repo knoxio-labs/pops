@@ -2,7 +2,17 @@
 
 // Utilities
 export { cn } from './lib/utils';
-export { useDebouncedValue } from './lib/useDebounce';
+export { useDebouncedValue, useDebouncedCallback } from './lib/useDebounce';
+export {
+  formatCurrency,
+  formatAUD,
+  formatUSD,
+  formatDate,
+  formatBytes,
+  formatRelativeTime,
+} from './lib/format';
+export type { FormatCurrencyOptions, DateStyle } from './lib/format';
+export { highlightMatch } from './lib/highlightMatch';
 
 // Primitives — non-conflicting exports
 export * from './primitives/accordion';

@@ -2,6 +2,7 @@ import { FileText, Link2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * LinkDocumentDialog — search Paperless-ngx and link a document to an inventory item.
  * Opens a dialog with search input, results with thumbnails, document type selector,
@@ -19,8 +20,6 @@ import {
   Skeleton,
   TextInput,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 /** Shape of a document info result from the paperless search API. */
 interface PaperlessDocResult {

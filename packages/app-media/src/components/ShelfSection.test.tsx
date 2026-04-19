@@ -13,7 +13,7 @@ const mockUseUtils = vi.fn().mockReturnValue({
   },
 });
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     useUtils: () => mockUseUtils(),
   },

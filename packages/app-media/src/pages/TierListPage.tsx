@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * TierListPage — dimension selector + TierListBoard for drag-and-drop tier placement.
  *
@@ -29,7 +30,6 @@ import {
 import { type Tier, TierListBoard, type TierMovie } from '../components/TierListBoard';
 import { TierListSummary } from '../components/TierListSummary';
 import { useTierListSubmit } from '../hooks/useTierListSubmit';
-import { trpc } from '../lib/trpc';
 
 function MovieCardSkeleton() {
   return (

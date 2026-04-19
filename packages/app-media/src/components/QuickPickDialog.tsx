@@ -2,6 +2,7 @@ import { Play, SkipForward, Sparkles } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * QuickPickDialog — "What Should I Watch Tonight?" modal.
  *
@@ -18,8 +19,6 @@ import {
   DialogTrigger,
   Skeleton,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 export function QuickPickDialog() {
   const [open, setOpen] = useState(false);

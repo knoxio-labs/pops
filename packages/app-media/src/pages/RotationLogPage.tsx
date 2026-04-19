@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * RotationLogPage — paginated history of rotation cycle events.
  *
@@ -23,11 +24,10 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  formatDate,
   PageHeader,
   Skeleton,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 const PAGE_SIZE = 20;
 
@@ -45,10 +45,6 @@ function parseDetails(raw: string | null): LogDetails | null {
   } catch {
     return null;
   }
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
 }
 
 export function RotationLogPage() {
@@ -203,7 +199,9 @@ function LogEntry({
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{formatDate(entry.executedAt)}</span>
+                    <span className="text-sm font-medium">
+                      {formatDate(entry.executedAt, 'datetime')}
+                    </span>
                     {wasSkipped && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
                         <AlertTriangle className="h-3 w-3" />

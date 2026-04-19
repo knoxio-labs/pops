@@ -2,6 +2,7 @@ import { LayoutGrid, LayoutList, Package, Plus, Search } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * ItemsPage — inventory item list with search, filters, table/grid toggle,
  * and summary statistics. PRD-019/US-2.
@@ -21,7 +22,6 @@ import {
 
 import { InventoryCard } from '../components/InventoryCard';
 import { InventoryTable } from '../components/InventoryTable';
-import { trpc } from '../lib/trpc';
 import { formatCurrency } from '../lib/utils';
 
 import type { InventoryItem } from '@pops/api/modules/inventory/items/types';

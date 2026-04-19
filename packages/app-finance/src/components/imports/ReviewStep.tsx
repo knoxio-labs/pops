@@ -2,10 +2,10 @@ import { AlertCircle, AlertTriangle, CheckCircle, Settings2, XCircle } from 'luc
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import { Button } from '@pops/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
 
-import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
 import { CorrectionProposalDialog } from './CorrectionProposalDialog';
 import { EntityCreateDialog } from './EntityCreateDialog';

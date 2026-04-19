@@ -3,13 +3,12 @@ import { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * ComparisonHistoryPage — paginated list of all comparisons with delete capability.
  * Allows users to review past comparisons and undo mistakes.
  */
 import { Button, Card, CardContent, Input, Select, Skeleton, useDebouncedValue } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 const PAGE_SIZE = 20;
 const UNDO_DELAY_MS = 5000;

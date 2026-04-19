@@ -2,15 +2,14 @@ import { AlertCircle, ChevronDown, ChevronRight, RefreshCw, ShieldCheck } from '
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 /**
  * WarrantiesPage — warranty tracking dashboard for inventory items.
  *
  * 5-tier system: <30d (red), 30-60d (yellow), 60-90d (orange),
  * >90d active (green), expired (grey). PRD-050/US-01.
  */
-import { AssetIdBadge, Badge, Button, PageHeader, Skeleton } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
+import { AssetIdBadge, Badge, Button, formatAUD, formatDate, PageHeader, Skeleton } from '@pops/ui';
 
 interface WarrantyItem {
   id: string;
@@ -21,23 +20,6 @@ interface WarrantyItem {
   warrantyExpires: string | null;
   replacementValue: number | null;
   warrantyDocumentId: number | null;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function daysUntil(dateStr: string): number {
@@ -145,7 +127,7 @@ function WarrantyRow({
       )}
       {item.replacementValue != null && (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {formatCurrency(item.replacementValue)}
+          {formatAUD(item.replacementValue)}
         </span>
       )}
     </button>

@@ -7,7 +7,7 @@ const mockDeleteMutate = vi.fn();
 const mockAdjustMutate = vi.fn();
 const mockInvalidate = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
       corrections: {

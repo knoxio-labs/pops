@@ -1,5 +1,5 @@
 import { registerResultComponent } from '@pops/navigation';
-import { Badge } from '@pops/ui';
+import { Badge, highlightMatch } from '@pops/ui';
 
 import type { ResultComponentProps } from '@pops/navigation';
 
@@ -20,25 +20,6 @@ const entityTypeStyles: Record<string, string> = {
   organisation: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400',
 };
 
-function highlightMatch(text: string, query?: string): React.ReactNode {
-  if (!query) return text;
-
-  const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return text;
-
-  const before = text.slice(0, idx);
-  const match = text.slice(idx, idx + query.length);
-  const after = text.slice(idx + query.length);
-
-  return (
-    <>
-      {before}
-      <mark className="bg-warning/20 rounded-sm px-0.5">{match}</mark>
-      {after}
-    </>
-  );
-}
-
 export function EntitiesResultComponent({ data }: ResultComponentProps) {
   const { name, type, aliases, query } = data as unknown as EntityHitData;
 
@@ -47,7 +28,7 @@ export function EntitiesResultComponent({ data }: ResultComponentProps) {
   return (
     <div className="flex items-center gap-2 min-w-0">
       <div className="flex flex-col min-w-0">
-        <span className="text-sm font-medium truncate">{highlightMatch(name, query)}</span>
+        <span className="text-sm font-medium truncate">{highlightMatch(name, query ?? '')}</span>
         {aliases.length > 0 && (
           <span className="text-xs text-muted-foreground truncate">{aliases.join(', ')}</span>
         )}

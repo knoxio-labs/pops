@@ -79,7 +79,7 @@ const mockRemoveMutate = vi.fn();
 const mockReorderMutate = vi.fn();
 const mockRefetchPhotos = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       items: {

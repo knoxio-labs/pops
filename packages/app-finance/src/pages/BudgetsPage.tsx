@@ -8,6 +8,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { trpc } from '@pops/api-client';
 import { useSetPageContext } from '@pops/navigation';
 import {
   Alert,
@@ -39,8 +40,6 @@ import {
   Textarea,
   TextInput,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 import type { ColumnDef } from '@tanstack/react-table';
 

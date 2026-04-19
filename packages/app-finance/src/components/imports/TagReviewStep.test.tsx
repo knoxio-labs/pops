@@ -33,7 +33,7 @@ vi.mock('../../store/importStore', () => ({
 // Mock trpc
 // ---------------------------------------------------------------------------
 
-vi.mock('../../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     finance: {
       transactions: {

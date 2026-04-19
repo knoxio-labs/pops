@@ -32,7 +32,7 @@ let mockRejectOnSuccess:
   | undefined;
 let _mockRejectOnError: ((err: Error) => void) | undefined;
 
-vi.mock('../../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
       tagRules: {

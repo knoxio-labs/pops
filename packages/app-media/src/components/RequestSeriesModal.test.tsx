@@ -9,7 +9,7 @@ const mockLanguagesQuery = vi.fn();
 const mockAddSeriesMutate = vi.fn();
 let addSeriesOpts: Record<string, unknown> = {};
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       arr: {

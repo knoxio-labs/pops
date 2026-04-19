@@ -8,7 +8,7 @@ const mockWatchHistoryQuery = vi.fn();
 const mockGetStalenessQuery = vi.fn();
 const mockGetPendingDebriefsQuery = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       movies: {

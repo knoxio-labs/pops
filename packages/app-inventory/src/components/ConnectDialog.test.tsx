@@ -6,7 +6,7 @@ const mockItemsListQuery = vi.fn();
 const mockConnectMutate = vi.fn();
 const mockConnectMutation = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     inventory: {
       items: {

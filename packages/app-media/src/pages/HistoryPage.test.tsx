@@ -22,7 +22,7 @@ const mockInvalidateListRecent = vi.fn();
 const mockInvalidateList = vi.fn();
 const mockInvalidateWatchlist = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     media: {
       watchHistory: {

@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * ShelfSection — lazy-loaded horizontal shelf for a single assembleSession shelf.
  *
@@ -11,7 +12,6 @@ import { toast } from 'sonner';
  */
 import { Button, Skeleton } from '@pops/ui';
 
-import { trpc } from '../lib/trpc';
 import { DiscoverCard } from './DiscoverCard';
 import { HorizontalScrollRow } from './HorizontalScrollRow';
 import { LeavingBadge } from './LeavingBadge';

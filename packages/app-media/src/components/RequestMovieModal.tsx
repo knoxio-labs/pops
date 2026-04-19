@@ -1,6 +1,7 @@
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { trpc } from '@pops/api-client';
 /**
  * RequestMovieModal — Modal for adding a movie to Radarr.
  *
@@ -12,16 +13,15 @@ import { useEffect, useState } from 'react';
  * folder selection is shown because those are read from server settings.
  */
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  formatBytes,
   Select,
 } from '@pops/ui';
-import { Button } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 interface RequestMovieModalProps {
   open: boolean;
@@ -31,11 +31,6 @@ interface RequestMovieModalProps {
   year: number;
   /** `'request'` (default) uses addMovie; `'download'` uses downloadAndProtect. */
   mode?: 'request' | 'download';
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 export function RequestMovieModal({

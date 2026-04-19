@@ -1,12 +1,11 @@
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * ExcludedDimensions — shows which comparison dimensions a movie is excluded from
  * and provides an "Include" button to restore it.
  */
 import { Button } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 export interface ExcludedDimensionsProps {
   mediaType: 'movie' | 'tv_show';

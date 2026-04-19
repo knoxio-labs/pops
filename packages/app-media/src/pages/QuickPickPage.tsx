@@ -1,10 +1,10 @@
 import { RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import { trpc } from '@pops/api-client';
 import { Button, Skeleton } from '@pops/ui';
 
 import { MediaCard } from '../components/MediaCard';
-import { trpc } from '../lib/trpc';
 
 const COUNT_OPTIONS = [2, 3, 4, 5] as const;
 const DEFAULT_COUNT = 3;

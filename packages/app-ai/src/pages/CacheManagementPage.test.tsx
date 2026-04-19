@@ -22,7 +22,7 @@ const mockInvalidate = vi.fn();
 const mockCacheStats = vi.fn();
 const mockGetStats = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     useUtils: () => ({
       core: {

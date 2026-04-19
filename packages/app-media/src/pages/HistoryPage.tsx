@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * HistoryPage — watch history with filter tabs, pagination, and delete.
  *
@@ -27,7 +28,6 @@ import {
 } from '@pops/ui';
 
 import { formatEpisodeCode } from '../lib/format';
-import { trpc } from '../lib/trpc';
 
 const PAGE_SIZE = 50;
 

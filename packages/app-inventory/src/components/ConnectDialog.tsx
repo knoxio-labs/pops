@@ -2,6 +2,7 @@ import { Link2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * ConnectDialog — search and connect inventory items.
  * Opens a dialog with a search input that queries inventory.items.list,
@@ -20,8 +21,6 @@ import {
   TextInput,
   TypeBadge,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 import type { InventoryItem } from '@pops/api/modules/inventory/items/types';
 

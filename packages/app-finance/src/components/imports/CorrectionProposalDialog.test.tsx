@@ -42,7 +42,7 @@ vi.mock('../../store/importStore', () => ({
   },
 }));
 
-vi.mock('../../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
       corrections: {
@@ -862,7 +862,7 @@ describe('US-14: Save & Learn — acceptance criteria', () => {
     >;
     const expectedDescriptions = ['COLES 9999 NEW', 'WOOLWORTHS 1234 SYD'];
     const combinedPreviewCall = calls.find(([arg]) => {
-      const descriptions = arg.transactions.map((t) => t.description).sort();
+      const descriptions = arg.transactions.map((t) => t.description).toSorted();
       return JSON.stringify(descriptions) === JSON.stringify(expectedDescriptions);
     });
     expect(combinedPreviewCall).toBeDefined();

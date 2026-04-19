@@ -6,7 +6,8 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
-import { trpc } from '../../../lib/trpc';
+import { trpc } from '@pops/api-client';
+
 import { useImportStore } from '../../../store/importStore';
 import { localOpsToChangeSet, serverOpToLocalOp } from './useLocalOps';
 

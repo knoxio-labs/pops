@@ -2,6 +2,7 @@ import { Plus, Search } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import {
   Button,
   Dialog,
@@ -18,7 +19,6 @@ import {
   sortRulesForBrowseDisplay,
 } from '../../lib/correction-browse-reorder';
 import { computeMergedRules } from '../../lib/merged-state';
-import { trpc } from '../../lib/trpc';
 import { useImportStore } from '../../store/importStore';
 import {
   type CorrectionSignal,

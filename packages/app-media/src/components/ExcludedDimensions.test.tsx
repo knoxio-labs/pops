@@ -6,7 +6,7 @@ const mockScoresQuery = vi.fn();
 const mockDimensionsQuery = vi.fn();
 const mockIncludeMutate = vi.fn();
 
-vi.mock('../lib/trpc', () => ({
+vi.mock('@pops/api-client', () => ({
   trpc: {
     useUtils: () => ({
       media: {

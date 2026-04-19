@@ -7,7 +7,7 @@ import { useCallback, useRef, useState } from 'react';
  * Handles file selection, shows upload progress per file,
  * and allows deleting individual queued/uploaded photos.
  */
-import { Button, Progress } from '@pops/ui';
+import { Button, formatBytes, Progress } from '@pops/ui';
 
 import { cn } from '../lib/utils';
 
@@ -46,12 +46,6 @@ interface PhotoUploadProps {
 
 const DEFAULT_MAX_SIZE_MB = 10;
 const DEFAULT_ACCEPT = 'image/*';
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-}
 
 export function PhotoUpload({
   onFilesSelected,

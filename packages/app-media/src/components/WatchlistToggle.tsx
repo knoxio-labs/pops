@@ -1,9 +1,8 @@
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import { Button } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 type DisplayMediaType = 'movie' | 'tv';
 type ApiMediaType = 'movie' | 'tv_show';

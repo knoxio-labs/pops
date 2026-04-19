@@ -16,6 +16,7 @@ import {
   type Condition,
   ConditionBadge,
   DataTable,
+  formatAUD,
   LocationBreadcrumb,
   type LocationSegment,
   SortableHeader,
@@ -51,15 +52,6 @@ const VALID_CONDITIONS = new Set<string>([
   'Fair',
   'Poor',
 ]);
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function createColumns(
   locationPathMap: ReadonlyMap<string, LocationSegment[]>
@@ -127,7 +119,7 @@ function createColumns(
       header: ({ column }) => <SortableHeader column={column}>Value</SortableHeader>,
       cell: ({ row }) => {
         const value = row.original.replacementValue;
-        return value != null ? formatCurrency(value) : '—';
+        return value != null ? formatAUD(value) : '—';
       },
     },
     {

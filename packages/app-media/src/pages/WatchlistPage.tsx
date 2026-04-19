@@ -29,11 +29,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 import { Alert, AlertDescription, AlertTitle, Badge, Skeleton, Textarea } from '@pops/ui';
 import { Button } from '@pops/ui';
 
 import { LeavingBadge } from '../components/LeavingBadge';
-import { trpc } from '../lib/trpc';
 
 import type { RotationMeta } from '../lib/types';
 

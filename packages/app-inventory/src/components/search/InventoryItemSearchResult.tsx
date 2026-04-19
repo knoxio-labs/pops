@@ -1,5 +1,7 @@
 import { Package } from 'lucide-react';
 
+import { formatAUD, highlightMatch } from '@pops/ui';
+
 /**
  * InventoryItemSearchResult — ResultComponent for inventory-items search hits.
  *
@@ -14,40 +16,6 @@ interface InventoryItemHitData {
   room: string | null;
   replacementValue: number | null;
   brand: string | null;
-}
-
-/**
- * Highlight the matched portion of text based on query and match type.
- * Returns React nodes with the matched text wrapped in a <mark>.
- */
-export function highlightMatch(text: string, query: string, matchType: string): React.ReactNode {
-  if (!query) return text;
-
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  const start = matchType === 'exact' || matchType === 'prefix' ? 0 : lowerText.indexOf(lowerQuery);
-
-  if (start === -1) return text;
-
-  const end = start + query.length;
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className="bg-warning/20 dark:bg-warning/30 rounded-sm px-0.5">
-        {text.slice(start, end)}
-      </mark>
-      {text.slice(end)}
-    </>
-  );
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export function InventoryItemSearchResult({ data }: ResultComponentProps) {
@@ -83,7 +51,7 @@ export function InventoryItemSearchResult({ data }: ResultComponentProps) {
       {/* Value */}
       {replacementValue != null && (
         <span className="shrink-0 text-xs font-medium text-muted-foreground" data-testid="value">
-          {formatCurrency(replacementValue)}
+          {formatAUD(replacementValue)}
         </span>
       )}
     </div>

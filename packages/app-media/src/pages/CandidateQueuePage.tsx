@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
+import { trpc } from '@pops/api-client';
 /**
  * CandidateQueuePage — tabbed view of rotation candidate queue.
  *
@@ -21,8 +22,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@pops/ui';
-
-import { trpc } from '../lib/trpc';
 
 // ---------------------------------------------------------------------------
 // Constants
