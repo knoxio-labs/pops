@@ -5,7 +5,10 @@ import type { UpdateInventoryItemInput } from './types.js';
 type InventoryUpdate = Partial<typeof homeInventory.$inferInsert>;
 
 /**
- * Keys where we pass through string|null (setting null when caller passes undefined-as-null).
+ * Keys where we pass through string|null.
+ *
+ * - `undefined` means "leave unchanged" (the key is not written to the update payload)
+ * - `null` means "clear the field" (the key is written with a null value)
  */
 const NULLABLE_STRING_KEYS = [
   'brand',

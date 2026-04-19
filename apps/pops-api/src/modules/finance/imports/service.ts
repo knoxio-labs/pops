@@ -260,7 +260,7 @@ function tryWriteTransaction(
   transaction: ConfirmedTransaction,
   index: number,
   total: number
-): { result: ImportResult; ok: boolean; message?: string } {
+): { result: ImportResult; ok: boolean; message?: string; error?: unknown } {
   try {
     const { result } = writeConfirmedTransaction(transaction);
     logger.debug(
@@ -288,6 +288,7 @@ function tryWriteTransaction(
       result: { transaction, success: false, error: message },
       ok: false,
       message,
+      error,
     };
   }
 }
@@ -326,7 +327,7 @@ function executeImportCore(args: ExecuteCoreInput): ExecuteCoreOutput {
       batchItem.status = 'failed';
       batchItem.error = writeResult.message;
       if (onProgress) {
-        const formatted = formatImportError(writeResult.result.error, {
+        const formatted = formatImportError(writeResult.error ?? new Error(writeResult.message), {
           transaction: transaction.description,
         });
         errors.push({
