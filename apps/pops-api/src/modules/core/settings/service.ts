@@ -69,6 +69,36 @@ export function setSetting(input: SetSettingInput): SettingRow {
   return getSetting(input.key);
 }
 
+/** Get multiple settings by key — missing keys are omitted from the result */
+export function getBulkSettings(keys: string[]): Record<string, string> {
+  const db = getDrizzle();
+  const result: Record<string, string> = {};
+  for (const key of keys) {
+    const row = db.select().from(settings).where(eq(settings.key, key)).get();
+    if (row) result[key] = row.value;
+  }
+  return result;
+}
+
+/** Write multiple settings in a single transaction — rolls back all on any failure */
+export function setBulkSettings(entries: { key: string; value: string }[]): Record<string, string> {
+  const db = getDrizzle();
+  db.transaction((tx) => {
+    for (const { key, value } of entries) {
+      tx.insert(settings)
+        .values({ key, value })
+        .onConflictDoUpdate({ target: settings.key, set: { value } })
+        .run();
+    }
+  });
+  const result: Record<string, string> = {};
+  for (const { key } of entries) {
+    const row = db.select().from(settings).where(eq(settings.key, key)).get();
+    if (row) result[key] = row.value;
+  }
+  return result;
+}
+
 /** Delete a setting by key */
 export function deleteSetting(key: SettingsKey): void {
   const db = getDrizzle();

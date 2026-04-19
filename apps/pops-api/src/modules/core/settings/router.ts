@@ -8,6 +8,7 @@ import { NotFoundError } from '../../../shared/errors.js';
 import { paginationMeta, PaginationMetaSchema } from '../../../shared/pagination.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { SETTINGS_KEY_VALUES } from './keys.js';
+import { settingsRegistry } from './registry.js';
 import * as service from './service.js';
 import { SettingListSchema, SettingSchema, toSetting } from './types.js';
 
@@ -84,5 +85,22 @@ export const settingsRouter = router({
         }
         throw err;
       }
+    }),
+
+  /** Return all registered settings manifests sorted by order */
+  getManifests: protectedProcedure.output(z.object({ manifests: z.array(z.any()) })).query(() => {
+    return { manifests: settingsRegistry.getAll() };
+  }),
+
+  /** Fetch multiple settings by key — missing keys are omitted from result */
+  getBulk: protectedProcedure.input(z.object({ keys: z.array(z.string()) })).query(({ input }) => {
+    return { settings: service.getBulkSettings(input.keys) };
+  }),
+
+  /** Write multiple settings atomically — rolls back all on any failure */
+  setBulk: protectedProcedure
+    .input(z.object({ entries: z.array(z.object({ key: z.string(), value: z.string() })) }))
+    .mutation(({ input }) => {
+      return { settings: service.setBulkSettings(input.entries) };
     }),
 });
