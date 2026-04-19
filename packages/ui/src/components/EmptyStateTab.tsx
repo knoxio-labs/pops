@@ -16,7 +16,7 @@ export function EmptyStateTab({ message, icon, className }: EmptyStateTabProps) 
   return (
     <div
       className={cn(
-        'text-center py-12 text-gray-500 dark:text-gray-400 flex flex-col items-center gap-3',
+        'text-center py-12 text-muted-foreground flex flex-col items-center gap-3',
         className
       )}
     >

@@ -53,16 +53,16 @@ export function LoadingProgressStep({
 
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold">{title}</h2>
-        {message && <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>}
+        {message && <p className="text-sm text-muted-foreground">{message}</p>}
       </div>
 
       {progress !== undefined && (
         <div className="w-full max-w-md">
-          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span>Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <div
               className="bg-info/50 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -72,7 +72,7 @@ export function LoadingProgressStep({
       )}
 
       {steps && steps.length > 0 && (
-        <div className="w-full max-w-md text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <div className="w-full max-w-md text-xs text-muted-foreground space-y-1">
           {steps.map((step) => (
             <div key={step.label} className="flex justify-between">
               <span>{step.label}</span>
@@ -90,14 +90,12 @@ export function LoadingProgressStep({
 
       {currentBatch && currentBatch.length > 0 && (
         <div className="w-full max-w-md">
-          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Currently processing:
-          </p>
+          <p className="text-xs font-medium text-foreground mb-2">Currently processing:</p>
           <div className="space-y-1">
             {currentBatch.map((item, idx) => (
               <div
                 key={`${idx}-${item.description}`}
-                className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                className="flex items-center gap-2 text-xs text-muted-foreground"
               >
                 {item.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin" />}
                 {item.status === 'success' && <CheckCircle className="w-3 h-3 text-success" />}

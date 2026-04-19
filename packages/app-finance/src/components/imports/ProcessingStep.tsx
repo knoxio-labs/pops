@@ -193,7 +193,7 @@ export function ProcessingStep() {
       : null;
 
   return (
-    <div className="flex flex-col items-center py-12 space-y-6">
+    <div className="flex flex-col items-center space-y-6">
       <LoadingProgressStep
         title="Processing"
         message={

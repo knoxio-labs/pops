@@ -22,9 +22,9 @@ const variantStyles: Record<SummaryCardVariant, { wrapper: string; value: string
       label: 'text-destructive',
     },
     neutral: {
-      wrapper: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
-      value: 'text-gray-900 dark:text-gray-100',
-      label: 'text-gray-700 dark:text-gray-300',
+      wrapper: 'bg-muted border-border',
+      value: 'text-foreground',
+      label: 'text-muted-foreground',
     },
   };
 

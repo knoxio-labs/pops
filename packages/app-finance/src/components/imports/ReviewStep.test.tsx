@@ -347,6 +347,8 @@ vi.mock('@pops/ui', async () => {
       React.createElement('button', { role: 'tab', 'data-value': value }, children),
     TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) =>
       React.createElement('div', { 'data-testid': `tab-${value}` }, children),
+    EmptyStateTab: ({ message }: { message: string }) =>
+      React.createElement('p', { 'data-testid': 'empty-state-tab' }, message),
   };
 });
 
