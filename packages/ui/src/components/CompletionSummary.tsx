@@ -52,27 +52,38 @@ export function CompletionSummary({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-2">
-          {data.dimensions.map((dim) => (
-            <div key={dim.dimensionId} className="flex items-center justify-between text-sm">
-              <span>{dim.name}</span>
-              {dim.status === 'complete' && dim.comparisonId !== null ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  Compared
-                </Badge>
-              ) : dim.status === 'complete' && dim.comparisonId === null ? (
-                <Badge variant="secondary" className="gap-1">
-                  <XCircle className="h-3 w-3" />
-                  Skipped
-                </Badge>
-              ) : (
+          {data.dimensions.map((dim) => {
+            const renderBadge = () => {
+              if (dim.status === 'complete' && dim.comparisonId !== null) {
+                return (
+                  <Badge variant="default" className="gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Compared
+                  </Badge>
+                );
+              }
+              if (dim.status === 'complete' && dim.comparisonId === null) {
+                return (
+                  <Badge variant="secondary" className="gap-1">
+                    <XCircle className="h-3 w-3" />
+                    Skipped
+                  </Badge>
+                );
+              }
+              return (
                 <Badge variant="outline" className="gap-1">
                   <Clock className="h-3 w-3" />
                   Pending
                 </Badge>
-              )}
-            </div>
-          ))}
+              );
+            };
+            return (
+              <div key={dim.dimensionId} className="flex items-center justify-between text-sm">
+                <span>{dim.name}</span>
+                {renderBadge()}
+              </div>
+            );
+          })}
         </div>
 
         <div className="text-muted-foreground border-t pt-3 text-sm">

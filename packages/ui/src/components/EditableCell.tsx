@@ -185,64 +185,83 @@ export function EditableCell<T = unknown>({
     );
   }
 
+  const renderEditor = () => {
+    if (CustomEditor) {
+      return (
+        <CustomEditor
+          value={value}
+          onChange={setValue}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
+      );
+    }
+    if (type === 'text') {
+      return (
+        <TextInput
+          ref={inputRef}
+          value={value as string}
+          onChange={(e) => {
+            setValue(e.target.value as T);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="h-8"
+          disabled={saving}
+        />
+      );
+    }
+    if (type === 'number') {
+      return (
+        <NumberInput
+          ref={inputRef}
+          value={value as number}
+          onChange={(val) => {
+            setValue(val as T);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="h-8"
+          disabled={saving}
+        />
+      );
+    }
+    if (type === 'date') {
+      return (
+        <DateTimeInput
+          value={value as string}
+          onChange={(val) => {
+            setValue(val as T);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="h-8"
+          disabled={saving}
+        />
+      );
+    }
+    if (type === 'select') {
+      return (
+        <Select
+          value={value as string}
+          onChange={(e) => {
+            setValue(e.target.value as T);
+          }}
+          options={options}
+          placeholder={placeholder}
+          className="h-8"
+          disabled={saving}
+        />
+      );
+    }
+    return null;
+  };
+
   // Edit mode
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <div className="flex-1">
-        {CustomEditor ? (
-          <CustomEditor
-            value={value}
-            onChange={setValue}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        ) : type === 'text' ? (
-          <TextInput
-            ref={inputRef}
-            value={value as string}
-            onChange={(e) => {
-              setValue(e.target.value as T);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="h-8"
-            disabled={saving}
-          />
-        ) : type === 'number' ? (
-          <NumberInput
-            ref={inputRef}
-            value={value as number}
-            onChange={(val) => {
-              setValue(val as T);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="h-8"
-            disabled={saving}
-          />
-        ) : type === 'date' ? (
-          <DateTimeInput
-            value={value as string}
-            onChange={(val) => {
-              setValue(val as T);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="h-8"
-            disabled={saving}
-          />
-        ) : type === 'select' ? (
-          <Select
-            value={value as string}
-            onChange={(e) => {
-              setValue(e.target.value as T);
-            }}
-            options={options}
-            placeholder={placeholder}
-            className="h-8"
-            disabled={saving}
-          />
-        ) : null}
+        {renderEditor()}
         {error && <p className="text-xs text-destructive mt-1">{error}</p>}
       </div>
       <div className="flex gap-1">

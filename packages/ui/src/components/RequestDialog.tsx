@@ -76,19 +76,25 @@ export function RequestDialog({
               Cancel
             </Button>
             <Button onClick={onSubmit} disabled={!canSubmit}>
-              {isSuccess ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                  {successLabel}
-                </>
-              ) : isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
-                  {pendingLabel}
-                </>
-              ) : (
-                submitLabel
-              )}
+              {(() => {
+                if (isSuccess) {
+                  return (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                      {successLabel}
+                    </>
+                  );
+                }
+                if (isPending) {
+                  return (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+                      {pendingLabel}
+                    </>
+                  );
+                }
+                return submitLabel;
+              })()}
             </Button>
           </div>
         </div>
