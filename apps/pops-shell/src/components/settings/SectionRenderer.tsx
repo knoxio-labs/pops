@@ -414,6 +414,7 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
 
   const debounceRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const savedTimerRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const saveVersionRefs = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     return () => {
@@ -439,11 +440,19 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
 
       const timer = setTimeout(() => {
         debounceRefs.current.delete(key);
+        const version = (saveVersionRefs.current.get(key) ?? 0) + 1;
+        saveVersionRefs.current.set(key, version);
         setSaveStates((prev) => ({ ...prev, [key]: 'saving' }));
         setBulkMutation.mutate(
           { entries: [{ key, value }] },
           {
             onSuccess: () => {
+              if (saveVersionRefs.current.get(key) !== version) return;
+              const prevSaved = savedTimerRefs.current.get(key);
+              if (prevSaved) {
+                clearTimeout(prevSaved);
+                savedTimerRefs.current.delete(key);
+              }
               setSaveStates((prev) => ({ ...prev, [key]: 'saved' }));
               const savedTimer = setTimeout(() => {
                 savedTimerRefs.current.delete(key);
@@ -454,6 +463,7 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
               savedTimerRefs.current.set(key, savedTimer);
             },
             onError: (err) => {
+              if (saveVersionRefs.current.get(key) !== version) return;
               setSaveStates((prev) => ({ ...prev, [key]: 'idle' }));
               toast.error(`Failed to save ${key}: ${err.message}`);
             },
