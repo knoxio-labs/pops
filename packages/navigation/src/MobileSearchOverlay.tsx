@@ -1,7 +1,7 @@
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
 
-import { Button, Input, useDebouncedCallback } from '@pops/ui';
+import { Button, Input } from '@pops/ui';
 
 import { useSearchStore } from './searchStore';
 
@@ -14,32 +14,44 @@ interface MobileSearchOverlayProps {
 
 export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const query = useSearchStore((s) => s.query);
   const setQuery = useSearchStore((s) => s.setQuery);
   const clear = useSearchStore((s) => s.clear);
 
-  const debouncedSetQuery = useDebouncedCallback(setQuery, DEBOUNCE_MS);
+  const cancelDebounce = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => cancelDebounce(), [cancelDebounce]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      debouncedSetQuery(e.target.value);
+      const value = e.target.value;
+      cancelDebounce();
+      debounceTimerRef.current = setTimeout(() => setQuery(value), DEBOUNCE_MS);
     },
-    [debouncedSetQuery]
+    [cancelDebounce, setQuery]
   );
 
   const handleClear = useCallback(() => {
+    cancelDebounce();
     clear();
     if (inputRef.current) {
       inputRef.current.value = '';
       inputRef.current.focus();
     }
-  }, [clear]);
+  }, [cancelDebounce, clear]);
 
   const handleClose = useCallback(() => {
+    cancelDebounce();
     clear();
     if (inputRef.current) inputRef.current.value = '';
     onClose();
-  }, [clear, onClose]);
+  }, [cancelDebounce, clear, onClose]);
 
   useEffect(() => {
     if (open) {
@@ -50,7 +62,10 @@ export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps)
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      cancelDebounce();
+      return;
+    }
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -63,7 +78,7 @@ export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps)
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open, handleClose]);
+  }, [open, handleClose, cancelDebounce]);
 
   if (!open) return null;
 

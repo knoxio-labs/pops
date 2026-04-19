@@ -16,12 +16,12 @@ export const useSearchStore = create<SearchState>()((set) => ({
   query: '',
   isOpen: false,
   setQuery: (query) => {
-    set({ query });
+    set({ query, isOpen: query.length > 0 });
   },
   setOpen: (open) => {
     set({ isOpen: open });
   },
   clear: () => {
-    set({ query: '' });
+    set({ query: '', isOpen: false });
   },
 }));

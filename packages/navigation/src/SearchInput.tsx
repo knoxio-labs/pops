@@ -156,9 +156,15 @@ export function SearchInput() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       cancelDebounce();
-      debounceTimerRef.current = setTimeout(() => setQuery(value), DEBOUNCE_MS);
+      if (!value) {
+        // Immediate clear; re-open so RecentSearches shows while input is focused
+        setQuery('');
+        setOpen(true);
+      } else {
+        debounceTimerRef.current = setTimeout(() => setQuery(value), DEBOUNCE_MS);
+      }
     },
-    [cancelDebounce, setQuery]
+    [cancelDebounce, setQuery, setOpen]
   );
 
   const handleClear = useCallback(() => {
@@ -168,7 +174,8 @@ export function SearchInput() {
       inputRef.current.value = '';
       inputRef.current.focus();
     }
-  }, [cancelDebounce, clear]);
+    setOpen(true);
+  }, [cancelDebounce, clear, setOpen]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

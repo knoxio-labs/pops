@@ -35,6 +35,8 @@ export interface CardWithActionOverlayProps {
   /** Called when the poster area itself is clicked (optional). */
   onClick?: () => void;
   disabled?: boolean;
+  /** Accessible label for the clickable container (overrides using alt). */
+  ariaLabel?: string;
   /** Gradient style for the overlay. Defaults to from-black/80. */
   overlayGradient?: string;
   'data-testid'?: string;
@@ -106,7 +108,9 @@ function CardPosterContent({
           className={cn(
             'absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-2 pt-8',
             overlayGradient,
-            'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
+            'pointer-events-none opacity-0 transition-opacity',
+            'group-hover:pointer-events-auto group-hover:opacity-100',
+            'group-focus-within:pointer-events-auto group-focus-within:opacity-100'
           )}
         >
           {overlay}
@@ -127,6 +131,7 @@ export function CardWithActionOverlay({
   lazy = true,
   onClick,
   disabled,
+  ariaLabel,
   overlayGradient = 'from-black/80',
   'data-testid': testId,
 }: CardWithActionOverlayProps) {
@@ -147,7 +152,7 @@ export function CardWithActionOverlay({
             }
           : undefined
       }
-      aria-label={onClick ? alt : undefined}
+      aria-label={onClick ? (ariaLabel ?? alt) : undefined}
       aria-disabled={onClick && disabled ? true : undefined}
       className={cn(
         'group relative w-full overflow-hidden rounded-md bg-muted',
