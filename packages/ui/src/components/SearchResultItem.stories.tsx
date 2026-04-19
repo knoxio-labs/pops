@@ -1,6 +1,6 @@
 import { Film, Package, Star } from 'lucide-react';
 
-import { Badge } from './Badge';
+import { Badge } from '../primitives/badge';
 import { SearchResultItem } from './SearchResultItem';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
