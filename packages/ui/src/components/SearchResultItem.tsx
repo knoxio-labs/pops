@@ -27,7 +27,8 @@ export function SearchResultItem({
   className,
   ...props
 }: SearchResultItemProps) {
-  const visibleMeta = meta?.filter((item) => item !== null && item !== undefined && item !== false) ?? [];
+  const visibleMeta =
+    meta?.filter((item) => item !== null && item !== undefined && item !== false) ?? [];
 
   return (
     <div className={cn('flex items-center gap-3 py-1', className)} {...props}>
