@@ -146,9 +146,9 @@ export const rotationSourcesProcedures = {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot delete the manual source' });
       }
 
-      db.transaction(() => {
-        db.delete(rotationCandidates).where(eq(rotationCandidates.sourceId, input.id)).run();
-        db.delete(rotationSources).where(eq(rotationSources.id, input.id)).run();
+      db.transaction((tx) => {
+        tx.delete(rotationCandidates).where(eq(rotationCandidates.sourceId, input.id)).run();
+        tx.delete(rotationSources).where(eq(rotationSources.id, input.id)).run();
       });
 
       return { success: true };

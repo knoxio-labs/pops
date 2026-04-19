@@ -36,10 +36,8 @@ export const rotationCandidatesProcedures = {
         .limit(input.limit)
         .offset(input.offset)
         .all();
-      const total = db
-        .select({ count: rotationExclusions.id })
-        .from(rotationExclusions)
-        .all().length;
+      const totalRow = db.select({ total: count() }).from(rotationExclusions).get();
+      const total = totalRow?.total ?? 0;
       return { items, total };
     }),
 
