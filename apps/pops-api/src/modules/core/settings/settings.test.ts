@@ -329,6 +329,19 @@ describe('settings.getManifests', () => {
     const result = await caller.core.settings.getManifests();
     expect(result.manifests.map((m) => m.id)).toEqual(['a.manifest', 'z.manifest']);
   });
+
+  it('rejects when a registered manifest contains an invalid field type', async () => {
+    settingsRegistry.register({
+      id: 'bad.manifest',
+      title: 'Bad',
+      order: 1,
+      groups: [
+        { id: 'g', title: 'G', fields: [{ key: 'k', label: 'K', type: 'not-a-type' as any }] },
+      ],
+    } as any);
+
+    await expect(caller.core.settings.getManifests()).rejects.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
