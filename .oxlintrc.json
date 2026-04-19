@@ -8,15 +8,15 @@
     "perf": "warn"
   },
   "rules": {
-    "max-lines": ["error", { "max": 1200, "skipBlankLines": true, "skipComments": true }],
+    "max-lines": ["error", { "max": 200, "skipBlankLines": true, "skipComments": true }],
     "max-lines-per-function": [
       "error",
-      { "max": 600, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+      { "max": 60, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
     ],
-    "complexity": ["error", 45],
+    "complexity": ["error", 12],
     "max-statements": ["error", 160],
     "max-params": ["error", 6],
-    "max-depth": ["error", 5],
+    "max-depth": ["error", 3],
     "no-console": ["error", { "allow": ["warn", "error"] }],
     "no-inline-comments": "off",
     "no-negated-condition": "off",
@@ -202,6 +202,7 @@
           { "max": 450, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
         ],
         "complexity": ["error", 42],
+        "max-depth": ["error", 5],
         "max-params": ["error", 10],
         "typescript/no-non-null-assertion": "error",
         "typescript/explicit-function-return-type": [
@@ -216,24 +217,77 @@
       }
     },
     {
-      "files": ["apps/pops-api/src/db/schema.ts", "apps/pops-api/src/db/seeder.ts"],
-      "rules": {
-        "max-lines": "off",
-        "max-lines-per-function": "off",
-        "complexity": "off",
-        "max-statements": "off",
-        "max-params": "off",
-        "max-depth": "off"
-      }
-    },
-    {
       "files": ["packages/import-tools/src/**/*.ts"],
       "rules": {
         "no-console": "off",
+        "max-lines": ["error", { "max": 400, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 200, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 20],
+        "max-depth": ["error", 4],
         "typescript/explicit-function-return-type": "off",
         "typescript/require-await": "off",
         "typescript/no-unnecessary-type-assertion": "error",
         "typescript/no-floating-promises": "error"
+      }
+    },
+    {
+      "files": ["apps/pops-shell/src/**/*.{ts,tsx}"],
+      "rules": {
+        "max-lines": ["error", { "max": 550, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 300, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 40],
+        "max-depth": ["error", 4]
+      }
+    },
+    {
+      "files": ["packages/ui/src/**/*.{ts,tsx}"],
+      "rules": {
+        "max-lines": ["error", { "max": 400, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 300, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 25],
+        "max-depth": ["error", 4],
+        "jsx-a11y/alt-text": "warn",
+        "jsx-a11y/aria-role": "warn",
+        "jsx-a11y/click-events-have-key-events": "warn"
+      }
+    },
+    {
+      "files": [
+        "packages/app-*/src/components/**/*.{ts,tsx}",
+        "packages/app-*/src/hooks/**/*.{ts,tsx}",
+        "packages/app-*/src/store/**/*.{ts,tsx}",
+        "packages/app-*/src/lib/**/*.{ts,tsx}",
+        "packages/navigation/src/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "max-lines": ["error", { "max": 500, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 300, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 25],
+        "max-depth": ["error", 4]
+      }
+    },
+    {
+      "files": ["packages/app-*/src/pages/**/*.{ts,tsx}"],
+      "rules": {
+        "max-lines": ["error", { "max": 600, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 500, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 25],
+        "max-depth": ["error", 4]
       }
     },
     {
@@ -244,7 +298,8 @@
           "error",
           { "max": 650, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
         ],
-        "complexity": ["error", 50]
+        "complexity": ["error", 50],
+        "max-depth": ["error", 4]
       }
     },
     {
@@ -260,30 +315,110 @@
       }
     },
     {
-      "files": ["packages/app-inventory/src/pages/ItemFormPage.tsx"],
-      "rules": {
-        "max-lines-per-function": [
-          "error",
-          { "max": 750, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
-        ]
-      }
-    },
-    {
       "files": ["packages/app-media/src/pages/**/*.tsx"],
       "rules": {
-        "complexity": ["error", 105],
+        "max-lines": ["error", { "max": 950, "skipBlankLines": true, "skipComments": true }],
         "max-lines-per-function": [
           "error",
           { "max": 650, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 105],
+        "max-depth": ["error", 4]
+      }
+    },
+    {
+      "files": ["packages/app-inventory/src/pages/ItemFormPage.tsx"],
+      "rules": {
+        "max-lines": ["error", { "max": 950, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 750, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 45]
+      }
+    },
+    {
+      "files": ["packages/app-inventory/src/pages/LocationTreePage.tsx"],
+      "rules": {
+        "max-lines": ["error", { "max": 1050, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 460, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 50]
+      }
+    },
+    {
+      "files": ["packages/app-inventory/src/pages/ItemDetailPage.tsx"],
+      "rules": {
+        "max-lines": ["error", { "max": 800, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 320, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 40]
+      }
+    },
+    {
+      "files": ["packages/app-ai/src/pages/AiUsagePage.tsx"],
+      "rules": {
+        "max-lines": ["error", { "max": 800, "skipBlankLines": true, "skipComments": true }],
+        "max-lines-per-function": [
+          "error",
+          { "max": 310, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ],
+        "complexity": ["error", 35]
+      }
+    },
+    {
+      "files": [
+        "packages/app-media/src/components/RequestSeriesModal.tsx",
+        "packages/app-media/src/components/RequestMovieModal.tsx",
+        "packages/app-media/src/components/SourceManagementSection.tsx",
+        "packages/app-media/src/components/DiscoverCard.tsx",
+        "packages/app-media/src/components/SearchResultCard.tsx",
+        "packages/app-media/src/components/MovieActionButtons.tsx"
+      ],
+      "rules": {
+        "complexity": ["error", 40]
+      }
+    },
+    {
+      "files": ["packages/app-media/src/components/DimensionManager.tsx"],
+      "rules": {
+        "max-lines-per-function": [
+          "error",
+          { "max": 325, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
         ]
       }
     },
     {
-      "files": ["packages/ui/src/**/*.{ts,tsx}"],
+      "files": ["packages/app-media/src/hooks/useSyncJob.ts"],
       "rules": {
-        "jsx-a11y/alt-text": "warn",
-        "jsx-a11y/aria-role": "warn",
-        "jsx-a11y/click-events-have-key-events": "warn"
+        "complexity": ["error", 30]
+      }
+    },
+    {
+      "files": ["packages/app-inventory/src/components/InventoryCard.tsx"],
+      "rules": {
+        "complexity": ["error", 35]
+      }
+    },
+    {
+      "files": ["packages/app-inventory/src/pages/ItemsPage.tsx"],
+      "rules": {
+        "complexity": ["error", 35]
+      }
+    },
+    {
+      "files": ["apps/pops-api/src/db/schema.ts", "apps/pops-api/src/db/seeder.ts"],
+      "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off",
+        "complexity": "off",
+        "max-statements": "off",
+        "max-params": "off",
+        "max-depth": "off"
       }
     },
     {
@@ -310,6 +445,11 @@
     {
       "files": ["**/*.stories.{ts,tsx}"],
       "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off",
+        "complexity": "off",
+        "max-depth": "off",
+        "max-statements": "off",
         "no-console": "off",
         "react/no-array-index-key": "off",
         "react-hooks/rules-of-hooks": "off"
@@ -322,6 +462,10 @@
         "services/*/src/scripts/**/*.ts"
       ],
       "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off",
+        "complexity": "off",
+        "max-depth": "off",
         "no-console": "off"
       }
     }
