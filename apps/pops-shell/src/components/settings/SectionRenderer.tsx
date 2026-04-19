@@ -413,16 +413,26 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
   }, [optionsLoaders]);
 
   const debounceRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const savedTimerRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
     return () => {
       for (const timer of debounceRefs.current.values()) clearTimeout(timer);
+      for (const timer of savedTimerRefs.current.values()) clearTimeout(timer);
     };
   }, []);
 
   const handleChange = useCallback(
     (key: string, value: string) => {
       setValues((prev) => ({ ...prev, [key]: value }));
+
+      // Clear any pending saved→idle timer and immediately hide stale checkmark
+      const pendingSaved = savedTimerRefs.current.get(key);
+      if (pendingSaved) {
+        clearTimeout(pendingSaved);
+        savedTimerRefs.current.delete(key);
+      }
+      setSaveStates((prev) => ({ ...prev, [key]: 'idle' }));
 
       const existing = debounceRefs.current.get(key);
       if (existing) clearTimeout(existing);
@@ -435,9 +445,13 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
           {
             onSuccess: () => {
               setSaveStates((prev) => ({ ...prev, [key]: 'saved' }));
-              setTimeout(() => {
-                setSaveStates((prev) => ({ ...prev, [key]: 'idle' }));
+              const savedTimer = setTimeout(() => {
+                savedTimerRefs.current.delete(key);
+                setSaveStates((prev) =>
+                  prev[key] === 'saved' ? { ...prev, [key]: 'idle' } : prev
+                );
               }, 2000);
+              savedTimerRefs.current.set(key, savedTimer);
             },
             onError: (err) => {
               setSaveStates((prev) => ({ ...prev, [key]: 'idle' }));
