@@ -9,7 +9,12 @@ describe('SectionRenderer: fieldsByKey lookup', () => {
 
   it('maps field keys to their field definitions', () => {
     const groups = [
-      { fields: [{ key: 'a.key', requiresRestart: false }, { key: 'b.key', requiresRestart: true }] },
+      {
+        fields: [
+          { key: 'a.key', requiresRestart: false },
+          { key: 'b.key', requiresRestart: true },
+        ],
+      },
     ];
     const map = buildFieldsByKey(groups);
     expect(map['a.key']?.requiresRestart).toBe(false);
@@ -58,18 +63,14 @@ describe('SectionRenderer: restart-required toast trigger', () => {
     expect(toastInfo).not.toHaveBeenCalled();
   });
 
-  it('does not fire toast when save errors (only error toast fires on onError path)', () => {
+  it('does not fire toast on the error path', () => {
     const toastInfo = vi.fn();
     const toastError = vi.fn();
-    const fieldsByKey: FieldMap = { 'server.port': { requiresRestart: true } };
-    const onSuccess = makeOnSuccess(fieldsByKey, toastInfo);
-    const onError = (key: string, message: string) => toastError(`Failed to save ${key}: ${message}`);
+    const onError = (key: string, message: string) =>
+      toastError(`Failed to save ${key}: ${message}`);
 
     onError('server.port', 'Network error');
     expect(toastError).toHaveBeenCalledWith('Failed to save server.port: Network error');
-    expect(toastInfo).not.toHaveBeenCalled();
-
-    // onSuccess was never called — confirm toast still silent
     expect(toastInfo).not.toHaveBeenCalled();
   });
 });
