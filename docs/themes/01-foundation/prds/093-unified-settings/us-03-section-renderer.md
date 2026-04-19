@@ -36,7 +36,7 @@ As a user, I want settings fields to render as appropriate input widgets with in
 
 - [x] Validation rules from the manifest's `validation` object are enforced on the client before saving
 - [x] Invalid values show an inline error message below the field (using `validation.message` if provided, otherwise a sensible default)
-- [ ] When a field value is invalid, the debounced save is not triggered — the value is not persisted until valid
+- [x] When a field value is invalid, the debounced save is not triggered — the value is not persisted until valid
 
 ### Environment Variable Fallback
 
