@@ -18,11 +18,12 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
-  Separator,
   Slider,
   Switch,
   Textarea,
 } from '@pops/ui';
+
+import { CRUDManagementSection } from './CRUDManagementSection';
 
 interface Dimension {
   id: number;
@@ -42,6 +43,7 @@ interface EditState {
 
 export function DimensionManager() {
   const [open, setOpen] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [addName, setAddName] = useState('');
   const [addDescription, setAddDescription] = useState('');
   const [editing, setEditing] = useState<EditState | null>(null);
@@ -97,6 +99,7 @@ export function DimensionManager() {
       description: addDescription.trim() || null,
       sortOrder: dimensions.length,
     });
+    setShowAddForm(false);
   }, [addName, addDescription, dimensions.length, createMutation]);
 
   const handleToggleActive = useCallback(
@@ -182,6 +185,51 @@ export function DimensionManager() {
 
   const sorted = [...dimensions].toSorted((a, b) => a.sortOrder - b.sortOrder);
 
+  const addForm = (
+    <div className="space-y-2">
+      <Input
+        placeholder="Dimension name"
+        value={addName}
+        onChange={(e) => {
+          setAddName(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleAdd();
+        }}
+      />
+      <Textarea
+        placeholder="Description (optional)"
+        value={addDescription}
+        onChange={(e) => {
+          setAddDescription(e.target.value);
+        }}
+        rows={2}
+        className="resize-none"
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          onClick={handleAdd}
+          disabled={!addName.trim() || createMutation.isPending}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Dimension
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setShowAddForm(false);
+            setAddName('');
+            setAddDescription('');
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -189,54 +237,32 @@ export function DimensionManager() {
           <Settings className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md p-0">
+        {/* Hidden title for accessibility */}
+        <DialogHeader className="sr-only">
           <DialogTitle>Comparison Dimensions</DialogTitle>
         </DialogHeader>
 
-        {/* Add new dimension */}
-        <div className="space-y-2">
-          <Input
-            placeholder="Dimension name"
-            value={addName}
-            onChange={(e) => {
-              setAddName(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAdd();
-            }}
-          />
-          <Textarea
-            placeholder="Description (optional)"
-            value={addDescription}
-            onChange={(e) => {
-              setAddDescription(e.target.value);
-            }}
-            rows={2}
-            className="resize-none"
-          />
-          <Button
-            size="sm"
-            onClick={handleAdd}
-            disabled={!addName.trim() || createMutation.isPending}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Dimension
-          </Button>
-        </div>
-
-        <Separator />
-
-        {/* Dimension list */}
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">Loading...</p>
-        ) : sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No dimensions yet. Add one above.
-          </p>
-        ) : (
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {sorted.map((dim, idx) => (
+        <CRUDManagementSection
+          title="Comparison Dimensions"
+          addLabel="Add Dimension"
+          onAdd={() => {
+            setAddName('');
+            setAddDescription('');
+            setShowAddForm(true);
+          }}
+          showForm={showAddForm}
+          form={addForm}
+        >
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Loading...</p>
+          ) : sorted.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No dimensions yet. Add one above.
+            </p>
+          ) : (
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {sorted.map((dim, idx) => (
               <div
                 key={dim.id}
                 className="flex items-center gap-2 rounded-md border border-border p-2"
@@ -382,6 +408,7 @@ export function DimensionManager() {
             ))}
           </div>
         )}
+        </CRUDManagementSection>
       </DialogContent>
     </Dialog>
   );
