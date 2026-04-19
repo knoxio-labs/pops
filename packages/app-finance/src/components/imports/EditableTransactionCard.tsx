@@ -1,11 +1,16 @@
 import { ChevronRight, Save, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button } from '@pops/ui';
-import { Input } from '@pops/ui';
-import { Label } from '@pops/ui';
-import { Select as UiSelect } from '@pops/ui';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
+import {
+  Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  EditableFormCard,
+  Input,
+  Label,
+  Select as UiSelect,
+} from '@pops/ui';
 
 import { EntitySelect } from './EntitySelect';
 
@@ -55,46 +60,30 @@ export function EditableTransactionCard({
     onSave(transaction, editedFields, shouldLearn);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel();
-    }
-  };
+  const actions = (
+    <>
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => handleSave(true)}
+        className="bg-purple-600 hover:bg-purple-700"
+      >
+        <Save className="w-4 h-4 mr-1" />
+        Save & Learn
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => handleSave(false)}>
+        <Save className="w-4 h-4 mr-1" />
+        Save Once
+      </Button>
+      <Button variant="outline" size="sm" onClick={onCancel}>
+        <X className="w-4 h-4 mr-1" />
+        Cancel
+      </Button>
+    </>
+  );
 
   return (
-    <div className="border-2 border-info rounded-lg p-4 bg-info/5" onKeyDown={handleKeyDown}>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4 pb-2 border-b border-info/20">
-        <h3 className="font-semibold text-info">Edit Transaction</h3>
-        <div className="flex gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => {
-              handleSave(true);
-            }}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Save className="w-4 h-4 mr-1" />
-            Save & Learn
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              handleSave(false);
-            }}
-          >
-            <Save className="w-4 h-4 mr-1" />
-            Save Once
-          </Button>
-          <Button variant="outline" size="sm" onClick={onCancel}>
-            <X className="w-4 h-4 mr-1" />
-            Cancel
-          </Button>
-        </div>
-      </div>
-
+    <EditableFormCard title="Edit Transaction" actions={actions} onEscape={onCancel}>
       {/* Transaction Type */}
       <div className="mb-4 p-3 bg-info/10 rounded-lg">
         <Label htmlFor="transactionType" className="block mb-2 font-semibold">
@@ -230,6 +219,6 @@ export function EditableTransactionCard({
           </pre>
         </CollapsibleContent>
       </Collapsible>
-    </div>
+    </EditableFormCard>
   );
 }

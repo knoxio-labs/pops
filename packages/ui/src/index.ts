@@ -13,6 +13,7 @@ export {
 } from './lib/format';
 export type { FormatCurrencyOptions, DateStyle } from './lib/format';
 export { highlightMatch } from './lib/highlightMatch';
+export { hashToColor } from './lib/hashToColor';
 
 // Primitives — non-conflicting exports
 export * from './primitives/accordion';
@@ -126,3 +127,13 @@ export * from './components/SettingsForm';
 
 // Hooks
 export * from './hooks/useImageProcessor';
+
+// Cross-domain primitives extracted from app packages
+export * from './components/EditableFormCard';
+export * from './components/EmptyStateTab';
+export * from './components/EntitySelect';
+export * from './components/ErrorAlert';
+export * from './components/LoadingProgressStep';
+export * from './components/SkeletonGrid';
+export * from './components/SummaryCard';
+export * from './components/WorkflowDialog';

@@ -1,8 +1,8 @@
-import { AlertTriangle, ArrowRight, CheckCircle, Loader2, RefreshCw, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { trpc } from '@pops/api-client';
-import { Button } from '@pops/ui';
+import { Button, LoadingProgressStep } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
 
@@ -125,13 +125,11 @@ export function ProcessingStep() {
   if (hasAlreadyProcessed) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-6">
-        <CheckCircle className="w-16 h-16 text-success" />
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-semibold">Already processed</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Your transactions are ready for review. Nothing to re-run.
-          </p>
-        </div>
+        <LoadingProgressStep
+          done
+          title="Already processed"
+          message="Your transactions are ready for review. Nothing to re-run."
+        />
         <Button onClick={nextStep}>
           <ArrowRight className="h-4 w-4" />
           Continue to Review
@@ -140,153 +138,112 @@ export function ProcessingStep() {
     );
   }
 
+  const pct =
+    isProcessing && progress
+      ? (progress.processedCount / progress.totalTransactions) * 100
+      : undefined;
+
+  const steps = isProcessing
+    ? [
+        {
+          label: 'Checking for duplicates',
+          status: (
+            progress?.currentStep === 'deduplicating'
+              ? 'in_progress'
+              : ['matching', 'writing'].includes(progress?.currentStep ?? '')
+                ? 'done'
+                : 'pending'
+          ) as 'pending' | 'in_progress' | 'done',
+        },
+        {
+          label: 'Matching entities',
+          status: (
+            progress?.currentStep === 'matching'
+              ? 'in_progress'
+              : progress?.currentStep === 'writing'
+                ? 'done'
+                : 'pending'
+          ) as 'pending' | 'in_progress' | 'done',
+        },
+      ]
+    : undefined;
+
+  const batchItems =
+    isProcessing && progress && progress.currentBatch.length > 0
+      ? progress.currentBatch.map((item) => ({
+          description: item.description,
+          status: item.status as 'processing' | 'success' | 'failed',
+        }))
+      : undefined;
+
+  const warningErrors =
+    progress?.errors && progress.errors.length > 0
+      ? progress.errors
+          .slice(0, 3)
+          .map((e) => `${e.description}: ${e.error}`)
+          .concat(
+            progress.errors.length > 3
+              ? [`And ${progress.errors.length - 3} more errors...`]
+              : []
+          )
+      : undefined;
+
+  // Completed result warnings (AI unavailable etc.)
+  const completedWarnings =
+    progressQuery.data?.result &&
+    (progressQuery.data.result as ProcessImportOutput).warnings?.length
+      ? (progressQuery.data.result as ProcessImportOutput).warnings!
+      : null;
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 space-y-6">
-      <Loader2 className="w-16 h-16 animate-spin text-info" />
-
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-semibold">Processing</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {isProcessing && progress
+    <div className="flex flex-col items-center py-12 space-y-6">
+      <LoadingProgressStep
+        title="Processing"
+        message={
+          isProcessing && progress
             ? `Processing ${progress.processedCount}/${progress.totalTransactions} transactions...`
-            : `Analyzing ${parsedTransactions.length} transactions...`}
-        </p>
-      </div>
+            : `Analyzing ${parsedTransactions.length} transactions...`
+        }
+        progress={pct}
+        steps={steps}
+        currentBatch={batchItems}
+        errors={warningErrors}
+      />
 
-      {/* Progress bar */}
-      {isProcessing && progress && (
-        <div className="w-full max-w-md">
-          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span>Progress</span>
-            <span>{Math.round((progress.processedCount / progress.totalTransactions) * 100)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div
-              className="bg-info/50 h-2 rounded-full transition-all duration-300"
-              style={{
-                width: `${(progress.processedCount / progress.totalTransactions) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Current step indicator */}
-      <div className="w-full max-w-md space-y-2">
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          <div className="flex justify-between">
-            <span>Checking for duplicates</span>
-            <span>
-              {progress?.currentStep === 'deduplicating'
-                ? 'In progress...'
-                : ['matching', 'writing'].includes(progress?.currentStep ?? '')
-                  ? 'Complete'
-                  : 'Pending'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Matching entities</span>
-            <span>
-              {progress?.currentStep === 'matching'
-                ? 'In progress...'
-                : progress?.currentStep === 'writing'
-                  ? 'Complete'
-                  : 'Pending'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Current batch (up to 5 items) */}
-      {isProcessing && progress && progress.currentBatch.length > 0 && (
-        <div className="w-full max-w-md">
-          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Currently processing:
-          </p>
-          <div className="space-y-1">
-            {progress.currentBatch.map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
-              >
-                {item.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin" />}
-                {item.status === 'success' && <CheckCircle className="w-3 h-3 text-success" />}
-                {item.status === 'failed' && <XCircle className="w-3 h-3 text-destructive" />}
-                <span className="truncate">{item.description}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Errors during processing */}
-      {progress?.errors && progress.errors.length > 0 && (
-        <div className="w-full max-w-md space-y-2">
-          {progress.errors.slice(0, 3).map((error, idx) => (
-            <div
-              key={idx}
-              className="p-3 text-sm text-warning bg-warning/10 rounded-lg border border-warning/25"
-            >
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-xs">{error.description}</p>
-                  <p className="text-xs opacity-80 mt-0.5">{error.error}</p>
-                </div>
+      {/* Warnings from completed result */}
+      {completedWarnings &&
+        completedWarnings.map((warning: ImportWarning, idx: number) => (
+          <div
+            key={idx}
+            className="w-full max-w-md p-4 text-sm rounded-lg border text-warning bg-warning/10 border-warning/25"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <p className="font-medium">
+                  {warning.type === 'AI_CATEGORIZATION_UNAVAILABLE'
+                    ? 'AI Categorization Unavailable'
+                    : 'AI API Error'}
+                </p>
+                <p className="text-xs">{warning.message}</p>
+                {warning.details && (
+                  <p className="text-xs opacity-70 font-mono">{warning.details}</p>
+                )}
+                {warning.affectedCount && (
+                  <p className="text-xs opacity-80">
+                    {warning.affectedCount} transaction
+                    {warning.affectedCount !== 1 ? 's' : ''} could not be automatically
+                    categorized. You can manually categorize them in the review step.
+                  </p>
+                )}
               </div>
             </div>
-          ))}
-          {progress.errors.length > 3 && (
-            <p className="text-xs text-gray-500 text-center">
-              And {progress.errors.length - 3} more errors...
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Warnings (from completed result) */}
-      {progressQuery.data?.result &&
-        (progressQuery.data.result as ProcessImportOutput).warnings &&
-        (progressQuery.data.result as ProcessImportOutput).warnings!.length > 0 && (
-          <div className="w-full max-w-md space-y-2">
-            {(progressQuery.data.result as ProcessImportOutput).warnings!.map(
-              (warning: ImportWarning, idx: number) => {
-                return (
-                  <div
-                    key={idx}
-                    className="p-4 text-sm rounded-lg border text-warning bg-warning/10 border-warning/25"
-                  >
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 space-y-1">
-                        <p className="font-medium">
-                          {warning.type === 'AI_CATEGORIZATION_UNAVAILABLE'
-                            ? 'AI Categorization Unavailable'
-                            : 'AI API Error'}
-                        </p>
-                        <p className="text-xs">{warning.message}</p>
-                        {warning.details && (
-                          <p className="text-xs opacity-70 font-mono">{warning.details}</p>
-                        )}
-                        {warning.affectedCount && (
-                          <p className="text-xs opacity-80">
-                            {warning.affectedCount} transaction
-                            {warning.affectedCount !== 1 ? 's' : ''} could not be automatically
-                            categorized. You can manually categorize them in the review step.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            )}
           </div>
-        )}
+        ))}
 
       {/* Fatal errors */}
       {(processImportMutation.isError || progressQuery.data?.status === 'failed') && (
-        <div className="p-4 max-w-md text-sm text-destructive bg-destructive/10 dark:text-destructive/40 rounded-lg">
+        <div className="p-4 max-w-md w-full text-sm text-destructive bg-destructive/10 dark:text-destructive/40 rounded-lg">
           <p className="font-medium mb-1">Processing Failed</p>
           <p>{processImportMutation.error?.message || 'An unexpected error occurred'}</p>
           {progressQuery.data?.errors && progressQuery.data.errors.length > 0 && (
