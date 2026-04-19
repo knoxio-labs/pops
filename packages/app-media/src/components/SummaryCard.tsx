@@ -17,7 +17,6 @@ interface DimensionResult {
 }
 
 export interface SummaryCardProps {
-  sessionId: number;
   movieTitle: string;
   dimensions: DimensionResult[];
   onDoAnother?: () => void;

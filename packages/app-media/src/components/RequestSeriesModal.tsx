@@ -172,9 +172,9 @@ export function RequestSeriesModal({
           variant="outline"
           size="sm"
           onClick={() => {
-            profiles.refetch();
-            folders.refetch();
-            languages.refetch();
+            void profiles.refetch();
+            void folders.refetch();
+            void languages.refetch();
           }}
         >
           Retry

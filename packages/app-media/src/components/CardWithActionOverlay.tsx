@@ -82,7 +82,7 @@ function CardPosterContent({
           loading={lazy ? 'lazy' : 'eager'}
           className={cn(
             'h-full w-full object-cover transition-opacity duration-200',
-            hasOnClick && 'group-hover:opacity-80',
+            (hasOnClick || overlay) && 'group-hover:opacity-80',
             imageLoaded ? 'opacity-100' : 'opacity-0'
           )}
           onLoad={() => setImageLoaded(true)}

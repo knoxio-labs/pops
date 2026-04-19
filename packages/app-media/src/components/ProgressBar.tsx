@@ -19,7 +19,7 @@ export function ProgressBar({ watched, total, className, showLabel = true }: Pro
         value={Math.min(percentage, 100)}
         className={cn(
           'flex-1 h-2',
-          isComplete ? '[&>[data-slot=progress-indicator]]:bg-success' : ''
+          isComplete ? '[&>[data-slot=progress-indicator]]:!bg-success' : ''
         )}
       />
       {showLabel && (
