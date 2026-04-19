@@ -53,7 +53,7 @@ export function ConfidenceSlider({ ruleId, initial, onAutoDelete }: ConfidenceSl
   };
 
   return (
-    <div className="flex items-center gap-2 min-w-35">
+    <div className="flex items-center gap-2 min-w-36">
       <Slider
         min={0}
         max={1}

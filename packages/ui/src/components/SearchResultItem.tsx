@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 
 import type { HTMLAttributes, ReactNode } from 'react';
 
-interface SearchResultItemProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+interface SearchResultItemProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title' | 'children'> {
   /** Icon, thumbnail, or avatar displayed before the text content. */
   leading?: ReactNode;
   /** Primary title line — pass a highlighted node or plain string. */
@@ -27,7 +27,7 @@ export function SearchResultItem({
   className,
   ...props
 }: SearchResultItemProps) {
-  const visibleMeta = meta?.filter(Boolean) ?? [];
+  const visibleMeta = meta?.filter((item) => item !== null && item !== undefined && item !== false) ?? [];
 
   return (
     <div className={cn('flex items-center gap-3 py-1', className)} {...props}>
