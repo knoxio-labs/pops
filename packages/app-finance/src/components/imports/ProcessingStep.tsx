@@ -36,10 +36,11 @@ export function ProcessingStep() {
    * and this gate will correctly re-run processing.
    */
   const hasProcessedResults =
-    processedTransactions.matched.length > 0 ||
-    processedTransactions.uncertain.length > 0 ||
-    processedTransactions.failed.length > 0 ||
-    processedTransactions.skipped.length > 0;
+    processedTransactions.matched.length +
+      processedTransactions.uncertain.length +
+      processedTransactions.failed.length +
+      processedTransactions.skipped.length >
+    0;
   const hasAlreadyProcessed =
     hasProcessedResults &&
     processedForFingerprint !== null &&
@@ -149,23 +150,19 @@ export function ProcessingStep() {
     ? [
         {
           label: 'Checking for duplicates',
-          status: (
-            progress?.currentStep === 'deduplicating'
-              ? 'in_progress'
-              : ['matching', 'writing'].includes(progress?.currentStep ?? '')
-                ? 'done'
-                : 'pending'
-          ) as 'pending' | 'in_progress' | 'done',
+          status: (progress?.currentStep === 'deduplicating'
+            ? 'in_progress'
+            : ['matching', 'writing'].includes(progress?.currentStep ?? '')
+              ? 'done'
+              : 'pending') as 'pending' | 'in_progress' | 'done',
         },
         {
           label: 'Matching entities',
-          status: (
-            progress?.currentStep === 'matching'
-              ? 'in_progress'
-              : progress?.currentStep === 'writing'
-                ? 'done'
-                : 'pending'
-          ) as 'pending' | 'in_progress' | 'done',
+          status: (progress?.currentStep === 'matching'
+            ? 'in_progress'
+            : progress?.currentStep === 'writing'
+              ? 'done'
+              : 'pending') as 'pending' | 'in_progress' | 'done',
         },
       ]
     : undefined;
@@ -184,9 +181,7 @@ export function ProcessingStep() {
           .slice(0, 3)
           .map((e) => `${e.description}: ${e.error}`)
           .concat(
-            progress.errors.length > 3
-              ? [`And ${progress.errors.length - 3} more errors...`]
-              : []
+            progress.errors.length > 3 ? [`And ${progress.errors.length - 3} more errors...`] : []
           )
       : undefined;
 
@@ -234,8 +229,8 @@ export function ProcessingStep() {
                 {warning.affectedCount && (
                   <p className="text-xs opacity-80">
                     {warning.affectedCount} transaction
-                    {warning.affectedCount !== 1 ? 's' : ''} could not be automatically
-                    categorized. You can manually categorize them in the review step.
+                    {warning.affectedCount !== 1 ? 's' : ''} could not be automatically categorized.
+                    You can manually categorize them in the review step.
                   </p>
                 )}
               </div>
@@ -250,8 +245,8 @@ export function ProcessingStep() {
           <p>{processImportMutation.error?.message || 'An unexpected error occurred'}</p>
           {progressQuery.data?.errors && progressQuery.data.errors.length > 0 && (
             <div className="mt-2 space-y-1">
-              {progressQuery.data.errors.map((error, idx) => (
-                <p key={idx} className="text-xs">
+              {progressQuery.data.errors.map((error) => (
+                <p key={error.error} className="text-xs">
                   • {error.error}
                 </p>
               ))}

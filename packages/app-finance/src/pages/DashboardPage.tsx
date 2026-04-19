@@ -2,14 +2,7 @@ import { trpc } from '@pops/api-client';
 /**
  * Dashboard page - overview of finances
  */
-import {
-  Badge,
-  Card,
-  ErrorAlert,
-  PageHeader,
-  SkeletonGrid,
-  StatCard,
-} from '@pops/ui';
+import { Badge, Card, ErrorAlert, PageHeader, SkeletonGrid, StatCard } from '@pops/ui';
 
 import type { Budget } from '@pops/api/modules/finance/budgets/types';
 import type { Transaction } from '@pops/api/modules/finance/transactions/types';

@@ -77,9 +77,7 @@ export function WorkflowDialog({
         {header}
 
         {useGrid ? (
-          <div className={cn('grid gap-0 border-y flex-1 min-h-0', templateClass)}>
-            {children}
-          </div>
+          <div className={cn('grid gap-0 border-y flex-1 min-h-0', templateClass)}>{children}</div>
         ) : (
           children
         )}

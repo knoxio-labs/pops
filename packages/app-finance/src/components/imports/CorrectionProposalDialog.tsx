@@ -78,6 +78,12 @@ export interface CorrectionProposalDialogProps {
   onBrowseClose?: (hadChanges: boolean) => void;
 }
 
+function previewLabel(view: PreviewView, hasSelectedOp: boolean): string {
+  if (view === 'combined') return 'Combined effect of entire ChangeSet';
+  if (hasSelectedOp) return 'Effect of selected operation';
+  return 'No operation selected';
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -423,129 +429,126 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       </>
     );
 
-    const browseBody =
-      browseListQuery.isError ? (
-        <div className="px-6 pb-6 text-sm text-destructive">{browseListQuery.error.message}</div>
-      ) : browseListQuery.isLoading ? (
-        <div className="px-6 pb-6 text-sm text-muted-foreground">Loading rules…</div>
-      ) : (
-        // 3-column grid rendered via WorkflowDialog columns prop
-        <>
-          {/* Sidebar: rule list with search */}
-          <div className="flex flex-col min-h-0 border-r">
-            <div className="px-3 py-2 border-b">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  value={browseSearch}
-                  onChange={(e) => {
-                    setBrowseSearch(e.target.value);
-                  }}
-                  placeholder="Search rules…"
-                  className="pl-7 h-8 text-xs"
-                />
-              </div>
-            </div>
-            <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b space-y-0.5">
-              <div>
-                {browseOrderedFiltered.length} rule
-                {browseOrderedFiltered.length === 1 ? '' : 's'}
-                {browseSearch && ` matching "${browseSearch}"`}
-              </div>
-              {browseSearch.trim() !== '' && (
-                <div className="text-[10px] text-muted-foreground/90">
-                  Clear search to drag rules into priority order.
-                </div>
-              )}
-            </div>
-            <div className="flex-1 overflow-auto">
-              <Suspense
-                fallback={<div className="p-3 text-xs text-muted-foreground">Loading…</div>}
-              >
-                <BrowseRulesSidebar
-                  canDragReorder={browseCanDragReorder}
-                  orderedMerged={browseOrderedMerged}
-                  orderedFiltered={browseOrderedFiltered}
-                  selectedRuleId={browseSelectedRuleId}
-                  localOps={localOps}
-                  onSelectRule={handleBrowseSelectRule}
-                  onReorderFullList={handleBrowseReorderFullList}
-                />
-              </Suspense>
-            </div>
-            <div className="border-t p-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
-                onClick={handleAddNewRuleOp}
-              >
-                <Plus className="mr-1 h-3.5 w-3.5" /> Add new rule
-              </Button>
+    const browseBody = browseListQuery.isError ? (
+      <div className="px-6 pb-6 text-sm text-destructive">{browseListQuery.error.message}</div>
+    ) : browseListQuery.isLoading ? (
+      <div className="px-6 pb-6 text-sm text-muted-foreground">Loading rules…</div>
+    ) : (
+      // 3-column grid rendered via WorkflowDialog columns prop
+      <>
+        {/* Sidebar: rule list with search */}
+        <div className="flex flex-col min-h-0 border-r">
+          <div className="px-3 py-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={browseSearch}
+                onChange={(e) => {
+                  setBrowseSearch(e.target.value);
+                }}
+                placeholder="Search rules…"
+                className="pl-7 h-8 text-xs"
+              />
             </div>
           </div>
-
-          {/* Detail: show selected rule or selected op editor */}
-          <div className="flex flex-col min-h-0 overflow-auto">
-            {selectedOp ? (
-              <DetailPanel
-                op={selectedOp}
-                onChange={(mutator) => {
-                  if (!selectedOp) return;
-                  updateOp(selectedOp.clientId, mutator);
-                }}
-                disabled={false}
-              />
-            ) : browseSelectedRule ? (
-              <BrowseRuleDetailPanel
-                rule={browseSelectedRule}
-                onEdit={handleBrowseEditRule}
-                onDisable={handleBrowseDisableRule}
-                onRemove={handleBrowseRemoveRule}
-              />
-            ) : (
-              <div className="p-6 text-sm text-muted-foreground">
-                Select a rule on the left to view or edit it.
+          <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b space-y-0.5">
+            <div>
+              {browseOrderedFiltered.length} rule
+              {browseOrderedFiltered.length === 1 ? '' : 's'}
+              {browseSearch && ` matching "${browseSearch}"`}
+            </div>
+            {browseSearch.trim() !== '' && (
+              <div className="text-[10px] text-muted-foreground/90">
+                Clear search to drag rules into priority order.
               </div>
             )}
           </div>
-
-          {/* Impact preview (PRD-032 US-06) */}
-          {(() => {
-            const browsePreviewResult =
-              previewView === 'combined' ? combinedPreview : selectedOpPreview;
-            const browseDbPreviewResult =
-              previewView === 'combined' ? combinedDbPreview : selectedOpDbPreview;
-            const browsePreviewError =
-              previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
-            const browseTruncated =
-              previewView === 'combined' ? combinedPreviewTruncated : selectedOpPreviewTruncated;
-            const browseLabel =
-              previewView === 'combined'
-                ? 'Combined effect of all pending changes'
-                : selectedOp
-                  ? 'Effect of selected operation'
-                  : 'No operation selected';
-            return (
-              <ImpactPanel
-                view={previewView}
-                onViewChange={setPreviewView}
-                label={browseLabel}
-                previewResult={browsePreviewResult}
-                dbPreviewResult={browseDbPreviewResult}
-                dbTruncated={dbTxnsQuery.data?.truncated}
-                dbTotal={dbTxnsQuery.data?.total}
-                previewError={browsePreviewError}
-                isPending={previewMutationPending}
-                stale={hasDirty}
-                truncated={browseTruncated}
-                onRerun={handleRerunPreview}
-                disabled={localOps.length === 0}
+          <div className="flex-1 overflow-auto">
+            <Suspense fallback={<div className="p-3 text-xs text-muted-foreground">Loading…</div>}>
+              <BrowseRulesSidebar
+                canDragReorder={browseCanDragReorder}
+                orderedMerged={browseOrderedMerged}
+                orderedFiltered={browseOrderedFiltered}
+                selectedRuleId={browseSelectedRuleId}
+                localOps={localOps}
+                onSelectRule={handleBrowseSelectRule}
+                onReorderFullList={handleBrowseReorderFullList}
               />
-            );
-          })()}
-        </>
-      );
+            </Suspense>
+          </div>
+          <div className="border-t p-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full justify-start"
+              onClick={handleAddNewRuleOp}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add new rule
+            </Button>
+          </div>
+        </div>
+
+        {/* Detail: show selected rule or selected op editor */}
+        <div className="flex flex-col min-h-0 overflow-auto">
+          {selectedOp ? (
+            <DetailPanel
+              op={selectedOp}
+              onChange={(mutator) => {
+                if (!selectedOp) return;
+                updateOp(selectedOp.clientId, mutator);
+              }}
+              disabled={false}
+            />
+          ) : browseSelectedRule ? (
+            <BrowseRuleDetailPanel
+              rule={browseSelectedRule}
+              onEdit={handleBrowseEditRule}
+              onDisable={handleBrowseDisableRule}
+              onRemove={handleBrowseRemoveRule}
+            />
+          ) : (
+            <div className="p-6 text-sm text-muted-foreground">
+              Select a rule on the left to view or edit it.
+            </div>
+          )}
+        </div>
+
+        {/* Impact preview (PRD-032 US-06) */}
+        {(() => {
+          const browsePreviewResult =
+            previewView === 'combined' ? combinedPreview : selectedOpPreview;
+          const browseDbPreviewResult =
+            previewView === 'combined' ? combinedDbPreview : selectedOpDbPreview;
+          const browsePreviewError =
+            previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
+          const browseTruncated =
+            previewView === 'combined' ? combinedPreviewTruncated : selectedOpPreviewTruncated;
+          const browseLabel =
+            previewView === 'combined'
+              ? 'Combined effect of all pending changes'
+              : selectedOp
+                ? 'Effect of selected operation'
+                : 'No operation selected';
+          return (
+            <ImpactPanel
+              view={previewView}
+              onViewChange={setPreviewView}
+              label={browseLabel}
+              previewResult={browsePreviewResult}
+              dbPreviewResult={browseDbPreviewResult}
+              dbTruncated={dbTxnsQuery.data?.truncated}
+              dbTotal={dbTxnsQuery.data?.total}
+              previewError={browsePreviewError}
+              isPending={previewMutationPending}
+              stale={hasDirty}
+              truncated={browseTruncated}
+              onRerun={handleRerunPreview}
+              disabled={localOps.length === 0}
+            />
+          );
+        })()}
+      </>
+    );
 
     const isGridMode = !browseListQuery.isError && !browseListQuery.isLoading;
 
@@ -570,12 +573,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const previewError = previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
   const previewTruncated =
     previewView === 'combined' ? combinedPreviewTruncated : selectedOpPreviewTruncated;
-  const previewLabel =
-    previewView === 'combined'
-      ? 'Combined effect of entire ChangeSet'
-      : selectedOp
-        ? `Effect of selected operation`
-        : 'No operation selected';
+  const currentPreviewLabel = previewLabel(previewView, !!selectedOp);
 
   const proposalFooter = (
     <>
@@ -636,7 +634,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       <ImpactPanel
         view={previewView}
         onViewChange={setPreviewView}
-        label={previewLabel}
+        label={currentPreviewLabel}
         previewResult={previewResult}
         previewError={previewError}
         isPending={previewMutationPending}
@@ -671,15 +669,16 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       />
     ));
 
-  const proposalContextHeader = isProposalGridReady && props.signal ? (
-    <ContextPanel
-      signal={props.signal}
-      triggeringTransaction={props.triggeringTransaction}
-      rationale={rationale}
-      opCount={localOps.length}
-      combinedSummary={combinedPreview?.summary ?? null}
-    />
-  ) : undefined;
+  const proposalContextHeader =
+    isProposalGridReady && props.signal ? (
+      <ContextPanel
+        signal={props.signal}
+        triggeringTransaction={props.triggeringTransaction}
+        rationale={rationale}
+        opCount={localOps.length}
+        combinedSummary={combinedPreview?.summary ?? null}
+      />
+    ) : undefined;
 
   return (
     <WorkflowDialog
