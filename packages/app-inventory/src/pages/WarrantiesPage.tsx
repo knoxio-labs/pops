@@ -26,8 +26,22 @@ function daysUntil(dateStr: string): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   // Parse as local calendar date to avoid UTC-offset shifting
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const target = new Date(year!, month! - 1, day!);
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!dateMatch) return Number.NaN;
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return Number.NaN;
+  }
+  const target = new Date(year, month - 1, day);
+  if (
+    target.getFullYear() !== year ||
+    target.getMonth() !== month - 1 ||
+    target.getDate() !== day
+  ) {
+    return Number.NaN;
+  }
   return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
@@ -187,7 +201,8 @@ interface ExpiringSectionProps {
 
 function ExpiringSection({ tier, items, paperlessBaseUrl, onItemClick }: ExpiringSectionProps) {
   if (items.length === 0) return null;
-  const style = TIER_STYLES[tier]!;
+  const style = TIER_STYLES[tier];
+  if (!style) return null;
 
   return (
     <div
@@ -279,6 +294,7 @@ export function WarrantiesPage() {
     for (const item of items) {
       if (!item.warrantyExpires) continue;
       const days = daysUntil(item.warrantyExpires);
+      if (!Number.isFinite(days)) continue;
       const entry = { ...item, daysRemaining: days };
 
       if (days < 0) expired.push(entry);
