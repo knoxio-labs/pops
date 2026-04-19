@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── fieldsByKey lookup ────────────────────────────────────────────────
 
@@ -78,6 +78,14 @@ describe('SectionRenderer: restart-required toast trigger', () => {
 // ── debounced save ────────────────────────────────────────────────────
 
 describe('SectionRenderer: debounced save', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   function makeHandleChange(mutate: (args: unknown) => void) {
     const debounceRefs = new Map<string, ReturnType<typeof setTimeout>>();
     return (key: string, value: string) => {
@@ -92,7 +100,6 @@ describe('SectionRenderer: debounced save', () => {
   }
 
   it('does not call mutate before the 500ms debounce expires', () => {
-    vi.useFakeTimers();
     const mutate = vi.fn();
     const handleChange = makeHandleChange(mutate);
 
@@ -102,11 +109,9 @@ describe('SectionRenderer: debounced save', () => {
 
     vi.advanceTimersByTime(1);
     expect(mutate).toHaveBeenCalledTimes(1);
-    vi.useRealTimers();
   });
 
   it('debounces rapid changes — only the last value is saved', () => {
-    vi.useFakeTimers();
     const mutate = vi.fn();
     const handleChange = makeHandleChange(mutate);
 
@@ -118,11 +123,9 @@ describe('SectionRenderer: debounced save', () => {
     vi.advanceTimersByTime(500);
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate).toHaveBeenCalledWith({ entries: [{ key: 'server.port', value: '8080' }] });
-    vi.useRealTimers();
   });
 
-  it('saves immediately for different keys without blocking each other', () => {
-    vi.useFakeTimers();
+  it('saves independently for different keys', () => {
     const mutate = vi.fn();
     const handleChange = makeHandleChange(mutate);
 
@@ -131,6 +134,5 @@ describe('SectionRenderer: debounced save', () => {
 
     vi.advanceTimersByTime(500);
     expect(mutate).toHaveBeenCalledTimes(2);
-    vi.useRealTimers();
   });
 });
