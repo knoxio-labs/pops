@@ -177,6 +177,7 @@ export function ComparisonMovieCard({
         <CardWithActionOverlay
           src={movie.posterUrl}
           alt={`${movie.title} poster`}
+          ariaLabel={`Pick ${movie.title}`}
           onClick={onPick}
           disabled={disabled}
           topLeft={topLeft}
