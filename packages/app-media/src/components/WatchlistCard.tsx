@@ -1,15 +1,15 @@
-import type { DraggableAttributes } from '@dnd-kit/core';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Film, GripVertical, Trash2 } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import type { DraggableAttributes } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Film, GripVertical, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
 
-import { Badge, Button } from '@pops/ui';
+import { Badge, Button } from "@pops/ui";
 
-import { LeavingBadge } from './LeavingBadge';
+import { LeavingBadge } from "./LeavingBadge";
 
-import type { RotationMeta } from '../lib/types';
+import type { RotationMeta } from "../lib/types";
 
 /**
  * WatchlistCard — desktop poster card for a watchlist entry.
@@ -56,7 +56,9 @@ export function WatchlistCard({
   const [imageError, setImageError] = useState(false);
 
   const href =
-    entry.mediaType === 'movie' ? `/media/movies/${entry.mediaId}` : `/media/tv/${entry.mediaId}`;
+    entry.mediaType === "movie"
+      ? `/media/movies/${entry.mediaId}`
+      : `/media/tv/${entry.mediaId}`;
 
   return (
     <div className="group flex flex-col gap-2">
@@ -66,7 +68,7 @@ export function WatchlistCard({
         className="relative w-full overflow-hidden rounded-md bg-muted aspect-[2/3] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => navigate(href)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             navigate(href);
           }
@@ -93,10 +95,10 @@ export function WatchlistCard({
         )}
 
         <Badge
-          variant={entry.mediaType === 'movie' ? 'default' : 'secondary'}
+          variant={entry.mediaType === "movie" ? "default" : "secondary"}
           className="absolute top-2 right-2 z-10"
         >
-          {entry.mediaType === 'movie' ? 'Movie' : 'TV'}
+          {entry.mediaType === "movie" ? "Movie" : "TV"}
         </Badge>
 
         <Button
@@ -132,20 +134,33 @@ export function WatchlistCard({
 
       <div className="space-y-0.5 px-0.5">
         <Link to={href} className="hover:underline">
-          <h3 className="text-sm font-medium leading-tight line-clamp-2">{title}</h3>
+          <h3 className="text-sm font-medium leading-tight line-clamp-2">
+            {title}
+          </h3>
         </Link>
         {year && <p className="text-xs text-muted-foreground">{year}</p>}
-        {rotationStatus === 'leaving' && rotationExpiresAt && (
+        {rotationStatus === "leaving" && rotationExpiresAt && (
           <LeavingBadge rotationExpiresAt={rotationExpiresAt} />
         )}
-        {entry.notes && <p className="text-xs text-muted-foreground line-clamp-1">{entry.notes}</p>}
+        {entry.notes && (
+          <p className="text-xs text-muted-foreground line-clamp-1">
+            {entry.notes}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
 export function SortableWatchlistCard(props: WatchlistCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: props.entry.id,
   });
 
@@ -157,7 +172,11 @@ export function SortableWatchlistCard(props: WatchlistCardProps) {
 
   return (
     <div ref={setNodeRef} style={style}>
-      <WatchlistCard {...props} dragAttributes={attributes} dragListeners={listeners} />
+      <WatchlistCard
+        {...props}
+        dragAttributes={attributes}
+        dragListeners={listeners}
+      />
     </div>
   );
 }

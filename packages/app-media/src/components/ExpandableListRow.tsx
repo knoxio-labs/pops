@@ -1,9 +1,9 @@
-import { Check, ChevronDown, ChevronRight, HardDrive } from 'lucide-react';
-import { useState } from 'react';
+import { Check, ChevronDown, ChevronRight, HardDrive } from "lucide-react";
+import { useState } from "react";
 
-import { Switch } from '@pops/ui';
+import { Switch } from "@pops/ui";
 
-import { formatRuntime } from '../lib/format';
+import { formatRuntime } from "../lib/format";
 
 /**
  * ExpandableListRow — a single row in a bordered list with optional:
@@ -52,7 +52,7 @@ export function ExpandableListRow({
   const hasOverview = !!item.overview;
 
   return (
-    <div className={`px-4 py-3${isUpcoming ? ' opacity-50' : ''}`}>
+    <div className={`px-4 py-3${isUpcoming ? " opacity-50" : ""}`}>
       <div className="flex items-start gap-3">
         {onToggleWatched && (
           <button
@@ -70,10 +70,10 @@ export function ExpandableListRow({
             }
             className={`mt-0.5 shrink-0 flex items-center justify-center h-5 w-5 rounded border transition-colors ${
               isToggling || isUpcoming
-                ? 'opacity-50 cursor-not-allowed border-muted'
+                ? "opacity-50 cursor-not-allowed border-muted"
                 : isWatched
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'border-muted-foreground/40 hover:border-primary'
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : "border-muted-foreground/40 hover:border-primary"
             }`}
           >
             {isWatched && <Check className="h-3.5 w-3.5" />}
@@ -101,12 +101,14 @@ export function ExpandableListRow({
               {item.episodeNumber}
             </span>
             <span
-              className={`text-sm font-medium truncate ${isWatched ? 'text-muted-foreground' : ''}`}
+              className={`text-sm font-medium truncate ${isWatched ? "text-muted-foreground" : ""}`}
             >
               {item.name ?? `Episode ${item.episodeNumber}`}
             </span>
             {isUpcoming && (
-              <span className="text-xs text-warning font-medium shrink-0">Upcoming</span>
+              <span className="text-xs text-warning font-medium shrink-0">
+                Upcoming
+              </span>
             )}
           </div>
 
@@ -141,7 +143,9 @@ export function ExpandableListRow({
       </div>
 
       {isExpanded && hasOverview && (
-        <p className="mt-2 ml-7 text-sm text-muted-foreground leading-relaxed">{item.overview}</p>
+        <p className="mt-2 ml-7 text-sm text-muted-foreground leading-relaxed">
+          {item.overview}
+        </p>
       )}
     </div>
   );

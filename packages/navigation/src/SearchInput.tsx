@@ -1,19 +1,31 @@
-import { trpc } from '@pops/api-client';
-import { Button, Input, useDebouncedCallback } from '@pops/ui';
-import { ArrowRightLeft, Box, Building2, Film, PiggyBank, Search, Tv, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { trpc } from "@pops/api-client";
+import { Button, Input, useDebouncedCallback } from "@pops/ui";
+import {
+  ArrowRightLeft,
+  Box,
+  Building2,
+  Film,
+  PiggyBank,
+  Search,
+  Tv,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import { RecentSearches } from './RecentSearches';
-import { useRecentSearches } from './recent-searches';
-import { useSearchKeyboardNav } from './search-keyboard-nav';
-import { useSearchStore } from './searchStore';
-import { SearchResultsPanel } from './SearchResultsPanel';
-import { useFocusTrap } from './useFocusTrap';
-import { useCurrentApp, useSearchResultNavigation } from './hooks';
+import { RecentSearches } from "./RecentSearches";
+import { useRecentSearches } from "./recent-searches";
+import { useSearchKeyboardNav } from "./search-keyboard-nav";
+import { useSearchStore } from "./searchStore";
+import { SearchResultsPanel } from "./SearchResultsPanel";
+import { useFocusTrap } from "./useFocusTrap";
+import { useCurrentApp, useSearchResultNavigation } from "./hooks";
 
-import type { SearchResultHit, SearchResultSection } from './SearchResultsPanel';
+import type {
+  SearchResultHit,
+  SearchResultSection,
+} from "./SearchResultsPanel";
 
 const DEBOUNCE_MS = 300;
 
@@ -28,9 +40,9 @@ const ICON_MAP: Record<string, ReactNode> = {
 
 function domainToLabel(domain: string): string {
   return domain
-    .split('-')
+    .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+    .join(" ");
 }
 
 export function SearchInput() {
@@ -49,11 +61,13 @@ export function SearchInput() {
   const { queries, addQuery, clearAll } = useRecentSearches();
   const utils = trpc.useUtils();
 
-  const [extraHits, setExtraHits] = useState<Record<string, SearchResultHit[]>>({});
+  const [extraHits, setExtraHits] = useState<Record<string, SearchResultHit[]>>(
+    {},
+  );
 
   const { data: searchData } = trpc.core.search.query.useQuery(
     { text: query, context: { app: currentApp ?? null, page: null } },
-    { enabled: isOpen && query.length > 0 }
+    { enabled: isOpen && query.length > 0 },
   );
 
   useEffect(() => {
@@ -112,7 +126,7 @@ export function SearchInput() {
         [domain]: [...(prev[domain] ?? []), ...newHits],
       }));
     },
-    [sections, query, currentApp, utils]
+    [sections, query, currentApp, utils],
   );
 
   const handleResultClick = useCallback(
@@ -121,7 +135,7 @@ export function SearchInput() {
       navigateTo(uri);
       clear();
     },
-    [query, addQuery, navigateTo, clear]
+    [query, addQuery, navigateTo, clear],
   );
 
   const handleClose = useCallback(() => {
@@ -132,7 +146,7 @@ export function SearchInput() {
     containerRef,
     resultCount: orderedUris.length,
     onSelect: (index) => {
-      handleResultClick(orderedUris[index] ?? '');
+      handleResultClick(orderedUris[index] ?? "");
     },
     onClose: handleClose,
   });
@@ -143,36 +157,40 @@ export function SearchInput() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       debouncedSetQuery(e.target.value);
     },
-    [debouncedSetQuery]
+    [debouncedSetQuery],
   );
 
   const handleClear = useCallback(() => {
     clear();
     if (inputRef.current) {
-      inputRef.current.value = '';
+      inputRef.current.value = "";
       inputRef.current.focus();
     }
   }, [clear]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         inputRef.current?.focus();
       }
     }
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
-  const showPanel = isOpen && (query.length > 0 || (isFocused && queries.length > 0));
+  const showPanel =
+    isOpen && (query.length > 0 || (isFocused && queries.length > 0));
 
   useFocusTrap({ containerRef, active: showPanel });
 
   return (
-    <div ref={containerRef} className="hidden md:flex relative items-center max-w-sm w-full mx-4">
+    <div
+      ref={containerRef}
+      className="hidden md:flex relative items-center max-w-sm w-full mx-4"
+    >
       <Search className="absolute left-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
       <Input
         ref={inputRef}

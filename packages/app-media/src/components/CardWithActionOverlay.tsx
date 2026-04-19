@@ -1,9 +1,9 @@
-import { ImageOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ImageOff } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { cn, Skeleton } from '@pops/ui';
+import { cn, Skeleton } from "@pops/ui";
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 /**
  * CardWithActionOverlay — poster card with hover-revealed action overlay.
@@ -37,22 +37,22 @@ export interface CardWithActionOverlayProps {
   disabled?: boolean;
   /** Gradient style for the overlay. Defaults to from-black/80. */
   overlayGradient?: string;
-  'data-testid'?: string;
+  "data-testid"?: string;
 }
 
 export function CardWithActionOverlay({
   src,
   alt,
   className,
-  aspectClass = 'aspect-[2/3]',
+  aspectClass = "aspect-[2/3]",
   overlay,
   topLeft,
   topRight,
   lazy = true,
   onClick,
   disabled,
-  overlayGradient = 'from-black/80',
-  'data-testid': testId,
+  overlayGradient = "from-black/80",
+  "data-testid": testId,
 }: CardWithActionOverlayProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -71,11 +71,11 @@ export function CardWithActionOverlay({
         <img
           src={src}
           alt={alt}
-          loading={lazy ? 'lazy' : 'eager'}
+          loading={lazy ? "lazy" : "eager"}
           className={cn(
-            'h-full w-full object-cover transition-opacity duration-200',
-            onClick && 'group-hover:opacity-80',
-            imageLoaded ? 'opacity-100' : 'opacity-0'
+            "h-full w-full object-cover transition-opacity duration-200",
+            onClick && "group-hover:opacity-80",
+            imageLoaded ? "opacity-100" : "opacity-0",
           )}
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}
@@ -94,15 +94,17 @@ export function CardWithActionOverlay({
 
       {/* Top badges */}
       {topLeft && <div className="absolute top-2 left-2 z-10">{topLeft}</div>}
-      {topRight && <div className="absolute top-2 right-2 z-10">{topRight}</div>}
+      {topRight && (
+        <div className="absolute top-2 right-2 z-10">{topRight}</div>
+      )}
 
       {/* Bottom overlay */}
       {overlay && (
         <div
           className={cn(
-            'absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-2 pt-8',
+            "absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-2 pt-8",
             overlayGradient,
-            'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
+            "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
           )}
         >
           {overlay}
@@ -118,10 +120,12 @@ export function CardWithActionOverlay({
         disabled={disabled}
         aria-label={alt}
         className={cn(
-          'group relative w-full overflow-hidden rounded-md bg-muted',
+          "group relative w-full overflow-hidden rounded-md bg-muted",
           aspectClass,
-          disabled ? 'cursor-default' : 'cursor-pointer active:scale-[0.98] transition-transform',
-          className
+          disabled
+            ? "cursor-default"
+            : "cursor-pointer active:scale-[0.98] transition-transform",
+          className,
         )}
         data-testid={testId}
       >
@@ -133,9 +137,9 @@ export function CardWithActionOverlay({
   return (
     <div
       className={cn(
-        'group relative w-full overflow-hidden rounded-md bg-muted',
+        "group relative w-full overflow-hidden rounded-md bg-muted",
         aspectClass,
-        className
+        className,
       )}
       data-testid={testId}
     >

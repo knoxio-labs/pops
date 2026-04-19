@@ -1,8 +1,8 @@
-import { Plus } from 'lucide-react';
+import { Plus } from "lucide-react";
 
-import { Button } from '@pops/ui';
+import { Button } from "@pops/ui";
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 /**
  * CRUDManagementSection — generic section wrapper for list-based CRUD UIs.
@@ -28,7 +28,7 @@ export interface CRUDManagementSectionProps {
 export function CRUDManagementSection({
   title,
   description,
-  addLabel = 'Add',
+  addLabel = "Add",
   onAdd,
   showForm,
   form,
@@ -36,7 +36,9 @@ export function CRUDManagementSection({
   className,
 }: CRUDManagementSectionProps) {
   return (
-    <div className={`rounded-lg border bg-card p-6 space-y-4 ${className ?? ''}`}>
+    <div
+      className={`rounded-lg border bg-card p-6 space-y-4 ${className ?? ""}`}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">{title}</h2>

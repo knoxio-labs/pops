@@ -2,7 +2,7 @@
  * Search store — manages search input state.
  * Not persisted (search is ephemeral).
  */
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface SearchState {
   query: string;
@@ -13,7 +13,7 @@ interface SearchState {
 }
 
 export const useSearchStore = create<SearchState>()((set) => ({
-  query: '',
+  query: "",
   isOpen: false,
   setQuery: (query) => {
     set({ query, isOpen: query.length > 0 });
@@ -22,6 +22,6 @@ export const useSearchStore = create<SearchState>()((set) => ({
     set({ isOpen: open });
   },
   clear: () => {
-    set({ query: '', isOpen: false });
+    set({ query: "", isOpen: false });
   },
 }));
