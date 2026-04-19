@@ -28,8 +28,8 @@ As a user, I want settings fields to render as appropriate input widgets with in
 ### Auto-Save
 
 - [x] Changing any field triggers a call to `core.settings.setBulk` after a 500ms debounce — there is no submit button
-- [ ] While the save is in flight, the field shows a subtle saving indicator
-- [ ] On successful save, the indicator briefly shows a checkmark then disappears
+- [x] While the save is in flight, the field shows a subtle saving indicator
+- [x] On successful save, the indicator briefly shows a checkmark then disappears
 - [x] If the save fails, an error message is shown below the field (toast)
 
 ### Validation
