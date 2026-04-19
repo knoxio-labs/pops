@@ -6,6 +6,60 @@ import { Button } from '@pops/ui';
 import { useImportStore } from '../../store/importStore';
 import { FileUpload } from './FileUpload';
 
+interface ParseResult {
+  ok: boolean;
+  error?: string;
+  headers?: string[];
+  rows?: Record<string, string>[];
+}
+
+function parseCsvFile(file: File): Promise<ParseResult> {
+  return new Promise((resolve) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          resolve({
+            ok: false,
+            error: `CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`,
+          });
+          return;
+        }
+        if (results.data.length === 0) {
+          resolve({ ok: false, error: 'CSV file is empty' });
+          return;
+        }
+        const headers = results.meta.fields ?? [];
+        if (headers.length === 0) {
+          resolve({ ok: false, error: 'CSV file has no headers' });
+          return;
+        }
+        resolve({ ok: true, headers, rows: results.data });
+      },
+      error: (error) => resolve({ ok: false, error: `Failed to parse CSV: ${error.message}` }),
+    });
+  });
+}
+
+function UploadFooter({
+  onNext,
+  disabled,
+  isProcessing,
+}: {
+  onNext: () => void;
+  disabled: boolean;
+  isProcessing: boolean;
+}) {
+  return (
+    <div className="flex justify-end gap-3">
+      <Button onClick={onNext} disabled={disabled}>
+        {isProcessing ? 'Processing...' : 'Next'}
+      </Button>
+    </div>
+  );
+}
+
 /**
  * Step 1: Upload CSV file and parse it
  */
@@ -22,48 +76,22 @@ export function UploadStep() {
     [setFile]
   );
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     if (!file) {
       setError('Please select a file');
       return;
     }
-
     setIsProcessing(true);
     setError(null);
-
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors.length > 0) {
-          setError(`CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`);
-          setIsProcessing(false);
-          return;
-        }
-
-        if (results.data.length === 0) {
-          setError('CSV file is empty');
-          setIsProcessing(false);
-          return;
-        }
-
-        const headers = results.meta.fields ?? [];
-        if (headers.length === 0) {
-          setError('CSV file has no headers');
-          setIsProcessing(false);
-          return;
-        }
-
-        setHeaders(headers);
-        setRows(results.data);
-        setIsProcessing(false);
-        nextStep();
-      },
-      error: (error) => {
-        setError(`Failed to parse CSV: ${error.message}`);
-        setIsProcessing(false);
-      },
-    });
+    const result = await parseCsvFile(file);
+    setIsProcessing(false);
+    if (!result.ok) {
+      setError(result.error ?? 'Unknown error');
+      return;
+    }
+    setHeaders(result.headers ?? []);
+    setRows(result.rows ?? []);
+    nextStep();
   }, [file, setHeaders, setRows, nextStep]);
 
   return (
@@ -95,11 +123,11 @@ export function UploadStep() {
         </div>
       )}
 
-      <div className="flex justify-end gap-3">
-        <Button onClick={handleNext} disabled={!file || isProcessing}>
-          {isProcessing ? 'Processing...' : 'Next'}
-        </Button>
-      </div>
+      <UploadFooter
+        onNext={handleNext}
+        disabled={!file || isProcessing}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 }
