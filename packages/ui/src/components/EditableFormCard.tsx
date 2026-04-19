@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-
 import { cn } from '../lib/utils';
+
+import type { KeyboardEvent, ReactNode } from 'react';
 
 export interface EditableFormCardProps {
   /** Title shown in the card header */
@@ -25,7 +25,7 @@ export function EditableFormCard({
   onEscape,
   className,
 }: EditableFormCardProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') onEscape?.();
   };
 

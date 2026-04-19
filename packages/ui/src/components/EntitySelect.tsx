@@ -2,6 +2,7 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { Badge } from '../primitives/badge';
 import {
   Command,
   CommandEmpty,
@@ -11,7 +12,6 @@ import {
   CommandList,
 } from '../primitives/command';
 import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
-import { Badge } from '../primitives/badge';
 import { Button } from './Button';
 
 export interface EntityOption {

@@ -96,7 +96,7 @@ export function LoadingProgressStep({
           <div className="space-y-1">
             {currentBatch.map((item, idx) => (
               <div
-                key={idx}
+                key={`${idx}-${item.description}`}
                 className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
               >
                 {item.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin" />}
@@ -111,9 +111,9 @@ export function LoadingProgressStep({
 
       {errors && errors.length > 0 && (
         <div className="w-full max-w-md space-y-2">
-          {errors.map((error, idx) => (
+          {errors.map((error) => (
             <div
-              key={idx}
+              key={error}
               className="p-3 text-sm text-warning bg-warning/10 rounded-lg border border-warning/25"
             >
               <p className="text-xs">{error}</p>

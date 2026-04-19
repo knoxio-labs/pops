@@ -61,11 +61,11 @@ export function DashboardPage() {
       <PageHeader title="Dashboard" description="Welcome back! Here's your financial overview." />
 
       {/* Stats Grid */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section>
         {transactionsLoading ? (
           <SkeletonGrid count={4} itemHeight="h-32" cols="sm:grid-cols-2 lg:grid-cols-4" />
         ) : stats ? (
-          <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Transactions"
               value={stats.totalTransactions.toLocaleString()}
@@ -90,7 +90,7 @@ export function DashboardPage() {
               description="Last 10 transactions"
               color={stats.totalIncome > stats.totalExpenses ? 'emerald' : 'rose'}
             />
-          </>
+          </div>
         ) : null}
       </section>
 

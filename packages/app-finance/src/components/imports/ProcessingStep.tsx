@@ -124,22 +124,24 @@ export function ProcessingStep() {
   // click Continue without re-running the pipeline.
   if (hasAlreadyProcessed) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-6">
+      <>
         <LoadingProgressStep
           done
           title="Already processed"
           message="Your transactions are ready for review. Nothing to re-run."
         />
-        <Button onClick={nextStep}>
-          <ArrowRight className="h-4 w-4" />
-          Continue to Review
-        </Button>
-      </div>
+        <div className="flex justify-center pb-6">
+          <Button onClick={nextStep}>
+            <ArrowRight className="h-4 w-4" />
+            Continue to Review
+          </Button>
+        </div>
+      </>
     );
   }
 
   const pct =
-    isProcessing && progress
+    isProcessing && progress && progress.totalTransactions > 0
       ? (progress.processedCount / progress.totalTransactions) * 100
       : undefined;
 
@@ -212,9 +214,9 @@ export function ProcessingStep() {
 
       {/* Warnings from completed result */}
       {completedWarnings &&
-        completedWarnings.map((warning: ImportWarning, idx: number) => (
+        completedWarnings.map((warning: ImportWarning) => (
           <div
-            key={idx}
+            key={warning.type}
             className="w-full max-w-md p-4 text-sm rounded-lg border text-warning bg-warning/10 border-warning/25"
           >
             <div className="flex items-start gap-3">

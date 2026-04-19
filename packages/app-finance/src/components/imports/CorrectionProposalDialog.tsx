@@ -558,10 +558,6 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
         columns={isGridMode ? 3 : undefined}
         gridTemplate={isGridMode ? 'grid-cols-[300px_minmax(0,1fr)_360px]' : undefined}
         footer={browseFooter}
-        className="
-          max-w-(--size-dialog-max-vw) max-h-(--size-dialog-max-vh) w-(--size-dialog-xl)
-          md:max-w-(--size-dialog-max-vw) md:w-(--size-dialog-xl)
-        "
       >
         {browseBody}
       </WorkflowDialog>

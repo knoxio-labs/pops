@@ -25,8 +25,8 @@ export function SkeletonGrid({
 }: SkeletonGridProps) {
   return (
     <div className={cn('grid', cols, gap, className)}>
-      {Array.from({ length: count }).map((_, i) => (
-        <Skeleton key={i} className={itemHeight} />
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={`skeleton-${i}`} className={itemHeight} />
       ))}
     </div>
   );

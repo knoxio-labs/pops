@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 import { cn } from '../lib/utils';
 import {
   Dialog,
@@ -9,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../primitives/dialog';
+
+import type { ReactNode } from 'react';
 
 export interface WorkflowDialogProps {
   open: boolean;
@@ -64,8 +64,7 @@ export function WorkflowDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          'max-w-[92vw] max-h-[88vh] w-[1180px]',
-          'md:max-w-[92vw] md:w-[1180px]',
+          'w-(--size-dialog-xl) max-w-(--size-dialog-max-vw) max-h-(--size-dialog-max-vh)',
           'flex flex-col gap-0 overflow-hidden p-0',
           className
         )}

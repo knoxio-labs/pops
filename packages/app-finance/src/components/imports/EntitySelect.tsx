@@ -1,7 +1,5 @@
 import { EntitySelect as UiEntitySelect } from '@pops/ui';
 
-export type { EntityOption, EntitySelectProps } from '@pops/ui';
-
 export interface FinanceEntityOption {
   id: string;
   name: string;
