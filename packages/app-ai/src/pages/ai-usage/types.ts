@@ -7,3 +7,8 @@ export interface HistoryRecord {
   cacheHits: number;
   errors: number;
 }
+
+export type HistoryPayload = {
+  records: HistoryRecord[];
+  summary: { totalCostUsd: number };
+};

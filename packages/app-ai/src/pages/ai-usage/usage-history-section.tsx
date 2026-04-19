@@ -2,12 +2,7 @@ import { Card, DataTable } from '@pops/ui';
 
 import { buildHistoryColumns } from './history-columns';
 
-import type { HistoryRecord } from './types';
-
-type HistoryPayload = {
-  records: HistoryRecord[];
-  summary: { totalCostUsd: number };
-};
+import type { HistoryPayload } from './types';
 
 export function UsageHistorySection({ history }: { history: HistoryPayload }) {
   const historyColumns = buildHistoryColumns();

@@ -127,14 +127,16 @@ export function useWatchlistPageModel() {
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
+      if (isReordering) return;
       setActiveId(event.active.id as number);
       setOptimisticOrder([...sortedEntries]);
     },
-    [sortedEntries]
+    [sortedEntries, isReordering]
   );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      if (isReordering) return;
       const { active, over } = event;
       setActiveId(null);
 
@@ -162,7 +164,7 @@ export function useWatchlistPageModel() {
       setIsReordering(true);
       reorderMutation.mutate({ items });
     },
-    [sortedEntries, optimisticOrder, reorderMutation]
+    [sortedEntries, optimisticOrder, reorderMutation, isReordering]
   );
 
   const handleDragCancel = useCallback(() => {

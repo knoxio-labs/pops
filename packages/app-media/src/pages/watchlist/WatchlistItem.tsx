@@ -102,9 +102,8 @@ export function WatchlistItem({
       {showReorderControls && (
         <div className="flex flex-col justify-center gap-1 shrink-0">
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-6 w-6 p-0"
             disabled={isFirst || isReordering}
             onClick={onMoveUp}
             aria-label={`Move ${title} up`}
@@ -112,9 +111,8 @@ export function WatchlistItem({
             <ArrowUp className="h-3.5 w-3.5" />
           </Button>
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-6 w-6 p-0"
             disabled={isLast || isReordering}
             onClick={onMoveDown}
             aria-label={`Move ${title} down`}
@@ -158,9 +156,9 @@ export function WatchlistItem({
           </div>
 
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+            className="text-muted-foreground hover:text-destructive shrink-0"
             onClick={() => onRemove(entry.id)}
             disabled={isRemoving}
             aria-label={`Remove ${title} from watchlist`}
