@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createCaller, seedSetting, setupTestContext } from '../../../shared/test-utils.js';
 import { SETTINGS_KEYS } from './keys.js';
-import { SettingsRegistry } from './registry.js';
+import { SettingsRegistry, settingsRegistry } from './registry.js';
 
 import type { Database } from 'better-sqlite3';
 
@@ -31,7 +31,10 @@ describe('settings.list', () => {
   });
 
   it('returns all settings', async () => {
-    seedSetting(db, { key: SETTINGS_KEYS.PLEX_URL, value: 'http://plex:32400' });
+    seedSetting(db, {
+      key: SETTINGS_KEYS.PLEX_URL,
+      value: 'http://plex:32400',
+    });
     seedSetting(db, { key: SETTINGS_KEYS.THEME, value: 'dark' });
 
     const result = await caller.core.settings.list({});
@@ -40,7 +43,10 @@ describe('settings.list', () => {
   });
 
   it('filters by search term', async () => {
-    seedSetting(db, { key: SETTINGS_KEYS.PLEX_URL, value: 'http://plex:32400' });
+    seedSetting(db, {
+      key: SETTINGS_KEYS.PLEX_URL,
+      value: 'http://plex:32400',
+    });
     seedSetting(db, { key: SETTINGS_KEYS.PLEX_TOKEN, value: 'abc123' });
     seedSetting(db, { key: SETTINGS_KEYS.THEME, value: 'dark' });
 
@@ -50,7 +56,10 @@ describe('settings.list', () => {
   });
 
   it('paginates results', async () => {
-    seedSetting(db, { key: SETTINGS_KEYS.PLEX_URL, value: 'http://plex:32400' });
+    seedSetting(db, {
+      key: SETTINGS_KEYS.PLEX_URL,
+      value: 'http://plex:32400',
+    });
     seedSetting(db, { key: SETTINGS_KEYS.PLEX_TOKEN, value: 'abc' });
     seedSetting(db, { key: SETTINGS_KEYS.THEME, value: 'dark' });
 
@@ -80,14 +89,19 @@ describe('settings.get', () => {
   });
 
   it('returns null for missing key', async () => {
-    const result = await caller.core.settings.get({ key: SETTINGS_KEYS.RADARR_URL });
+    const result = await caller.core.settings.get({
+      key: SETTINGS_KEYS.RADARR_URL,
+    });
     expect(result.data).toBeNull();
   });
 });
 
 describe('settings.set', () => {
   it('creates a new setting', async () => {
-    const result = await caller.core.settings.set({ key: SETTINGS_KEYS.THEME, value: 'dark' });
+    const result = await caller.core.settings.set({
+      key: SETTINGS_KEYS.THEME,
+      value: 'dark',
+    });
     expect(result.message).toBe('Setting saved');
     expect(result.data.key).toBe(SETTINGS_KEYS.THEME);
     expect(result.data.value).toBe('dark');
@@ -96,16 +110,24 @@ describe('settings.set', () => {
   it('updates an existing setting (upsert)', async () => {
     seedSetting(db, { key: SETTINGS_KEYS.THEME, value: 'light' });
 
-    const result = await caller.core.settings.set({ key: SETTINGS_KEYS.THEME, value: 'dark' });
+    const result = await caller.core.settings.set({
+      key: SETTINGS_KEYS.THEME,
+      value: 'dark',
+    });
     expect(result.data.value).toBe('dark');
 
     // Verify only one row exists
-    const listResult = await caller.core.settings.list({ search: SETTINGS_KEYS.THEME });
+    const listResult = await caller.core.settings.list({
+      search: SETTINGS_KEYS.THEME,
+    });
     expect(listResult.data).toHaveLength(1);
   });
 
   it('persists to the database', async () => {
-    await caller.core.settings.set({ key: SETTINGS_KEYS.RADARR_URL, value: 'http://radarr:7878' });
+    await caller.core.settings.set({
+      key: SETTINGS_KEYS.RADARR_URL,
+      value: 'http://radarr:7878',
+    });
     const row = db
       .prepare('SELECT * FROM settings WHERE key = ?')
       .get(SETTINGS_KEYS.RADARR_URL) as {
@@ -117,7 +139,10 @@ describe('settings.set', () => {
   });
 
   it('allows empty string value', async () => {
-    const result = await caller.core.settings.set({ key: SETTINGS_KEYS.SONARR_URL, value: '' });
+    const result = await caller.core.settings.set({
+      key: SETTINGS_KEYS.SONARR_URL,
+      value: '',
+    });
     expect(result.data.value).toBe('');
   });
 });
@@ -126,7 +151,9 @@ describe('settings.delete', () => {
   it('deletes an existing setting', async () => {
     seedSetting(db, { key: SETTINGS_KEYS.THEME, value: 'dark' });
 
-    const result = await caller.core.settings.delete({ key: SETTINGS_KEYS.THEME });
+    const result = await caller.core.settings.delete({
+      key: SETTINGS_KEYS.THEME,
+    });
     expect(result.message).toBe('Setting deleted');
 
     // Verify it's gone
@@ -183,12 +210,52 @@ describe('SettingsRegistry', () => {
 
     expect(() =>
       registry.register(makeManifest('manifest-b', 200, ['b.only', 'shared.key']))
-    ).toThrow(/shared\.key.*manifest-a.*manifest-b|manifest-a.*shared\.key.*manifest-b/);
+    ).toThrow(/(?=.*shared\.key)(?=.*manifest-a)(?=.*manifest-b)/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// settings.getBulk / settings.setBulk tRPC procedure tests
+// settings.getManifests (tRPC — uses singleton, cleared after each test)
+// ---------------------------------------------------------------------------
+
+describe('settings.getManifests', () => {
+  beforeEach(() => {
+    settingsRegistry.clear();
+  });
+
+  afterEach(() => {
+    settingsRegistry.clear();
+  });
+
+  it('returns empty array when no manifests are registered', async () => {
+    const result = await caller.core.settings.getManifests();
+    expect(result.manifests).toEqual([]);
+  });
+
+  it('returns registered manifests sorted by order', async () => {
+    settingsRegistry.register(makeManifest('z.manifest', 300, ['z.key']));
+    settingsRegistry.register(makeManifest('a.manifest', 10, ['a.key']));
+
+    const result = await caller.core.settings.getManifests();
+    expect(result.manifests.map((m) => m.id)).toEqual(['a.manifest', 'z.manifest']);
+  });
+
+  it('rejects when a registered manifest contains an invalid field type', async () => {
+    settingsRegistry.register({
+      id: 'bad.manifest',
+      title: 'Bad',
+      order: 1,
+      groups: [
+        { id: 'g', title: 'G', fields: [{ key: 'k', label: 'K', type: 'not-a-type' as any }] },
+      ],
+    } as any);
+
+    await expect(caller.core.settings.getManifests()).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// settings.getBulk
 // ---------------------------------------------------------------------------
 
 describe('settings.getBulk', () => {
@@ -208,7 +275,16 @@ describe('settings.getBulk', () => {
     expect(result.settings['bulk.key.4']).toBeUndefined();
     expect(result.settings['bulk.key.5']).toBeUndefined();
   });
+
+  it('returns empty object for empty keys array', async () => {
+    const result = await caller.core.settings.getBulk({ keys: [] });
+    expect(result.settings).toEqual({});
+  });
 });
+
+// ---------------------------------------------------------------------------
+// settings.setBulk
+// ---------------------------------------------------------------------------
 
 describe('settings.setBulk', () => {
   it('saves all 3 entries and makes them retrievable', async () => {
