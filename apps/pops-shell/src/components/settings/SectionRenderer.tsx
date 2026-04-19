@@ -63,6 +63,19 @@ function inferUnit(ms: number): string {
   return 'milliseconds';
 }
 
+function TestActionIcon({ state, fallback }: { state: TestState; fallback: React.ReactNode }) {
+  if (state === 'loading') return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
+  if (state === 'success') return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
+  if (state === 'error') return <XCircle className="h-3.5 w-3.5 text-destructive" />;
+  return <>{fallback}</>;
+}
+
+function getInputType(type: SettingsField['type']): 'number' | 'url' | 'text' {
+  if (type === 'number') return 'number';
+  if (type === 'url') return 'url';
+  return 'text';
+}
+
 function DurationFieldInput({
   field,
   value,
@@ -268,15 +281,7 @@ function FieldInput({
               disabled={testState === 'loading'}
               type="button"
             >
-              {testState === 'loading' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : testState === 'success' ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              ) : testState === 'error' ? (
-                <XCircle className="h-3.5 w-3.5 text-destructive" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
+              <TestActionIcon state={testState} fallback={<RefreshCw className="h-3.5 w-3.5" />} />
               <span className="ml-1">{field.testAction.label}</span>
             </Button>
           )}
@@ -290,8 +295,7 @@ function FieldInput({
     );
   }
 
-  // text, number, url
-  const inputType = field.type === 'number' ? 'number' : field.type === 'url' ? 'url' : 'text';
+  const inputType = getInputType(field.type);
 
   return (
     <FieldWrapper field={field} saveState={saveState}>
@@ -312,13 +316,7 @@ function FieldInput({
             disabled={testState === 'loading'}
             type="button"
           >
-            {testState === 'loading' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : testState === 'success' ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-            ) : testState === 'error' ? (
-              <XCircle className="h-3.5 w-3.5 text-destructive" />
-            ) : null}
+            <TestActionIcon state={testState} fallback={null} />
             <span className={cn(testState !== 'idle' && 'ml-1')}>{field.testAction.label}</span>
           </Button>
         )}
