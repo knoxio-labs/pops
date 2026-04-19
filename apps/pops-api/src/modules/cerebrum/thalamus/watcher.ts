@@ -63,23 +63,28 @@ export class FileWatcherService extends EventEmitter {
       return;
     }
 
+    const attachErrorHandler = (w: FSWatcher): void => {
+      w.on('error', (err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
+        if ((error as NodeJS.ErrnoException).code === 'EMFILE') {
+          console.error(
+            '[thalamus] EMFILE: too many open files — falling back to polling (interval: 60s)'
+          );
+          void w.close().then(() => {
+            this.watcher = null;
+            const pollingOptions = { ...watchOptions, usePolling: true, interval: 60_000 };
+            const pollingWatcher = chokidarWatch(this.root, pollingOptions);
+            this.watcher = pollingWatcher;
+            attachErrorHandler(pollingWatcher);
+            this.attachHandlers(pollingWatcher, existingPaths);
+          });
+        } else {
+          this.emit('error', error);
+        }
+      });
+    };
     // Handle EMFILE by falling back to polling.
-    watcher.on('error', (err: unknown) => {
-      const error = err instanceof Error ? err : new Error(String(err));
-      if ((error as NodeJS.ErrnoException).code === 'EMFILE') {
-        console.error(
-          '[thalamus] EMFILE: too many open files — falling back to polling (interval: 60s)'
-        );
-        void watcher.close().then(() => {
-          this.watcher = null;
-          const pollingOptions = { ...watchOptions, usePolling: true, interval: 60_000 };
-          this.watcher = chokidarWatch(this.root, pollingOptions);
-          this.attachHandlers(this.watcher, existingPaths);
-        });
-      } else {
-        this.emit('error', error);
-      }
-    });
+    attachErrorHandler(watcher);
 
     this.watcher = watcher;
     this.attachHandlers(watcher, existingPaths);

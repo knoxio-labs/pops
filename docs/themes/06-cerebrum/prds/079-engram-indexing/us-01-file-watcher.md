@@ -15,7 +15,7 @@ As the Thalamus indexing service, I need to watch the engram directory for file 
 - [x] Events are batched — the watcher collects events during the debounce window and emits them as a batch array of `{ type: 'create' | 'modify' | 'delete', filePath: string }` objects
 - [x] On startup, the watcher performs an initial scan of the engram directory and emits `create` events for all existing `.md` files not already in the index (reconciliation pass)
 - [x] The startup reconciliation batches file processing (100 files per tick via `setImmediate` or equivalent) to avoid blocking the event loop during large initial scans
-- [x] If the engram directory does not exist at startup, the service throws a fatal error with a clear message and prevents Thalamus from starting
+- [x] If the engram directory does not exist at startup, the service logs a clear warning, disables file watching, and allows Thalamus to continue starting (non-fatal — create the directory and restart to enable)
 - [x] If the OS file watcher limit is exceeded, the service logs an error and falls back to periodic polling at a 60-second interval
 - [x] The service exposes a health check method returning `{ watching: boolean, lastEventAt: string | null, watchedPaths: number }`
 

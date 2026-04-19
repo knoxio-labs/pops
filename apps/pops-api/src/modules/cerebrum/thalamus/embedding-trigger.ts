@@ -45,7 +45,7 @@ export class EmbeddingTrigger {
         const queue = getEmbeddingsQueue();
         await queue.add(
           EMBEDDINGS_QUEUE,
-          { sourceType: 'engram', sourceId: engramId },
+          { sourceType: 'engram', sourceId: engramId, content: result.bodyText },
           EMBEDDINGS_JOB_OPTIONS
         );
         output.push({ engramId, action: 'enqueued', reason: 'content changed' });

@@ -30,6 +30,8 @@ export interface SyncResult {
   contentHash?: string;
   previousContentHash?: string;
   wordCount?: number;
+  /** Body text (frontmatter stripped) — used as the embedding job payload so the worker doesn't re-read the file. */
+  bodyText?: string;
   error?: string;
 }
 
@@ -128,22 +130,37 @@ export class FrontmatterSyncService {
     const newLinks = dedupe(frontmatter.links ?? []);
 
     this.db.transaction((tx) => {
-      // Upsert index row (delete + insert for simplicity, matching EngramService).
-      tx.delete(engramIndex).where(eq(engramIndex.id, frontmatter.id)).run();
+      // Upsert index row without deleting — preserves junction rows so the diffs below see current state.
+      const indexValues = {
+        id: frontmatter.id,
+        filePath: relPath,
+        type: frontmatter.type,
+        source: frontmatter.source,
+        status: frontmatter.status,
+        template: frontmatter.template ?? null,
+        createdAt: frontmatter.created,
+        modifiedAt: frontmatter.modified,
+        title,
+        contentHash,
+        wordCount,
+        customFields: Object.keys(customFields).length > 0 ? JSON.stringify(customFields) : null,
+      };
       tx.insert(engramIndex)
-        .values({
-          id: frontmatter.id,
-          filePath: relPath,
-          type: frontmatter.type,
-          source: frontmatter.source,
-          status: frontmatter.status,
-          template: frontmatter.template ?? null,
-          createdAt: frontmatter.created,
-          modifiedAt: frontmatter.modified,
-          title,
-          contentHash,
-          wordCount,
-          customFields: Object.keys(customFields).length > 0 ? JSON.stringify(customFields) : null,
+        .values(indexValues)
+        .onConflictDoUpdate({
+          target: engramIndex.id,
+          set: {
+            filePath: indexValues.filePath,
+            type: indexValues.type,
+            source: indexValues.source,
+            status: indexValues.status,
+            template: indexValues.template,
+            modifiedAt: indexValues.modifiedAt,
+            title: indexValues.title,
+            contentHash: indexValues.contentHash,
+            wordCount: indexValues.wordCount,
+            customFields: indexValues.customFields,
+          },
         })
         .run();
 
@@ -227,6 +244,7 @@ export class FrontmatterSyncService {
       contentHash,
       previousContentHash: previousContentHash ?? undefined,
       wordCount,
+      bodyText: body,
     };
   }
 

@@ -13,12 +13,16 @@ import { eq } from 'drizzle-orm';
 import { engramIndex } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { DEFAULT_JOB_OPTIONS, getDefaultQueue } from '../../../jobs/queues.js';
 import { getEngramRoot } from '../instance.js';
 import { EmbeddingTrigger } from './embedding-trigger.js';
 import { FrontmatterSyncService } from './sync.js';
 import { FileWatcherService } from './watcher.js';
 
 import type { WatchEvent } from './watcher.js';
+
+const CROSS_SOURCE_SCHEDULER_ID = 'pops-cross-source-index';
+const CROSS_SOURCE_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 let watcher: FileWatcherService | null = null;
 
@@ -78,10 +82,27 @@ export async function startThalamus(): Promise<void> {
 
   watcher.start(existingPaths);
   console.warn(`[thalamus] File watcher started (root: ${root})`);
+
+  // Register cross-source index repeatable job (every 6 hours).
+  void getDefaultQueue()
+    .upsertJobScheduler(
+      CROSS_SOURCE_SCHEDULER_ID,
+      { every: CROSS_SOURCE_INTERVAL_MS },
+      { name: 'crossSourceIndex', data: { type: 'crossSourceIndex' }, opts: DEFAULT_JOB_OPTIONS }
+    )
+    .catch((err: unknown) => {
+      console.error('[thalamus] Failed to register cross-source index scheduler:', err);
+    });
 }
 
-/** Stop the Thalamus file watcher. */
+/** Stop the Thalamus file watcher and deregister the cross-source scheduler. */
 export async function stopThalamus(): Promise<void> {
+  void getDefaultQueue()
+    .removeJobScheduler(CROSS_SOURCE_SCHEDULER_ID)
+    .catch((err: unknown) => {
+      console.error('[thalamus] Failed to remove cross-source index scheduler:', err);
+    });
+
   if (watcher) {
     await watcher.stop();
     watcher = null;

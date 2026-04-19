@@ -92,7 +92,7 @@ export const indexRouter = router({
    */
   reconcile: protectedProcedure
     .input(z.object({ dryRun: z.boolean().optional() }))
-    .query(async ({ input }) => {
+    .mutation(async ({ input }) => {
       const { existsSync, readdirSync } = await import('node:fs');
       const { join, relative } = await import('node:path');
       const { engramIndex } = await import('@pops/db-types');

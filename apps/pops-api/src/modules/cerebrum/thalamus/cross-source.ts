@@ -7,8 +7,6 @@
  * `content_hash` stored in the `embeddings` table.  Missing rows (never
  * embedded) are always enqueued.
  */
-import { createHash } from 'node:crypto';
-
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { embeddings, homeInventory, movies, transactions, tvShows } from '@pops/db-types';
@@ -18,6 +16,7 @@ import {
   EMBEDDINGS_QUEUE,
   getEmbeddingsQueue,
 } from '../../../jobs/queues.js';
+import { chunkText, hashContent } from '../../../shared/chunker.js';
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
@@ -73,10 +72,6 @@ export function toInventoryText(row: InventoryRow): string {
   if (row.type) parts.push(`Type: ${row.type}`);
   if (row.location) parts.push(`Location: ${row.location}`);
   return parts.join('\n');
-}
-
-function sha256(input: string): string {
-  return createHash('sha256').update(input).digest('hex');
 }
 
 // ---------------------------------------------------------------------------
@@ -153,22 +148,31 @@ export class CrossSourceIndexer {
       const items = batch.map(toItem);
       const ids = items.map((it) => it.id);
 
-      // Fetch existing embeddings for this batch.
+      // Fetch chunk_index=0 embeddings for this batch — compare against the first chunk hash
+      // to detect whether content has changed since the last embedding run.
       const existing = this.db
         .select({ sourceId: embeddings.sourceId, contentHash: embeddings.contentHash })
         .from(embeddings)
-        .where(and(eq(embeddings.sourceType, sourceType), inArray(embeddings.sourceId, ids)))
+        .where(
+          and(
+            eq(embeddings.sourceType, sourceType),
+            inArray(embeddings.sourceId, ids),
+            eq(embeddings.chunkIndex, 0)
+          )
+        )
         .all();
 
-      const hashBySourceId = new Map(existing.map((e) => [e.sourceId, e.contentHash]));
+      const chunk0HashBySourceId = new Map(existing.map((e) => [e.sourceId, e.contentHash]));
 
       const queue = getEmbeddingsQueue();
 
       for (const item of items) {
         if (!item.text.trim()) continue;
-        const newHash = sha256(item.text);
-        const existingHash = hashBySourceId.get(item.id);
-        if (existingHash === newHash) continue;
+        const firstChunk = chunkText(item.text)[0];
+        if (!firstChunk) continue;
+        const firstChunkHash = hashContent(firstChunk.text);
+        const existingHash = chunk0HashBySourceId.get(item.id);
+        if (existingHash === firstChunkHash) continue;
 
         try {
           await queue.add(
