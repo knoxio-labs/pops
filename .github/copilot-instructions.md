@@ -2,7 +2,7 @@
 
 ## What This Repository Is
 
-POPS (Personal Operations System) is a self-hosted personal command center for finance, media, inventory, and AI operations. It is a pnpm/Turborepo monorepo running on Node.js 24 with SQLite (Drizzle ORM), tRPC + Express, React 19 + Vite, and Tailwind v4. All AI calls go through the Claude API. Jobs run on BullMQ + Redis. The system deploys via Docker Compose + Ansible to a home server behind Cloudflare Tunnel.
+POPS (Personal Operations System) is a self-hosted personal command center for finance, media, inventory, and AI operations. It is a pnpm/Turborepo monorepo running on Node.js (24 locally via `mise`, 22 in CI/production) with SQLite (Drizzle ORM), tRPC + Express, React 19 + Vite, and Tailwind v4. AI categorization and entity matching use the Claude API; embeddings use an OpenAI-compatible client (configurable via `EMBEDDING_API_URL`, defaulting to `https://api.openai.com/v1`). Jobs run on BullMQ + Redis. The system deploys via Docker Compose + Ansible to a home server behind Cloudflare Tunnel.
 
 **Monorepo layout:**
 - `apps/pops-api/` — Express + tRPC backend
@@ -15,7 +15,7 @@ POPS (Personal Operations System) is a self-hosted personal command center for f
 - `infra/` — Ansible playbooks + Docker Compose
 - `docs/` — PRDs, epics, user stories, ADRs, roadmap
 
-**Documentation hierarchy (strictly maintained):** User Story → PRD → Epic → Theme → `docs/roadmap.md`
+**Documentation hierarchy (strictly maintained):** Theme → Epic → PRD → User Story (status flows upward: US done → PRD → Epic → Theme → `docs/roadmap.md`)
 
 ---
 
@@ -37,7 +37,7 @@ cd apps/pops-shell && pnpm test:e2e         # Playwright E2E (run in CI)
 pnpm format:check                           # oxfmt formatting check
 ```
 
-Pre-push gate (enforced via Husky): `mise lint && mise typecheck`
+Git hooks (enforced via Husky): pre-commit runs `lint-staged` (oxlint + oxfmt on staged files) and `pnpm typecheck`; pre-push checks for merge conflicts with `origin/main`. Recommended to also run `mise lint && mise typecheck && mise test` manually before pushing.
 
 GitHub Actions runs: lint, typecheck, format, unit tests, integration tests, E2E, OpenAPI validation, and Docker build — all must be green.
 
@@ -87,7 +87,7 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 
 - API modules: `router.ts` + `service.ts` + `types.ts` + `index.ts`. Business logic lives in `service.ts` only.
 - Frontend: one route = one page. Page components use shell + sections + hooks pattern for complex UIs.
-- Styling: Tailwind only. No arbitrary values without a design token reason. Use `app-accent` for domain color. No inline styles.
+- Styling: Tailwind only. No arbitrary values without a design token reason. Use `app-accent` for domain color. No `style={{}}` except for dynamic runtime values (e.g., progress bar widths computed at runtime); `w-[var(--radix-*)]` bindings are also permitted.
 - Components: all new UI components must have a Storybook story.
 - Icons: Lucide only. No other icon libraries.
 - Database: integer PKs for domain tables, UUID text for cross-domain FKs. Timestamps as ISO 8601 `TEXT`. All schema changes via Drizzle migrations.
