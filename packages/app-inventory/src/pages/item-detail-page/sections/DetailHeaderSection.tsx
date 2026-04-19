@@ -33,10 +33,10 @@ function LocationBreadcrumb({
   return (
     <div className="mb-8 flex items-center gap-1.5 text-sm" data-testid="location-breadcrumb">
       <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-      {!locationId ? (
-        <span className="text-muted-foreground">No location assigned</span>
-      ) : locationPath ? (
-        locationPath.map((loc, i) => (
+      {(() => {
+        if (!locationId) return <span className="text-muted-foreground">No location assigned</span>;
+        if (!locationPath) return <Skeleton className="h-4 w-32" />;
+        return locationPath.map((loc, i) => (
           <span key={loc.id} className="flex items-center gap-1.5">
             {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
             <Link
@@ -46,10 +46,8 @@ function LocationBreadcrumb({
               {loc.name}
             </Link>
           </span>
-        ))
-      ) : (
-        <Skeleton className="h-4 w-32" />
-      )}
+        ));
+      })()}
     </div>
   );
 }

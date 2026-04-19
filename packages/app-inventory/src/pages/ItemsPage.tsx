@@ -310,44 +310,49 @@ export function ItemsPage() {
       )}
 
       {/* Content */}
-      {isLoading ? (
-        <ItemsPageSkeleton />
-      ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
-          <Package className="h-12 w-12 opacity-40" />
-          {search || hasActiveFilters ? (
-            <p>No items match your filters.</p>
-          ) : (
-            <>
-              <p>No inventory items yet.</p>
-              <Button
-                prefix={<Plus className="h-4 w-4" />}
-                onClick={() => navigate('/inventory/items/new')}
-              >
-                Add your first item
-              </Button>
-            </>
-          )}
-        </div>
-      ) : viewMode === 'table' ? (
-        <InventoryTable items={items} locationPathMap={locationPathMap} />
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {items.map((item: InventoryItem) => (
-            <InventoryCard
-              key={item.id}
-              id={item.id}
-              itemName={item.itemName}
-              assetId={item.assetId}
-              type={item.type}
-              condition={item.condition as Condition | null}
-              locationName={item.location}
-              layout="vertical"
-              onClick={() => navigate(`/inventory/items/${item.id}`)}
-            />
-          ))}
-        </div>
-      )}
+      {(() => {
+        if (isLoading) return <ItemsPageSkeleton />;
+        if (items.length === 0) {
+          return (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-4">
+              <Package className="h-12 w-12 opacity-40" />
+              {search || hasActiveFilters ? (
+                <p>No items match your filters.</p>
+              ) : (
+                <>
+                  <p>No inventory items yet.</p>
+                  <Button
+                    prefix={<Plus className="h-4 w-4" />}
+                    onClick={() => navigate('/inventory/items/new')}
+                  >
+                    Add your first item
+                  </Button>
+                </>
+              )}
+            </div>
+          );
+        }
+        if (viewMode === 'table') {
+          return <InventoryTable items={items} locationPathMap={locationPathMap} />;
+        }
+        return (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {items.map((item: InventoryItem) => (
+              <InventoryCard
+                key={item.id}
+                id={item.id}
+                itemName={item.itemName}
+                assetId={item.assetId}
+                type={item.type}
+                condition={item.condition as Condition | null}
+                locationName={item.location}
+                layout="vertical"
+                onClick={() => navigate(`/inventory/items/${item.id}`)}
+              />
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

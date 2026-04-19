@@ -90,69 +90,75 @@ function DocumentsList({
           onLinked={() => void utils.inventory.documents.listForItem.invalidate({ itemId })}
         />
       </div>
-      {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ) : docs.length > 0 ? (
-        <div className="space-y-4">
-          {sortedTypes.map((type) => (
-            <div key={type}>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                {DOCUMENT_TYPE_LABELS[type] ?? type}
-              </h3>
-              <div className="space-y-1.5">
-                {grouped.get(type)?.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between p-3 rounded-lg border"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <DocumentThumbnail documentId={doc.paperlessDocumentId} />
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium text-sm truncate block">
-                          {doc.title ?? `Document #${doc.paperlessDocumentId}`}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Linked {new Date(doc.createdAt).toLocaleDateString()}
-                        </span>
+      {(() => {
+        if (isLoading) {
+          return (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          );
+        }
+        if (docs.length === 0) {
+          return <p className="text-muted-foreground text-sm">No documents linked yet.</p>;
+        }
+        return (
+          <div className="space-y-4">
+            {sortedTypes.map((type) => (
+              <div key={type}>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                  {DOCUMENT_TYPE_LABELS[type] ?? type}
+                </h3>
+                <div className="space-y-1.5">
+                  {grouped.get(type)?.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <DocumentThumbnail documentId={doc.paperlessDocumentId} />
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-sm truncate block">
+                            {doc.title ?? `Document #${doc.paperlessDocumentId}`}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Linked {new Date(doc.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {paperlessBaseUrl && (
+                          <a
+                            href={`${paperlessBaseUrl}/documents/${doc.paperlessDocumentId}/details`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative inline-flex items-center justify-center size-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent before:absolute before:content-[''] before:-inset-1"
+                            title="View in Paperless"
+                            aria-label="View in Paperless"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive shrink-0"
+                          onClick={() => unlinkMutation.mutate({ id: doc.id })}
+                          disabled={unlinkMutation.isPending}
+                          title="Unlink document"
+                          aria-label="Unlink document"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {paperlessBaseUrl && (
-                        <a
-                          href={`${paperlessBaseUrl}/documents/${doc.paperlessDocumentId}/details`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="relative inline-flex items-center justify-center size-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent before:absolute before:content-[''] before:-inset-1"
-                          title="View in Paperless"
-                          aria-label="View in Paperless"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive shrink-0"
-                        onClick={() => unlinkMutation.mutate({ id: doc.id })}
-                        disabled={unlinkMutation.isPending}
-                        title="Unlink document"
-                        aria-label="Unlink document"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">No documents linked yet.</p>
-      )}
+            ))}
+          </div>
+        );
+      })()}
     </section>
   );
 }

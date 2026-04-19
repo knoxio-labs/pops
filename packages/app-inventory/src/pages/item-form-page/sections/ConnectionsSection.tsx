@@ -70,15 +70,21 @@ export function ConnectionsSection({
 
       {connectionSearch.length >= 2 && (
         <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
-          {searchLoading ? (
-            <div className="space-y-2 p-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-3 text-center">No items found</p>
-          ) : (
-            filtered.map((item: InventoryItem) => (
+          {(() => {
+            if (searchLoading) {
+              return (
+                <div className="space-y-2 p-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              );
+            }
+            if (filtered.length === 0) {
+              return (
+                <p className="text-sm text-muted-foreground py-3 text-center">No items found</p>
+              );
+            }
+            return filtered.map((item: InventoryItem) => (
               <Button
                 key={item.id}
                 variant="ghost"
@@ -97,8 +103,8 @@ export function ConnectionsSection({
                 </div>
                 <Link2 className="h-4 w-4 text-app-accent/50 shrink-0 ml-2" />
               </Button>
-            ))
-          )}
+            ));
+          })()}
         </div>
       )}
     </section>

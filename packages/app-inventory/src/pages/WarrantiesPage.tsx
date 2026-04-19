@@ -329,88 +329,95 @@ export function WarrantiesPage() {
         }
       />
 
-      {isLoading ? (
-        <WarrantySkeleton />
-      ) : isError ? (
-        <div className="text-center py-16">
-          <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-          <p className="text-muted-foreground mb-4">Could not load warranties — try again</p>
-          <Button onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
-      ) : totalItems === 0 ? (
-        <div className="text-center py-16">
-          <ShieldCheck className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-          <p className="text-muted-foreground mb-4">
-            No items with warranty dates. Add warranty expiry dates to your inventory items to track
-            them here.
-          </p>
-          <Link
-            to="/inventory/items"
-            className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Browse Items
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Expiring tiers — always expanded, not collapsible */}
-          <ExpiringSection
-            tier="critical"
-            items={critical}
-            paperlessBaseUrl={paperlessBaseUrl}
-            onItemClick={(id) => navigate(`/inventory/items/${id}`)}
-          />
-          <ExpiringSection
-            tier="warning"
-            items={warning}
-            paperlessBaseUrl={paperlessBaseUrl}
-            onItemClick={(id) => navigate(`/inventory/items/${id}`)}
-          />
-          <ExpiringSection
-            tier="caution"
-            items={caution}
-            paperlessBaseUrl={paperlessBaseUrl}
-            onItemClick={(id) => navigate(`/inventory/items/${id}`)}
-          />
+      {(() => {
+        if (isLoading) return <WarrantySkeleton />;
+        if (isError) {
+          return (
+            <div className="text-center py-16">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground mb-4">Could not load warranties — try again</p>
+              <Button onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
+          );
+        }
+        if (totalItems === 0) {
+          return (
+            <div className="text-center py-16">
+              <ShieldCheck className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground mb-4">
+                No items with warranty dates. Add warranty expiry dates to your inventory items to
+                track them here.
+              </p>
+              <Link
+                to="/inventory/items"
+                className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Browse Items
+              </Link>
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-4">
+            {/* Expiring tiers — always expanded, not collapsible */}
+            <ExpiringSection
+              tier="critical"
+              items={critical}
+              paperlessBaseUrl={paperlessBaseUrl}
+              onItemClick={(id) => navigate(`/inventory/items/${id}`)}
+            />
+            <ExpiringSection
+              tier="warning"
+              items={warning}
+              paperlessBaseUrl={paperlessBaseUrl}
+              onItemClick={(id) => navigate(`/inventory/items/${id}`)}
+            />
+            <ExpiringSection
+              tier="caution"
+              items={caution}
+              paperlessBaseUrl={paperlessBaseUrl}
+              onItemClick={(id) => navigate(`/inventory/items/${id}`)}
+            />
 
-          {/* Active — collapsible, expanded by default */}
-          {active.length > 0 && (
-            <CollapsibleSection title="Active" count={active.length} defaultOpen>
-              {active.map((item) => (
-                <WarrantyRow
-                  key={item.id}
-                  item={item}
-                  daysRemaining={item.daysRemaining}
-                  paperlessBaseUrl={paperlessBaseUrl}
-                  onClick={() => navigate(`/inventory/items/${item.id}`)}
-                />
-              ))}
-            </CollapsibleSection>
-          )}
+            {/* Active — collapsible, expanded by default */}
+            {active.length > 0 && (
+              <CollapsibleSection title="Active" count={active.length} defaultOpen>
+                {active.map((item) => (
+                  <WarrantyRow
+                    key={item.id}
+                    item={item}
+                    daysRemaining={item.daysRemaining}
+                    paperlessBaseUrl={paperlessBaseUrl}
+                    onClick={() => navigate(`/inventory/items/${item.id}`)}
+                  />
+                ))}
+              </CollapsibleSection>
+            )}
 
-          {/* Expired — collapsible, collapsed by default */}
-          {expired.length > 0 && (
-            <CollapsibleSection
-              title="Expired"
-              count={expired.length}
-              defaultOpen={!hasExpiringItems && active.length === 0}
-            >
-              {expired.map((item) => (
-                <WarrantyRow
-                  key={item.id}
-                  item={item}
-                  daysRemaining={item.daysRemaining}
-                  paperlessBaseUrl={paperlessBaseUrl}
-                  onClick={() => navigate(`/inventory/items/${item.id}`)}
-                />
-              ))}
-            </CollapsibleSection>
-          )}
-        </div>
-      )}
+            {/* Expired — collapsible, collapsed by default */}
+            {expired.length > 0 && (
+              <CollapsibleSection
+                title="Expired"
+                count={expired.length}
+                defaultOpen={!hasExpiringItems && active.length === 0}
+              >
+                {expired.map((item) => (
+                  <WarrantyRow
+                    key={item.id}
+                    item={item}
+                    daysRemaining={item.daysRemaining}
+                    paperlessBaseUrl={paperlessBaseUrl}
+                    onClick={() => navigate(`/inventory/items/${item.id}`)}
+                  />
+                ))}
+              </CollapsibleSection>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
