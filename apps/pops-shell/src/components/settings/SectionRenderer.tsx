@@ -8,6 +8,7 @@ import { Badge, Button, Input, Label, Select, Skeleton, Switch, Textarea, cn } f
 import type { SettingsField, SettingsGroup, SettingsManifest } from '@pops/types';
 
 type TestState = 'idle' | 'loading' | 'success' | 'error';
+type SaveState = 'idle' | 'saving' | 'saved';
 
 interface FieldProps {
   field: SettingsField;
@@ -15,9 +16,18 @@ interface FieldProps {
   onChange: (key: string, value: string) => void;
   onTestAction: (procedure: string) => Promise<void>;
   envFallbackActive: boolean;
+  saveState: SaveState;
 }
 
-function FieldWrapper({ field, children }: { field: SettingsField; children: React.ReactNode }) {
+function FieldWrapper({
+  field,
+  children,
+  saveState,
+}: {
+  field: SettingsField;
+  children: React.ReactNode;
+  saveState?: SaveState;
+}) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
@@ -27,6 +37,10 @@ function FieldWrapper({ field, children }: { field: SettingsField; children: Rea
             Requires restart
           </Badge>
         )}
+        {saveState === 'saving' && (
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+        )}
+        {saveState === 'saved' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
       </div>
       {children}
       {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
@@ -52,10 +66,12 @@ function DurationFieldInput({
   field,
   value,
   onChange,
+  saveState,
 }: {
   field: SettingsField;
   value: string;
   onChange: (key: string, value: string) => void;
+  saveState: SaveState;
 }) {
   const ms = value ? parseInt(value, 10) : 0;
   const [unit, setUnit] = useState(() => inferUnit(ms));
@@ -63,7 +79,7 @@ function DurationFieldInput({
   const displayValue = ms ? String(ms / (UNIT_MULTIPLIERS[unit] ?? 1)) : '';
 
   return (
-    <FieldWrapper field={field}>
+    <FieldWrapper field={field} saveState={saveState}>
       <div className="flex gap-2">
         <Input
           type="number"
@@ -96,7 +112,14 @@ function DurationFieldInput({
   );
 }
 
-function FieldInput({ field, value, onChange, onTestAction, envFallbackActive }: FieldProps) {
+function FieldInput({
+  field,
+  value,
+  onChange,
+  onTestAction,
+  envFallbackActive,
+  saveState,
+}: FieldProps) {
   const [revealed, setRevealed] = useState(false);
   const [testState, setTestState] = useState<TestState>('idle');
   const [testError, setTestError] = useState<string>('');
@@ -164,12 +187,14 @@ function FieldInput({ field, value, onChange, onTestAction, envFallbackActive }:
     ) : null;
 
   if (field.type === 'duration') {
-    return <DurationFieldInput field={field} value={value} onChange={onChange} />;
+    return (
+      <DurationFieldInput field={field} value={value} onChange={onChange} saveState={saveState} />
+    );
   }
 
   if (field.type === 'toggle') {
     return (
-      <FieldWrapper field={field}>
+      <FieldWrapper field={field} saveState={saveState}>
         <Switch
           checked={value === 'true'}
           onCheckedChange={(checked) => handleChange(checked ? 'true' : 'false')}
@@ -181,7 +206,7 @@ function FieldInput({ field, value, onChange, onTestAction, envFallbackActive }:
 
   if (field.type === 'select') {
     return (
-      <FieldWrapper field={field}>
+      <FieldWrapper field={field} saveState={saveState}>
         <Select
           options={field.options ?? []}
           value={value}
@@ -194,7 +219,7 @@ function FieldInput({ field, value, onChange, onTestAction, envFallbackActive }:
 
   if (field.type === 'json') {
     return (
-      <FieldWrapper field={field}>
+      <FieldWrapper field={field} saveState={saveState}>
         <Textarea
           value={value}
           onChange={(e) => handleChange(e.target.value)}
@@ -217,7 +242,7 @@ function FieldInput({ field, value, onChange, onTestAction, envFallbackActive }:
 
   if (field.type === 'password') {
     return (
-      <FieldWrapper field={field}>
+      <FieldWrapper field={field} saveState={saveState}>
         <div className="flex gap-2">
           <Input
             type={revealed ? 'text' : 'password'}
@@ -263,7 +288,7 @@ function FieldInput({ field, value, onChange, onTestAction, envFallbackActive }:
   const inputType = field.type === 'number' ? 'number' : field.type === 'url' ? 'url' : 'text';
 
   return (
-    <FieldWrapper field={field}>
+    <FieldWrapper field={field} saveState={saveState}>
       <div className="flex gap-2">
         <Input
           type={inputType}
@@ -307,9 +332,17 @@ interface GroupRendererProps {
   onChange: (key: string, value: string) => void;
   onTestAction: (procedure: string) => Promise<void>;
   dbValues: Record<string, string>;
+  saveStates: Record<string, SaveState>;
 }
 
-function GroupRenderer({ group, values, onChange, onTestAction, dbValues }: GroupRendererProps) {
+function GroupRenderer({
+  group,
+  values,
+  onChange,
+  onTestAction,
+  dbValues,
+  saveStates,
+}: GroupRendererProps) {
   return (
     <div className="rounded-lg border bg-card p-5 space-y-4">
       <div>
@@ -327,6 +360,7 @@ function GroupRenderer({ group, values, onChange, onTestAction, dbValues }: Grou
             onChange={onChange}
             onTestAction={onTestAction}
             envFallbackActive={!!field.envFallback && !(field.key in dbValues)}
+            saveState={saveStates[field.key] ?? 'idle'}
           />
         ))}
       </div>
@@ -351,6 +385,7 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
   const [dynamicOptions, setDynamicOptions] = useState<
     Record<string, { value: string; label: string }[]>
   >({});
+  const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
 
   useEffect(() => {
     if (!data?.settings) return;
@@ -378,10 +413,13 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
   }, [optionsLoaders]);
 
   const debounceRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const savedTimerRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const saveVersionRefs = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     return () => {
       for (const timer of debounceRefs.current.values()) clearTimeout(timer);
+      for (const timer of savedTimerRefs.current.values()) clearTimeout(timer);
     };
   }, []);
 
@@ -389,15 +427,44 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
     (key: string, value: string) => {
       setValues((prev) => ({ ...prev, [key]: value }));
 
+      // Clear any pending saved→idle timer and immediately hide stale checkmark
+      const pendingSaved = savedTimerRefs.current.get(key);
+      if (pendingSaved) {
+        clearTimeout(pendingSaved);
+        savedTimerRefs.current.delete(key);
+      }
+      setSaveStates((prev) => ({ ...prev, [key]: 'idle' }));
+
       const existing = debounceRefs.current.get(key);
       if (existing) clearTimeout(existing);
 
       const timer = setTimeout(() => {
         debounceRefs.current.delete(key);
+        const version = (saveVersionRefs.current.get(key) ?? 0) + 1;
+        saveVersionRefs.current.set(key, version);
+        setSaveStates((prev) => ({ ...prev, [key]: 'saving' }));
         setBulkMutation.mutate(
           { entries: [{ key, value }] },
           {
+            onSuccess: () => {
+              if (saveVersionRefs.current.get(key) !== version) return;
+              const prevSaved = savedTimerRefs.current.get(key);
+              if (prevSaved) {
+                clearTimeout(prevSaved);
+                savedTimerRefs.current.delete(key);
+              }
+              setSaveStates((prev) => ({ ...prev, [key]: 'saved' }));
+              const savedTimer = setTimeout(() => {
+                savedTimerRefs.current.delete(key);
+                setSaveStates((prev) =>
+                  prev[key] === 'saved' ? { ...prev, [key]: 'idle' } : prev
+                );
+              }, 2000);
+              savedTimerRefs.current.set(key, savedTimer);
+            },
             onError: (err) => {
+              if (saveVersionRefs.current.get(key) !== version) return;
+              setSaveStates((prev) => ({ ...prev, [key]: 'idle' }));
               toast.error(`Failed to save ${key}: ${err.message}`);
             },
           }
@@ -450,6 +517,7 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
           onChange={handleChange}
           onTestAction={handleTestAction}
           dbValues={loadedKeys}
+          saveStates={saveStates}
         />
       ))}
     </div>
