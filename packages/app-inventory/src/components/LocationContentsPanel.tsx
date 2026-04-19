@@ -121,30 +121,36 @@ export function LocationContentsPanel({
         </Button>
       }
     >
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
-          ))}
-        </div>
-      ) : allItems.length > 0 ? (
-        <ul className="space-y-1">
-          {allItems.map((item: InventoryItem) => (
-            <li key={item.id}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 h-auto px-2 py-1.5 text-left"
-                onClick={() => navigate(`/inventory/items/${item.id}`)}
-              >
-                <span className="font-medium truncate flex-1">{item.itemName}</span>
-                {item.assetId && <AssetIdBadge assetId={item.assetId} />}
-                {item.type && <TypeBadge type={item.type} />}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {(() => {
+        if (isLoading) {
+          return (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          );
+        }
+        if (allItems.length === 0) return null;
+        return (
+          <ul className="space-y-1">
+            {allItems.map((item: InventoryItem) => (
+              <li key={item.id}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-auto px-2 py-1.5 text-left"
+                  onClick={() => navigate(`/inventory/items/${item.id}`)}
+                >
+                  <span className="font-medium truncate flex-1">{item.itemName}</span>
+                  {item.assetId && <AssetIdBadge assetId={item.assetId} />}
+                  {item.type && <TypeBadge type={item.type} />}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        );
+      })()}
     </ContainerPanel>
   );
 }

@@ -108,7 +108,12 @@ export function ComboboxSelect({
   className,
 }: ComboboxSelectProps) {
   const [open, setOpen] = useState(false);
-  const selectedValues = Array.isArray(value) ? value : value ? [value] : [];
+  const getSelectedValues = (): string[] => {
+    if (Array.isArray(value)) return value;
+    if (value) return [value];
+    return [];
+  };
+  const selectedValues = getSelectedValues();
 
   const toggleOption = (optionValue: string) => {
     if (multiple) {
@@ -132,13 +137,13 @@ export function ComboboxSelect({
     return options.find((opt) => opt.value === val)?.label ?? val;
   };
 
-  const displayText = multiple
-    ? selectedValues.length > 0
-      ? `${selectedValues.length} selected`
-      : placeholder
-    : selectedValues.length > 0
-      ? getOptionLabel(selectedValues[0] ?? '')
-      : placeholder;
+  const getDisplayText = (): string => {
+    if (multiple) {
+      return selectedValues.length > 0 ? `${selectedValues.length} selected` : placeholder;
+    }
+    return selectedValues.length > 0 ? getOptionLabel(selectedValues[0] ?? '') : placeholder;
+  };
+  const displayText = getDisplayText();
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>

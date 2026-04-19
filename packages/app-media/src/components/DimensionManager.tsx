@@ -425,44 +425,50 @@ export function DimensionManager() {
           showForm={showAddForm}
           form={addForm}
         >
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Loading...</p>
-          ) : sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No dimensions yet. Add one above.
-            </p>
-          ) : (
-            <div className="space-y-1 max-h-64 overflow-y-auto">
-              {sorted.map((dim, idx) => (
-                <DimensionListItem
-                  key={dim.id}
-                  dim={dim}
-                  idx={idx}
-                  isLast={idx === sorted.length - 1}
-                  editing={editing}
-                  setEditing={setEditing}
-                  onSaveEdit={handleSaveEdit}
-                  onReorder={(direction) => {
-                    handleReorder(dim, direction);
-                  }}
-                  onStartEdit={() => {
-                    handleStartEdit(dim);
-                  }}
-                  onToggleActive={() => {
-                    handleToggleActive(dim);
-                  }}
-                  onWeightDrag={(v) => {
-                    handleWeightDrag(dim.id, v);
-                  }}
-                  onWeightCommit={(v) => {
-                    handleWeightCommit(dim, v);
-                  }}
-                  localWeight={localWeights.get(dim.id) ?? dim.weight}
-                  isPending={updateMutation.isPending}
-                />
-              ))}
-            </div>
-          )}
+          {(() => {
+            if (isLoading) {
+              return <p className="text-sm text-muted-foreground py-4 text-center">Loading...</p>;
+            }
+            if (sorted.length === 0) {
+              return (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No dimensions yet. Add one above.
+                </p>
+              );
+            }
+            return (
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {sorted.map((dim, idx) => (
+                  <DimensionListItem
+                    key={dim.id}
+                    dim={dim}
+                    idx={idx}
+                    isLast={idx === sorted.length - 1}
+                    editing={editing}
+                    setEditing={setEditing}
+                    onSaveEdit={handleSaveEdit}
+                    onReorder={(direction) => {
+                      handleReorder(dim, direction);
+                    }}
+                    onStartEdit={() => {
+                      handleStartEdit(dim);
+                    }}
+                    onToggleActive={() => {
+                      handleToggleActive(dim);
+                    }}
+                    onWeightDrag={(v) => {
+                      handleWeightDrag(dim.id, v);
+                    }}
+                    onWeightCommit={(v) => {
+                      handleWeightCommit(dim, v);
+                    }}
+                    localWeight={localWeights.get(dim.id) ?? dim.weight}
+                    isPending={updateMutation.isPending}
+                  />
+                ))}
+              </div>
+            );
+          })()}
         </CRUDManagementSection>
       </DialogContent>
     </Dialog>

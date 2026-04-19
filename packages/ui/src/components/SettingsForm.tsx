@@ -88,6 +88,12 @@ export interface SettingsFormProps {
   className?: string;
 }
 
+function getNumberFieldValue(value: unknown): number | string {
+  if (typeof value === 'number') return value;
+  if (value === '') return '';
+  return Number(value) || 0;
+}
+
 export function SettingsForm({
   section,
   values,
@@ -221,7 +227,7 @@ export function SettingsForm({
             type="number"
             min={field.min}
             max={field.max}
-            value={typeof value === 'number' ? value : value === '' ? '' : Number(value) || 0}
+            value={getNumberFieldValue(value)}
             placeholder={field.placeholder}
             onChange={(e) => update(field.id, e.target.value === '' ? '' : Number(e.target.value))}
           />

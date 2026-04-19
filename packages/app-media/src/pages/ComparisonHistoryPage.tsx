@@ -148,49 +148,57 @@ export function ComparisonHistoryPage() {
         )}
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : comparisons.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            No comparisons yet. Head to the{' '}
-            <Link to="/media/compare" className="text-primary underline">
-              Compare Arena
-            </Link>{' '}
-            to start comparing movies.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {comparisons.map(
-            (comp: {
-              id: number;
-              dimensionId: number;
-              mediaAType: string;
-              mediaAId: number;
-              mediaBType: string;
-              mediaBId: number;
-              winnerType: string;
-              winnerId: number;
-              deltaA: number | null;
-              deltaB: number | null;
-              drawTier: string | null;
-              comparedAt: string;
-            }) => (
-              <ComparisonRow
-                key={comp.id}
-                comparison={comp}
-                dimensionName={dimensionMap.get(comp.dimensionId) ?? 'Unknown'}
-                onDelete={handleDelete}
-              />
-            )
-          )}
-        </div>
-      )}
+      {(() => {
+        if (isLoading) {
+          return (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
+          );
+        }
+        if (comparisons.length === 0) {
+          return (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                No comparisons yet. Head to the{' '}
+                <Link to="/media/compare" className="text-primary underline">
+                  Compare Arena
+                </Link>{' '}
+                to start comparing movies.
+              </CardContent>
+            </Card>
+          );
+        }
+        return (
+          <div className="space-y-2">
+            {comparisons.map(
+              (comp: {
+                id: number;
+                dimensionId: number;
+                mediaAType: string;
+                mediaAId: number;
+                mediaBType: string;
+                mediaBId: number;
+                winnerType: string;
+                winnerId: number;
+                deltaA: number | null;
+                deltaB: number | null;
+                drawTier: string | null;
+                comparedAt: string;
+              }) => (
+                <ComparisonRow
+                  key={comp.id}
+                  comparison={comp}
+                  dimensionName={dimensionMap.get(comp.dimensionId) ?? 'Unknown'}
+                  onDelete={handleDelete}
+                />
+              )
+            )}
+          </div>
+        );
+      })()}
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
@@ -228,13 +236,11 @@ function EloDelta({ delta }: { delta: number | null }) {
   const isPositive = delta > 0;
   return (
     <span
-      className={`text-2xs font-mono tabular-nums px-1 py-0.5 rounded ${
-        isPositive
-          ? 'text-success bg-success/10'
-          : delta < 0
-            ? 'text-destructive bg-destructive/10'
-            : 'text-muted-foreground'
-      }`}
+      className={`text-2xs font-mono tabular-nums px-1 py-0.5 rounded ${(() => {
+        if (isPositive) return 'text-success bg-success/10';
+        if (delta < 0) return 'text-destructive bg-destructive/10';
+        return 'text-muted-foreground';
+      })()}`}
     >
       {isPositive ? '+' : ''}
       {delta}

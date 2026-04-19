@@ -215,99 +215,112 @@ export function TierListPage() {
         <h1 className="text-2xl font-bold">Tier List</h1>
       </div>
 
-      {dimsLoading ? (
-        <PoolSkeleton />
-      ) : activeDimensions.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">No active dimensions. Create one to get started.</p>
-        </div>
-      ) : (
-        <>
-          <div
-            className="flex flex-wrap justify-center gap-2"
-            role="tablist"
-            aria-label="Dimension selector"
-          >
-            {activeDimensions.map((dim: { id: number; name: string }) => (
-              <button
-                key={dim.id}
-                role="tab"
-                aria-selected={effectiveDimension === dim.id}
-                onClick={() => {
-                  handleDimensionChange(dim.id);
-                }}
-                className={cn(
-                  'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                  effectiveDimension === dim.id
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
-                )}
-              >
-                {dim.name}
-              </button>
-            ))}
-          </div>
+      {(() => {
+        if (dimsLoading) return <PoolSkeleton />;
+        if (activeDimensions.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground">
+                No active dimensions. Create one to get started.
+              </p>
+            </div>
+          );
+        }
+        return (
+          <>
+            <div
+              className="flex flex-wrap justify-center gap-2"
+              role="tablist"
+              aria-label="Dimension selector"
+            >
+              {activeDimensions.map((dim: { id: number; name: string }) => (
+                <button
+                  key={dim.id}
+                  role="tab"
+                  aria-selected={effectiveDimension === dim.id}
+                  onClick={() => {
+                    handleDimensionChange(dim.id);
+                  }}
+                  className={cn(
+                    'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                    effectiveDimension === dim.id
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {dim.name}
+                </button>
+              ))}
+            </div>
 
-          {submitError && (
-            <Alert variant="destructive">
-              <AlertTitle>Submission Failed</AlertTitle>
-              <AlertDescription>{submitError.message}</AlertDescription>
-            </Alert>
-          )}
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertTitle>Submission Failed</AlertTitle>
+                <AlertDescription>{submitError.message}</AlertDescription>
+              </Alert>
+            )}
 
-          {result ? (
-            <TierListSummary
-              comparisonsRecorded={result.comparisonsRecorded}
-              scoreChanges={result.scoreChanges}
-              onDoAnother={handleDoAnother}
-              onDone={handleDone}
-            />
-          ) : (
-            effectiveDimension && (
-              <div className="space-y-3">
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => refetch()}
-                    disabled={isFetching}
-                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-                    aria-label="Refresh movie pool"
-                  >
-                    <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-                    Refresh
-                  </button>
-                </div>
-
-                {moviesError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>Failed to load movies for tier list.</AlertDescription>
-                  </Alert>
-                ) : moviesLoading ? (
-                  <PoolSkeleton />
-                ) : movies.length === 0 ? (
-                  <div className="text-center py-16">
-                    <LayoutGrid className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-                    <p className="text-muted-foreground">
-                      No eligible movies for this dimension. Compare more movies or check your
-                      exclusions.
-                    </p>
+            {result ? (
+              <TierListSummary
+                comparisonsRecorded={result.comparisonsRecorded}
+                scoreChanges={result.scoreChanges}
+                onDoAnother={handleDoAnother}
+                onDone={handleDone}
+              />
+            ) : (
+              effectiveDimension && (
+                <div className="space-y-3">
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => refetch()}
+                      disabled={isFetching}
+                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                      aria-label="Refresh movie pool"
+                    >
+                      <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
+                      Refresh
+                    </button>
                   </div>
-                ) : (
-                  <TierListBoard
-                    movies={movies}
-                    onSubmit={handleSubmit}
-                    submitPending={isPending}
-                    onNotWatched={handleNotWatched}
-                    onMarkStale={handleMarkStale}
-                    onNA={handleNA}
-                  />
-                )}
-              </div>
-            )
-          )}
-        </>
-      )}
+
+                  {(() => {
+                    if (moviesError) {
+                      return (
+                        <Alert variant="destructive">
+                          <AlertTitle>Error</AlertTitle>
+                          <AlertDescription>Failed to load movies for tier list.</AlertDescription>
+                        </Alert>
+                      );
+                    }
+                    if (moviesLoading) return <PoolSkeleton />;
+                    if (movies.length === 0) {
+                      return (
+                        <div className="text-center py-16">
+                          <LayoutGrid className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+                          <p className="text-muted-foreground">
+                            No eligible movies for this dimension. Compare more movies or check your
+                            exclusions.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <TierListBoard
+                        movies={movies}
+                        onSubmit={handleSubmit}
+                        submitPending={isPending}
+                        onNotWatched={handleNotWatched}
+                        onMarkStale={handleMarkStale}
+                        onNA={handleNA}
+                      />
+                    );
+                  })()}
+                </div>
+              )
+            )}
+          </>
+        );
+      })()}
 
       {/* Blacklist confirmation dialog */}
       <AlertDialog

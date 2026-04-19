@@ -90,42 +90,47 @@ export function DropdownMenu({
   children,
   className,
 }: DropdownMenuProps) {
+  const renderItems = () => {
+    if (groups) {
+      return groups.map((group, groupIndex) => (
+        <div key={groupIndex}>
+          {group.label && <DropdownMenuLabel>{group.label}</DropdownMenuLabel>}
+          {group.items.map((item) => (
+            <DropdownMenuItem
+              key={item.value}
+              disabled={item.disabled}
+              variant={item.variant}
+              onSelect={item.onSelect}
+            >
+              {item.icon}
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+          {groupIndex < groups.length - 1 && <DropdownMenuSeparator />}
+        </div>
+      ));
+    }
+    if (items) {
+      return items.map((item) => (
+        <DropdownMenuItem
+          key={item.value}
+          disabled={item.disabled}
+          variant={item.variant}
+          onSelect={item.onSelect}
+        >
+          {item.icon}
+          {item.label}
+        </DropdownMenuItem>
+      ));
+    }
+    return null;
+  };
+
   return (
     <DropdownMenuPrimitive>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align={align} side={side} className={className}>
-        {children ||
-          (groups
-            ? groups.map((group, groupIndex) => (
-                <div key={groupIndex}>
-                  {group.label && <DropdownMenuLabel>{group.label}</DropdownMenuLabel>}
-                  {group.items.map((item) => (
-                    <DropdownMenuItem
-                      key={item.value}
-                      disabled={item.disabled}
-                      variant={item.variant}
-                      onSelect={item.onSelect}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </DropdownMenuItem>
-                  ))}
-                  {groupIndex < groups.length - 1 && <DropdownMenuSeparator />}
-                </div>
-              ))
-            : items
-              ? items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.value}
-                    disabled={item.disabled}
-                    variant={item.variant}
-                    onSelect={item.onSelect}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </DropdownMenuItem>
-                ))
-              : null)}
+        {children || renderItems()}
       </DropdownMenuContent>
     </DropdownMenuPrimitive>
   );

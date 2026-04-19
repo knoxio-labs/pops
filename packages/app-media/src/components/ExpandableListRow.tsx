@@ -71,20 +71,16 @@ export function ExpandableListRow({
               onToggleWatched(item.id, !isWatched);
             }}
             disabled={isToggling || isUpcoming}
-            aria-label={
-              isUpcoming
-                ? `Episode ${item.episodeNumber} upcoming`
-                : isWatched
-                  ? `Mark episode ${item.episodeNumber} as unwatched`
-                  : `Mark episode ${item.episodeNumber} as watched`
-            }
-            className={`mt-0.5 shrink-0 flex items-center justify-center h-5 w-5 rounded border transition-colors ${
-              isToggling || isUpcoming
-                ? 'opacity-50 cursor-not-allowed border-muted'
-                : isWatched
-                  ? 'bg-primary border-primary text-primary-foreground'
-                  : 'border-muted-foreground/40 hover:border-primary'
-            }`}
+            aria-label={(() => {
+              if (isUpcoming) return `Episode ${item.episodeNumber} upcoming`;
+              if (isWatched) return `Mark episode ${item.episodeNumber} as unwatched`;
+              return `Mark episode ${item.episodeNumber} as watched`;
+            })()}
+            className={`mt-0.5 shrink-0 flex items-center justify-center h-5 w-5 rounded border transition-colors ${(() => {
+              if (isToggling || isUpcoming) return 'opacity-50 cursor-not-allowed border-muted';
+              if (isWatched) return 'bg-primary border-primary text-primary-foreground';
+              return 'border-muted-foreground/40 hover:border-primary';
+            })()}`}
           >
             {isWatched && <Check className="h-3.5 w-3.5" />}
           </button>

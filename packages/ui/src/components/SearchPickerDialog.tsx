@@ -73,23 +73,32 @@ export function SearchPickerDialog<T>({
         </div>
 
         <div className={`${maxResultsHeight} overflow-y-auto space-y-1`}>
-          {search.length < minChars ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Type at least {minChars} characters to search
-            </p>
-          ) : isLoading ? (
-            <div className="space-y-2 py-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : results.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">{emptyMessage}</p>
-          ) : (
-            results.map((item) => (
+          {(() => {
+            if (search.length < minChars) {
+              return (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  Type at least {minChars} characters to search
+                </p>
+              );
+            }
+            if (isLoading) {
+              return (
+                <div className="space-y-2 py-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              );
+            }
+            if (results.length === 0) {
+              return (
+                <p className="text-sm text-muted-foreground py-4 text-center">{emptyMessage}</p>
+              );
+            }
+            return results.map((item) => (
               <React.Fragment key={getResultKey(item)}>{renderResult(item)}</React.Fragment>
-            ))
-          )}
+            ));
+          })()}
         </div>
       </DialogContent>
     </Dialog>

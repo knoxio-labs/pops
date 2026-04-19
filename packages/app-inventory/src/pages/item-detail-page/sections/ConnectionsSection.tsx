@@ -110,25 +110,31 @@ export function ConnectionsSection({
           <ConnectDialog currentItemId={itemId} onConnected={onConnected} />
         </div>
 
-        {connectionsLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : connections.length ? (
-          <div className="space-y-2">
-            {connections.map((conn: ItemConnection) => (
-              <ConnectionRow
-                key={conn.id}
-                connectedItemId={conn.itemAId === itemId ? conn.itemBId : conn.itemAId}
-                onDisconnect={() => onDisconnect(conn)}
-                isDisconnecting={isDisconnecting}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">No connected items yet.</p>
-        )}
+        {(() => {
+          if (connectionsLoading) {
+            return (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            );
+          }
+          if (connections.length) {
+            return (
+              <div className="space-y-2">
+                {connections.map((conn: ItemConnection) => (
+                  <ConnectionRow
+                    key={conn.id}
+                    connectedItemId={conn.itemAId === itemId ? conn.itemBId : conn.itemAId}
+                    onDisconnect={() => onDisconnect(conn)}
+                    isDisconnecting={isDisconnecting}
+                  />
+                ))}
+              </div>
+            );
+          }
+          return <p className="text-muted-foreground text-sm">No connected items yet.</p>;
+        })()}
       </section>
 
       {connections.length ? (

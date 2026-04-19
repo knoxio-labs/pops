@@ -229,53 +229,61 @@ function CandidateList({ status, actions }: CandidateListProps) {
         </div>
       </div>
 
-      {query.isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-22 w-full rounded-md" />
-          ))}
-        </div>
-      ) : !query.data?.items.length ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">No candidates found</p>
-      ) : (
-        <>
-          <div className="space-y-2">
-            {query.data.items.map((c) => (
-              <CandidateCard key={c.id} candidate={c} actions={actions} />
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-muted-foreground">
-                {query.data.total} total &middot; page {page + 1} of {totalPages}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPage((p) => Math.max(0, p - 1));
-                  }}
-                  disabled={page === 0}
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPage((p) => Math.min(totalPages - 1, p + 1));
-                  }}
-                  disabled={page >= totalPages - 1}
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+      {(() => {
+        if (query.isLoading) {
+          return (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-22 w-full rounded-md" />
+              ))}
             </div>
-          )}
-        </>
-      )}
+          );
+        }
+        if (!query.data?.items.length) {
+          return (
+            <p className="text-sm text-muted-foreground py-8 text-center">No candidates found</p>
+          );
+        }
+        return (
+          <>
+            <div className="space-y-2">
+              {query.data.items.map((c) => (
+                <CandidateCard key={c.id} candidate={c} actions={actions} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs text-muted-foreground">
+                  {query.data.total} total &middot; page {page + 1} of {totalPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPage((p) => Math.max(0, p - 1));
+                    }}
+                    disabled={page === 0}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPage((p) => Math.min(totalPages - 1, p + 1));
+                    }}
+                    disabled={page >= totalPages - 1}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

@@ -73,18 +73,19 @@ export function LoadingProgressStep({
 
       {steps && steps.length > 0 && (
         <div className="w-full max-w-md text-xs text-muted-foreground space-y-1">
-          {steps.map((step) => (
-            <div key={step.label} className="flex justify-between">
-              <span>{step.label}</span>
-              <span>
-                {step.status === 'in_progress'
-                  ? 'In progress...'
-                  : step.status === 'done'
-                    ? 'Complete'
-                    : 'Pending'}
-              </span>
-            </div>
-          ))}
+          {steps.map((step) => {
+            const statusLabel = (() => {
+              if (step.status === 'in_progress') return 'In progress...';
+              if (step.status === 'done') return 'Complete';
+              return 'Pending';
+            })();
+            return (
+              <div key={step.label} className="flex justify-between">
+                <span>{step.label}</span>
+                <span>{statusLabel}</span>
+              </div>
+            );
+          })}
         </div>
       )}
 

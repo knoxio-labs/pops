@@ -295,32 +295,36 @@ function SourceForm({ mode, initialValues, sourceTypes, onClose }: SourceFormPro
       {type === 'plex_friends' && (
         <div className="space-y-1.5">
           <Label className="text-muted-foreground">Plex Friend</Label>
-          {plexFriendsQuery.isLoading ? (
-            <p className="text-xs text-muted-foreground">Loading friends...</p>
-          ) : plexFriendsQuery.data?.error ? (
-            <p className="text-xs text-destructive/80">{plexFriendsQuery.data.error}</p>
-          ) : (
-            <Select
-              value={(configValues.friendUuid as string) ?? ''}
-              onChange={(e) => {
-                const friend = plexFriendsQuery.data?.friends.find(
-                  (f) => f.uuid === e.target.value
-                );
-                setConfigValues({
-                  friendUuid: e.target.value,
-                  friendUsername: friend?.username ?? '',
-                });
-              }}
-              options={[
-                { value: '', label: 'Select a friend...' },
-                ...(plexFriendsQuery.data?.friends.map((f) => ({
-                  value: f.uuid,
-                  label: f.username,
-                })) ?? []),
-              ]}
-              size="sm"
-            />
-          )}
+          {(() => {
+            if (plexFriendsQuery.isLoading) {
+              return <p className="text-xs text-muted-foreground">Loading friends...</p>;
+            }
+            if (plexFriendsQuery.data?.error) {
+              return <p className="text-xs text-destructive/80">{plexFriendsQuery.data.error}</p>;
+            }
+            return (
+              <Select
+                value={(configValues.friendUuid as string) ?? ''}
+                onChange={(e) => {
+                  const friend = plexFriendsQuery.data?.friends.find(
+                    (f) => f.uuid === e.target.value
+                  );
+                  setConfigValues({
+                    friendUuid: e.target.value,
+                    friendUsername: friend?.username ?? '',
+                  });
+                }}
+                options={[
+                  { value: '', label: 'Select a friend...' },
+                  ...(plexFriendsQuery.data?.friends.map((f) => ({
+                    value: f.uuid,
+                    label: f.username,
+                  })) ?? []),
+                ]}
+                size="sm"
+              />
+            );
+          })()}
         </div>
       )}
 
@@ -433,12 +437,14 @@ export function SourceManagementSection() {
         ) : undefined
       }
     >
-      {sourcesQuery.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading sources...</p>
-      ) : !sourcesQuery.data?.length ? (
-        <p className="text-sm text-muted-foreground">No sources configured</p>
-      ) : (
-        sourcesQuery.data.map((source) => (
+      {(() => {
+        if (sourcesQuery.isLoading) {
+          return <p className="text-sm text-muted-foreground">Loading sources...</p>;
+        }
+        if (!sourcesQuery.data?.length) {
+          return <p className="text-sm text-muted-foreground">No sources configured</p>;
+        }
+        return sourcesQuery.data.map((source) => (
           <SourceCard
             key={source.id}
             source={source}
@@ -446,8 +452,8 @@ export function SourceManagementSection() {
               handleEdit(source);
             }}
           />
-        ))
-      )}
+        ));
+      })()}
     </CRUDManagementSection>
   );
 }

@@ -57,22 +57,18 @@ export function TierListSummary({
                 <span className="text-muted-foreground">→</span>
                 <span className="text-sm font-medium">{Math.round(change.newScore)}</span>
                 <span
-                  className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${
-                    isPositive
-                      ? 'bg-success/20 text-success'
-                      : isNegative
-                        ? 'bg-destructive/20 text-destructive'
-                        : 'bg-muted text-muted-foreground'
-                  }`}
+                  className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium ${(() => {
+                    if (isPositive) return 'bg-success/20 text-success';
+                    if (isNegative) return 'bg-destructive/20 text-destructive';
+                    return 'bg-muted text-muted-foreground';
+                  })()}`}
                   data-testid={`delta-${change.movieId}`}
                 >
-                  {isPositive ? (
-                    <ArrowUpRight className="h-3 w-3" />
-                  ) : isNegative ? (
-                    <ArrowDownRight className="h-3 w-3" />
-                  ) : (
-                    <Minus className="h-3 w-3" />
-                  )}
+                  {(() => {
+                    if (isPositive) return <ArrowUpRight className="h-3 w-3" />;
+                    if (isNegative) return <ArrowDownRight className="h-3 w-3" />;
+                    return <Minus className="h-3 w-3" />;
+                  })()}
                   {isPositive ? '+' : ''}
                   {delta}
                 </span>

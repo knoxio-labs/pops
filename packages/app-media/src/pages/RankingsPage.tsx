@@ -69,9 +69,11 @@ function RankingRow({
       <span className="w-8 text-right text-sm font-bold text-muted-foreground tabular-nums">
         {rank <= 3 ? (
           <span
-            className={
-              rank === 1 ? 'text-warning' : rank === 2 ? 'text-zinc-400' : 'text-amber-700'
-            }
+            className={(() => {
+              if (rank === 1) return 'text-warning';
+              if (rank === 2) return 'text-zinc-400';
+              return 'text-amber-700';
+            })()}
           >
             #{rank}
           </span>
@@ -114,11 +116,11 @@ function RankingRow({
           <div
             className={cn(
               'text-xs tabular-nums',
-              confidence >= 0.7
-                ? 'text-success'
-                : confidence >= 0.4
-                  ? 'text-warning'
-                  : 'text-destructive'
+              (() => {
+                if (confidence >= 0.7) return 'text-success';
+                if (confidence >= 0.4) return 'text-warning';
+                return 'text-destructive';
+              })()
             )}
           >
             {Math.round(confidence * 100)}% conf
@@ -267,50 +269,50 @@ export function RankingsPage() {
         <h1 className="text-2xl font-bold">Rankings</h1>
       </div>
 
-      {dimsLoading ? (
-        <RankingsSkeleton />
-      ) : showTabs ? (
-        <Tabs value={dimensionParam} onValueChange={handleTabChange}>
-          <div className="flex flex-wrap justify-center gap-2" role="tablist">
-            {[
-              { value: 'overall', label: 'Overall' },
-              ...activeDimensions.map((dim: { id: number; name: string }) => ({
-                value: String(dim.id),
-                label: dim.name,
-              })),
-            ].map((chip) => (
-              <button
-                key={chip.value}
-                role="tab"
-                aria-selected={dimensionParam === chip.value}
-                onClick={() => {
-                  handleTabChange(chip.value);
-                }}
-                className={cn(
-                  'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                  dimensionParam === chip.value
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
+      {(() => {
+        if (dimsLoading) return <RankingsSkeleton />;
+        if (!showTabs) return <RankingsList />;
+        return (
+          <Tabs value={dimensionParam} onValueChange={handleTabChange}>
+            <div className="flex flex-wrap justify-center gap-2" role="tablist">
+              {[
+                { value: 'overall', label: 'Overall' },
+                ...activeDimensions.map((dim: { id: number; name: string }) => ({
+                  value: String(dim.id),
+                  label: dim.name,
+                })),
+              ].map((chip) => (
+                <button
+                  key={chip.value}
+                  role="tab"
+                  aria-selected={dimensionParam === chip.value}
+                  onClick={() => {
+                    handleTabChange(chip.value);
+                  }}
+                  className={cn(
+                    'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                    dimensionParam === chip.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
 
-          <TabsContent value="overall" className="mt-4">
-            <RankingsList />
-          </TabsContent>
-
-          {activeDimensions.map((dim: { id: number; name: string }) => (
-            <TabsContent key={dim.id} value={String(dim.id)} className="mt-4">
-              <RankingsList dimensionId={dim.id} />
+            <TabsContent value="overall" className="mt-4">
+              <RankingsList />
             </TabsContent>
-          ))}
-        </Tabs>
-      ) : (
-        <RankingsList />
-      )}
+
+            {activeDimensions.map((dim: { id: number; name: string }) => (
+              <TabsContent key={dim.id} value={String(dim.id)} className="mt-4">
+                <RankingsList dimensionId={dim.id} />
+              </TabsContent>
+            ))}
+          </Tabs>
+        );
+      })()}
     </div>
   );
 }

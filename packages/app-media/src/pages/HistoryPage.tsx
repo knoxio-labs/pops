@@ -56,6 +56,12 @@ function formatShortDate(iso: string): string {
   });
 }
 
+function getEmptyHistoryMessage(filter: MediaTypeFilter): string {
+  if (filter === 'all') return 'No watch history yet. Start watching something!';
+  if (filter === 'movie') return 'No movies in your history.';
+  return 'No episodes in your history.';
+}
+
 function HistorySkeleton() {
   return (
     <>
@@ -408,88 +414,95 @@ export function HistoryPage() {
         ))}
       </div>
 
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      ) : isLoading ? (
-        <HistorySkeleton />
-      ) : entries.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">
-            {filter === 'all'
-              ? 'No watch history yet. Start watching something!'
-              : `No ${filter === 'movie' ? 'movies' : 'episodes'} in your history.`}
-          </p>
-          <Link to="/media" className="mt-4 inline-block text-sm text-primary underline">
-            Browse library
-          </Link>
-        </div>
-      ) : (
-        <>
-          {/* Mobile: compact list */}
-          <div className="space-y-2 md:hidden">
-            {entries.map((entry: HistoryEntry) => (
-              <HistoryItem
-                key={entry.id}
-                entry={entry}
-                onDelete={handleDeleteClick}
-                isDeleting={deleteMutation.isPending}
-                debriefSessionId={
-                  entry.mediaType === 'movie' ? (debriefByMovieId.get(entry.mediaId) ?? null) : null
-                }
-              />
-            ))}
-          </div>
-
-          {/* Desktop: poster card grid */}
-          <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {entries.map((entry: HistoryEntry) => (
-              <HistoryCard
-                key={entry.id}
-                entry={entry}
-                onDelete={handleDeleteClick}
-                isDeleting={deleteMutation.isPending}
-                debriefSessionId={
-                  entry.mediaType === 'movie' ? (debriefByMovieId.get(entry.mediaId) ?? null) : null
-                }
-              />
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {Math.min(offset + PAGE_SIZE, total)} of {total}
-            </p>
-            <div className="flex gap-2">
-              {offset > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setOffset(Math.max(0, offset - PAGE_SIZE));
-                  }}
-                >
-                  Previous
-                </Button>
-              )}
-              {hasMore && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setOffset(offset + PAGE_SIZE);
-                  }}
-                >
-                  Next
-                </Button>
-              )}
+      {(() => {
+        if (error) {
+          return (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error.message}</AlertDescription>
+            </Alert>
+          );
+        }
+        if (isLoading) return <HistorySkeleton />;
+        if (entries.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground">{getEmptyHistoryMessage(filter)}</p>
+              <Link to="/media" className="mt-4 inline-block text-sm text-primary underline">
+                Browse library
+              </Link>
             </div>
-          </div>
-        </>
-      )}
+          );
+        }
+        return (
+          <>
+            {/* Mobile: compact list */}
+            <div className="space-y-2 md:hidden">
+              {entries.map((entry: HistoryEntry) => (
+                <HistoryItem
+                  key={entry.id}
+                  entry={entry}
+                  onDelete={handleDeleteClick}
+                  isDeleting={deleteMutation.isPending}
+                  debriefSessionId={
+                    entry.mediaType === 'movie'
+                      ? (debriefByMovieId.get(entry.mediaId) ?? null)
+                      : null
+                  }
+                />
+              ))}
+            </div>
+
+            {/* Desktop: poster card grid */}
+            <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {entries.map((entry: HistoryEntry) => (
+                <HistoryCard
+                  key={entry.id}
+                  entry={entry}
+                  onDelete={handleDeleteClick}
+                  isDeleting={deleteMutation.isPending}
+                  debriefSessionId={
+                    entry.mediaType === 'movie'
+                      ? (debriefByMovieId.get(entry.mediaId) ?? null)
+                      : null
+                  }
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {Math.min(offset + PAGE_SIZE, total)} of {total}
+              </p>
+              <div className="flex gap-2">
+                {offset > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setOffset(Math.max(0, offset - PAGE_SIZE));
+                    }}
+                  >
+                    Previous
+                  </Button>
+                )}
+                {hasMore && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setOffset(offset + PAGE_SIZE);
+                    }}
+                  >
+                    Next
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Delete confirmation dialog */}
       <AlertDialog
