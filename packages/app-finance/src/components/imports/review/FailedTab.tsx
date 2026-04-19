@@ -1,6 +1,6 @@
 import { Layers, List } from 'lucide-react';
 
-import { Button } from '@pops/ui';
+import { Button, EmptyStateTab } from '@pops/ui';
 
 import { EditableTransactionCard } from '../EditableTransactionCard';
 import { TransactionCard } from '../TransactionCard';
@@ -49,7 +49,7 @@ export function FailedTab({
   entities,
 }: FailedTabProps) {
   if (transactions.length === 0) {
-    return <div className="text-center py-12 text-gray-500">No failed transactions</div>;
+    return <EmptyStateTab message="No failed transactions" />;
   }
 
   return (

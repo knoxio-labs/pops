@@ -7,7 +7,15 @@ import { useEffect, useRef, useState } from 'react';
  *
  * This component is tRPC-agnostic — callers wire up the API.
  */
-import { Badge, Button, Chip, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+import {
+  Badge,
+  Button,
+  Chip,
+  hashToColor,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@pops/ui';
 
 import { cn } from '../lib/utils';
 
@@ -59,24 +67,6 @@ const SOURCE_ICONS: Record<TagSource, string> = {
   rule: '📋',
   entity: '🏪',
 };
-
-/**
- * Deterministic tag coloring based on string hash.
- * Uses OKLCH for perceptually uniform colors that look good in dark mode.
- */
-function getTagStyle(tag: string) {
-  let hash = 0;
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash % 360);
-  // Soft tinted background with high-contrast text for dark mode
-  return {
-    backgroundColor: `oklch(0.3 0.08 ${hue} / 0.4)`,
-    color: `oklch(0.85 0.06 ${hue})`,
-    borderColor: `oklch(0.85 0.06 ${hue} / 0.2)`,
-  };
-}
 
 export function TagEditor({
   currentTags,
@@ -202,7 +192,7 @@ export function TagEditor({
                   : meta?.source
                     ? `${meta.source} suggestion`
                     : undefined;
-              const style = getTagStyle(tag);
+              const style = hashToColor(tag);
               return (
                 <Badge
                   key={tag}
@@ -232,7 +222,7 @@ export function TagEditor({
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => {
-                const style = getTagStyle(tag);
+                const style = hashToColor(tag);
                 return (
                   <Chip
                     key={tag}
@@ -265,7 +255,7 @@ export function TagEditor({
           {filteredSuggestions.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {filteredSuggestions.slice(0, 8).map((tag) => {
-                const style = getTagStyle(tag);
+                const style = hashToColor(tag);
                 return (
                   <Button
                     key={tag}

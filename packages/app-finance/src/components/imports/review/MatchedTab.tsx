@@ -1,3 +1,5 @@
+import { EmptyStateTab } from '@pops/ui';
+
 import { EditableTransactionCard } from '../EditableTransactionCard';
 import { TransactionCard } from '../TransactionCard';
 
@@ -28,7 +30,7 @@ export function MatchedTab({
   entities,
 }: MatchedTabProps) {
   if (transactions.length === 0) {
-    return <div className="text-center py-12 text-gray-500">No matched transactions</div>;
+    return <EmptyStateTab message="No matched transactions" />;
   }
 
   return (

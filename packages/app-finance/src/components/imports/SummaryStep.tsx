@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle, List, Plus, RefreshCw, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
-import { Button } from '@pops/ui';
+import { Button, SummaryCard } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
 
@@ -43,54 +43,41 @@ export function SummaryStep() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Entities created */}
-        <div className="bg-success/5 border border-success/20 rounded-lg p-4 text-center">
-          <div className="flex items-center justify-center mb-2">
-            <CheckCircle className="w-5 h-5 text-success" />
-          </div>
-          <div className="text-2xl font-semibold text-success">{commitResult.entitiesCreated}</div>
-          <div className="text-xs text-success dark:text-success/60">Entities Created</div>
-        </div>
+        <SummaryCard
+          icon={<CheckCircle className="w-5 h-5 text-success" />}
+          value={commitResult.entitiesCreated}
+          label="Entities Created"
+          variant="success"
+        />
 
-        {/* Rules applied */}
-        <div className="bg-info/5 border border-info/20 rounded-lg p-4 text-center">
-          <div className="flex items-center justify-center mb-2">
-            <CheckCircle className="w-5 h-5 text-info" />
-          </div>
-          <div className="text-2xl font-semibold text-info">{totalRules}</div>
-          <div className="text-xs text-info">Rules Applied</div>
-        </div>
+        <SummaryCard
+          icon={<CheckCircle className="w-5 h-5 text-info" />}
+          value={totalRules}
+          label="Rules Applied"
+          variant="info"
+        />
 
-        {/* Transactions imported */}
-        <div className="bg-success/5 border border-success/20 rounded-lg p-4 text-center">
-          <div className="flex items-center justify-center mb-2">
-            <CheckCircle className="w-5 h-5 text-success" />
-          </div>
-          <div className="text-2xl font-semibold text-success">
-            {commitResult.transactionsImported}
-          </div>
-          <div className="text-xs text-success dark:text-success/60">Transactions Imported</div>
-        </div>
+        <SummaryCard
+          icon={<CheckCircle className="w-5 h-5 text-success" />}
+          value={commitResult.transactionsImported}
+          label="Transactions Imported"
+          variant="success"
+        />
 
-        {/* Transactions failed */}
         {commitResult.transactionsFailed > 0 ? (
-          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <XCircle className="w-5 h-5 text-destructive" />
-            </div>
-            <div className="text-2xl font-semibold text-destructive">
-              {commitResult.transactionsFailed}
-            </div>
-            <div className="text-xs text-destructive">Transactions Failed</div>
-          </div>
+          <SummaryCard
+            icon={<XCircle className="w-5 h-5 text-destructive" />}
+            value={commitResult.transactionsFailed}
+            label="Transactions Failed"
+            variant="destructive"
+          />
         ) : (
-          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <AlertCircle className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">0</div>
-            <div className="text-xs text-gray-700 dark:text-gray-300">Transactions Failed</div>
-          </div>
+          <SummaryCard
+            icon={<AlertCircle className="w-5 h-5 text-gray-400" />}
+            value={0}
+            label="Transactions Failed"
+            variant="neutral"
+          />
         )}
       </div>
 

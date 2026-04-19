@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
 import {
-  Alert,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -28,11 +27,13 @@ import {
   Card,
   DataTable,
   DateInput,
+  ErrorAlert,
   formatBytes,
   Input,
   Label,
   PageHeader,
   Skeleton,
+  SkeletonGrid,
   SortableHeader,
   StatCard,
 } from '@pops/ui';
@@ -430,11 +431,7 @@ export function AiUsagePage() {
           title="AI Observability"
           description="Monitor AI usage, costs, latency, and provider health"
         />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {(['cost', 'calls', 'cache', 'error'] as const).map((k) => (
-            <Skeleton key={k} className="h-32" />
-          ))}
-        </div>
+        <SkeletonGrid count={4} itemHeight="h-32" cols="md:grid-cols-2 lg:grid-cols-4" />
         <Skeleton className="h-64" />
       </div>
     );
@@ -444,10 +441,7 @@ export function AiUsagePage() {
     return (
       <div className="space-y-6">
         <PageHeader title="AI Observability" />
-        <Alert variant="destructive">
-          <h3 className="font-semibold">Failed to load observability data</h3>
-          <p className="text-sm mt-1">{error.message}</p>
-        </Alert>
+        <ErrorAlert title="Failed to load observability data" message={error.message} />
       </div>
     );
   }

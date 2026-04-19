@@ -1,3 +1,5 @@
+import { EmptyStateTab } from '@pops/ui';
+
 import type { ProcessedTransaction } from '../../../store/importStore';
 
 interface SkippedTabProps {
@@ -9,7 +11,7 @@ interface SkippedTabProps {
  */
 export function SkippedTab({ transactions }: SkippedTabProps) {
   if (transactions.length === 0) {
-    return <div className="text-center py-12 text-gray-500">No skipped transactions</div>;
+    return <EmptyStateTab message="No skipped transactions" />;
   }
 
   return (

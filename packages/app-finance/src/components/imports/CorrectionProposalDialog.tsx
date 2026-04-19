@@ -3,16 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-} from '@pops/ui';
+import { Button, Input, WorkflowDialog } from '@pops/ui';
 
 import {
   applyBrowsePriorityReorder,
@@ -85,6 +76,12 @@ export interface CorrectionProposalDialogProps {
   onApproved?: (changeSet: ServerChangeSet) => void;
   mode?: 'proposal' | 'browse';
   onBrowseClose?: (hadChanges: boolean) => void;
+}
+
+function previewLabel(view: PreviewView, hasSelectedOp: boolean): string {
+  if (view === 'combined') return 'Combined effect of entire ChangeSet';
+  if (hasSelectedOp) return 'Effect of selected operation';
+  return 'No operation selected';
 }
 
 // ---------------------------------------------------------------------------
@@ -414,171 +411,159 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   // ---- render -------------------------------------------------------------
 
   if (isBrowseMode) {
-    return (
-      <Dialog open={props.open} onOpenChange={handleOpenChange}>
-        <DialogContent
-          className="
-            max-w-(--size-dialog-max-vw) max-h-(--size-dialog-max-vh) w-(--size-dialog-xl)
-            md:max-w-(--size-dialog-max-vw) md:w-(--size-dialog-xl)
-            flex flex-col gap-0 overflow-hidden p-0
-          "
-        >
-          <DialogHeader className="px-6 pt-6 pb-3">
-            <DialogTitle>Manage Rules</DialogTitle>
-            <DialogDescription>
-              Browse, search, and edit classification rules. Changes are buffered locally until
-              import is committed.
-            </DialogDescription>
-          </DialogHeader>
+    const browseFooter = (
+      <>
+        <div className="flex-1 text-xs text-muted-foreground">
+          {localOps.length > 0 && (
+            <span>
+              {localOps.length} unsaved change{localOps.length === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
+        <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button onClick={handleBrowseSave} disabled={localOps.length === 0}>
+          Save Changes
+        </Button>
+      </>
+    );
 
-          {browseListQuery.isError ? (
-            <div className="px-6 pb-6 text-sm text-destructive">
-              {browseListQuery.error.message}
+    const browseBody = browseListQuery.isError ? (
+      <div className="px-6 pb-6 text-sm text-destructive">{browseListQuery.error.message}</div>
+    ) : browseListQuery.isLoading ? (
+      <div className="px-6 pb-6 text-sm text-muted-foreground">Loading rules…</div>
+    ) : (
+      // 3-column grid rendered via WorkflowDialog columns prop
+      <>
+        {/* Sidebar: rule list with search */}
+        <div className="flex flex-col min-h-0 border-r">
+          <div className="px-3 py-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={browseSearch}
+                onChange={(e) => {
+                  setBrowseSearch(e.target.value);
+                }}
+                placeholder="Search rules…"
+                className="pl-7 h-8 text-xs"
+              />
             </div>
-          ) : browseListQuery.isLoading ? (
-            <div className="px-6 pb-6 text-sm text-muted-foreground">Loading rules…</div>
+          </div>
+          <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b space-y-0.5">
+            <div>
+              {browseOrderedFiltered.length} rule
+              {browseOrderedFiltered.length === 1 ? '' : 's'}
+              {browseSearch && ` matching "${browseSearch}"`}
+            </div>
+            {browseSearch.trim() !== '' && (
+              <div className="text-[10px] text-muted-foreground/90">
+                Clear search to drag rules into priority order.
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-auto">
+            <Suspense fallback={<div className="p-3 text-xs text-muted-foreground">Loading…</div>}>
+              <BrowseRulesSidebar
+                canDragReorder={browseCanDragReorder}
+                orderedMerged={browseOrderedMerged}
+                orderedFiltered={browseOrderedFiltered}
+                selectedRuleId={browseSelectedRuleId}
+                localOps={localOps}
+                onSelectRule={handleBrowseSelectRule}
+                onReorderFullList={handleBrowseReorderFullList}
+              />
+            </Suspense>
+          </div>
+          <div className="border-t p-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full justify-start"
+              onClick={handleAddNewRuleOp}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add new rule
+            </Button>
+          </div>
+        </div>
+
+        {/* Detail: show selected rule or selected op editor */}
+        <div className="flex flex-col min-h-0 overflow-auto">
+          {selectedOp ? (
+            <DetailPanel
+              op={selectedOp}
+              onChange={(mutator) => {
+                if (!selectedOp) return;
+                updateOp(selectedOp.clientId, mutator);
+              }}
+              disabled={false}
+            />
+          ) : browseSelectedRule ? (
+            <BrowseRuleDetailPanel
+              rule={browseSelectedRule}
+              onEdit={handleBrowseEditRule}
+              onDisable={handleBrowseDisableRule}
+              onRemove={handleBrowseRemoveRule}
+            />
           ) : (
-            <div className="grid grid-cols-[300px_minmax(0,1fr)_360px] gap-0 border-y flex-1 min-h-0">
-              {/* Sidebar: rule list with search */}
-              <div className="flex flex-col min-h-0 border-r">
-                <div className="px-3 py-2 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      value={browseSearch}
-                      onChange={(e) => {
-                        setBrowseSearch(e.target.value);
-                      }}
-                      placeholder="Search rules…"
-                      className="pl-7 h-8 text-xs"
-                    />
-                  </div>
-                </div>
-                <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b space-y-0.5">
-                  <div>
-                    {browseOrderedFiltered.length} rule
-                    {browseOrderedFiltered.length === 1 ? '' : 's'}
-                    {browseSearch && ` matching "${browseSearch}"`}
-                  </div>
-                  {browseSearch.trim() !== '' && (
-                    <div className="text-[10px] text-muted-foreground/90">
-                      Clear search to drag rules into priority order.
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 overflow-auto">
-                  <Suspense
-                    fallback={<div className="p-3 text-xs text-muted-foreground">Loading…</div>}
-                  >
-                    <BrowseRulesSidebar
-                      canDragReorder={browseCanDragReorder}
-                      orderedMerged={browseOrderedMerged}
-                      orderedFiltered={browseOrderedFiltered}
-                      selectedRuleId={browseSelectedRuleId}
-                      localOps={localOps}
-                      onSelectRule={handleBrowseSelectRule}
-                      onReorderFullList={handleBrowseReorderFullList}
-                    />
-                  </Suspense>
-                </div>
-                <div className="border-t p-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleAddNewRuleOp}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add new rule
-                  </Button>
-                </div>
-              </div>
-
-              {/* Detail: show selected rule or selected op editor */}
-              <div className="flex flex-col min-h-0 overflow-auto">
-                {selectedOp ? (
-                  <DetailPanel
-                    op={selectedOp}
-                    onChange={(mutator) => {
-                      if (!selectedOp) return;
-                      updateOp(selectedOp.clientId, mutator);
-                    }}
-                    disabled={false}
-                  />
-                ) : browseSelectedRule ? (
-                  <BrowseRuleDetailPanel
-                    rule={browseSelectedRule}
-                    onEdit={handleBrowseEditRule}
-                    onDisable={handleBrowseDisableRule}
-                    onRemove={handleBrowseRemoveRule}
-                  />
-                ) : (
-                  <div className="p-6 text-sm text-muted-foreground">
-                    Select a rule on the left to view or edit it.
-                  </div>
-                )}
-              </div>
-
-              {/* Impact preview (PRD-032 US-06) */}
-              {(() => {
-                const browsePreviewResult =
-                  previewView === 'combined' ? combinedPreview : selectedOpPreview;
-                const browseDbPreviewResult =
-                  previewView === 'combined' ? combinedDbPreview : selectedOpDbPreview;
-                const browsePreviewError =
-                  previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
-                const browseTruncated =
-                  previewView === 'combined'
-                    ? combinedPreviewTruncated
-                    : selectedOpPreviewTruncated;
-                const browseLabel =
-                  previewView === 'combined'
-                    ? 'Combined effect of all pending changes'
-                    : selectedOp
-                      ? 'Effect of selected operation'
-                      : 'No operation selected';
-                return (
-                  <ImpactPanel
-                    view={previewView}
-                    onViewChange={setPreviewView}
-                    label={browseLabel}
-                    previewResult={browsePreviewResult}
-                    dbPreviewResult={browseDbPreviewResult}
-                    dbTruncated={dbTxnsQuery.data?.truncated}
-                    dbTotal={dbTxnsQuery.data?.total}
-                    previewError={browsePreviewError}
-                    isPending={previewMutationPending}
-                    stale={hasDirty}
-                    truncated={browseTruncated}
-                    onRerun={handleRerunPreview}
-                    disabled={localOps.length === 0}
-                  />
-                );
-              })()}
+            <div className="p-6 text-sm text-muted-foreground">
+              Select a rule on the left to view or edit it.
             </div>
           )}
+        </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
-            <div className="flex-1 text-xs text-muted-foreground">
-              {localOps.length > 0 && (
-                <span>
-                  {localOps.length} unsaved change{localOps.length === 1 ? '' : 's'}
-                </span>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                handleOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleBrowseSave} disabled={localOps.length === 0}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Impact preview (PRD-032 US-06) */}
+        {(() => {
+          const browsePreviewResult =
+            previewView === 'combined' ? combinedPreview : selectedOpPreview;
+          const browseDbPreviewResult =
+            previewView === 'combined' ? combinedDbPreview : selectedOpDbPreview;
+          const browsePreviewError =
+            previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
+          const browseTruncated =
+            previewView === 'combined' ? combinedPreviewTruncated : selectedOpPreviewTruncated;
+          const browseLabel =
+            previewView === 'combined'
+              ? 'Combined effect of all pending changes'
+              : selectedOp
+                ? 'Effect of selected operation'
+                : 'No operation selected';
+          return (
+            <ImpactPanel
+              view={previewView}
+              onViewChange={setPreviewView}
+              label={browseLabel}
+              previewResult={browsePreviewResult}
+              dbPreviewResult={browseDbPreviewResult}
+              dbTruncated={dbTxnsQuery.data?.truncated}
+              dbTotal={dbTxnsQuery.data?.total}
+              previewError={browsePreviewError}
+              isPending={previewMutationPending}
+              stale={hasDirty}
+              truncated={browseTruncated}
+              onRerun={handleRerunPreview}
+              disabled={localOps.length === 0}
+            />
+          );
+        })()}
+      </>
+    );
+
+    const isGridMode = !browseListQuery.isError && !browseListQuery.isLoading;
+
+    return (
+      <WorkflowDialog
+        open={props.open}
+        onOpenChange={handleOpenChange}
+        title="Manage Rules"
+        description="Browse, search, and edit classification rules. Changes are buffered locally until import is committed."
+        columns={isGridMode ? 3 : undefined}
+        gridTemplate={isGridMode ? 'grid-cols-[300px_minmax(0,1fr)_360px]' : undefined}
+        footer={browseFooter}
+      >
+        {browseBody}
+      </WorkflowDialog>
     );
   }
 
@@ -588,136 +573,125 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
   const previewError = previewView === 'combined' ? combinedPreviewError : selectedOpPreviewError;
   const previewTruncated =
     previewView === 'combined' ? combinedPreviewTruncated : selectedOpPreviewTruncated;
-  const previewLabel =
-    previewView === 'combined'
-      ? 'Combined effect of entire ChangeSet'
-      : selectedOp
-        ? `Effect of selected operation`
-        : 'No operation selected';
+  const currentPreviewLabel = previewLabel(previewView, !!selectedOp);
+
+  const proposalFooter = (
+    <>
+      <div className="flex-1 text-xs text-muted-foreground">
+        {hasDirty ? (
+          <span>Preview stale — re-run before applying.</span>
+        ) : localOps.length === 0 ? (
+          <span>ChangeSet is empty.</span>
+        ) : null}
+      </div>
+      <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isBusy}>
+        Cancel
+      </Button>
+      {!rejectMode && (
+        <Button
+          variant="outline"
+          onClick={() => setRejectMode(true)}
+          disabled={isBusy || localOps.length === 0}
+        >
+          Reject with feedback
+        </Button>
+      )}
+      <Button onClick={handleApprove} disabled={!canApply}>
+        Apply ChangeSet
+      </Button>
+    </>
+  );
+
+  const isProposalGridReady =
+    props.signal && !proposeQuery.isError && !(proposeQuery.isLoading && localOps.length === 0);
+
+  const proposalBody = !props.signal ? (
+    <div className="px-6 pb-6 text-sm text-muted-foreground">No proposal signal provided.</div>
+  ) : proposeQuery.isError ? (
+    <div className="px-6 pb-6 text-sm text-destructive">{proposeQuery.error.message}</div>
+  ) : proposeQuery.isLoading && localOps.length === 0 ? (
+    <div className="px-6 pb-6 text-sm text-muted-foreground">Generating proposal…</div>
+  ) : (
+    <>
+      <OpsListPanel
+        ops={localOps}
+        selectedClientId={selectedClientId}
+        onSelect={setSelectedClientId}
+        onDelete={handleDeleteOp}
+        onAddNewRule={handleAddNewRuleOp}
+        onAddTargeted={handleAddTargetedOp}
+        excludeIds={excludeIds}
+        disabled={isBusy}
+      />
+      <DetailPanel
+        op={selectedOp}
+        onChange={(mutator) => {
+          if (!selectedOp) return;
+          updateOp(selectedOp.clientId, mutator);
+        }}
+        disabled={isBusy}
+      />
+      <ImpactPanel
+        view={previewView}
+        onViewChange={setPreviewView}
+        label={currentPreviewLabel}
+        previewResult={previewResult}
+        previewError={previewError}
+        isPending={previewMutationPending}
+        stale={hasDirty}
+        truncated={previewTruncated}
+        onRerun={handleRerunPreview}
+        disabled={isBusy || localOps.length === 0}
+      />
+    </>
+  );
+
+  const proposalSubpanel =
+    isProposalGridReady &&
+    (rejectMode ? (
+      <RejectPanel
+        feedback={rejectFeedback}
+        onFeedbackChange={setRejectFeedback}
+        onCancel={() => {
+          setRejectMode(false);
+          setRejectFeedback('');
+        }}
+        onConfirm={handleConfirmReject}
+        busy={mutationsHook.rejectMutationPending}
+      />
+    ) : (
+      <AiHelperPanel
+        messages={aiMessages}
+        instruction={aiInstruction}
+        onInstructionChange={setAiInstruction}
+        onSubmit={handleAiSubmit}
+        busy={aiBusy}
+      />
+    ));
+
+  const proposalContextHeader =
+    isProposalGridReady && props.signal ? (
+      <ContextPanel
+        signal={props.signal}
+        triggeringTransaction={props.triggeringTransaction}
+        rationale={rationale}
+        opCount={localOps.length}
+        combinedSummary={combinedPreview?.summary ?? null}
+      />
+    ) : undefined;
 
   return (
-    <Dialog open={props.open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="
-          max-w-[92vw] max-h-[88vh] w-[1180px]
-          md:max-w-[92vw] md:w-[1180px]
-          flex flex-col gap-0 overflow-hidden p-0
-        "
-      >
-        <DialogHeader className="px-6 pt-6 pb-3">
-          <DialogTitle>Correction proposal</DialogTitle>
-          <DialogDescription>
-            Edit the proposed rule changes and preview their impact before applying.
-          </DialogDescription>
-        </DialogHeader>
-
-        {!props.signal ? (
-          <div className="px-6 pb-6 text-sm text-muted-foreground">
-            No proposal signal provided.
-          </div>
-        ) : proposeQuery.isError ? (
-          <div className="px-6 pb-6 text-sm text-destructive">{proposeQuery.error.message}</div>
-        ) : proposeQuery.isLoading && localOps.length === 0 ? (
-          <div className="px-6 pb-6 text-sm text-muted-foreground">Generating proposal…</div>
-        ) : (
-          <>
-            <ContextPanel
-              signal={props.signal}
-              triggeringTransaction={props.triggeringTransaction}
-              rationale={rationale}
-              opCount={localOps.length}
-              combinedSummary={combinedPreview?.summary ?? null}
-            />
-
-            <div className="grid grid-cols-[260px_minmax(0,1fr)_360px] gap-0 border-y flex-1 min-h-0">
-              <OpsListPanel
-                ops={localOps}
-                selectedClientId={selectedClientId}
-                onSelect={setSelectedClientId}
-                onDelete={handleDeleteOp}
-                onAddNewRule={handleAddNewRuleOp}
-                onAddTargeted={handleAddTargetedOp}
-                excludeIds={excludeIds}
-                disabled={isBusy}
-              />
-              <DetailPanel
-                op={selectedOp}
-                onChange={(mutator) => {
-                  if (!selectedOp) return;
-                  updateOp(selectedOp.clientId, mutator);
-                }}
-                disabled={isBusy}
-              />
-              <ImpactPanel
-                view={previewView}
-                onViewChange={setPreviewView}
-                label={previewLabel}
-                previewResult={previewResult}
-                previewError={previewError}
-                isPending={previewMutationPending}
-                stale={hasDirty}
-                truncated={previewTruncated}
-                onRerun={handleRerunPreview}
-                disabled={isBusy || localOps.length === 0}
-              />
-            </div>
-
-            {rejectMode ? (
-              <RejectPanel
-                feedback={rejectFeedback}
-                onFeedbackChange={setRejectFeedback}
-                onCancel={() => {
-                  setRejectMode(false);
-                  setRejectFeedback('');
-                }}
-                onConfirm={handleConfirmReject}
-                busy={mutationsHook.rejectMutationPending}
-              />
-            ) : (
-              <AiHelperPanel
-                messages={aiMessages}
-                instruction={aiInstruction}
-                onInstructionChange={setAiInstruction}
-                onSubmit={handleAiSubmit}
-                busy={aiBusy}
-              />
-            )}
-          </>
-        )}
-
-        <DialogFooter className="px-6 py-4 border-t">
-          <div className="flex-1 text-xs text-muted-foreground">
-            {hasDirty ? (
-              <span>Preview stale — re-run before applying.</span>
-            ) : localOps.length === 0 ? (
-              <span>ChangeSet is empty.</span>
-            ) : null}
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              handleOpenChange(false);
-            }}
-            disabled={isBusy}
-          >
-            Cancel
-          </Button>
-          {!rejectMode && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectMode(true);
-              }}
-              disabled={isBusy || localOps.length === 0}
-            >
-              Reject with feedback
-            </Button>
-          )}
-          <Button onClick={handleApprove} disabled={!canApply}>
-            Apply ChangeSet
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <WorkflowDialog
+      open={props.open}
+      onOpenChange={handleOpenChange}
+      title="Correction proposal"
+      description="Edit the proposed rule changes and preview their impact before applying."
+      columns={isProposalGridReady ? 3 : undefined}
+      header={proposalContextHeader || undefined}
+      subpanel={proposalSubpanel || undefined}
+      footer={proposalFooter}
+    >
+      {proposalBody}
+    </WorkflowDialog>
   );
 }

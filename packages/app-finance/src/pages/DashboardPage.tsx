@@ -2,16 +2,7 @@ import { trpc } from '@pops/api-client';
 /**
  * Dashboard page - overview of finances
  */
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Badge,
-  Card,
-  PageHeader,
-  Skeleton,
-  StatCard,
-} from '@pops/ui';
+import { Badge, Card, ErrorAlert, PageHeader, SkeletonGrid, StatCard } from '@pops/ui';
 
 import type { Budget } from '@pops/api/modules/finance/budgets/types';
 import type { Transaction } from '@pops/api/modules/finance/transactions/types';
@@ -49,22 +40,11 @@ export function DashboardPage() {
     return (
       <div className="container mx-auto py-8">
         <PageHeader title="Dashboard" className="mb-6" />
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load dashboard</AlertTitle>
-          <AlertDescription>
-            <p className="mb-2">
-              The backend API is not responding. Make sure the pops-api server is running.
-            </p>
-            <details className="mt-3">
-              <summary className="cursor-pointer hover:underline font-medium text-sm">
-                Show technical details
-              </summary>
-              <code className="block mt-2 p-3 bg-black/10 dark:bg-black/20 rounded text-xs font-mono whitespace-pre-wrap break-all">
-                {transactionsError.message}
-              </code>
-            </details>
-          </AlertDescription>
-        </Alert>
+        <ErrorAlert
+          title="Unable to load dashboard"
+          message="The backend API is not responding. Make sure the pops-api server is running."
+          details={transactionsError.message}
+        />
       </div>
     );
   }
@@ -74,16 +54,11 @@ export function DashboardPage() {
       <PageHeader title="Dashboard" description="Welcome back! Here's your financial overview." />
 
       {/* Stats Grid */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section>
         {transactionsLoading ? (
-          <>
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </>
+          <SkeletonGrid count={4} itemHeight="h-32" cols="sm:grid-cols-2 lg:grid-cols-4" />
         ) : stats ? (
-          <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Transactions"
               value={stats.totalTransactions.toLocaleString()}
@@ -108,7 +83,7 @@ export function DashboardPage() {
               description="Last 10 transactions"
               color={stats.totalIncome > stats.totalExpenses ? 'emerald' : 'rose'}
             />
-          </>
+          </div>
         ) : null}
       </section>
 
@@ -118,11 +93,7 @@ export function DashboardPage() {
           <h2 className="text-xl font-semibold tracking-tight">Recent Transactions</h2>
         </div>
         {transactionsLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-          </div>
+          <SkeletonGrid count={3} itemHeight="h-16" cols="grid-cols-1" gap="gap-3" />
         ) : transactions && transactions.data.length > 0 ? (
           <Card className="overflow-hidden p-0">
             <div className="divide-y divide-border">
@@ -187,11 +158,7 @@ export function DashboardPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">Active Budgets</h2>
         {budgetsLoading ? (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </div>
+          <SkeletonGrid count={3} itemHeight="h-32" cols="md:grid-cols-3" />
         ) : budgets && budgets.data.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {budgets.data.slice(0, 3).map((budget: Budget) => (
