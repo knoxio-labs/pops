@@ -47,9 +47,7 @@ test.describe('Finance — transactions list smoke test', () => {
 
     await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible();
     // Expense rows should no longer be visible.
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Woolworths Metro' })
-    ).not.toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Woolworths Metro' })).not.toBeVisible();
   });
 
   test('clearing the filter restores the full list', async ({ page }) => {
@@ -59,9 +57,7 @@ test.describe('Finance — transactions list smoke test', () => {
 
     // Apply Income filter.
     await page.locator('select').nth(1).selectOption('Income');
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Woolworths Metro' })
-    ).not.toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Woolworths Metro' })).not.toBeVisible();
 
     // Clear all filters — button appears when any filter is active.
     await page.getByRole('button', { name: /clear all/i }).click();

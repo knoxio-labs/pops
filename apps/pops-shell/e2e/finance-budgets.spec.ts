@@ -33,14 +33,10 @@ test.describe('Finance — budgets list smoke test', () => {
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
       timeout: 10_000,
     });
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Transport' }).first()
-    ).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Transport' }).first()).toBeVisible();
 
     // Yearly budget
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()
-    ).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
   });
 
   test('shows both Monthly and Yearly period badges', async ({ page }) => {
@@ -56,9 +52,7 @@ test.describe('Finance — budgets list smoke test', () => {
     // Period is the first filter select.
     await page.locator('select').nth(0).selectOption('Yearly');
 
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()
-    ).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
     // Monthly budgets should no longer be visible.
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' })).not.toBeVisible();
   });
@@ -70,9 +64,7 @@ test.describe('Finance — budgets list smoke test', () => {
 
     await page.locator('select').nth(0).selectOption('Monthly');
 
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Groceries' }).first()
-    ).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible();
     // Yearly budget should not be visible.
     await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' })).not.toBeVisible();
   });
@@ -87,11 +79,7 @@ test.describe('Finance — budgets list smoke test', () => {
 
     await page.getByRole('button', { name: /clear all/i }).click();
 
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Groceries' }).first()
-    ).toBeVisible();
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()
-    ).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
   });
 });
