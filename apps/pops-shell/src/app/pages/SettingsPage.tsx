@@ -58,7 +58,7 @@ export function SettingsPage() {
 
       <div className="flex-1 space-y-10 min-w-0">
         {manifests.map((manifest) => (
-          <section key={manifest.id} id={manifest.id} className="scroll-mt-20">
+          <section key={manifest.id} id={manifest.id} className="scroll-mt-14 md:scroll-mt-20">
             <h2 className="text-lg font-semibold mb-4">{manifest.title}</h2>
             <SectionRenderer manifest={manifest} onTestAction={handleTestAction} />
           </section>

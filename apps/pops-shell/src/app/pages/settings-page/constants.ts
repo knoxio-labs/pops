@@ -1,3 +1,4 @@
-// Matches aside sticky offset (top-20), section scroll-mt-20, and max-h-[calc(100vh-5rem)]
-// When changing the TopBar height, update this value AND the three Tailwind classes in SettingsPage.tsx
-export const SETTINGS_HEADER_OFFSET = 80;
+// TopBar is h-14 (56px) on mobile, h-16 (64px) on md+ with sticky top-20 (80px)
+export const SETTINGS_HEADER_OFFSET_MOBILE = 56;
+export const SETTINGS_HEADER_OFFSET_DESKTOP = 80;
+export const SETTINGS_MD_BREAKPOINT = '(min-width: 768px)';
