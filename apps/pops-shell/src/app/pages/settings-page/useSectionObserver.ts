@@ -28,8 +28,9 @@ export function useSectionObserver(manifests: SettingsManifest[]) {
       let current = manifests[0]?.id ?? '';
       for (let i = 0; i < manifests.length; i++) {
         const el = elements[i];
-        if (!el) continue;
-        if (el.getBoundingClientRect().top <= HEADER_OFFSET) current = manifests[i]!.id;
+        const manifest = manifests[i];
+        if (!el || !manifest) continue;
+        if (el.getBoundingClientRect().top <= HEADER_OFFSET) current = manifest.id;
       }
       setActiveId(current);
       rafId = null;
