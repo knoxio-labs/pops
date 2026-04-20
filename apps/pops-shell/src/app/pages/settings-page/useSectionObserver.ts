@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-import type { SettingsManifest } from '@pops/types';
-
 import { SETTINGS_HEADER_OFFSET } from './constants';
+
+import type { SettingsManifest } from '@pops/types';
 
 export function useSectionObserver(manifests: SettingsManifest[]) {
   const [activeId, setActiveId] = useState<string>('');
@@ -21,7 +21,6 @@ export function useSectionObserver(manifests: SettingsManifest[]) {
 
   useEffect(() => {
     if (!manifests.length) return;
-    const HEADER_OFFSET = SETTINGS_HEADER_OFFSET;
     // Cache elements once so the scroll handler avoids repeated DOM queries
     const elements = manifests.map((m) => document.getElementById(m.id));
     let rafId: number | null = null;
@@ -31,7 +30,7 @@ export function useSectionObserver(manifests: SettingsManifest[]) {
         const el = elements[i];
         const manifest = manifests[i];
         if (!el || !manifest) continue;
-        if (el.getBoundingClientRect().top <= HEADER_OFFSET) current = manifest.id;
+        if (el.getBoundingClientRect().top <= SETTINGS_HEADER_OFFSET) current = manifest.id;
       }
       setActiveId(current);
       rafId = null;
