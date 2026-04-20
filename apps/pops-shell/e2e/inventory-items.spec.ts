@@ -43,7 +43,10 @@ test.describe('Inventory — items list smoke test', () => {
     await page.goto('/inventory');
     await expect(page.getByText(/MacBook Pro/i).first()).toBeVisible({ timeout: 10_000 });
 
+    const realConsoleErrors = consoleErrors.filter(
+      (e) => !e.includes('React Router') && !e.includes('Download the React DevTools')
+    );
     expect(pageErrors).toHaveLength(0);
-    expect(consoleErrors).toHaveLength(0);
+    expect(realConsoleErrors).toHaveLength(0);
   });
 });

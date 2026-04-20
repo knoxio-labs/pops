@@ -16,6 +16,8 @@ import { expect, test } from '@playwright/test';
 import { useRealApi } from './helpers/use-real-api';
 
 test.describe('Shell — app-rail navigation smoke test', () => {
+  test.describe.configure({ mode: 'serial' });
+
   let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {

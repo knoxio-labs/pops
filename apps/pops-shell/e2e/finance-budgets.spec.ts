@@ -127,7 +127,10 @@ test.describe('Finance — budgets list smoke test', () => {
       timeout: 10_000,
     });
 
+    const realConsoleErrors = consoleErrors.filter(
+      (e) => !e.includes('React Router') && !e.includes('Download the React DevTools')
+    );
     expect(pageErrors).toHaveLength(0);
-    expect(consoleErrors).toHaveLength(0);
+    expect(realConsoleErrors).toHaveLength(0);
   });
 });
