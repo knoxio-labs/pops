@@ -77,9 +77,12 @@ test.describe('Shell — app-rail navigation smoke test', () => {
   });
 
   test('navigates to AI — updates URL, active indicator, and shows a heading', async ({ page }) => {
-    await page.getByRole('button', { name: 'AI' }).click();
+    await page.getByRole('button', { name: 'AI', exact: true }).click();
     await expect(page).toHaveURL(/\/ai/);
-    await expect(page.getByRole('button', { name: 'AI' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('button', { name: 'AI', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
     await expect(page.getByRole('heading').first()).toBeVisible();
   });
 

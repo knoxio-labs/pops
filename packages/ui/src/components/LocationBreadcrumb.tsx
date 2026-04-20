@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+
 import { cn } from '../lib/utils';
 import {
   Breadcrumb,
@@ -30,21 +32,21 @@ export function LocationBreadcrumb({ segments, onNavigate, className }: Location
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1;
           return (
-            <BreadcrumbItem key={segment.id}>
-              {isLast ? (
-                <BreadcrumbPage className="text-xs font-medium">{segment.name}</BreadcrumbPage>
-              ) : (
-                <>
+            <Fragment key={segment.id}>
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage className="text-xs font-medium">{segment.name}</BreadcrumbPage>
+                ) : (
                   <BreadcrumbLink
                     className="text-xs cursor-pointer"
                     onClick={() => onNavigate?.(segment)}
                   >
                     {segment.name}
                   </BreadcrumbLink>
-                  <BreadcrumbSeparator className="[&>svg]:size-3" />
-                </>
-              )}
-            </BreadcrumbItem>
+                )}
+              </BreadcrumbItem>
+              {!isLast && <BreadcrumbSeparator className="[&>svg]:size-3" />}
+            </Fragment>
           );
         })}
       </BreadcrumbList>
