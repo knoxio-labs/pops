@@ -5,7 +5,7 @@
  * and no uncaught JS error occurs.
  *
  * Seeded media (from seeder.ts):
- *   Movies: The Shawshank Redemption, The Godfather, The Dark Knight, …
+ *   Movies: Interstellar, The Dark Knight, The Godfather, … (alphabetical; page 1 of 2)
  *   TV:     Breaking Bad, Severance, Shogun
  */
 import { expect, test } from '@playwright/test';
@@ -23,7 +23,7 @@ test.describe('Media — library list smoke test', () => {
   });
 
   test('renders seeded movies', async ({ page }) => {
-    await expect(page.getByText(/Shawshank Redemption/i).first()).toBeVisible({
+    await expect(page.getByText(/Interstellar/i).first()).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -42,7 +42,7 @@ test.describe('Media — library list smoke test', () => {
     });
 
     await page.goto('/media');
-    await expect(page.getByText(/Shawshank Redemption/i).first()).toBeVisible({
+    await expect(page.getByText(/Interstellar/i).first()).toBeVisible({
       timeout: 10_000,
     });
 
