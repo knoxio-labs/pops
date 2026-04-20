@@ -1,43 +1,54 @@
 import { useEffect, useState } from 'react';
 
+import {
+  SETTINGS_HEADER_OFFSET_DESKTOP,
+  SETTINGS_HEADER_OFFSET_MOBILE,
+  SETTINGS_MD_BREAKPOINT,
+} from './constants';
+
 import type { SettingsManifest } from '@pops/types';
 
-export function useSectionObserver(
-  manifests: SettingsManifest[],
-  contentRef: React.RefObject<HTMLDivElement | null>
-) {
+export function useSectionObserver(manifests: SettingsManifest[]) {
   const [activeId, setActiveId] = useState<string>('');
 
-  // Default to first manifest when data loads and no section is active yet
+  // Only initialize once (when activeId is still empty) so tRPC refetches
+  // never overwrite scroll-derived state.
   useEffect(() => {
-    if (manifests.length > 0 && !activeId) {
-      const hash = window.location.hash.slice(1);
-      setActiveId(hash && manifests.some((m) => m.id === hash) ? hash : (manifests[0]?.id ?? ''));
-    }
-  }, [manifests, activeId]);
+    if (!manifests.length || activeId) return;
+    const hash = window.location.hash.slice(1);
+    const hasValidHash = hash !== '' && manifests.some((m) => m.id === hash);
+    setActiveId(hasValidHash ? hash : (manifests[0]?.id ?? ''));
+  }, [activeId, manifests]);
 
   useEffect(() => {
-    if (!manifests.length || !contentRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .toSorted((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0 && visible[0]) {
-          setActiveId(visible[0].target.id);
-        }
-      },
-      { root: null, rootMargin: '-10% 0px -70% 0px', threshold: 0 }
-    );
-
-    for (const m of manifests) {
-      const el = document.getElementById(m.id);
-      if (el) observer.observe(el);
-    }
-
-    return () => observer.disconnect();
-  }, [manifests, contentRef]);
+    if (!manifests.length) return;
+    // Cache elements once so the scroll handler avoids repeated DOM queries
+    const elements = manifests.map((m) => document.getElementById(m.id));
+    let rafId: number | null = null;
+    const update = () => {
+      const offset = window.matchMedia(SETTINGS_MD_BREAKPOINT).matches
+        ? SETTINGS_HEADER_OFFSET_DESKTOP
+        : SETTINGS_HEADER_OFFSET_MOBILE;
+      let current = manifests[0]?.id ?? '';
+      for (let i = 0; i < manifests.length; i++) {
+        const el = elements[i];
+        const manifest = manifests[i];
+        if (!el || !manifest) continue;
+        if (el.getBoundingClientRect().top <= offset) current = manifest.id;
+      }
+      setActiveId(current);
+      rafId = null;
+    };
+    const onScroll = () => {
+      if (rafId === null) rafId = requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    update();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [manifests]);
 
   return activeId;
 }
