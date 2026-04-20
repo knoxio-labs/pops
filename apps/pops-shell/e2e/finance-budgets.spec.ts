@@ -14,8 +14,12 @@
  * is no progress indicator against actual spending. This gap is noted in the
  * issue and tracked separately; the test covers what is currently built.
  *
- * Filter selects are scoped to their labelled control to avoid coupling to
- * DOM order (which includes the page-size <select> in the table footer).
+ * Filter selects are identified by a unique non-numeric option value to avoid
+ * coupling to DOM order (which includes the page-size <select> in the table
+ * footer).
+ *
+ * Crash detection is wired into beforeEach/afterEach so every test in this
+ * suite verifies the page does not crash (no separate crash test needed).
  */
 import { expect, test } from '@playwright/test';
 
@@ -41,13 +45,31 @@ const MONTHLY_BUDGETS = [
 ];
 
 test.describe('Finance — budgets list smoke test', () => {
+  let pageErrors: string[] = [];
+  let consoleErrors: string[] = [];
+
   test.beforeEach(async ({ page }) => {
+    pageErrors = [];
+    consoleErrors = [];
     await useRealApi(page);
+    // Register before navigation so errors on first load are captured.
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
     await page.goto('/finance/budgets');
   });
 
   test.afterEach(async ({ page }) => {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
+    const realConsoleErrors = consoleErrors.filter(
+      (e) =>
+        !e.includes('React Router') &&
+        !e.includes('Download the React DevTools') &&
+        !e.includes('Failed to load resource')
+    );
+    expect(pageErrors).toHaveLength(0);
+    expect(realConsoleErrors).toHaveLength(0);
   });
 
   test('renders all 8 seeded budgets', async ({ page }) => {
@@ -111,29 +133,5 @@ test.describe('Finance — budgets list smoke test', () => {
 
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible();
     await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
-  });
-
-  test('page does not crash (no uncaught errors or console errors)', async ({ page }) => {
-    // Register BEFORE navigation so errors during first load are captured.
-    const pageErrors: string[] = [];
-    const consoleErrors: string[] = [];
-    page.on('pageerror', (err) => pageErrors.push(err.message));
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
-
-    await page.goto('/finance/budgets');
-    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
-      timeout: 10_000,
-    });
-
-    const realConsoleErrors = consoleErrors.filter(
-      (e) =>
-        !e.includes('React Router') &&
-        !e.includes('Download the React DevTools') &&
-        !e.includes('Failed to load resource')
-    );
-    expect(pageErrors).toHaveLength(0);
-    expect(realConsoleErrors).toHaveLength(0);
   });
 });

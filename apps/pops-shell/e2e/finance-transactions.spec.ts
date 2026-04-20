@@ -12,8 +12,9 @@
  *   narrows the list to 0 rows — which still confirms the filter mechanism works.
  *   This seeded-data / filter-option mismatch is a pre-existing gap in the
  *   production code, tracked separately.
- * - Filter selects are scoped to their labelled control to avoid coupling to
- *   DOM order (which includes the page-size <select> in the table footer).
+ * - Filter selects are identified by a unique non-numeric option value to avoid
+ *   coupling to DOM order (which includes the page-size <select> in the table
+ *   footer).
  */
 import { expect, test } from '@playwright/test';
 
