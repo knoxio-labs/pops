@@ -1,6 +1,8 @@
 import { SectionRenderer } from '@/components/settings/SectionRenderer';
 import { trpc } from '@/lib/trpc';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+
+import { Select } from '@pops/ui';
 
 import { SectionNav } from './settings-page/SectionNav';
 import { SettingsEmpty, SettingsLoading } from './settings-page/SettingsLoading';
@@ -11,9 +13,8 @@ import type { SettingsManifest } from '@pops/types';
 
 export function SettingsPage() {
   const { data, isLoading } = trpc.core.settings.getManifests.useQuery();
-  const contentRef = useRef<HTMLDivElement>(null);
   const manifests = useMemo(() => (data?.manifests ?? []) as SettingsManifest[], [data?.manifests]);
-  const activeId = useSectionObserver(manifests, contentRef);
+  const activeId = useSectionObserver(manifests);
   const handleTestAction = useTestActionHandler();
 
   // Handle hash-based deep linking on load
@@ -38,7 +39,8 @@ export function SettingsPage() {
 
   return (
     <div className="flex gap-8 p-6 max-w-5xl mx-auto">
-      <aside className="w-48 shrink-0 hidden md:block sticky top-6 self-start">
+      {/* Sidebar — hidden on mobile; top-20 clears the fixed TopBar (h-16 = 4rem) */}
+      <aside className="w-48 shrink-0 hidden md:block sticky top-20 self-start max-h-[calc(100vh-5rem)] overflow-y-auto">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-3">
           Settings
         </p>
@@ -46,22 +48,16 @@ export function SettingsPage() {
       </aside>
 
       <div className="md:hidden w-full mb-4">
-        <select
+        <Select
           value={activeId}
           onChange={(e) => scrollToSection(e.target.value)}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        >
-          {manifests.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.title}
-            </option>
-          ))}
-        </select>
+          options={manifests.map((m) => ({ value: m.id, label: m.title }))}
+        />
       </div>
 
-      <div ref={contentRef} className="flex-1 space-y-10 min-w-0">
+      <div className="flex-1 space-y-10 min-w-0">
         {manifests.map((manifest) => (
-          <section key={manifest.id} id={manifest.id}>
+          <section key={manifest.id} id={manifest.id} className="scroll-mt-20">
             <h2 className="text-lg font-semibold mb-4">{manifest.title}</h2>
             <SectionRenderer manifest={manifest} onTestAction={handleTestAction} />
           </section>
