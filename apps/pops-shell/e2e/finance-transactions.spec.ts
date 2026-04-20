@@ -1,19 +1,28 @@
 /**
  * Smoke test — Finance transactions list (#2100)
  *
- * Tier 1 minimum: page loads, seeded rows render, a filter narrows the list,
+ * Tier 1 minimum: page loads, seeded rows render, filters narrow the list,
  * and clearing the filter restores the full list.
  *
  * Notes:
  * - Real API against the seeded 'e2e' SQLite environment.
- * - Seeded accounts ("Bank Account", "Credit Card", "Debit Card") do not match
- *   the account filter's static options ("ANZ Everyday", "Amex", etc.), so the
- *   Type filter is used for the narrowing assertion — it reliably matches seeded
- *   types (Income / Expense / Transfer).
+ * - The Account filter dropdown offers static options (ANZ Everyday, ANZ Savings,
+ *   Amex, ING Savings, Up Everyday). Seeded transactions use different account
+ *   names (Bank Account, Credit Card, Debit Card). Selecting "Amex" therefore
+ *   narrows the list to 0 rows — which still confirms the filter mechanism works.
+ *   This seeded-data / filter-option mismatch is a pre-existing gap in the
+ *   production code, tracked separately.
+ * - Filter selects are scoped to their labelled control to avoid coupling to
+ *   DOM order (which includes the page-size <select> in the table footer).
  */
 import { expect, test } from '@playwright/test';
 
 import { useRealApi } from './helpers/use-real-api';
+
+/** Find the native <select> inside the filter block whose label matches text. */
+function filterSelect(page: import('@playwright/test').Page, labelText: string) {
+  return page.locator('label', { hasText: labelText }).locator('xpath=..').locator('select');
+}
 
 test.describe('Finance — transactions list smoke test', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,7 +35,6 @@ test.describe('Finance — transactions list smoke test', () => {
   });
 
   test('renders seeded transactions', async ({ page }) => {
-    // Two distinct seeded transactions that should both be visible.
     await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible({
       timeout: 10_000,
     });
@@ -35,34 +43,53 @@ test.describe('Finance — transactions list smoke test', () => {
     ).toBeVisible();
   });
 
-  test('filter by Type narrows the list', async ({ page }) => {
-    // Wait for data to load.
+  test('Account filter narrows the list', async ({ page }) => {
     await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible({
       timeout: 10_000,
     });
 
-    // The Type select is the second filter (after Account).
-    // Select "Income" — only Salary Payment rows remain.
-    await page.locator('select').nth(1).selectOption('Income');
+    // "Amex" matches no seeded transaction accounts → all rows removed from view.
+    // This confirms the filter mechanism works even though seeded account names
+    // (Bank Account, Credit Card, …) don't match the dropdown options.
+    await filterSelect(page, 'Account').selectOption('Amex');
+
+    await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' })).not.toBeVisible();
+  });
+
+  test('clearing Account filter restores the full list', async ({ page }) => {
+    await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await filterSelect(page, 'Account').selectOption('Amex');
+    await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' })).not.toBeVisible();
+
+    await page.getByRole('button', { name: /clear all/i }).click();
 
     await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible();
-    // Expense rows should no longer be visible.
+  });
+
+  test('Type filter narrows to Income rows only', async ({ page }) => {
+    await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await filterSelect(page, 'Type').selectOption('Income');
+
+    await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible();
     await expect(page.getByRole('row').filter({ hasText: 'Woolworths Metro' })).not.toBeVisible();
   });
 
-  test('clearing the filter restores the full list', async ({ page }) => {
+  test('clearing Type filter restores the full list', async ({ page }) => {
     await expect(page.getByRole('row').filter({ hasText: 'Salary Payment' }).first()).toBeVisible({
       timeout: 10_000,
     });
 
-    // Apply Income filter.
-    await page.locator('select').nth(1).selectOption('Income');
+    await filterSelect(page, 'Type').selectOption('Income');
     await expect(page.getByRole('row').filter({ hasText: 'Woolworths Metro' })).not.toBeVisible();
 
-    // Clear all filters — button appears when any filter is active.
     await page.getByRole('button', { name: /clear all/i }).click();
 
-    // Woolworths Metro should be visible again.
     await expect(
       page.getByRole('row').filter({ hasText: 'Woolworths Metro' }).first()
     ).toBeVisible();

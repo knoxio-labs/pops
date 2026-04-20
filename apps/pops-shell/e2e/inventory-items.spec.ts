@@ -1,8 +1,8 @@
 /**
  * Smoke test — Inventory items list (#2102)
  *
- * Tier 1 minimum: page loads, seeded items are visible, and the replacement
- * value total is displayed in the summary bar.
+ * Tier 1 minimum: page loads, seeded items are visible, the replacement
+ * value total is displayed in the summary bar, and no JS crash occurs.
  *
  * Seeded items include:
  *   MacBook Pro 16-inch (replacement: $5,499), Sony WH-1000XM5 Headphones,
@@ -23,7 +23,6 @@ test.describe('Inventory — items list smoke test', () => {
   });
 
   test('renders seeded inventory items', async ({ page }) => {
-    // MacBook Pro is the first seeded item and a reliable anchor.
     await expect(page.getByText(/MacBook Pro/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
@@ -33,10 +32,10 @@ test.describe('Inventory — items list smoke test', () => {
   });
 
   test('page does not crash (no uncaught errors)', async ({ page }) => {
+    // Register BEFORE navigation so errors during first load are captured.
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
 
-    // Re-navigate inside the test to capture any errors after the hook's goto.
     await page.goto('/inventory');
     await expect(page.getByText(/MacBook Pro/i).first()).toBeVisible({ timeout: 10_000 });
 

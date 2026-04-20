@@ -33,6 +33,7 @@ test.describe('Media — library list smoke test', () => {
   });
 
   test('page does not crash (no uncaught errors)', async ({ page }) => {
+    // Register BEFORE navigation so errors during first load are captured.
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
 

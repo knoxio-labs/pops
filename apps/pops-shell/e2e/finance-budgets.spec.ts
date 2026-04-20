@@ -1,8 +1,8 @@
 /**
  * Smoke test — Finance budgets list (#2104)
  *
- * Tier 1 minimum: page loads, 8 seeded budgets are visible (7 monthly + 1 yearly),
- * and the Period filter correctly narrows to each group.
+ * Tier 1 minimum: page loads, all 8 seeded budgets are visible, period badges
+ * render in table rows, and the Period filter narrows/restores correctly.
  *
  * Seeded budgets:
  *   Monthly: Groceries, Transport, Entertainment, Shopping, Home & Garden,
@@ -10,13 +10,31 @@
  *   Yearly:  Holiday Fund
  *
  * Note: the issue specifies a spending progress bar per budget row. That
- * column is not yet implemented in BudgetsPage — amounts are shown but
- * there is no progress indicator against actual spending. This gap is
- * tracked in the issue and this test covers what is currently built.
+ * column is not yet implemented in BudgetsPage — amounts are shown but there
+ * is no progress indicator against actual spending. This gap is noted in the
+ * issue and tracked separately; the test covers what is currently built.
+ *
+ * Filter selects are scoped to their labelled control to avoid coupling to
+ * DOM order (which includes the page-size <select> in the table footer).
  */
 import { expect, test } from '@playwright/test';
 
 import { useRealApi } from './helpers/use-real-api';
+
+/** Find the native <select> inside the filter block whose label matches text. */
+function filterSelect(page: import('@playwright/test').Page, labelText: string) {
+  return page.locator('label', { hasText: labelText }).locator('xpath=..').locator('select');
+}
+
+const MONTHLY_BUDGETS = [
+  'Groceries',
+  'Transport',
+  'Entertainment',
+  'Shopping',
+  'Home & Garden',
+  'Utilities',
+  'Subscriptions',
+];
 
 test.describe('Finance — budgets list smoke test', () => {
   test.beforeEach(async ({ page }) => {
@@ -28,44 +46,52 @@ test.describe('Finance — budgets list smoke test', () => {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   });
 
-  test('renders seeded budgets', async ({ page }) => {
-    // Monthly budgets
-    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
-      timeout: 10_000,
-    });
-    await expect(page.getByRole('row').filter({ hasText: 'Transport' }).first()).toBeVisible();
-
-    // Yearly budget
-    await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
-  });
-
-  test('shows both Monthly and Yearly period badges', async ({ page }) => {
-    await expect(page.getByText('Monthly').first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Yearly').first()).toBeVisible();
-  });
-
-  test('Period filter narrows to Yearly budgets', async ({ page }) => {
+  test('renders all 8 seeded budgets', async ({ page }) => {
+    // Wait for data to load via the first monthly budget.
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
       timeout: 10_000,
     });
 
-    // Period is the first filter select.
-    await page.locator('select').nth(0).selectOption('Yearly');
+    // All 7 monthly categories
+    for (const category of MONTHLY_BUDGETS) {
+      await expect(page.getByRole('row').filter({ hasText: category }).first()).toBeVisible({
+        timeout: 5_000,
+      });
+    }
+
+    // The 1 yearly budget
+    await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
+  });
+
+  test('table rows show Monthly and Yearly period badges', async ({ page }) => {
+    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Scope to table rows to avoid matching the Period filter <select> options.
+    await expect(page.getByRole('row').filter({ hasText: 'Monthly' }).first()).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Yearly' }).first()).toBeVisible();
+  });
+
+  test('Period filter narrows to Yearly only', async ({ page }) => {
+    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await filterSelect(page, 'Period').selectOption('Yearly');
 
     await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
-    // Monthly budgets should no longer be visible.
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' })).not.toBeVisible();
   });
 
-  test('Period filter narrows to Monthly budgets', async ({ page }) => {
+  test('Period filter narrows to Monthly only', async ({ page }) => {
     await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible({
       timeout: 10_000,
     });
 
-    await page.locator('select').nth(0).selectOption('Monthly');
+    await filterSelect(page, 'Period').selectOption('Monthly');
 
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible();
-    // Yearly budget should not be visible.
     await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' })).not.toBeVisible();
   });
 
@@ -74,12 +100,24 @@ test.describe('Finance — budgets list smoke test', () => {
       timeout: 10_000,
     });
 
-    await page.locator('select').nth(0).selectOption('Yearly');
+    await filterSelect(page, 'Period').selectOption('Yearly');
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' })).not.toBeVisible();
 
     await page.getByRole('button', { name: /clear all/i }).click();
 
     await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible();
     await expect(page.getByRole('row').filter({ hasText: 'Holiday Fund' }).first()).toBeVisible();
+  });
+
+  test('page does not crash (no uncaught errors)', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+
+    await page.goto('/finance/budgets');
+    await expect(page.getByRole('row').filter({ hasText: 'Groceries' }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    expect(errors).toHaveLength(0);
   });
 });
