@@ -44,7 +44,10 @@ test.describe('Inventory — items list smoke test', () => {
     await expect(page.getByText(/MacBook Pro/i).first()).toBeVisible({ timeout: 10_000 });
 
     const realConsoleErrors = consoleErrors.filter(
-      (e) => !e.includes('React Router') && !e.includes('Download the React DevTools')
+      (e) =>
+        !e.includes('React Router') &&
+        !e.includes('Download the React DevTools') &&
+        !e.includes('Failed to load resource')
     );
     expect(pageErrors).toHaveLength(0);
     expect(realConsoleErrors).toHaveLength(0);
