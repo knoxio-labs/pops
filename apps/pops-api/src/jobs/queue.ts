@@ -11,7 +11,7 @@ export function getEmbeddingsQueue(): Queue<EmbedJobData> | null {
   const redis = getRedis();
   if (!redis || !isRedisAvailable()) return null;
 
-  _embeddingsQueue ??= new Queue<EmbedJobData>('pops:embeddings', {
+  _embeddingsQueue ??= new Queue<EmbedJobData>('pops-embeddings', {
     connection: redis,
     defaultJobOptions: {
       attempts: 3,

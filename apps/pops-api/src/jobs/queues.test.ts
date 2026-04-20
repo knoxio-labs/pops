@@ -81,12 +81,12 @@ describe('queue creation succeeds when Redis is available', () => {
     expect(MockQueue).toHaveBeenCalledTimes(1);
   });
 
-  it('all queue names are prefixed with pops:', () => {
-    expect(SYNC_QUEUE).toMatch(/^pops:/);
-    expect(EMBEDDINGS_QUEUE).toMatch(/^pops:/);
-    expect(CURATION_QUEUE).toMatch(/^pops:/);
-    expect(DEFAULT_QUEUE).toMatch(/^pops:/);
-    expect(DEAD_LETTER_QUEUE).toMatch(/^pops:/);
+  it('all queue names are prefixed with pops-', () => {
+    expect(SYNC_QUEUE).toMatch(/^pops-/);
+    expect(EMBEDDINGS_QUEUE).toMatch(/^pops-/);
+    expect(CURATION_QUEUE).toMatch(/^pops-/);
+    expect(DEFAULT_QUEUE).toMatch(/^pops-/);
+    expect(DEAD_LETTER_QUEUE).toMatch(/^pops-/);
   });
 
   it('all queues retain failed jobs so they can be dead-lettered', () => {

@@ -17,7 +17,7 @@ const mockGetEmbeddingsQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: m
 
 vi.mock('../../../jobs/queues.js', () => ({
   getEmbeddingsQueue: mockGetEmbeddingsQueue,
-  EMBEDDINGS_QUEUE: 'pops:embeddings',
+  EMBEDDINGS_QUEUE: 'pops-embeddings',
   EMBEDDINGS_JOB_OPTIONS: {},
 }));
 
@@ -60,7 +60,7 @@ describe('EmbeddingTrigger', () => {
     expect(triggers[0]?.action).toBe('enqueued');
     expect(mockAdd).toHaveBeenCalledOnce();
     expect(mockAdd).toHaveBeenCalledWith(
-      'pops:embeddings',
+      'pops-embeddings',
       { sourceType: 'engram', sourceId: 'eng_20260419_1200_test' },
       {}
     );
