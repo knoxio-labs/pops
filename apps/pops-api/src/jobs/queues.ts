@@ -16,11 +16,11 @@ import type {
 // Queue name constants
 // ---------------------------------------------------------------------------
 
-export const SYNC_QUEUE = 'pops:sync';
-export const EMBEDDINGS_QUEUE = 'pops:embeddings';
-export const CURATION_QUEUE = 'pops:curation';
-export const DEFAULT_QUEUE = 'pops:default';
-export const DEAD_LETTER_QUEUE = 'pops:dead-letter';
+export const SYNC_QUEUE = 'pops-sync';
+export const EMBEDDINGS_QUEUE = 'pops-embeddings';
+export const CURATION_QUEUE = 'pops-curation';
+export const DEFAULT_QUEUE = 'pops-default';
+export const DEAD_LETTER_QUEUE = 'pops-dead-letter';
 
 export const ALL_QUEUES = [SYNC_QUEUE, EMBEDDINGS_QUEUE, CURATION_QUEUE, DEFAULT_QUEUE] as const;
 export type QueueName = (typeof ALL_QUEUES)[number] | typeof DEAD_LETTER_QUEUE;

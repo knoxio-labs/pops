@@ -40,16 +40,16 @@ const {
   const mockSyncJob = makeMockJob();
   const mockDlqJob = makeMockJob({
     id: 'dlq-1',
-    name: 'pops:dead-letter',
+    name: 'pops-dead-letter',
     data: {
-      originalQueue: 'pops:sync',
+      originalQueue: 'pops-sync',
       originalJobName: 'syncJob',
       originalData: { type: 'plexSyncMovies' },
     },
   });
 
   const mockSyncQueue = {
-    name: 'pops:sync',
+    name: 'pops-sync',
     getJobs: vi.fn().mockResolvedValue([mockSyncJob]),
     getJob: vi.fn().mockResolvedValue(mockSyncJob),
     getJobCounts: vi.fn().mockResolvedValue({
@@ -66,7 +66,7 @@ const {
   };
 
   const mockDeadLetterQueue = {
-    name: 'pops:dead-letter',
+    name: 'pops-dead-letter',
     getJobs: vi.fn().mockResolvedValue([mockDlqJob]),
     getJob: vi.fn().mockResolvedValue(mockDlqJob),
     getJobCounts: vi
@@ -87,9 +87,9 @@ const {
     add: vi.fn().mockResolvedValue({ id: 'generic-1' }),
   });
 
-  const mockEmbeddingsQueue = makeSimpleQueue('pops:embeddings');
-  const mockCurationQueue = makeSimpleQueue('pops:curation');
-  const mockDefaultQueue = makeSimpleQueue('pops:default');
+  const mockEmbeddingsQueue = makeSimpleQueue('pops-embeddings');
+  const mockCurationQueue = makeSimpleQueue('pops-curation');
+  const mockDefaultQueue = makeSimpleQueue('pops-default');
 
   return {
     mockSyncJob,
@@ -103,15 +103,15 @@ const {
 });
 
 vi.mock('../../../jobs/queues.js', () => {
-  const ALL_QUEUES = ['pops:sync', 'pops:embeddings', 'pops:curation', 'pops:default'] as const;
-  const DEAD_LETTER_QUEUE = 'pops:dead-letter';
+  const ALL_QUEUES = ['pops-sync', 'pops-embeddings', 'pops-curation', 'pops-default'] as const;
+  const DEAD_LETTER_QUEUE = 'pops-dead-letter';
 
   const queueMap: Record<string, unknown> = {
-    'pops:sync': mockSyncQueue,
-    'pops:embeddings': mockEmbeddingsQueue,
-    'pops:curation': mockCurationQueue,
-    'pops:default': mockDefaultQueue,
-    'pops:dead-letter': mockDeadLetterQueue,
+    'pops-sync': mockSyncQueue,
+    'pops-embeddings': mockEmbeddingsQueue,
+    'pops-curation': mockCurationQueue,
+    'pops-default': mockDefaultQueue,
+    'pops-dead-letter': mockDeadLetterQueue,
   };
 
   return {
@@ -194,8 +194,8 @@ describe('jobs router', () => {
     });
 
     it('filters by queue name', async () => {
-      const res = await caller.core.jobs.list({ queue: 'pops:sync' });
-      expect(res.jobs.every((j) => j.queue === 'pops:sync')).toBe(true);
+      const res = await caller.core.jobs.list({ queue: 'pops-sync' });
+      expect(res.jobs.every((j) => j.queue === 'pops-sync')).toBe(true);
     });
 
     it('returns empty list for unknown queue', async () => {
@@ -210,13 +210,13 @@ describe('jobs router', () => {
         { ...mockSyncJob, id: 'j2' },
         { ...mockSyncJob, id: 'j3' },
       ]);
-      const res = await caller.core.jobs.list({ queue: 'pops:sync', limit: 2, offset: 0 });
+      const res = await caller.core.jobs.list({ queue: 'pops-sync', limit: 2, offset: 0 });
       expect(res.jobs).toHaveLength(2);
       expect(res.total).toBe(3);
     });
 
     it('serialises job fields correctly', async () => {
-      const res = await caller.core.jobs.list({ queue: 'pops:sync' });
+      const res = await caller.core.jobs.list({ queue: 'pops-sync' });
       const job = res.jobs[0]!;
       expect(job).toHaveProperty('id');
       expect(job).toHaveProperty('name');
@@ -233,14 +233,14 @@ describe('jobs router', () => {
 
   describe('get', () => {
     it('returns full job details for a known job', async () => {
-      const res = await caller.core.jobs.get({ jobId: 'job-1', queue: 'pops:sync' });
+      const res = await caller.core.jobs.get({ jobId: 'job-1', queue: 'pops-sync' });
       expect(res.job.id).toBe('job-1');
-      expect(res.job.queue).toBe('pops:sync');
+      expect(res.job.queue).toBe('pops-sync');
     });
 
     it('throws NOT_FOUND when job does not exist', async () => {
       mockSyncQueue.getJob.mockResolvedValue(null);
-      await expect(caller.core.jobs.get({ jobId: 'missing', queue: 'pops:sync' })).rejects.toThrow(
+      await expect(caller.core.jobs.get({ jobId: 'missing', queue: 'pops-sync' })).rejects.toThrow(
         'Job not found'
       );
     });
@@ -258,13 +258,13 @@ describe('jobs router', () => {
 
   describe('retry', () => {
     it('retries a failed job in a known queue', async () => {
-      const res = await caller.core.jobs.retry({ jobId: 'job-1', queue: 'pops:sync' });
+      const res = await caller.core.jobs.retry({ jobId: 'job-1', queue: 'pops-sync' });
       expect(res.success).toBe(true);
       expect(mockSyncJob.retry).toHaveBeenCalled();
     });
 
     it('re-enqueues a dead-letter job to its original queue', async () => {
-      const res = await caller.core.jobs.retry({ jobId: 'dlq-1', queue: 'pops:dead-letter' });
+      const res = await caller.core.jobs.retry({ jobId: 'dlq-1', queue: 'pops-dead-letter' });
       expect(res.success).toBe(true);
       expect(mockSyncQueue.add).toHaveBeenCalledWith('syncJob', expect.anything());
       expect(mockDlqJob.remove).toHaveBeenCalled();
@@ -273,7 +273,7 @@ describe('jobs router', () => {
     it('throws NOT_FOUND when dead-letter job is missing', async () => {
       mockDeadLetterQueue.getJob.mockResolvedValue(null);
       await expect(
-        caller.core.jobs.retry({ jobId: 'missing', queue: 'pops:dead-letter' })
+        caller.core.jobs.retry({ jobId: 'missing', queue: 'pops-dead-letter' })
       ).rejects.toThrow('Dead-letter job not found');
     });
 
@@ -284,7 +284,7 @@ describe('jobs router', () => {
         remove: vi.fn(),
       });
       await expect(
-        caller.core.jobs.retry({ jobId: 'dlq-1', queue: 'pops:dead-letter' })
+        caller.core.jobs.retry({ jobId: 'dlq-1', queue: 'pops-dead-letter' })
       ).rejects.toThrow('Missing originalQueue');
     });
   });
@@ -296,14 +296,14 @@ describe('jobs router', () => {
   describe('cancel', () => {
     it('removes a waiting job', async () => {
       mockSyncJob.getState.mockResolvedValue('waiting');
-      const res = await caller.core.jobs.cancel({ jobId: 'job-1', queue: 'pops:sync' });
+      const res = await caller.core.jobs.cancel({ jobId: 'job-1', queue: 'pops-sync' });
       expect(res.success).toBe(true);
       expect(mockSyncJob.remove).toHaveBeenCalled();
     });
 
     it('discards an active job', async () => {
       mockSyncJob.getState.mockResolvedValue('active');
-      const res = await caller.core.jobs.cancel({ jobId: 'job-1', queue: 'pops:sync' });
+      const res = await caller.core.jobs.cancel({ jobId: 'job-1', queue: 'pops-sync' });
       expect(res.success).toBe(true);
       expect(mockSyncJob.discard).toHaveBeenCalled();
     });
@@ -311,7 +311,7 @@ describe('jobs router', () => {
     it('throws NOT_FOUND when job does not exist', async () => {
       mockSyncQueue.getJob.mockResolvedValue(null);
       await expect(
-        caller.core.jobs.cancel({ jobId: 'missing', queue: 'pops:sync' })
+        caller.core.jobs.cancel({ jobId: 'missing', queue: 'pops-sync' })
       ).rejects.toThrow('Job not found');
     });
   });
@@ -322,7 +322,7 @@ describe('jobs router', () => {
 
   describe('drain', () => {
     it('drains a queue and returns the count of removed waiting jobs', async () => {
-      const res = await caller.core.jobs.drain({ queue: 'pops:sync', confirm: true });
+      const res = await caller.core.jobs.drain({ queue: 'pops-sync', confirm: true });
       expect(res.drained).toBe(2);
       expect(mockSyncQueue.drain).toHaveBeenCalled();
     });
@@ -342,13 +342,13 @@ describe('jobs router', () => {
     it('returns counts for all queues including dead-letter', async () => {
       const res = await caller.core.jobs.queueStats();
       const queueNames = res.queues.map((q) => q.queue);
-      expect(queueNames).toContain('pops:sync');
-      expect(queueNames).toContain('pops:dead-letter');
+      expect(queueNames).toContain('pops-sync');
+      expect(queueNames).toContain('pops-dead-letter');
     });
 
     it('includes waiting and active counts in each queue entry', async () => {
       const res = await caller.core.jobs.queueStats();
-      const syncStats = res.queues.find((q) => q.queue === 'pops:sync');
+      const syncStats = res.queues.find((q) => q.queue === 'pops-sync');
       expect(syncStats?.counts).toMatchObject({ waiting: 2, active: 1 });
     });
   });

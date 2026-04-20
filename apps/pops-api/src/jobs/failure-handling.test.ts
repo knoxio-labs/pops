@@ -52,7 +52,7 @@ describe('failure handling — queue configuration', () => {
   });
 
   it('dead-letter queue name is distinct from operational queues', () => {
-    const operationalQueues = ['pops:sync', 'pops:embeddings', 'pops:curation', 'pops:default'];
+    const operationalQueues = ['pops-sync', 'pops-embeddings', 'pops-curation', 'pops-default'];
     expect(operationalQueues).not.toContain(DEAD_LETTER_QUEUE);
   });
 });
@@ -70,7 +70,7 @@ describe('failure handling — dead-letter routing', () => {
     };
 
     const jobData = {
-      originalQueue: 'pops:sync',
+      originalQueue: 'pops-sync',
       originalJobId: 'job-42',
       originalJobName: 'plexSyncMovies',
       originalData: { type: 'plexSyncMovies' },
@@ -85,7 +85,7 @@ describe('failure handling — dead-letter routing', () => {
     expect(dlq.add).toHaveBeenCalledWith(
       DEAD_LETTER_QUEUE,
       expect.objectContaining({
-        originalQueue: 'pops:sync',
+        originalQueue: 'pops-sync',
         originalJobName: 'plexSyncMovies',
         finalError: 'Connection timeout',
         attemptsMade: 3,

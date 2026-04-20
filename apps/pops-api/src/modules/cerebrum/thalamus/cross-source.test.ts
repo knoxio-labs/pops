@@ -27,7 +27,7 @@ const mockGetEmbeddingsQueue = vi.hoisted(() => vi.fn().mockReturnValue({ add: m
 
 vi.mock('../../../jobs/queues.js', () => ({
   getEmbeddingsQueue: mockGetEmbeddingsQueue,
-  EMBEDDINGS_QUEUE: 'pops:embeddings',
+  EMBEDDINGS_QUEUE: 'pops-embeddings',
   EMBEDDINGS_JOB_OPTIONS: {},
 }));
 
