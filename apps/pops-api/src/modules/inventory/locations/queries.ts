@@ -7,21 +7,36 @@ import { NotFoundError } from '../../../shared/errors.js';
 
 import type { DeleteLocationStats, LocationRow } from './types.js';
 
-/** Collect all descendant location IDs via BFS. */
+/**
+ * Collect all descendant location IDs via BFS.
+ *
+ * Implementation note: fetches every (id, parentId) pair once and traverses the
+ * in-memory adjacency map, avoiding both N+1 DB queries and Array#shift's O(n)
+ * cost per pop.
+ */
 export function getDescendantLocationIds(id: string): string[] {
   const db = getDrizzle();
+  const allRows = db
+    .select({ id: locations.id, parentId: locations.parentId })
+    .from(locations)
+    .all();
+  const childrenByParent = new Map<string, string[]>();
+  for (const row of allRows) {
+    if (row.parentId === null) continue;
+    const list = childrenByParent.get(row.parentId);
+    if (list) list.push(row.id);
+    else childrenByParent.set(row.parentId, [row.id]);
+  }
   const descendantIds: string[] = [];
-  const queue = [id];
-  let current: string | undefined;
-  while ((current = queue.shift()) !== undefined) {
-    const children = db
-      .select({ id: locations.id })
-      .from(locations)
-      .where(eq(locations.parentId, current))
-      .all();
-    for (const child of children) {
-      descendantIds.push(child.id);
-      queue.push(child.id);
+  const queue: string[] = [id];
+  for (let i = 0; i < queue.length; i++) {
+    const current = queue[i];
+    if (current === undefined) continue;
+    const children = childrenByParent.get(current);
+    if (!children) continue;
+    for (const childId of children) {
+      descendantIds.push(childId);
+      queue.push(childId);
     }
   }
   return descendantIds;
@@ -97,13 +112,13 @@ export function getDeleteStats(id: string): DeleteLocationStats {
   const itemCount = directItems?.total ?? 0;
 
   let totalItemCount = itemCount;
-  for (const descId of descendantIds) {
-    const [desc] = db
+  if (descendantIds.length > 0) {
+    const [descAgg] = db
       .select({ total: count() })
       .from(homeInventory)
-      .where(eq(homeInventory.locationId, descId))
+      .where(inArray(homeInventory.locationId, descendantIds))
       .all();
-    totalItemCount += desc?.total ?? 0;
+    totalItemCount += descAgg?.total ?? 0;
   }
 
   return {

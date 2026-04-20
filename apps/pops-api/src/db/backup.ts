@@ -1,3 +1,5 @@
+import { logger } from '../lib/logger.js';
+
 import type BetterSqlite3 from 'better-sqlite3';
 
 function hasData(database: BetterSqlite3.Database): boolean {
@@ -25,7 +27,7 @@ export function createPreMigrationBackup(
   const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-');
   const backupPath = `${dbPath}.pre-migration-${timestamp}.bak`;
 
-  console.warn(`[db] Backing up database before applying ${pendingCount} migration(s)...`);
+  logger.info({ pendingCount }, '[db] Backing up database before applying migrations');
   database.exec(`VACUUM INTO '${backupPath.replaceAll(/'/g, "''")}'`);
   return backupPath;
 }

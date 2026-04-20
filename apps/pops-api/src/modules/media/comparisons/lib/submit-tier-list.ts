@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { mediaScores } from '@pops/db-types';
 
@@ -16,24 +16,32 @@ import type {
 
 const DEFAULT_SCORE = 1500.0;
 
-function captureOldScores(input: SubmitTierListInput): Map<number, number> {
+function fetchScoresMap(movieIds: number[], dimensionId: number): Map<number, number> {
   const drizzleDb = getDrizzle();
-  const oldScores = new Map<number, number>();
-  for (const placement of input.placements) {
-    const existing = drizzleDb
-      .select()
-      .from(mediaScores)
-      .where(
-        and(
-          eq(mediaScores.mediaType, 'movie'),
-          eq(mediaScores.mediaId, placement.movieId),
-          eq(mediaScores.dimensionId, input.dimensionId)
-        )
+  const map = new Map<number, number>();
+  if (movieIds.length === 0) return map;
+  const rows = drizzleDb
+    .select({ mediaId: mediaScores.mediaId, score: mediaScores.score })
+    .from(mediaScores)
+    .where(
+      and(
+        eq(mediaScores.mediaType, 'movie'),
+        eq(mediaScores.dimensionId, dimensionId),
+        inArray(mediaScores.mediaId, movieIds)
       )
-      .get();
-    oldScores.set(placement.movieId, existing?.score ?? DEFAULT_SCORE);
+    )
+    .all();
+  for (const row of rows) map.set(row.mediaId, row.score);
+  return map;
+}
+
+function captureOldScores(input: SubmitTierListInput): Map<number, number> {
+  const ids = input.placements.map((p) => p.movieId);
+  const map = fetchScoresMap(ids, input.dimensionId);
+  for (const id of ids) {
+    if (!map.has(id)) map.set(id, DEFAULT_SCORE);
   }
-  return oldScores;
+  return map;
 }
 
 function buildBatchItems(input: SubmitTierListInput): BatchComparisonItem[] {
@@ -62,27 +70,13 @@ function collectScoreChanges(
   input: SubmitTierListInput,
   oldScores: Map<number, number>
 ): ScoreChange[] {
-  const drizzleDb = getDrizzle();
-  const scoreChanges: ScoreChange[] = [];
-  for (const placement of input.placements) {
-    const newRow = drizzleDb
-      .select()
-      .from(mediaScores)
-      .where(
-        and(
-          eq(mediaScores.mediaType, 'movie'),
-          eq(mediaScores.mediaId, placement.movieId),
-          eq(mediaScores.dimensionId, input.dimensionId)
-        )
-      )
-      .get();
-    scoreChanges.push({
-      movieId: placement.movieId,
-      oldScore: oldScores.get(placement.movieId) ?? DEFAULT_SCORE,
-      newScore: newRow?.score ?? DEFAULT_SCORE,
-    });
-  }
-  return scoreChanges;
+  const ids = input.placements.map((p) => p.movieId);
+  const newScores = fetchScoresMap(ids, input.dimensionId);
+  return input.placements.map((placement) => ({
+    movieId: placement.movieId,
+    oldScore: oldScores.get(placement.movieId) ?? DEFAULT_SCORE,
+    newScore: newScores.get(placement.movieId) ?? DEFAULT_SCORE,
+  }));
 }
 
 /**

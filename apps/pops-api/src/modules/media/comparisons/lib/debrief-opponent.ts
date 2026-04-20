@@ -4,6 +4,7 @@ import { comparisons, mediaScores, movies, watchHistory } from '@pops/db-types';
 
 import { getDrizzle } from '../../../../db.js';
 import { getDimension } from '../dimensions.service.js';
+import { resolveMoviePoster } from '../pairs/movie-helpers.js';
 
 import type { DebriefOpponent } from '../types.js';
 
@@ -112,13 +113,11 @@ function buildOpponent(closest: ScoreRow): DebriefOpponent | null {
     .get();
 
   if (!movieRow) return null;
-  const posterUrl =
-    movieRow.posterOverridePath ?? `/media/images/movie/${movieRow.tmdbId}/poster.jpg`;
   return {
     id: movieRow.id,
     title: movieRow.title,
     posterPath: movieRow.posterPath,
-    posterUrl,
+    posterUrl: resolveMoviePoster(movieRow),
   };
 }
 

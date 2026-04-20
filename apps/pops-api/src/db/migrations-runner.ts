@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { logger } from '../lib/logger.js';
+
 import type BetterSqlite3 from 'better-sqlite3';
 
 const __dirname = import.meta.dirname;
@@ -52,7 +54,7 @@ export function runMigrations(database: BetterSqlite3.Database): void {
       database.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(file);
     })();
 
-    console.warn(`[db] Applied migration: ${file}`);
+    logger.info({ file }, '[db] Applied migration');
   }
 }
 

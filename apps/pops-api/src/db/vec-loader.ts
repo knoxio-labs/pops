@@ -1,5 +1,7 @@
 import * as sqliteVec from 'sqlite-vec';
 
+import { logger } from '../lib/logger.js';
+
 import type BetterSqlite3 from 'better-sqlite3';
 
 let vecAvailable = false;
@@ -18,15 +20,15 @@ export function tryLoadVecExtension(db: BetterSqlite3.Database): boolean {
     sqliteVec.load(db);
     if (!vecAvailable) {
       const version = db.prepare('SELECT vec_version()').pluck().get() as string;
-      console.warn(`[db] sqlite-vec loaded: ${version}`);
+      logger.info({ version }, '[db] sqlite-vec loaded');
       vecAvailable = true;
     }
     return true;
   } catch (err) {
     if (!vecAvailable) {
-      console.error(
-        '[db] sqlite-vec extension failed to load — vector features disabled:',
-        (err as Error).message
+      logger.error(
+        { err: (err as Error).message },
+        '[db] sqlite-vec extension failed to load — vector features disabled'
       );
     }
     return false;

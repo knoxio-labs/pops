@@ -9,6 +9,7 @@ import {
 } from '@pops/db-types';
 
 import { getDrizzle } from '../../../../db.js';
+import { resolveMoviePoster } from '../pairs/movie-helpers.js';
 
 import type { PendingDebrief } from '../types.js';
 
@@ -88,14 +89,12 @@ function buildPendingFromSession(
 
   const completedCount = getCompletedResultCount(session.sessionId);
   const pendingDimensionCount = Math.max(0, activeDimCount - completedCount);
-  const posterUrl =
-    movieRow.posterOverridePath ?? `/media/images/movie/${movieRow.tmdbId}/poster.jpg`;
 
   return {
     sessionId: session.sessionId,
     movieId: movieRow.id,
     title: movieRow.title,
-    posterUrl,
+    posterUrl: resolveMoviePoster(movieRow),
     status: session.status as 'pending' | 'active',
     createdAt: session.createdAt,
     pendingDimensionCount,

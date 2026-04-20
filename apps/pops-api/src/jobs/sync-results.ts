@@ -54,7 +54,14 @@ export function persistSyncResult(params: PersistSyncResultParams): void {
       })
       .onConflictDoUpdate({
         target: syncJobResults.id,
-        set: { status, completedAt, durationMs, result: resultJson, error },
+        set: {
+          status,
+          completedAt,
+          durationMs,
+          progress: progressJson,
+          result: resultJson,
+          error,
+        },
       })
       .run();
   } catch (err) {
