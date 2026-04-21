@@ -25,12 +25,12 @@ What's _missing_ is a coherent story. Today a feature can be controlled by (a) a
 
 ## Four categories — different answers for each
 
-| Category                   | Examples                                                                                                      | Where the toggle lives                                     | Install vs runtime                               |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
-| **Whole app**              | finance, media, inventory, ego                                                                                | App registry (see [modular-apps](./modular-apps-spike.md)) | Install (Tier 1) / runtime (Tier 2)              |
-| **External integration**   | Plex, Sonarr, Radarr, TMDB, TVDB, Up Bank, Paperless, Notion                                                  | Credentials presence + admin UI                            | Install via env; runtime enable/disable in admin |
-| **Sub-feature flag**       | Rotation carousel, AI categoriser fallback, vector search, inventory connected-status indicator, debrief jobs | `settings` table, read per-request                         | Runtime only (default sensible, user toggles)    |
-| **Experimental / preview** | Anything in-flight                                                                                            | Same as sub-feature, but tagged `preview: true`            | Runtime                                          |
+| Category                   | Examples                                                                                                      | Where the toggle lives                                        | Install vs runtime                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------ |
+| **Whole module**           | App: finance, media, inventory, engrams, ai-admin. Overlay: search, ego                                       | Module registry (see [modular-apps](./modular-apps-spike.md)) | Install-time via `POPS_APPS` / `POPS_OVERLAYS`   |
+| **External integration**   | Plex, Sonarr, Radarr, TMDB, TVDB, Up Bank, Paperless, Notion                                                  | Credentials presence + admin UI                               | Install via env; runtime enable/disable in admin |
+| **Sub-feature flag**       | Rotation carousel, AI categoriser fallback, vector search, inventory connected-status indicator, debrief jobs | `settings` table, read per-request                            | Runtime only (default sensible, user toggles)    |
+| **Experimental / preview** | Anything in-flight                                                                                            | Same as sub-feature, but tagged `preview: true`               | Runtime                                          |
 
 Rule of thumb:
 
