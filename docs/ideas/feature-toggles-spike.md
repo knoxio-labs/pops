@@ -21,16 +21,16 @@ Some features should be toggleable — at install time, at runtime, or both. Exa
   - `tools` (on-demand import runner)
 - **Capability detection**: `sqlite-vec` loaded → vector search available; not loaded → search gracefully returns an "unavailable" error
 
-What's *missing* is a coherent story. Today a feature can be controlled by (a) an env var, (b) a secret, (c) a row in `settings`, (d) a compose profile, or (e) nothing at all — and the choice has been per-feature, case-by-case.
+What's _missing_ is a coherent story. Today a feature can be controlled by (a) an env var, (b) a secret, (c) a row in `settings`, (d) a compose profile, or (e) nothing at all — and the choice has been per-feature, case-by-case.
 
 ## Four categories — different answers for each
 
-| Category | Examples | Where the toggle lives | Install vs runtime |
-| --- | --- | --- | --- |
-| **Whole app** | finance, media, inventory, ego | App registry (see [modular-apps](./modular-apps-spike.md)) | Install (Tier 1) / runtime (Tier 2) |
-| **External integration** | Plex, Sonarr, Radarr, TMDB, TVDB, Up Bank, Paperless, Notion | Credentials presence + admin UI | Install via env; runtime enable/disable in admin |
-| **Sub-feature flag** | Rotation carousel, AI categoriser fallback, vector search, inventory connected-status indicator, debrief jobs | `settings` table, read per-request | Runtime only (default sensible, user toggles) |
-| **Experimental / preview** | Anything in-flight | Same as sub-feature, but tagged `preview: true` | Runtime |
+| Category                   | Examples                                                                                                      | Where the toggle lives                                     | Install vs runtime                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| **Whole app**              | finance, media, inventory, ego                                                                                | App registry (see [modular-apps](./modular-apps-spike.md)) | Install (Tier 1) / runtime (Tier 2)              |
+| **External integration**   | Plex, Sonarr, Radarr, TMDB, TVDB, Up Bank, Paperless, Notion                                                  | Credentials presence + admin UI                            | Install via env; runtime enable/disable in admin |
+| **Sub-feature flag**       | Rotation carousel, AI categoriser fallback, vector search, inventory connected-status indicator, debrief jobs | `settings` table, read per-request                         | Runtime only (default sensible, user toggles)    |
+| **Experimental / preview** | Anything in-flight                                                                                            | Same as sub-feature, but tagged `preview: true`            | Runtime                                          |
 
 Rule of thumb:
 
@@ -90,7 +90,7 @@ Backed by a cached read from the `settings` table keyed by `<module>.<flag>`. Re
 
 - `.env` / Docker secrets: credentials only. Not feature state.
 - `POPS_APPS` env: which modules to mount (see [modular-apps](./modular-apps-spike.md)). This is the install-time coarse grain.
-- Compose profiles: optional *containers* (moltbot, tools). Keep as-is.
+- Compose profiles: optional _containers_ (moltbot, tools). Keep as-is.
 - `settings` table: all runtime feature state. Admin UI reads and writes here.
 - User preferences: in `settings` with user scope (or a separate `user_settings` table if we need per-user defaults).
 

@@ -20,11 +20,11 @@ The ansible roles are already clean (they don't import app code). The compose fi
 
 ## Three ways to split
 
-| Option | What moves to `mu-deploy` | What stays in `pops` | Build model |
-| --- | --- | --- | --- |
-| **A. Full split** | `infra/ansible/`, `infra/docker-compose.yml`, `deploy.sh`, `scripts/setup-github-runner.sh`, all vault secrets | Dockerfiles, source | POPS publishes tagged images to a registry; `mu-deploy` pulls + runs |
-| **B. Ansible-only split** | `infra/ansible/`, `deploy.sh`, `scripts/setup-github-runner.sh` | Dockerfiles, `infra/docker-compose.yml` | POPS still builds locally on the server via compose; `mu-deploy` clones it and drives the build |
-| **C. Generic infra only** | `common`, `docker`, `github-runner`, `cloudflare-tunnel`, `monitoring`, `backups`, `secrets` | `pops-deploy` role, `docker-compose.yml`, Dockerfiles, `deploy.sh` | POPS owns its deploy; `mu-deploy` owns the host |
+| Option                    | What moves to `mu-deploy`                                                                                      | What stays in `pops`                                               | Build model                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **A. Full split**         | `infra/ansible/`, `infra/docker-compose.yml`, `deploy.sh`, `scripts/setup-github-runner.sh`, all vault secrets | Dockerfiles, source                                                | POPS publishes tagged images to a registry; `mu-deploy` pulls + runs                            |
+| **B. Ansible-only split** | `infra/ansible/`, `deploy.sh`, `scripts/setup-github-runner.sh`                                                | Dockerfiles, `infra/docker-compose.yml`                            | POPS still builds locally on the server via compose; `mu-deploy` clones it and drives the build |
+| **C. Generic infra only** | `common`, `docker`, `github-runner`, `cloudflare-tunnel`, `monitoring`, `backups`, `secrets`                   | `pops-deploy` role, `docker-compose.yml`, Dockerfiles, `deploy.sh` | POPS owns its deploy; `mu-deploy` owns the host                                                 |
 
 Option C is the lightest: `mu-deploy` becomes a "my home server" repo that provisions Docker, runners, tunnels, backups, and monitoring on any box. Each hosted service (POPS, a future moltbot-standalone, anything else) keeps its own compose and deploy playbook and registers itself with the host.
 

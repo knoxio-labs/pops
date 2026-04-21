@@ -23,23 +23,23 @@ So the architecture is already close. The remaining work is to make app presence
 
 Always present (the "shell"):
 
-| Surface | Provided by |
-| --- | --- |
-| Auth, user, admin | `apps/pops-api/src/modules/core/*`, `@pops/auth` |
-| Settings | `apps/pops-shell/src/app/pages/SettingsPage.tsx`, `core/settings` |
-| Navigation, search | `packages/navigation`, shell layout |
-| UI library | `packages/ui` |
-| API client + types | `packages/api-client`, `packages/db-types` (core schema) |
-| Shared entities | `core/entities` ([ADR-005](../architecture/adr-005-shared-entities.md)) |
+| Surface            | Provided by                                                             |
+| ------------------ | ----------------------------------------------------------------------- |
+| Auth, user, admin  | `apps/pops-api/src/modules/core/*`, `@pops/auth`                        |
+| Settings           | `apps/pops-shell/src/app/pages/SettingsPage.tsx`, `core/settings`       |
+| Navigation, search | `packages/navigation`, shell layout                                     |
+| UI library         | `packages/ui`                                                           |
+| API client + types | `packages/api-client`, `packages/db-types` (core schema)                |
+| Shared entities    | `core/entities` ([ADR-005](../architecture/adr-005-shared-entities.md)) |
 
 Optional (the "apps"):
 
-| App | Tables owned | Notes |
-| --- | --- | --- |
-| finance | `transactions`, `budgets`, `wishlist`, `transaction_tag_rules` | Uses `entities` FK |
-| media | `movies`, `tv_shows`, `comparisons`, `watch_history`, `watchlist`, `rotation_*`, ~11 tables | Heaviest; external integrations (Plex, TMDB, TVDB, Arr) |
-| inventory | `home_inventory`, `item_connections`, `item_documents`, `item_photos`, `locations` | Uses `entities` FK |
-| ai / ego / cerebrum | `engrams`, `embeddings`, `ai_usage`, `debrief_*` | See open question on "ego" below |
+| App                 | Tables owned                                                                                | Notes                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| finance             | `transactions`, `budgets`, `wishlist`, `transaction_tag_rules`                              | Uses `entities` FK                                      |
+| media               | `movies`, `tv_shows`, `comparisons`, `watch_history`, `watchlist`, `rotation_*`, ~11 tables | Heaviest; external integrations (Plex, TMDB, TVDB, Arr) |
+| inventory           | `home_inventory`, `item_connections`, `item_documents`, `item_photos`, `locations`          | Uses `entities` FK                                      |
+| ai / ego / cerebrum | `engrams`, `embeddings`, `ai_usage`, `debrief_*`                                            | See open question on "ego" below                        |
 
 ## What has to change
 
@@ -77,7 +77,7 @@ Today, cross-app comms is implicit (shared `entities` FK, implicit URI resolutio
 
 - **Typed contracts**: `packages/contracts/` defines versioned interfaces (e.g. `core.entity@1`, `finance.transaction@1`). Apps consume via tRPC calls only.
 - **No cross-app imports at code level** (already enforced — keep enforcing).
-- **Optional dependencies**: an app that *can* link to an object type from another app (e.g. inventory item linked from a finance transaction note) must declare it as optional and degrade when that app is absent. The URI resolver ([ADR-012](../architecture/adr-012-universal-object-uri.md)) needs to tolerate missing resolvers.
+- **Optional dependencies**: an app that _can_ link to an object type from another app (e.g. inventory item linked from a finance transaction note) must declare it as optional and degrade when that app is absent. The URI resolver ([ADR-012](../architecture/adr-012-universal-object-uri.md)) needs to tolerate missing resolvers.
 - **FK hygiene**: cross-app FKs become nullable with `ON DELETE SET NULL`. No cascading deletes across app boundaries.
 
 ### 4. Database — the real cost
@@ -86,8 +86,8 @@ SQLite is one file, and today's FKs cross boundaries. Two sub-problems:
 
 - **Install**: run that app's migrations against the shared DB. Each app owns a migration folder; `drizzle-kit` run scoped per app. The existing single-migrations model ([ADR-013](../architecture/adr-013-drizzle-orm.md)) needs to be sliced per app.
 - **Uninstall**: what happens to the data?
-  - *Soft uninstall* (default): routes hidden, router unmounted, jobs stopped, data retained. Reinstall is instant.
-  - *Hard uninstall*: export (JSON) → drop tables → null cross-refs. Needs a per-app export format and user confirmation.
+  - _Soft uninstall_ (default): routes hidden, router unmounted, jobs stopped, data retained. Reinstall is instant.
+  - _Hard uninstall_: export (JSON) → drop tables → null cross-refs. Needs a per-app export format and user confirmation.
   - Cross-app references (e.g. inventory items referenced from finance) must be scanned before hard uninstall. Show "this will break N links in finance" before proceeding.
 
 ### 5. Progressive add/remove UX
