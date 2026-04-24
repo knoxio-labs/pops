@@ -32,12 +32,20 @@ const PickerTrigger = forwardRef<HTMLButtonElement, PickerTriggerProps>(function
   { selectedPath, placeholder, open, disabled, className, hasValue, ...props },
   ref
 ) {
+  // WAI-ARIA 1.2 prohibits name-from-content for role="combobox", so we must
+  // provide an explicit accessible name. We surface either the selected path
+  // breadcrumb (e.g. "Home › Bedroom › Wardrobe") or the placeholder so that
+  // screen readers and test tooling (getByRole('combobox', { name })) can
+  // identify the control.
+  const accessibleName =
+    selectedPath.length > 0 ? selectedPath.map((n) => n.name).join(' › ') : placeholder;
   return (
     <Button
       ref={ref}
       variant="outline"
       role="combobox"
       aria-expanded={open}
+      aria-label={accessibleName}
       disabled={disabled}
       className={cn(
         'w-full justify-start text-left font-normal h-9',
