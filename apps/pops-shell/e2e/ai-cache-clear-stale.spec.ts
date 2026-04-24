@@ -56,8 +56,10 @@ const REMOVED_COUNT = BEFORE_ENTRIES - AFTER_ENTRIES;
 // browser context defaults to en-US, so we can hard-code the rendered form.
 const BEFORE_ENTRIES_RENDERED = '1,500';
 const AFTER_ENTRIES_RENDERED = '300';
-const DISK_SIZE_BYTES = 524_288; // formatBytes → "512 KB"
-const EXPECTED_DISK_LABEL = /512\s*KB/i;
+// formatBytes(524_288) renders as "512.0 KB" — it always uses .toFixed(1) for
+// KB/MB/GB tiers, so the label contains the decimal even for whole-number KB.
+const DISK_SIZE_BYTES = 524_288;
+const EXPECTED_DISK_LABEL = '512.0 KB';
 
 // Usage stats feed the Hit Rate card. 120 hits / (500 calls + 120 hits) is not
 // what the UI computes — it uses cacheHitRate directly (0.24 → "24.0%").
@@ -202,12 +204,12 @@ test.describe('AI — cache management: view stats and clear stale entries', () 
   });
 
   test('displays initial stat values and disk size label', async ({ page }) => {
-    // Values are unique across cards (1500, "512 KB", "24.0%") so a
+    // Values are unique across cards (1500, "512.0 KB", "24.0%") so a
     // page-scoped text locator unambiguously identifies each card's value.
     await expect(page.getByText(BEFORE_ENTRIES_RENDERED, { exact: true }).first()).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText(EXPECTED_DISK_LABEL).first()).toBeVisible();
+    await expect(page.getByText(EXPECTED_DISK_LABEL, { exact: true }).first()).toBeVisible();
     await expect(page.getByText(/^24\.0%$/).first()).toBeVisible();
   });
 
