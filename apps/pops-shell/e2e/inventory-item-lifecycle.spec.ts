@@ -122,13 +122,17 @@ test.describe('Inventory — item lifecycle (create, view, edit, delete)', () =>
     // Location is picked through a Radix Popover combobox — open, search for the
     // seeded child location, then click it. The search input filters the tree
     // and auto-expands matches, so we don't need to drill through ancestors.
-    await page.getByRole('combobox').click();
+    // Scope to the <button role="combobox"> because the Type and Condition
+    // fields are native <select> elements (implicit ARIA role="combobox"),
+    // so an unscoped getByRole('combobox') matches 3 elements on this form.
+    const locationTrigger = page.locator('button[role="combobox"]');
+    await locationTrigger.click();
     const popover = page.getByPlaceholder(/search locations/i);
     await expect(popover).toBeVisible();
     await popover.fill(ITEM_LOCATION);
     await page.getByRole('button', { name: new RegExp(`^${ITEM_LOCATION}$`, 'i') }).click();
     // Combobox closes when a location is selected; the trigger now shows the path.
-    await expect(page.getByRole('combobox')).toContainText(ITEM_LOCATION);
+    await expect(locationTrigger).toContainText(ITEM_LOCATION);
 
     await page.getByRole('button', { name: /create item/i }).click();
 
