@@ -137,7 +137,10 @@ test.describe('Inventory — item lifecycle (create, view, edit, delete)', () =>
     await page.getByRole('button', { name: /create item/i }).click();
 
     // Create mutation navigates to the detail page.
-    await expect(page).toHaveURL(/\/inventory\/items\/[0-9a-f-]+$/i, { timeout: 10_000 });
+    // The id is whatever the API generates (crypto.randomUUID today, but ids are
+    // treated as opaque strings elsewhere — e.g. seed rows use `inv-001`), so match
+    // any non-empty final path segment rather than a specific charset.
+    await expect(page).toHaveURL(/\/inventory\/items\/[^/]+$/, { timeout: 10_000 });
     await expect(page.getByRole('heading', { name: ITEM_NAME })).toBeVisible();
     await expect(page.getByText(INITIAL_REPLACEMENT_FORMATTED)).toBeVisible();
 
@@ -160,7 +163,7 @@ test.describe('Inventory — item lifecycle (create, view, edit, delete)', () =>
     await expect(page.getByRole('heading', { name: ITEM_NAME })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page).toHaveURL(/\/inventory\/items\/[0-9a-f-]+$/i);
+    await expect(page).toHaveURL(/\/inventory\/items\/[^/]+$/);
 
     await page.getByRole('link', { name: /edit/i }).click();
     await expect(page.getByRole('heading', { name: /edit item/i })).toBeVisible({
@@ -174,8 +177,8 @@ test.describe('Inventory — item lifecycle (create, view, edit, delete)', () =>
 
     await page.getByRole('button', { name: /save changes/i }).click();
 
-    // Update mutation navigates back to the detail page.
-    await expect(page).toHaveURL(/\/inventory\/items\/[0-9a-f-]+$/i, { timeout: 10_000 });
+    // Update mutation navigates back to the detail page (off the `/edit` segment).
+    await expect(page).toHaveURL(/\/inventory\/items\/[^/]+$/, { timeout: 10_000 });
     await expect(page.getByText(UPDATED_REPLACEMENT_FORMATTED)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(INITIAL_REPLACEMENT_FORMATTED)).not.toBeVisible();
 
