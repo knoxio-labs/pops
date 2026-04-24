@@ -37,9 +37,15 @@ const CHANGED_VALUE = '150';
  *     ...
  *   </div>
  *
- * Matching the radix <label> element directly by exact text, then scoping
- * to its nearest `.space-y-1\\.5` ancestor wrapper, ensures uniqueness even
- * if other fields in the group share label fragments.
+ * The radix <Label> component renders a bare <label> without `htmlFor`, so
+ * `getByLabel` can't associate it with the input. Instead, match the
+ * `<div.space-y-1.5>` field wrapper that contains a descendant label with
+ * the exact text, then descend to the numeric input.
+ *
+ * The inner locator passed to `filter({ has })` MUST be a locator that
+ * resolves to a descendant of each candidate div — passing an absolute
+ * locator rooted at the section silently matches zero elements because the
+ * section is not a descendant of the field wrapper.
  */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -49,7 +55,7 @@ function findNumericInputByLabel(section: Locator, labelText: string): Locator {
   const exactLabel = new RegExp(`^${escapeRegex(labelText)}$`);
   return section
     .locator('div.space-y-1\\.5')
-    .filter({ has: section.locator('label', { hasText: exactLabel }) })
+    .filter({ has: section.page().locator('label').filter({ hasText: exactLabel }) })
     .locator('input[type="number"]');
 }
 
