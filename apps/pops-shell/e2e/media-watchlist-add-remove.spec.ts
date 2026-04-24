@@ -2,13 +2,25 @@
  * E2E — Media watchlist: add and remove an item (#2116)
  *
  * Tier 2 flow: navigate to a seeded movie detail page, click "Add to
- * Watchlist", visit /media/watchlist, confirm the movie appears, remove it
- * from the watchlist, and confirm it no longer appears.
+ * Watchlist", visit /media/watchlist, confirm the movie appears, then remove
+ * it via the detail page toggle and confirm it no longer appears in the
+ * watchlist list.
  *
  * Seed context (see apps/pops-api/src/db/seeder.ts):
  *   The seeded watchlist contains Matrix, Interstellar, Fight Club (movies)
  *   and Shogun (TV). Forrest Gump is NOT seeded onto the watchlist and NOT in
  *   watch_history, so it is the natural candidate for "add a fresh item".
+ *
+ * Removal surface:
+ *   The WatchlistCard exposes a per-item remove button, but it is styled
+ *   `opacity-0 group-hover:opacity-100` and positioned over the poster div,
+ *   whose own click handler navigates to the detail page. On WebKit the
+ *   pointer move synthesized by Playwright's `.click()` can race the CSS
+ *   transition so the click resolves against the underlying poster div
+ *   instead of the button, causing an unintended navigation. To avoid the
+ *   race, this test drives removal via the detail-page WatchlistToggle —
+ *   which is always visible and surfaces the same success toast via
+ *   useWatchlistToggleModel → useRemoveMutation.
  *
  * Idempotency:
  *   The test removes the entry it creates at the end of the flow, restoring
@@ -116,27 +128,36 @@ test.describe('Media — watchlist add and remove', () => {
     await expect(page.getByText('Added to watchlist').first()).toBeVisible({ timeout: 10_000 });
 
     // Navigate to the watchlist page and confirm the movie is present.
+    // WatchlistCard (desktop) and WatchlistItem (mobile) both render the
+    // title in an <h3>; a semantic heading locator covers both viewports.
     await page.goto('/media/watchlist');
     await expect(page.getByRole('heading', { name: 'Watchlist', level: 1 })).toBeVisible();
-
-    // WatchlistCard (desktop) and WatchlistItem (mobile) both render the
-    // title in an <h3>. A semantic heading locator covers both viewports.
     const titleHeading = page.getByRole('heading', { level: 3, name: MOVIE_TITLE });
     await expect(titleHeading).toBeVisible({ timeout: 10_000 });
 
-    // Remove via the per-card remove button, which has a title-scoped
-    // aria-label so we do not accidentally remove a different seeded entry.
-    // On desktop the button is styled opacity-0 until the card is hovered;
-    // hover first so the action doesn't race the CSS transition.
-    await titleHeading.hover();
-    const removeOnList = page.getByRole('button', {
-      name: `Remove ${MOVIE_TITLE} from watchlist`,
+    // Remove from the watchlist via the detail page's WatchlistToggle. The
+    // per-card remove button on WatchlistCard sits at `absolute bottom-2
+    // right-2` with `opacity-0 group-hover:opacity-100`; on WebKit the
+    // synthesized pointer move during `.click()` can race the CSS transition
+    // and the click lands on the underlying poster div (which navigates to
+    // the detail page) instead of firing `onRemove`. The detail page toggle
+    // is always visible and fires the same `toast.success('Removed from
+    // watchlist')` via useWatchlistToggleModel → useRemoveMutation.
+    await openMovieDetail(page, MOVIE_TITLE);
+    const removeFromDetail = page.getByRole('button', { name: 'Remove from watchlist' });
+    await expect(removeFromDetail).toBeVisible({ timeout: 10_000 });
+    await removeFromDetail.click();
+    await expect(page.getByRole('button', { name: 'Add to watchlist' })).toBeVisible({
+      timeout: 10_000,
     });
-    await removeOnList.first().click();
-
-    // The entry should disappear from the list, leaving no matching heading.
-    await expect(titleHeading).toHaveCount(0, { timeout: 10_000 });
     await expect(page.getByText('Removed from watchlist').first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Confirm the entry is gone from the watchlist list.
+    await page.goto('/media/watchlist');
+    await expect(page.getByRole('heading', { name: 'Watchlist', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: MOVIE_TITLE })).toHaveCount(0, {
       timeout: 10_000,
     });
   });
