@@ -52,12 +52,18 @@ export default defineConfig({
     },
     // Finance API — required for integration tests; mocked tests don't use it but starting
     // it is harmless and ensures the proxy target is always available.
+    //
+    // INVENTORY_IMAGES_DIR is required by inventory.photos.upload (no default, unlike
+    // MEDIA_IMAGES_DIR). Setting it here keeps the inventory photo e2e tests (#2125)
+    // self-contained — uploads are written under a per-process tmp dir that the test
+    // teardown cleans up alongside the e2e SQLite environment.
     {
       command: 'pnpm dev',
       url: 'http://localhost:3000/health',
       cwd: '../pops-api',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,
+      env: { INVENTORY_IMAGES_DIR: './data/e2e/inventory-images' },
     },
   ],
 });
