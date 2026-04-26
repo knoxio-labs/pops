@@ -31,6 +31,7 @@ import type { homeInventory } from './schema/inventory.js';
 import type { itemConnections } from './schema/item-connections.js';
 import type { itemDocuments } from './schema/item-documents.js';
 import type { itemPhotos } from './schema/item-photos.js';
+import type { itemUploadedFiles } from './schema/item-uploaded-files.js';
 import type { locations } from './schema/locations.js';
 import type { mediaScores } from './schema/media-scores.js';
 import type { mediaWatchlist } from './schema/media-watchlist.js';
@@ -80,6 +81,7 @@ export {
   itemConnections,
   itemDocuments,
   itemPhotos,
+  itemUploadedFiles,
   locations,
   mediaScores,
   mediaWatchlist,
@@ -136,6 +138,7 @@ export type MediaScoreRow = InferSelectModel<typeof mediaScores>;
 export type LocationRow = InferSelectModel<typeof locations>;
 export type ItemConnectionRow = InferSelectModel<typeof itemConnections>;
 export type ItemPhotoRow = InferSelectModel<typeof itemPhotos>;
+export type ItemUploadedFileRow = InferSelectModel<typeof itemUploadedFiles>;
 export type ItemDocumentRow = InferSelectModel<typeof itemDocuments>;
 export type SettingRow = InferSelectModel<typeof settings>;
 
@@ -160,6 +163,7 @@ export type MediaScoreInsert = InferInsertModel<typeof mediaScores>;
 export type LocationInsert = InferInsertModel<typeof locations>;
 export type ItemConnectionInsert = InferInsertModel<typeof itemConnections>;
 export type ItemPhotoInsert = InferInsertModel<typeof itemPhotos>;
+export type ItemUploadedFileInsert = InferInsertModel<typeof itemUploadedFiles>;
 export type ItemDocumentInsert = InferInsertModel<typeof itemDocuments>;
 export type SettingInsert = InferInsertModel<typeof settings>;
 export type SyncLogRow = InferSelectModel<typeof syncLogs>;
