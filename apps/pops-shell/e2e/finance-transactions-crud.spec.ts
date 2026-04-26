@@ -187,9 +187,10 @@ test.describe('Finance — transactions CRUD', () => {
     await fillForm(dialog, { amount: UPDATED_AMOUNT });
 
     // Pick an entity via the EntitySelect combobox. The seeded e2e DB has
-    // "Woolworths" as the first entity. The combobox renders as a button with
-    // role="combobox"; clicking it opens a Popover with a CommandInput.
-    await dialog.getByRole('combobox').click();
+    // "Woolworths" as the first entity. The form contains two role="combobox"
+    // elements (the type <select> and the entity Popover trigger) — scope to
+    // the entity trigger by its placeholder so strict mode resolves to one.
+    await dialog.getByRole('combobox').filter({ hasText: 'Choose entity' }).click();
     const popover = page.locator('[data-slot="popover-content"]');
     await expect(popover).toBeVisible();
     await popover
