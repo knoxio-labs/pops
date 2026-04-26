@@ -12,6 +12,7 @@ import { WatchlistDesktopDnd } from './watchlist/WatchlistDesktopDnd';
 import { WatchlistEmptyState } from './watchlist/WatchlistEmptyState';
 import { WatchlistFilterTabs } from './watchlist/WatchlistFilterTabs';
 import { WatchlistMobileList } from './watchlist/WatchlistMobileList';
+import { WatchlistPlexSyncButton } from './watchlist/WatchlistPlexSyncButton';
 import { WatchlistSkeleton } from './watchlist/WatchlistSkeleton';
 
 type Model = ReturnType<typeof useWatchlistPageModel>;
@@ -72,7 +73,10 @@ export function WatchlistPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold">Watchlist</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Watchlist</h1>
+        <WatchlistPlexSyncButton />
+      </div>
       <WatchlistFilterTabs filter={model.filter} onFilterChange={model.setFilter} />
       {renderBody()}
     </div>

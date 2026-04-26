@@ -42,6 +42,17 @@ vi.mock('@pops/api-client', () => ({
       tvShows: {
         list: { useQuery: (...args: unknown[]) => mockTvShowsQuery(...args) },
       },
+      plex: {
+        getActiveSyncJobs: {
+          useQuery: () => ({ data: { data: [] }, isLoading: false }),
+        },
+        getSyncJobStatus: {
+          useQuery: () => ({ data: undefined, isLoading: false }),
+        },
+        startSyncJob: {
+          useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+        },
+      },
     },
     useUtils: () => ({
       media: {
