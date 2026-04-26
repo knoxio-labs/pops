@@ -8,9 +8,23 @@ interface DropZoneProps {
   maxSizeMb: number;
   onClick: () => void;
   onFiles: (files: FileList) => void;
+  /** Accessible button label. Defaults to "Upload photos" for back-compat. */
+  ariaLabel?: string;
+  /**
+   * Helper text rendered below the prompt. Defaults to
+   * `Images up to {maxSizeMb}MB`. Override for non-image dropzones.
+   */
+  helperText?: string;
 }
 
-export function DropZone({ disabled, maxSizeMb, onClick, onFiles }: DropZoneProps) {
+export function DropZone({
+  disabled,
+  maxSizeMb,
+  onClick,
+  onFiles,
+  ariaLabel = 'Upload photos',
+  helperText,
+}: DropZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDrop = useCallback(
@@ -40,7 +54,7 @@ export function DropZone({ disabled, maxSizeMb, onClick, onFiles }: DropZoneProp
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') onClick();
       }}
-      aria-label="Upload photos"
+      aria-label={ariaLabel}
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors',
         isDragOver
@@ -53,7 +67,7 @@ export function DropZone({ disabled, maxSizeMb, onClick, onFiles }: DropZoneProp
       <p className="text-sm text-muted-foreground text-center">
         <span className="font-medium text-foreground">Click to browse</span> or drag and drop
       </p>
-      <p className="text-xs text-muted-foreground">Images up to {maxSizeMb}MB</p>
+      <p className="text-xs text-muted-foreground">{helperText ?? `Images up to ${maxSizeMb}MB`}</p>
     </div>
   );
 }

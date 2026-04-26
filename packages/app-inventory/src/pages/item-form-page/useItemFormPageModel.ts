@@ -7,6 +7,7 @@ import { trpc } from '@pops/api-client';
 
 import { defaultValues, type ItemFormValues, type PendingConnection } from './types';
 import { useAssetIdValidation } from './useAssetIdValidation';
+import { useDocumentUploadState } from './useDocumentUpload';
 import { useItemMutations } from './useItemMutations';
 import { usePhotoUploadState } from './usePhotoUpload';
 
@@ -119,6 +120,7 @@ export function useItemFormPageModel() {
   const [connectionSearch, setConnectionSearch] = useState('');
 
   const photoState = usePhotoUploadState(id, isEditMode);
+  const documentState = useDocumentUploadState(id, isEditMode);
   const assetId = useAssetIdValidation({ id, typeValue, setValue });
   const mutations = useItemMutations({ id, isEditMode, pendingConnections });
 
@@ -156,6 +158,7 @@ export function useItemFormPageModel() {
     isLoading,
     error,
     ...photoState,
+    ...documentState,
     ...assetId,
     ...mutations,
   };
