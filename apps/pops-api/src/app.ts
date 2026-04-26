@@ -11,6 +11,7 @@ import { envRouter } from './modules/core/envs/router.js';
 import { openApiDocument } from './openapi.js';
 import { appRouter } from './router.js';
 import healthRouter from './routes/health.js';
+import inventoryDocumentFilesRouter from './routes/inventory/document-files.js';
 import documentThumbnailRouter from './routes/inventory/documents.js';
 import inventoryPhotosRouter from './routes/inventory/photos.js';
 import mediaImagesRouter from './routes/media/images.js';
@@ -54,6 +55,10 @@ export function createApp(): express.Express {
   // Inventory photo serving — static files from INVENTORY_IMAGES_DIR.
   // Placed before authMiddleware so <img> tags can render without JWT cookies.
   app.use(inventoryPhotosRouter);
+
+  // Inventory document upload serving — static files from INVENTORY_DOCUMENTS_DIR.
+  // Placed before authMiddleware so download links open without JWT cookies.
+  app.use(inventoryDocumentFilesRouter);
 
   // Cloudflare Access JWT auth — validates cf-access-jwt-assertion header.
   // Placed after health/webhook/media routes (those skip auth or use their own).
