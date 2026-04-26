@@ -1,4 +1,4 @@
-import { Badge, SortableHeader } from '@pops/ui';
+import { Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
 
 import { TagEditor } from '../../components/TagEditor';
 
@@ -36,6 +36,7 @@ const dateColumn: ColumnDef<Transaction> = {
       month: 'short',
       year: 'numeric',
     }),
+  filterFn: dateRangeFilter,
 };
 
 const descriptionColumn: ColumnDef<Transaction> = {
@@ -131,3 +132,41 @@ export function buildColumns(args: BuildColumnsArgs): ColumnDef<Transaction>[] {
     buildTagsColumn(args),
   ];
 }
+
+export const TRANSACTION_TABLE_FILTERS: ColumnFilter[] = [
+  {
+    id: 'date',
+    type: 'daterange',
+    label: 'Date Range',
+  },
+  {
+    id: 'account',
+    type: 'select',
+    label: 'Account',
+    options: [
+      { label: 'All Accounts', value: '' },
+      { label: 'ANZ Everyday', value: 'ANZ Everyday' },
+      { label: 'ANZ Savings', value: 'ANZ Savings' },
+      { label: 'Amex', value: 'Amex' },
+      { label: 'ING Savings', value: 'ING Savings' },
+      { label: 'Up Everyday', value: 'Up Everyday' },
+    ],
+  },
+  {
+    id: 'type',
+    type: 'select',
+    label: 'Type',
+    options: [
+      { label: 'All Types', value: '' },
+      { label: 'Income', value: 'Income' },
+      { label: 'Expense', value: 'Expense' },
+      { label: 'Transfer', value: 'Transfer' },
+    ],
+  },
+  {
+    id: 'tags',
+    type: 'text',
+    label: 'Tag',
+    placeholder: 'Filter by tag...',
+  },
+];

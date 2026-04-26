@@ -4,8 +4,7 @@ import { trpc } from '@pops/api-client';
 import { useSetPageContext } from '@pops/navigation';
 import { Alert, Button, DataTable, PageHeader, Skeleton } from '@pops/ui';
 
-import { buildColumns, type Transaction } from './transactions/columns';
-import { TABLE_FILTERS } from './transactions/filters';
+import { buildColumns, TRANSACTION_TABLE_FILTERS, type Transaction } from './transactions/columns';
 
 function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -50,7 +49,7 @@ function TableContent({
       paginated
       defaultPageSize={50}
       pageSizeOptions={[25, 50, 100]}
-      filters={TABLE_FILTERS}
+      filters={TRANSACTION_TABLE_FILTERS}
     />
   );
 }
