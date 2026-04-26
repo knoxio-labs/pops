@@ -7,11 +7,21 @@ const mockDeleteMutate = vi.fn();
 const mockAdjustMutate = vi.fn();
 const mockInvalidate = vi.fn();
 
+const mockCreateMutate = vi.fn();
+const mockUpdateMutate = vi.fn();
+const mockPreviewQuery = vi.fn((..._args: unknown[]) => ({
+  data: undefined,
+  isFetching: false,
+  error: null,
+  refetch: vi.fn(),
+}));
+
 vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
       corrections: {
         list: { useQuery: (...args: unknown[]) => mockListQuery(...args) },
+        previewMatches: { useQuery: (...args: unknown[]) => mockPreviewQuery(...args) },
         delete: {
           useMutation: (opts: { onSuccess?: () => void }) => ({
             mutate: (...args: unknown[]) => {
@@ -25,9 +35,26 @@ vi.mock('@pops/api-client', () => ({
           useMutation: (opts: { onSuccess?: () => void }) => ({
             mutate: (...args: unknown[]) => {
               mockAdjustMutate(...args);
-              // call onSuccess from the second arg if provided
               const callOpts = args[1] as { onSuccess?: () => void } | undefined;
               callOpts?.onSuccess?.();
+              opts.onSuccess?.();
+            },
+            isPending: false,
+          }),
+        },
+        createOrUpdate: {
+          useMutation: (opts: { onSuccess?: () => void; onError?: (e: Error) => void }) => ({
+            mutate: (...args: unknown[]) => {
+              mockCreateMutate(...args);
+              opts.onSuccess?.();
+            },
+            isPending: false,
+          }),
+        },
+        update: {
+          useMutation: (opts: { onSuccess?: () => void; onError?: (e: Error) => void }) => ({
+            mutate: (...args: unknown[]) => {
+              mockUpdateMutate(...args);
               opts.onSuccess?.();
             },
             isPending: false,
@@ -157,11 +184,14 @@ vi.mock('@pops/ui', async () => {
       open: boolean;
       onOpenChange: (v: boolean) => void;
     }) => {
-      dialogCloseRef = open
-        ? () => {
-            onOpenChange(false);
-          }
-        : null;
+      // Only update the ref when the dialog is actually open so a sibling
+      // closed Dialog doesn't reset the ref of the open one (RuleFormDialog
+      // and DeleteRuleDialog now coexist on the page).
+      if (open) {
+        dialogCloseRef = () => {
+          onOpenChange(false);
+        };
+      }
       return open
         ? React.createElement(
             'div',
@@ -241,6 +271,60 @@ vi.mock('@pops/ui', async () => {
         timer = setTimeout(() => fn(...args), delay);
       };
     },
+    useDebouncedValue: (value: string) => value,
+    Label: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('label', null, children),
+    ChipInput: ({
+      value,
+      onChange,
+      placeholder,
+    }: {
+      value?: string[];
+      onChange?: (next: string[]) => void;
+      placeholder?: string;
+    }) =>
+      React.createElement('input', {
+        'data-testid': 'chip-input',
+        placeholder,
+        value: (value ?? []).join(','),
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+          onChange?.(e.target.value ? e.target.value.split(',') : []),
+      }),
+    CheckboxInput: ({
+      checked,
+      onCheckedChange,
+      label,
+    }: {
+      checked?: boolean;
+      onCheckedChange?: (next: boolean) => void;
+      label?: React.ReactNode;
+    }) =>
+      React.createElement(
+        'label',
+        null,
+        React.createElement('input', {
+          type: 'checkbox',
+          checked: !!checked,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => onCheckedChange?.(e.target.checked),
+          'aria-label': typeof label === 'string' ? label : undefined,
+        }),
+        label as React.ReactNode
+      ),
+    NumberInput: ({
+      value,
+      onChange,
+      ...rest
+    }: {
+      value?: number;
+      onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+      'aria-label'?: string;
+    }) =>
+      React.createElement('input', {
+        type: 'number',
+        value: value ?? 0,
+        onChange,
+        ...rest,
+      }),
   };
 });
 
@@ -260,6 +344,8 @@ const mockRules = [
     location: null,
     tags: [],
     transactionType: null,
+    isActive: true,
+    priority: 0,
   },
   {
     id: 'rule-2',
@@ -274,6 +360,8 @@ const mockRules = [
     location: null,
     tags: [],
     transactionType: null,
+    isActive: true,
+    priority: 0,
   },
   {
     id: 'rule-3',
@@ -288,6 +376,8 @@ const mockRules = [
     location: null,
     tags: [],
     transactionType: null,
+    isActive: true,
+    priority: 0,
   },
 ];
 

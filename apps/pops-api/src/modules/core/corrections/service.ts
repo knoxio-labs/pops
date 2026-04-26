@@ -22,6 +22,14 @@ export {
   findMatchingCorrection,
 } from './handlers/pattern-match.js';
 
+export type {
+  PreviewMatchInput,
+  PreviewMatchResult,
+  PreviewMatchTransaction,
+  RuleMatchType,
+} from './handlers/preview-matches.js';
+export { previewMatches } from './handlers/preview-matches.js';
+
 export {
   adjustConfidence,
   createOrUpdateCorrection,

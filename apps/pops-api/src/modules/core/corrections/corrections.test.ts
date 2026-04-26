@@ -1092,6 +1092,22 @@ describe('corrections', () => {
 
       expect(updated.data.confidence).toBe(0.9);
     });
+
+    it('updates descriptionPattern (normalised) and matchType', async () => {
+      const created = await caller.core.corrections.createOrUpdate({
+        descriptionPattern: 'AMAZON',
+        matchType: 'contains',
+        tags: ['Shopping'],
+      });
+
+      const updated = await caller.core.corrections.update({
+        id: created.data.id,
+        data: { descriptionPattern: 'amazon prime', matchType: 'exact' },
+      });
+
+      expect(updated.data.descriptionPattern).toBe('AMAZON PRIME');
+      expect(updated.data.matchType).toBe('exact');
+    });
   });
 
   describe('delete', () => {

@@ -26,6 +26,8 @@ export type CorrectionSignal = z.infer<typeof CorrectionSignalSchema>;
 export const AdaptedSignalSchema = CorrectionSignalSchema;
 
 export const UpdateCorrectionSchema = z.object({
+  descriptionPattern: z.string().min(1).optional(),
+  matchType: z.enum(['exact', 'contains', 'regex']).optional(),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
   location: z.string().nullable().optional(),

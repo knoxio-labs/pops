@@ -134,6 +134,16 @@ export function updateCorrection(id: string, input: UpdateCorrectionInput): Corr
   const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
   let hasUpdates = false;
 
+  if (input.descriptionPattern !== undefined) {
+    // Normalise on edit so the stored pattern stays consistent with how
+    // createOrUpdateCorrection persists newly created rules.
+    updates.descriptionPattern = normalizeDescription(input.descriptionPattern);
+    hasUpdates = true;
+  }
+  if (input.matchType !== undefined) {
+    updates.matchType = input.matchType;
+    hasUpdates = true;
+  }
   if (input.entityId !== undefined) {
     updates.entityId = input.entityId;
     hasUpdates = true;

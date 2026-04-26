@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NotFoundError } from '../../../shared/errors.js';
 import { paginationMeta } from '../../../shared/pagination.js';
 import { protectedProcedure, router } from '../../../trpc.js';
+import { previewMatches } from './handlers/preview-matches.js';
 import { analyzeCorrection, generateRules } from './lib/rule-generator.js';
 import * as service from './service.js';
 import {
@@ -114,6 +115,25 @@ export const crudRouter = router({
     )
     .mutation(async ({ input }) => {
       const result = await analyzeCorrection(input);
+      return { data: result };
+    }),
+
+  /**
+   * Preview which transactions a candidate (pattern, matchType) would match
+   * against the live transactions table. Used by the manual rule create/edit
+   * dialog (#2187) to show users which rows their rule will affect before
+   * they save it.
+   */
+  previewMatches: protectedProcedure
+    .input(
+      z.object({
+        descriptionPattern: z.string().min(1),
+        matchType: z.enum(['exact', 'contains', 'regex']),
+        limit: z.number().int().positive().max(200).optional(),
+      })
+    )
+    .query(({ input }) => {
+      const result = previewMatches(input);
       return { data: result };
     }),
 
