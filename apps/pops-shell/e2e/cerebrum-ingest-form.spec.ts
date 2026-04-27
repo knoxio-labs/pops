@@ -93,8 +93,8 @@ const MOCK_INFER_SCOPES_RESULT = {
 
 type PayloadProvider = (input: unknown) => unknown;
 
-function envelope(data: unknown): { result: { data: unknown } } {
-  return { result: { data } };
+function envelope(data: unknown): { result: { data: { json: unknown } } } {
+  return { result: { data: { json: data } } };
 }
 
 function parseBatchInputs(rawInput: string | null): Record<string, unknown> {
@@ -258,7 +258,7 @@ test.describe('Cerebrum — ingest form', () => {
 
     // Success banner shows engram ID, type, and path
     await expect(page.getByText('Engram Created')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(MOCK_ENGRAM.id)).toBeVisible();
+    await expect(page.getByText(MOCK_ENGRAM.id).first()).toBeVisible();
     await expect(page.getByText(MOCK_ENGRAM.filePath)).toBeVisible();
 
     // Type badge
