@@ -3,7 +3,11 @@
  *
  * Handles 'classifyEngram' jobs enqueued by quickCapture: reads the stored
  * capture engram, runs full classification + entity extraction + scope
- * inference, and updates the engram in-place.
+ * inference, and updates the engram's type, template, tags, scopes, and
+ * referenced_dates in both the file and the index.
+ *
+ * Idempotent: skips enrichment if the engram's content hash hasn't changed
+ * since the last enrichment (tracked via `_enrichedHash` custom field).
  */
 import pino from 'pino';
 
@@ -34,11 +38,23 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
   const engramService = getEngramService();
   const { engram, body } = engramService.read(engramId);
 
+  // Idempotency: skip if content hasn't changed since last enrichment.
+  const previousHash = engram.customFields['_enrichedHash'] as string | undefined;
+  if (previousHash && previousHash === engram.contentHash) {
+    logger.info({ engramId }, '[curation] Content unchanged — skipping enrichment');
+    return { engramId };
+  }
+
   const classifier = new CortexClassifier();
   const entityExtractor = new CortexEntityExtractor();
+  const referenceDate = engram.created.slice(0, 10);
 
   const classification = await classifier.classify(body, engram.title);
-  const { tags: entityTags } = await entityExtractor.extract(body, engram.tags);
+  const { tags: entityTags, referencedDates } = await entityExtractor.extract(
+    body,
+    engram.tags,
+    referenceDate
+  );
 
   const mergedTags = dedupe([...engram.tags, ...entityTags, ...classification.suggestedTags]);
 
@@ -52,9 +68,17 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
     explicitScopes: undefined,
   });
 
+  // Build custom fields: merge referenced_dates + enrichment hash.
+  const customFields: Record<string, unknown> = { ...engram.customFields };
+  if (referencedDates.length > 0) {
+    customFields['referenced_dates'] = referencedDates;
+  }
+  customFields['_enrichedHash'] = engram.contentHash;
+
   engramService.update(engramId, {
     scopes: scopeResult.scopes,
     tags: mergedTags.length > 0 ? mergedTags : undefined,
+    customFields,
   });
 
   logger.info(
@@ -63,6 +87,7 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
       type: classification.type,
       confidence: classification.confidence,
       scopes: scopeResult.scopes,
+      referencedDates: referencedDates.length,
     },
     '[curation] Engram enriched'
   );

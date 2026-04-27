@@ -65,6 +65,7 @@
     "test:watch": "vitest",
     "openapi:validate": "tsx scripts/validate-openapi.ts",
     "ego": "tsx src/cli/ego.ts",
+    "capture": "tsx src/cli/capture.ts",
     "mcp": "tsx src/mcp/server.ts"
   },
   "dependencies": {
