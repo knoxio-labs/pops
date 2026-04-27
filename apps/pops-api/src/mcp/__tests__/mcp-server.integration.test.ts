@@ -353,19 +353,19 @@ describe('cerebrum.ingest', () => {
 
 describe('cerebrum.engram.read', () => {
   it('reads back a created engram with correct metadata and body', async () => {
-    // Create an engram via the ingest tool.
-    const createResult = await handleCerebrumIngest({
-      body: 'Notes about my vacation plans for next summer.',
-      title: 'Vacation Plans',
+    // Create directly via EngramService (bypasses ingest pipeline scope inference mock).
+    const engramService = getEngramService();
+    const engram = engramService.create({
       type: 'note',
+      title: 'Vacation Plans',
+      body: 'Notes about my vacation plans for next summer.',
       scopes: ['personal.travel'],
       tags: ['vacation', 'summer'],
+      source: 'manual',
     });
-    expect(createResult.isError).toBeUndefined();
-    const created = parseResult(createResult) as { engram: { id: string } };
 
-    // Read it back.
-    const readResult = await handleEngramRead({ id: created.engram.id });
+    // Read it back via the MCP tool.
+    const readResult = await handleEngramRead({ id: engram.id });
 
     expect(readResult.isError).toBeUndefined();
     const parsed = parseResult(readResult) as {
@@ -380,8 +380,8 @@ describe('cerebrum.engram.read', () => {
       body: string;
     };
 
-    expect(parsed.engram.id).toBe(created.engram.id);
-    expect(typeof parsed.engram.title).toBe('string');
+    expect(parsed.engram.id).toBe(engram.id);
+    expect(parsed.engram.title).toBe('Vacation Plans');
     expect(parsed.engram.type).toBe('note');
     expect(parsed.engram.scopes).toContain('personal.travel');
     expect(parsed.engram.status).toBe('active');
