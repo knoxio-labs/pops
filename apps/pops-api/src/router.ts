@@ -7,11 +7,13 @@
  *   inventory — items
  *   media     — comparisons
  *   cerebrum  — engrams, templates
+ *   ego       — conversational AI interface
  *
  * Note: envs is an Express router (not tRPC) — mounted directly in app.ts.
  */
 import { cerebrumRouter } from './modules/cerebrum/index.js';
 import { coreRouter } from './modules/core/index.js';
+import { egoRouter } from './modules/ego/router.js';
 import { financeRouter } from './modules/finance/index.js';
 import { inventoryRouter } from './modules/inventory/index.js';
 import { mediaRouter } from './modules/media/index.js';
@@ -24,6 +26,7 @@ import { router } from './trpc.js';
 export const appRouter = router({
   cerebrum: cerebrumRouter,
   core: coreRouter,
+  ego: egoRouter,
   finance: financeRouter,
   inventory: inventoryRouter,
   media: mediaRouter,
