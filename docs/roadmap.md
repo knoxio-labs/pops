@@ -135,10 +135,10 @@ Live status of every theme and epic. Updated as work completes.
 
 ### Cerebrum — Phase 2 (Curation & Interface)
 
-| Epic                    | Status      | Notes                                                       |
-| ----------------------- | ----------- | ----------------------------------------------------------- |
-| Glia (curation workers) | Not started | Pruner, consolidator, linker, auditor + trust graduation    |
-| Ego (chat agent)        | Partial     | PRD-088 (Ego Channels) done. PRD-087 (Ego Core) not started |
+| Epic                    | Status      | Notes                                                                               |
+| ----------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| Glia (curation workers) | Not started | Pruner, consolidator, linker, auditor + trust graduation                            |
+| Ego (chat agent)        | Partial     | PRD-088 (Ego Channels) done. PRD-087 (Ego Core) partial — SSE streaming gap remains |
 
 ### Cerebrum — Phase 3 (Automation & Ecosystem)
 

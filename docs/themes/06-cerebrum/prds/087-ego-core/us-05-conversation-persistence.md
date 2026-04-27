@@ -8,15 +8,15 @@ As a user, I want my conversations with Ego to be saved and resumable so that I 
 
 ## Acceptance Criteria
 
-- [ ] A Drizzle schema defines the `conversations` table with columns: `id` (TEXT PK), `title` (TEXT), `active_scopes` (TEXT, JSON array), `app_context` (TEXT, JSON), `model` (TEXT NOT NULL), `created_at` (TEXT NOT NULL), `updated_at` (TEXT NOT NULL)
-- [ ] A Drizzle schema defines the `messages` table with columns: `id` (TEXT PK), `conversation_id` (TEXT FK NOT NULL), `role` (TEXT NOT NULL), `content` (TEXT NOT NULL), `citations` (TEXT, JSON array), `tool_calls` (TEXT, JSON array), `tokens_in` (INTEGER), `tokens_out` (INTEGER), `created_at` (TEXT NOT NULL)
-- [ ] A Drizzle schema defines the `conversation_context` table with columns: `conversation_id` (TEXT FK NOT NULL), `engram_id` (TEXT NOT NULL), `relevance_score` (REAL), `loaded_at` (TEXT NOT NULL) — composite PK on `(conversation_id, engram_id)`
-- [ ] `ego.conversations.create` inserts a new conversation row and returns it — title defaults to null (set on first message)
-- [ ] `ego.conversations.list` returns conversations sorted by `updated_at` descending with pagination — supports text search on `title`
-- [ ] `ego.conversations.get` returns the conversation with all associated messages ordered by `created_at` ascending
-- [ ] `ego.conversations.delete` deletes the conversation, all associated messages, and all context entries in a single transaction
-- [ ] Each `ego.chat` call appends the user message and assistant response to the `messages` table, updates `conversation.updated_at`, and upserts `conversation_context` entries for any newly retrieved engrams
-- [ ] Conversation title is auto-generated from the first user message: first 80 characters cleaned of Markdown formatting, truncated at the nearest word boundary
+- [x] A Drizzle schema defines the `conversations` table with columns: `id` (TEXT PK), `title` (TEXT), `active_scopes` (TEXT, JSON array), `app_context` (TEXT, JSON), `model` (TEXT NOT NULL), `created_at` (TEXT NOT NULL), `updated_at` (TEXT NOT NULL)
+- [x] A Drizzle schema defines the `messages` table with columns: `id` (TEXT PK), `conversation_id` (TEXT FK NOT NULL), `role` (TEXT NOT NULL), `content` (TEXT NOT NULL), `citations` (TEXT, JSON array), `tool_calls` (TEXT, JSON array), `tokens_in` (INTEGER), `tokens_out` (INTEGER), `created_at` (TEXT NOT NULL)
+- [x] A Drizzle schema defines the `conversation_context` table with columns: `conversation_id` (TEXT FK NOT NULL), `engram_id` (TEXT NOT NULL), `relevance_score` (REAL), `loaded_at` (TEXT NOT NULL) — composite PK on `(conversation_id, engram_id)`
+- [x] `ego.conversations.create` inserts a new conversation row and returns it — title defaults to null (set on first message)
+- [x] `ego.conversations.list` returns conversations sorted by `updated_at` descending with pagination — supports text search on `title`
+- [x] `ego.conversations.get` returns the conversation with all associated messages ordered by `created_at` ascending
+- [x] `ego.conversations.delete` deletes the conversation, all associated messages, and all context entries in a single transaction
+- [x] Each `ego.chat` call appends the user message and assistant response to the `messages` table, updates `conversation.updated_at`, and upserts `conversation_context` entries for any newly retrieved engrams
+- [x] Conversation title is auto-generated from the first user message: first 80 characters cleaned of Markdown formatting, truncated at the nearest word boundary
 
 ## Notes
 

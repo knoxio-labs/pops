@@ -1,7 +1,7 @@
 # PRD-087: Ego Core
 
 > Epic: [05 — Ego](../../epics/05-ego.md)
-> Status: In progress
+> Status: Partial
 > Supersedes: PRD-054 (AI Overlay)
 
 ## Overview
@@ -89,13 +89,13 @@ Build the conversational agent core — the "I" of the system. Ego manages multi
 
 ## User Stories
 
-| #   | Story                                                               | Summary                                                                                | Status      | Parallelisable   |
-| --- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------- | ---------------- |
-| 01  | [us-01-conversation-engine](us-01-conversation-engine.md)           | Multi-turn conversation management: history, context window, system prompt             | Not started | No (first)       |
-| 02  | [us-02-shell-chat-panel](us-02-shell-chat-panel.md)                 | React component in pops-shell: streaming responses, message history, conversation list | Partial     | Blocked by us-01 |
-| 03  | [us-03-context-awareness](us-03-context-awareness.md)               | App-aware context: current pops app, recent actions, active engram context             | Not started | Blocked by us-01 |
-| 04  | [us-04-scope-negotiation](us-04-scope-negotiation.md)               | Infer scopes from conversation: explicit mentions, topic inference, channel defaults   | Done        | Blocked by us-01 |
-| 05  | [us-05-conversation-persistence](us-05-conversation-persistence.md) | SQLite persistence: conversations, messages, context metadata                          | Not started | Yes              |
+| #   | Story                                                               | Summary                                                                                | Status  | Parallelisable   |
+| --- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------- | ---------------- |
+| 01  | [us-01-conversation-engine](us-01-conversation-engine.md)           | Multi-turn conversation management: history, context window, system prompt             | Partial | No (first)       |
+| 02  | [us-02-shell-chat-panel](us-02-shell-chat-panel.md)                 | React component in pops-shell: streaming responses, message history, conversation list | Partial | Blocked by us-01 |
+| 03  | [us-03-context-awareness](us-03-context-awareness.md)               | App-aware context: current pops app, recent actions, active engram context             | Partial | Blocked by us-01 |
+| 04  | [us-04-scope-negotiation](us-04-scope-negotiation.md)               | Infer scopes from conversation: explicit mentions, topic inference, channel defaults   | Done    | Blocked by us-01 |
+| 05  | [us-05-conversation-persistence](us-05-conversation-persistence.md) | SQLite persistence: conversations, messages, context metadata                          | Done    | Yes              |
 
 US-01 (conversation engine) is the foundation. US-02, US-03, and US-04 depend on it. US-05 (persistence) can be built in parallel since it defines the storage schema independently.
 
