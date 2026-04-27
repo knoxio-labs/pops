@@ -67,6 +67,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@pops/db-types": "workspace:*",
     "@pops/types": "workspace:*",
     "@trpc/server": "^11.16.0",
