@@ -1,18 +1,13 @@
 import { toast } from 'sonner';
 
+import { blobToBase64 } from './upload-helpers';
+
 import type { trpc } from '@pops/api-client';
 
 import type { UploadedFile } from '../../components/PhotoUpload';
 import type { ProcessedFile } from '../../hooks/useImageProcessor';
 
-export async function blobToBase64(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  }
-  return btoa(binary);
-}
+export { blobToBase64 };
 
 export function patchFile(
   prev: UploadedFile[],

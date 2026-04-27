@@ -22,6 +22,7 @@ export { homeInventory } from './inventory.js';
 export { itemConnections } from './item-connections.js';
 export { itemDocuments } from './item-documents.js';
 export { itemPhotos } from './item-photos.js';
+export { itemUploadedFiles } from './item-uploaded-files.js';
 export { locations } from './locations.js';
 export { mediaScores } from './media-scores.js';
 export { mediaWatchlist } from './media-watchlist.js';

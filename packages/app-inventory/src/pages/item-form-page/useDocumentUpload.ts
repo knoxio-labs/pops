@@ -1,0 +1,91 @@
+import { useCallback, useState } from 'react';
+
+import { trpc } from '@pops/api-client';
+
+import { processAndUploadDocuments } from './document-upload-helpers';
+
+import type { DocumentItem } from '../../components/DocumentList';
+import type { PendingDocumentFile } from '../../components/DocumentUpload';
+
+function useDocumentMutations(
+  id: string | undefined,
+  isEditMode: boolean,
+  setDeleteConfirmId: (v: number | null) => void
+) {
+  const { data: documentsData, refetch: refetchDocuments } =
+    trpc.inventory.documentFiles.listForItem.useQuery(
+      { itemId: id ?? '' },
+      { enabled: isEditMode }
+    );
+  const existingDocuments: DocumentItem[] = documentsData?.data ?? [];
+  const uploadMutation = trpc.inventory.documentFiles.upload.useMutation({
+    onSuccess: () => void refetchDocuments(),
+  });
+  const removeMutation = trpc.inventory.documentFiles.removeUpload.useMutation({
+    onSuccess: () => {
+      void refetchDocuments();
+      setDeleteConfirmId(null);
+    },
+  });
+  return { existingDocuments, uploadMutation, removeMutation };
+}
+
+/**
+ * Item-form-page state hook for direct document uploads. Mirrors
+ * {@link usePhotoUploadState} but talks to `inventory.documentFiles.*`
+ * and uses {@link PendingDocumentFile} for pending entries.
+ *
+ * On create mode (no `id`) the upload mutation is skipped — pending entries
+ * stay as 'pending' and the parent is expected to re-trigger uploads after
+ * the item is saved. Today the form does not yet wire that follow-up step
+ * because the backend requires the item to exist; this matches the photo
+ * upload behaviour for create mode.
+ */
+export function useDocumentUploadState(id: string | undefined, isEditMode: boolean) {
+  const [uploadFiles, setUploadFiles] = useState<PendingDocumentFile[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const { existingDocuments, uploadMutation, removeMutation } = useDocumentMutations(
+    id,
+    isEditMode,
+    setDeleteConfirmId
+  );
+
+  const handleFilesSelected = useCallback(
+    async (files: File[]) => {
+      const pending: PendingDocumentFile[] = files.map((file, i) => ({
+        localId: `${Date.now()}-${i}`,
+        file,
+        status: 'pending' as const,
+      }));
+      setUploadFiles((prev) => [...prev, ...pending]);
+      await processAndUploadDocuments({
+        pending,
+        setUploadFiles,
+        isEditMode,
+        id,
+        uploadMutation,
+      });
+    },
+    [isEditMode, id, uploadMutation]
+  );
+
+  const handleRemoveUpload = useCallback((localId: string) => {
+    setUploadFiles((prev) => prev.filter((f) => f.localId !== localId));
+  }, []);
+
+  const confirmDeleteDocument = useCallback(() => {
+    if (deleteConfirmId !== null) removeMutation.mutate({ id: deleteConfirmId });
+  }, [deleteConfirmId, removeMutation]);
+
+  return {
+    documentUploadFiles: uploadFiles,
+    documentDeleteConfirmId: deleteConfirmId,
+    setDocumentDeleteConfirmId: setDeleteConfirmId,
+    existingDocuments,
+    documentRemoveMutation: removeMutation,
+    handleDocumentFilesSelected: handleFilesSelected,
+    handleDocumentRemoveUpload: handleRemoveUpload,
+    handleDeleteDocument: setDeleteConfirmId,
+    confirmDeleteDocument,
+  };
+}

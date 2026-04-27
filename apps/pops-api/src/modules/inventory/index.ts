@@ -6,6 +6,7 @@ import './items/search-adapter.js';
 
 import { router } from '../../trpc.js';
 import { connectionsRouter } from './connections/index.js';
+import { documentFilesRouter } from './document-files/index.js';
 import { documentsRouter } from './documents/index.js';
 import { inventoryRouter as itemsRouter } from './items/router.js';
 import { locationsRouter } from './locations/router.js';
@@ -20,5 +21,6 @@ export const inventoryRouter = router({
   photos: photosRouter,
   reports: reportsRouter,
   documents: documentsRouter,
+  documentFiles: documentFilesRouter,
   paperless: paperlessRouter,
 });

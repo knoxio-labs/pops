@@ -161,6 +161,17 @@ vi.mock('@pops/api-client', () => ({
           useMutation: () => ({ mutate: mockReorderMutate, isPending: false }),
         },
       },
+      documentFiles: {
+        listForItem: {
+          useQuery: () => ({ data: { data: [] }, refetch: vi.fn() }),
+        },
+        upload: {
+          useMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+        },
+        removeUpload: {
+          useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+        },
+      },
     },
     useUtils: () => ({
       inventory: {

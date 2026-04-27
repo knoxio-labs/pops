@@ -2,11 +2,14 @@ import { Link } from 'react-router';
 
 import { Alert, AlertDescription, AlertTitle, PageHeader, Skeleton } from '@pops/ui';
 
-import { ConnectionsSection } from './item-form-page/sections/ConnectionsSection';
-import { CoreFieldsSection } from './item-form-page/sections/CoreFieldsSection';
 import { FormFooter } from './item-form-page/sections/FormFooter';
 import { NotesSection } from './item-form-page/sections/NotesSection';
-import { PhotoUploadSection } from './item-form-page/sections/PhotoUploadSection';
+import {
+  ConnectionsBlock,
+  CoreSection,
+  DocumentsSection,
+  PhotosSection,
+} from './item-form-page/sections/section-adapters';
 import { useItemFormPageModel } from './item-form-page/useItemFormPageModel';
 
 export { extractPrefix } from './item-form-page/useItemFormPageModel';
@@ -61,110 +64,13 @@ function buildBreadcrumbs(
   return [{ label: 'Inventory', href: '/inventory' }, { label: 'New Item' }];
 }
 
-function CoreSection({ model }: { model: Model }) {
-  const {
-    form: {
-      register,
-      control,
-      watch,
-      setValue,
-      formState: { errors },
-    },
-    assetIdError,
-    assetIdChecking,
-    generating,
-    locationTree,
-    createLocationMutation,
-    handleAutoGenerate,
-    validateAssetIdUniqueness,
-  } = model;
-  return (
-    <CoreFieldsSection
-      register={register}
-      control={control}
-      watch={watch}
-      setValue={setValue}
-      errors={errors}
-      assetIdError={assetIdError}
-      assetIdChecking={assetIdChecking}
-      generating={generating}
-      locationTree={locationTree}
-      onAutoGenerate={() => void handleAutoGenerate()}
-      onValidateAssetId={(v) => void validateAssetIdUniqueness(v)}
-      onCreateLocation={(name, parentId) => createLocationMutation.mutate({ name, parentId })}
-    />
-  );
-}
-
-function PhotosSection({ model }: { model: Model }) {
-  const {
-    id,
-    isEditMode,
-    existingPhotos,
-    uploadFiles,
-    imageProcessing,
-    reorderMutation,
-    deleteConfirmId,
-    setDeleteConfirmId,
-    photoDeleteMutation,
-    handleFilesSelected,
-    handleRemoveUpload,
-    handleDeletePhoto,
-    confirmDeletePhoto,
-  } = model;
-  return (
-    <PhotoUploadSection
-      isEditMode={isEditMode}
-      existingPhotos={existingPhotos}
-      uploadFiles={uploadFiles}
-      imageProcessing={imageProcessing}
-      isReordering={reorderMutation.isPending}
-      deleteConfirmId={deleteConfirmId}
-      isDeleting={photoDeleteMutation.isPending}
-      onFilesSelected={handleFilesSelected}
-      onRemoveUpload={handleRemoveUpload}
-      onDeletePhoto={handleDeletePhoto}
-      onConfirmDelete={confirmDeletePhoto}
-      onCancelDelete={() => setDeleteConfirmId(null)}
-      onReorder={(orderedIds) => {
-        if (id) reorderMutation.mutate({ itemId: id, orderedIds });
-      }}
-    />
-  );
-}
-
-function ConnectionsBlock({ model }: { model: Model }) {
-  const {
-    isEditMode,
-    pendingConnections,
-    setPendingConnections,
-    connectionSearch,
-    setConnectionSearch,
-    searchResults,
-    searchLoading,
-  } = model;
-  if (isEditMode) return null;
-  return (
-    <ConnectionsSection
-      pendingConnections={pendingConnections}
-      connectionSearch={connectionSearch}
-      searchResults={searchResults}
-      searchLoading={searchLoading}
-      onSearchChange={setConnectionSearch}
-      onAdd={(item) =>
-        setPendingConnections((prev) => [...prev, { id: item.id, itemName: item.itemName }])
-      }
-      onRemove={(itemId) => setPendingConnections((prev) => prev.filter((c) => c.id !== itemId))}
-    />
-  );
-}
-
 function FormBody({ model }: { model: Model }) {
   const { form, isEditMode, isMutating, notesPreview, setNotesPreview, onSubmit } = model;
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
       <CoreSection model={model} />
       <PhotosSection model={model} />
+      <DocumentsSection model={model} />
       <NotesSection
         register={form.register}
         watch={form.watch}

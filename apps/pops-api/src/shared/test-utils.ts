@@ -412,6 +412,19 @@ export function createTestDb(): Database {
     CREATE INDEX IF NOT EXISTS idx_item_documents_item ON item_documents(item_id);
     CREATE INDEX IF NOT EXISTS idx_item_documents_doc ON item_documents(paperless_document_id);
 
+    CREATE TABLE IF NOT EXISTS item_uploaded_files (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id     TEXT NOT NULL,
+      file_name   TEXT NOT NULL,
+      file_path   TEXT NOT NULL,
+      mime_type   TEXT NOT NULL,
+      file_size   INTEGER NOT NULL,
+      uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (item_id) REFERENCES home_inventory(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_item_uploaded_files_item ON item_uploaded_files(item_id);
+
     CREATE TABLE IF NOT EXISTS ai_inference_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       provider TEXT NOT NULL DEFAULT 'claude',
@@ -949,6 +962,35 @@ export function seedItemDocument(
       title: overrides.title ?? null,
     });
 
+  return Number(result.lastInsertRowid);
+}
+
+/**
+ * Seed a single uploaded-file row (direct, non-Paperless) into the test DB.
+ * Returns the auto-generated id.
+ */
+export function seedItemUploadedFile(
+  db: Database,
+  overrides: {
+    item_id: string;
+    file_name?: string;
+    file_path?: string;
+    mime_type?: string;
+    file_size?: number;
+  }
+): number {
+  const result = db
+    .prepare(
+      `INSERT INTO item_uploaded_files (item_id, file_name, file_path, mime_type, file_size)
+       VALUES (@item_id, @file_name, @file_path, @mime_type, @file_size)`
+    )
+    .run({
+      item_id: overrides.item_id,
+      file_name: overrides.file_name ?? 'receipt.pdf',
+      file_path: overrides.file_path ?? `items/${overrides.item_id}/file_001.pdf`,
+      mime_type: overrides.mime_type ?? 'application/pdf',
+      file_size: overrides.file_size ?? 1024,
+    });
   return Number(result.lastInsertRowid);
 }
 
