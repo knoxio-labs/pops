@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 import { Badge, Button, formatDate, SortableHeader } from '@pops/ui';
 
@@ -11,6 +11,7 @@ import type { Correction } from './types';
 type BuildOptions = {
   onAutoDelete: (id: string) => void;
   onDeleteClick: (id: string) => void;
+  onEditClick: (rule: Correction) => void;
 };
 
 const patternColumn: ColumnDef<Correction> = {
@@ -67,22 +68,38 @@ function confidenceColumn(onAutoDelete: BuildOptions['onAutoDelete']): ColumnDef
   };
 }
 
-function actionsColumn(onDeleteClick: BuildOptions['onDeleteClick']): ColumnDef<Correction> {
+function actionsColumn(
+  onDeleteClick: BuildOptions['onDeleteClick'],
+  onEditClick: BuildOptions['onEditClick']
+): ColumnDef<Correction> {
   return {
     id: 'actions',
     header: '',
     cell: ({ row }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDeleteClick(row.original.id);
-        }}
-        aria-label={`Delete rule ${row.original.descriptionPattern}`}
-      >
-        <Trash2 className="h-4 w-4 text-destructive" />
-      </Button>
+      <div className="flex items-center justify-end gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditClick(row.original);
+          }}
+          aria-label={`Edit rule ${row.original.descriptionPattern}`}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteClick(row.original.id);
+          }}
+          aria-label={`Delete rule ${row.original.descriptionPattern}`}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
     ),
   };
 }
@@ -90,6 +107,7 @@ function actionsColumn(onDeleteClick: BuildOptions['onDeleteClick']): ColumnDef<
 export function buildRulesColumns({
   onAutoDelete,
   onDeleteClick,
+  onEditClick,
 }: BuildOptions): ColumnDef<Correction>[] {
   return [
     patternColumn,
@@ -98,6 +116,6 @@ export function buildRulesColumns({
     confidenceColumn(onAutoDelete),
     timesAppliedColumn,
     lastUsedColumn,
-    actionsColumn(onDeleteClick),
+    actionsColumn(onDeleteClick, onEditClick),
   ];
 }

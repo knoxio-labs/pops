@@ -9,6 +9,8 @@ export interface Correction {
   location: string | null;
   tags: string[];
   transactionType: 'purchase' | 'transfer' | 'income' | null;
+  isActive: boolean;
+  priority: number;
   confidence: number;
   timesApplied: number;
   createdAt: string;
