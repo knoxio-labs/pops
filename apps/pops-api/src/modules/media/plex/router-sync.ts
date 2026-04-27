@@ -6,6 +6,7 @@ import { syncJobResults } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
 import { getSyncQueue } from '../../../jobs/queues.js';
+import { getRedisStatus } from '../../../redis.js';
 import { protectedProcedure } from '../../../trpc.js';
 import {
   bullmqJobToSyncJob,
@@ -97,8 +98,17 @@ export const syncProcedures = {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
     }),
 
-  /** Get all currently active sync jobs (for restoring UI state on page load). */
+  /**
+   * Get all currently active sync jobs (for restoring UI state on page load).
+   *
+   * Polled on mount by every consumer of `useSyncJob`. When Redis is down the
+   * API runs in degraded mode (per AGENTS.md: "queues and cache disabled");
+   * we return an empty list instead of hitting BullMQ — there are no active
+   * jobs without a queue, so an empty result is the truthful answer and the
+   * page can render without surfacing 500s on every Watchlist visit.
+   */
   getActiveSyncJobs: protectedProcedure.query(async () => {
+    if (getRedisStatus() === 'disconnected') return { data: [] };
     const queue = getSyncQueue();
     const [active, waiting] = await Promise.all([
       queue.getJobs(['active']),
