@@ -76,7 +76,12 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1">
         Tags
       </label>
-      <ChipInput value={value} onChange={onChange} placeholder="Add tags (comma-separated)…" aria-label="Tags" />
+      <ChipInput
+        value={value}
+        onChange={onChange}
+        placeholder="Add tags (comma-separated)…"
+        aria-label="Tags"
+      />
     </div>
   );
 }

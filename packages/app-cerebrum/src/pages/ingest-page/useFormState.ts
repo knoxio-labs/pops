@@ -46,5 +46,13 @@ export function useFormState(templates: TemplateSummary[]) {
   const resetForm = useCallback(() => setForm(INITIAL_FORM), []);
   const isValid = form.body.trim().length > 0;
 
-  return { form, selectedTemplate, updateField, updateCustomField, handleTypeChange, resetForm, isValid };
+  return {
+    form,
+    selectedTemplate,
+    updateField,
+    updateCustomField,
+    handleTypeChange,
+    resetForm,
+    isValid,
+  };
 }

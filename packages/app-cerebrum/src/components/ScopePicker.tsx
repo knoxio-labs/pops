@@ -48,9 +48,7 @@ function ScopeDropdown({
           onClick={() => onSelect(s.value)}
         >
           <span>{s.label}</span>
-          {s.description && (
-            <span className="text-xs text-muted-foreground">{s.description}</span>
-          )}
+          {s.description && <span className="text-xs text-muted-foreground">{s.description}</span>}
         </button>
       ))}
     </div>
@@ -130,7 +128,9 @@ export function ScopePicker({ value, suggestions, loading, onChange }: ScopePick
             aria-label="Scope input"
           />
         </div>
-        {state.inputValue && <ScopeDropdown items={state.filteredSuggestions} onSelect={state.addScope} />}
+        {state.inputValue && (
+          <ScopeDropdown items={state.filteredSuggestions} onSelect={state.addScope} />
+        )}
       </div>
       {value.length === 0 && (
         <p className="text-xs text-muted-foreground ml-1">

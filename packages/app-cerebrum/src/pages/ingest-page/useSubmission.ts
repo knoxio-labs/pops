@@ -3,9 +3,9 @@ import { useCallback, useState } from 'react';
 
 import { trpc } from '@pops/api-client';
 
+import type { SubmitResult } from './types';
 import type { useFormState } from './useFormState';
 import type { useScopeInference } from './useScopeInference';
-import type { SubmitResult } from './types';
 
 type FormState = ReturnType<typeof useFormState>;
 type Inference = ReturnType<typeof useScopeInference>;
@@ -25,9 +25,7 @@ export function useSubmission(formState: FormState, inference: Inference) {
 
   const confirmInferredScopes = useCallback(() => {
     inference.confirm((scopes) => {
-      formState.updateField('scopes', [
-        ...new Set([...formState.form.scopes, ...scopes]),
-      ]);
+      formState.updateField('scopes', [...new Set([...formState.form.scopes, ...scopes])]);
     });
   }, [inference, formState]);
 

@@ -6,13 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@pops/ui', async () => {
   const React = await import('react');
   return {
-    TextInput: ({
-      value,
-      onChange,
-      placeholder,
-      label,
-      ...rest
-    }: Record<string, unknown>) =>
+    TextInput: ({ value, onChange, placeholder, label, ...rest }: Record<string, unknown>) =>
       React.createElement(
         'div',
         null,
@@ -62,9 +56,7 @@ describe('TemplateFields', () => {
   });
 
   it('renders nothing when fields is empty', () => {
-    const { container } = render(
-      <TemplateFields fields={{}} values={{}} onChange={onChange} />
-    );
+    const { container } = render(<TemplateFields fields={{}} values={{}} onChange={onChange} />);
     expect(container.innerHTML).toBe('');
   });
 
@@ -158,9 +150,7 @@ describe('TemplateFields', () => {
   });
 
   it('renders all fields from a multi-field template', () => {
-    render(
-      <TemplateFields fields={decisionFields} values={{}} onChange={onChange} />
-    );
+    render(<TemplateFields fields={decisionFields} values={{}} onChange={onChange} />);
     expect(screen.getByLabelText('decision')).toBeInTheDocument();
     expect(screen.getByLabelText('confidence')).toBeInTheDocument();
     expect(screen.getByLabelText('priority')).toBeInTheDocument();

@@ -88,20 +88,13 @@ vi.mock('@pops/ui', async () => {
             onChange,
             'aria-label': placeholder ?? label ?? 'select',
           },
-          placeholder &&
-            React.createElement('option', { value: '', disabled: true }, placeholder),
+          placeholder && React.createElement('option', { value: '', disabled: true }, placeholder),
           options.map((opt) =>
             React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
           )
         )
       ),
-    TextInput: ({
-      value,
-      onChange,
-      placeholder,
-      label,
-      ...rest
-    }: Record<string, unknown>) =>
+    TextInput: ({ value, onChange, placeholder, label, ...rest }: Record<string, unknown>) =>
       React.createElement(
         'div',
         null,
@@ -131,13 +124,7 @@ vi.mock('@pops/ui', async () => {
         className: className as string,
         'aria-label': rest['aria-label'] as string,
       }),
-    Button: ({
-      children,
-      onClick,
-      disabled,
-      prefix,
-      ...rest
-    }: Record<string, unknown>) =>
+    Button: ({ children, onClick, disabled, prefix, ...rest }: Record<string, unknown>) =>
       React.createElement(
         'button',
         {

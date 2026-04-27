@@ -14,10 +14,7 @@ export function IngestPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <PageHeader
-        title="Ingest"
-        description="Create a new engram through the ingestion pipeline"
-      />
+      <PageHeader title="Ingest" description="Create a new engram through the ingestion pipeline" />
       <IngestForm model={model} />
     </div>
   );

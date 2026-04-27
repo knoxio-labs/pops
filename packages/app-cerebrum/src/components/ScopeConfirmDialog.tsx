@@ -3,7 +3,15 @@
  * and scope inference returns results. Presents inferred scopes for
  * confirmation before final submission.
  */
-import { Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@pops/ui';
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@pops/ui';
 
 interface ScopeConfirmDialogProps {
   open: boolean;
@@ -12,7 +20,12 @@ interface ScopeConfirmDialogProps {
   onDismiss: () => void;
 }
 
-export function ScopeConfirmDialog({ open, scopes, onConfirm, onDismiss }: ScopeConfirmDialogProps) {
+export function ScopeConfirmDialog({
+  open,
+  scopes,
+  onConfirm,
+  onDismiss,
+}: ScopeConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onDismiss()}>
       <DialogContent>

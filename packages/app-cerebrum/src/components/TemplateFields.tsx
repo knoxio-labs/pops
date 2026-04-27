@@ -165,19 +165,12 @@ function TemplateFieldWidget({
       );
     case 'boolean':
       return (
-        <BooleanField
-          name={name}
-          def={def}
-          value={value}
-          onChange={(v) => onChange(name, v)}
-        />
+        <BooleanField name={name} def={def} value={value} onChange={(v) => onChange(name, v)} />
       );
     case 'string[]':
     case 'number[]':
     case 'boolean[]':
-      return (
-        <ArrayField name={name} def={def} value={value} onChange={(v) => onChange(name, v)} />
-      );
+      return <ArrayField name={name} def={def} value={value} onChange={(v) => onChange(name, v)} />;
     default:
       return (
         <StringField
