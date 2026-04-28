@@ -37,7 +37,7 @@ function TypeSelector({
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-sm h-11">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {t('ingest.submitting')}
+        {t('ingest.loadingTemplates')}
       </div>
     );
   }

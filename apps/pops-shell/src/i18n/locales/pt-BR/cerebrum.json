@@ -12,6 +12,7 @@
   "ingest.titlePlaceholder": "Titulo do engrama (opcional \u2014 inferido do corpo se ausente)",
   "ingest.submit": "Enviar Engrama",
   "ingest.submitting": "Enviando...",
+  "ingest.loadingTemplates": "Carregando modelos\u2026",
   "ingest.scopeInput": "Entrada de escopo",
 
   "ingest.scope.dialogTitle": "Escopos Inferidos",

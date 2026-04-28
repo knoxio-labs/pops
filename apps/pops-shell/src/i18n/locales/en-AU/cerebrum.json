@@ -12,6 +12,7 @@
   "ingest.titlePlaceholder": "Engram title (optional \u2014 inferred from body if absent)",
   "ingest.submit": "Submit Engram",
   "ingest.submitting": "Submitting...",
+  "ingest.loadingTemplates": "Loading templates\u2026",
   "ingest.scopeInput": "Scope input",
 
   "ingest.scope.dialogTitle": "Inferred Scopes",
