@@ -1,5 +1,4 @@
-import { TRPCError } from '@trpc/server';
-
+import { trpcError } from '../../../shared/trpc-error.js';
 import * as arrService from './service.js';
 import { ArrApiError } from './types.js';
 
@@ -35,13 +34,18 @@ export async function withArrErrorHandling<T>(service: string, fn: () => Promise
     return await fn();
   } catch (err) {
     if (err instanceof ArrApiError) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `${service} error: ${err.message}`,
-      });
+      throw trpcError(
+        'INTERNAL_SERVER_ERROR',
+        'media.arr.apiError',
+        {
+          service,
+          detail: err.message,
+        },
+        err
+      );
     }
     if (err instanceof Error && err.message === `${service} not configured`) {
-      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: err.message });
+      throw trpcError('PRECONDITION_FAILED', 'media.arr.serviceNotConfigured', { service });
     }
     throw err;
   }
@@ -51,7 +55,7 @@ export async function withArrErrorHandling<T>(service: string, fn: () => Promise
 export function requireRadarrClient(): RadarrClient {
   const client = arrService.getRadarrClient();
   if (!client) {
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr is not configured' });
+    throw trpcError('PRECONDITION_FAILED', 'media.arr.radarrNotConfigured');
   }
   return client;
 }
@@ -60,7 +64,7 @@ export function requireRadarrClient(): RadarrClient {
 export function requireSonarrClient(): SonarrClient {
   const client = arrService.getSonarrClient();
   if (!client) {
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Sonarr is not configured' });
+    throw trpcError('PRECONDITION_FAILED', 'media.arr.sonarrNotConfigured');
   }
   return client;
 }

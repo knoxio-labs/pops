@@ -1,9 +1,9 @@
 /**
  * Paperless-ngx tRPC router — connection status, health check, and document search.
  */
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { getPaperlessClient } from './index.js';
 import { PaperlessApiError } from './types.js';
@@ -31,10 +31,7 @@ export const paperlessRouter = router({
     .query(async ({ input }) => {
       const client = getPaperlessClient();
       if (!client) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Paperless-ngx is not configured',
-        });
+        throw trpcError('PRECONDITION_FAILED', 'inventory.paperless.notConfigured');
       }
 
       try {
@@ -50,10 +47,12 @@ export const paperlessRouter = router({
         };
       } catch (err) {
         if (err instanceof PaperlessApiError) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Paperless error: ${err.message}`,
-          });
+          throw trpcError(
+            'INTERNAL_SERVER_ERROR',
+            'inventory.paperless.apiError',
+            { detail: err.message },
+            err
+          );
         }
         throw err;
       }

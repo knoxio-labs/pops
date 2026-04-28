@@ -4,6 +4,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../../../shared/e
 
 /**
  * Convert known service errors into appropriate TRPC errors.
+ * Preserves the `messageKey` from the original error when present.
  */
 export function rethrowKnownErrors(err: unknown): never {
   if (err instanceof NotFoundError) {

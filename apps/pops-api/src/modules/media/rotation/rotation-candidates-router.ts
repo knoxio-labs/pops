@@ -1,10 +1,10 @@
-import { TRPCError } from '@trpc/server';
 import { and, count, desc, eq, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { rotationCandidates, rotationExclusions, rotationSources } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure } from '../../../trpc.js';
 import { downloadCandidateImpl } from './download-candidate.js';
 import { rotationExclusionsProcedures } from './rotation-exclusions-router.js';
@@ -34,10 +34,7 @@ export const rotationCandidatesProcedures = {
           .get();
 
         if (excluded) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Movie is excluded from rotation',
-          });
+          throw trpcError('CONFLICT', 'media.rotation.movieExcludedFromRotation');
         }
 
         let manualSource = tx

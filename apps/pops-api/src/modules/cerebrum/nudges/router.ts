@@ -9,10 +9,10 @@
  *   scan      — trigger an on-demand nudge scan
  *   configure — update detection thresholds
  */
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
 import { ConsolidationDetector } from './detectors/consolidation.js';
@@ -66,7 +66,7 @@ export const nudgesRouter = router({
   get: protectedProcedure.input(z.object({ id: z.string().min(1) })).query(({ input }) => {
     const nudge = getService().get(input.id);
     if (!nudge) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: `Nudge '${input.id}' not found` });
+      throw trpcError('NOT_FOUND', 'cerebrum.nudge.notFound', { id: input.id });
     }
     return { nudge };
   }),
@@ -75,10 +75,7 @@ export const nudgesRouter = router({
   dismiss: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(({ input }) => {
     const result = getService().dismiss(input.id);
     if (!result.success) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Nudge '${input.id}' is not pending or does not exist`,
-      });
+      throw trpcError('BAD_REQUEST', 'cerebrum.nudge.notPendingOrMissing', { id: input.id });
     }
     return result;
   }),
@@ -87,10 +84,7 @@ export const nudgesRouter = router({
   act: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(({ input }) => {
     const result = getService().act(input.id);
     if (!result.success) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Nudge '${input.id}' is not pending or does not exist`,
-      });
+      throw trpcError('BAD_REQUEST', 'cerebrum.nudge.notPendingOrMissing', { id: input.id });
     }
     return { result: { success: true, nudge: result.nudge } };
   }),

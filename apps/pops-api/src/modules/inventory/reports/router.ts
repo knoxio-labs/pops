@@ -1,9 +1,9 @@
 /**
  * Inventory reports tRPC router — warranty tracking and insurance reports.
  */
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { toInventoryItem } from '../items/types.js';
 import * as service from './service.js';
@@ -47,11 +47,12 @@ export const reportsRouter = router({
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
         console.error('[insurance-report] Failed:', detail, err);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to generate insurance report: ${detail}`,
-          cause: err,
-        });
+        throw trpcError(
+          'INTERNAL_SERVER_ERROR',
+          'inventory.reports.insuranceReportFailed',
+          { detail },
+          err
+        );
       }
     }),
 
@@ -62,11 +63,12 @@ export const reportsRouter = router({
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       console.error('[value-by-location] Failed:', detail, err);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to load value by location breakdown: ${detail}`,
-        cause: err,
-      });
+      throw trpcError(
+        'INTERNAL_SERVER_ERROR',
+        'inventory.reports.valueByLocationFailed',
+        { detail },
+        err
+      );
     }
   }),
 
@@ -77,11 +79,12 @@ export const reportsRouter = router({
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       console.error('[value-by-type] Failed:', detail, err);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to load value by type breakdown: ${detail}`,
-        cause: err,
-      });
+      throw trpcError(
+        'INTERNAL_SERVER_ERROR',
+        'inventory.reports.valueByTypeFailed',
+        { detail },
+        err
+      );
     }
   }),
 });

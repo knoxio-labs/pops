@@ -5,9 +5,9 @@
  * directly on disk. The router exposes list/get for UIs that let the user
  * pick a template when creating an engram.
  */
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { getTemplateRegistry } from '../instance.js';
 
@@ -22,7 +22,7 @@ export const templatesRouter = router({
   get: protectedProcedure.input(z.object({ name: z.string().min(1) })).query(({ input }) => {
     const template = getTemplateRegistry().get(input.name);
     if (!template) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: `Template '${input.name}' not found` });
+      throw trpcError('NOT_FOUND', 'cerebrum.template.notFound', { name: input.name });
     }
     return { template };
   }),

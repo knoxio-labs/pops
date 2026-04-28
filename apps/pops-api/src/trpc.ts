@@ -66,7 +66,24 @@ export async function createContext({ req }: CreateExpressContextOptions): Promi
 
 export type ContextType = Awaited<ReturnType<typeof createContext>>;
 
-const t = initTRPC.context<Context>().meta<OpenApiMeta>().create();
+const t = initTRPC
+  .context<Context>()
+  .meta<OpenApiMeta>()
+  .create({
+    errorFormatter({ shape, error }) {
+      return {
+        ...shape,
+        data: {
+          ...shape.data,
+          /** i18n key for frontend translation lookup. */
+          messageKey:
+            error.cause instanceof Error && 'messageKey' in error.cause
+              ? (error.cause as { messageKey: string }).messageKey
+              : undefined,
+        },
+      };
+    },
+  });
 
 /** Base router for composing routers. */
 export const router = t.router;

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { logger } from '../../../lib/logger.js';
 import { NotFoundError } from '../../../shared/errors.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import {
   PREVIEW_RULES_FETCH_LIMIT,
@@ -130,14 +131,21 @@ export const changesetRouter = router({
         triggeringTransactionCount: input.triggeringTransactions.length,
         err,
       });
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message:
-          err instanceof Error
-            ? `Failed to revise ChangeSet: ${err.message}`
-            : 'Failed to revise ChangeSet',
-        cause: err,
-      });
+      throw err instanceof Error
+        ? trpcError(
+            'INTERNAL_SERVER_ERROR',
+            'core.corrections.revisionFailed',
+            {
+              detail: err.message,
+            },
+            err
+          )
+        : trpcError(
+            'INTERNAL_SERVER_ERROR',
+            'core.corrections.revisionFailedGeneric',
+            undefined,
+            err
+          );
     }
   }),
 

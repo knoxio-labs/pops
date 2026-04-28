@@ -14,6 +14,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { NotFoundError, ValidationError } from '../../../shared/errors.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { applyChangeSet } from '../../core/corrections/service.js';
 import { ChangeSetSchema } from '../../core/corrections/types.js';
@@ -133,22 +134,16 @@ export const importsRouter = router({
     .mutation(({ input }) => {
       const progress = getProgress(input.sessionId);
       if (!progress) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Import session not found' });
+        throw trpcError('NOT_FOUND', 'finance.import.sessionNotFound');
       }
       if (progress.status !== 'completed' || !progress.result) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Import session is not ready for re-evaluation',
-        });
+        throw trpcError('PRECONDITION_FAILED', 'finance.import.sessionNotReady');
       }
 
       // Ensure this is a processImport session (not executeImport).
       const result = progress.result;
       if (!isProcessImportOutput(result)) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Import session result is not a processImport result',
-        });
+        throw trpcError('PRECONDITION_FAILED', 'finance.import.sessionNotProcessResult');
       }
 
       // 1) Apply ChangeSet atomically (DB transaction)
@@ -205,21 +200,15 @@ export const importsRouter = router({
     .mutation(({ input }) => {
       const progress = getProgress(input.sessionId);
       if (!progress) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Import session not found' });
+        throw trpcError('NOT_FOUND', 'finance.import.sessionNotFound');
       }
       if (progress.status !== 'completed' || !progress.result) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Import session is not ready for re-evaluation',
-        });
+        throw trpcError('PRECONDITION_FAILED', 'finance.import.sessionNotReady');
       }
 
       const result = progress.result;
       if (!isProcessImportOutput(result)) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Import session result is not a processImport result',
-        });
+        throw trpcError('PRECONDITION_FAILED', 'finance.import.sessionNotProcessResult');
       }
 
       const { nextResult, affectedCount } = reevaluateImportSessionWithRules({

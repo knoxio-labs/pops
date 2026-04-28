@@ -8,13 +8,13 @@
  *   similar — k-NN from an existing engram's vector (no re-embedding)
  *   stats   — retrieval layer health and coverage counts
  */
-import { TRPCError } from '@trpc/server';
 import { count, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { embeddings, engramIndex } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { ContextAssemblyService } from './context-assembly.js';
 import { HybridSearchService } from './hybrid-search.js';
@@ -50,17 +50,11 @@ async function runSearchProcedure(input: SearchProcedureInput): Promise<{
   const filters: RetrievalFilters = input.filters ?? {};
 
   if (input.mode !== 'structured' && !input.query?.trim()) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Query is required for semantic and hybrid search modes',
-    });
+    throw trpcError('BAD_REQUEST', 'media.retrieval.queryRequired');
   }
 
   if (input.mode === 'structured' && !hasAnyStructuredFilter(filters)) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Structured search requires at least one filter',
-    });
+    throw trpcError('BAD_REQUEST', 'media.retrieval.filterRequired');
   }
 
   const svc = new HybridSearchService(getDrizzle());
@@ -127,10 +121,7 @@ export const retrievalRouter = router({
     )
     .query(async ({ input }) => {
       if (!input.query.trim()) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Query is required for context assembly',
-        });
+        throw trpcError('BAD_REQUEST', 'media.retrieval.contextQueryRequired');
       }
 
       const db = getDrizzle();
