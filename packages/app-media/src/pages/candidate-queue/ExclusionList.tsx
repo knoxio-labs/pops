@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -40,7 +41,7 @@ function ExclusionRow({
         size="sm"
         onClick={() => onRestore(e.tmdbId)}
         disabled={isPending}
-        title="Restore to queue"
+        title={t('candidateQueue.restoreToQueue')}
       >
         <RotateCcw className="h-3.5 w-3.5" />
       </Button>

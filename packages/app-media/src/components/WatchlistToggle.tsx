@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 
 import { Button } from '@pops/ui';
@@ -16,6 +17,7 @@ export interface WatchlistToggleProps {
 }
 
 export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistToggleProps) {
+  const { t } = useTranslation('media');
   const apiMediaType = toApiMediaType(mediaType);
   const { isChecking, isOnWatchlist, isMutating, handleToggle } = useWatchlistToggleModel(
     apiMediaType,
@@ -28,7 +30,7 @@ export function WatchlistToggle({ mediaType, mediaId, className }: WatchlistTogg
         variant="outline"
         size="sm"
         loading
-        loadingText="Checking watchlist"
+        loadingText={t('watchlistToggle.checkingWatchlist')}
         aria-label="Checking watchlist status"
         className={className}
       >

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -11,6 +12,7 @@ interface OptimisticArgs {
 }
 
 function useAddMutation({ apiMediaType, mediaId, utils }: OptimisticArgs) {
+  const { t } = useTranslation('media');
   return trpc.media.watchlist.add.useMutation({
     onMutate: async () => {
       await utils.media.watchlist.status.cancel({ mediaType: apiMediaType, mediaId });
@@ -22,9 +24,11 @@ function useAddMutation({ apiMediaType, mediaId, utils }: OptimisticArgs) {
       return { previous };
     },
     onSuccess: () => {
-      toast.success('Added to watchlist');
+  const { t } = useTranslation('media');
+      toast.success(t('watchlistToggle.addedToWatchlist'));
     },
     onError: (err: { message: string; data?: { code?: string } | null }, _vars, context) => {
+  const { t } = useTranslation('media');
       if (context?.previous !== undefined) {
         utils.media.watchlist.status.setData(
           { mediaType: apiMediaType, mediaId },
@@ -32,9 +36,9 @@ function useAddMutation({ apiMediaType, mediaId, utils }: OptimisticArgs) {
         );
       }
       if (err.data?.code === 'CONFLICT') {
-        toast.info('Already on watchlist');
+        toast.info(t('watchlistToggle.alreadyOnWatchlist'));
       } else {
-        toast.error(`Failed to add: ${err.message}`);
+        toast.error(t('watchlistToggle.failedToAdd', { message: err.message }));
       }
     },
     onSettled: () => {
@@ -44,6 +48,7 @@ function useAddMutation({ apiMediaType, mediaId, utils }: OptimisticArgs) {
 }
 
 function useRemoveMutation({ apiMediaType, mediaId, utils }: OptimisticArgs) {
+  const { t } = useTranslation('media');
   return trpc.media.watchlist.remove.useMutation({
     onMutate: async () => {
       await utils.media.watchlist.status.cancel({ mediaType: apiMediaType, mediaId });
@@ -55,16 +60,18 @@ function useRemoveMutation({ apiMediaType, mediaId, utils }: OptimisticArgs) {
       return { previous };
     },
     onSuccess: () => {
-      toast.success('Removed from watchlist');
+  const { t } = useTranslation('media');
+      toast.success(t('watchlistToggle.removedFromWatchlist'));
     },
     onError: (err: { message: string }, _vars, context) => {
+  const { t } = useTranslation('media');
       if (context?.previous !== undefined) {
         utils.media.watchlist.status.setData(
           { mediaType: apiMediaType, mediaId },
           context.previous
         );
       }
-      toast.error(`Failed to remove: ${err.message}`);
+      toast.error(t('watchlistToggle.failedToRemove', { message: err.message }));
     },
     onSettled: () => {
       void utils.media.watchlist.status.invalidate({ mediaType: apiMediaType, mediaId });

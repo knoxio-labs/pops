@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Ban, Check, Loader2, X } from 'lucide-react';
 
 import { Button } from '@pops/ui';
@@ -52,6 +53,7 @@ export function ExcludedButton({ tmdbId, variant, mutation }: StatusBtnProps) {
 }
 
 export function InQueueButton({ tmdbId, variant, mutation }: StatusBtnProps) {
+  const { t } = useTranslation('media');
   if (variant === 'compact') {
     return (
       <Button
@@ -61,7 +63,7 @@ export function InQueueButton({ tmdbId, variant, mutation }: StatusBtnProps) {
         onClick={() => mutation.mutate({ tmdbId })}
         disabled={mutation.isPending}
         title="In Queue — click to remove"
-        aria-label="Remove from queue"
+        aria-label={t('movieActions.removeFromQueue')}
       >
         {mutation.isPending ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
 import { Alert, AlertDescription, AlertTitle } from '@pops/ui';
@@ -8,10 +9,11 @@ import { TvShowHero } from './tv-show-detail/TvShowHero';
 import { useTvShowDetailModel } from './tv-show-detail/useTvShowDetailModel';
 
 function InvalidIdView() {
+  const { t } = useTranslation('media');
   return (
     <div className="p-6">
       <Alert variant="destructive">
-        <AlertTitle>Invalid show ID</AlertTitle>
+        <AlertTitle>{t('tvShowDetail.invalidShowId')}</AlertTitle>
         <AlertDescription>The show ID must be a number.</AlertDescription>
       </Alert>
     </div>

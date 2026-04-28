@@ -1,19 +1,25 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
 
-function useUndoMutation(mediaId: number) {
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+function useUndoMutation(mediaId: number, t: TFn) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const addToWatchlistMutation = trpc.media.watchlist.add.useMutation();
   const deleteMutation = trpc.media.watchHistory.delete.useMutation({
     onSuccess: () => {
-      toast.success('Watch entry undone');
+  const { t } = useTranslation('media');
+      toast.success(t('markAsWatched.watchEntryUndone'));
       void utils.media.watchHistory.list.invalidate();
       void utils.media.watchlist.list.invalidate();
     },
     onError: (err: { message: string }) => {
-      toast.error(`Failed to undo: ${err.message}`);
+  const { t } = useTranslation('media');
+      toast.error(t('markAsWatched.failedToUndo', { message: err.message }));
     },
   });
 
@@ -44,18 +50,21 @@ function useLogMutation({
   handleUndo,
   setShowDatePicker,
   setCustomDate,
+  t,
 }: {
   handleUndo: (id: number, removed: boolean) => void;
   setShowDatePicker: (v: boolean) => void;
   setCustomDate: (v: string) => void;
+  t: TFn;
 }) {
   const utils = trpc.useUtils();
   return trpc.media.watchHistory.log.useMutation({
     onSuccess: (result: { data: { id: number }; watchlistRemoved: boolean }) => {
-      toast.success('Marked as watched', {
+  const { t } = useTranslation('media');
+      toast.success(t('markAsWatched.markedAsWatched'), {
         duration: 5000,
         action: {
-          label: 'Undo',
+          label: t('common.undo'),
           onClick: () => {
             handleUndo(result.data.id, result.watchlistRemoved);
           },
@@ -68,7 +77,8 @@ function useLogMutation({
       setCustomDate('');
     },
     onError: (err: { message: string }) => {
-      toast.error(`Failed to log watch: ${err.message}`);
+  const { t } = useTranslation('media');
+      toast.error(t('markAsWatched.failedToLogWatch', { message: err.message }));
     },
   });
 }
@@ -85,8 +95,8 @@ export function useMarkAsWatched(mediaId: number) {
   const watchCount = historyData?.data?.length ?? 0;
   const lastWatched = historyData?.data?.[0]?.watchedAt;
 
-  const handleUndo = useUndoMutation(mediaId);
-  const logMutation = useLogMutation({ handleUndo, setShowDatePicker, setCustomDate });
+  const handleUndo = useUndoMutation(mediaId, t);
+  const logMutation = useLogMutation({ handleUndo, setShowDatePicker, setCustomDate, t });
 
   const handleMarkWatched = () => {
     logMutation.mutate({ mediaType: 'movie', mediaId, completed: 1 });

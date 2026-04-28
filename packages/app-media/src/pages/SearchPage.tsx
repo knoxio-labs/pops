@@ -12,6 +12,7 @@
  * "Watched + Library" buttons that add the item then trigger the secondary
  * action in a single click.
  */
+import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 
@@ -164,12 +165,13 @@ function TvSection({ m }: { m: ReturnType<typeof useSearchPageModel> }) {
 }
 
 export function SearchPage() {
+  const { t } = useTranslation('media');
   const m = useSearchPageModel();
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Search</h1>
+        <h1 className="text-2xl font-bold">{t('search.title')}</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Search for movies and TV shows to add to your library.
         </p>

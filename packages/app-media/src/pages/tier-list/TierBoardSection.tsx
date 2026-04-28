@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { LayoutGrid, RefreshCw } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle, cn } from '@pops/ui';
@@ -30,6 +31,7 @@ function EmptyMovies() {
 }
 
 function RefreshButton({ isFetching, refetch }: { isFetching: boolean; refetch: () => void }) {
+  const { t } = useTranslation('media');
   return (
     <div className="flex justify-end">
       <button
@@ -37,7 +39,7 @@ function RefreshButton({ isFetching, refetch }: { isFetching: boolean; refetch: 
         onClick={() => refetch()}
         disabled={isFetching}
         className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-        aria-label="Refresh movie pool"
+        aria-label={t('tierList.refreshMoviePool')}
       >
         <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
         Refresh
@@ -47,13 +49,15 @@ function RefreshButton({ isFetching, refetch }: { isFetching: boolean; refetch: 
 }
 
 export function TierBoardSection(props: TierBoardSectionProps) {
+  const { t } = useTranslation('media');
   const { movies, moviesLoading, moviesError, isFetching, refetch } = props;
 
   function renderBody() {
+  const { t } = useTranslation('media');
     if (moviesError) {
       return (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t('common.error')}</AlertTitle>
           <AlertDescription>Failed to load movies for tier list.</AlertDescription>
         </Alert>
       );

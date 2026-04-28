@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Badge } from '@pops/ui';
@@ -44,10 +45,11 @@ function buildMetadata(movie: Movie) {
 }
 
 function GenreSection({ genres }: { genres: string[] }) {
+  const { t } = useTranslation('media');
   if (genres.length === 0) return null;
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-2">Genres</h2>
+      <h2 className="text-lg font-semibold mb-2">{t('movieDetail.genres')}</h2>
       <div className="flex flex-wrap gap-2">
         {genres.map((genre) => (
           <Link key={genre} to={`/media?genre=${encodeURIComponent(genre)}`}>
@@ -62,10 +64,11 @@ function GenreSection({ genres }: { genres: string[] }) {
 }
 
 function MetadataSection({ items }: { items: { label: string; value: string | null }[] }) {
+  const { t } = useTranslation('media');
   if (items.length === 0) return null;
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-2">Details</h2>
+      <h2 className="text-lg font-semibold mb-2">{t('movieDetail.details')}</h2>
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {items.map((item) => (
           <div key={item.label}>
@@ -79,9 +82,10 @@ function MetadataSection({ items }: { items: { label: string; value: string | nu
 }
 
 function WatchHistorySection({ entries }: { entries: WatchEntry[] | undefined }) {
+  const { t } = useTranslation('media');
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-2">Watch History</h2>
+      <h2 className="text-lg font-semibold mb-2">{t('movieDetail.watchHistory')}</h2>
       {entries && entries.length > 0 ? (
         <ul className="space-y-2">
           {[...entries]
@@ -115,7 +119,7 @@ export function MovieDetailContent({
     <div className="space-y-6 max-w-4xl mx-auto">
       {movie.overview && (
         <section>
-          <h2 className="text-lg font-semibold mb-2">Overview</h2>
+          <h2 className="text-lg font-semibold mb-2">{t('movieDetail.overview')}</h2>
           <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
         </section>
       )}

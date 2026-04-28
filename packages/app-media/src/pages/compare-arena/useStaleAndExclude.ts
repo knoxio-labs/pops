@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
@@ -16,11 +17,13 @@ export function useStaleAndExcludeMutations({
   resolveTitle,
   onAfterAction,
 }: Args) {
+  const { t } = useTranslation('media');
   const markStaleMutation = trpc.media.comparisons.markStale.useMutation({
     onSuccess: (data: { data: { staleness: number } }, variables: { mediaId: number }) => {
+  const { t } = useTranslation('media');
       const staleness = data.data.staleness;
       const timesMarked = Math.round(Math.log(staleness) / Math.log(0.5));
-      toast.success(`${resolveTitle(variables.mediaId)} marked stale (×${timesMarked})`);
+      toast.success(t('staleAndExclude.markedStale', { title: resolveTitle(variables.mediaId), times: timesMarked }));
       onAfterAction();
       void utils.media.comparisons.getSmartPair.invalidate();
     },
@@ -38,12 +41,14 @@ export function useStaleAndExcludeMutations({
 
   const handleNA = useCallback(
     (movieId: number) => {
+  const { t } = useTranslation('media');
       if (!dimensionId || excludeMutation.isPending) return;
       excludeMutation.mutate(
         { mediaType: 'movie', mediaId: movieId, dimensionId },
         {
           onSuccess: () => {
-            toast.success(`${resolveTitle(movieId)} excluded from this dimension`);
+  const { t } = useTranslation('media');
+            toast.success(t('staleAndExclude.excludedFromDimension', { title: resolveTitle(movieId) }));
             void utils.media.comparisons.getSmartPair.invalidate();
           },
         }

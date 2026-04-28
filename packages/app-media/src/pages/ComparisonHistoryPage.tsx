@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
@@ -32,7 +33,7 @@ function FiltersBar({
       <Input
         value={searchInput}
         onChange={(e) => onSearchChange(e.target.value)}
-        placeholder="Search by movie title…"
+        placeholder={t('comparison.searchByMovieTitle')}
         className="w-56"
       />
       <Select
@@ -140,6 +141,7 @@ function renderUndoToast(_id: number, onUndo: (toastId: string | number) => void
 }
 
 export function ComparisonHistoryPage() {
+  const { t } = useTranslation('media');
   const model = useComparisonHistoryModel(renderUndoToast);
 
   const allComparisons = model.data?.data ?? [];
@@ -158,7 +160,7 @@ export function ComparisonHistoryPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <History className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Comparison History</h1>
+          <h1 className="text-2xl font-bold">{t('comparisonHistory.title')}</h1>
         </div>
         <Link to="/media/compare">
           <Button variant="outline" size="sm">

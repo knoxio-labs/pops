@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useDroppable } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 
@@ -51,12 +52,13 @@ export function TierRow({
 }
 
 export function UnrankedPool({ movies }: { movies: TierMovie[] }) {
+  const { t } = useTranslation('media');
   const { setNodeRef, isOver } = useDroppable({ id: 'unranked' });
 
   return (
     <div
       ref={setNodeRef}
-      aria-label="Unranked movies"
+      aria-label={t('tierList.unrankedMovies')}
       className={`mt-4 rounded-lg border border-dashed border-muted-foreground/30 p-3 transition-colors ${
         isOver ? 'ring-2 ring-primary bg-muted/50' : 'bg-muted/20'
       }`}

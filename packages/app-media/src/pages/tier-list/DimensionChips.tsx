@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@pops/ui';
 
 export function DimensionChips({
@@ -13,7 +14,7 @@ export function DimensionChips({
     <div
       className="flex flex-wrap justify-center gap-2"
       role="tablist"
-      aria-label="Dimension selector"
+      aria-label={t('tierList.dimensionSelector')}
     >
       {activeDimensions.map((dim) => (
         <button

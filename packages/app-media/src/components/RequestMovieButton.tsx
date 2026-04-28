@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
 
 import { trpc } from '@pops/api-client';
@@ -103,7 +104,7 @@ export function RequestMovieButton({
   const { config, movieStatus } = useRequestMovieGate(tmdbId);
 
   if (!config?.radarrConfigured) {
-    return <RequestButtonShell variant={variant} disabled title="Radarr not configured" />;
+    return <RequestButtonShell variant={variant} disabled title={t('request.radarrNotConfigured')} />;
   }
   if (movieStatus.isLoading || movieStatus.error) return null;
   const status = movieStatus.data?.data?.status;
@@ -114,7 +115,7 @@ export function RequestMovieButton({
       <RequestButtonShell
         variant={variant}
         onClick={() => onRequest(tmdbId)}
-        title="Request in Radarr"
+        title={t('request.requestInRadarr')}
       />
     );
   }
@@ -123,7 +124,7 @@ export function RequestMovieButton({
     <ConditionalModalButton
       show
       trigger={({ onClick }) => (
-        <RequestButtonShell variant={variant} onClick={onClick} title="Request in Radarr" />
+        <RequestButtonShell variant={variant} onClick={onClick} title={t('request.requestInRadarr')} />
       )}
       modal={({ open, onClose }) => (
         <RequestMovieModal

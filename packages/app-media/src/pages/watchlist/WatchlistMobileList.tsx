@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { WatchlistItem } from './WatchlistItem';
 
 import type { MediaMeta, WatchlistEntry } from './types';
@@ -30,7 +31,7 @@ export function WatchlistMobileList({
   isUpdatingEntry,
 }: WatchlistMobileListProps) {
   return (
-    <div className="space-y-3 md:hidden" role="list" aria-label="Watchlist items">
+    <div className="space-y-3 md:hidden" role="list" aria-label={t('watchlist.watchlistItems')}>
       {sortedEntries.map((entry, index) => {
         const meta = getMetaForEntry(entry);
 

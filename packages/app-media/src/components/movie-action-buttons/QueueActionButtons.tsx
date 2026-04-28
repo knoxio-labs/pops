@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Download, ListPlus, Loader2 } from 'lucide-react';
 
 import { ActionGroup, Button, ConditionalModalButton } from '@pops/ui';
@@ -25,6 +26,7 @@ function CompactQueueButtons({
   QueueActionButtonsProps,
   'onAddToQueue' | 'isAdding' | 'radarrConfigured' | 'setDownloadModalOpen'
 >) {
+  const { t } = useTranslation('media');
   return (
     <ActionGroup>
       <Button
@@ -33,8 +35,8 @@ function CompactQueueButtons({
         className="h-7 w-7 text-white hover:bg-white/20"
         onClick={onAddToQueue}
         disabled={isAdding}
-        title="Add to Rotation Queue"
-        aria-label="Add to Rotation Queue"
+        title={t('movieActions.addToRotationQueue')}
+        aria-label={t('movieActions.addToRotationQueue')}
       >
         {isAdding ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -48,8 +50,8 @@ function CompactQueueButtons({
           variant="ghost"
           className="h-7 w-7 text-white hover:bg-white/20"
           onClick={() => setDownloadModalOpen(true)}
-          title="Download Now"
-          aria-label="Download Now"
+          title={t('movieActions.downloadNow')}
+          aria-label={t('movieActions.downloadNow')}
         >
           <Download className="h-3.5 w-3.5" />
         </Button>

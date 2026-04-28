@@ -7,6 +7,7 @@
  * not want to flip mid-life). No checkboxes, so the post-#2175 Controller
  * wiring rules do not apply here.
  */
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 
 import {
@@ -41,6 +42,7 @@ interface FormFieldsProps {
 }
 
 function FormFields({ name, setName, description, setDescription, onEnter }: FormFieldsProps) {
+  const { t } = useTranslation('media');
   return (
     <div className="space-y-4">
       <div>
@@ -64,7 +66,7 @@ function FormFields({ name, setName, description, setDescription, onEnter }: For
         </label>
         <Textarea
           id="dimension-description"
-          placeholder="Optional — describe what this dimension measures"
+          placeholder={t('tierList.descriptionHint')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
@@ -112,7 +114,7 @@ export function CreateDimensionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New dimension</DialogTitle>
+          <DialogTitle>{t('tierList.newDimension')}</DialogTitle>
           <DialogDescription>
             Dimensions are axes along which you rank media — e.g. Cinematography or Soundtrack.
           </DialogDescription>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Calendar } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
@@ -111,14 +112,15 @@ function useCalendarPageModel() {
 }
 
 function NotConfigured() {
+  const { t } = useTranslation('media');
   return (
     <div className="p-6">
       <div className="flex items-center gap-2 mb-6">
         <Calendar className="h-5 w-5" />
-        <h1 className="text-xl font-bold">Upcoming Episodes</h1>
+        <h1 className="text-xl font-bold">{t('calendar.upcomingEpisodes')}</h1>
       </div>
       <Alert>
-        <AlertTitle>Sonarr not configured</AlertTitle>
+        <AlertTitle>{t('calendar.sonarrNotConfigured')}</AlertTitle>
         <AlertDescription>
           Configure Sonarr in{' '}
           <Link to="/media/arr" className="underline text-primary">
@@ -166,6 +168,7 @@ function DateSection({ dateKey, eps }: { dateKey: string; eps: CalendarEpisode[]
 }
 
 export function CalendarPage() {
+  const { t } = useTranslation('media');
   const { config, isLoading, error, grouped } = useCalendarPageModel();
 
   if (config && !config.sonarrConfigured) return <NotConfigured />;
@@ -174,14 +177,14 @@ export function CalendarPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Calendar className="h-5 w-5" />
-        <h1 className="text-xl font-bold">Upcoming Episodes</h1>
+        <h1 className="text-xl font-bold">{t('calendar.upcomingEpisodes')}</h1>
         <span className="text-sm text-muted-foreground">Next 30 days</span>
       </div>
 
       {isLoading && <CalendarSkeleton />}
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t('common.error')}</AlertTitle>
           <AlertDescription>{error.message}</AlertDescription>
         </Alert>
       )}

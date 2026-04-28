@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Select, Skeleton } from '@pops/ui';
 
 import type { Dimension } from './types';
@@ -28,7 +29,7 @@ export function ArenaDimensionPicker({
       variant="ghost"
       size="sm"
       containerClassName="w-auto"
-      aria-label="Comparison dimension"
+      aria-label={t('arena.comparisonDimension')}
     />
   );
 }

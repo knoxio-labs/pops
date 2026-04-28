@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Bookmark, BookmarkCheck, Eye, Loader2, Plus, RotateCw, X } from 'lucide-react';
 
 import { Button } from '@pops/ui';
@@ -41,7 +42,7 @@ function AddLibraryButton({
     <IconButton
       onClick={() => onAddToLibrary?.(tmdbId)}
       disabled={isAddingToLibrary}
-      title="Add to Library"
+      title={t('discover.addToLibrary')}
     >
       {isAddingToLibrary ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -103,12 +104,13 @@ function WatchedToggleButton({
   | 'onMarkWatched'
   | 'onMarkRewatched'
 >) {
+  const { t } = useTranslation('media');
   if (isWatched) {
     return (
       <IconButton
         onClick={() => onMarkRewatched?.(tmdbId)}
         disabled={isMarkingRewatched}
-        title="Mark as Rewatched"
+        title={t('discover.markAsRewatched')}
       >
         {isMarkingRewatched ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -122,7 +124,7 @@ function WatchedToggleButton({
     <IconButton
       onClick={() => onMarkWatched?.(tmdbId)}
       disabled={isMarkingWatched}
-      title="Mark as Watched"
+      title={t('discover.markAsWatched')}
     >
       {isMarkingWatched ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -134,6 +136,7 @@ function WatchedToggleButton({
 }
 
 export function DiscoverCardOverlay(props: DiscoverCardProps & { year: string | null }) {
+  const { t } = useTranslation('media');
   const { tmdbId, title, year, voteAverage, inLibrary, onNotInterested, isDismissing } = props;
   return (
     <div className="flex gap-1">
@@ -155,8 +158,8 @@ export function DiscoverCardOverlay(props: DiscoverCardProps & { year: string | 
         className="ml-auto h-7 w-7 text-white hover:bg-white/20"
         onClick={() => onNotInterested?.(tmdbId)}
         disabled={isDismissing}
-        title="Not Interested"
-        aria-label="Not Interested"
+        title={t('discover.notInterested')}
+        aria-label={t('discover.notInterested')}
       >
         {isDismissing ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />

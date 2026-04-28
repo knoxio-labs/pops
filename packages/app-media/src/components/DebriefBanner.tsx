@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ClipboardList, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -11,6 +12,7 @@ import { trpc } from '@pops/api-client';
 import { Alert, AlertDescription, AlertTitle } from '@pops/ui';
 
 export function DebriefBanner() {
+  const { t } = useTranslation('media');
   const [dismissed, setDismissed] = useState(false);
   const { data } = trpc.media.comparisons.getPendingDebriefs.useQuery();
 
@@ -38,7 +40,7 @@ export function DebriefBanner() {
       </AlertDescription>
       <button
         type="button"
-        aria-label="Dismiss debrief banner"
+        aria-label={t('debrief.dismissDebriefBanner')}
         className="absolute right-3 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         onClick={() => {
           setDismissed(true);

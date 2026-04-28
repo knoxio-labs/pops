@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button, Label } from '@pops/ui';
 
 import type { SeasonInfo } from '../RequestSeriesModal';
@@ -74,7 +75,7 @@ export function SeasonMonitoringList({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Season Monitoring</span>
+        <span className="text-sm font-medium">{t('seasonDetail.seasonMonitoring')}</span>
         {showBulkControls && (
           <BulkControls
             seasons={seasons}

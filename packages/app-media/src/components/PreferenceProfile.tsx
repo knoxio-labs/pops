@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { BarChart3, Heart, Swords, Weight } from 'lucide-react';
 import { Link } from 'react-router';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -178,6 +179,7 @@ function DimensionWeightsSection({ weights, show }: { weights: DimensionWeight[]
 }
 
 export function PreferenceProfile({ data, isLoading }: PreferenceProfileProps) {
+  const { t } = useTranslation('media');
   if (isLoading) {
     return (
       <section className="space-y-6" data-testid="preference-profile-loading">
@@ -194,7 +196,7 @@ export function PreferenceProfile({ data, isLoading }: PreferenceProfileProps) {
 
   return (
     <section className="space-y-8" data-testid="preference-profile">
-      <h2 className="text-xl font-bold">Your Preference Profile</h2>
+      <h2 className="text-xl font-bold">{t('preference.yourPreferenceProfile')}</h2>
       <GenreDistributionSection data={data.genreDistribution} />
       <GenreAffinitySection affinities={data.genreAffinities} hasComparisons={hasComparisons} />
       <DimensionWeightsSection

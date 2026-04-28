@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,13 +40,13 @@ export function BlacklistConfirmDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Mark as not watched?</AlertDialogTitle>
+          <AlertDialogTitle>{t('blacklist.markAsNotWatched')}</AlertDialogTitle>
           <AlertDialogDescription>
             <BlacklistMessage comparisonsToPurge={comparisonsToPurge} title={target?.title} />
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={onConfirm} disabled={isPending}>
             {isPending ? 'Removing\u2026' : 'Not watched'}
           </AlertDialogAction>

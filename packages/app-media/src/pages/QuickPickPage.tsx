@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 
@@ -90,7 +91,7 @@ function QuickPickHeader({
         <div
           className="flex items-center gap-1 rounded-lg border p-1"
           role="group"
-          aria-label="Number of picks"
+          aria-label={t('quickPick.numberOfPicks')}
         >
           {COUNT_OPTIONS.map((n) => (
             <button

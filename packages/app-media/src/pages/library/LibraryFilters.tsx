@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 
 import { Button, Select, TextInput } from '@pops/ui';
@@ -24,7 +25,7 @@ function TypeToggle({
     <div
       className="flex rounded-lg border bg-muted/30 p-0.5"
       role="group"
-      aria-label="Filter by type"
+      aria-label={t('library.filterByType')}
     >
       {TYPE_OPTIONS.map((opt) => (
         <Button
@@ -47,6 +48,7 @@ function TypeToggle({
 }
 
 export function LibraryFilters(props: LibraryFiltersProps) {
+  const { t } = useTranslation('media');
   const { genreFilter, allGenres, sortBy, setParam, localSearch, setLocalSearch } = props;
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -55,7 +57,7 @@ export function LibraryFilters(props: LibraryFiltersProps) {
         <Select
           value={genreFilter ?? ''}
           onChange={(e) => setParam('genre', e.target.value)}
-          aria-label="Filter by genre"
+          aria-label={t('library.filterByGenre')}
           size="sm"
           options={[
             { value: '', label: 'All Genres' },
@@ -66,7 +68,7 @@ export function LibraryFilters(props: LibraryFiltersProps) {
       <Select
         value={sortBy}
         onChange={(e) => setParam('sort', e.target.value)}
-        aria-label="Sort by"
+        aria-label={t('library.sortBy')}
         size="sm"
         options={SORT_OPTIONS.map((opt) => ({
           value: opt.value,
@@ -74,7 +76,7 @@ export function LibraryFilters(props: LibraryFiltersProps) {
         }))}
       />
       <TextInput
-        placeholder="Search library..."
+        placeholder={t('library.searchPlaceholder')}
         value={localSearch}
         onChange={(e) => setLocalSearch(e.target.value)}
         prefix={<Search className="h-4 w-4" />}

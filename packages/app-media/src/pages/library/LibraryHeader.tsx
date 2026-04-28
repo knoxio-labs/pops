@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { RefreshCw, Settings, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 
@@ -6,9 +7,10 @@ import { Button } from '@pops/ui';
 import { QuickPickDialog } from '../../components/QuickPickDialog';
 
 export function LibraryHeader() {
+  const { t } = useTranslation('media');
   return (
     <div className="flex items-center justify-between">
-      <h1 className="text-2xl font-bold tracking-tight">Library</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t('library.title')}</h1>
       <div className="flex items-center gap-3">
         <QuickPickDialog />
         <Link to="/media/quick-pick">

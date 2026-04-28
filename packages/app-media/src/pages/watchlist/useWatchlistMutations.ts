@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -11,6 +12,7 @@ interface MutationsArgs {
 }
 
 export function useWatchlistMutations({ setIsReordering, setOptimisticOrder }: MutationsArgs) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [updateErrorId, setUpdateErrorId] = useState<number | null>(null);
@@ -18,26 +20,30 @@ export function useWatchlistMutations({ setIsReordering, setOptimisticOrder }: M
 
   const removeMutation = trpc.media.watchlist.remove.useMutation({
     onSuccess: () => {
+  const { t } = useTranslation('media');
       setRemovingId(null);
-      toast.success('Removed from watchlist');
+      toast.success(t('watchlist.removedFromWatchlist'));
       void utils.media.watchlist.list.invalidate();
     },
     onError: (err: { message: string }) => {
+  const { t } = useTranslation('media');
       setRemovingId(null);
-      toast.error(`Failed to remove: ${err.message}`);
+      toast.error(t('watchlist.failedToRemove', { message: err.message }));
     },
   });
 
   const updateMutation = trpc.media.watchlist.update.useMutation({
     onSuccess: () => {
+  const { t } = useTranslation('media');
       setUpdateErrorId(null);
       setUpdateErrorMsg(null);
-      toast.success('Notes saved');
+      toast.success(t('watchlist.notesSaved'));
       void utils.media.watchlist.list.invalidate();
     },
     onError: (error: { message: string }) => {
-      setUpdateErrorMsg(error.message ?? 'Failed to save notes');
-      toast.error(`Failed to save notes: ${error.message}`);
+  const { t } = useTranslation('media');
+      setUpdateErrorMsg(error.message ?? t('watchlist.failedToSaveNotes', { message: '' }));
+      toast.error(t('watchlist.failedToSaveNotes', { message: error.message }));
     },
   });
 
@@ -47,8 +53,9 @@ export function useWatchlistMutations({ setIsReordering, setOptimisticOrder }: M
       void utils.media.watchlist.list.invalidate();
     },
     onError: (err: { message: string }) => {
+  const { t } = useTranslation('media');
       setOptimisticOrder(null);
-      toast.error(`Failed to reorder: ${err.message}`);
+      toast.error(t('watchlist.failedToReorder', { message: err.message }));
     },
     onSettled: () => {
       setIsReordering(false);

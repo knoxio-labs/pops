@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
 
 export function useRotationButtonsModel(tmdbId: number) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
 
   const { data: configData } = trpc.media.arr.getConfig.useQuery();
@@ -18,26 +20,29 @@ export function useRotationButtonsModel(tmdbId: number) {
 
   const addToQueueMutation = trpc.media.rotation.addToQueue.useMutation({
     onSuccess: () => {
-      toast.success('Added to rotation queue');
+  const { t } = useTranslation('media');
+      toast.success(t('movieActions.addedToRotationQueue'));
       void utils.media.rotation.getCandidateStatus.invalidate({ tmdbId });
     },
-    onError: () => toast.error('Failed to add to queue'),
+    onError: () => toast.error(t('movieActions.failedToAddToQueue')),
   });
 
   const removeFromQueueMutation = trpc.media.rotation.removeFromQueue.useMutation({
     onSuccess: () => {
-      toast.success('Removed from queue');
+  const { t } = useTranslation('media');
+      toast.success(t('movieActions.removedFromQueue'));
       void utils.media.rotation.getCandidateStatus.invalidate({ tmdbId });
     },
-    onError: () => toast.error('Failed to remove from queue'),
+    onError: () => toast.error(t('movieActions.failedToRemoveFromQueue')),
   });
 
   const removeExclusionMutation = trpc.media.rotation.removeExclusion.useMutation({
     onSuccess: () => {
-      toast.success('Exclusion removed');
+  const { t } = useTranslation('media');
+      toast.success(t('movieActions.exclusionRemoved'));
       void utils.media.rotation.getCandidateStatus.invalidate({ tmdbId });
     },
-    onError: () => toast.error('Failed to remove exclusion'),
+    onError: () => toast.error(t('movieActions.failedToRemoveExclusion')),
   });
 
   return {

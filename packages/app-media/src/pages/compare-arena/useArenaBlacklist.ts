@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -13,6 +14,7 @@ interface UseArenaBlacklistArgs {
  * the target movie, comparison-count lookup, and the destructive mutation.
  */
 export function useArenaBlacklist({ resolveTitle, onAfterAction }: UseArenaBlacklistArgs) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const [target, setTarget] = useState<{ id: number; title: string } | null>(null);
 
@@ -24,7 +26,8 @@ export function useArenaBlacklist({ resolveTitle, onAfterAction }: UseArenaBlack
 
   const blacklistMutation = trpc.media.comparisons.blacklistMovie.useMutation({
     onSuccess: (_data, variables) => {
-      toast.success(`${resolveTitle(variables.mediaId)} marked as not watched`);
+  const { t } = useTranslation('media');
+      toast.success(t('blacklist.markedAsNotWatched', { title: resolveTitle(variables.mediaId) }));
       setTarget(null);
       onAfterAction();
       void utils.media.comparisons.getSmartPair.invalidate();

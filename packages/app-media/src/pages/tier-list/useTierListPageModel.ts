@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -65,6 +66,7 @@ function useCreateDimension(args: {
   setSelectedDimension: (id: number) => void;
   setDialogOpen: (open: boolean) => void;
 }) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const createDimensionMutation = trpc.media.comparisons.createDimension.useMutation({
     onSuccess: (result) => {
@@ -72,7 +74,7 @@ function useCreateDimension(args: {
       const newId = result?.data?.id;
       if (typeof newId === 'number') args.setSelectedDimension(newId);
       args.setDialogOpen(false);
-      toast.success('Dimension created');
+      toast.success(t('tierList.dimensionCreated'));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -92,6 +94,7 @@ function useCreateDimension(args: {
 }
 
 export function useTierListPageModel() {
+  const { t } = useTranslation('media');
   const navigate = useNavigate();
   const data = useDimensionsAndMovies();
   const { effectiveDimension, movies, tierMoviesQuery } = data;
@@ -109,7 +112,7 @@ export function useTierListPageModel() {
 
   const submitState = useTierListSubmit({
     movieTitles,
-    onSuccess: () => toast.success('Tier list submitted!'),
+    onSuccess: () => toast.success(t('tierList.tierListSubmitted')),
   });
 
   const mutations = useTierListMutations({

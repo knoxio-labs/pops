@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@pops/ui';
@@ -30,6 +31,7 @@ export interface ShelfSectionProps extends ShelfActionHandlers {
 }
 
 function LoadMoreButton({ loadingMore, onClick }: { loadingMore: boolean; onClick: () => void }) {
+  const { t } = useTranslation('media');
   return (
     <div className="flex shrink-0 items-center px-2">
       <Button
@@ -45,7 +47,7 @@ function LoadMoreButton({ loadingMore, onClick }: { loadingMore: boolean; onClic
             Loading…
           </>
         ) : (
-          'Show more'
+          t('shelf.showMore')
         )}
       </Button>
     </div>

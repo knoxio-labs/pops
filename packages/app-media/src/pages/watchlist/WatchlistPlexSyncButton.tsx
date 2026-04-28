@@ -10,6 +10,7 @@
  * Toasts ("Watchlist sync complete" / "failed") are emitted by the hook
  * itself — this component owns only the UI affordance and cache invalidation.
  */
+import { useTranslation } from 'react-i18next';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
@@ -19,6 +20,7 @@ import { Button } from '@pops/ui';
 import { useSyncJob } from '../../hooks/useSyncJob';
 
 export function WatchlistPlexSyncButton() {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const sync = useSyncJob('plexSyncWatchlist');
   const previousStatusRef = useRef(sync.status);
@@ -41,7 +43,7 @@ export function WatchlistPlexSyncButton() {
     <Button
       variant="outline"
       size="sm"
-      aria-label="Sync watchlist with Plex"
+      aria-label={t('watchlist.syncWithPlex')}
       disabled={busy}
       onClick={() => sync.start()}
       data-testid="watchlist-plex-sync-button"

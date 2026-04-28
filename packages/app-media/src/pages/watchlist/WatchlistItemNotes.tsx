@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button, Textarea } from '@pops/ui';
 
 interface NotesEditorProps {
@@ -30,7 +31,7 @@ export function NotesEditor({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Add a note..."
+        placeholder={t('watchlist.addNote')}
         rows={2}
         maxLength={500}
         aria-label={`Notes for ${title}`}
@@ -42,7 +43,7 @@ export function NotesEditor({
           size="sm"
           onClick={handleSave}
           disabled={isUpdating}
-          aria-label="Save note"
+          aria-label={t('watchlist.saveNote')}
           className="text-xs text-primary"
         >
           {isUpdating ? 'Saving...' : 'Save'}
@@ -52,7 +53,7 @@ export function NotesEditor({
           size="sm"
           onClick={handleCancel}
           disabled={isUpdating}
-          aria-label="Cancel editing"
+          aria-label={t('watchlist.cancelEditing')}
           className="text-xs text-muted-foreground"
         >
           Cancel

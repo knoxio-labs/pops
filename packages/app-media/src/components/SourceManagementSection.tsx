@@ -81,8 +81,8 @@ export function SourceManagementSection() {
   return (
     <CRUDManagementSection
       title="Sources"
-      description="Configure where candidate movies come from"
-      addLabel="Add Source"
+      description={t("source.sourcesDescription")}
+      addLabel={t("source.addSource")}
       onAdd={() => {
         setEditingSource(null);
         setShowForm('create');

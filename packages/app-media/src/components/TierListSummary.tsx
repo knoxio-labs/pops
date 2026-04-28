@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowDownRight, ArrowUpRight, Check, Minus, RefreshCw } from 'lucide-react';
 
 /**
@@ -68,7 +69,7 @@ export function TierListSummary({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="text-xl font-bold">Tier List Submitted</h2>
+        <h2 className="text-xl font-bold">{t('tierList.tierListSubmitted')}</h2>
         <p className="text-muted-foreground">
           {comparisonsRecorded} comparison{comparisonsRecorded !== 1 ? 's' : ''} from {movieCount}{' '}
           movie{movieCount !== 1 ? 's' : ''}

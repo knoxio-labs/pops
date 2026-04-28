@@ -52,7 +52,7 @@ function ProfileFolderSelects({
   return (
     <>
       <Select
-        label="Quality Profile"
+        label={t("request.qualityProfile")}
         id="quality-profile"
         value={String(qualityProfileId ?? '')}
         onChange={(e) => {
@@ -65,7 +65,7 @@ function ProfileFolderSelects({
         }))}
       />
       <Select
-        label="Root Folder"
+        label={t("request.rootFolder")}
         id="root-folder"
         value={rootFolderPath}
         onChange={(e) => {

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Bookmark, Check, Eye, Loader2, Plus } from 'lucide-react';
 
 import { Badge, Button } from '@pops/ui';
@@ -35,7 +36,7 @@ export function InLibraryActionButtons({
           className="h-7 gap-1 text-xs"
           onClick={onMarkWatched}
           disabled={isMarkingWatched}
-          aria-label="Mark as watched"
+          aria-label={t('markAsWatched.markAsWatched')}
         >
           {isMarkingWatched ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -93,6 +94,7 @@ function WatchlistAndLibraryBtn({
   NotInLibraryActionButtonsProps,
   'onAddToWatchlistAndLibrary' | 'isAdding' | 'isAddingToWatchlistAndLibrary'
 >) {
+  const { t } = useTranslation('media');
   if (onAddToWatchlistAndLibrary == null) return null;
   return (
     <Button
@@ -101,7 +103,7 @@ function WatchlistAndLibraryBtn({
       className="h-7 gap-1 text-xs"
       onClick={onAddToWatchlistAndLibrary}
       disabled={isAdding ?? isAddingToWatchlistAndLibrary}
-      aria-label="Add to watchlist and library"
+      aria-label={t('search.addToWatchlistAndLibrary')}
     >
       {isAddingToWatchlistAndLibrary ? (
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -122,6 +124,7 @@ function WatchedAndLibraryBtn({
   NotInLibraryActionButtonsProps,
   'type' | 'onMarkWatchedAndLibrary' | 'isAdding' | 'isMarkingWatchedAndLibrary'
 >) {
+  const { t } = useTranslation('media');
   if (type !== 'movie' || onMarkWatchedAndLibrary == null) return null;
   return (
     <Button
@@ -130,7 +133,7 @@ function WatchedAndLibraryBtn({
       className="h-7 gap-1 text-xs"
       onClick={onMarkWatchedAndLibrary}
       disabled={isAdding ?? isMarkingWatchedAndLibrary}
-      aria-label="Mark as watched and add to library"
+      aria-label={t('search.markAsWatchedAndAddToLibrary')}
     >
       {isMarkingWatchedAndLibrary ? (
         <Loader2 className="h-3 w-3 animate-spin" />

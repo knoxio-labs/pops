@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -73,7 +74,7 @@ function LeavingMovieCard({
           onCancel(movie.id);
         }}
         disabled={isPending}
-        title="Keep in library"
+        title={t('leaving.keepInLibrary')}
       >
         <X className="h-3.5 w-3.5" />
       </Button>

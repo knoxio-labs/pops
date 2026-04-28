@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -45,7 +46,7 @@ function ScrollHeader({
           size="icon"
           className="h-8 w-8"
           onClick={onScrollLeft}
-          aria-label="Scroll left"
+          aria-label={t('shelf.scrollLeft')}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -54,7 +55,7 @@ function ScrollHeader({
           size="icon"
           className="h-8 w-8"
           onClick={onScrollRight}
-          aria-label="Scroll right"
+          aria-label={t('shelf.scrollRight')}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

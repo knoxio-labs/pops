@@ -1,12 +1,14 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Alert, AlertDescription, AlertTitle } from '@pops/ui';
 
 export function InvalidParamsError() {
+  const { t } = useTranslation('media');
   return (
     <div className="p-6">
       <Alert variant="destructive">
-        <AlertTitle>Invalid parameters</AlertTitle>
+        <AlertTitle>{t('seasonDetail.invalidParameters')}</AlertTitle>
         <AlertDescription>Show ID and season number must be valid numbers.</AlertDescription>
       </Alert>
     </div>
@@ -41,7 +43,7 @@ export function SeasonNotFoundError({
   return (
     <div className="p-6">
       <Alert variant="destructive">
-        <AlertTitle>Season not found</AlertTitle>
+        <AlertTitle>{t('seasonDetail.seasonNotFound')}</AlertTitle>
         <AlertDescription>
           Season {seasonNum} doesn't exist for {showName}.
         </AlertDescription>

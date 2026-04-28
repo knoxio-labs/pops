@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -104,6 +105,7 @@ function useOptimisticUpdates({
 }
 
 export function useBatchSeasonLog({ showId, seasonNum, season, episodes }: UseBatchSeasonLogArgs) {
+  const { t } = useTranslation('media');
   const { utils, apply, rollback } = useOptimisticUpdates({ showId, seasonNum, episodes });
 
   const batchLogMutation = trpc.media.watchHistory.batchLog.useMutation({
@@ -114,8 +116,9 @@ export function useBatchSeasonLog({ showId, seasonNum, season, episodes }: UseBa
       );
     },
     onError: (err: { message: string }) => {
+  const { t } = useTranslation('media');
       rollback();
-      toast.error(`Failed to mark season: ${err.message}`);
+      toast.error(t('seasonDetail.failedToMarkSeason', { message: err.message }));
     },
     onSettled: () => {
       void utils.media.watchHistory.invalidate();

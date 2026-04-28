@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -8,6 +9,7 @@ interface UseEpisodeToggleArgs {
 }
 
 export function useEpisodeToggle({ watchHistory }: UseEpisodeToggleArgs) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
   const deleteEntryToEpisode = useRef<Map<number, number>>(new Map());
@@ -27,7 +29,8 @@ export function useEpisodeToggle({ watchHistory }: UseEpisodeToggleArgs) {
       void utils.media.tvShows.listSeasons.invalidate();
     },
     onError: (err: { message: string }) => {
-      toast.error(`Failed to log watch: ${err.message}`);
+  const { t } = useTranslation('media');
+      toast.error(t('seasonDetail.failedToLogWatch', { message: err.message }));
     },
     onSettled: (_data: unknown, _err: unknown, variables: { mediaId: number }) => {
       removeToggling(variables.mediaId);
@@ -41,7 +44,8 @@ export function useEpisodeToggle({ watchHistory }: UseEpisodeToggleArgs) {
       void utils.media.tvShows.listSeasons.invalidate();
     },
     onError: (err: { message: string }) => {
-      toast.error(`Failed to remove watch: ${err.message}`);
+  const { t } = useTranslation('media');
+      toast.error(t('seasonDetail.failedToRemoveWatch', { message: err.message }));
     },
     onSettled: (_data: unknown, _err: unknown, variables: { id: number }) => {
       const episodeId = deleteEntryToEpisode.current.get(variables.id);

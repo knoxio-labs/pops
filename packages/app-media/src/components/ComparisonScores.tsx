@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -61,9 +62,10 @@ function buildRadarData(scores: ScoreEntry[], dimensions: DimensionEntry[]): Rad
 }
 
 function ScoresSection({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('media');
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-2">Comparison Scores</h2>
+      <h2 className="text-lg font-semibold mb-2">{t('comparison.comparisonScores')}</h2>
       {children}
     </section>
   );

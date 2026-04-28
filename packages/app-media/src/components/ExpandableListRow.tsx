@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, ChevronRight, HardDrive } from 'lucide-react';
 import { useState } from 'react';
 
@@ -171,7 +172,7 @@ export function ExpandableListRow({
         {hasFile && (
           <span
             className="shrink-0 text-success"
-            title="Downloaded"
+            title={t('arr.downloaded')}
             aria-label={`Episode ${item.episodeNumber} downloaded`}
           >
             <HardDrive className="h-4 w-4" />

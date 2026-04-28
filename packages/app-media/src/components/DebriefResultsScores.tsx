@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 
 interface ScoreEntry {
@@ -53,7 +54,7 @@ export function CurrentScoresList({
   const dimNameById = new Map(dimensions.map((d) => [d.dimensionId, d.name]));
   return (
     <div className="border-t pt-4 space-y-2">
-      <h3 className="text-sm font-medium text-muted-foreground">Current Scores</h3>
+      <h3 className="text-sm font-medium text-muted-foreground">{t('debrief.currentScores')}</h3>
       <div className="space-y-1.5">
         {scores.map((s) => (
           <ScoreRow

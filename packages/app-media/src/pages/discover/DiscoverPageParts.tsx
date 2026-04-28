@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Loader2, RefreshCw, Swords } from 'lucide-react';
 import { Link } from 'react-router';
 
@@ -67,13 +68,13 @@ export function DiscoverHeader({
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1">
-        <h1 className="text-2xl font-bold">Discover</h1>
+        <h1 className="text-2xl font-bold">{t('discover.title')}</h1>
         <p className="text-sm text-muted-foreground">Find your next favourite movie</p>
       </div>
       <Button
         variant="outline"
         size="sm"
-        aria-label="Refresh shelf selection"
+        aria-label={t('discover.refreshShelfSelection')}
         disabled={isFetching}
         onClick={onRefresh}
       >

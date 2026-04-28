@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 /**
@@ -71,13 +72,13 @@ function DeleteDialog({
     <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove watch event?</AlertDialogTitle>
+          <AlertDialogTitle>{t('history.removeWatchEvent')}</AlertDialogTitle>
           <AlertDialogDescription>
             This will remove this entry from your watch history. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm}>Remove</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -86,13 +87,15 @@ function DeleteDialog({
 }
 
 export function HistoryPage() {
+  const { t } = useTranslation('media');
   const m = useHistoryPageModel();
 
   function renderBody() {
+  const { t } = useTranslation('media');
     if (m.error) {
       return (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t('common.error')}</AlertTitle>
           <AlertDescription>{m.error.message}</AlertDescription>
         </Alert>
       );
@@ -115,7 +118,7 @@ export function HistoryPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Watch History</h1>
+      <h1 className="text-2xl font-bold">{t('history.title')}</h1>
       <FilterTabs
         filter={m.filter}
         onFilterChange={(v) => {

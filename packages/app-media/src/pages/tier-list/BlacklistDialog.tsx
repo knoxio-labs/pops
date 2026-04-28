@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,14 +30,14 @@ export function BlacklistDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Mark as not watched?</AlertDialogTitle>
+          <AlertDialogTitle>{t('blacklist.markAsNotWatched')}</AlertDialogTitle>
           <AlertDialogDescription>
             This will remove <strong>{blacklistTarget?.title}</strong> from all comparisons and
             rankings across every dimension. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} disabled={isPending}>
             {isPending ? 'Removing\u2026' : 'Not watched'}
           </AlertDialogAction>

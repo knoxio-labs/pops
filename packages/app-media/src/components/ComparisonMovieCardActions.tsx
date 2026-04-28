@@ -141,7 +141,7 @@ export function CardActionsOverlay({
           disabled={blacklistPending}
           ariaLabel={`Not watched ${movie.title}`}
           testId={`blacklist-button-${movie.id}`}
-          tooltip="Not watched"
+          tooltip={t("staleAndExclude.notWatched")}
           hoverDestructive
         />
       )}

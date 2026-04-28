@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@pops/ui';
 
 import { FILTER_OPTIONS } from './types';
@@ -10,8 +11,9 @@ type WatchlistFilterTabsProps = {
 };
 
 export function WatchlistFilterTabs({ filter, onFilterChange }: WatchlistFilterTabsProps) {
+  const { t } = useTranslation('media');
   return (
-    <div className="flex gap-2" role="tablist" aria-label="Filter watchlist">
+    <div className="flex gap-2" role="tablist" aria-label={t('watchlist.filterWatchlist')}>
       {FILTER_OPTIONS.map((opt) => (
         <Button
           key={opt.value}

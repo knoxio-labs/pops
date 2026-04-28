@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ClipboardCheck, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 
@@ -50,7 +51,7 @@ function ItemActions({
       {debriefSessionId != null && (
         <Link
           to={`/media/debrief/${debriefSessionId}`}
-          aria-label="Debrief"
+          aria-label={t('history.debrief')}
           className="p-1 h-auto w-auto rounded-sm text-primary hover:bg-primary/10 inline-flex items-center"
           onClick={(e) => e.stopPropagation()}
         >
@@ -60,7 +61,7 @@ function ItemActions({
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Delete watch event"
+        aria-label={t('history.deleteWatchEvent')}
         disabled={isDeleting}
         onClick={() => onDelete(entryId)}
         className="p-1 h-auto w-auto hover:bg-destructive/10 text-muted-foreground hover:text-destructive"

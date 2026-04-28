@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
 import { PageHeader, Skeleton } from '@pops/ui';
@@ -32,7 +33,7 @@ function EpisodesSection({
 }) {
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-3">Episodes</h2>
+      <h2 className="text-lg font-semibold mb-3">{t('seasonDetail.episodes')}</h2>
       {episodesLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (

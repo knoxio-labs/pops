@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -17,24 +18,28 @@ interface MutationsArgs {
 }
 
 function useCoreMutations(
-  args: Pick<MutationsArgs, 'setEditing' | 'setAddName' | 'setAddDescription'>
+  args: Pick<MutationsArgs, 'setEditing' | 'setAddName' | 'setAddDescription'>,
+  t: (key: string) => string
 ) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const createMutation = trpc.media.comparisons.createDimension.useMutation({
     onSuccess: () => {
+  const { t } = useTranslation('media');
       void utils.media.comparisons.listDimensions.invalidate();
       args.setAddName('');
       args.setAddDescription('');
-      toast.success('Dimension created');
+      toast.success(t('dimensions.dimensionCreated'));
     },
     onError: (err: { message: string }) => toast.error(err.message),
   });
 
   const updateMutation = trpc.media.comparisons.updateDimension.useMutation({
     onSuccess: () => {
+  const { t } = useTranslation('media');
       void utils.media.comparisons.listDimensions.invalidate();
       args.setEditing(null);
-      toast.success('Dimension updated');
+      toast.success(t('dimensions.dimensionUpdated'));
     },
     onError: (err: { message: string }) => toast.error(err.message),
   });
@@ -108,7 +113,7 @@ function useWeightHandlers(
 }
 
 export function useDimensionMutations(args: MutationsArgs) {
-  const { createMutation, updateMutation } = useCoreMutations(args);
+  const { createMutation, updateMutation } = useCoreMutations(args, t);
   const editHandlers = useEditHandlers(args, updateMutation);
   const weightHandlers = useWeightHandlers(updateMutation);
 

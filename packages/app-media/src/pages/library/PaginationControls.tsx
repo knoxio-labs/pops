@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button, Select } from '@pops/ui';
@@ -45,12 +46,13 @@ function PageNav({
   PaginationControlsProps,
   'page' | 'totalPages' | 'pageSize' | 'onPageChange' | 'onPageSizeChange'
 >) {
+  const { t } = useTranslation('media');
   return (
     <div className="flex items-center gap-2">
       <Select
         value={String(pageSize)}
         onChange={(e) => onPageSizeChange(Number(e.target.value))}
-        aria-label="Items per page"
+        aria-label={t('library.itemsPerPage')}
         size="sm"
         options={PAGE_SIZE_OPTIONS.map((size) => ({
           value: String(size),
@@ -62,7 +64,7 @@ function PageNav({
         size="sm"
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
-        aria-label="Previous page"
+        aria-label={t('library.previousPage')}
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -71,7 +73,7 @@ function PageNav({
         size="sm"
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
-        aria-label="Next page"
+        aria-label={t('library.nextPage')}
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

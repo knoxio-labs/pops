@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -39,6 +40,7 @@ function useMonitorMutation(
   setOptimisticEpMonitoring: React.Dispatch<React.SetStateAction<Map<number, boolean>>>,
   setPendingEpMonitoring: React.Dispatch<React.SetStateAction<Set<number>>>
 ) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   return trpc.media.arr.updateEpisodeMonitoring.useMutation({
     onSuccess: () => {
@@ -48,6 +50,7 @@ function useMonitorMutation(
       err: { message: string },
       variables: { episodeIds: number[]; monitored: boolean }
     ) => {
+  const { t } = useTranslation('media');
       setOptimisticEpMonitoring((prev) => {
         const next = new Map(prev);
         const affectedIds = new Set(variables.episodeIds);
@@ -56,7 +59,7 @@ function useMonitorMutation(
         }
         return next;
       });
-      toast.error(`Failed to update monitoring: ${err.message}`);
+      toast.error(t('seasonDetail.failedToUpdateMonitoring', { message: err.message }));
     },
     onSettled: (_data: unknown, _err: unknown, variables: { episodeIds: number[] }) => {
       setPendingEpMonitoring((prev) => {

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -60,6 +61,7 @@ function useRecordHandlers({
 }
 
 function useDebriefData(movieId: number) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const {
     data: debriefData,
@@ -78,7 +80,8 @@ function useDebriefData(movieId: number) {
 
   const recordMutation = trpc.media.comparisons.recordDebriefComparison.useMutation({
     onSuccess: (result) => {
-      toast.success(result.data.sessionComplete ? 'Debrief complete!' : 'Comparison recorded');
+  const { t } = useTranslation('media');
+      toast.success(result.data.sessionComplete ? t('debrief.debriefComplete') : t('debrief.comparisonRecorded'));
       void utils.media.comparisons.getDebrief.invalidate({ mediaType: 'movie', mediaId: movieId });
       void utils.media.comparisons.getPendingDebriefs.invalidate();
     },

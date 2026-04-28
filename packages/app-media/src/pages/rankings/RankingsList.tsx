@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import { useState } from 'react';
 
@@ -73,6 +74,7 @@ function PaginationFooter({
 }
 
 export function RankingsList({ dimensionId }: { dimensionId?: number }) {
+  const { t } = useTranslation('media');
   const [offset, setOffset] = useState(0);
 
   const { data, isLoading, error } = trpc.media.comparisons.rankings.useQuery({
@@ -84,7 +86,7 @@ export function RankingsList({ dimensionId }: { dimensionId?: number }) {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Error</AlertTitle>
+        <AlertTitle>{t('common.error')}</AlertTitle>
         <AlertDescription>Failed to load rankings.</AlertDescription>
       </Alert>
     );
@@ -98,7 +100,7 @@ export function RankingsList({ dimensionId }: { dimensionId?: number }) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2" role="list" aria-label="Rankings">
+      <div className="space-y-2" role="list" aria-label={t('rankings.rankingsList')}>
         {entries.map((entry) => (
           <RankingRow
             key={`${entry.mediaType}-${entry.mediaId}`}

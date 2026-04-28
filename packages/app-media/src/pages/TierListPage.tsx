@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { LayoutGrid, Plus } from 'lucide-react';
 
 /**
@@ -70,6 +71,7 @@ function DimensionHeader({ m }: { m: ReturnType<typeof useTierListPageModel> }) 
 }
 
 function TierListMain({ m }: { m: ReturnType<typeof useTierListPageModel> }) {
+  const { t } = useTranslation('media');
   if (m.dimsLoading) return <PoolSkeleton />;
   if (m.activeDimensions.length === 0)
     return <NoActiveDimensions onCreate={() => m.setDialogOpen(true)} />;
@@ -78,7 +80,7 @@ function TierListMain({ m }: { m: ReturnType<typeof useTierListPageModel> }) {
       <DimensionHeader m={m} />
       {m.submitState.error && (
         <Alert variant="destructive">
-          <AlertTitle>Submission Failed</AlertTitle>
+          <AlertTitle>{t('tierList.submissionFailed')}</AlertTitle>
           <AlertDescription>{m.submitState.error.message}</AlertDescription>
         </Alert>
       )}
@@ -88,13 +90,14 @@ function TierListMain({ m }: { m: ReturnType<typeof useTierListPageModel> }) {
 }
 
 export function TierListPage() {
+  const { t } = useTranslation('media');
   const m = useTierListPageModel();
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3">
         <LayoutGrid className="h-6 w-6 text-app-accent" />
-        <h1 className="text-2xl font-bold">Tier List</h1>
+        <h1 className="text-2xl font-bold">{t('tierList.title')}</h1>
       </div>
       <TierListMain m={m} />
       <BlacklistDialog

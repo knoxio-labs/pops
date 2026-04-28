@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -20,6 +21,7 @@ interface UseSonarrMonitoringArgs {
  * Hook owning Sonarr (Arr) monitoring state for a single season.
  */
 export function useSonarrMonitoring({ tvdbId, seasonNum }: UseSonarrMonitoringArgs) {
+  const { t } = useTranslation('media');
   const { data: sonarrData } = trpc.media.arr.checkSeries.useQuery(
     { tvdbId: tvdbId ?? 0 },
     { enabled: !!tvdbId }
@@ -32,8 +34,9 @@ export function useSonarrMonitoring({ tvdbId, seasonNum }: UseSonarrMonitoringAr
 
   const seasonMonitorMutation = trpc.media.arr.updateSeasonMonitoring.useMutation({
     onError: (err: { message: string }) => {
+  const { t } = useTranslation('media');
       setSeasonMonitored((prev) => (prev != null ? !prev : null));
-      toast.error(`Failed to update monitoring: ${err.message}`);
+      toast.error(t('seasonDetail.failedToUpdateMonitoring', { message: err.message }));
     },
   });
 

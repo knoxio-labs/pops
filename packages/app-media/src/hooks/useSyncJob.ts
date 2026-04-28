@@ -5,6 +5,7 @@
  * and auto-restores running jobs on mount (survives page navigation).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
@@ -60,12 +61,12 @@ interface UseSyncJobReturn {
   status: 'idle' | 'running' | 'completed' | 'failed';
 }
 
-const JOB_TYPE_LABELS: Record<SyncJobType, string> = {
-  plexSyncMovies: 'Movie sync',
-  plexSyncTvShows: 'TV sync',
-  plexSyncWatchlist: 'Watchlist sync',
-  plexSyncWatchHistory: 'Watch history sync',
-  plexSyncDiscoverWatches: 'Cloud watch sync',
+const JOB_TYPE_LABEL_KEYS: Record<SyncJobType, string> = {
+  plexSyncMovies: 'sync.movieSync',
+  plexSyncTvShows: 'sync.tvSync',
+  plexSyncWatchlist: 'sync.watchlistSync',
+  plexSyncWatchHistory: 'sync.watchHistorySync',
+  plexSyncDiscoverWatches: 'sync.cloudWatchSync',
 };
 
 function useRestoreActiveJob(
@@ -79,21 +80,20 @@ function useRestoreActiveJob(
     enabled: !jobId && !restoredRef.current,
     refetchOnWindowFocus: false,
   });
-  const isRestoring = !restoredRef.current && !jobId && activeJobs.isLoading;
+
+  const isRestoring = !jobId && activeJobs.isLoading;
 
   useEffect(() => {
     if (restoredRef.current || jobId) return;
-    if (!activeJobs.data?.data) return;
-    restoredRef.current = true;
-
-    const match = activeJobs.data.data.find(
-      (j) => j.jobType === jobType && j.status === 'running'
-    ) as SyncJob | undefined;
+    const jobs = activeJobs.data?.data;
+    if (!jobs) return;
+    const match = jobs.find((j: SyncJob) => j.jobType === jobType && j.status === 'running');
     if (match) {
       setJobId(match.id);
       setRestoredJob(match);
     }
-  }, [activeJobs.data?.data, jobId, jobType, setJobId, setRestoredJob]);
+    restoredRef.current = true;
+  }, [activeJobs.data, jobType, jobId, setJobId, setRestoredJob]);
 
   return { isRestoring };
 }
@@ -108,9 +108,11 @@ function useStatusPolling(
     {
       enabled: !!jobId,
       refetchInterval: (query) => {
-        const status = query.state.data?.data?.status;
-        return status === 'running' ? 1500 : false;
+        const data = query.state.data?.data as SyncJob | undefined;
+        if (data && data.status !== 'running') return false;
+        return 1500;
       },
+      refetchOnWindowFocus: false,
     }
   );
 
@@ -123,15 +125,22 @@ function useStatusPolling(
   return statusQuery;
 }
 
-function useCompletionToast(label: string, jobId: string | null, statusData: SyncJob | undefined) {
+function useCompletionToast(
+  label: string,
+  jobId: string | null,
+  statusData: SyncJob | undefined,
+  t: (key: string, opts?: Record<string, unknown>) => string
+) {
+  const { t } = useTranslation('media');
   useEffect(() => {
+  const { t } = useTranslation('media');
     if (!statusData || !jobId) return;
     if (statusData.status === 'completed') {
-      toast.success(`${label} complete`);
+      toast.success(t('sync.complete', { label }));
     } else if (statusData.status === 'failed') {
-      toast.error(`${label} failed: ${statusData.error ?? 'Unknown error'}`);
+      toast.error(t('sync.failed', { label, error: statusData.error ?? t('sync.unknownError') }));
     }
-  }, [statusData?.status, jobId, label, statusData]);
+  }, [statusData?.status, jobId, label, statusData, t]);
 }
 
 function deriveStatus(
@@ -157,9 +166,10 @@ function buildReturnState(
 }
 
 export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
+  const { t } = useTranslation('media');
   const [jobId, setJobId] = useState<string | null>(null);
   const [restoredJob, setRestoredJob] = useState<SyncJob | null>(null);
-  const label = JOB_TYPE_LABELS[jobType];
+  const label = t(JOB_TYPE_LABEL_KEYS[jobType]);
 
   const { isRestoring } = useRestoreActiveJob(jobType, jobId, setJobId, setRestoredJob);
   const statusQuery = useStatusPolling(jobId, restoredJob, () => setRestoredJob(null));
@@ -169,11 +179,12 @@ export function useSyncJob(jobType: SyncJobType): UseSyncJobReturn {
       setJobId(res.data.jobId);
     },
     onError: (err) => {
-      toast.error(`Failed to start ${label}: ${err.message}`);
+  const { t } = useTranslation('media');
+      toast.error(t('sync.failedToStart', { label, message: err.message }));
     },
   });
 
-  useCompletionToast(label, jobId, statusQuery.data?.data as SyncJob | undefined);
+  useCompletionToast(label, jobId, statusQuery.data?.data as SyncJob | undefined, t);
 
   const start = useCallback(
     (params?: SyncJobParams) => {

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
 import { trpc } from '@pops/api-client';
@@ -12,6 +13,7 @@ import { CandidateList } from './candidate-queue/CandidateList';
 import { ExclusionList } from './candidate-queue/ExclusionList';
 
 export function CandidateQueuePage() {
+  const { t } = useTranslation('media');
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') ?? 'pending';
 
@@ -21,7 +23,7 @@ export function CandidateQueuePage() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Candidate Queue"
-        description="Browse and manage rotation candidates"
+        description={t("candidateQueue.description")}
         backHref="/media/rotation"
         breadcrumbs={[
           { label: 'Media', href: '/media' },
@@ -46,8 +48,8 @@ export function CandidateQueuePage() {
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="added">Added</TabsTrigger>
-          <TabsTrigger value="excluded">Excluded</TabsTrigger>
+          <TabsTrigger value="added">{t('common.added')}</TabsTrigger>
+          <TabsTrigger value="excluded">{t('common.excluded')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">

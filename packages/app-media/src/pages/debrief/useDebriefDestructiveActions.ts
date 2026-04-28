@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -22,11 +23,13 @@ function useStaleAndExclude({
   resolveTitle: (id: number) => string;
   currentDimensionId: number | null;
 }) {
+  const { t } = useTranslation('media');
   const markStaleMutation = trpc.media.comparisons.markStale.useMutation({
     onSuccess: (data: { data: { staleness: number } }, variables: { mediaId: number }) => {
+  const { t } = useTranslation('media');
       const staleness = data.data.staleness;
       const timesMarked = Math.round(Math.log(staleness) / Math.log(0.5));
-      toast.success(`${resolveTitle(variables.mediaId)} marked stale (×${timesMarked})`);
+      toast.success(t('staleAndExclude.markedStale', { title: resolveTitle(variables.mediaId), times: timesMarked }));
       invalidateDebrief();
     },
   });
@@ -43,12 +46,14 @@ function useStaleAndExclude({
 
   const handleNA = useCallback(
     (id: number) => {
+  const { t } = useTranslation('media');
       if (currentDimensionId == null || excludeMutation.isPending) return;
       excludeMutation.mutate(
         { mediaType: 'movie', mediaId: id, dimensionId: currentDimensionId },
         {
           onSuccess: () => {
-            toast.success(`${resolveTitle(id)} excluded from this dimension`);
+  const { t } = useTranslation('media');
+            toast.success(t('staleAndExclude.excludedFromDimension', { title: resolveTitle(id) }));
             invalidateDebrief();
           },
         }
@@ -79,7 +84,8 @@ function useBlacklistFlow({
 
   const blacklistMutation = trpc.media.comparisons.blacklistMovie.useMutation({
     onSuccess: (_data, variables) => {
-      toast.success(`${resolveTitle(variables.mediaId)} marked as not watched`);
+  const { t } = useTranslation('media');
+      toast.success(t('blacklist.markedAsNotWatched', { title: resolveTitle(variables.mediaId) }));
       setBlacklistTarget(null);
       invalidateDebrief();
     },

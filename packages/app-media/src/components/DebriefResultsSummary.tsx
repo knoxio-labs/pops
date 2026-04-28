@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, CheckCircle, Clock, Trophy, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
@@ -144,6 +145,7 @@ function ResultsBody({
 }
 
 export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSummaryProps) {
+  const { t } = useTranslation('media');
   const {
     data: debriefData,
     isLoading,
@@ -168,7 +170,7 @@ export function DebriefResultsSummary({ mediaType, mediaId }: DebriefResultsSumm
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-warning" />
-            <CardTitle className="text-lg">Debrief Results</CardTitle>
+            <CardTitle className="text-lg">{t('debrief.debriefResults')}</CardTitle>
           </div>
           <p className="text-muted-foreground text-sm">
             Results for <strong>{debrief.movie.title}</strong>

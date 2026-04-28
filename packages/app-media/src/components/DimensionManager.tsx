@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Settings } from 'lucide-react';
 
 /**
@@ -86,6 +87,7 @@ function DimensionList({ model }: { model: DimensionManagerModel }) {
 }
 
 export function DimensionManager() {
+  const { t } = useTranslation('media');
   const model = useDimensionManagerModel();
   const {
     open,
@@ -119,17 +121,17 @@ export function DimensionManager() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Manage dimensions">
+        <Button variant="ghost" size="icon" aria-label={t('dimensions.manageDimensions')}>
           <Settings className="h-5 w-5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md p-0">
         <DialogHeader className="sr-only">
-          <DialogTitle>Comparison Dimensions</DialogTitle>
+          <DialogTitle>{t('dimensions.comparisonDimensions')}</DialogTitle>
         </DialogHeader>
         <CRUDManagementSection
           title="Comparison Dimensions"
-          addLabel="Add Dimension"
+          addLabel={t("dimensions.addDimension")}
           onAdd={() => {
             setAddName('');
             setAddDescription('');

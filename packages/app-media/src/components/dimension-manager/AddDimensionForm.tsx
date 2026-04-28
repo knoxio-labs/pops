@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 
 import { Button, Input, Textarea } from '@pops/ui';
@@ -24,7 +25,7 @@ export function AddDimensionForm({
   return (
     <div className="space-y-2">
       <Input
-        placeholder="Dimension name"
+        placeholder={t('dimensions.dimensionNamePlaceholder')}
         value={addName}
         onChange={(e) => {
           setAddName(e.target.value);
@@ -34,7 +35,7 @@ export function AddDimensionForm({
         }}
       />
       <Textarea
-        placeholder="Description (optional)"
+        placeholder={t('dimensions.descriptionOptional')}
         value={addDescription}
         onChange={(e) => {
           setAddDescription(e.target.value);

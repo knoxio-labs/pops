@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,13 +16,14 @@ interface CandidateListProps {
 }
 
 function SearchInput({ search, onChange }: { search: string; onChange: (v: string) => void }) {
+  const { t } = useTranslation('media');
   return (
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <input
           className="flex h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder="Search by title..."
+          placeholder={t('candidateQueue.searchByTitle')}
           value={search}
           onChange={(e) => onChange(e.target.value)}
         />

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { RequestDialog } from '@pops/ui';
 
 /**
@@ -58,14 +59,14 @@ export function RequestSeriesModal({
     <RequestDialog
       open={open}
       onClose={model.handleClose}
-      title="Request Series"
+      title={t('request.requestSeries')}
       description={`${title} (${year})`}
       isLoading={isDataLoading}
       error={state.error}
       canSubmit={canSubmit}
       isPending={addSeries.isPending}
       isSuccess={state.success}
-      successLabel="Series Added"
+      successLabel={t("request.seriesAdded")}
       onSubmit={model.handleSubmit}
     >
       <RequestSeriesForm

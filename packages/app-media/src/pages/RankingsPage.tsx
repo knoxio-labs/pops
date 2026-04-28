@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
@@ -77,6 +78,7 @@ function RankingsTabs({
 }
 
 export function RankingsPage() {
+  const { t } = useTranslation('media');
   const [searchParams, setSearchParams] = useSearchParams();
   const dimensionParam = searchParams.get('dimension') ?? 'overall';
 
@@ -121,7 +123,7 @@ export function RankingsPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3">
         <Trophy className="h-6 w-6 text-warning" />
-        <h1 className="text-2xl font-bold">Rankings</h1>
+        <h1 className="text-2xl font-bold">{t('rankings.title')}</h1>
       </div>
       {renderBody()}
     </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@pops/ui';
 
 import { SeasonsList } from './SeasonsList';
@@ -40,10 +41,11 @@ function buildMetadata(show: TvShowDetailContentProps['show'], seasonCount: numb
 }
 
 function GenreSection({ genres }: { genres: string[] | null }) {
+  const { t } = useTranslation('media');
   if (!genres || genres.length === 0) return null;
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-2">Genres</h2>
+      <h2 className="text-lg font-semibold mb-2">{t('movieDetail.genres')}</h2>
       <div className="flex flex-wrap gap-2">
         {genres.map((genre) => (
           <Badge key={genre} variant="secondary">
@@ -56,10 +58,11 @@ function GenreSection({ genres }: { genres: string[] | null }) {
 }
 
 function MetadataSection({ items }: { items: { label: string; value: string | null }[] }) {
+  const { t } = useTranslation('media');
   if (items.length === 0) return null;
   return (
     <section>
-      <h2 className="text-lg font-semibold mb-2">Details</h2>
+      <h2 className="text-lg font-semibold mb-2">{t('movieDetail.details')}</h2>
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {items.map((item) => (
           <div key={item.label}>
@@ -73,20 +76,21 @@ function MetadataSection({ items }: { items: { label: string; value: string | nu
 }
 
 export function TvShowDetailContent(props: TvShowDetailContentProps) {
+  const { t } = useTranslation('media');
   const { show, seasons } = props;
   const metadataItems = buildMetadata(show, seasons.length);
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {show.overview && (
         <section>
-          <h2 className="text-lg font-semibold mb-2">Overview</h2>
+          <h2 className="text-lg font-semibold mb-2">{t('movieDetail.overview')}</h2>
           <p className="text-muted-foreground leading-relaxed">{show.overview}</p>
         </section>
       )}
       <GenreSection genres={show.genres} />
       <MetadataSection items={metadataItems} />
       <section>
-        <h2 className="text-lg font-semibold mb-3">Seasons</h2>
+        <h2 className="text-lg font-semibold mb-3">{t('tvShowDetail.seasons')}</h2>
         <SeasonsList
           showId={show.id}
           seasons={seasons}

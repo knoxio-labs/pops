@@ -5,6 +5,7 @@
  * Mobile: compact list with up/down reorder buttons.
  * Desktop (md+): responsive poster card grid with priority badges.
  */
+import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription, AlertTitle } from '@pops/ui';
 
 import { useWatchlistPageModel } from './watchlist/useWatchlistPageModel';
@@ -54,12 +55,13 @@ function WatchlistContent({ model }: { model: Model }) {
 }
 
 export function WatchlistPage() {
+  const { t } = useTranslation('media');
   const model = useWatchlistPageModel();
 
   if (model.watchlistError) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Error</AlertTitle>
+        <AlertTitle>{t('common.error')}</AlertTitle>
         <AlertDescription>Failed to load watchlist. Please try again.</AlertDescription>
       </Alert>
     );
@@ -74,7 +76,7 @@ export function WatchlistPage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Watchlist</h1>
+        <h1 className="text-2xl font-bold">{t('watchlist.title')}</h1>
         <WatchlistPlexSyncButton />
       </div>
       <WatchlistFilterTabs filter={model.filter} onFilterChange={model.setFilter} />

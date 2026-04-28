@@ -1,14 +1,16 @@
+import { useTranslation } from 'react-i18next';
 import { Undo2 } from 'lucide-react';
 
 export const UNDO_DELAY_MS = 5000;
 
 /** Toast with a shrinking progress bar and undo button. */
 export function UndoToast({ toastId, onUndo }: { toastId: string | number; onUndo: () => void }) {
+  const { t } = useTranslation('media');
   void toastId;
   return (
     <div className="bg-card border border-border rounded-lg shadow-lg px-4 py-3 w-72">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-foreground">Comparison deleted</span>
+        <span className="text-sm text-foreground">{t('comparison.comparisonDeleted')}</span>
         <button
           onClick={onUndo}
           className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"

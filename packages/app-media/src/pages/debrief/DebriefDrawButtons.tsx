@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, Minus } from 'lucide-react';
 
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
@@ -13,19 +14,19 @@ const DRAW_TIERS = [
   {
     tier: 'high' as const,
     icon: ChevronUp,
-    label: 'Equally great',
+    label: t('drawTier.equallyGreat'),
     color: 'hover:border-success hover:text-success',
   },
   {
     tier: 'mid' as const,
     icon: Minus,
-    label: 'Equally average',
+    label: t('drawTier.equallyAverage'),
     color: 'hover:border-muted-foreground',
   },
   {
     tier: 'low' as const,
     icon: ChevronDown,
-    label: 'Equally poor',
+    label: t('drawTier.equallyPoor'),
     color: 'hover:border-destructive hover:text-destructive',
   },
 ] as const;

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ClipboardCheck, Film, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -67,7 +68,7 @@ function CardOverlays({
       {debriefSessionId != null && (
         <Link
           to={`/media/debrief/${debriefSessionId}`}
-          aria-label="Debrief"
+          aria-label={t('history.debrief')}
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-2 left-2 z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1.5 h-auto w-auto rounded-md bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center"
         >
@@ -77,7 +78,7 @@ function CardOverlays({
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Delete watch event"
+        aria-label={t('history.deleteWatchEvent')}
         disabled={isDeleting}
         onClick={(e) => {
           e.stopPropagation();

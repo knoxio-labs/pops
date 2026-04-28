@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 import { Button, Label, NumberInput, Select, Switch } from '@pops/ui';
@@ -25,6 +26,7 @@ interface CommonFieldsProps {
 }
 
 function NameField({ name, setName }: Pick<CommonFieldsProps, 'name' | 'setName'>) {
+  const { t } = useTranslation('media');
   return (
     <div className="space-y-1.5">
       <Label className="text-muted-foreground">Name</Label>
@@ -34,7 +36,7 @@ function NameField({ name, setName }: Pick<CommonFieldsProps, 'name' | 'setName'
         onChange={(e) => {
           setName(e.target.value);
         }}
-        placeholder="Source name"
+        placeholder={t('source.sourceNamePlaceholder')}
       />
     </div>
   );

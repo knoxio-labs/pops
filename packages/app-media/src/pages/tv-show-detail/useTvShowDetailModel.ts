@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -35,12 +36,13 @@ function useMonitoringMutation({
       err: { message: string },
       variables: { seasonNumber: number; monitored: boolean }
     ) => {
+  const { t } = useTranslation('media');
       setOptimisticMonitoring((prev) => {
         const next = new Map(prev);
         next.set(variables.seasonNumber, !variables.monitored);
         return next;
       });
-      toast.error(`Failed to update monitoring: ${err.message}`);
+      toast.error(t('tvShowDetail.failedToUpdateMonitoring', { message: err.message }));
     },
     onSuccess: () => {
       void utils.media.arr.checkSeries.invalidate();
@@ -56,6 +58,7 @@ function useMonitoringMutation({
 }
 
 function useBatchLogMutation(showId: number) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const progressSnapshot =
     useRef<ReturnType<typeof utils.media.watchHistory.progress.getData>>(undefined);
@@ -89,10 +92,11 @@ function useBatchLogMutation(showId: number) {
       );
     },
     onError: (err: { message: string }) => {
+  const { t } = useTranslation('media');
       if (progressSnapshot.current !== undefined) {
         utils.media.watchHistory.progress.setData({ tvShowId: showId }, progressSnapshot.current);
       }
-      toast.error(`Failed to mark all watched: ${err.message}`);
+      toast.error(t('tvShowDetail.failedToMarkAllWatched', { message: err.message }));
     },
     onSettled: () => {
       void utils.media.watchHistory.invalidate();

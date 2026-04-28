@@ -174,7 +174,7 @@ export function RadarChart({
       height={size}
       className="mx-auto"
       role="img"
-      aria-label="Radar chart showing scores across dimensions"
+      aria-label={t('radarChart.ariaLabel')}
     >
       <GridAndAxes dimensions={dimensions} geom={geom} />
       <DataLayer dimensions={dimensions} geom={geom} />

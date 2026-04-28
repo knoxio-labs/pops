@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { History } from 'lucide-react';
 import { Link } from 'react-router';
 
@@ -10,10 +11,11 @@ interface ArenaHeaderProps {
 }
 
 export function ArenaHeader({ sessionCount }: ArenaHeaderProps) {
+  const { t } = useTranslation('media');
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold">Arena</h1>
+        <h1 className="text-2xl font-bold">{t('arena.title')}</h1>
         {sessionCount > 0 && (
           <Badge variant="outline" className="text-xs tabular-nums">
             {sessionCount}
@@ -23,13 +25,13 @@ export function ArenaHeader({ sessionCount }: ArenaHeaderProps) {
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button asChild variant="ghost" size="icon" aria-label="Comparison history">
+            <Button asChild variant="ghost" size="icon" aria-label={t('arena.comparisonHistory')}>
               <Link to="/media/compare/history">
                 <History className="h-4.5 w-4.5" />
               </Link>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>History</TooltipContent>
+          <TooltipContent>{t('arena.history')}</TooltipContent>
         </Tooltip>
         <DimensionManager />
       </div>

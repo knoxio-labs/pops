@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger, TextInput } from '@pops/ui';
@@ -14,11 +15,12 @@ interface SearchInputProps {
 }
 
 export function SearchInput({ query, mode, onQueryChange, onModeChange }: SearchInputProps) {
+  const { t } = useTranslation('media');
   return (
     <>
       <TextInput
         type="search"
-        placeholder="Search movies and TV shows…"
+        placeholder={t('search.placeholder')}
         value={query}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onQueryChange(e.target.value)}
         prefix={<Search className="h-4 w-4" />}
@@ -29,9 +31,9 @@ export function SearchInput({ query, mode, onQueryChange, onModeChange }: Search
 
       <Tabs value={mode} onValueChange={(v: string) => onModeChange(v as SearchMode)}>
         <TabsList>
-          <TabsTrigger value="both">Both</TabsTrigger>
-          <TabsTrigger value="movies">Movies</TabsTrigger>
-          <TabsTrigger value="tv">TV Shows</TabsTrigger>
+          <TabsTrigger value="both">{t('common.both')}</TabsTrigger>
+          <TabsTrigger value="movies">{t('common.movies')}</TabsTrigger>
+          <TabsTrigger value="tv">{t('common.tvShows')}</TabsTrigger>
         </TabsList>
       </Tabs>
     </>

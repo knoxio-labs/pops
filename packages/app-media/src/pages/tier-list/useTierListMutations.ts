@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -14,15 +15,17 @@ function useStaleAndNa({
   effectiveDimension: number | null;
   refetch: () => void;
 }) {
+  const { t } = useTranslation('media');
   const markStaleMutation = trpc.media.comparisons.markStale.useMutation({
     onSuccess: (
       data: { data: { staleness: number } },
       variables: { mediaType: string; mediaId: number }
     ) => {
+  const { t } = useTranslation('media');
       const movie = movies.find((m) => m.mediaId === variables.mediaId);
       const staleness = data.data.staleness;
       const timesMarked = Math.round(Math.log(staleness) / Math.log(0.5));
-      toast.success(`${movie?.title ?? 'Movie'} marked stale (×${timesMarked})`);
+      toast.success(t('staleAndExclude.markedStale', { title: movie?.title ?? t('common.movie'), times: timesMarked }));
       refetch();
     },
   });
@@ -41,13 +44,15 @@ function useStaleAndNa({
 
   const handleNA = useCallback(
     (movieId: number) => {
+  const { t } = useTranslation('media');
       if (!effectiveDimension || excludeMutation.isPending) return;
       const movie = movies.find((m) => m.mediaId === movieId);
       excludeMutation.mutate(
         { mediaType: 'movie', mediaId: movieId, dimensionId: effectiveDimension },
         {
           onSuccess: () => {
-            toast.success(`${movie?.title ?? 'Movie'} excluded from this dimension`);
+  const { t } = useTranslation('media');
+            toast.success(t('staleAndExclude.excludedFromDimension', { title: movie?.title ?? t('common.movie') }));
           },
         }
       );
@@ -59,6 +64,7 @@ function useStaleAndNa({
 }
 
 function useBlacklistFlow({ movies, refetch }: { movies: TierMovie[]; refetch: () => void }) {
+  const { t } = useTranslation('media');
   const utils = trpc.useUtils();
   const [blacklistTarget, setBlacklistTarget] = useState<{ id: number; title: string } | null>(
     null
@@ -66,8 +72,9 @@ function useBlacklistFlow({ movies, refetch }: { movies: TierMovie[]; refetch: (
 
   const blacklistMutation = trpc.media.comparisons.blacklistMovie.useMutation({
     onSuccess: (_data: unknown, variables: { mediaType: string; mediaId: number }) => {
+  const { t } = useTranslation('media');
       const movie = movies.find((m) => m.mediaId === variables.mediaId);
-      toast.success(`${movie?.title ?? 'Movie'} marked as not watched`);
+      toast.success(t('blacklist.markedAsNotWatched', { title: movie?.title ?? t('common.movie') }));
       setBlacklistTarget(null);
       refetch();
       void utils.media.comparisons.getSmartPair.invalidate();

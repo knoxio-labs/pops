@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, ChevronUp, Pencil, X } from 'lucide-react';
 
 import { Badge, Button, Input, Slider, Switch, Textarea } from '@pops/ui';
@@ -86,7 +87,7 @@ function EditView({
         }}
         rows={1}
         className="resize-none text-sm"
-        placeholder="Description"
+        placeholder={t('dimensions.descriptionPlaceholder')}
       />
       <div className="flex gap-1">
         <Button

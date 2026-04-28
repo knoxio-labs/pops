@@ -71,7 +71,7 @@ function ProfileSelects({
   return (
     <>
       <Select
-        label="Quality Profile"
+        label={t("request.qualityProfile")}
         id="quality-profile"
         value={String(qualityProfileId ?? '')}
         onChange={(e) => {
@@ -81,7 +81,7 @@ function ProfileSelects({
         options={profileList.map((p) => ({ value: String(p.id), label: p.name }))}
       />
       <Select
-        label="Root Folder"
+        label={t("request.rootFolder")}
         id="root-folder"
         value={rootFolderPath}
         onChange={(e) => {
@@ -94,7 +94,7 @@ function ProfileSelects({
         }))}
       />
       <Select
-        label="Language Profile"
+        label={t("request.languageProfile")}
         id="language-profile"
         value={String(languageProfileId ?? '')}
         onChange={(e) => {

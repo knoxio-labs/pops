@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Ban, Download, RotateCcw } from 'lucide-react';
 
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
@@ -33,7 +34,7 @@ function ExcludePopover({
         <p className="text-sm font-medium">Exclude this movie?</p>
         <input
           className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 py-1 text-sm"
-          placeholder="Reason (optional)"
+          placeholder={t('candidateQueue.reasonOptional')}
           value={excludeReason}
           onChange={(e) => setExcludeReason(e.target.value)}
         />
@@ -79,7 +80,7 @@ export function PendingActions({
         size="sm"
         onClick={() => downloadMutation.mutate({ candidateId: candidate.id })}
         disabled={downloadMutation.isPending}
-        title="Download via Radarr"
+        title={t('candidateQueue.downloadViaRadarr')}
       >
         <Download className="h-3.5 w-3.5" />
       </Button>
@@ -108,7 +109,7 @@ export function ExcludedActions({
       size="sm"
       onClick={() => unexcludeMutation.mutate({ tmdbId: candidate.tmdbId })}
       disabled={unexcludeMutation.isPending}
-      title="Restore to queue"
+      title={t('candidateQueue.restoreToQueue')}
     >
       <RotateCcw className="h-3.5 w-3.5" />
     </Button>
