@@ -1,10 +1,10 @@
-import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { settings } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure } from '../../../trpc.js';
 import { SETTINGS_KEYS } from '../../core/settings/keys.js';
 import { PlexClient } from './client.js';
@@ -20,11 +20,7 @@ function normalizeUrl(input: string): string {
   try {
     new URL(final);
   } catch {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message:
-        'Invalid URL format. Please provide a valid address (e.g., http://192.168.1.100:32400)',
-    });
+    throw trpcError('BAD_REQUEST', 'media.plex.invalidUrl');
   }
   return final;
 }
@@ -57,10 +53,7 @@ async function validateConnection(url: string, token: string | undefined): Promi
     }
   } catch (err) {
     console.error(`[Plex] Connection validation failed for ${url}:`, err);
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: `Could not connect to Plex server at ${url}. Verify the address is correct and the server is reachable.`,
-    });
+    throw trpcError('BAD_REQUEST', 'media.plex.connectionFailed', { url });
   }
 }
 
@@ -94,10 +87,12 @@ export const connectionProcedures = {
       return { data: await client.getLibraries() };
     } catch (err) {
       if (err instanceof PlexApiError) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Plex API error: ${err.message}`,
-        });
+        throw trpcError(
+          'INTERNAL_SERVER_ERROR',
+          'media.plex.apiError',
+          { detail: err.message },
+          err
+        );
       }
       throw err;
     }

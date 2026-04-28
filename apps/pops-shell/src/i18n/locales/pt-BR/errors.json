@@ -1,0 +1,61 @@
+{
+  "common.notFound": "{{resource}} '{{id}}' não encontrado(a)",
+  "common.conflict": "{{resource}} já existe",
+  "common.validationFailed": "Falha na validação",
+  "common.noFieldsToUpdate": "Nenhum campo para atualizar",
+  "common.internalError": "Ocorreu um erro inesperado",
+
+  "finance.import.sessionNotFound": "Sessão de importação não encontrada",
+  "finance.import.sessionNotReady": "A sessão de importação não está pronta para reavaliação",
+  "finance.import.sessionNotProcessResult": "O resultado da sessão de importação não é um resultado de processImport",
+  "finance.import.commitValidationFailed": "Falha na validação do commit da importação: {{detail}}",
+
+  "media.library.movieNotFoundOnTmdb": "Filme não encontrado no TMDB (ID: {{tmdbId}})",
+  "media.library.tmdbApiError": "Erro na API do TMDB: {{detail}}",
+  "media.library.tvdbApiError": "Erro na API do TheTVDB: {{detail}}",
+
+  "media.plex.notConfigured": "O Plex não está configurado. Conecte-se ao Plex nas configurações primeiro.",
+  "media.plex.invalidUrl": "Formato de URL inválido. Forneça um endereço válido (ex: http://192.168.1.100:32400)",
+  "media.plex.connectionFailed": "Não foi possível conectar ao servidor Plex em {{url}}. Verifique se o endereço está correto e o servidor está acessível.",
+  "media.plex.apiError": "Erro na API do Plex: {{detail}}",
+  "media.plex.pinFailed": "Falha ao obter PIN do Plex (HTTP {{status}})",
+  "media.plex.pinCheckFailed": "Falha ao verificar PIN do Plex (HTTP {{status}})",
+  "media.plex.pinNotFound": "PIN inválido ou expirado",
+
+  "media.arr.radarrNotConfigured": "O Radarr não está configurado",
+  "media.arr.sonarrNotConfigured": "O Sonarr não está configurado",
+  "media.arr.apiError": "Erro do {{service}}: {{detail}}",
+  "media.arr.serviceNotConfigured": "{{service}} não configurado",
+
+  "media.rotation.candidateNotFound": "Candidato não encontrado",
+  "media.rotation.candidateAlreadyProcessed": "O candidato já está com status {{status}}",
+  "media.rotation.radarrConfigMissing": "Perfil de qualidade ou pasta raiz do Radarr não configurados",
+  "media.rotation.radarrNotConfigured": "Radarr não configurado",
+  "media.rotation.sourceNotFound": "Fonte não encontrada",
+  "media.rotation.cannotDeleteManualSource": "Não é possível excluir a fonte manual",
+  "media.rotation.movieExcludedFromRotation": "Filme excluído da rotação",
+
+  "media.retrieval.queryRequired": "A consulta é obrigatória para os modos de busca semântica e híbrida",
+  "media.retrieval.filterRequired": "A busca estruturada requer pelo menos um filtro",
+  "media.retrieval.contextQueryRequired": "A consulta é obrigatória para montagem de contexto",
+
+  "inventory.reports.insuranceReportFailed": "Falha ao gerar relatório de seguro: {{detail}}",
+  "inventory.reports.valueByLocationFailed": "Falha ao carregar detalhamento de valor por localização: {{detail}}",
+  "inventory.reports.valueByTypeFailed": "Falha ao carregar detalhamento de valor por tipo: {{detail}}",
+  "inventory.paperless.notConfigured": "O Paperless-ngx não está configurado",
+  "inventory.paperless.apiError": "Erro do Paperless: {{detail}}",
+
+  "cerebrum.nudge.notFound": "Nudge '{{id}}' não encontrado",
+  "cerebrum.nudge.notPendingOrMissing": "Nudge '{{id}}' não está pendente ou não existe",
+
+  "cerebrum.template.notFound": "Template '{{name}}' não encontrado",
+
+  "cerebrum.reflex.notFound": "Reflexo \"{{name}}\" não encontrado",
+
+  "cerebrum.emit.invalidDateRange": "Intervalo de datas inválido: a data inicial deve ser anterior ou igual à final",
+  "cerebrum.emit.queryRequiredForReport": "A consulta é obrigatória para o modo relatório",
+  "cerebrum.emit.dateRangeRequiredForSummary": "O intervalo de datas é obrigatório para o modo resumo",
+
+  "core.corrections.revisionFailed": "Falha ao revisar ChangeSet: {{detail}}",
+  "core.corrections.revisionFailedGeneric": "Falha ao revisar ChangeSet"
+}

@@ -1,10 +1,10 @@
-import { TRPCError } from '@trpc/server';
 import { count, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { rotationCandidates, rotationSources } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure } from '../../../trpc.js';
 import { fetchPlexFriends } from '../plex/friends.js';
 import { getPlexToken } from '../plex/service.js';
@@ -115,7 +115,7 @@ export const rotationSourcesProcedures = {
         updates.syncIntervalHours = input.syncIntervalHours;
 
       if (Object.keys(updates).length === 0) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No fields to update' });
+        throw trpcError('BAD_REQUEST', 'common.noFieldsToUpdate');
       }
 
       const result = db
@@ -140,10 +140,10 @@ export const rotationSourcesProcedures = {
         .get();
 
       if (!source) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Source not found' });
+        throw trpcError('NOT_FOUND', 'media.rotation.sourceNotFound');
       }
       if (source.type === 'manual') {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot delete the manual source' });
+        throw trpcError('FORBIDDEN', 'media.rotation.cannotDeleteManualSource');
       }
 
       db.transaction((tx) => {

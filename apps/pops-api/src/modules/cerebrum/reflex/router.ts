@@ -3,9 +3,9 @@
  *
  * Exposes management endpoints: list, get, test, enable, disable, history.
  */
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { getReflexService } from './instance.js';
 
@@ -22,10 +22,7 @@ export const reflexRouter = router({
     const service = getReflexService();
     const result = service.getWithHistory(input.name);
     if (!result) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `Reflex "${input.name}" not found`,
-      });
+      throw trpcError('NOT_FOUND', 'cerebrum.reflex.notFound', { name: input.name });
     }
     return result;
   }),
@@ -34,10 +31,7 @@ export const reflexRouter = router({
     const service = getReflexService();
     const result = service.testReflex(input.name);
     if (!result) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `Reflex "${input.name}" not found`,
-      });
+      throw trpcError('NOT_FOUND', 'cerebrum.reflex.notFound', { name: input.name });
     }
     return { result };
   }),
@@ -46,10 +40,7 @@ export const reflexRouter = router({
     const service = getReflexService();
     const found = service.getByName(input.name);
     if (!found) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `Reflex "${input.name}" not found`,
-      });
+      throw trpcError('NOT_FOUND', 'cerebrum.reflex.notFound', { name: input.name });
     }
     const success = service.enableReflex(input.name);
     return { success };
@@ -59,10 +50,7 @@ export const reflexRouter = router({
     const service = getReflexService();
     const found = service.getByName(input.name);
     if (!found) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `Reflex "${input.name}" not found`,
-      });
+      throw trpcError('NOT_FOUND', 'cerebrum.reflex.notFound', { name: input.name });
     }
     const success = service.disableReflex(input.name);
     return { success };

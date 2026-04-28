@@ -1,5 +1,4 @@
-import { TRPCError } from '@trpc/server';
-
+import { trpcError } from '../../../shared/trpc-error.js';
 import * as plexService from './service.js';
 
 import type { Job } from 'bullmq';
@@ -39,10 +38,7 @@ export interface SyncJob {
 export function requirePlexClient(): PlexClient {
   const client = plexService.getPlexClient();
   if (!client) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message: 'Plex is not configured. Connect to Plex in settings first.',
-    });
+    throw trpcError('PRECONDITION_FAILED', 'media.plex.notConfigured');
   }
   return client;
 }

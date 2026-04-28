@@ -1,10 +1,10 @@
-import { TRPCError } from '@trpc/server';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { settings } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure } from '../../../trpc.js';
 import { SETTINGS_KEYS } from '../../core/settings/keys.js';
 import * as plexService from './service.js';
@@ -43,10 +43,11 @@ export const authProcedures = {
       },
     });
     if (!res.ok) {
-      throw new TRPCError({
-        code: res.status === 429 ? 'TOO_MANY_REQUESTS' : 'INTERNAL_SERVER_ERROR',
-        message: `Failed to get Plex PIN (HTTP ${res.status})`,
-      });
+      throw trpcError(
+        res.status === 429 ? 'TOO_MANY_REQUESTS' : 'INTERNAL_SERVER_ERROR',
+        'media.plex.pinFailed',
+        { status: String(res.status) }
+      );
     }
     const data = (await res.json()) as { id: number; code: string };
     return { data: { id: data.id, code: data.code, clientId } };
@@ -61,11 +62,10 @@ export const authProcedures = {
       });
       if (!res.ok) {
         if (res.status === 404) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired PIN ID' });
+          throw trpcError('NOT_FOUND', 'media.plex.pinNotFound');
         }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to check Plex PIN (HTTP ${res.status})`,
+        throw trpcError('INTERNAL_SERVER_ERROR', 'media.plex.pinCheckFailed', {
+          status: String(res.status),
         });
       }
 

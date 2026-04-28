@@ -1,9 +1,9 @@
-import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import { movies, rotationCandidates, settings } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { getRadarrClient } from '../arr/service.js';
 import { addMovie as addMovieToLibrary } from '../library/service.js';
 import { getImageCache, getTmdbClient } from '../tmdb/index.js';
@@ -21,12 +21,11 @@ function loadCandidate(candidateId: number): typeof rotationCandidates.$inferSel
     .where(eq(rotationCandidates.id, candidateId))
     .get();
   if (!candidate) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Candidate not found' });
+    throw trpcError('NOT_FOUND', 'media.rotation.candidateNotFound');
   }
   if (candidate.status !== 'pending') {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: `Candidate is already ${candidate.status}`,
+    throw trpcError('BAD_REQUEST', 'media.rotation.candidateAlreadyProcessed', {
+      status: candidate.status,
     });
   }
   return candidate;
@@ -45,10 +44,7 @@ function loadRadarrConfig(): RadarrConfig {
     .where(eq(settings.key, 'rotation_root_folder_path'))
     .get()?.value;
   if (!qualityProfileId || !rootFolderPath) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message: 'Radarr quality profile or root folder not configured',
-    });
+    throw trpcError('PRECONDITION_FAILED', 'media.rotation.radarrConfigMissing');
   }
   return { qualityProfileId: Number(qualityProfileId), rootFolderPath };
 }
@@ -61,7 +57,7 @@ export async function downloadCandidateImpl(
 
   const client = getRadarrClient();
   if (!client) {
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Radarr not configured' });
+    throw trpcError('PRECONDITION_FAILED', 'media.rotation.radarrNotConfigured');
   }
 
   const config = loadRadarrConfig();

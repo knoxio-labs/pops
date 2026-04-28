@@ -5,6 +5,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { NotFoundError } from '../../../shared/errors.js';
+import { trpcError } from '../../../shared/trpc-error.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import { toMovie } from '../movies/types.js';
 import { getPlexClient } from '../plex/service.js';
@@ -78,15 +79,18 @@ export const libraryRouter = router({
       } catch (err) {
         if (err instanceof TmdbApiError) {
           if (err.status === 404) {
-            throw new TRPCError({
-              code: 'NOT_FOUND',
-              message: `Movie not found on TMDB (ID: ${input.tmdbId})`,
+            throw trpcError('NOT_FOUND', 'media.library.movieNotFoundOnTmdb', {
+              tmdbId: String(input.tmdbId),
             });
           }
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `TMDB API error: ${err.message}`,
-          });
+          throw trpcError(
+            'INTERNAL_SERVER_ERROR',
+            'media.library.tmdbApiError',
+            {
+              detail: err.message,
+            },
+            err
+          );
         }
         throw err;
       }
@@ -112,10 +116,14 @@ export const libraryRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
       }
       if (err instanceof TmdbApiError) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `TMDB API error: ${err.message}`,
-        });
+        throw trpcError(
+          'INTERNAL_SERVER_ERROR',
+          'media.library.tmdbApiError',
+          {
+            detail: err.message,
+          },
+          err
+        );
       }
       throw err;
     }
@@ -139,10 +147,14 @@ export const libraryRouter = router({
         };
       } catch (err) {
         if (err instanceof TvdbApiError) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `TheTVDB API error: ${err.message}`,
-          });
+          throw trpcError(
+            'INTERNAL_SERVER_ERROR',
+            'media.library.tvdbApiError',
+            {
+              detail: err.message,
+            },
+            err
+          );
         }
         throw err;
       }
@@ -187,10 +199,14 @@ export const libraryRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
         }
         if (err instanceof TvdbApiError) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `TheTVDB API error: ${err.message}`,
-          });
+          throw trpcError(
+            'INTERNAL_SERVER_ERROR',
+            'media.library.tvdbApiError',
+            {
+              detail: err.message,
+            },
+            err
+          );
         }
         throw err;
       }
