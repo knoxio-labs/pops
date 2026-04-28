@@ -16,7 +16,7 @@ export interface CorrectionMatchResult {
 export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMatchResult {
   return {
     correction,
-    status: correction.confidence >= getHighConfidenceThreshold() ? 'matched' : 'uncertain',
+    status: correction.confidence >= HIGH_CONFIDENCE_THRESHOLD ? 'matched' : 'uncertain',
   };
 }
 
