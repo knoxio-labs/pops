@@ -8,8 +8,8 @@ As a user, I need per-adapter ingestion filter rules so that I can control which
 
 ## Acceptance Criteria
 
-- [ ] Each adapter can have zero or more filter rules stored in the `plexus_filters` table, with fields: `filter_type` (`include` or `exclude`), `field` (adapter-specific field name to match against), `pattern` (regex pattern), and `enabled` (boolean)
-- [ ] Filters are also definable in `plexus.toml` under each adapter's section as an array of filter objects — these are synced to the database on load:
+- [x] Each adapter can have zero or more filter rules stored in the `plexus_filters` table, with fields: `filter_type` (`include` or `exclude`), `field` (adapter-specific field name to match against), `pattern` (regex pattern), and `enabled` (boolean)
+- [x] Filters are also definable in `plexus.toml` under each adapter's section as an array of filter objects — these are synced to the database on load:
   ```toml
   [adapters.email]
   # ...
@@ -22,12 +22,12 @@ As a user, I need per-adapter ingestion filter rules so that I can control which
   field = "from"
   pattern = ".*@company\\.com$"
   ```
-- [ ] Filter evaluation order: if both include and exclude filters exist, include filters are evaluated first (only content matching at least one include filter passes), then exclude filters remove matches from the included set. If only exclude filters exist, all content passes except excluded matches. If only include filters exist, only matching content passes
-- [ ] The `field` value is adapter-specific — email adapters filter on `subject`, `from`, `to`; GitHub adapters filter on `event_type`, `repo`, `author`; calendar adapters filter on `calendar_name`, `category`. Each adapter documents its filterable fields
-- [ ] Patterns support regex syntax (anchored — full match unless `.*` is used). Invalid regex patterns are caught at filter load time and the filter is disabled with a warning log
-- [ ] Filter evaluation happens in the plugin system before content is sent to the ingestion pipeline — filtered content is counted (reflected in `filtered` count returned by sync) but not ingested
-- [ ] `cerebrum.plexus.filters.set` replaces all filters for an adapter atomically — this is a full replace, not a merge, to simplify conflict resolution
-- [ ] Filters can be toggled individually via the `enabled` field without removing them — useful for temporarily disabling a filter during debugging
+- [x] Filter evaluation order: if both include and exclude filters exist, include filters are evaluated first (only content matching at least one include filter passes), then exclude filters remove matches from the included set. If only exclude filters exist, all content passes except excluded matches. If only include filters exist, only matching content passes
+- [x] The `field` value is adapter-specific — email adapters filter on `subject`, `from`, `to`; GitHub adapters filter on `event_type`, `repo`, `author`; calendar adapters filter on `calendar_name`, `category`. Each adapter documents its filterable fields
+- [x] Patterns support regex syntax (anchored — full match unless `.*` is used). Invalid regex patterns are caught at filter load time and the filter is disabled with a warning log
+- [x] Filter evaluation happens in the plugin system before content is sent to the ingestion pipeline — filtered content is counted (reflected in `filtered` count returned by sync) but not ingested
+- [x] `cerebrum.plexus.filters.set` replaces all filters for an adapter atomically — this is a full replace, not a merge, to simplify conflict resolution
+- [x] Filters can be toggled individually via the `enabled` field without removing them — useful for temporarily disabling a filter during debugging
 
 ## Notes
 
