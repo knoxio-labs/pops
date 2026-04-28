@@ -281,6 +281,13 @@
       "when": 1777334137968,
       "tag": "0039_dry_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1714200000000,
+      "tag": "0040_bumpy_namorita",
+      "breakpoints": true
     }
   ]
 }

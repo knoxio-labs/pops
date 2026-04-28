@@ -17,6 +17,7 @@ export { dismissedDiscover } from './dismissed-discover.js';
 export { conversations, conversationContext, messages } from './ego.js';
 export { engramIndex, engramLinks, engramScopes, engramTags } from './engrams.js';
 export { entities } from './entities.js';
+export { gliaActions, gliaTrustState } from './glia.js';
 export { environments } from './environments.js';
 export { episodes } from './episodes.js';
 export { homeInventory } from './inventory.js';

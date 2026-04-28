@@ -1,7 +1,7 @@
 # PRD-086: Trust Graduation
 
 > Epic: [04 — Glia](../../epics/04-glia.md)
-> Status: Not started
+> Status: Partial
 
 ## Overview
 
@@ -85,12 +85,12 @@ Implement the three-phase trust graduation system from [ADR-021](../../../archit
 
 ## User Stories
 
-| #   | Story                                                 | Summary                                                                              | Status      | Parallelisable   |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------- | ---------------- |
-| 01  | [us-01-proposal-queue](us-01-proposal-queue.md)       | Review queue UI and Moltbot notifications for approve/reject/modify                  | Not started | Yes              |
-| 02  | [us-02-approval-tracking](us-02-approval-tracking.md) | glia_actions SQLite table and CRUD operations for tracking every action              | Not started | Yes              |
-| 03  | [us-03-graduation-logic](us-03-graduation-logic.md)   | Per-action-type state machine with threshold-based graduation and automatic demotion | Not started | Blocked by us-02 |
-| 04  | [us-04-audit-trail](us-04-audit-trail.md)             | Immutable action log, revert operations, digest reports                              | Not started | Blocked by us-02 |
+| #   | Story                                                 | Summary                                                                              | Status  | Parallelisable   |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ | ------- | ---------------- |
+| 01  | [us-01-proposal-queue](us-01-proposal-queue.md)       | Review queue UI and Moltbot notifications for approve/reject/modify                  | Partial | Yes              |
+| 02  | [us-02-approval-tracking](us-02-approval-tracking.md) | glia_actions SQLite table and CRUD operations for tracking every action              | Done    | Yes              |
+| 03  | [us-03-graduation-logic](us-03-graduation-logic.md)   | Per-action-type state machine with threshold-based graduation and automatic demotion | Partial | Blocked by us-02 |
+| 04  | [us-04-audit-trail](us-04-audit-trail.md)             | Immutable action log, revert operations, digest reports                              | Partial | Blocked by us-02 |
 
 US-01 and US-02 can be built in parallel. US-03 and US-04 both depend on the `glia_actions` table from US-02.
 
