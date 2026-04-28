@@ -196,4 +196,3 @@ export const rotationManifest: SettingsManifest = {
     },
   ],
 };
-

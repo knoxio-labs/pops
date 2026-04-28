@@ -36,8 +36,7 @@ const getSessionTargetMin = (): number =>
   resolveNumber(SETTINGS_KEYS.DISCOVERY_SESSION_TARGET_MIN, 10);
 const getSessionTargetMax = (): number =>
   resolveNumber(SETTINGS_KEYS.DISCOVERY_SESSION_TARGET_MAX, 15);
-const getMaxSeedShelves = (): number =>
-  resolveNumber(SETTINGS_KEYS.DISCOVERY_MAX_SEED_SHELVES, 3);
+const getMaxSeedShelves = (): number => resolveNumber(SETTINGS_KEYS.DISCOVERY_MAX_SEED_SHELVES, 3);
 const getMaxGenreShelves = (): number =>
   resolveNumber(SETTINGS_KEYS.DISCOVERY_MAX_GENRE_SHELVES, 2);
 const getMaxLocalPerWindow = (): number =>

@@ -1,3 +1,5 @@
+import { getSettingOrNull } from './service.js';
+
 /**
  * Resolve a settings value at runtime — returns the DB-stored value if present,
  * otherwise falls back to the provided default. The lookup is synchronous
@@ -10,8 +12,6 @@
  * modules using them.
  */
 import type { SettingsKey } from '@pops/types';
-
-import { getSettingOrNull } from './service.js';
 
 /** Read a string setting, falling back to `defaultValue` if not stored. */
 export function resolveString(key: SettingsKey, defaultValue: string): string {

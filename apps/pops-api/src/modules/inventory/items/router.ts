@@ -41,8 +41,7 @@ export const inventoryRouter = router({
       })
     )
     .query(({ input }) => {
-      const limit =
-        input.limit ?? resolveNumber(SETTINGS_KEYS.INVENTORY_ITEMS_DEFAULT_LIMIT, 50);
+      const limit = input.limit ?? resolveNumber(SETTINGS_KEYS.INVENTORY_ITEMS_DEFAULT_LIMIT, 50);
       const offset = input.offset ?? DEFAULT_OFFSET;
 
       const parseTriBool = (value: string | undefined): boolean | undefined => {

@@ -23,8 +23,7 @@ const DEFAULT_OFFSET = 0;
 export const wishlistRouter = router({
   /** List wish list items with optional search/priority filters and pagination. */
   list: protectedProcedure.input(WishListQuerySchema).query(({ input }) => {
-    const limit =
-      input.limit ?? resolveNumber(SETTINGS_KEYS.FINANCE_WISHLIST_DEFAULT_LIMIT, 50);
+    const limit = input.limit ?? resolveNumber(SETTINGS_KEYS.FINANCE_WISHLIST_DEFAULT_LIMIT, 50);
     const offset = input.offset ?? DEFAULT_OFFSET;
 
     const { rows, total } = service.listWishListItems(input.search, input.priority, limit, offset);

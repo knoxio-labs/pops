@@ -1,5 +1,5 @@
 import {
-  HIGH_CONFIDENCE_THRESHOLD,
+  getHighConfidenceThreshold,
   normalizeDescription,
 } from '@pops/api/modules/core/corrections/types';
 
@@ -31,7 +31,7 @@ interface LocalMatchResult {
 function classifyCorrection(correction: Correction): LocalMatchResult {
   return {
     correction,
-    status: correction.confidence >= HIGH_CONFIDENCE_THRESHOLD ? 'matched' : 'uncertain',
+    status: correction.confidence >= getHighConfidenceThreshold() ? 'matched' : 'uncertain',
   };
 }
 

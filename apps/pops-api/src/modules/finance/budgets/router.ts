@@ -35,8 +35,7 @@ export const budgetsRouter = router({
     .input(BudgetQuerySchema)
     .output(z.object({ data: z.array(BudgetSchema), pagination: PaginationMetaSchema }))
     .query(({ input }) => {
-      const limit =
-        input.limit ?? resolveNumber(SETTINGS_KEYS.FINANCE_BUDGETS_DEFAULT_LIMIT, 50);
+      const limit = input.limit ?? resolveNumber(SETTINGS_KEYS.FINANCE_BUDGETS_DEFAULT_LIMIT, 50);
       const offset = input.offset ?? DEFAULT_OFFSET;
 
       let activeFilter: boolean | undefined;

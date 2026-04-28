@@ -6,8 +6,8 @@
  */
 import { SETTINGS_KEYS } from '@pops/types';
 
-import { resolveNumber } from '../../core/settings/index.js';
 import { TokenBucketRateLimiter } from '../../../shared/rate-limiter.js';
+import { resolveNumber } from '../../core/settings/index.js';
 
 const DEFAULT_CAPACITY = 20;
 const DEFAULT_REFILL_RATE = 2;

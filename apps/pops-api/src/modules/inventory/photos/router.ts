@@ -106,8 +106,7 @@ export const photosRouter = router({
 
   /** List photos for an item, ordered by sortOrder. */
   listForItem: protectedProcedure.input(PhotoQuerySchema).query(({ input }) => {
-    const limit =
-      input.limit ?? resolveNumber(SETTINGS_KEYS.INVENTORY_PHOTOS_DEFAULT_LIMIT, 50);
+    const limit = input.limit ?? resolveNumber(SETTINGS_KEYS.INVENTORY_PHOTOS_DEFAULT_LIMIT, 50);
     const offset = input.offset ?? DEFAULT_OFFSET;
 
     const { rows, total } = service.listPhotosForItem(input.itemId, limit, offset);

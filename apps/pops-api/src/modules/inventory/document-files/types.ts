@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-import type { ItemUploadedFileRow } from '@pops/db-types';
-
 import { SETTINGS_KEYS } from '@pops/types';
 
 import { resolveNumber } from '../../core/settings/index.js';
+
+import type { ItemUploadedFileRow } from '@pops/db-types';
 
 export type { ItemUploadedFileRow };
 

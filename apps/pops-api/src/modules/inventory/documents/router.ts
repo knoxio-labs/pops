@@ -57,8 +57,7 @@ export const documentsRouter = router({
 
   /** List all documents linked to an item. */
   listForItem: protectedProcedure.input(DocumentQuerySchema).query(({ input }) => {
-    const limit =
-      input.limit ?? resolveNumber(SETTINGS_KEYS.INVENTORY_DOCUMENTS_DEFAULT_LIMIT, 50);
+    const limit = input.limit ?? resolveNumber(SETTINGS_KEYS.INVENTORY_DOCUMENTS_DEFAULT_LIMIT, 50);
     const offset = input.offset ?? DEFAULT_OFFSET;
 
     const { rows, total } = service.listDocumentsForItem(input.itemId, limit, offset);
