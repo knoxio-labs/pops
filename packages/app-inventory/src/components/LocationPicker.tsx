@@ -149,6 +149,27 @@ function LocationList({
   );
 }
 
+function usePickerCallbacks(
+  onChange: LocationPickerProps['onChange'],
+  setOpen: (v: boolean) => void,
+  setSearch: (v: string) => void
+) {
+  const handleSelect = useCallback(
+    (id: string) => {
+      onChange?.(id);
+      setOpen(false);
+      setSearch('');
+    },
+    [onChange, setOpen, setSearch]
+  );
+  const handleClear = useCallback(() => {
+    onChange?.(null);
+    setOpen(false);
+    setSearch('');
+  }, [onChange, setOpen, setSearch]);
+  return { handleSelect, handleClear };
+}
+
 export function LocationPicker({
   value,
   onChange,
@@ -163,20 +184,7 @@ export function LocationPicker({
   const [open, setOpen] = useState(false);
   const { search, setSearch, selectedPath, visibleIds, effectiveExpanded, handleToggle } =
     useLocationPickerState(value, locations);
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      onChange?.(id);
-      setOpen(false);
-      setSearch('');
-    },
-    [onChange, setSearch]
-  );
-  const handleClear = useCallback(() => {
-    onChange?.(null);
-    setOpen(false);
-    setSearch('');
-  }, [onChange, setSearch]);
+  const { handleSelect, handleClear } = usePickerCallbacks(onChange, setOpen, setSearch);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
