@@ -642,6 +642,38 @@ export function createTestDb(): Database {
     CREATE UNIQUE INDEX IF NOT EXISTS uq_engram_links_pair ON engram_links(source_id, target_id);
     CREATE INDEX IF NOT EXISTS idx_engram_links_target ON engram_links(target_id);
 
+    CREATE TABLE IF NOT EXISTS glia_actions (
+      id            TEXT PRIMARY KEY NOT NULL,
+      action_type   TEXT NOT NULL,
+      affected_ids  TEXT NOT NULL,
+      rationale     TEXT NOT NULL,
+      payload       TEXT,
+      phase         TEXT NOT NULL,
+      status        TEXT NOT NULL,
+      user_decision TEXT,
+      user_note     TEXT,
+      executed_at   TEXT,
+      decided_at    TEXT,
+      reverted_at   TEXT,
+      created_at    TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_glia_actions_action_type ON glia_actions(action_type);
+    CREATE INDEX IF NOT EXISTS idx_glia_actions_status ON glia_actions(status);
+    CREATE INDEX IF NOT EXISTS idx_glia_actions_phase ON glia_actions(phase);
+    CREATE INDEX IF NOT EXISTS idx_glia_actions_created_at ON glia_actions(created_at);
+
+    CREATE TABLE IF NOT EXISTS glia_trust_state (
+      action_type      TEXT PRIMARY KEY NOT NULL,
+      current_phase    TEXT NOT NULL,
+      approved_count   INTEGER NOT NULL DEFAULT 0,
+      rejected_count   INTEGER NOT NULL DEFAULT 0,
+      reverted_count   INTEGER NOT NULL DEFAULT 0,
+      autonomous_since TEXT,
+      last_revert_at   TEXT,
+      graduated_at     TEXT,
+      updated_at       TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS embeddings (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       source_type   TEXT NOT NULL,

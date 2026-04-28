@@ -8,14 +8,14 @@ As the Cerebrum system, I need a per-action-type state machine that tracks appro
 
 ## Acceptance Criteria
 
-- [ ] A `GliaTrustMachine` evaluates phase transitions for each action type after every `decideAction` or `revertAction` call — transitions are checked eagerly, not on a schedule
-- [ ] `propose → act_report` transition fires when `approved_count >= 20` AND the rejection rate (`rejected_count / (approved_count + rejected_count)`) is below 10% — both thresholds are configurable in `glia.toml` under `[trust.graduation]`
-- [ ] `act_report → silent` transition fires when the action type has been in `act_report` phase for at least 60 days (configurable) AND `reverted_count` is 0 during that period
-- [ ] Automatic demotion: any action type is reset to `propose` phase when 2 or more reverts occur within any rolling 7-day window — the window is calculated from `glia_actions` rows with `status: reverted` and `reverted_at` within the last 7 days
-- [ ] On demotion, `approved_count`, `rejected_count`, and `reverted_count` are reset to 0, `autonomous_since` is cleared, and `graduated_at` is set to the demotion timestamp with a log entry explaining the demotion trigger
-- [ ] On graduation, `graduated_at` is set to the transition timestamp, and for `propose → act_report` the `autonomous_since` field is set — a structured log entry records the transition with the action type, old phase, new phase, and triggering stats
+- [x] A `GliaTrustMachine` evaluates phase transitions for each action type after every `decideAction` or `revertAction` call — transitions are checked eagerly, not on a schedule
+- [x] `propose → act_report` transition fires when `approved_count >= 20` AND the rejection rate (`rejected_count / (approved_count + rejected_count)`) is below 10% — both thresholds are configurable in `glia.toml` under `[trust.graduation]`
+- [x] `act_report → silent` transition fires when the action type has been in `act_report` phase for at least 60 days (configurable) AND `reverted_count` is 0 during that period
+- [x] Automatic demotion: any action type is reset to `propose` phase when 2 or more reverts occur within any rolling 7-day window — the window is calculated from `glia_actions` rows with `status: reverted` and `reverted_at` within the last 7 days
+- [x] On demotion, `approved_count`, `rejected_count`, and `reverted_count` are reset to 0, `autonomous_since` is cleared, and `graduated_at` is set to the demotion timestamp with a log entry explaining the demotion trigger
+- [x] On graduation, `graduated_at` is set to the transition timestamp, and for `propose → act_report` the `autonomous_since` field is set — a structured log entry records the transition with the action type, old phase, new phase, and triggering stats
 - [ ] Graduation thresholds are read from `engrams/.config/glia.toml` at evaluation time (not cached at startup) so that user edits take effect on the next evaluation without restart
-- [ ] Lowering graduation thresholds does not cause retroactive graduation — the transition only fires when triggered by a new user decision or revert event
+- [x] Lowering graduation thresholds does not cause retroactive graduation — the transition only fires when triggered by a new user decision or revert event
 
 ## Notes
 
