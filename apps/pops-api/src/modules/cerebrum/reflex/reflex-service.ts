@@ -4,21 +4,28 @@
  * Loads and watches `reflexes.toml`, maintains a registry, matches
  * events/thresholds/schedules, and logs execution history.
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { watch as chokidarWatch, type FSWatcher } from 'chokidar';
 import { eq } from 'drizzle-orm';
 
 import { reflexExecutions } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
-import { toReflexExecution, updateEnabledInToml, buildTestTriggerData } from './reflex-helpers.js';
-import { parseReflexesToml } from './reflex-parser.js';
+import { toReflexExecution, buildTestTriggerData } from './reflex-helpers.js';
+import {
+  loadFromDisk,
+  startWatcher,
+  setReflexEnabled,
+  logExecution,
+  completeExecution,
+} from './reflex-io.js';
 import { enrichWithStatus, getReflexHistory, queryExecutionHistory } from './reflex-queries.js';
 import { matchesEventTrigger, resolveTemplateVariables } from './triggers/event-trigger.js';
 import { evaluateThreshold, createInitialThresholdState } from './triggers/threshold-trigger.js';
 
+import type { FSWatcher } from 'chokidar';
+
+import type { ReflexState } from './reflex-io.js';
 import type { ParseError } from './reflex-parser.js';
 import type { ThresholdState } from './triggers/threshold-trigger.js';
 import type {
@@ -28,24 +35,26 @@ import type {
   EngramEventPayload,
   TriggerType,
   ExecutionStatus,
-  ActionType,
 } from './types.js';
 
 export class ReflexService {
-  private reflexes: ReflexDefinition[] = [];
-  private parseErrors: ParseError[] = [];
   private watcher: FSWatcher | null = null;
   private readonly configPath: string;
   private readonly thresholdStates = new Map<string, ThresholdState>();
   private readonly runningReflexes = new Set<string>();
+  private readonly state: ReflexState;
 
   constructor(engramRoot: string) {
     this.configPath = join(engramRoot, '.config', 'reflexes.toml');
+    this.state = { reflexes: [], parseErrors: [], thresholdStates: this.thresholdStates };
   }
 
   start(): void {
-    this.loadFromDisk();
-    this.startWatcher();
+    loadFromDisk(this.configPath, this.state);
+    if (!this.watcher) {
+      this.watcher =
+        startWatcher(this.configPath, () => loadFromDisk(this.configPath, this.state)) ?? null;
+    }
   }
 
   async stop(): Promise<void> {
@@ -53,26 +62,26 @@ export class ReflexService {
       await this.watcher.close();
       this.watcher = null;
     }
-    this.reflexes = [];
-    this.parseErrors = [];
+    this.state.reflexes = [];
+    this.state.parseErrors = [];
     this.thresholdStates.clear();
     this.runningReflexes.clear();
   }
 
   getAll(): ReflexDefinition[] {
-    return this.reflexes;
+    return this.state.reflexes;
   }
   getByName(name: string): ReflexDefinition | undefined {
-    return this.reflexes.find((r) => r.name === name);
+    return this.state.reflexes.find((r) => r.name === name);
   }
   getEnabled(): ReflexDefinition[] {
-    return this.reflexes.filter((r) => r.enabled);
+    return this.state.reflexes.filter((r) => r.enabled);
   }
   getByTriggerType(type: TriggerType): ReflexDefinition[] {
-    return this.reflexes.filter((r) => r.trigger.type === type);
+    return this.state.reflexes.filter((r) => r.trigger.type === type);
   }
   getParseErrors(): ParseError[] {
-    return this.parseErrors;
+    return this.state.parseErrors;
   }
 
   processEvent(payload: EngramEventPayload): string[] {
@@ -82,7 +91,7 @@ export class ReflexService {
         const resolvedTarget = reflex.action.target
           ? resolveTemplateVariables(reflex.action.target, payload)
           : undefined;
-        return this.logExecution({
+        return logExecution({
           reflexName: reflex.name,
           triggerType: 'event',
           triggerData: {
@@ -107,12 +116,12 @@ export class ReflexService {
       if (reflex.trigger.type !== 'threshold') continue;
       const val = metrics[reflex.trigger.metric];
       if (val === undefined) continue;
-      const state = this.thresholdStates.get(reflex.name) ?? createInitialThresholdState();
-      const { shouldFire, newState } = evaluateThreshold(reflex, val, state);
+      const prev = this.thresholdStates.get(reflex.name) ?? createInitialThresholdState();
+      const { shouldFire, newState } = evaluateThreshold(reflex, val, prev);
       this.thresholdStates.set(reflex.name, newState);
       if (shouldFire) {
         ids.push(
-          this.logExecution({
+          logExecution({
             reflexName: reflex.name,
             triggerType: 'threshold',
             triggerData: {
@@ -139,7 +148,7 @@ export class ReflexService {
       return null;
     }
     this.runningReflexes.add(reflexName);
-    return this.logExecution({
+    return logExecution({
       reflexName: reflex.name,
       triggerType: 'schedule',
       triggerData: { cron: reflex.trigger.cron, firedAt: new Date().toISOString() },
@@ -155,25 +164,12 @@ export class ReflexService {
     status: ExecutionStatus,
     result: Record<string, unknown> | null
   ): void {
-    const db = getDrizzle();
-    db.update(reflexExecutions)
-      .set({
-        status,
-        result: result ? JSON.stringify(result) : null,
-        completedAt: new Date().toISOString(),
-      })
-      .where(eq(reflexExecutions.id, executionId))
-      .run();
-    const row = db
-      .select({ reflexName: reflexExecutions.reflexName })
-      .from(reflexExecutions)
-      .where(eq(reflexExecutions.id, executionId))
-      .get();
-    if (row) this.runningReflexes.delete(row.reflexName);
+    const name = completeExecution(executionId, status, result);
+    if (name) this.runningReflexes.delete(name);
   }
 
   listWithStatus(timezone?: string): ReflexWithStatus[] {
-    return this.reflexes.map((r) => enrichWithStatus(r, timezone));
+    return this.state.reflexes.map((r) => enrichWithStatus(r, timezone));
   }
 
   getWithHistory(
@@ -187,7 +183,7 @@ export class ReflexService {
   testReflex(name: string): ReflexExecution | null {
     const reflex = this.getByName(name);
     if (!reflex) return null;
-    const id = this.logExecution({
+    const id = logExecution({
       reflexName: reflex.name,
       triggerType: reflex.trigger.type,
       triggerData: buildTestTriggerData(reflex),
@@ -205,10 +201,10 @@ export class ReflexService {
   }
 
   enableReflex(name: string): boolean {
-    return this.setReflexEnabled(name, true);
+    return setReflexEnabled(this.configPath, this.state, name, true);
   }
   disableReflex(name: string): boolean {
-    return this.setReflexEnabled(name, false);
+    return setReflexEnabled(this.configPath, this.state, name, false);
   }
 
   getHistory(opts: {
@@ -219,95 +215,5 @@ export class ReflexService {
     offset?: number;
   }): { executions: ReflexExecution[]; total: number } {
     return queryExecutionHistory(opts);
-  }
-
-  private loadFromDisk(): void {
-    if (!existsSync(this.configPath)) {
-      console.warn(`[reflex] reflexes.toml not found at ${this.configPath}`);
-      this.reflexes = [];
-      this.parseErrors = [];
-      return;
-    }
-    let text: string;
-    try {
-      text = readFileSync(this.configPath, 'utf8');
-    } catch (err) {
-      console.error(`[reflex] Failed to read: ${(err as Error).message}`);
-      this.reflexes = [];
-      this.parseErrors = [{ reflexName: null, message: (err as Error).message }];
-      return;
-    }
-    const result = parseReflexesToml(text);
-    this.reflexes = result.reflexes;
-    this.parseErrors = result.errors;
-    for (const e of result.errors)
-      console.warn(`[reflex] ${e.reflexName ? `"${e.reflexName}": ` : ''}${e.message}`);
-    for (const key of this.thresholdStates.keys()) {
-      if (!this.reflexes.some((r) => r.name === key)) this.thresholdStates.delete(key);
-    }
-    console.warn(`[reflex] Loaded ${this.reflexes.length} reflex(es)`);
-  }
-
-  private startWatcher(): void {
-    if (this.watcher) return;
-    try {
-      this.watcher = chokidarWatch(this.configPath, {
-        persistent: true,
-        ignoreInitial: true,
-        awaitWriteFinish: { stabilityThreshold: 500, pollInterval: 100 },
-      });
-      this.watcher.on('change', () => {
-        console.warn('[reflex] reflexes.toml changed — reloading');
-        this.loadFromDisk();
-      });
-      this.watcher.on('error', (err: unknown) => {
-        console.error(`[reflex] Watcher error: ${(err as Error).message}`);
-      });
-    } catch (err) {
-      console.error(`[reflex] Watcher start failed: ${(err as Error).message}`);
-    }
-  }
-
-  private setReflexEnabled(name: string, enabled: boolean): boolean {
-    if (!this.getByName(name)) return false;
-    try {
-      const updated = updateEnabledInToml(readFileSync(this.configPath, 'utf8'), name, enabled);
-      if (!updated) return false;
-      writeFileSync(this.configPath, updated, 'utf8');
-      this.loadFromDisk();
-      return true;
-    } catch (err) {
-      console.error(`[reflex] TOML update failed: ${(err as Error).message}`);
-      return false;
-    }
-  }
-
-  private logExecution(entry: {
-    reflexName: string;
-    triggerType: TriggerType;
-    triggerData: Record<string, unknown> | null;
-    actionType: ActionType;
-    actionVerb: string;
-    status: ExecutionStatus;
-    result: Record<string, unknown> | null;
-  }): string {
-    const now = new Date().toISOString();
-    const id = `rex_${entry.reflexName}_${Date.now()}`;
-    getDrizzle()
-      .insert(reflexExecutions)
-      .values({
-        id,
-        reflexName: entry.reflexName,
-        triggerType: entry.triggerType,
-        triggerData: entry.triggerData ? JSON.stringify(entry.triggerData) : null,
-        actionType: entry.actionType,
-        actionVerb: entry.actionVerb,
-        status: entry.status,
-        result: entry.result ? JSON.stringify(entry.result) : null,
-        triggeredAt: now,
-        completedAt: entry.status === 'completed' || entry.status === 'failed' ? now : null,
-      })
-      .run();
-    return id;
   }
 }
