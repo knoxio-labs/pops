@@ -37,6 +37,7 @@ import type { mediaScores } from './schema/media-scores.js';
 import type { mediaWatchlist } from './schema/media-watchlist.js';
 import type { movies } from './schema/movies.js';
 import type { nudgeLog } from './schema/nudge-log.js';
+import type { reflexExecutions } from './schema/reflex-executions.js';
 import type { rotationCandidates } from './schema/rotation-candidates.js';
 import type { rotationExclusions } from './schema/rotation-exclusions.js';
 import type { rotationLog } from './schema/rotation-log.js';
@@ -76,6 +77,7 @@ export {
   engramScopes,
   engramTags,
   entities,
+  reflexExecutions,
   environments,
   episodes,
   homeInventory,
@@ -182,6 +184,8 @@ export type EngramTagRow = InferSelectModel<typeof engramTags>;
 export type EngramTagInsert = InferInsertModel<typeof engramTags>;
 export type EngramLinkRow = InferSelectModel<typeof engramLinks>;
 export type EngramLinkInsert = InferInsertModel<typeof engramLinks>;
+export type ReflexExecutionRow = InferSelectModel<typeof reflexExecutions>;
+export type ReflexExecutionInsert = InferInsertModel<typeof reflexExecutions>;
 export type ComparisonSkipCooloffRow = InferSelectModel<typeof comparisonSkipCooloffs>;
 export type ComparisonSkipCooloffInsert = InferInsertModel<typeof comparisonSkipCooloffs>;
 export type ComparisonStalenessRow = InferSelectModel<typeof comparisonStaleness>;
