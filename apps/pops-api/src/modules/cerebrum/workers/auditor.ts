@@ -1,3 +1,10 @@
+/**
+ * Auditor Worker (US-04, PRD-085).
+ *
+ * Scores engram quality, detects contradictions within scopes, and identifies
+ * coverage gaps. The auditor is read-only — it surfaces issues but never
+ * modifies engrams directly.
+ */
 import {
   buildTagSharedPairs,
   computeQualityScore,
@@ -15,13 +22,6 @@ import {
   type TrustPhase,
   type WorkerRunResult,
 } from './types.js';
-/**
- * Auditor Worker (US-04, PRD-085).
- *
- * Scores engram quality, detects contradictions within scopes, and identifies
- * coverage gaps. The auditor is read-only — it surfaces issues but never
- * modifies engrams directly.
- */
 import { WorkerBase, type WorkerBaseDeps } from './worker-base.js';
 
 import type { Engram } from '../engrams/types.js';
@@ -129,48 +129,35 @@ export class AuditorWorker extends WorkerBase {
       const bodyB = this.engramService.read(b.id).body;
       const conflict = await this.contradictionDetector.detectContradiction(bodyA, bodyB);
       if (!conflict) return null;
-      return this.buildContradictionAction(a, b, conflict, phase);
+      return this.buildContradictionAction(a, b, phase, conflict);
     } catch {
-      return this.buildContradictionErrorAction(a, b, phase);
+      return this.buildContradictionAction(a, b, phase);
     }
   }
 
   private buildContradictionAction(
     a: Engram,
     b: Engram,
-    conflict: string,
-    phase: TrustPhase
+    phase: TrustPhase,
+    conflict?: string
   ): GliaAction {
+    const isError = conflict === undefined;
+    const summary = conflict ?? 'Comparison failed — will retry on next run';
     const payload: ContradictionPayload = {
       type: 'contradiction',
       engramA: a.id,
       engramB: b.id,
-      conflictSummary: conflict,
+      conflictSummary: summary,
     };
-    const action = this.createAction(
-      [a.id, b.id],
-      `Contradiction detected between "${a.title}" and "${b.title}": ${conflict}`,
-      payload,
-      phase
-    );
-    if (phase !== 'propose') action.status = 'executed';
-    return action;
-  }
-
-  private buildContradictionErrorAction(a: Engram, b: Engram, phase: TrustPhase): GliaAction {
-    const payload: ContradictionPayload = {
-      type: 'contradiction',
-      engramA: a.id,
-      engramB: b.id,
-      conflictSummary: 'Comparison failed — will retry on next run',
-    };
-    const action = this.createAction(
-      [a.id, b.id],
-      `Contradiction check failed for "${a.title}" and "${b.title}"`,
-      payload,
-      phase
-    );
-    action.status = 'error';
+    const rationale = isError
+      ? `Contradiction check failed for "${a.title}" and "${b.title}"`
+      : `Contradiction detected between "${a.title}" and "${b.title}": ${conflict}`;
+    const action = this.createAction([a.id, b.id], rationale, payload, phase);
+    if (isError) {
+      action.status = 'error';
+    } else if (phase !== 'propose') {
+      action.status = 'executed';
+    }
     return action;
   }
 

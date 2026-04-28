@@ -1,6 +1,6 @@
 /**
- * Auditor worker helpers — quality scoring and contradiction pair building.
- * Extracted from auditor.ts to respect max-lines-per-file.
+ * Auditor worker helpers — quality scoring, contradiction pair building, and
+ * coverage gap detection. Extracted from auditor.ts to respect max-lines.
  */
 import { topLevelScope } from './worker-base.js';
 
@@ -8,7 +8,6 @@ import type { EngramService } from '../engrams/service.js';
 import type { Engram } from '../engrams/types.js';
 import type { QualityFactors, QualityResult } from './types.js';
 
-/** Weights for the quality score computation. */
 const QUALITY_WEIGHTS = {
   completeness: 0.3,
   specificity: 0.3,
@@ -19,7 +18,6 @@ const QUALITY_WEIGHTS = {
 const MIN_WORD_COUNT = 50;
 const MAX_LINK_DENSITY = 10;
 
-/** Simple heuristic patterns for detecting concrete/specific content. */
 const SPECIFICITY_PATTERNS = [
   /\b\d{4}[-/]\d{2}[-/]\d{2}\b/,
   /\b\d+(\.\d+)?%/,
@@ -99,29 +97,21 @@ function scoreTemplateFit(engram: Engram, engramService: EngramService): number 
 export function generateSuggestions(engram: Engram, result: QualityResult): string[] {
   const suggestions: string[] = [];
   if (result.factors.completeness <= 0.5) {
-    if (engram.wordCount <= MIN_WORD_COUNT) {
-      suggestions.push(
-        `Expand body content (currently ${engram.wordCount} words, minimum ${MIN_WORD_COUNT})`
-      );
-    }
+    if (engram.wordCount <= MIN_WORD_COUNT)
+      suggestions.push(`Expand body (${engram.wordCount}/${MIN_WORD_COUNT} words)`);
     if (engram.tags.length === 0) suggestions.push('Add at least one tag');
     if (!engram.title || engram.title.trim().length === 0)
       suggestions.push('Add a descriptive title');
   }
-  if (result.factors.specificity < 0.3) {
+  if (result.factors.specificity < 0.3)
     suggestions.push('Add specific details: dates, names, numbers, or references');
-  }
-  if (result.factors.linkDensity < 0.2) {
-    suggestions.push('Add cross-references to related engrams');
-  }
-  if (result.factors.templateFit < 0.3 && engram.template) {
+  if (result.factors.linkDensity < 0.2) suggestions.push('Add cross-references to related engrams');
+  if (result.factors.templateFit < 0.3 && engram.template)
     suggestions.push('Fill in template-suggested sections');
-  }
   return suggestions;
 }
 
-/** Group engrams by top-level scope, deduplicating within each group. */
-export function groupByTopScope(engrams: Engram[]): Map<string, Engram[]> {
+function groupByTopScope(engrams: Engram[]): Map<string, Engram[]> {
   const groups = new Map<string, Engram[]>();
   for (const engram of engrams) {
     for (const scope of engram.scopes) {
@@ -136,13 +126,11 @@ export function groupByTopScope(engrams: Engram[]): Map<string, Engram[]> {
   return groups;
 }
 
-/** Check if two engrams share at least one tag. */
 function sharesTags(a: Engram, b: Engram): boolean {
   const aTagSet = new Set(a.tags);
   return b.tags.some((t) => aTagSet.has(t));
 }
 
-/** Collect pairs from a single scope group into the accumulator. */
 function collectGroupPairs(
   group: Engram[],
   seen: Set<string>,
