@@ -142,10 +142,10 @@ Live status of every theme and epic. Updated as work completes.
 
 ### Cerebrum — Phase 3 (Automation & Ecosystem)
 
-| Epic                   | Status      | Notes                                                          |
-| ---------------------- | ----------- | -------------------------------------------------------------- |
-| Reflex (automation)    | Not started | reflexes.toml, event/threshold/scheduled triggers              |
-| Plexus (plugin system) | Not started | Adapter interface, core integrations (email, calendar, GitHub) |
+| Epic                   | Status      | Notes                                                            |
+| ---------------------- | ----------- | ---------------------------------------------------------------- |
+| Reflex (automation)    | Not started | reflexes.toml, event/threshold/scheduled triggers                |
+| Plexus (plugin system) | Partial     | PRD-090 (architecture) done; PRD-091 (core adapters) not started |
 
 ### Phase 1 — Foundation (continued)
 

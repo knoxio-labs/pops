@@ -9,6 +9,7 @@ import { scopesRouter } from './engrams/scopes-router.js';
 import { gliaRouter } from './glia/router.js';
 import { ingestRouter } from './ingest/router.js';
 import { nudgesRouter } from './nudges/router.js';
+import { plexusRouter } from './plexus/router.js';
 import { queryRouter } from './query/router.js';
 import { retrievalRouter } from './retrieval/router.js';
 import { templatesRouter } from './templates/router.js';
@@ -26,4 +27,5 @@ export const cerebrumRouter = router({
 
   glia: gliaRouter,
   nudges: nudgesRouter,
+  plexus: plexusRouter,
 });

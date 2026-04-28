@@ -798,6 +798,33 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
       ON embeddings(source_type, source_id, chunk_index);
     CREATE INDEX IF NOT EXISTS idx_embeddings_source_type ON embeddings(source_type);
     CREATE INDEX IF NOT EXISTS idx_embeddings_content_hash ON embeddings(content_hash);
+
+    -- Plexus adapter registry (PRD-090).
+    CREATE TABLE IF NOT EXISTS plexus_adapters (
+      id             TEXT PRIMARY KEY,
+      name           TEXT NOT NULL UNIQUE,
+      status         TEXT NOT NULL DEFAULT 'registered',
+      config         TEXT,
+      last_health    TEXT,
+      last_error     TEXT,
+      ingested_count INTEGER NOT NULL DEFAULT 0,
+      emitted_count  INTEGER NOT NULL DEFAULT 0,
+      created_at     TEXT NOT NULL,
+      updated_at     TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_plexus_adapters_name ON plexus_adapters(name);
+    CREATE INDEX IF NOT EXISTS idx_plexus_adapters_status ON plexus_adapters(status);
+
+    -- Plexus ingestion filters (PRD-090).
+    CREATE TABLE IF NOT EXISTS plexus_filters (
+      id          TEXT PRIMARY KEY,
+      adapter_id  TEXT NOT NULL REFERENCES plexus_adapters(id) ON DELETE CASCADE,
+      filter_type TEXT NOT NULL,
+      field       TEXT NOT NULL,
+      pattern     TEXT NOT NULL,
+      enabled     INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_plexus_filters_adapter_id ON plexus_filters(adapter_id);
   `);
 
   // embeddings_vec virtual table (PRD-076). Requires sqlite-vec extension.

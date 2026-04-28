@@ -1,7 +1,7 @@
 # PRD-090: Plugin Architecture
 
 > Epic: [07 — Plexus](../../epics/07-plexus.md)
-> Status: Not started
+> Status: Done
 
 ## Overview
 
@@ -80,12 +80,12 @@ Define the Plexus adapter interface, plugin lifecycle system, plugin registry, a
 
 ## User Stories
 
-| #   | Story                                                 | Summary                                                                       | Status      | Parallelisable   |
-| --- | ----------------------------------------------------- | ----------------------------------------------------------------------------- | ----------- | ---------------- |
-| 01  | [us-01-adapter-interface](us-01-adapter-interface.md) | TypeScript interface definition for PlexusAdapter with EngineData return type | Not started | No (first)       |
-| 02  | [us-02-plugin-lifecycle](us-02-plugin-lifecycle.md)   | Register, initialize, health check, shutdown lifecycle with error isolation   | Not started | Blocked by us-01 |
-| 03  | [us-03-plugin-registry](us-03-plugin-registry.md)     | plexus.toml configuration, adapter discovery, credential management           | Not started | Blocked by us-01 |
-| 04  | [us-04-ingestion-filters](us-04-ingestion-filters.md) | Per-adapter include/exclude rules for filtering ingested content              | Not started | Yes              |
+| #   | Story                                                 | Summary                                                                       | Status | Parallelisable   |
+| --- | ----------------------------------------------------- | ----------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-adapter-interface](us-01-adapter-interface.md) | TypeScript interface definition for PlexusAdapter with EngineData return type | Done   | No (first)       |
+| 02  | [us-02-plugin-lifecycle](us-02-plugin-lifecycle.md)   | Register, initialize, health check, shutdown lifecycle with error isolation   | Done   | Blocked by us-01 |
+| 03  | [us-03-plugin-registry](us-03-plugin-registry.md)     | plexus.toml configuration, adapter discovery, credential management           | Done   | Blocked by us-01 |
+| 04  | [us-04-ingestion-filters](us-04-ingestion-filters.md) | Per-adapter include/exclude rules for filtering ingested content              | Done   | Yes              |
 
 US-01 defines the interface that US-02 and US-03 depend on. US-04 (ingestion filters) is independent of the lifecycle and registry and can be built in parallel.
 
