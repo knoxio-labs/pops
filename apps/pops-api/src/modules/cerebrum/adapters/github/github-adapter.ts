@@ -1,9 +1,4 @@
-/**
- * GitHubAdapter — GitHub API activity adapter for Plexus (PRD-091 US-03).
- *
- * Connects via GitHub REST API, fetches issues, PRs, commits, and comments,
- * filters bot noise, and returns EngineData[] for ingestion.
- */
+/** GitHubAdapter — GitHub API activity adapter for Plexus (PRD-091 US-03). */
 import {
   BaseAdapter,
   type AdapterConfig,
