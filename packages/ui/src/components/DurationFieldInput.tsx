@@ -4,6 +4,7 @@
  * renders a user-friendly unit.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Input } from '../primitives/input';
@@ -47,12 +48,18 @@ export interface DurationFieldInputProps {
   'aria-label'?: string;
 }
 
-const UNIT_LABELS: Record<DurationUnit, string> = {
-  ms: 'ms',
-  seconds: 'seconds',
-  minutes: 'minutes',
-  hours: 'hours',
-};
+function useUnitLabels(): Record<DurationUnit, string> {
+  const { t } = useTranslation('ui');
+  return useMemo(
+    () => ({
+      ms: t('durationField.ms'),
+      seconds: t('durationField.seconds'),
+      minutes: t('durationField.minutes'),
+      hours: t('durationField.hours'),
+    }),
+    [t]
+  );
+}
 
 function useDurationUnit(value: number, units: DurationUnit[], defaultUnit?: DurationUnit) {
   const clampUnit = useCallback(
@@ -85,6 +92,7 @@ export function DurationFieldInput({
   id,
   'aria-label': ariaLabel,
 }: DurationFieldInputProps) {
+  const unitLabels = useUnitLabels();
   const [unit, setUnit] = useDurationUnit(value, units, defaultUnit);
   const displayValue = useMemo(() => {
     if (value === 0) return '';
@@ -123,7 +131,7 @@ export function DurationFieldInput({
         <SelectContent>
           {units.map((u) => (
             <SelectItem key={u} value={u}>
-              {UNIT_LABELS[u]}
+              {unitLabels[u]}
             </SelectItem>
           ))}
         </SelectContent>

@@ -8,6 +8,7 @@
  */
 import { ChevronRight } from 'lucide-react';
 import { type KeyboardEvent, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 
@@ -62,6 +63,7 @@ function TreeRow<T>({
   onSelect,
   renderNode,
 }: TreeRowProps<T>) {
+  const { t } = useTranslation('ui');
   const hasChildren = node.children.length > 0;
   return (
     <div
@@ -74,7 +76,7 @@ function TreeRow<T>({
       {hasChildren ? (
         <button
           type="button"
-          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          aria-label={isExpanded ? t('treeView.collapse') : t('treeView.expand')}
           onClick={(e) => {
             e.stopPropagation();
             toggle(node.id);

@@ -1,0 +1,175 @@
+{
+  "actionButton": {
+    "done": "Done",
+    "undo": "Undo"
+  },
+  "autocomplete": {
+    "searchPlaceholder": "Search...",
+    "noResults": "No results found."
+  },
+  "breakdownChart": {
+    "retry": "Retry",
+    "emptyTitle": "No data"
+  },
+  "button": {
+    "loading": "Loading"
+  },
+  "chip": {
+    "remove": "Remove"
+  },
+  "comboboxSelect": {
+    "selectPlaceholder": "Select...",
+    "searchPlaceholder": "Search...",
+    "noOptions": "No options found.",
+    "selectedCount": "{{count}} selected"
+  },
+  "completionSummary": {
+    "debriefComplete": "Debrief Complete",
+    "finishedDebrief": "Finished debrief for",
+    "compared": "Compared",
+    "skipped": "Skipped",
+    "pending": "Pending",
+    "comparedCount": "{{count}} compared, {{skippedCount}} skipped",
+    "doAnother": "Do another",
+    "done": "Done"
+  },
+  "crudSection": {
+    "add": "Add"
+  },
+  "dataTable": {
+    "searchPlaceholder": "Search...",
+    "columns": "Columns",
+    "loading": "Loading...",
+    "noResults": "No results.",
+    "rowsSelected": "{{selected}} of {{total}} row(s) selected.",
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{current}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "dataTableFilters": {
+    "filterPlaceholder": "Filter...",
+    "selectPlaceholder": "Select...",
+    "from": "From",
+    "to": "to",
+    "min": "Min",
+    "max": "Max",
+    "filters": "Filters",
+    "clearAll": "Clear all",
+    "apply": "Apply",
+    "filtersActive_one": "{{count}} filter active",
+    "filtersActive_other": "{{count}} filters active"
+  },
+  "durationField": {
+    "ms": "ms",
+    "seconds": "seconds",
+    "minutes": "minutes",
+    "hours": "hours"
+  },
+  "editableCell": {
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "entitySelect": {
+    "choosePlaceholder": "Choose entity...",
+    "searchPlaceholder": "Search entities...",
+    "noEntities": "No entities found.",
+    "pending": "Pending"
+  },
+  "errorAlert": {
+    "showDetails": "Show technical details"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "tryAgain": "Try again"
+  },
+  "fileUpload": {
+    "dragSingle": "Drag a file here, or click to browse",
+    "dragMultiple": "Drag files here, or click to browse",
+    "accepts": "Accepts {{types}}",
+    "remove": "Remove {{name}}"
+  },
+  "imageGallery": {
+    "showImage": "Show image {{index}}",
+    "deleteImage": "Delete image",
+    "closeGallery": "Close gallery",
+    "previousImage": "Previous image",
+    "nextImage": "Next image"
+  },
+  "infiniteScroll": {
+    "loadingMore": "Loading more...",
+    "noMoreItems": "No more items to load"
+  },
+  "loadingProgress": {
+    "progress": "Progress",
+    "inProgress": "In progress...",
+    "complete": "Complete",
+    "pending": "Pending",
+    "currentlyProcessing": "Currently processing:"
+  },
+  "pageHeader": {
+    "goBack": "Go back"
+  },
+  "radarChart": {
+    "ariaLabel": "Radar chart over {{count}} axes"
+  },
+  "requestDialog": {
+    "loadingOptions": "Loading options...",
+    "cancel": "Cancel",
+    "submitLabel": "Request",
+    "successLabel": "Added",
+    "pendingLabel": "Adding..."
+  },
+  "searchPicker": {
+    "searchPlaceholder": "Search...",
+    "minChars": "Type at least {{count}} characters to search",
+    "noResults": "No results found"
+  },
+  "settingsForm": {
+    "testActions": "Test actions",
+    "ok": "OK",
+    "failed": "Failed",
+    "save": "Save"
+  },
+  "textInput": {
+    "clearInput": "Clear input"
+  },
+  "tierListBoard": {
+    "dropToRemove": "Drop here to remove",
+    "unranked": "Unranked"
+  },
+  "treePicker": {
+    "searchPlaceholder": "Search\u2026",
+    "selectTrigger": "Select\u2026",
+    "noMatches": "No matches for \u201c{{query}}\u201d",
+    "create": "Create \u201c{{query}}\u201d"
+  },
+  "treeView": {
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "scrollShelf": {
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right"
+  },
+  "responsiveActionBar": {
+    "markStale": "Mark {{title}} as stale",
+    "staleTooltip": "Mark as stale \u2014 reduces score weight for future comparisons",
+    "stale": "Stale:",
+    "moreActions": "More actions",
+    "naExcludeBoth": "N/A (exclude both)",
+    "notWatched": "Not Watched: {{title}}",
+    "excluding": "Excluding\u2026",
+    "na": "N/A"
+  },
+  "commandDialog": {
+    "title": "Command Palette",
+    "description": "Search for a command to run..."
+  },
+  "warranty": {
+    "noWarranty": "No warranty",
+    "expired": "Expired",
+    "expiresInDays": "Expires in {{days}} days",
+    "warrantyUntil": "Warranty until {{date}}"
+  }
+}

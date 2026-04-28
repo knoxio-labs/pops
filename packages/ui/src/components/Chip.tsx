@@ -4,6 +4,7 @@
  */
 import { cva, type VariantProps } from 'class-variance-authority';
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 
@@ -79,11 +80,13 @@ export const Chip = forwardRef<HTMLDivElement, ChipProps>(
       prefix,
       removable = false,
       onRemove,
-      removeLabel = 'Remove',
+      removeLabel,
       ...props
     },
     ref
   ) => {
+    const { t } = useTranslation('ui');
+    const resolvedRemoveLabel = removeLabel ?? t('chip.remove');
     return (
       <div ref={ref} className={cn(chipVariants({ variant, size, className }))} {...props}>
         {prefix && <span className="inline-flex shrink-0">{prefix}</span>}
@@ -96,7 +99,7 @@ export const Chip = forwardRef<HTMLDivElement, ChipProps>(
               onRemove?.();
             }}
             className="inline-flex shrink-0 items-center justify-center rounded-sm opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-opacity p-1 min-w-11 min-h-11"
-            aria-label={removeLabel}
+            aria-label={resolvedRemoveLabel}
           >
             <XIcon />
           </button>

@@ -3,6 +3,7 @@
  * Catches errors in component tree and displays fallback UI
  */
 import { Component, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   children: ReactNode;
@@ -33,19 +34,26 @@ export class ErrorBoundary extends Component<Props, State> {
       return this.props.fallback ? (
         this.props.fallback(this.state.error, this.reset)
       ) : (
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-destructive">Something went wrong</h1>
-          <p className="mt-2 text-muted-foreground">{this.state.error.message}</p>
-          <button
-            onClick={this.reset}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorBoundaryFallback error={this.state.error} onReset={this.reset} />
       );
     }
 
     return this.props.children;
   }
+}
+
+function ErrorBoundaryFallback({ error, onReset }: { error: Error; onReset: () => void }) {
+  const { t } = useTranslation('ui');
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-destructive">{t('errorBoundary.title')}</h1>
+      <p className="mt-2 text-muted-foreground">{error.message}</p>
+      <button
+        onClick={onReset}
+        className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+      >
+        {t('errorBoundary.tryAgain')}
+      </button>
+    </div>
+  );
 }

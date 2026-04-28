@@ -4,6 +4,7 @@
  */
 import { type VariantProps } from 'class-variance-authority';
 import { forwardRef, useMemo, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { useTextInput } from './TextInput.hooks';
@@ -73,6 +74,7 @@ interface TextInputBodyProps {
   prefix?: ReactNode;
   suffix?: ReactNode;
   clearable: boolean;
+  clearLabel: string;
   disabled?: boolean;
   error?: string;
   onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
@@ -111,6 +113,7 @@ function TextInputBody({
   prefix,
   suffix,
   clearable,
+  clearLabel,
   disabled,
   error,
   onFocus,
@@ -147,12 +150,18 @@ function TextInputBody({
         aria-invalid={!!error}
         {...inputProps}
       />
-      <TrailingSlot showClearButton={showClearButton} suffix={suffix} onClear={handleClear} />
+      <TrailingSlot
+        showClearButton={showClearButton}
+        suffix={suffix}
+        onClear={handleClear}
+        clearLabel={clearLabel}
+      />
     </>
   );
 }
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, ref) => {
+  const { t } = useTranslation('ui');
   const {
     className,
     containerClassName,
@@ -198,6 +207,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, re
           prefix={prefix}
           suffix={suffix}
           clearable={clearable}
+          clearLabel={t('textInput.clearInput')}
           disabled={disabled}
           error={error}
           onFocus={onFocus}
@@ -217,10 +227,12 @@ function TrailingSlot({
   showClearButton,
   suffix,
   onClear,
+  clearLabel,
 }: {
   showClearButton: boolean;
   suffix?: ReactNode;
   onClear: () => void;
+  clearLabel: string;
 }) {
   if (showClearButton) {
     return (
@@ -228,7 +240,7 @@ function TrailingSlot({
         type="button"
         onClick={onClear}
         className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm p-1 min-w-11 min-h-11 inline-flex items-center justify-center"
-        aria-label="Clear input"
+        aria-label={clearLabel}
         tabIndex={-1}
       >
         <XIcon />

@@ -3,6 +3,7 @@
  * Built on Popover + Command for proper positioning and filtering
  */
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import {
@@ -106,11 +107,14 @@ export function Autocomplete({
   value = '',
   onChange,
   onSelect,
-  placeholder = 'Search...',
-  emptyMessage = 'No results found.',
+  placeholder,
+  emptyMessage,
   disabled = false,
   className,
 }: AutocompleteProps) {
+  const { t } = useTranslation('ui');
+  const resolvedPlaceholder = placeholder ?? t('autocomplete.searchPlaceholder');
+  const resolvedEmptyMessage = emptyMessage ?? t('autocomplete.noResults');
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +145,7 @@ export function Autocomplete({
             value={inputValue}
             onValueChange={handleInputChange}
             onFocus={() => inputValue && setOpen(true)}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             disabled={disabled}
             className="h-10"
           />
@@ -153,7 +157,7 @@ export function Autocomplete({
           onOpenAutoFocus={(e: Event) => e.preventDefault()}
         >
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
             <SuggestionItems suggestions={suggestions} onPick={handleSelect} />
           </CommandList>
         </PopoverContent>

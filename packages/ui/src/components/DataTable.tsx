@@ -1,4 +1,5 @@
 import { ArrowUpDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Button } from './Button';
@@ -41,7 +42,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchable = false,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
   searchColumn,
   paginated = true,
   pageSizeOptions = [10, 20, 50, 100],
@@ -56,6 +57,8 @@ export function DataTable<TData, TValue>({
   filters,
   filterFns,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useTranslation('ui');
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('dataTable.searchPlaceholder');
   const table = useDataTable({
     data,
     columns,
@@ -74,7 +77,7 @@ export function DataTable<TData, TValue>({
       <DataTableToolbar
         table={table}
         searchable={searchable}
-        searchPlaceholder={searchPlaceholder}
+        searchPlaceholder={resolvedSearchPlaceholder}
         searchColumn={searchColumn}
         columnVisibility={columnVisibility}
       />

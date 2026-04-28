@@ -5,6 +5,7 @@
  * and error are provided, plus optional click handler per bar.
  */
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Button } from '../primitives/button';
@@ -52,10 +53,12 @@ function LoadingState({ className }: { className?: string }) {
 function ErrorState({
   error,
   onRetry,
+  retryLabel,
   className,
 }: {
   error: string;
   onRetry?: () => void;
+  retryLabel: string;
   className?: string;
 }) {
   return (
@@ -69,7 +72,7 @@ function ErrorState({
       <div className="font-medium text-destructive">{error}</div>
       {onRetry ? (
         <Button size="sm" variant="outline" onClick={onRetry}>
-          Retry
+          {retryLabel}
         </Button>
       ) : null}
     </div>
@@ -124,16 +127,26 @@ export function BreakdownChart({
   error,
   onRetry,
   maxRows,
-  emptyTitle = 'No data',
+  emptyTitle,
   emptyDescription,
   className,
 }: BreakdownChartProps) {
+  const { t } = useTranslation('ui');
+  const resolvedEmptyTitle = emptyTitle ?? t('breakdownChart.emptyTitle');
   if (loading) return <LoadingState className={className} />;
-  if (error) return <ErrorState error={error} onRetry={onRetry} className={className} />;
+  if (error)
+    return (
+      <ErrorState
+        error={error}
+        onRetry={onRetry}
+        retryLabel={t('breakdownChart.retry')}
+        className={className}
+      />
+    );
   if (data.length === 0) {
     return (
       <EmptyState
-        title={emptyTitle}
+        title={resolvedEmptyTitle}
         description={emptyDescription}
         size="sm"
         className={className}

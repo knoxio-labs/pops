@@ -6,6 +6,7 @@
  */
 import { Check, Plus, Search } from 'lucide-react';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Button } from '../primitives/button';
@@ -53,9 +54,10 @@ interface NoMatchesProps<T> {
 }
 
 function NoMatches<T>({ query, onCreate, onCreated }: NoMatchesProps<T>) {
+  const { t } = useTranslation('ui');
   return (
     <div className="flex flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
-      <div>No matches for &ldquo;{query}&rdquo;</div>
+      <div>{t('treePicker.noMatches', { query })}</div>
       {onCreate && query.trim() ? (
         <Button
           size="sm"
@@ -65,7 +67,7 @@ function NoMatches<T>({ query, onCreate, onCreated }: NoMatchesProps<T>) {
             onCreated();
           }}
         >
-          <Plus /> Create &ldquo;{query.trim()}&rdquo;
+          <Plus /> {t('treePicker.create', { query: query.trim() })}
         </Button>
       ) : null}
     </div>
@@ -137,12 +139,14 @@ export function TreePicker<T>({
   selectedId = null,
   onSelect,
   onCreate,
-  placeholder = 'Search…',
+  placeholder,
   trigger,
   triggerLabel,
   disabled,
   className,
 }: TreePickerProps<T>) {
+  const { t } = useTranslation('ui');
+  const resolvedPlaceholder = placeholder ?? t('treePicker.searchPlaceholder');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -171,14 +175,14 @@ export function TreePicker<T>({
       <PopoverTrigger asChild>
         {trigger ?? (
           <Button variant="outline" disabled={disabled} className={className}>
-            {triggerLabel ?? 'Select…'}
+            {triggerLabel ?? t('treePicker.selectTrigger')}
           </Button>
         )}
       </PopoverTrigger>
       <PickerBody
         query={query}
         setQuery={setQuery}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         filtered={filtered}
         expandedIds={expandedIds}
         onCreate={onCreate}

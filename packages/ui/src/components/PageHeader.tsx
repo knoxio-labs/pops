@@ -9,6 +9,7 @@
  */
 import { ArrowLeft } from 'lucide-react';
 import { type ComponentType, Fragment, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import {
@@ -184,6 +185,7 @@ export function PageHeader({
   renderLink: LinkComponent = DefaultLink,
   className,
 }: PageHeaderProps) {
+  const { t } = useTranslation('ui');
   const hasBreadcrumbs = breadcrumbs && breadcrumbs.length > 0;
   const isTopLevel = !backHref && !hasBreadcrumbs;
 
@@ -204,7 +206,7 @@ export function PageHeader({
             className="min-w-11 min-h-11 flex items-center justify-center hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-            <span className="sr-only">Go back</span>
+            <span className="sr-only">{t('pageHeader.goBack')}</span>
           </LinkComponent>
         )}
         {hasBreadcrumbs && (

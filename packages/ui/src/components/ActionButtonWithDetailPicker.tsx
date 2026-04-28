@@ -7,6 +7,7 @@
  */
 import { Check } from 'lucide-react';
 import { type ComponentType, type ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
@@ -101,15 +102,18 @@ export function ActionButtonWithDetailPicker<Detail>({
   onConfirm,
   onUndo,
   confirmed,
-  confirmedLabel = 'Done',
-  undoLabel = 'Undo',
+  confirmedLabel,
+  undoLabel,
   buttonVariant = 'default',
   buttonSize = 'default',
   disabled,
   className,
 }: ActionButtonWithDetailPickerProps<Detail>) {
+  const { t } = useTranslation('ui');
   const [open, setOpen] = useState(false);
   const { isConfirmed, busy, confirm, undo } = useConfirmFlow(confirmed, onConfirm, onUndo);
+  const resolvedConfirmedLabel = confirmedLabel ?? t('actionButton.done');
+  const resolvedUndoLabel = undoLabel ?? t('actionButton.undo');
 
   if (isConfirmed) {
     return (
@@ -118,8 +122,8 @@ export function ActionButtonWithDetailPicker<Detail>({
         busy={busy}
         onUndo={onUndo}
         undo={undo}
-        confirmedLabel={confirmedLabel}
-        undoLabel={undoLabel}
+        confirmedLabel={resolvedConfirmedLabel}
+        undoLabel={resolvedUndoLabel}
       />
     );
   }

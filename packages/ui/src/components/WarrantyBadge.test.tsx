@@ -21,25 +21,25 @@ describe('getWarrantyStatus', () => {
   it('returns expiring with 0 days when expiry is today', () => {
     const result = getWarrantyStatus('2026-03-26');
     expect(result.state).toBe('expiring');
-    expect(result.label).toBe('Expires in 0 days');
+    expect(result.label).toBe('0');
   });
 
   it('returns expiring with 1 day remaining', () => {
     const result = getWarrantyStatus('2026-03-27');
     expect(result.state).toBe('expiring');
-    expect(result.label).toBe('Expires in 1 days');
+    expect(result.label).toBe('1');
   });
 
   it('returns expiring with 45 days remaining', () => {
     const result = getWarrantyStatus('2026-05-10');
     expect(result.state).toBe('expiring');
-    expect(result.label).toMatch(/^Expires in 4[456] days$/);
+    expect(result.label).toMatch(/^4[456]$/);
   });
 
   it('returns expiring with 89 days remaining', () => {
     const result = getWarrantyStatus('2026-06-23');
     expect(result.state).toBe('expiring');
-    expect(result.label).toMatch(/^Expires in (89|90) days$/);
+    expect(result.label).toMatch(/^(89|90)$/);
   });
 
   it('returns expiring at 90-day boundary', () => {
@@ -52,7 +52,8 @@ describe('getWarrantyStatus', () => {
   it('returns active for warranty beyond 90 days', () => {
     const result = getWarrantyStatus('2026-06-26');
     expect(result.state).toBe('active');
-    expect(result.label).toMatch(/^Warranty until /);
+    // label is now the formatted date (i18n resolves the full string in the component)
+    expect(result.label).toBeTruthy();
   });
 
   it('returns none when warrantyExpiry is null', () => {
@@ -64,6 +65,6 @@ describe('getWarrantyStatus', () => {
   it('returns active with formatted date for far future', () => {
     const result = getWarrantyStatus('2027-12-31');
     expect(result.state).toBe('active');
-    expect(result.label).toMatch(/Warranty until.*2027/);
+    expect(result.label).toMatch(/2027/);
   });
 });

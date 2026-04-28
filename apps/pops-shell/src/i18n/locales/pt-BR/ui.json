@@ -1,0 +1,175 @@
+{
+  "actionButton": {
+    "done": "Conclu\u00eddo",
+    "undo": "Desfazer"
+  },
+  "autocomplete": {
+    "searchPlaceholder": "Pesquisar...",
+    "noResults": "Nenhum resultado encontrado."
+  },
+  "breakdownChart": {
+    "retry": "Tentar novamente",
+    "emptyTitle": "Sem dados"
+  },
+  "button": {
+    "loading": "Carregando"
+  },
+  "chip": {
+    "remove": "Remover"
+  },
+  "comboboxSelect": {
+    "selectPlaceholder": "Selecionar...",
+    "searchPlaceholder": "Pesquisar...",
+    "noOptions": "Nenhuma op\u00e7\u00e3o encontrada.",
+    "selectedCount": "{{count}} selecionados"
+  },
+  "completionSummary": {
+    "debriefComplete": "Revis\u00e3o Completa",
+    "finishedDebrief": "Revis\u00e3o conclu\u00edda para",
+    "compared": "Comparado",
+    "skipped": "Ignorado",
+    "pending": "Pendente",
+    "comparedCount": "{{count}} comparados, {{skippedCount}} ignorados",
+    "doAnother": "Fazer outro",
+    "done": "Conclu\u00eddo"
+  },
+  "crudSection": {
+    "add": "Adicionar"
+  },
+  "dataTable": {
+    "searchPlaceholder": "Pesquisar...",
+    "columns": "Colunas",
+    "loading": "Carregando...",
+    "noResults": "Sem resultados.",
+    "rowsSelected": "{{selected}} de {{total}} linha(s) selecionada(s).",
+    "rowsPerPage": "Linhas por p\u00e1gina",
+    "pageOf": "P\u00e1gina {{current}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Pr\u00f3ximo"
+  },
+  "dataTableFilters": {
+    "filterPlaceholder": "Filtrar...",
+    "selectPlaceholder": "Selecionar...",
+    "from": "De",
+    "to": "at\u00e9",
+    "min": "M\u00edn",
+    "max": "M\u00e1x",
+    "filters": "Filtros",
+    "clearAll": "Limpar tudo",
+    "apply": "Aplicar",
+    "filtersActive_one": "{{count}} filtro ativo",
+    "filtersActive_other": "{{count}} filtros ativos"
+  },
+  "durationField": {
+    "ms": "ms",
+    "seconds": "segundos",
+    "minutes": "minutos",
+    "hours": "horas"
+  },
+  "editableCell": {
+    "save": "Salvar",
+    "cancel": "Cancelar"
+  },
+  "entitySelect": {
+    "choosePlaceholder": "Escolher entidade...",
+    "searchPlaceholder": "Pesquisar entidades...",
+    "noEntities": "Nenhuma entidade encontrada.",
+    "pending": "Pendente"
+  },
+  "errorAlert": {
+    "showDetails": "Mostrar detalhes t\u00e9cnicos"
+  },
+  "errorBoundary": {
+    "title": "Algo deu errado",
+    "tryAgain": "Tentar novamente"
+  },
+  "fileUpload": {
+    "dragSingle": "Arraste um arquivo aqui, ou clique para procurar",
+    "dragMultiple": "Arraste arquivos aqui, ou clique para procurar",
+    "accepts": "Aceita {{types}}",
+    "remove": "Remover {{name}}"
+  },
+  "imageGallery": {
+    "showImage": "Mostrar imagem {{index}}",
+    "deleteImage": "Excluir imagem",
+    "closeGallery": "Fechar galeria",
+    "previousImage": "Imagem anterior",
+    "nextImage": "Pr\u00f3xima imagem"
+  },
+  "infiniteScroll": {
+    "loadingMore": "Carregando mais...",
+    "noMoreItems": "N\u00e3o h\u00e1 mais itens para carregar"
+  },
+  "loadingProgress": {
+    "progress": "Progresso",
+    "inProgress": "Em andamento...",
+    "complete": "Completo",
+    "pending": "Pendente",
+    "currentlyProcessing": "Processando atualmente:"
+  },
+  "pageHeader": {
+    "goBack": "Voltar"
+  },
+  "radarChart": {
+    "ariaLabel": "Gr\u00e1fico radar com {{count}} eixos"
+  },
+  "requestDialog": {
+    "loadingOptions": "Carregando op\u00e7\u00f5es...",
+    "cancel": "Cancelar",
+    "submitLabel": "Solicitar",
+    "successLabel": "Adicionado",
+    "pendingLabel": "Adicionando..."
+  },
+  "searchPicker": {
+    "searchPlaceholder": "Pesquisar...",
+    "minChars": "Digite pelo menos {{count}} caracteres para pesquisar",
+    "noResults": "Nenhum resultado encontrado"
+  },
+  "settingsForm": {
+    "testActions": "A\u00e7\u00f5es de teste",
+    "ok": "OK",
+    "failed": "Falhou",
+    "save": "Salvar"
+  },
+  "textInput": {
+    "clearInput": "Limpar campo"
+  },
+  "tierListBoard": {
+    "dropToRemove": "Solte aqui para remover",
+    "unranked": "Sem classifica\u00e7\u00e3o"
+  },
+  "treePicker": {
+    "searchPlaceholder": "Pesquisar\u2026",
+    "selectTrigger": "Selecionar\u2026",
+    "noMatches": "Nenhuma correspond\u00eancia para \u201c{{query}}\u201d",
+    "create": "Criar \u201c{{query}}\u201d"
+  },
+  "treeView": {
+    "collapse": "Recolher",
+    "expand": "Expandir"
+  },
+  "scrollShelf": {
+    "scrollLeft": "Rolar para a esquerda",
+    "scrollRight": "Rolar para a direita"
+  },
+  "responsiveActionBar": {
+    "markStale": "Marcar {{title}} como obsoleto",
+    "staleTooltip": "Marcar como obsoleto \u2014 reduz o peso da pontua\u00e7\u00e3o para compara\u00e7\u00f5es futuras",
+    "stale": "Obsoleto:",
+    "moreActions": "Mais a\u00e7\u00f5es",
+    "naExcludeBoth": "N/A (excluir ambos)",
+    "notWatched": "N\u00e3o Assistido: {{title}}",
+    "excluding": "Excluindo\u2026",
+    "na": "N/A"
+  },
+  "commandDialog": {
+    "title": "Paleta de Comandos",
+    "description": "Pesquisar um comando para executar..."
+  },
+  "warranty": {
+    "noWarranty": "Sem garantia",
+    "expired": "Expirada",
+    "expiresInDays": "Expira em {{days}} dias",
+    "warrantyUntil": "Garantia at\u00e9 {{date}}"
+  }
+}

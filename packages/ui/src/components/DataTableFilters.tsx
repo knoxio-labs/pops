@@ -1,5 +1,6 @@
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Dialog,
@@ -109,11 +110,12 @@ function FilterBarHeader({
   onOpenMobile: () => void;
   onClearAll: () => void;
 }) {
+  const { t } = useTranslation('ui');
   return (
     <div className="flex items-center justify-between">
       <Button variant="outline" size="default" onClick={onOpenMobile} className="md:hidden">
         <SlidersHorizontal className="h-4 w-4 mr-2" />
-        Filters
+        {t('dataTableFilters.filters')}
         {activeFiltersCount > 0 && (
           <span className="ml-1.5 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5">
             {activeFiltersCount}
@@ -121,7 +123,7 @@ function FilterBarHeader({
         )}
       </Button>
       <h3 className="text-2xs font-bold uppercase tracking-widest text-muted-foreground/80 hidden md:block">
-        Filters
+        {t('dataTableFilters.filters')}
       </h3>
       {activeFiltersCount > 0 && (
         <Button
@@ -130,7 +132,7 @@ function FilterBarHeader({
           onClick={onClearAll}
           className="px-3 h-8 text-xs text-muted-foreground hover:text-foreground"
         >
-          Clear all
+          {t('dataTableFilters.clearAll')}
           <X className="ml-2 h-3.5 w-3.5" />
         </Button>
       )}
@@ -139,6 +141,7 @@ function FilterBarHeader({
 }
 
 export function FilterBar({ filters, table, onClearAll }: FilterBarProps) {
+  const { t } = useTranslation('ui');
   const [mobileOpen, setMobileOpen] = useState(false);
   const activeFiltersCount = countActiveFilters(table);
 
@@ -157,17 +160,17 @@ export function FilterBar({ filters, table, onClearAll }: FilterBarProps) {
       <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
         <DialogContent className="md:hidden max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Filters</DialogTitle>
+            <DialogTitle>{t('dataTableFilters.filters')}</DialogTitle>
           </DialogHeader>
           <FilterGrid filters={filters} table={table} />
           <DialogFooter className="flex-row gap-2">
             {activeFiltersCount > 0 && (
               <Button variant="ghost" size="sm" onClick={handleClearAll}>
-                Clear all
+                {t('dataTableFilters.clearAll')}
               </Button>
             )}
             <Button size="sm" onClick={() => setMobileOpen(false)}>
-              Apply
+              {t('dataTableFilters.apply')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -177,7 +180,7 @@ export function FilterBar({ filters, table, onClearAll }: FilterBarProps) {
       </div>
       {activeFiltersCount > 0 && (
         <div className="text-sm text-muted-foreground">
-          {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
+          {t('dataTableFilters.filtersActive', { count: activeFiltersCount })}
         </div>
       )}
     </div>

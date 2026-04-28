@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { DataTable } from './DataTable';
 
@@ -141,6 +142,7 @@ export function InfiniteScrollTable<TData, TValue>({
   onRowClick,
   scrollThreshold = 200,
 }: InfiniteScrollTableProps<TData, TValue>) {
+  const { t } = useTranslation('ui');
   const observerTarget = useInfiniteScrollTrigger(hasMore, loading, scrollThreshold, onLoadMore);
 
   return (
@@ -159,9 +161,11 @@ export function InfiniteScrollTable<TData, TValue>({
       />
       {data.length > 0 && (
         <div ref={observerTarget} className="py-4 text-center">
-          {loading && <div className="text-sm text-muted-foreground">Loading more...</div>}
+          {loading && (
+            <div className="text-sm text-muted-foreground">{t('infiniteScroll.loadingMore')}</div>
+          )}
           {!loading && !hasMore && (
-            <div className="text-sm text-muted-foreground">No more items to load</div>
+            <div className="text-sm text-muted-foreground">{t('infiniteScroll.noMoreItems')}</div>
           )}
         </div>
       )}

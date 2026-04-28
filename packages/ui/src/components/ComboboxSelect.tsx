@@ -3,6 +3,7 @@
  * Built on Popover + Command for proper positioning and filtering
  */
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { ComboboxPopover, SelectedChips } from './ComboboxSelect.popover';
@@ -33,14 +34,23 @@ function getSelectedValues(value: string | string[] | undefined): string[] {
   return [];
 }
 
-function getDisplayText(
-  multiple: boolean,
-  selectedValues: string[],
-  getOptionLabel: (v: string) => string,
-  placeholder: string
-): string {
+interface DisplayTextArgs {
+  multiple: boolean;
+  selectedValues: string[];
+  getOptionLabel: (v: string) => string;
+  placeholder: string;
+  selectedCountLabel: string;
+}
+
+function getDisplayText({
+  multiple,
+  selectedValues,
+  getOptionLabel,
+  placeholder,
+  selectedCountLabel,
+}: DisplayTextArgs): string {
   if (multiple) {
-    return selectedValues.length > 0 ? `${selectedValues.length} selected` : placeholder;
+    return selectedValues.length > 0 ? selectedCountLabel : placeholder;
   }
   return selectedValues.length > 0 ? getOptionLabel(selectedValues[0] ?? '') : placeholder;
 }
@@ -50,14 +60,18 @@ export function ComboboxSelect({
   value,
   onChange,
   multiple = false,
-  placeholder = 'Select...',
-  searchPlaceholder = 'Search...',
-  emptyMessage = 'No options found.',
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
   disabled = false,
   variant = 'outline',
   size = 'default',
   className,
 }: ComboboxSelectProps) {
+  const { t } = useTranslation('ui');
+  const resolvedPlaceholder = placeholder ?? t('comboboxSelect.selectPlaceholder');
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('comboboxSelect.searchPlaceholder');
+  const resolvedEmptyMessage = emptyMessage ?? t('comboboxSelect.noOptions');
   const [open, setOpen] = useState(false);
   const selectedValues = getSelectedValues(value);
   const getOptionLabel = (val: string): string =>
@@ -91,9 +105,15 @@ export function ComboboxSelect({
         variant={variant}
         size={size}
         disabled={disabled}
-        displayText={getDisplayText(multiple, selectedValues, getOptionLabel, placeholder)}
-        searchPlaceholder={searchPlaceholder}
-        emptyMessage={emptyMessage}
+        displayText={getDisplayText({
+          multiple,
+          selectedValues,
+          getOptionLabel,
+          placeholder: resolvedPlaceholder,
+          selectedCountLabel: t('comboboxSelect.selectedCount', { count: selectedValues.length }),
+        })}
+        searchPlaceholder={resolvedSearchPlaceholder}
+        emptyMessage={resolvedEmptyMessage}
         className={className}
         onToggle={toggleOption}
       />

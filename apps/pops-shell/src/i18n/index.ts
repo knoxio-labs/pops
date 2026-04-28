@@ -2,7 +2,7 @@
  * i18next initialization for the POPS shell.
  *
  * Supported locales: en-AU (default), pt-BR.
- * Namespaces: common (shared strings), shell (shell UI), navigation (nav labels).
+ * Namespaces: common (shared strings), shell (shell UI), navigation (nav labels), ui (shared components).
  *
  * Language preference is persisted to localStorage under the key `pops-locale`.
  */
@@ -12,9 +12,11 @@ import { initReactI18next } from 'react-i18next';
 import enAUCommon from './locales/en-AU/common.json';
 import enAUNavigation from './locales/en-AU/navigation.json';
 import enAUShell from './locales/en-AU/shell.json';
+import enAUUi from './locales/en-AU/ui.json';
 import ptBRCommon from './locales/pt-BR/common.json';
 import ptBRNavigation from './locales/pt-BR/navigation.json';
 import ptBRShell from './locales/pt-BR/shell.json';
+import ptBRUi from './locales/pt-BR/ui.json';
 
 /** LocalStorage key for persisting the user's locale choice. */
 export const LOCALE_STORAGE_KEY = 'pops-locale';
@@ -39,7 +41,7 @@ const i18n = createInstance();
 void i18n.use(initReactI18next).init({
   lng: getStoredLocale(),
   fallbackLng: DEFAULT_LOCALE,
-  ns: ['common', 'shell', 'navigation'],
+  ns: ['common', 'shell', 'navigation', 'ui'],
   defaultNS: 'common',
   interpolation: { escapeValue: false },
   resources: {
@@ -47,11 +49,13 @@ void i18n.use(initReactI18next).init({
       common: enAUCommon,
       shell: enAUShell,
       navigation: enAUNavigation,
+      ui: enAUUi,
     },
     'pt-BR': {
       common: ptBRCommon,
       shell: ptBRShell,
       navigation: ptBRNavigation,
+      ui: ptBRUi,
     },
   },
 });

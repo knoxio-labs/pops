@@ -3,6 +3,7 @@
  * Supports text, number, date, select, and custom editors
  */
 import { Check, Pencil, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { DateEditor, NumberEditor, SelectEditor, TextEditor } from './EditableCell.editors';
@@ -85,13 +86,14 @@ interface EditorActionsProps {
 }
 
 function EditorActions({ saving, onSave, onCancel }: EditorActionsProps) {
+  const { t } = useTranslation('ui');
   return (
     <div className="flex gap-1">
       <button
         onClick={onSave}
         disabled={saving}
         className="p-1 rounded hover:bg-accent disabled:opacity-50"
-        title="Save"
+        title={t('editableCell.save')}
       >
         <Check className="h-4 w-4 text-success" />
       </button>
@@ -99,7 +101,7 @@ function EditorActions({ saving, onSave, onCancel }: EditorActionsProps) {
         onClick={onCancel}
         disabled={saving}
         className="p-1 rounded hover:bg-accent disabled:opacity-50"
-        title="Cancel"
+        title={t('editableCell.cancel')}
       >
         <X className="h-4 w-4 text-destructive" />
       </button>

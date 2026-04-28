@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Dialog,
@@ -50,10 +51,11 @@ function ResultsBody<T>({
   getResultKey,
   emptyMessage,
 }: ResultsBodyProps<T>) {
+  const { t } = useTranslation('ui');
   if (search.length < minChars) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
-        Type at least {minChars} characters to search
+        {t('searchPicker.minChars', { count: minChars })}
       </p>
     );
   }
@@ -84,7 +86,7 @@ export function SearchPickerDialog<T>({
   onOpenChange,
   title,
   description,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
   search,
   onSearchChange,
   isLoading,
@@ -94,8 +96,11 @@ export function SearchPickerDialog<T>({
   trailing,
   minChars = 2,
   maxResultsHeight = 'max-h-64',
-  emptyMessage = 'No results found',
+  emptyMessage,
 }: SearchPickerDialogProps<T>) {
+  const { t } = useTranslation('ui');
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('searchPicker.searchPlaceholder');
+  const resolvedEmptyMessage = emptyMessage ?? t('searchPicker.noResults');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -110,7 +115,7 @@ export function SearchPickerDialog<T>({
             <TextInput
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
               className="pl-9"
               autoFocus
             />
@@ -125,7 +130,7 @@ export function SearchPickerDialog<T>({
             results={results}
             renderResult={renderResult}
             getResultKey={getResultKey}
-            emptyMessage={emptyMessage}
+            emptyMessage={resolvedEmptyMessage}
           />
         </div>
       </DialogContent>

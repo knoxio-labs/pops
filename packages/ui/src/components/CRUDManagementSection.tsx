@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from './Button';
 
@@ -22,13 +23,15 @@ export interface CRUDManagementSectionProps {
 export function CRUDManagementSection({
   title,
   description,
-  addLabel = 'Add',
+  addLabel,
   onAdd,
   showForm,
   form,
   children,
   className,
 }: CRUDManagementSectionProps) {
+  const { t } = useTranslation('ui');
+  const resolvedAddLabel = addLabel ?? t('crudSection.add');
   return (
     <div className={`rounded-lg border bg-card p-6 space-y-4 ${className ?? ''}`}>
       <div className="flex items-center justify-between">
@@ -39,7 +42,7 @@ export function CRUDManagementSection({
         {onAdd && (
           <Button variant="outline" size="sm" onClick={onAdd}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {addLabel}
+            {resolvedAddLabel}
           </Button>
         )}
       </div>

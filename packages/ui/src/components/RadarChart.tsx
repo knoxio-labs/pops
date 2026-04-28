@@ -5,6 +5,7 @@
  * framework-free — no Recharts, no D3.
  */
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 
@@ -141,6 +142,7 @@ export function RadarChart({
   className,
   style,
 }: RadarChartProps) {
+  const { t } = useTranslation('ui');
   const geom: ChartGeom = {
     cx: size / 2,
     cy: size / 2,
@@ -158,7 +160,7 @@ export function RadarChart({
       className={cn('h-auto w-full', className)}
       style={style}
       role="img"
-      aria-label={`Radar chart over ${axes.length} axes`}
+      aria-label={t('radarChart.ariaLabel', { count: axes.length })}
     >
       <GridRings geom={geom} axes={axes} rings={rings} />
       <AxisSpokes geom={geom} axes={axes} />

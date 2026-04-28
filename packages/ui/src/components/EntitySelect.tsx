@@ -1,5 +1,6 @@
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Badge } from '../primitives/badge';
@@ -37,9 +38,11 @@ export interface EntitySelectProps {
 function EntityTriggerLabel({
   selected,
   placeholder,
+  pendingLabel,
 }: {
   selected?: EntityOption;
   placeholder: string;
+  pendingLabel: string;
 }) {
   if (!selected) return <span className="text-muted-foreground">{placeholder}</span>;
   return (
@@ -47,7 +50,7 @@ function EntityTriggerLabel({
       <span className={cn('truncate', selected.pending && 'italic')}>{selected.name}</span>
       {selected.pending && (
         <Badge variant="secondary" className="text-xs shrink-0">
-          Pending
+          {pendingLabel}
         </Badge>
       )}
       {selected.type && (
@@ -59,14 +62,22 @@ function EntityTriggerLabel({
   );
 }
 
-function EntityRow({ entity, selectedId }: { entity: EntityOption; selectedId?: string }) {
+function EntityRow({
+  entity,
+  selectedId,
+  pendingLabel,
+}: {
+  entity: EntityOption;
+  selectedId?: string;
+  pendingLabel: string;
+}) {
   return (
     <>
       <Check className={`mr-2 h-4 w-4 ${selectedId === entity.id ? 'opacity-100' : 'opacity-0'}`} />
       <span className={cn('truncate', entity.pending && 'italic')}>{entity.name}</span>
       {entity.pending && (
         <Badge variant="secondary" className="ml-1 text-xs shrink-0">
-          Pending
+          {pendingLabel}
         </Badge>
       )}
       {entity.type && (
@@ -86,12 +97,17 @@ export function EntitySelect({
   entities,
   value,
   onChange,
-  placeholder = 'Choose entity...',
-  searchPlaceholder = 'Search entities...',
-  emptyMessage = 'No entities found.',
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
   disabled = false,
   className,
 }: EntitySelectProps) {
+  const { t } = useTranslation('ui');
+  const resolvedPlaceholder = placeholder ?? t('entitySelect.choosePlaceholder');
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('entitySelect.searchPlaceholder');
+  const resolvedEmptyMessage = emptyMessage ?? t('entitySelect.noEntities');
+  const pendingLabel = t('entitySelect.pending');
   const [open, setOpen] = useState(false);
   const selected = entities.find((e) => e.id === value);
 
@@ -105,15 +121,19 @@ export function EntitySelect({
           disabled={disabled}
           className={cn('w-full justify-between font-normal', className)}
         >
-          <EntityTriggerLabel selected={selected} placeholder={placeholder} />
+          <EntityTriggerLabel
+            selected={selected}
+            placeholder={resolvedPlaceholder}
+            pendingLabel={pendingLabel}
+          />
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={resolvedSearchPlaceholder} />
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
             <CommandGroup>
               {entities.map((entity) => (
                 <CommandItem
@@ -124,7 +144,7 @@ export function EntitySelect({
                     setOpen(false);
                   }}
                 >
-                  <EntityRow entity={entity} selectedId={value} />
+                  <EntityRow entity={entity} selectedId={value} pendingLabel={pendingLabel} />
                 </CommandItem>
               ))}
             </CommandGroup>

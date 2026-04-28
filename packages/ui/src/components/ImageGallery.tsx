@@ -4,6 +4,7 @@
  */
 import { ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Button } from '../primitives/button';
@@ -70,6 +71,7 @@ function Thumbnails({
   activeIndex: number;
   onPick: (i: number) => void;
 }) {
+  const { t } = useTranslation('ui');
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
       {items.map((item, i) => (
@@ -77,7 +79,7 @@ function Thumbnails({
           key={item.id}
           type="button"
           onClick={() => onPick(i)}
-          aria-label={`Show image ${i + 1}`}
+          aria-label={t('imageGallery.showImage', { index: i + 1 })}
           aria-current={i === activeIndex}
           className={cn(
             'relative h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-all',
@@ -101,6 +103,7 @@ interface LightboxProps {
 }
 
 function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: LightboxProps) {
+  const { t } = useTranslation('ui');
   return (
     <div
       role="dialog"
@@ -122,13 +125,18 @@ function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: Li
             <Button
               size="icon-sm"
               variant="destructive"
-              aria-label="Delete image"
+              aria-label={t('imageGallery.deleteImage')}
               onClick={() => onDelete(active.id)}
             >
               <Trash2 />
             </Button>
           ) : null}
-          <Button size="icon-sm" variant="secondary" aria-label="Close gallery" onClick={onClose}>
+          <Button
+            size="icon-sm"
+            variant="secondary"
+            aria-label={t('imageGallery.closeGallery')}
+            onClick={onClose}
+          >
             <X />
           </Button>
         </div>
@@ -137,7 +145,7 @@ function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: Li
             <Button
               size="icon-sm"
               variant="secondary"
-              aria-label="Previous image"
+              aria-label={t('imageGallery.previousImage')}
               onClick={goPrev}
               className="absolute left-2 top-1/2 -translate-y-1/2"
             >
@@ -146,7 +154,7 @@ function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: Li
             <Button
               size="icon-sm"
               variant="secondary"
-              aria-label="Next image"
+              aria-label={t('imageGallery.nextImage')}
               onClick={goNext}
               className="absolute right-2 top-1/2 -translate-y-1/2"
             >

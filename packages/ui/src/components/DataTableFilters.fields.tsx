@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { ComboboxSelect } from './ComboboxSelect';
 import { NumberInput } from './NumberInput';
 import { Select, type SelectOption } from './Select';
@@ -11,9 +13,10 @@ interface TextFilterProps {
 }
 
 export function TextFilter({ column, placeholder }: TextFilterProps) {
+  const { t } = useTranslation('ui');
   return (
     <TextInput
-      placeholder={placeholder ?? 'Filter...'}
+      placeholder={placeholder ?? t('dataTableFilters.filterPlaceholder')}
       value={(column.getFilterValue() as string) ?? ''}
       onChange={(e) => column.setFilterValue(e.target.value)}
       clearable
@@ -30,12 +33,13 @@ interface SelectFilterProps {
 }
 
 export function SelectFilter({ column, options, placeholder }: SelectFilterProps) {
+  const { t } = useTranslation('ui');
   return (
     <Select
       value={(column.getFilterValue() as string) ?? ''}
       onChange={(e) => column.setFilterValue(e.target.value || undefined)}
       options={options}
-      placeholder={placeholder ?? 'Select...'}
+      placeholder={placeholder ?? t('dataTableFilters.selectPlaceholder')}
       className="w-full sm:w-45"
     />
   );
@@ -48,6 +52,7 @@ interface MultiSelectFilterProps {
 }
 
 export function MultiSelectFilter({ column, options, placeholder }: MultiSelectFilterProps) {
+  const { t } = useTranslation('ui');
   const filterValue = (column.getFilterValue() as string[]) ?? [];
 
   return (
@@ -58,7 +63,7 @@ export function MultiSelectFilter({ column, options, placeholder }: MultiSelectF
         column.setFilterValue(Array.isArray(value) && value.length > 0 ? value : undefined)
       }
       multiple
-      placeholder={placeholder ?? 'Select...'}
+      placeholder={placeholder ?? t('dataTableFilters.selectPlaceholder')}
       className="w-full sm:min-w-50"
     />
   );
@@ -69,6 +74,7 @@ interface DateRangeFilterProps {
 }
 
 export function DateRangeFilter({ column }: DateRangeFilterProps) {
+  const { t } = useTranslation('ui');
   const filterValue = (column.getFilterValue() as [string, string]) ?? ['', ''];
 
   return (
@@ -77,15 +83,15 @@ export function DateRangeFilter({ column }: DateRangeFilterProps) {
         type="date"
         value={filterValue[0]}
         onChange={(e) => column.setFilterValue([e.target.value, filterValue[1]])}
-        placeholder="From"
+        placeholder={t('dataTableFilters.from')}
         className="w-full sm:w-38"
       />
-      <span className="hidden text-muted-foreground sm:block">to</span>
+      <span className="hidden text-muted-foreground sm:block">{t('dataTableFilters.to')}</span>
       <TextInput
         type="date"
         value={filterValue[1]}
         onChange={(e) => column.setFilterValue([filterValue[0], e.target.value])}
-        placeholder="To"
+        placeholder={t('dataTableFilters.to')}
         className="w-full sm:w-38"
       />
     </div>
@@ -100,9 +106,12 @@ interface NumberRangeFilterProps {
 
 export function NumberRangeFilter({
   column,
-  minPlaceholder = 'Min',
-  maxPlaceholder = 'Max',
+  minPlaceholder,
+  maxPlaceholder,
 }: NumberRangeFilterProps) {
+  const { t } = useTranslation('ui');
+  const resolvedMinPlaceholder = minPlaceholder ?? t('dataTableFilters.min');
+  const resolvedMaxPlaceholder = maxPlaceholder ?? t('dataTableFilters.max');
   const filterValue = (column.getFilterValue() as [number, number]) ?? [undefined, undefined];
 
   return (
@@ -110,14 +119,14 @@ export function NumberRangeFilter({
       <NumberInput
         value={filterValue[0]}
         onChange={(value) => column.setFilterValue([value, filterValue[1]])}
-        placeholder={minPlaceholder}
+        placeholder={resolvedMinPlaceholder}
         className="w-full sm:w-25"
       />
-      <span className="hidden text-muted-foreground sm:block">to</span>
+      <span className="hidden text-muted-foreground sm:block">{t('dataTableFilters.to')}</span>
       <NumberInput
         value={filterValue[1]}
         onChange={(value) => column.setFilterValue([filterValue[0], value])}
-        placeholder={maxPlaceholder}
+        placeholder={resolvedMaxPlaceholder}
         className="w-full sm:w-25"
       />
     </div>

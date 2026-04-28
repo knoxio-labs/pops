@@ -1,4 +1,5 @@
 import { CheckCircle2, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Dialog,
@@ -73,12 +74,16 @@ export function RequestDialog({
   canSubmit,
   isPending,
   isSuccess,
-  submitLabel = 'Request',
-  successLabel = 'Added',
-  pendingLabel = 'Adding...',
+  submitLabel,
+  successLabel,
+  pendingLabel,
   onSubmit,
   children,
 }: RequestDialogProps) {
+  const { t } = useTranslation('ui');
+  const resolvedSubmitLabel = submitLabel ?? t('requestDialog.submitLabel');
+  const resolvedSuccessLabel = successLabel ?? t('requestDialog.successLabel');
+  const resolvedPendingLabel = pendingLabel ?? t('requestDialog.pendingLabel');
   const handleClose = () => {
     if (!isPending) onClose();
   };
@@ -94,7 +99,7 @@ export function RequestDialog({
           {isLoading ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Loading options...
+              {t('requestDialog.loadingOptions')}
             </div>
           ) : (
             children
@@ -102,15 +107,15 @@ export function RequestDialog({
           {error && <p className="text-sm text-destructive/80">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={handleClose} disabled={isPending}>
-              Cancel
+              {t('requestDialog.cancel')}
             </Button>
             <Button onClick={onSubmit} disabled={!canSubmit}>
               <SubmitButtonLabel
                 isPending={!!isPending}
                 isSuccess={isSuccess}
-                pendingLabel={pendingLabel}
-                successLabel={successLabel}
-                submitLabel={submitLabel}
+                pendingLabel={resolvedPendingLabel}
+                successLabel={resolvedSuccessLabel}
+                submitLabel={resolvedSubmitLabel}
               />
             </Button>
           </div>

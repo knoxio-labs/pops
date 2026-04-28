@@ -7,6 +7,7 @@
  */
 import { X } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { TierRow, UNRANKED_POOL_KEY } from './TierListBoard.row';
@@ -15,6 +16,11 @@ export { UNRANKED_POOL_KEY } from './TierListBoard.row';
 
 const POOL = UNRANKED_POOL_KEY;
 const DISMISS = '__dismiss';
+
+function DismissLabel() {
+  const { t } = useTranslation('ui');
+  return <>{t('tierListBoard.dropToRemove')}</>;
+}
 
 export interface TierDefinition {
   id: string;
@@ -98,7 +104,7 @@ function DismissZone({
         active && 'bg-destructive/10'
       )}
     >
-      <X className="h-4 w-4" aria-hidden /> Drop here to remove
+      <X className="h-4 w-4" aria-hidden /> <DismissLabel />
     </div>
   );
 }
@@ -111,15 +117,17 @@ export function TierListBoard<T>({
   onAssignmentsChange,
   showDismissZone = false,
   onDismiss,
-  unrankedLabel = 'Unranked',
+  unrankedLabel,
   className,
 }: TierListBoardProps<T>) {
+  const { t } = useTranslation('ui');
+  const resolvedUnrankedLabel = unrankedLabel ?? t('tierListBoard.unranked');
   const [dragId, setDragId] = useState<string | null>(null);
   const [overZone, setOverZone] = useState<string | null>(null);
 
   const rows = [
     ...tiers.map((t) => ({ id: t.id, label: t.label as ReactNode, color: t.color })),
-    { id: POOL, label: unrankedLabel, color: undefined },
+    { id: POOL, label: resolvedUnrankedLabel, color: undefined },
   ];
 
   const handleDrop = useTierDrop({

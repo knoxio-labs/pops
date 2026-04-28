@@ -5,6 +5,7 @@
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 
@@ -96,13 +97,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       prefix,
       suffix,
       loading = false,
-      loadingText = 'Loading',
+      loadingText,
       asChild = false,
       disabled,
       ...props
     },
     ref
   ) => {
+    const { t } = useTranslation('ui');
+    const resolvedLoadingText = loadingText ?? t('button.loading');
     const isDisabled = disabled ?? loading;
     const mergedClassName = cn(buttonVariants({ variant, size, shape, className }));
 
@@ -120,7 +123,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={mergedClassName}
         disabled={isDisabled}
         aria-busy={loading}
-        aria-label={loading ? loadingText : undefined}
+        aria-label={loading ? resolvedLoadingText : undefined}
         {...props}
       >
         {loading ? (

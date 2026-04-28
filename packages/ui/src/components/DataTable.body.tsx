@@ -1,4 +1,5 @@
 import { flexRender } from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../primitives/table';
@@ -57,11 +58,12 @@ function DataTableRows<TData>({
   emptyState,
   onRowClick,
 }: DataTableBodyProps<TData>) {
+  const { t } = useTranslation('ui');
   if (loading) {
     return (
       <TableRow>
         <TableCell colSpan={columnCount} className="h-24 text-center">
-          Loading...
+          {t('dataTable.loading')}
         </TableCell>
       </TableRow>
     );
@@ -90,7 +92,7 @@ function DataTableRows<TData>({
   return (
     <TableRow>
       <TableCell colSpan={columnCount} className="h-24 text-center">
-        {emptyState ?? 'No results.'}
+        {emptyState ?? t('dataTable.noResults')}
       </TableCell>
     </TableRow>
   );

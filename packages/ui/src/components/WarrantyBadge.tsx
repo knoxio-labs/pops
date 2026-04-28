@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { cn } from '../lib/utils';
 import { Badge } from '../primitives/badge';
 
@@ -30,14 +32,28 @@ export function getWarrantyStatus(warrantyExpiry: string | null): WarrantyInfo {
   const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
   if (days < 0) return { state: 'expired', label: 'Expired' };
-  if (days <= 90) return { state: 'expiring', label: `Expires in ${days} days` };
+  if (days <= 90) return { state: 'expiring', label: `${days}` };
 
   const formatted = expiry.toLocaleDateString('en-AU', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   });
-  return { state: 'active', label: `Warranty until ${formatted}` };
+  return { state: 'active', label: formatted };
+}
+
+function useWarrantyLabel(info: WarrantyInfo): string {
+  const { t } = useTranslation('ui');
+  switch (info.state) {
+    case 'none':
+      return t('warranty.noWarranty');
+    case 'expired':
+      return t('warranty.expired');
+    case 'expiring':
+      return t('warranty.expiresInDays', { days: info.label });
+    case 'active':
+      return t('warranty.warrantyUntil', { date: info.label });
+  }
 }
 
 export interface WarrantyBadgeProps extends Omit<
@@ -48,7 +64,9 @@ export interface WarrantyBadgeProps extends Omit<
 }
 
 export function WarrantyBadge({ warrantyExpiry, className, ...props }: WarrantyBadgeProps) {
-  const { state, label } = getWarrantyStatus(warrantyExpiry);
+  const info = getWarrantyStatus(warrantyExpiry);
+  const { state } = info;
+  const label = useWarrantyLabel(info);
   return (
     <Badge
       variant="outline"

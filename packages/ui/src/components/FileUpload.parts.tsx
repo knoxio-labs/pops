@@ -1,5 +1,6 @@
 import { Upload, X } from 'lucide-react';
 import { type ChangeEvent, type DragEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { formatBytes } from '../lib/format';
 import { cn } from '../lib/utils';
@@ -30,6 +31,7 @@ export function DropZone({
   onDrop,
   onChange,
 }: DropZoneProps) {
+  const { t } = useTranslation('ui');
   return (
     <div
       role="button"
@@ -58,9 +60,13 @@ export function DropZone({
     >
       <Upload className="h-8 w-8 text-muted-foreground" aria-hidden />
       <div className="text-sm font-medium">
-        {prompt ?? <>Drag {multiple ? 'files' : 'a file'} here, or click to browse</>}
+        {prompt ?? (multiple ? t('fileUpload.dragMultiple') : t('fileUpload.dragSingle'))}
       </div>
-      {accept ? <div className="text-xs text-muted-foreground">Accepts {accept}</div> : null}
+      {accept ? (
+        <div className="text-xs text-muted-foreground">
+          {t('fileUpload.accepts', { types: accept })}
+        </div>
+      ) : null}
       <input
         ref={inputRef}
         id={inputId}
@@ -81,6 +87,7 @@ export interface FileListProps {
 }
 
 export function FileList({ files, onRemoveFile }: FileListProps) {
+  const { t } = useTranslation('ui');
   return (
     <ul className="flex flex-col gap-1.5 text-sm">
       {files.map((file, i) => (
@@ -98,7 +105,7 @@ export function FileList({ files, onRemoveFile }: FileListProps) {
               size="icon-sm"
               variant="ghost"
               onClick={() => onRemoveFile(i)}
-              aria-label={`Remove ${file.name}`}
+              aria-label={t('fileUpload.remove', { name: file.name })}
             >
               <X />
             </Button>

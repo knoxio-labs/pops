@@ -8,6 +8,7 @@
  * field's value is stored under its `id` in the returned values object.
  */
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Label } from '../primitives/label';
@@ -102,10 +103,11 @@ interface TestActionsPanelProps {
 }
 
 function TestActionsPanel({ testActions, testStatus, onRun }: TestActionsPanelProps) {
+  const { t } = useTranslation('ui');
   if (testActions.length === 0) return null;
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/20 p-3">
-      <div className="text-sm font-medium">Test actions</div>
+      <div className="text-sm font-medium">{t('settingsForm.testActions')}</div>
       <div className="flex flex-wrap gap-2">
         {testActions.map((action) => {
           const status = testStatus[action.id];
@@ -116,7 +118,7 @@ function TestActionsPanel({ testActions, testStatus, onRun }: TestActionsPanelPr
               </Button>
               {status ? (
                 <span className={cn('text-xs', status.ok ? 'text-success' : 'text-destructive')}>
-                  {status.message ?? (status.ok ? 'OK' : 'Failed')}
+                  {status.message ?? (status.ok ? t('settingsForm.ok') : t('settingsForm.failed'))}
                 </span>
               ) : null}
             </div>
@@ -156,6 +158,7 @@ export function SettingsForm({
   headerSlot,
   className,
 }: SettingsFormProps) {
+  const { t } = useTranslation('ui');
   const { errors, runValidation } = useSettingsErrors(section.fields);
   const loadedOptions = useLoadedOptions(section.fields);
   const { saving, update, handleCommit } = useSettingsSave({
@@ -193,7 +196,7 @@ export function SettingsForm({
       {showFooter ? (
         <footer className="flex justify-end gap-2">
           <Button onClick={handleCommit} loading={saving}>
-            Save
+            {t('settingsForm.save')}
           </Button>
         </footer>
       ) : null}

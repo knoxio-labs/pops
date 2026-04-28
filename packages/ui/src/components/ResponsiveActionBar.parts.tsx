@@ -1,4 +1,5 @@
 import { Ban, Clock, EyeOff, MoreHorizontal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '../primitives/tooltip';
 import { Button } from './Button';
@@ -20,6 +21,7 @@ export function StaleButton({
   pending?: boolean;
   onStale: (id: number) => void;
 }) {
+  const { t } = useTranslation('ui');
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -28,15 +30,15 @@ export function StaleButton({
           size="sm"
           onClick={() => onStale(movie.id)}
           disabled={pending}
-          aria-label={`Mark ${movie.title} as stale`}
+          aria-label={t('responsiveActionBar.markStale', { title: movie.title })}
           data-testid={testId}
         >
           <Clock className="h-3.5 w-3.5 mr-1.5" />
-          <span className="hidden sm:inline">Stale:</span>
+          <span className="hidden sm:inline">{t('responsiveActionBar.stale')}</span>
           <span className="truncate max-w-[8rem]">{movie.title}</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent>Mark as stale — reduces score weight for future comparisons</TooltipContent>
+      <TooltipContent>{t('responsiveActionBar.staleTooltip')}</TooltipContent>
     </Tooltip>
   );
 }
@@ -58,11 +60,12 @@ export function MobileMenu({
   naPending,
   blacklistPending,
 }: MobileMenuProps) {
+  const { t } = useTranslation('ui');
   return (
     <div className="md:hidden">
       <DropdownMenu
         trigger={
-          <Button variant="outline" size="sm" aria-label="More actions">
+          <Button variant="outline" size="sm" aria-label={t('responsiveActionBar.moreActions')}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         }
@@ -70,7 +73,7 @@ export function MobileMenu({
           {
             items: [
               {
-                label: 'N/A (exclude both)',
+                label: t('responsiveActionBar.naExcludeBoth'),
                 value: 'na',
                 icon: <Ban className="h-4 w-4" />,
                 disabled: naPending,
@@ -82,7 +85,7 @@ export function MobileMenu({
             label: 'Destructive',
             items: [
               {
-                label: `Not Watched: ${movieA.title}`,
+                label: t('responsiveActionBar.notWatched', { title: movieA.title }),
                 value: 'blacklist-a',
                 variant: 'destructive' as const,
                 icon: <EyeOff className="h-4 w-4" />,
@@ -90,7 +93,7 @@ export function MobileMenu({
                 onSelect: () => onBlacklist(movieA),
               },
               {
-                label: `Not Watched: ${movieB.title}`,
+                label: t('responsiveActionBar.notWatched', { title: movieB.title }),
                 value: 'blacklist-b',
                 variant: 'destructive' as const,
                 icon: <EyeOff className="h-4 w-4" />,
@@ -116,6 +119,7 @@ export function NotWatchedButton({
   pending?: boolean;
   onBlacklist: (m: ResponsiveActionBarMovie) => void;
 }) {
+  const { t } = useTranslation('ui');
   return (
     <Button
       variant="outline"
@@ -126,7 +130,7 @@ export function NotWatchedButton({
       data-testid={testId}
     >
       <EyeOff className="h-3.5 w-3.5 mr-1.5" />
-      Not Watched: {movie.title}
+      {t('responsiveActionBar.notWatched', { title: movie.title })}
     </Button>
   );
 }
@@ -148,6 +152,7 @@ export function DesktopRow({
   naPending,
   blacklistPending,
 }: DesktopRowProps) {
+  const { t } = useTranslation('ui');
   return (
     <div className="hidden md:flex justify-center gap-2">
       <Button
@@ -159,7 +164,7 @@ export function DesktopRow({
         data-testid="na-button"
       >
         <Ban className="h-3.5 w-3.5 mr-1.5" />
-        {naPending ? 'Excluding…' : 'N/A'}
+        {naPending ? t('responsiveActionBar.excluding') : t('responsiveActionBar.na')}
       </Button>
       <NotWatchedButton
         movie={movieA}

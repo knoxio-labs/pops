@@ -5,6 +5,7 @@
  */
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Button } from '../primitives/button';
@@ -54,15 +55,17 @@ function useScrollButtons(itemsLength: number) {
 function ScrollButton({
   direction,
   onClick,
+  scrollLabel,
 }: {
   direction: 'left' | 'right';
   onClick: () => void;
+  scrollLabel: string;
 }) {
   return (
     <Button
       size="icon-sm"
       variant="secondary"
-      aria-label={`Scroll ${direction}`}
+      aria-label={scrollLabel}
       onClick={onClick}
       className={cn(
         'absolute top-1/2 -translate-y-1/2 shadow-md',
@@ -83,6 +86,7 @@ export function ScrollShelf<T>({
   itemWidth = 192,
   className,
 }: ScrollShelfProps<T>) {
+  const { t } = useTranslation('ui');
   const { scrollRef, canScrollLeft, canScrollRight } = useScrollButtons(items.length);
 
   const scrollBy = (direction: 1 | -1) => {
@@ -111,8 +115,20 @@ export function ScrollShelf<T>({
             </div>
           ))}
         </div>
-        {canScrollLeft ? <ScrollButton direction="left" onClick={() => scrollBy(-1)} /> : null}
-        {canScrollRight ? <ScrollButton direction="right" onClick={() => scrollBy(1)} /> : null}
+        {canScrollLeft ? (
+          <ScrollButton
+            direction="left"
+            onClick={() => scrollBy(-1)}
+            scrollLabel={t('scrollShelf.scrollLeft')}
+          />
+        ) : null}
+        {canScrollRight ? (
+          <ScrollButton
+            direction="right"
+            onClick={() => scrollBy(1)}
+            scrollLabel={t('scrollShelf.scrollRight')}
+          />
+        ) : null}
       </div>
     </section>
   );

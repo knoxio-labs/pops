@@ -1,4 +1,5 @@
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 
@@ -31,10 +32,11 @@ export interface LoadingProgressStepProps {
 }
 
 function ProgressBar({ progress }: { progress: number }) {
+  const { t } = useTranslation('ui');
   return (
     <div className="w-full max-w-md">
       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-        <span>Progress</span>
+        <span>{t('loadingProgress.progress')}</span>
         <span>{Math.round(progress)}%</span>
       </div>
       <div className="w-full bg-muted rounded-full h-2">
@@ -47,13 +49,17 @@ function ProgressBar({ progress }: { progress: number }) {
   );
 }
 
-function stepStatusLabel(status: ProgressStep['status']) {
-  if (status === 'in_progress') return 'In progress...';
-  if (status === 'done') return 'Complete';
-  return 'Pending';
+function useStepStatusLabel() {
+  const { t } = useTranslation('ui');
+  return (status: ProgressStep['status']) => {
+    if (status === 'in_progress') return t('loadingProgress.inProgress');
+    if (status === 'done') return t('loadingProgress.complete');
+    return t('loadingProgress.pending');
+  };
 }
 
 function StepsList({ steps }: { steps: ProgressStep[] }) {
+  const stepStatusLabel = useStepStatusLabel();
   return (
     <div className="w-full max-w-md text-xs text-muted-foreground space-y-1">
       {steps.map((step) => (
@@ -67,9 +73,12 @@ function StepsList({ steps }: { steps: ProgressStep[] }) {
 }
 
 function CurrentBatchList({ items }: { items: ProgressItem[] }) {
+  const { t } = useTranslation('ui');
   return (
     <div className="w-full max-w-md">
-      <p className="text-xs font-medium text-foreground mb-2">Currently processing:</p>
+      <p className="text-xs font-medium text-foreground mb-2">
+        {t('loadingProgress.currentlyProcessing')}
+      </p>
       <div className="space-y-1">
         {items.map((item, idx) => (
           <div
