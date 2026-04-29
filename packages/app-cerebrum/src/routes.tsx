@@ -9,9 +9,9 @@
  */
 import { lazy } from 'react';
 
-import type { RouteObject } from 'react-router';
-
 import { routes as aiAdminRoutes } from '@pops/app-ai';
+
+import type { RouteObject } from 'react-router';
 
 import type { IconName } from '@pops/navigation';
 
