@@ -16,6 +16,7 @@ import { cn, ErrorBoundary } from '@pops/ui';
 import { AmbientBackground } from './root-layout/AmbientBackground';
 import { NavRegion } from './root-layout/NavRegion';
 import { usePageNavAutoClose } from './root-layout/usePageNavAutoClose';
+import { CerebrumChatOverlay } from './CerebrumChatOverlay';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 

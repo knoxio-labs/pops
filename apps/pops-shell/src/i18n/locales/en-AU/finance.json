@@ -21,6 +21,7 @@
 
   "transactions.failedToLoad": "Failed to load transactions",
   "transactions.totalCount": "{{count}} total transactions",
+  "transactions.filteredCount": "{{filtered}} of {{total}} transactions",
   "transactions.searchPlaceholder": "Search transactions...",
   "transactions.addTransaction": "Add Transaction",
   "transactions.editTransaction": "Edit Transaction",
@@ -136,6 +137,7 @@
   "placeholder.tagsExample": "Groceries, Transport",
   "placeholder.filterByTag": "Filter by tag...",
 
+  "column.date": "Date",
   "column.category": "Category",
   "column.period": "Period",
   "column.amount": "Amount",

@@ -23,16 +23,17 @@ export function useTemplateAndScopeData() {
   const knownScopes = scopesRef.current;
 
   const typeOptions = useMemo(() => {
+    const toTitleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const opts = templates
       .filter((t) => t.name !== 'capture')
       .map((t) => ({
         value: t.name,
-        label: t.name,
+        label: toTitleCase(t.name),
         description: t.description,
       }));
     opts.unshift({
       value: 'capture',
-      label: 'capture',
+      label: 'Capture',
       description: 'Freeform capture — no template',
     });
     return opts;
