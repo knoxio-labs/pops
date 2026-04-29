@@ -25,7 +25,7 @@ export const BudgetFormSchema = z.object({
 export type BudgetFormValues = z.infer<typeof BudgetFormSchema>;
 
 export const PERIOD_OPTIONS = [
-  { label: 'None (One-time)', value: '' },
+  { label: 'One-time', value: '' },
   { label: 'Monthly', value: 'Monthly' },
   { label: 'Yearly', value: 'Yearly' },
 ];
