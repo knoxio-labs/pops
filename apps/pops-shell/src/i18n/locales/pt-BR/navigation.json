@@ -20,14 +20,13 @@
   "inventory.warranties": "Garantias",
   "inventory.locations": "Localizações",
   "inventory.reports": "Relatórios",
-  "ai": "IA",
-  "ai.usage": "Uso de IA",
-  "ai.promptTemplates": "Modelos de Prompt",
-  "ai.rules": "Regras",
-  "ai.cache": "Cache",
   "cerebrum": "Cerebrum",
   "cerebrum.ingest": "Ingerir",
   "cerebrum.chat": "Chat",
   "cerebrum.nudges": "Nudges",
-  "cerebrum.proposals": "Propostas"
+  "cerebrum.proposals": "Propostas",
+  "cerebrum.admin.usage": "Uso de IA",
+  "cerebrum.admin.promptTemplates": "Modelos de Prompt",
+  "cerebrum.admin.rules": "Regras",
+  "cerebrum.admin.cache": "Cache"
 }

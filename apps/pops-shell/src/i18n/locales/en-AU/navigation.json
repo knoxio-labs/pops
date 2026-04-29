@@ -20,14 +20,13 @@
   "inventory.warranties": "Warranties",
   "inventory.locations": "Locations",
   "inventory.reports": "Reports",
-  "ai": "AI",
-  "ai.usage": "AI Usage",
-  "ai.promptTemplates": "Prompt Templates",
-  "ai.rules": "Rules",
-  "ai.cache": "Cache",
   "cerebrum": "Cerebrum",
   "cerebrum.ingest": "Ingest",
   "cerebrum.chat": "Chat",
   "cerebrum.nudges": "Nudges",
-  "cerebrum.proposals": "Proposals"
+  "cerebrum.proposals": "Proposals",
+  "cerebrum.admin.usage": "AI Usage",
+  "cerebrum.admin.promptTemplates": "Prompt Templates",
+  "cerebrum.admin.rules": "Rules",
+  "cerebrum.admin.cache": "Cache"
 }

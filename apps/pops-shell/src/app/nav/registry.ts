@@ -7,7 +7,6 @@
  * 3. Import it here and add to the registeredApps array
  * 4. Add its routes to the shell router (app/router.tsx)
  */
-import { navConfig as aiNavConfig } from '@pops/app-ai';
 import { navConfig as cerebrumNavConfig } from '@pops/app-cerebrum';
 import { navConfig as financeNavConfig } from '@pops/app-finance';
 import { navConfig as inventoryNavConfig } from '@pops/app-inventory';
@@ -20,7 +19,6 @@ export const registeredApps: AppNavConfig[] = [
   financeNavConfig,
   mediaNavConfig,
   inventoryNavConfig,
-  aiNavConfig,
   cerebrumNavConfig,
 ];
 

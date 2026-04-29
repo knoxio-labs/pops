@@ -6,8 +6,10 @@ import { createBrowserRouter, Link, Navigate } from 'react-router';
  *
  * RootLayout provides the top bar + sidebar chrome.
  * Finance routes are lazily loaded from @pops/app-finance.
+ *
+ * The former /ai top-level route has been merged into /cerebrum/admin/*
+ * (see issue #2333). Legacy /ai/* URLs redirect to /cerebrum/admin/*.
  */
-import { routes as aiRoutes } from '@pops/app-ai';
 import { routes as cerebrumRoutes } from '@pops/app-cerebrum';
 import { routes as financeRoutes } from '@pops/app-finance';
 import { routes as inventoryRoutes } from '@pops/app-inventory';
@@ -69,13 +71,15 @@ export const router = createBrowserRouter([
         children: withSuspense(inventoryRoutes),
       },
       {
-        path: 'ai',
-        children: withSuspense(aiRoutes),
-      },
-      {
         path: 'cerebrum',
         children: withSuspense(cerebrumRoutes),
       },
+      // Legacy /ai/* redirects — keep bookmarks and deep-links working.
+      { path: 'ai', element: <Navigate to="/cerebrum" replace /> },
+      { path: 'ai/prompts', element: <Navigate to="/cerebrum/admin/prompts" replace /> },
+      { path: 'ai/config', element: <Navigate to="/settings#ai.config" replace /> },
+      { path: 'ai/rules', element: <Navigate to="/cerebrum/admin/rules" replace /> },
+      { path: 'ai/cache', element: <Navigate to="/cerebrum/admin/cache" replace /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'features', element: <FeaturesPage /> },
       { path: '*', element: <NotFoundPage /> },

@@ -3,10 +3,15 @@
  *
  * Routes are lazy-loaded for code splitting. The shell imports
  * these via @pops/app-cerebrum and mounts them under /cerebrum/*.
+ *
+ * AI admin pages (usage, prompts, rules, cache) are mounted under
+ * /cerebrum/admin/* — imported from @pops/app-ai.
  */
 import { lazy } from 'react';
 
 import type { RouteObject } from 'react-router';
+
+import { routes as aiAdminRoutes } from '@pops/app-ai';
 
 import type { IconName } from '@pops/navigation';
 
@@ -49,6 +54,15 @@ export const navConfig = {
       labelKey: 'cerebrum.proposals',
       icon: 'GitPullRequest',
     },
+    { path: '/admin', label: 'AI Usage', labelKey: 'cerebrum.admin.usage', icon: 'BarChart3' },
+    {
+      path: '/admin/prompts',
+      label: 'Prompt Templates',
+      labelKey: 'cerebrum.admin.promptTemplates',
+      icon: 'FileText',
+    },
+    { path: '/admin/rules', label: 'Rules', labelKey: 'cerebrum.admin.rules', icon: 'BookOpen' },
+    { path: '/admin/cache', label: 'Cache', labelKey: 'cerebrum.admin.cache', icon: 'Database' },
   ],
 } satisfies AppNavConfigShape;
 
@@ -57,4 +71,5 @@ export const routes: RouteObject[] = [
   { path: 'chat', element: <ChatPage /> },
   { path: 'nudges', element: <NudgesPage /> },
   { path: 'proposals', element: <ProposalQueuePage /> },
+  { path: 'admin', children: aiAdminRoutes },
 ];
