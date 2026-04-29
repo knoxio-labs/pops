@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import { DEFAULT_SQLITE_PATH } from '../../../../db/sqlite-path.js';
 import { logger } from '../../../../lib/logger.js';
 
 export interface AiCacheEntry {
@@ -16,7 +17,7 @@ let diskLoaded = false;
 function getCachePath(): string {
   return (
     process.env['AI_CACHE_PATH'] ??
-    join(dirname(process.env['SQLITE_PATH'] ?? './data/pops.db'), 'ai_entity_cache.json')
+    join(dirname(process.env['SQLITE_PATH'] ?? DEFAULT_SQLITE_PATH), 'ai_entity_cache.json')
   );
 }
 
