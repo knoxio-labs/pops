@@ -32,7 +32,7 @@ describe('WishlistResult', () => {
     expect(screen.getByText('$5,000.00')).toBeInTheDocument();
   });
 
-  it('renders dash when targetAmount is null', () => {
+  it('does not render trailing amount when targetAmount is null', () => {
     render(
       <WishlistResult
         data={{
@@ -44,7 +44,7 @@ describe('WishlistResult', () => {
     );
 
     expect(screen.getByText('Standing Desk')).toBeInTheDocument();
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
   });
 
   it('hides priority when null', () => {

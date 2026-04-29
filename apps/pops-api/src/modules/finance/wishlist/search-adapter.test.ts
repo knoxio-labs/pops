@@ -63,13 +63,21 @@ describe('wishlist search adapter', () => {
     });
   });
 
-  it('exact match is case-insensitive', () => {
+  it('exact match is case-insensitive for ASCII', () => {
     seedWishListItem(db, { item: 'Japan Trip' });
 
     const hits = search('japan trip');
     expect(hits).toHaveLength(1);
     expect(hits[0]!.score).toBe(1.0);
     expect(hits[0]!.matchType).toBe('exact');
+  });
+
+  it('match is case-insensitive for non-ASCII characters', () => {
+    seedWishListItem(db, { item: 'Café au Lait Machine' });
+
+    const hits = search('café');
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.matchType).toBe('prefix');
   });
 
   it('returns prefix match with score 0.8', () => {

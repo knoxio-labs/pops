@@ -1,8 +1,7 @@
 import { registerResultComponent, type ResultComponentProps } from '@pops/navigation';
 import { formatCurrency, highlightMatch, SearchResultItem } from '@pops/ui';
 
-function formatAmount(amount: number | null | undefined): string {
-  if (amount == null) return '—';
+function formatAmount(amount: number): string {
   return formatCurrency(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 

@@ -1,4 +1,4 @@
-import { like } from 'drizzle-orm';
+import { like, sql } from 'drizzle-orm';
 
 import { wishList } from '@pops/db-types';
 
@@ -9,6 +9,7 @@ import type { Query, SearchAdapter, SearchContext, SearchHit } from '../../core/
 
 export interface WishlistHitData {
   item: string;
+  // Free-text in the DB; renderer handles low/medium/high and surfaces others as-is
   priority: string | null;
   targetAmount: number | null;
 }
@@ -40,13 +41,12 @@ export const wishlistSearchAdapter: SearchAdapter<WishlistHitData> = {
     if (!text) return [];
 
     const db = getDrizzle();
-    const limit = options?.limit ?? 20;
+    const lowerText = text.toLowerCase();
 
     const rows = db
       .select()
       .from(wishList)
-      .where(like(wishList.item, `%${text}%`))
-      .limit(limit)
+      .where(like(sql`lower(${wishList.item})`, `%${lowerText}%`))
       .all();
 
     const hits: SearchHit<WishlistHitData>[] = [];
@@ -68,7 +68,13 @@ export const wishlistSearchAdapter: SearchAdapter<WishlistHitData> = {
       });
     }
 
-    return hits.toSorted((a, b) => b.score - a.score);
+    hits.sort((a, b) => b.score - a.score);
+
+    if (options?.limit && options.limit > 0) {
+      return hits.slice(0, options.limit);
+    }
+
+    return hits;
   },
 };
 
