@@ -46,8 +46,8 @@ export function BudgetsPage() {
             : t('budgets.manageTargets')
         }
         actions={
-          <Button onClick={state.handleAdd}>
-            <Plus className="mr-2 h-4 w-4" /> {t('budgets.addBudget')}
+          <Button onClick={state.handleAdd} prefix={<Plus className="h-4 w-4" />}>
+            {t('budgets.addBudget')}
           </Button>
         }
       />
@@ -65,7 +65,6 @@ export function BudgetsPage() {
           searchPlaceholder={t('budgets.searchPlaceholder')}
           paginated
           defaultPageSize={50}
-          pageSizeOptions={[25, 50, 100]}
           filters={BUDGET_TABLE_FILTERS}
         />
       )}

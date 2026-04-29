@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   typesQuery: vi.fn(),
   treeQuery: vi.fn(),
   searchByAssetId: vi.fn(),
+  deleteItem: vi.fn(),
+  invalidateList: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@pops/api-client', () => ({
@@ -16,6 +18,15 @@ vi.mock('@pops/api-client', () => ({
         list: { useQuery: (input: unknown) => mocks.itemsQuery(input) },
         distinctTypes: { useQuery: () => mocks.typesQuery() },
         searchByAssetId: { fetch: mocks.searchByAssetId },
+        delete: {
+          useMutation: (opts?: { onSuccess?: () => void }) => ({
+            mutate: (input: { id: string }) => {
+              mocks.deleteItem(input);
+              opts?.onSuccess?.();
+            },
+            isPending: false,
+          }),
+        },
       },
       locations: {
         tree: { useQuery: () => mocks.treeQuery() },
@@ -23,7 +34,10 @@ vi.mock('@pops/api-client', () => ({
     },
     useUtils: () => ({
       inventory: {
-        items: { searchByAssetId: { fetch: mocks.searchByAssetId } },
+        items: {
+          list: { invalidate: mocks.invalidateList },
+          searchByAssetId: { fetch: mocks.searchByAssetId },
+        },
       },
     }),
   },
@@ -77,9 +91,9 @@ describe('ItemsPage', () => {
 
       const typeSelect = screen.getAllByRole('combobox')[0]!;
       expect(typeSelect).toBeInTheDocument();
-      // Options include: placeholder + "All Types" + 3 dynamic types = 5
+      // Options include: "All Types" + 3 dynamic types = 4
       const options = typeSelect.querySelectorAll('option');
-      expect(options.length).toBe(5);
+      expect(options.length).toBe(4);
     });
 
     it('renders Location select dropdown with hierarchical options', () => {
@@ -107,10 +121,10 @@ describe('ItemsPage', () => {
       renderPage();
 
       const selects = screen.getAllByRole('combobox');
-      // Condition select: placeholder + All Conditions + New + Good + Fair + Poor + Broken = 7
+      // Condition select: All Conditions + New + Good + Fair + Poor + Broken = 6
       const conditionSelect = selects[1]!; // second select
       const options = conditionSelect.querySelectorAll('option');
-      expect(options.length).toBe(7);
+      expect(options.length).toBe(6);
     });
 
     it('shows Clear filters button when a filter is active', () => {

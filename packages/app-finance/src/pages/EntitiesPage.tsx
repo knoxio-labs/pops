@@ -75,7 +75,6 @@ function TableSection({
         searchPlaceholder={t('entities.searchPlaceholder')}
         paginated
         defaultPageSize={50}
-        pageSizeOptions={[25, 50, 100]}
         filters={ENTITY_TABLE_FILTERS}
       />
     </>
@@ -108,8 +107,8 @@ export function EntitiesPage() {
         title={t('entities')}
         description={getDescription(t, query.data, state.showOrphanedOnly)}
         actions={
-          <Button onClick={state.handleAdd}>
-            <Plus className="mr-2 h-4 w-4" /> {t('entities.addEntity')}
+          <Button onClick={state.handleAdd} prefix={<Plus className="h-4 w-4" />}>
+            {t('entities.addEntity')}
           </Button>
         }
       />

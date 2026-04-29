@@ -55,7 +55,6 @@ function TableContent({
       searchPlaceholder={t('transactions.searchPlaceholder')}
       paginated
       defaultPageSize={50}
-      pageSizeOptions={[25, 50, 100]}
       filters={TRANSACTION_TABLE_FILTERS}
     />
   );
@@ -114,8 +113,8 @@ export function TransactionsPage() {
             : undefined
         }
         actions={
-          <Button onClick={state.handleAdd}>
-            <Plus className="mr-2 h-4 w-4" /> {t('transactions.addTransaction')}
+          <Button onClick={state.handleAdd} prefix={<Plus className="h-4 w-4" />}>
+            {t('transactions.addTransaction')}
           </Button>
         }
       />
