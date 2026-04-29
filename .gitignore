@@ -21,6 +21,8 @@ dist/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
+*-shm
+*-wal
 *.csv
 !apps/pops-api/src/modules/finance/imports/test-data/amex-sample.csv
 entity_lookup.json

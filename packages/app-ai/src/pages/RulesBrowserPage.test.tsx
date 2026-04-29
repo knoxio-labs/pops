@@ -19,6 +19,14 @@ const mockPreviewQuery = vi.fn((..._args: unknown[]) => ({
 vi.mock('@pops/api-client', () => ({
   trpc: {
     core: {
+      entities: {
+        list: {
+          useQuery: () => ({
+            data: { data: [], pagination: { total: 0, limit: 500, offset: 0 } },
+            isLoading: false,
+          }),
+        },
+      },
       corrections: {
         list: { useQuery: (...args: unknown[]) => mockListQuery(...args) },
         previewMatches: { useQuery: (...args: unknown[]) => mockPreviewQuery(...args) },

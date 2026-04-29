@@ -20,6 +20,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  EntitySelect,
+  type EntityOption,
   Label,
   NumberInput,
   Select,
@@ -39,6 +41,7 @@ interface RuleFormDialogProps {
   isSubmitting: boolean;
   onSubmit: (values: RuleFormValues) => void;
   preview: RulePreviewPanelProps['preview'];
+  entities: EntityOption[];
 }
 
 function PriorityField({ form }: { form: UseFormReturn<RuleFormValues> }) {
@@ -64,7 +67,39 @@ function PriorityField({ form }: { form: UseFormReturn<RuleFormValues> }) {
   );
 }
 
-function PatternAndType({ form }: { form: UseFormReturn<RuleFormValues> }) {
+function EntityField({
+  form,
+  entities,
+}: {
+  form: UseFormReturn<RuleFormValues>;
+  entities: EntityOption[];
+}) {
+  return (
+    <Controller
+      control={form.control}
+      name="entityId"
+      render={({ field }) => (
+        <div className="flex flex-col gap-1.5 w-full">
+          <Label>Entity</Label>
+          <EntitySelect
+            entities={entities}
+            value={field.value ?? undefined}
+            onChange={(id) => field.onChange(id)}
+            placeholder="Choose entity..."
+          />
+        </div>
+      )}
+    />
+  );
+}
+
+function PatternAndType({
+  form,
+  entities,
+}: {
+  form: UseFormReturn<RuleFormValues>;
+  entities: EntityOption[];
+}) {
   return (
     <>
       <TextInput
@@ -81,6 +116,7 @@ function PatternAndType({ form }: { form: UseFormReturn<RuleFormValues> }) {
         />
         <PriorityField form={form} />
       </div>
+      <EntityField form={form} entities={entities} />
     </>
   );
 }
@@ -141,7 +177,8 @@ function DialogActions({
 }
 
 export function RuleFormDialog(props: RuleFormDialogProps) {
-  const { open, onOpenChange, editingRule, form, isSubmitting, onSubmit, preview } = props;
+  const { open, onOpenChange, editingRule, form, isSubmitting, onSubmit, preview, entities } =
+    props;
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
       <DialogContent className="sm:max-w-4xl">
@@ -154,7 +191,7 @@ export function RuleFormDialog(props: RuleFormDialogProps) {
           </DialogHeader>
           <div className="grid gap-6 py-4 md:grid-cols-2">
             <div className="grid gap-4 min-w-0">
-              <PatternAndType form={form} />
+              <PatternAndType form={form} entities={entities} />
               <TagsAndActive form={form} />
             </div>
             <RulePreviewPanel preview={preview} />

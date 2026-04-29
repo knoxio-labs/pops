@@ -46,6 +46,7 @@ function buildSubmit(
         data: {
           descriptionPattern: values.descriptionPattern,
           matchType: values.matchType,
+          entityId: values.entityId ?? null,
           tags: values.tags,
           priority: values.priority,
           isActive: values.isActive,
@@ -56,6 +57,7 @@ function buildSubmit(
     createMutation.mutate({
       descriptionPattern: values.descriptionPattern,
       matchType: values.matchType,
+      entityId: values.entityId ?? null,
       tags: values.tags,
       priority: values.priority,
     });
@@ -86,6 +88,8 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
     defaultValues: DEFAULT_RULE_FORM_VALUES,
   });
   const { createMutation, updateMutation } = useRuleMutations(onClose);
+  const entitiesQuery = trpc.core.entities.list.useQuery({ limit: 500 });
+  const entities = (entitiesQuery.data?.data ?? []).map((e) => ({ id: e.id, name: e.name }));
 
   const handleAdd = useCallback(() => {
     setEditingRule(null);
@@ -98,6 +102,7 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
       form.reset({
         descriptionPattern: rule.descriptionPattern,
         matchType: rule.matchType,
+        entityId: rule.entityId ?? null,
         tags: rule.tags,
         priority: rule.priority,
         isActive: rule.isActive,
@@ -109,6 +114,7 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
   return {
     form,
     editingRule,
+    entities,
     handleAdd,
     handleEdit,
     onSubmit: buildSubmit(editingRule, createMutation, updateMutation),

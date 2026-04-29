@@ -16,6 +16,7 @@ import type { MatchType } from '../types';
 export const RuleFormSchema = z.object({
   descriptionPattern: z.string().min(1, 'Pattern is required'),
   matchType: z.enum(['exact', 'contains', 'regex']),
+  entityId: z.string().nullable().optional(),
   tags: z.array(z.string()),
   priority: z.number().int().nonnegative(),
   isActive: z.boolean(),
@@ -26,6 +27,7 @@ export type RuleFormValues = z.infer<typeof RuleFormSchema>;
 export const DEFAULT_RULE_FORM_VALUES: RuleFormValues = {
   descriptionPattern: '',
   matchType: 'contains',
+  entityId: null,
   tags: [],
   priority: 0,
   isActive: true,
