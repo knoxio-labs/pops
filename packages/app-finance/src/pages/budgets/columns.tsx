@@ -40,6 +40,12 @@ const periodColumn: ColumnDef<Budget> = {
       </Badge>
     );
   },
+  filterFn: (row, columnId, filterValue) => {
+    if (filterValue === undefined || filterValue === null || filterValue === '') return true;
+    const value = row.getValue<string | null>(columnId);
+    if (filterValue === 'one-time') return value === null;
+    return value === filterValue;
+  },
 };
 
 const amountColumn: ColumnDef<Budget> = {
@@ -190,6 +196,7 @@ export const BUDGET_TABLE_FILTERS: ColumnFilter[] = [
     label: 'Period',
     options: [
       { label: 'All Periods', value: '' },
+      { label: 'One-time', value: 'one-time' },
       { label: 'Monthly', value: 'Monthly' },
       { label: 'Yearly', value: 'Yearly' },
     ],
