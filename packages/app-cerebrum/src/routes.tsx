@@ -41,7 +41,9 @@ export const navConfig = {
   basePath: '/cerebrum',
   items: [
     { path: '', label: 'Ingest', labelKey: 'cerebrum.ingest', icon: 'FileText' },
-    { path: '/chat', label: 'Chat', labelKey: 'cerebrum.chat', icon: 'MessageSquare' },
+    // Chat is intentionally absent from sidebar nav — the canonical surface is
+    // the global overlay FAB (CerebrumChatOverlay). The /cerebrum/chat route
+    // remains for direct navigation but is not listed here.
     { path: '/nudges', label: 'Nudges', labelKey: 'cerebrum.nudges', icon: 'Bell' },
     {
       path: '/proposals',

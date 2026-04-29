@@ -137,6 +137,7 @@
   "placeholder.tagsExample": "Supermercado, Transporte",
   "placeholder.filterByTag": "Filtrar por tag...",
 
+  "column.date": "Data",
   "column.category": "Categoria",
   "column.period": "Período",
   "column.amount": "Valor",
