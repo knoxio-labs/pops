@@ -9,6 +9,8 @@ import { Link } from 'react-router';
  */
 import { Badge, cn, Skeleton } from '@pops/ui';
 
+import { usePosterCascade } from '../hooks/usePosterCascade';
+
 export type MediaType = 'movie' | 'tv';
 
 export interface MediaCardProps {
@@ -41,48 +43,13 @@ function buildHref(type: MediaType, id: number): string {
   return type === 'movie' ? `/media/movies/${id}` : `/media/tv/${id}`;
 }
 
-function usePosterCascade(posterUrl?: string | null, fallbackPosterUrl?: string | null) {
+function PosterImage({ src, title, onError }: { src: string; title: string; onError: () => void }) {
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState<string | null>(
-    posterUrl ?? fallbackPosterUrl ?? null
-  );
-  const [showPlaceholder, setShowPlaceholder] = useState(!posterUrl && !fallbackPosterUrl);
 
-  const handleImageError = () => {
-    if (currentSrc === posterUrl && fallbackPosterUrl) {
-      setCurrentSrc(fallbackPosterUrl);
-      setImageLoaded(false);
-      return;
-    }
-    setShowPlaceholder(true);
-  };
-
-  return {
-    activeSrc: showPlaceholder ? null : currentSrc,
-    showPlaceholder,
-    imageLoaded,
-    setImageLoaded,
-    handleImageError,
-  };
-}
-
-function PosterImage({
-  activeSrc,
-  title,
-  imageLoaded,
-  setImageLoaded,
-  handleImageError,
-}: {
-  activeSrc: string;
-  title: string;
-  imageLoaded: boolean;
-  setImageLoaded: (v: boolean) => void;
-  handleImageError: () => void;
-}) {
   return (
     <>
       <img
-        src={activeSrc}
+        src={src}
         alt={`${title} poster`}
         loading="lazy"
         className={cn(
@@ -93,7 +60,7 @@ function PosterImage({
         onLoad={() => {
           setImageLoaded(true);
         }}
-        onError={handleImageError}
+        onError={onError}
       />
       {!imageLoaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
     </>
@@ -144,17 +111,9 @@ export function MediaCard({
           </Badge>
         )}
 
-        {cascade.activeSrc && !cascade.showPlaceholder && (
-          <PosterImage
-            activeSrc={cascade.activeSrc}
-            title={title}
-            imageLoaded={cascade.imageLoaded}
-            setImageLoaded={cascade.setImageLoaded}
-            handleImageError={cascade.handleImageError}
-          />
-        )}
+        {cascade.src && <PosterImage src={cascade.src} title={title} onError={cascade.onError} />}
 
-        {cascade.showPlaceholder && (
+        {!cascade.src && (
           <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
             <Film className="h-10 w-10 opacity-40" />
           </div>

@@ -17,7 +17,12 @@ import {
   TextInput,
 } from '@pops/ui';
 
-import { type Transaction, TRANSACTION_TYPE_OPTIONS, type TransactionFormValues } from './types';
+import {
+  type Transaction,
+  TRANSACTION_ACCOUNT_OPTIONS,
+  TRANSACTION_TYPE_OPTIONS,
+  type TransactionFormValues,
+} from './types';
 
 interface DialogProps {
   open: boolean;
@@ -65,9 +70,10 @@ function DescriptionField({ form }: { form: UseFormReturn<TransactionFormValues>
 function AccountAndType({ form }: { form: UseFormReturn<TransactionFormValues> }) {
   return (
     <div className="grid grid-cols-2 gap-4">
-      <TextInput
+      <Select
         label="Account"
-        placeholder="e.g. Bank Account"
+        options={TRANSACTION_ACCOUNT_OPTIONS}
+        placeholder="Select account..."
         {...form.register('account')}
         error={form.formState.errors.account?.message}
       />

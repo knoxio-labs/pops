@@ -1,3 +1,4 @@
+import { usePosterCascade } from '../../hooks/usePosterCascade';
 import { formatRuntime } from '../../lib/format';
 import { MovieHeroActions } from './MovieHeroActions';
 import { MovieHeroBreadcrumb } from './MovieHeroBreadcrumb';
@@ -24,12 +25,15 @@ interface MovieHeroProps {
 }
 
 function HeroPoster({ posterUrl, title }: { posterUrl: string | null; title: string }) {
-  if (posterUrl) {
+  const { src, onError } = usePosterCascade(posterUrl);
+
+  if (src) {
     return (
       <img
-        src={posterUrl}
+        src={src}
         alt={`${title} poster`}
         className="w-28 md:w-44 aspect-[2/3] rounded-lg object-cover shadow-lg shrink-0"
+        onError={onError}
       />
     );
   }

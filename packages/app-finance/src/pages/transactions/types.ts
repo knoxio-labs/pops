@@ -26,11 +26,23 @@ export interface Transaction {
   lastEditedTime?: string;
 }
 
-/** Allowed transaction types. Mirrors the existing TABLE_FILTERS values. */
+/** Allowed transaction types. Values match the DB/PRD-019 canonical enum: purchase | income | transfer. */
 export const TRANSACTION_TYPE_OPTIONS = [
-  { label: 'Expense', value: 'Expense' },
-  { label: 'Income', value: 'Income' },
-  { label: 'Transfer', value: 'Transfer' },
+  { label: 'Purchase', value: 'purchase' },
+  { label: 'Income', value: 'income' },
+  { label: 'Transfer', value: 'transfer' },
+];
+
+/**
+ * Canonical account list — single source of truth for both the New Transaction
+ * form select and the filter row.  Mirrors TRANSACTION_ACCOUNTS in @pops/db-types.
+ */
+export const TRANSACTION_ACCOUNT_OPTIONS = [
+  { label: 'ANZ Everyday', value: 'ANZ Everyday' },
+  { label: 'ANZ Savings', value: 'ANZ Savings' },
+  { label: 'Amex', value: 'Amex' },
+  { label: 'ING Savings', value: 'ING Savings' },
+  { label: 'Up Everyday', value: 'Up Everyday' },
 ];
 
 /**
@@ -60,7 +72,7 @@ export const DEFAULT_TRANSACTION_VALUES: TransactionFormValues = {
   amount: '',
   description: '',
   account: '',
-  type: 'Expense',
+  type: 'purchase',
   entityId: '',
   tags: [],
   notes: '',

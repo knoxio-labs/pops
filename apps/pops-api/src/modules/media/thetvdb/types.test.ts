@@ -13,6 +13,7 @@ import {
   type RawTvdbEpisode,
   type RawTvdbSearchResult,
   type RawTvdbSeriesExtended,
+  stripSurroundingQuotes,
   toEpisodeInsert,
   toSeasonInsert,
   toTvShowInsert,
@@ -140,6 +141,54 @@ const RAW_EPISODE: RawTvdbEpisode = {
   runtime: 58,
   image: 'https://artworks.thetvdb.com/banners/episodes/81189/349232.jpg',
 };
+
+// ---------------------------------------------------------------------------
+// stripSurroundingQuotes
+// ---------------------------------------------------------------------------
+
+describe('stripSurroundingQuotes', () => {
+  it('strips surrounding double-quotes', () => {
+    expect(stripSurroundingQuotes('"Breaking Bad"')).toBe('Breaking Bad');
+  });
+
+  it('leaves a clean name unchanged', () => {
+    expect(stripSurroundingQuotes('Severance')).toBe('Severance');
+  });
+
+  it('strips multiple surrounding double-quotes', () => {
+    expect(stripSurroundingQuotes('""Shogun""')).toBe('Shogun');
+  });
+
+  it('does not strip interior quotes', () => {
+    expect(stripSurroundingQuotes('"Say "Hello""')).toBe('Say "Hello"');
+  });
+});
+
+describe('mapSearchResult — quote stripping', () => {
+  it('strips surrounding quotes from name', () => {
+    const result = mapSearchResult({ ...RAW_SEARCH_RESULT, name: '"Breaking Bad"' });
+    expect(result.name).toBe('Breaking Bad');
+  });
+});
+
+describe('mapShowDetail — quote stripping', () => {
+  it('strips surrounding quotes from show name', () => {
+    const detail = mapShowDetail({ ...RAW_SERIES_EXTENDED, name: '"Breaking Bad"' });
+    expect(detail.name).toBe('Breaking Bad');
+  });
+});
+
+describe('mapEpisode — quote stripping', () => {
+  it('strips surrounding quotes from episode name', () => {
+    const episode = mapEpisode({ ...RAW_EPISODE, name: '"Pilot"' });
+    expect(episode.name).toBe('Pilot');
+  });
+
+  it('returns null when episode name is undefined', () => {
+    const episode = mapEpisode({ id: 1, number: 1, seasonNumber: 1 });
+    expect(episode.name).toBeNull();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // mapSearchResult

@@ -9,7 +9,7 @@ export const debriefResults = sqliteTable('debrief_results', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   sessionId: integer('session_id')
     .notNull()
-    .references(() => debriefSessions.id),
+    .references(() => debriefSessions.id, { onDelete: 'cascade' }),
   dimensionId: integer('dimension_id')
     .notNull()
     .references(() => comparisonDimensions.id),

@@ -17,6 +17,14 @@ import type {
 const ARTWORK_TYPE_POSTER = 2;
 const ARTWORK_TYPE_BACKDROP = 3;
 
+/**
+ * Strip leading/trailing double-quote characters from a title string.
+ * Guards against TheTVDB returning names like `"Wuthering Heights"`.
+ */
+export function stripSurroundingQuotes(s: string): string {
+  return s.replace(/^"+|"+$/g, '').trim();
+}
+
 function pickFirst<T>(...values: Array<T | null | undefined>): T | null {
   for (const v of values) {
     if (v != null) return v;
@@ -28,7 +36,7 @@ function pickFirst<T>(...values: Array<T | null | undefined>): T | null {
 export function mapSearchResult(raw: RawTvdbSearchResult): TvdbSearchResult {
   return {
     tvdbId: Number(pickFirst(raw.tvdb_id, raw.objectID) ?? 0),
-    name: raw.name,
+    name: stripSurroundingQuotes(raw.name),
     originalName: raw.name_translated?.eng ?? null,
     overview: pickFirst(raw.overview, raw.overviews?.eng),
     firstAirDate: raw.first_air_time ?? null,
@@ -44,7 +52,7 @@ function mapSeasonSummary(s: RawTvdbSeasonSummary): TvdbSeasonSummary {
   return {
     tvdbId: s.id,
     seasonNumber: s.number,
-    name: s.name ?? null,
+    name: s.name != null ? stripSurroundingQuotes(s.name) : null,
     overview: s.overview ?? null,
     imageUrl: s.image ?? null,
     episodeCount: Array.isArray(s.episodes) ? s.episodes.length : 0,
@@ -92,7 +100,7 @@ export function mapShowDetail(raw: RawTvdbSeriesExtended): TvdbShowDetail {
   const rawSeasons = (raw.seasons ?? []).filter(isDefaultOrOfficialSeason);
   return {
     tvdbId: raw.id,
-    name: raw.name,
+    name: stripSurroundingQuotes(raw.name),
     ...mapShowDetailScalars(raw),
     genres: (raw.genres ?? []).map((g) => ({ id: g.id, name: g.name })),
     networks: (raw.networks ?? []).map((n) => ({ id: n.id, name: n.name })),
@@ -107,7 +115,7 @@ export function mapEpisode(raw: RawTvdbEpisode): TvdbEpisode {
     tvdbId: raw.id,
     episodeNumber: raw.number,
     seasonNumber: raw.seasonNumber,
-    name: raw.name ?? null,
+    name: raw.name != null ? stripSurroundingQuotes(raw.name) : null,
     overview: raw.overview ?? null,
     airDate: raw.aired ?? null,
     runtime: raw.runtime ?? null,

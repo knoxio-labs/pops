@@ -7,7 +7,7 @@ export const debriefSessions = sqliteTable('debrief_sessions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   watchHistoryId: integer('watch_history_id')
     .notNull()
-    .references(() => watchHistory.id),
+    .references(() => watchHistory.id, { onDelete: 'cascade' }),
   status: text('status', { enum: ['pending', 'active', 'complete'] })
     .notNull()
     .default('pending'),

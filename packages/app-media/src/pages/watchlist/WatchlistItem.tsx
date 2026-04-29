@@ -123,7 +123,7 @@ function ItemHeader({
           <Badge variant="secondary" className="text-xs">
             {entry.mediaType === 'movie' ? 'Movie' : 'TV'}
           </Badge>
-          {year && <span className="text-xs text-muted-foreground">{year}</span>}
+          <span className="text-xs text-muted-foreground">{year ?? '—'}</span>
           {rotationStatus === 'leaving' && rotationExpiresAt && (
             <LeavingBadge rotationExpiresAt={rotationExpiresAt} />
           )}

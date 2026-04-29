@@ -12,6 +12,7 @@ import {
 } from '@pops/ui';
 
 import { TagEditor } from '../../components/TagEditor';
+import { TRANSACTION_ACCOUNT_OPTIONS } from './types';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -177,14 +178,7 @@ export const TRANSACTION_TABLE_FILTERS: ColumnFilter[] = [
     id: 'account',
     type: 'select',
     label: 'Account',
-    options: [
-      { label: 'All Accounts', value: '' },
-      { label: 'ANZ Everyday', value: 'ANZ Everyday' },
-      { label: 'ANZ Savings', value: 'ANZ Savings' },
-      { label: 'Amex', value: 'Amex' },
-      { label: 'ING Savings', value: 'ING Savings' },
-      { label: 'Up Everyday', value: 'Up Everyday' },
-    ],
+    options: [{ label: 'All Accounts', value: '' }, ...TRANSACTION_ACCOUNT_OPTIONS],
   },
   {
     id: 'type',
@@ -192,9 +186,9 @@ export const TRANSACTION_TABLE_FILTERS: ColumnFilter[] = [
     label: 'Type',
     options: [
       { label: 'All Types', value: '' },
-      { label: 'Income', value: 'Income' },
-      { label: 'Expense', value: 'Expense' },
-      { label: 'Transfer', value: 'Transfer' },
+      { label: 'Income', value: 'income' },
+      { label: 'Purchase', value: 'purchase' },
+      { label: 'Transfer', value: 'transfer' },
     ],
   },
   {
