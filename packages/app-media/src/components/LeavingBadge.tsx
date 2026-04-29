@@ -19,11 +19,11 @@ function getDaysRemaining(expiresAt: string): number {
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-function getBadgeText(days: number): string {
+export function getBadgeText(days: number): string {
   if (days <= 0) return 'Leaving today';
   if (days === 1) return 'Leaving tomorrow';
   if (days < 7) return `Leaving in ${days} days`;
-  const weeks = Math.round(days / 7);
+  const weeks = Math.floor(days / 7);
   return weeks === 1 ? 'Leaving in 1 week' : `Leaving in ${weeks} weeks`;
 }
 
