@@ -1,6 +1,18 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageHeader } from '@pops/ui';
+import { trpc } from '@pops/api-client';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  PageHeader,
+} from '@pops/ui';
 
 import { FiltersBar } from './items-page/FiltersBar';
 import { ItemsContent } from './items-page/ItemsContent';
@@ -12,6 +24,15 @@ export function ItemsPage() {
   const model = useItemsPageModel();
   const { filters, navigate } = model;
   const hasSearchOrFilters = !!filters.search || model.hasActiveFilters;
+
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const utils = trpc.useUtils();
+  const deleteMutation = trpc.inventory.items.delete.useMutation({
+    onSuccess: () => {
+      void utils.inventory.items.list.invalidate();
+      setDeletingItemId(null);
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -47,7 +68,29 @@ export function ItemsPage() {
         locationPathMap={model.locationPathMap}
         onAdd={() => navigate('/inventory/items/new')}
         onOpen={(id) => navigate(`/inventory/items/${id}`)}
+        onEdit={(id) => navigate(`/inventory/items/${id}/edit`)}
+        onDeleteRequest={setDeletingItemId}
       />
+      <AlertDialog open={deletingItemId !== null} onOpenChange={(open) => !open && setDeletingItemId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the item and all associated photos and connections.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => deletingItemId && deleteMutation.mutate({ id: deletingItemId })}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
