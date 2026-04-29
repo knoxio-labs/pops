@@ -1,6 +1,6 @@
-import { and, count, desc, eq, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, type SQL } from 'drizzle-orm';
 
-import { watchHistory } from '@pops/db-types';
+import { debriefResults, debriefSessions, watchHistory } from '@pops/db-types';
 
 import { getDrizzle } from '../../../../db.js';
 import { NotFoundError } from '../../../../shared/errors.js';
@@ -48,7 +48,27 @@ export function getWatchHistoryEntry(id: number): WatchHistoryRow {
 }
 
 export function deleteWatchHistoryEntry(id: number): void {
+  // Verify the entry exists before attempting deletion (throws NotFoundError if missing).
   getWatchHistoryEntry(id);
-  const result = getDrizzle().delete(watchHistory).where(eq(watchHistory.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError('WatchHistoryEntry', String(id));
+
+  getDrizzle().transaction((tx) => {
+    // Cascade: delete debrief_results rows that belong to sessions referencing this entry.
+    const sessionIds = tx
+      .select({ id: debriefSessions.id })
+      .from(debriefSessions)
+      .where(eq(debriefSessions.watchHistoryId, id))
+      .all()
+      .map((r) => r.id);
+
+    if (sessionIds.length > 0) {
+      tx.delete(debriefResults).where(inArray(debriefResults.sessionId, sessionIds)).run();
+    }
+
+    // Cascade: delete debrief_sessions rows referencing this watch_history entry.
+    tx.delete(debriefSessions).where(eq(debriefSessions.watchHistoryId, id)).run();
+
+    // Now safe to delete the watch_history row.
+    const result = tx.delete(watchHistory).where(eq(watchHistory.id, id)).run();
+    if (result.changes === 0) throw new NotFoundError('WatchHistoryEntry', String(id));
+  });
 }
