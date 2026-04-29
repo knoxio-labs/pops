@@ -36,5 +36,12 @@
 
   "imageGallery.delete": "Excluir imagem",
   "imageGallery.previous": "Imagem anterior",
-  "imageGallery.next": "Próxima imagem"
+  "imageGallery.next": "Próxima imagem",
+
+  "filterBar.filters": "Filtros",
+  "filterBar.clearAll": "Limpar tudo",
+  "filterBar.apply": "Aplicar",
+  "filterBar.applyFiltersDesc": "Aplicar filtros para refinar os resultados da tabela",
+  "filterBar.activeFilters": "{{count}} filtro ativo",
+  "filterBar.activeFilters_other": "{{count}} filtros ativos"
 }
