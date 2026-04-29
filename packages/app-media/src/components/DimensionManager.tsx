@@ -127,7 +127,9 @@ export function DimensionManager() {
       <DialogContent className="max-w-md p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>Comparison Dimensions</DialogTitle>
-          <DialogDescription>Manage the dimensions used for comparing media</DialogDescription>
+          <DialogDescription className="sr-only">
+            Manage the dimensions used for comparing media
+          </DialogDescription>
         </DialogHeader>
         <CRUDManagementSection
           title="Comparison Dimensions"

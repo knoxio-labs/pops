@@ -32,13 +32,10 @@ export function ScopeConfirmDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Inferred Scopes</DialogTitle>
-          <DialogDescription className="sr-only">
-            Review and confirm the scopes inferred from your content
-          </DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
+        <DialogDescription className="text-sm text-muted-foreground">
           No scopes were provided. The following scopes were inferred from the content:
-        </p>
+        </DialogDescription>
         <div className="flex flex-wrap gap-2 py-2">
           {scopes.map((scope) => (
             <Badge key={scope} variant="secondary">
