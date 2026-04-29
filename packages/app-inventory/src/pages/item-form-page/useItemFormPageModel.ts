@@ -98,6 +98,21 @@ function locationExistsInTree(nodes: LocationTreeNode[], id: string): boolean {
   return false;
 }
 
+function useLocationIdPrefill(
+  isEditMode: boolean,
+  locationTree: LocationTreeNode[],
+  setValue: (name: 'locationId', value: string, opts?: { shouldDirty?: boolean }) => void,
+) {
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    if (isEditMode || locationTree.length === 0) return;
+    const paramId = searchParams.get('locationId') ?? '';
+    if (paramId && locationExistsInTree(locationTree, paramId)) {
+      setValue('locationId', paramId, { shouldDirty: false });
+    }
+  }, [isEditMode, locationTree, searchParams, setValue]);
+}
+
 function useLocationsAndCreate() {
   const utils = trpc.useUtils();
   const { data: locationsData } = trpc.inventory.locations.tree.useQuery();
@@ -114,7 +129,6 @@ function useLocationsAndCreate() {
 
 export function useItemFormPageModel() {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
   const isEditMode = !!id;
 
   const form = useForm<ItemFormValues>({ defaultValues });
@@ -140,14 +154,7 @@ export function useItemFormPageModel() {
     { enabled: !isEditMode && connectionSearch.length >= 2 }
   );
   const { locationTree, createLocationMutation } = useLocationsAndCreate();
-
-  useEffect(() => {
-    if (isEditMode || locationTree.length === 0) return;
-    const paramId = searchParams.get('locationId') ?? '';
-    if (paramId && locationExistsInTree(locationTree, paramId)) {
-      setValue('locationId', paramId, { shouldDirty: false });
-    }
-  }, [isEditMode, locationTree, searchParams, setValue]);
+  useLocationIdPrefill(isEditMode, locationTree, setValue);
 
   const {
     data: itemData,
