@@ -52,7 +52,7 @@ interface ShelfInstance {
 | `trending-tmdb`         | "Trending"                      | TMDB             | `/trending/movie/{week\|day}`                               |
 | `trending-plex`         | "Trending on Plex"              | Plex Discover    | Cloud trending, hidden if disconnected                      |
 | `new-releases`          | "New Releases"                  | TMDB             | Released in last 30 days, filtered by genre affinity        |
-| `upcoming-releases`     | "Upcoming Releases"             | TMDB             | Release date today → +90 days, sorted by release date asc  |
+| `upcoming-releases`     | "Upcoming Releases"             | TMDB             | Release date today → +90 days, sorted by release date asc   |
 | `hidden-gems`           | "Hidden Gems"                   | TMDB             | Vote count 50-500, vote average > 7.0, in top genres        |
 | `critics-vs-audiences`  | "Critics Love, Audiences Split" | TMDB             | High vote average + low popularity (proxy for polarizing)   |
 | `short-watch`           | "Quick Watch"                   | Local            | Runtime < 100min, unwatched, scored                         |
