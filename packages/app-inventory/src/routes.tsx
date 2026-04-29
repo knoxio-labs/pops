@@ -40,6 +40,11 @@ const LocationTreePage = lazy(() =>
     default: m.LocationTreePage,
   }))
 );
+const ConnectionsPage = lazy(() =>
+  import('./pages/ConnectionsPage').then((m) => ({
+    default: m.ConnectionsPage,
+  }))
+);
 
 /** Redirects the old singular path to the plural equivalent, preserving query string. */
 export function SearchPreservingRedirect({ to }: { to: string }) {
@@ -75,6 +80,12 @@ export const navConfig = {
     },
     { path: '/locations', label: 'Locations', labelKey: 'inventory.locations', icon: 'MapPin' },
     { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'BarChart3' },
+    {
+      path: '/connections',
+      label: 'Connections',
+      labelKey: 'inventory.connections',
+      icon: 'Network',
+    },
   ],
 } satisfies AppNavConfigShape;
 
@@ -83,6 +94,7 @@ export const routes: RouteObject[] = [
   { path: 'items/new', element: <ItemFormPage /> },
   { path: 'items/:id', element: <ItemDetailPage /> },
   { path: 'items/:id/edit', element: <ItemFormPage /> },
+  { path: 'connections', element: <ConnectionsPage /> },
   { path: 'warranties', element: <WarrantiesPage /> },
   { path: 'locations', element: <LocationTreePage /> },
   {

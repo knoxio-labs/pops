@@ -39,6 +39,7 @@ export type IconName =
   | 'Library'
   | 'MapPin'
   | 'MessageSquare'
+  | 'Network'
   | 'Package'
   | 'PiggyBank'
   | 'Search'
