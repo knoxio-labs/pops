@@ -76,10 +76,12 @@ test.describe('Shell — app-rail navigation smoke test', () => {
     await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
   });
 
-  test('navigates to AI — updates URL, active indicator, and shows a heading', async ({ page }) => {
-    await page.getByRole('button', { name: 'AI', exact: true }).click();
-    await expect(page).toHaveURL(/\/ai/);
-    await expect(page.getByRole('button', { name: 'AI', exact: true })).toHaveAttribute(
+  test('navigates to Cerebrum — updates URL, active indicator, and shows a heading', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Cerebrum', exact: true }).click();
+    await expect(page).toHaveURL(/\/cerebrum/);
+    await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toHaveAttribute(
       'aria-current',
       'page'
     );
