@@ -1,11 +1,11 @@
-import Papa from 'papaparse';
-import { useCallback, useState } from 'react';
+import Papa from "papaparse";
+import { useCallback, useState } from "react";
 
-import { Button, RadioInput } from '@pops/ui';
+import { Button, RadioInput } from "@pops/ui";
 
-import { useImportStore } from '../../store/importStore';
-import type { BankType } from '../../store/import-store-types';
-import { FileUpload } from './FileUpload';
+import { useImportStore } from "../../store/importStore";
+import type { BankType } from "../../store/import-store-types";
+import { FileUpload } from "./FileUpload";
 
 interface ParseResult {
   ok: boolean;
@@ -23,22 +23,23 @@ function parseCsvFile(file: File): Promise<ParseResult> {
         if (results.errors.length > 0) {
           resolve({
             ok: false,
-            error: `CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`,
+            error: `CSV parsing error: ${results.errors[0]?.message ?? "Unknown error"}`,
           });
           return;
         }
         if (results.data.length === 0) {
-          resolve({ ok: false, error: 'CSV file is empty' });
+          resolve({ ok: false, error: "CSV file is empty" });
           return;
         }
         const headers = results.meta.fields ?? [];
         if (headers.length === 0) {
-          resolve({ ok: false, error: 'CSV file has no headers' });
+          resolve({ ok: false, error: "CSV file has no headers" });
           return;
         }
         resolve({ ok: true, headers, rows: results.data });
       },
-      error: (error) => resolve({ ok: false, error: `Failed to parse CSV: ${error.message}` }),
+      error: (error) =>
+        resolve({ ok: false, error: `Failed to parse CSV: ${error.message}` }),
     });
   });
 }
@@ -55,28 +56,36 @@ function UploadFooter({
   return (
     <div className="flex justify-end gap-3">
       <Button onClick={onNext} disabled={disabled}>
-        {isProcessing ? 'Processing...' : 'Next'}
+        {isProcessing ? "Processing..." : "Next"}
       </Button>
     </div>
   );
 }
 
 const BANK_OPTIONS = [
-  { value: 'ANZ', label: 'ANZ', description: 'Everyday, Savings' },
-  { value: 'Amex', label: 'Amex', description: 'American Express' },
-  { value: 'ING', label: 'ING', description: 'Savings, Everyday' },
-  { value: 'Up', label: 'Up', description: 'Everyday, Round Up' },
+  { value: "ANZ", label: "ANZ", description: "Everyday, Savings" },
+  { value: "Amex", label: "Amex", description: "American Express" },
+  { value: "ING", label: "ING", description: "Savings, Everyday" },
+  { value: "Up", label: "Up", description: "Everyday, Round Up" },
 ] satisfies Array<{ value: BankType; label: string; description: string }>;
 
 const BANK_HELP: Record<BankType, string> = {
-  ANZ: 'Log in to ANZ Internet Banking, open your account, and export transactions as CSV.',
-  Amex: 'Log in to your Amex online portal and download your transactions as a CSV export.',
-  ING: 'Log in to ING Banking Online, open your account, and export transactions as CSV.',
-  Up: 'In the Up app, go to your account, tap Export, and choose CSV format.',
+  ANZ: "Log in to ANZ Internet Banking, open your account, and export transactions as CSV.",
+  Amex: "Log in to your Amex online portal and download your transactions as a CSV export.",
+  ING: "Log in to ING Banking Online, open your account, and export transactions as CSV.",
+  Up: "In the Up app, go to your account, tap Export, and choose CSV format.",
 };
 
 function useUploadStep() {
-  const { file, bankType, setFile, setBankType, setHeaders, setRows, nextStep } = useImportStore();
+  const {
+    file,
+    bankType,
+    setFile,
+    setBankType,
+    setHeaders,
+    setRows,
+    nextStep,
+  } = useImportStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,19 +94,19 @@ function useUploadStep() {
       setFile(selectedFile);
       setError(null);
     },
-    [setFile]
+    [setFile],
   );
 
   const handleBankChange = useCallback(
     (value: string) => {
       setBankType(value as BankType);
     },
-    [setBankType]
+    [setBankType],
   );
 
   const handleNext = useCallback(async () => {
     if (!file) {
-      setError('Please select a file');
+      setError("Please select a file");
       return;
     }
     setIsProcessing(true);
@@ -105,7 +114,7 @@ function useUploadStep() {
     const result = await parseCsvFile(file);
     setIsProcessing(false);
     if (!result.ok) {
-      setError(result.error ?? 'Unknown error');
+      setError(result.error ?? "Unknown error");
       return;
     }
     setHeaders(result.headers ?? []);
@@ -113,12 +122,27 @@ function useUploadStep() {
     nextStep();
   }, [file, setHeaders, setRows, nextStep]);
 
-  return { file, bankType, isProcessing, error, handleFileSelect, handleBankChange, handleNext };
+  return {
+    file,
+    bankType,
+    isProcessing,
+    error,
+    handleFileSelect,
+    handleBankChange,
+    handleNext,
+  };
 }
 
 export function UploadStep() {
-  const { file, bankType, isProcessing, error, handleFileSelect, handleBankChange, handleNext } =
-    useUploadStep();
+  const {
+    file,
+    bankType,
+    isProcessing,
+    error,
+    handleFileSelect,
+    handleBankChange,
+    handleNext,
+  } = useUploadStep();
 
   return (
     <div className="space-y-6">
@@ -146,7 +170,8 @@ export function UploadStep() {
 
       <div className="bg-info/5 border border-info/20 rounded-lg p-4">
         <h3 className="text-sm font-medium text-info mb-2">
-          How to export from {BANK_OPTIONS.find((b) => b.value === bankType)?.label ?? bankType}
+          How to export from{" "}
+          {BANK_OPTIONS.find((b) => b.value === bankType)?.label ?? bankType}
         </h3>
         <p className="text-xs text-info">{BANK_HELP[bankType]}</p>
       </div>

@@ -1,16 +1,16 @@
-import type { ChangeSet } from '@pops/api/modules/core/corrections/types';
-import type { TagRuleChangeSet } from '@pops/api/modules/core/tag-rules/types';
+import type { ChangeSet } from "@pops/api/modules/core/corrections/types";
+import type { TagRuleChangeSet } from "@pops/api/modules/core/tag-rules/types";
 import type {
   ConfirmedTransaction,
   ImportWarning,
   ParsedTransaction,
   ProcessedTransaction as BaseProcessedTransaction,
   CommitResult,
-} from '@pops/api/modules/finance/imports';
+} from "@pops/api/modules/finance/imports";
 
-export type BankType = 'ANZ' | 'Amex' | 'ING' | 'Up';
+export type BankType = "ANZ" | "Amex" | "ING" | "Up";
 export type { ChangeSet };
-export type EntityType = 'company' | 'person' | 'government' | 'bank';
+export type EntityType = "company" | "person" | "government" | "bank";
 
 export interface PendingEntity {
   tempId: string;
@@ -84,10 +84,12 @@ export interface ImportStore {
   setBankType: (bankType: BankType) => void;
   setHeaders: (headers: string[]) => void;
   setRows: (rows: Record<string, string>[]) => void;
-  setColumnMap: (columnMap: ImportStore['columnMap']) => void;
+  setColumnMap: (columnMap: ImportStore["columnMap"]) => void;
   setParsedTransactions: (parsed: ParsedTransaction[]) => void;
   setProcessSessionId: (sessionId: string | null) => void;
-  setProcessedTransactions: (processed: ImportStore['processedTransactions']) => void;
+  setProcessedTransactions: (
+    processed: ImportStore["processedTransactions"],
+  ) => void;
   setConfirmedTransactions: (confirmed: ConfirmedTransaction[]) => void;
   setCommitResult: (result: CommitResult | null) => void;
 
@@ -98,7 +100,7 @@ export interface ImportStore {
 
   addPendingEntity: (
     input: AddPendingEntityInput,
-    dbEntities?: Array<{ name: string }>
+    dbEntities?: Array<{ name: string }>,
   ) => PendingEntity;
   listPendingEntities: () => PendingEntity[];
   removePendingEntity: (tempId: string) => void;
@@ -107,13 +109,15 @@ export interface ImportStore {
   listPendingChangeSets: () => PendingChangeSet[];
   removePendingChangeSet: (tempId: string) => void;
 
-  addPendingTagRuleChangeSet: (input: AddPendingTagRuleChangeSetInput) => PendingTagRuleChangeSet;
+  addPendingTagRuleChangeSet: (
+    input: AddPendingTagRuleChangeSetInput,
+  ) => PendingTagRuleChangeSet;
   listPendingTagRuleChangeSets: () => PendingTagRuleChangeSet[];
   removePendingTagRuleChangeSet: (tempId: string) => void;
 
   updateTransaction: (
     transaction: ProcessedTransaction,
-    updates: Partial<ProcessedTransaction>
+    updates: Partial<ProcessedTransaction>,
   ) => void;
   findSimilar: (transaction: ProcessedTransaction) => ProcessedTransaction[];
 
@@ -123,12 +127,12 @@ export interface ImportStore {
 export const initialState = {
   currentStep: 1,
   file: null,
-  bankType: 'Amex' as BankType,
+  bankType: "Amex" as BankType,
   headers: [],
   rows: [],
-  columnMap: { date: '', description: '', amount: '' },
+  columnMap: { date: "", description: "", amount: "" },
   parsedTransactions: [],
-  parsedTransactionsFingerprint: '',
+  parsedTransactionsFingerprint: "",
   processSessionId: null,
   processedForFingerprint: null,
   processedTransactions: {
@@ -148,25 +152,27 @@ export const initialState = {
 /**
  * Produce a content fingerprint for a list of parsed transactions.
  */
-export function fingerprintParsedTransactions(txns: ParsedTransaction[]): string {
-  if (txns.length === 0) return '';
-  return txns.map((t) => t.checksum).join('|');
+export function fingerprintParsedTransactions(
+  txns: ParsedTransaction[],
+): string {
+  if (txns.length === 0) return "";
+  return txns.map((t) => t.checksum).join("|");
 }
 
 export const downstreamReset: Pick<
   ImportStore,
-  | 'headers'
-  | 'rows'
-  | 'parsedTransactions'
-  | 'parsedTransactionsFingerprint'
-  | 'processSessionId'
-  | 'processedForFingerprint'
-  | 'processedTransactions'
-  | 'confirmedTransactions'
-  | 'commitResult'
-  | 'pendingEntities'
-  | 'pendingChangeSets'
-  | 'pendingTagRuleChangeSets'
+  | "headers"
+  | "rows"
+  | "parsedTransactions"
+  | "parsedTransactionsFingerprint"
+  | "processSessionId"
+  | "processedForFingerprint"
+  | "processedTransactions"
+  | "confirmedTransactions"
+  | "commitResult"
+  | "pendingEntities"
+  | "pendingChangeSets"
+  | "pendingTagRuleChangeSets"
 > = {
   headers: initialState.headers,
   rows: initialState.rows,
@@ -185,5 +191,7 @@ export const downstreamReset: Pick<
 export function isSameFile(a: File | null, b: File | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+  return (
+    a.name === b.name && a.size === b.size && a.lastModified === b.lastModified
+  );
 }
