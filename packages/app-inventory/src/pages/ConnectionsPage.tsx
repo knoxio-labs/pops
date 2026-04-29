@@ -20,9 +20,7 @@ export function ConnectionsPage() {
         <h1 role="heading" className="text-xl font-semibold text-foreground mb-2">
           {t('connections')}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          {t('connections.comingSoon')}
-        </p>
+        <p className="text-sm text-muted-foreground">{t('connections.comingSoon')}</p>
       </div>
     </div>
   );
