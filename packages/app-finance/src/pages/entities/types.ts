@@ -13,7 +13,15 @@ export interface Entity {
   transactionCount?: number;
 }
 
-export const ENTITY_TYPES = ['company', 'person', 'place', 'brand', 'organisation'] as const;
+export const ENTITY_TYPES = [
+  'company',
+  'person',
+  'government',
+  'bank',
+  'place',
+  'brand',
+  'organisation',
+] as const;
 
 export const TRANSACTION_TYPES = [
   { label: 'None', value: '' },
