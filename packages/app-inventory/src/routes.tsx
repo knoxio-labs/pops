@@ -5,7 +5,7 @@
  * these via @pops/app-inventory and mounts them under /inventory/*.
  */
 import { lazy } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 
 import type { RouteObject } from 'react-router';
 
@@ -40,6 +40,12 @@ const LocationTreePage = lazy(() =>
     default: m.LocationTreePage,
   }))
 );
+
+/** Redirects the old singular path to the plural equivalent, preserving query string. */
+export function SearchPreservingRedirect({ to }: { to: string }) {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
+}
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
@@ -86,6 +92,9 @@ export const routes: RouteObject[] = [
       { path: 'insurance', element: <InsuranceReportPage /> },
     ],
   },
-  { path: 'report', element: <Navigate to="/inventory/reports" replace /> },
-  { path: 'report/insurance', element: <Navigate to="/inventory/reports/insurance" replace /> },
+  { path: 'report', element: <SearchPreservingRedirect to="/inventory/reports" /> },
+  {
+    path: 'report/insurance',
+    element: <SearchPreservingRedirect to="/inventory/reports/insurance" />,
+  },
 ];
