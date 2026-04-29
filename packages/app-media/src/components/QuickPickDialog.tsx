@@ -1,14 +1,9 @@
-import { Sparkles } from 'lucide-react';
+import { AlertCircle, Library, Sparkles } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router';
 import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
-/**
- * QuickPickDialog — "What Should I Watch Tonight?" modal.
- *
- * Shows a single random recommendation at a time.
- * "Not this one" cycles to next, "Watch this!" adds to watchlist.
- */
 import {
   Button,
   Dialog,
@@ -46,10 +41,31 @@ function FinishedView({ onRefresh }: { onRefresh: () => void }) {
 
 function EmptyView() {
   return (
-    <div className="text-center py-8">
-      <p className="text-muted-foreground">
-        No picks available — all movies are watched or on your watchlist.
-      </p>
+    <div className="text-center py-8 space-y-4">
+      <Library className="h-10 w-10 mx-auto text-muted-foreground" />
+      <div className="space-y-1">
+        <p className="font-medium">Nothing to pick from</p>
+        <p className="text-sm text-muted-foreground">
+          All your library movies are watched or already on your watchlist.
+        </p>
+      </div>
+      <Link to="/media/search">
+        <Button variant="outline" size="sm">
+          Find something new
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function ErrorView({ message }: { message: string }) {
+  return (
+    <div className="text-center py-8 space-y-3">
+      <AlertCircle className="h-10 w-10 mx-auto text-destructive/70" />
+      <div className="space-y-1">
+        <p className="font-medium">Couldn't load picks</p>
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
     </div>
   );
 }
@@ -59,7 +75,7 @@ function useQuickPickModel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const utils = trpc.useUtils();
 
-  const { data, isLoading, refetch } = trpc.media.discovery.quickPick.useQuery(
+  const { data, isLoading, error, refetch } = trpc.media.discovery.quickPick.useQuery(
     { count: 5 },
     { enabled: open }
   );
@@ -98,6 +114,7 @@ function useQuickPickModel() {
   return {
     open,
     isLoading,
+    error,
     movies,
     currentMovie,
     currentIndex,
@@ -118,6 +135,7 @@ function useQuickPickModel() {
 
 function PickContent({
   isLoading,
+  error,
   movies,
   isFinished,
   currentMovie,
@@ -128,6 +146,7 @@ function PickContent({
   onRefresh,
 }: {
   isLoading: boolean;
+  error: { message: string } | null;
   movies: unknown[];
   isFinished: boolean;
   currentMovie: ReturnType<typeof useQuickPickModel>['currentMovie'];
@@ -138,6 +157,7 @@ function PickContent({
   onRefresh: () => void;
 }) {
   if (isLoading) return <PickLoading />;
+  if (error) return <ErrorView message={error.message} />;
   if (movies.length === 0) return <EmptyView />;
   if (isFinished) return <FinishedView onRefresh={onRefresh} />;
   if (!currentMovie) return null;
@@ -177,6 +197,7 @@ export function QuickPickDialog() {
         <div className="px-6 pb-6 pt-4">
           <PickContent
             isLoading={model.isLoading}
+            error={model.error}
             movies={model.movies}
             isFinished={model.isFinished}
             currentMovie={model.currentMovie}

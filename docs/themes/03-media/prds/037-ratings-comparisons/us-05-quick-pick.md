@@ -21,6 +21,7 @@ As a user, I want a "What should I watch?" page that shows random unwatched movi
 - [x] When fewer unwatched movies exist than the requested count, display all available (no error)
 - [x] Poster cards use the same MediaCard component or matching styling
 - [x] Tests cover: correct number of movies displayed, movies are unwatched, "Show me others" refreshes the set, count selector changes count, empty state renders, partial fill when few unwatched movies
+- [x] `QuickPickDialog` (Tonight? header button) always renders a visible panel response — never a silent no-op: loading skeleton while fetching, a pick card when movies are available, an informative empty state with next-step guidance when nothing is available, and an error state when the API call fails
 
 ## Notes
 
