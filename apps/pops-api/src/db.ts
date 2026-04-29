@@ -16,6 +16,7 @@ import {
   runMigrations,
 } from './db/migrations-runner.js';
 import { initializeSchema } from './db/schema.js';
+import { resolveSqlitePath } from './db/sqlite-path.js';
 import { isVecAvailable, tryLoadVecExtension } from './db/vec-loader.js';
 
 let prodDb: BetterSqlite3.Database | null = null;
@@ -124,8 +125,7 @@ export function isNamedEnvContext(): boolean {
 
 function getProdDb(): BetterSqlite3.Database {
   if (!prodDb) {
-    const sqlitePath = process.env['SQLITE_PATH'] ?? '[REDACTED]';
-    prodDb = openDatabase(sqlitePath);
+    prodDb = openDatabase(resolveSqlitePath());
   }
   return prodDb;
 }
