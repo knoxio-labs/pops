@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { closeDb, setDb } from '../../../db.js';
 import { createTestDb, seedTransaction } from '../../../shared/test-utils.js';
-import { type TransactionHitData, transactionsSearchAdapter } from './search-adapter.js';
+import {
+  normalizeTransactionType,
+  type TransactionHitData,
+  transactionsSearchAdapter,
+} from './search-adapter.js';
 
 import type { Database } from 'better-sqlite3';
 
@@ -20,6 +24,23 @@ afterEach(() => {
 });
 
 const adapter = transactionsSearchAdapter;
+
+describe('normalizeTransactionType', () => {
+  it.each([
+    ['Income', 'income'],
+    ['income', 'income'],
+    ['Expense', 'expense'],
+    ['expense', 'expense'],
+    ['purchase', 'expense'],
+    ['Purchase', 'expense'],
+    ['Transfer', 'transfer'],
+    ['transfer', 'transfer'],
+    ['unknown_value', 'expense'],
+    ['', 'expense'],
+  ])('normalizes %s → %s', (input, expected) => {
+    expect(normalizeTransactionType(input)).toBe(expected);
+  });
+});
 
 describe('transactions search adapter', () => {
   it('is registered with correct domain, icon, and color', () => {
@@ -44,7 +65,7 @@ describe('transactions search adapter', () => {
       description: 'Netflix',
       amount: -15.99,
       date: '2026-03-01',
-      type: 'expense',
+      type: 'Expense',
     });
     const hits = adapter.search(
       { text: 'Netflix' },
@@ -60,8 +81,48 @@ describe('transactions search adapter', () => {
     expect(hits[0]!.data.type).toBe('expense');
   });
 
+  it('normalizes capitalized DB type values to lowercase', () => {
+    seedTransaction(db, { description: 'Salary', amount: 5000, type: 'Income' });
+    seedTransaction(db, { description: 'Coffee', amount: -5.5, type: 'Expense' });
+    seedTransaction(db, { description: 'Bank transfer', amount: -200, type: 'Transfer' });
+
+    const income = (
+      adapter.search(
+        { text: 'Salary' },
+        { app: 'finance', page: null }
+      ) as SearchHit<TransactionHitData>[]
+    )[0]!;
+    const expense = (
+      adapter.search(
+        { text: 'Coffee' },
+        { app: 'finance', page: null }
+      ) as SearchHit<TransactionHitData>[]
+    )[0]!;
+    const transfer = (
+      adapter.search(
+        { text: 'Bank transfer' },
+        { app: 'finance', page: null }
+      ) as SearchHit<TransactionHitData>[]
+    )[0]!;
+
+    expect(income.data.type).toBe('income');
+    expect(expense.data.type).toBe('expense');
+    expect(transfer.data.type).toBe('transfer');
+  });
+
+  it('maps legacy purchase type to expense', () => {
+    seedTransaction(db, { description: 'Old purchase', amount: -42, type: 'purchase' });
+    const hits = adapter.search(
+      { text: 'Old purchase' },
+      { app: 'finance', page: null }
+    ) as SearchHit<TransactionHitData>[];
+
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.data.type).toBe('expense');
+  });
+
   it('finds exact match case-insensitively', () => {
-    seedTransaction(db, { description: 'Netflix', type: 'expense' });
+    seedTransaction(db, { description: 'Netflix', type: 'Expense' });
     const hits = adapter.search(
       { text: 'netflix' },
       { app: 'finance', page: null }
@@ -73,7 +134,7 @@ describe('transactions search adapter', () => {
   });
 
   it('finds prefix match with score 0.8', () => {
-    seedTransaction(db, { description: 'Netflix monthly subscription', type: 'expense' });
+    seedTransaction(db, { description: 'Netflix monthly subscription', type: 'Expense' });
     const hits = adapter.search(
       { text: 'Netflix' },
       { app: 'finance', page: null }
@@ -85,7 +146,7 @@ describe('transactions search adapter', () => {
   });
 
   it('finds contains match with score 0.5', () => {
-    seedTransaction(db, { description: 'Payment to Netflix AU', type: 'expense' });
+    seedTransaction(db, { description: 'Payment to Netflix AU', type: 'Expense' });
     const hits = adapter.search(
       { text: 'Netflix' },
       { app: 'finance', page: null }
@@ -97,9 +158,9 @@ describe('transactions search adapter', () => {
   });
 
   it('sorts hits by score descending', () => {
-    seedTransaction(db, { description: 'Netflix', type: 'expense' });
-    seedTransaction(db, { description: 'Netflix monthly', type: 'expense' });
-    seedTransaction(db, { description: 'Payment Netflix', type: 'expense' });
+    seedTransaction(db, { description: 'Netflix', type: 'Expense' });
+    seedTransaction(db, { description: 'Netflix monthly', type: 'Expense' });
+    seedTransaction(db, { description: 'Payment Netflix', type: 'Expense' });
     const hits = adapter.search(
       { text: 'Netflix' },
       { app: 'finance', page: null }
@@ -112,9 +173,9 @@ describe('transactions search adapter', () => {
   });
 
   it('respects options.limit', () => {
-    seedTransaction(db, { description: 'Coffee shop A', type: 'expense' });
-    seedTransaction(db, { description: 'Coffee shop B', type: 'expense' });
-    seedTransaction(db, { description: 'Coffee shop C', type: 'expense' });
+    seedTransaction(db, { description: 'Coffee shop A', type: 'Expense' });
+    seedTransaction(db, { description: 'Coffee shop B', type: 'Expense' });
+    seedTransaction(db, { description: 'Coffee shop C', type: 'Expense' });
     const hits = adapter.search({ text: 'Coffee' }, { app: 'finance', page: null }, { limit: 2 });
 
     expect(hits).toHaveLength(2);
@@ -126,7 +187,7 @@ describe('transactions search adapter', () => {
       amount: -85.42,
       date: '2026-03-15',
       entity_name: 'Woolworths',
-      type: 'expense',
+      type: 'Expense',
     });
     const hits = adapter.search(
       { text: 'Woolworths' },
@@ -145,7 +206,7 @@ describe('transactions search adapter', () => {
   });
 
   it('returns null entityName when transaction has no entity', () => {
-    seedTransaction(db, { description: 'Random purchase', type: 'expense' });
+    seedTransaction(db, { description: 'Random purchase', type: 'Expense' });
     const hits = adapter.search(
       { text: 'Random' },
       { app: 'finance', page: null }
@@ -156,7 +217,7 @@ describe('transactions search adapter', () => {
   });
 
   it('trims whitespace from query', () => {
-    seedTransaction(db, { description: 'Netflix', type: 'expense' });
+    seedTransaction(db, { description: 'Netflix', type: 'Expense' });
     const hits = adapter.search({ text: '  Netflix  ' }, { app: 'finance', page: null });
 
     expect(hits).toHaveLength(1);
