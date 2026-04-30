@@ -19,7 +19,7 @@ export const egoManifest: SettingsManifest = {
           key: 'ego.defaultModel',
           label: 'Default Model',
           type: 'text',
-          default: 'claude-sonnet-4-20250514',
+          default: 'claude-sonnet-4-6',
           description: 'LLM model used for chat and context retrieval.',
         },
         {

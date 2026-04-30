@@ -9,7 +9,7 @@ import type { RetrievalFilters } from '../cerebrum/retrieval/types.js';
 import type { EngineConfig, Message } from './types.js';
 
 function getEgoDefaultModel(): string {
-  return getSettingValue('ego.defaultModel', 'claude-sonnet-4-20250514');
+  return getSettingValue('ego.defaultModel', 'claude-sonnet-4-6');
 }
 
 function getEgoMaxHistory(): number {

@@ -13,7 +13,7 @@ import { autoTitle } from './types.js';
 
 import type { AppContext, ChatResult, Conversation, Message, ScopeNegotiation } from './types.js';
 
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 /** Lazily instantiated persistence service (uses the global Drizzle instance). */
 export function getPersistence(): ConversationPersistence {

@@ -12,7 +12,7 @@ export const queryGroup: SettingsGroup = {
       key: 'cerebrum.query.model',
       label: 'Query Model',
       type: 'text',
-      default: 'claude-sonnet-4-20250514',
+      default: 'claude-sonnet-4-6',
       description: 'LLM model used for Q&A answer generation.',
     },
     {
@@ -51,7 +51,7 @@ export const emitGroup: SettingsGroup = {
       key: 'cerebrum.emit.model',
       label: 'Generation Model',
       type: 'text',
-      default: 'claude-sonnet-4-20250514',
+      default: 'claude-sonnet-4-6',
       description: 'LLM model used for document generation.',
     },
     {
