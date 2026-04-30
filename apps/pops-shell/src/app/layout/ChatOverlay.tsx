@@ -62,7 +62,8 @@ export function ChatOverlay() {
           open ? 'translate-x-0' : 'translate-x-full'
         )}
         aria-label="Chat overlay"
-        aria-modal="true"
+        aria-hidden={!open}
+        aria-modal={open}
         role="dialog"
       >
         {open && <ChatOverlayPanel onClose={onClose} />}
