@@ -6,6 +6,8 @@ import { useMemo, useRef } from 'react';
 
 import { trpc } from '@pops/api-client';
 
+import { ENGRAM_TYPE_LABELS, ENGRAM_TYPES } from './types';
+
 import type { ScopeEntry, TemplateSummary } from './types';
 
 export function useTemplateAndScopeData() {
@@ -23,19 +25,17 @@ export function useTemplateAndScopeData() {
   const knownScopes = scopesRef.current;
 
   const typeOptions = useMemo(() => {
-    const opts = templates
-      .filter((t) => t.name !== 'capture')
-      .map((t) => ({
-        value: t.name,
-        label: t.name,
-        description: t.description,
-      }));
-    opts.unshift({
-      value: 'capture',
-      label: 'capture',
-      description: 'Freeform capture — no template',
+    const templatesByName = new Map<string, TemplateSummary>(
+      templates.map((t: TemplateSummary) => [t.name, t])
+    );
+    return ENGRAM_TYPES.map((typeName) => {
+      const tpl = templatesByName.get(typeName);
+      return {
+        value: typeName,
+        label: ENGRAM_TYPE_LABELS[typeName],
+        description: tpl?.description ?? '',
+      };
     });
-    return opts;
   }, [templates]);
 
   const scopeSuggestions = useMemo(
