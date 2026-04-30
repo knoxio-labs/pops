@@ -15,7 +15,7 @@ import { getSettingValue } from '../../core/settings/service.js';
 const OPERATION = 'cerebrum.emit';
 
 function getEmitModel(): string {
-  return getSettingValue('cerebrum.emit.model', 'claude-sonnet-4-20250514');
+  return getSettingValue('cerebrum.emit.model', 'claude-sonnet-4-6');
 }
 
 function getEmitMaxTokens(): number {

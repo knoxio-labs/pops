@@ -33,7 +33,7 @@ import type {
 const OPERATION = 'cerebrum.query';
 
 function getQueryModel(): string {
-  return getSettingValue('cerebrum.query.model', 'claude-sonnet-4-20250514');
+  return getSettingValue('cerebrum.query.model', 'claude-sonnet-4-6');
 }
 
 function getQueryMaxSources(): number {

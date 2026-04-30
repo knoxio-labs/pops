@@ -899,7 +899,8 @@ export function initializeSchema(db: BetterSqlite3.Database): void {
 
     INSERT OR IGNORE INTO ai_model_pricing (provider_id, model_id, display_name, input_cost_per_mtok, output_cost_per_mtok, context_window, is_default, created_at, updated_at) VALUES
       ('claude', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 1.0, 5.0, 200000, 1, datetime('now'), datetime('now')),
-      ('claude', 'claude-sonnet-4-20250514', 'Claude Sonnet 4', 3.0, 15.0, 200000, 0, datetime('now'), datetime('now')),
+      ('claude', 'claude-sonnet-4-6', 'Claude Sonnet 4.6', 3.0, 15.0, 200000, 0, datetime('now'), datetime('now')),
+      ('claude', 'claude-sonnet-4-20250514', 'Claude Sonnet 4 (deprecated)', 3.0, 15.0, 200000, 0, datetime('now'), datetime('now')),
       ('claude', 'claude-opus-4-20250514', 'Claude Opus 4', 15.0, 75.0, 200000, 0, datetime('now'), datetime('now'));
   `);
 
