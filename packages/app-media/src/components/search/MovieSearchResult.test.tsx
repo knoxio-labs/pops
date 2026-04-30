@@ -15,76 +15,69 @@ const baseMovie = {
   year: '2008',
   posterUrl: '/media/images/movie/155/poster.jpg',
   voteAverage: 9.0,
-  _query: 'dark',
-  _matchType: 'contains',
+  runtime: null,
 };
+
+const matchProps = { query: 'dark', matchType: 'contains' as const };
 
 describe('MovieSearchResult', () => {
   it('renders title, year, and rating', () => {
-    render(<MovieSearchResult data={baseMovie as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={baseMovie} {...matchProps} />);
     expect(screen.getByText(/Dark/)).toBeInTheDocument();
     expect(screen.getByText('2008')).toBeInTheDocument();
     expect(screen.getByText('9.0')).toBeInTheDocument();
   });
 
   it('renders poster image', () => {
-    render(<MovieSearchResult data={baseMovie as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={baseMovie} {...matchProps} />);
     const img = screen.getByAltText('The Dark Knight poster');
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute('src', '/media/images/movie/155/poster.jpg');
   });
 
   it('renders placeholder when no posterUrl', () => {
-    const data = { ...baseMovie, posterUrl: null };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, posterUrl: null }} {...matchProps} />);
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('renders rating with star icon', () => {
-    render(<MovieSearchResult data={baseMovie as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={baseMovie} {...matchProps} />);
     expect(screen.getByTestId('rating')).toBeInTheDocument();
     expect(screen.getByText('9.0')).toBeInTheDocument();
   });
 
   it('hides rating when null', () => {
-    const data = { ...baseMovie, voteAverage: null };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, voteAverage: null }} {...matchProps} />);
     expect(screen.queryByTestId('rating')).not.toBeInTheDocument();
   });
 
   it('hides year when null', () => {
-    const data = { ...baseMovie, year: null };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, year: null }} {...matchProps} />);
     expect(screen.queryByText('2008')).not.toBeInTheDocument();
   });
 
   it('hides separator when year is null', () => {
-    const data = { ...baseMovie, year: null };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, year: null }} {...matchProps} />);
     expect(screen.queryByText('·')).not.toBeInTheDocument();
   });
 
   it('hides separator when rating is null', () => {
-    const data = { ...baseMovie, voteAverage: null };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, voteAverage: null }} {...matchProps} />);
     expect(screen.queryByText('·')).not.toBeInTheDocument();
   });
 
   it('renders runtime when present', () => {
-    const data = { ...baseMovie, runtime: 152 };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, runtime: 152 }} {...matchProps} />);
     expect(screen.getByTestId('runtime')).toHaveTextContent('2h 32m');
   });
 
   it('renders runtime as minutes-only when under one hour', () => {
-    const data = { ...baseMovie, runtime: 45 };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, runtime: 45 }} {...matchProps} />);
     expect(screen.getByTestId('runtime')).toHaveTextContent('45m');
   });
 
   it('hides runtime when null', () => {
-    const data = { ...baseMovie, runtime: null };
-    render(<MovieSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<MovieSearchResult data={{ ...baseMovie, runtime: null }} {...matchProps} />);
     expect(screen.queryByTestId('runtime')).not.toBeInTheDocument();
   });
 

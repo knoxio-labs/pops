@@ -63,12 +63,10 @@ function ResultButton({
         data-result-index={index}
       >
         <ResultComponent
-          data={{
-            ...hit.data,
-            _query: query,
-            _matchField: hit.matchField,
-            _matchType: hit.matchType,
-          }}
+          data={hit.data}
+          query={query}
+          matchField={hit.matchField}
+          matchType={hit.matchType}
         />
       </button>
     </li>

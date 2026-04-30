@@ -1,6 +1,12 @@
 import { registerResultComponent, type ResultComponentProps } from '@pops/navigation';
 import { formatCurrency, highlightMatch, SearchResultItem } from '@pops/ui';
 
+interface BudgetHitData extends Record<string, unknown> {
+  category: string;
+  period: string | null;
+  amount: number | null;
+}
+
 function formatAmount(amount: number | null | undefined): string {
   if (amount == null) return '—';
   return formatCurrency(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,14 +20,13 @@ function formatPeriod(period: string | null | undefined): string {
   return period;
 }
 
-export function BudgetResult({ data }: ResultComponentProps) {
-  const category = (data.category as string) ?? '';
-  const period = data.period as string | null | undefined;
-  const amount = data.amount as number | null | undefined;
-  const query = (data._query as string) ?? '';
-  const matchField = (data._matchField as string) ?? '';
-  const matchType = (data._matchType as string) ?? '';
-
+export function BudgetResult({
+  data,
+  query = '',
+  matchField = '',
+  matchType,
+}: ResultComponentProps<BudgetHitData>) {
+  const { category, period, amount } = data;
   const shouldHighlight = matchField === 'category' && query;
 
   return (

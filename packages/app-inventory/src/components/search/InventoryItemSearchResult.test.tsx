@@ -16,58 +16,62 @@ const baseItem = {
   room: 'Office',
   replacementValue: 4299,
   brand: 'Apple',
-  _query: 'macbook',
-  _matchType: 'prefix',
 };
+
+const matchProps = { query: 'macbook', matchType: 'prefix' as const };
 
 describe('InventoryItemSearchResult', () => {
   it('renders name, brand, and location', () => {
-    render(<InventoryItemSearchResult data={baseItem as unknown as Record<string, unknown>} />);
+    render(<InventoryItemSearchResult data={baseItem} {...matchProps} />);
     expect(screen.getByText(/MacBook/)).toBeInTheDocument();
     expect(screen.getByText('Apple')).toBeInTheDocument();
     expect(screen.getByText('Office · Desk')).toBeInTheDocument();
   });
 
   it('renders formatted replacement value', () => {
-    render(<InventoryItemSearchResult data={baseItem as unknown as Record<string, unknown>} />);
+    render(<InventoryItemSearchResult data={baseItem} {...matchProps} />);
     expect(screen.getByTestId('value')).toHaveTextContent('$4,299');
   });
 
   it('hides value when null', () => {
-    const data = { ...baseItem, replacementValue: null };
-    render(<InventoryItemSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(
+      <InventoryItemSearchResult data={{ ...baseItem, replacementValue: null }} {...matchProps} />
+    );
     expect(screen.queryByTestId('value')).not.toBeInTheDocument();
   });
 
   it('hides brand when null', () => {
-    const data = { ...baseItem, brand: null };
-    render(<InventoryItemSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<InventoryItemSearchResult data={{ ...baseItem, brand: null }} {...matchProps} />);
     expect(screen.queryByText('Apple')).not.toBeInTheDocument();
   });
 
   it('renders location only when room is null', () => {
-    const data = { ...baseItem, room: null };
-    render(<InventoryItemSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<InventoryItemSearchResult data={{ ...baseItem, room: null }} {...matchProps} />);
     expect(screen.getByText('Desk')).toBeInTheDocument();
   });
 
   it('renders room only when location is null', () => {
-    const data = { ...baseItem, location: null };
-    render(<InventoryItemSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(<InventoryItemSearchResult data={{ ...baseItem, location: null }} {...matchProps} />);
     expect(screen.getByText('Office')).toBeInTheDocument();
   });
 
   it('hides location text when both room and location are null', () => {
-    const data = { ...baseItem, room: null, location: null };
-    render(<InventoryItemSearchResult data={data as unknown as Record<string, unknown>} />);
+    render(
+      <InventoryItemSearchResult
+        data={{ ...baseItem, room: null, location: null }}
+        {...matchProps}
+      />
+    );
     expect(screen.queryByText('Office')).not.toBeInTheDocument();
     expect(screen.queryByText('Desk')).not.toBeInTheDocument();
   });
 
   it('hides separator between brand and location when location is empty', () => {
-    const data = { ...baseItem, room: null, location: null };
     const { container } = render(
-      <InventoryItemSearchResult data={data as unknown as Record<string, unknown>} />
+      <InventoryItemSearchResult
+        data={{ ...baseItem, room: null, location: null }}
+        {...matchProps}
+      />
     );
     const dots = container.querySelectorAll('span');
     const dotTexts = Array.from(dots).map((el) => el.textContent);

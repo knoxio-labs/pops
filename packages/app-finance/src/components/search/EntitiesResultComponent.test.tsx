@@ -38,12 +38,8 @@ describe('EntitiesResultComponent', () => {
   it('highlights matched portion of name', () => {
     render(
       <EntitiesResultComponent
-        data={{
-          name: 'Woolworths',
-          type: 'company',
-          aliases: [],
-          query: 'wool',
-        }}
+        data={{ name: 'Woolworths', type: 'company', aliases: [] }}
+        query="wool"
       />
     );
 

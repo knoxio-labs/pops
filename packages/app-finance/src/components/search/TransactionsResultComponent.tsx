@@ -5,6 +5,14 @@ import type { ResultComponentProps } from '@pops/navigation';
 
 type TxType = 'income' | 'expense' | 'transfer';
 
+interface TransactionHitData extends Record<string, unknown> {
+  description: string;
+  amount: number;
+  date: string;
+  entityName: string | null;
+  type: string;
+}
+
 interface TransactionData {
   description: string;
   amount: number;
@@ -15,14 +23,13 @@ interface TransactionData {
 
 const VALID_TYPES = new Set<string>(['income', 'expense', 'transfer']);
 
-function parseTransactionData(data: Record<string, unknown>): TransactionData {
-  const rawType = String(data['type'] ?? '');
+function parseTransactionData(data: TransactionHitData): TransactionData {
   return {
-    description: String(data['description'] ?? ''),
-    amount: Number(data['amount'] ?? 0),
-    date: String(data['date'] ?? ''),
-    entityName: data['entityName'] != null ? String(data['entityName']) : null,
-    type: VALID_TYPES.has(rawType) ? (rawType as TxType) : 'expense',
+    description: data.description,
+    amount: data.amount,
+    date: data.date,
+    entityName: data.entityName,
+    type: VALID_TYPES.has(data.type) ? (data.type as TxType) : 'expense',
   };
 }
 
@@ -37,7 +44,11 @@ function amountColorClass(type: TxType): string {
   }
 }
 
-export function TransactionsResultComponent({ data, query, matchField }: ResultComponentProps) {
+export function TransactionsResultComponent({
+  data,
+  query,
+  matchField,
+}: ResultComponentProps<TransactionHitData>) {
   const tx = parseTransactionData(data);
   const shouldHighlight = matchField === 'description' && query;
 

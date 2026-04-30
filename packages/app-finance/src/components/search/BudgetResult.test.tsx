@@ -95,14 +95,10 @@ describe('BudgetResult', () => {
   it('highlights matched category for exact match', () => {
     const { container } = render(
       <BudgetResult
-        data={{
-          category: 'Groceries',
-          period: 'monthly',
-          amount: 500,
-          _query: 'Groceries',
-          _matchField: 'category',
-          _matchType: 'exact',
-        }}
+        data={{ category: 'Groceries', period: 'monthly', amount: 500 }}
+        query="Groceries"
+        matchField="category"
+        matchType="exact"
       />
     );
 
@@ -114,14 +110,10 @@ describe('BudgetResult', () => {
   it('highlights matched category for prefix match', () => {
     const { container } = render(
       <BudgetResult
-        data={{
-          category: 'Entertainment',
-          period: 'monthly',
-          amount: 200,
-          _query: 'Enter',
-          _matchField: 'category',
-          _matchType: 'prefix',
-        }}
+        data={{ category: 'Entertainment', period: 'monthly', amount: 200 }}
+        query="Enter"
+        matchField="category"
+        matchType="prefix"
       />
     );
 
@@ -133,14 +125,10 @@ describe('BudgetResult', () => {
   it('highlights matched category for contains match', () => {
     const { container } = render(
       <BudgetResult
-        data={{
-          category: 'Entertainment',
-          period: 'monthly',
-          amount: 200,
-          _query: 'tain',
-          _matchField: 'category',
-          _matchType: 'contains',
-        }}
+        data={{ category: 'Entertainment', period: 'monthly', amount: 200 }}
+        query="tain"
+        matchField="category"
+        matchType="contains"
       />
     );
 
@@ -152,14 +140,10 @@ describe('BudgetResult', () => {
   it('does not highlight when matchField is not category', () => {
     const { container } = render(
       <BudgetResult
-        data={{
-          category: 'Groceries',
-          period: 'monthly',
-          amount: 500,
-          _query: 'Groceries',
-          _matchField: 'notes',
-          _matchType: 'exact',
-        }}
+        data={{ category: 'Groceries', period: 'monthly', amount: 500 }}
+        query="Groceries"
+        matchField="notes"
+        matchType="exact"
       />
     );
 
