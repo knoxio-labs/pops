@@ -28,7 +28,7 @@ export const defaultValues: ItemFormValues = {
   model: '',
   itemId: '',
   type: '',
-  condition: 'good',
+  condition: 'Good',
   locationId: '',
   inUse: false,
   deductible: false,

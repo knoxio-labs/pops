@@ -35,16 +35,17 @@ export function HeaderActions({
 }: HeaderActionsProps) {
   return (
     <div className="flex items-center gap-2">
-      <Link to={`/inventory/items/${id}/edit`}>
-        <Button
-          variant="outline"
-          size="sm"
-          className="font-bold border-app-accent/20 hover:border-app-accent/50 hover:bg-app-accent/5 transition-colors"
-        >
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="font-bold border-app-accent/20 hover:border-app-accent/50 hover:bg-app-accent/5 transition-colors"
+      >
+        <Link to={`/inventory/items/${id}/edit`}>
           <Pencil className="h-4 w-4 mr-2 text-app-accent" />
           Edit
-        </Button>
-      </Link>
+        </Link>
+      </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="sm" className="text-destructive">
