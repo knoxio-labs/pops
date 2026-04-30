@@ -81,14 +81,10 @@ describe('WishlistResult', () => {
   it('highlights matched item name for exact match', () => {
     const { container } = render(
       <WishlistResult
-        data={{
-          item: 'Japan Trip',
-          priority: null,
-          targetAmount: null,
-          _query: 'Japan Trip',
-          _matchField: 'item',
-          _matchType: 'exact',
-        }}
+        data={{ item: 'Japan Trip', priority: null, targetAmount: null }}
+        query="Japan Trip"
+        matchField="item"
+        matchType="exact"
       />
     );
 
@@ -100,14 +96,10 @@ describe('WishlistResult', () => {
   it('highlights matched item name for prefix match', () => {
     const { container } = render(
       <WishlistResult
-        data={{
-          item: 'Gaming PC',
-          priority: null,
-          targetAmount: null,
-          _query: 'Gaming',
-          _matchField: 'item',
-          _matchType: 'prefix',
-        }}
+        data={{ item: 'Gaming PC', priority: null, targetAmount: null }}
+        query="Gaming"
+        matchField="item"
+        matchType="prefix"
       />
     );
 
@@ -119,14 +111,10 @@ describe('WishlistResult', () => {
   it('highlights matched item name for contains match', () => {
     const { container } = render(
       <WishlistResult
-        data={{
-          item: 'Standing Desk',
-          priority: null,
-          targetAmount: null,
-          _query: 'anding',
-          _matchField: 'item',
-          _matchType: 'contains',
-        }}
+        data={{ item: 'Standing Desk', priority: null, targetAmount: null }}
+        query="anding"
+        matchField="item"
+        matchType="contains"
       />
     );
 
@@ -138,14 +126,10 @@ describe('WishlistResult', () => {
   it('does not highlight when matchField is not item', () => {
     const { container } = render(
       <WishlistResult
-        data={{
-          item: 'Japan Trip',
-          priority: null,
-          targetAmount: null,
-          _query: 'Japan',
-          _matchField: 'notes',
-          _matchType: 'exact',
-        }}
+        data={{ item: 'Japan Trip', priority: null, targetAmount: null }}
+        query="Japan"
+        matchField="notes"
+        matchType="exact"
       />
     );
 
