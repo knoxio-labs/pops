@@ -39,6 +39,26 @@ export function useChatMutations({
     if (!trimmed || streaming.isStreaming) return;
 
     setInputValue('');
+
+    if (selectedConversationId) {
+      utils.ego.conversations.get.setData({ id: selectedConversationId }, (prev) => {
+        if (!prev) return prev;
+        const now = new Date().toISOString();
+        const optimisticMessage = {
+          id: `optimistic_${Date.now()}`,
+          conversationId: selectedConversationId,
+          role: 'user',
+          content: trimmed,
+          citations: null,
+          toolCalls: null,
+          tokensIn: null,
+          tokensOut: null,
+          createdAt: now,
+        };
+        return { ...prev, messages: [...prev.messages, optimisticMessage] };
+      });
+    }
+
     streaming.stream(
       { conversationId: selectedConversationId, message: trimmed },
       {
