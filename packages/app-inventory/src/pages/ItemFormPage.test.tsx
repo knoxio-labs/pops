@@ -566,24 +566,26 @@ describe('ItemFormPage — Form gaps (#1851)', () => {
     });
   });
 
-  it("defaults condition to 'good' in create mode", () => {
+  it("defaults condition to 'Good' in create mode", () => {
     renderCreate();
     const conditionSelect = document.querySelector('select[name="condition"]') as HTMLSelectElement;
     expect(conditionSelect).toBeInTheDocument();
-    expect(conditionSelect.value).toBe('good');
+    expect(conditionSelect.value).toBe('Good');
   });
 
-  it('renders correct condition options (new/good/fair/poor/broken)', () => {
+  it('renders correct condition options (Excellent/New/Good/Fair/Poor/Broken)', () => {
     renderCreate();
     const conditionSelect = document.querySelector('select[name="condition"]') as HTMLSelectElement;
     const options = Array.from(conditionSelect.options).map((o) => o.value);
-    expect(options).toContain('new');
-    expect(options).toContain('good');
-    expect(options).toContain('fair');
-    expect(options).toContain('poor');
-    expect(options).toContain('broken');
-    // Old values should not be present
-    expect(options).not.toContain('Excellent');
+    expect(options).toContain('Excellent');
+    expect(options).toContain('New');
+    expect(options).toContain('Good');
+    expect(options).toContain('Fair');
+    expect(options).toContain('Poor');
+    expect(options).toContain('Broken');
+    // Old lowercase values should not be present
+    expect(options).not.toContain('good');
+    expect(options).not.toContain('excellent');
   });
 
   it('marks Type as required with asterisk label', () => {
@@ -809,6 +811,40 @@ describe('ItemFormPage — checkbox population (#2175)', () => {
 
     fireEvent.click(inUse);
     expect(inUse.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('pre-fills Condition select from lowercase stored value in edit mode (#2407)', async () => {
+    mockItemQuery.mockReturnValue({
+      data: { data: seededItem({ inUse: false }) },
+      isLoading: false,
+      error: null,
+    });
+
+    renderEdit('item-1');
+
+    await vi.waitFor(() => {
+      const conditionSelect = document.querySelector(
+        'select[name="condition"]'
+      ) as HTMLSelectElement;
+      expect(conditionSelect.value).toBe('Good');
+    });
+  });
+
+  it('pre-fills Condition select from lowercase excellent stored value in edit mode (#2407)', async () => {
+    mockItemQuery.mockReturnValue({
+      data: { data: { ...seededItem(), condition: 'excellent' } },
+      isLoading: false,
+      error: null,
+    });
+
+    renderEdit('item-1');
+
+    await vi.waitFor(() => {
+      const conditionSelect = document.querySelector(
+        'select[name="condition"]'
+      ) as HTMLSelectElement;
+      expect(conditionSelect.value).toBe('Excellent');
+    });
   });
 
   it('submits the toggled inUse value in the create payload', async () => {

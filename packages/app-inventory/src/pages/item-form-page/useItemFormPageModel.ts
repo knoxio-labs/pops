@@ -43,6 +43,13 @@ function s(v: string | null | undefined): string {
   return v ?? '';
 }
 
+/** Normalise a stored condition value to title-case so it matches the select options. */
+function normalizeCondition(v: string | null | undefined): string {
+  const raw = v ?? '';
+  if (!raw) return raw;
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+}
+
 function n(v: number | null | undefined): string {
   return v?.toString() ?? '';
 }
@@ -54,7 +61,7 @@ function itemToFormValues(item: ItemRecord): ItemFormValues {
     model: s(item.model),
     itemId: s(item.itemId),
     type: s(item.type),
-    condition: s(item.condition),
+    condition: normalizeCondition(item.condition),
     locationId: s(item.locationId),
     inUse: item.inUse,
     deductible: item.deductible,

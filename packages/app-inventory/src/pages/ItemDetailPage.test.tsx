@@ -176,6 +176,15 @@ beforeEach(() => {
 });
 
 describe('ItemDetailPage', () => {
+  describe('Edit button navigation (#2406)', () => {
+    it('renders Edit as a link pointing to the edit route', () => {
+      renderAtRoute('/inventory/items/item-1');
+      const editLink = screen.getByRole('link', { name: /edit/i });
+      expect(editLink).toBeInTheDocument();
+      expect(editLink).toHaveAttribute('href', '/inventory/items/item-1/edit');
+    });
+  });
+
   describe('metadata rendering', () => {
     it('renders item name and brand/model', () => {
       renderAtRoute('/inventory/items/item-1');
