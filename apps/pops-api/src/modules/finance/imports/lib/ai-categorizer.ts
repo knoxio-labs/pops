@@ -65,11 +65,23 @@ function trackCacheHit(importBatchId: string | undefined): void {
   );
 }
 
+/**
+ * Normalize a raw transaction description into a stable cache key.
+ *
+ * Uppercases, trims, AND collapses internal whitespace so subtle differences
+ * like `"X   Y"` vs `"X  Y"` (3 vs 2 spaces) hit the same cache entry — the
+ * old behaviour caused identical merchants to miss the cache and produce
+ * different LLM-suggested entity names per call (#2447).
+ */
+export function normalizeCacheKey(rawRow: string): string {
+  return rawRow.toUpperCase().trim().replaceAll(/\s+/g, ' ');
+}
+
 export async function categorizeWithAi(
   rawRow: string,
   importBatchId?: string
 ): Promise<AiCallResult> {
-  const key = rawRow.toUpperCase().trim();
+  const key = normalizeCacheKey(rawRow);
   const sanitizedDescription = rawRow.trim().slice(0, 100);
 
   if (isNamedEnvContext()) return { result: null };

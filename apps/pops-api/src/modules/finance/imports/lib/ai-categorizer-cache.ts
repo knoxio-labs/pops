@@ -6,7 +6,12 @@ import { logger } from '../../../../lib/logger.js';
 
 export interface AiCacheEntry {
   description: string;
-  entityName: string;
+  /**
+   * Suggested entity name from the LLM. `null` when the description has no
+   * recoverable merchant (#2449) — caller should route the transaction to the
+   * uncertain bucket instead of inventing a placeholder entity.
+   */
+  entityName: string | null;
   category: string;
   cachedAt: string;
 }
