@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AiCategorizationError, categorizeWithAi, clearCache } from './ai-categorizer.js';
+import {
+  AiCategorizationError,
+  categorizeWithAi,
+  clearCache,
+  normalizeCacheKey,
+} from './ai-categorizer.js';
 
 /**
  * Unit tests for AI categorization with mocked Anthropic API.
@@ -68,6 +73,27 @@ afterEach(() => {
   }
 });
 
+describe('normalizeCacheKey (#2447)', () => {
+  it('uppercases and trims', () => {
+    expect(normalizeCacheKey('  woolworths  ')).toBe('WOOLWORTHS');
+  });
+
+  it('collapses runs of internal whitespace to a single space', () => {
+    expect(normalizeCacheKey('TRANSPORTFORNSWTRAVEL   SYDNEY')).toBe(
+      'TRANSPORTFORNSWTRAVEL SYDNEY'
+    );
+    expect(normalizeCacheKey('TRANSPORTFORNSWTRAVEL  SYDNEY')).toBe('TRANSPORTFORNSWTRAVEL SYDNEY');
+  });
+
+  it('treats tabs and newlines as whitespace', () => {
+    expect(normalizeCacheKey('A\tB\nC')).toBe('A B C');
+  });
+
+  it('produces the same key for cosmetically different but semantically identical descriptions', () => {
+    expect(normalizeCacheKey('  Coles   1234  ')).toBe(normalizeCacheKey('coles 1234'));
+  });
+});
+
 describe('categorizeWithAi', () => {
   describe('Caching behavior', () => {
     it('calls mocked API for new rawRow', async () => {
@@ -124,6 +150,28 @@ describe('categorizeWithAi', () => {
 
       expect(result2?.entityName).toBe('Netflix');
       expect(usage2).toBeUndefined(); // No usage stats for cache hit
+    });
+
+    it('cache key collapses internal whitespace (#2447)', async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: 'text',
+            text: '{"entityName": "Transport for NSW", "category": "Transport"}',
+          },
+        ],
+        usage: { input_tokens: 50, output_tokens: 20 },
+      });
+
+      // First call: 3 spaces between segments.
+      await categorizeWithAi('TRANSPORTFORNSWTRAVEL   SYDNEY');
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+
+      // Second call: 1 space, same merchant. Should hit cache.
+      const { result, usage } = await categorizeWithAi('TRANSPORTFORNSWTRAVEL SYDNEY');
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(result?.entityName).toBe('Transport for NSW');
+      expect(usage).toBeUndefined();
     });
 
     it('calls API for different rawRow', async () => {
@@ -253,8 +301,10 @@ describe('categorizeWithAi', () => {
 
       const { result } = await categorizeWithAi('TEST');
 
-      // Code doesn't validate schema, so it creates entry with undefined fields
-      expect(result?.entityName).toBeUndefined();
+      // Missing entityName is normalised to null by sanitizeEntityName so the
+      // caller can route the row to the uncertain bucket without inventing a
+      // placeholder entity (#2449).
+      expect(result?.entityName).toBeNull();
       expect(result?.category).toBe('Groceries');
     });
 
