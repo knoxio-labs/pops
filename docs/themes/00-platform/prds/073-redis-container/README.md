@@ -49,10 +49,9 @@ No new tRPC procedures. Redis is internal infrastructure consumed by other modul
 | --- | ----------------------------------------------------- | ------------------------------------------------------------------------- | ------ | ---------------- |
 | 01  | [us-01-docker-compose](us-01-docker-compose.md)       | Add Redis 7 Alpine container to Docker Compose on pops-backend network    | Done   | No (first)       |
 | 02  | [us-02-connection-module](us-02-connection-module.md) | ioredis connection module with health check, graceful shutdown, reconnect | Done   | Blocked by us-01 |
-| 03  | [us-03-ansible-role](us-03-ansible-role.md)           | Ansible provisioning for Redis volume, health check, maxmemory config     | Done   | Yes              |
 | 04  | [us-04-dev-environment](us-04-dev-environment.md)     | mise task for local Redis, .env.example update, dev documentation         | Done   | Yes              |
 
-US-03 and US-04 can parallelise after US-01. US-02 depends on US-01 (needs a running Redis to connect to).
+US-04 can parallelise after US-01. US-02 depends on US-01 (needs a running Redis to connect to). Server-side provisioning (the original US-03 ansible role) lives in [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra) and is no longer tracked here.
 
 ## Verification
 
@@ -60,7 +59,6 @@ US-03 and US-04 can parallelise after US-01. US-02 depends on US-01 (needs a run
 - `/health` endpoint reports Redis status
 - API starts successfully when Redis is unavailable (degraded mode)
 - API reconnects automatically when Redis comes back
-- Ansible deploys Redis with correct network, volume, and memory configuration
 - `mise redis:start` launches Redis locally for development
 - No secrets stored in Redis (verified by code review)
 

@@ -9,16 +9,16 @@ As a developer, I want CI workflows that run on every PR so that broken code can
 
 ## Acceptance Criteria
 
-- [x] `pops-api-ci.yml` runs lint, test, build on API changes
-- [x] `shell-ci.yml` runs lint, build on shell changes
-- [x] `test.yml` runs full test suite
-- [x] `e2e.yml` runs Playwright tests
-- [x] `ansible-ci.yml` runs syntax check on ansible changes
-- [x] `tools-ci.yml` runs lint, test on import tools changes
+- [x] `quality.yml` runs root-level lint + format check on every PR
+- [x] Per-area quality workflows (`api-quality.yml`, `fe-quality.yml`, `ai-quality.yml`, `finance-quality.yml`, `inventory-quality.yml`, `media-quality.yml`, `ui-quality.yml`, `db-types-quality.yml`, `api-client-quality.yml`, `navigation-quality.yml`) run typecheck/lint/test scoped to their package
+- [x] `api-test.yml` runs the API integration test suite
+- [x] `fe-test-e2e.yml` runs Playwright tests against the shell
+- [x] `docker-build.yml` builds every Dockerfile and validates compose configs on PRs that touch them
+- [x] `workflows-quality.yml` lints the workflow files themselves with actionlint
 - [x] Path filters configured — workflows only trigger on relevant file changes
-- [x] All workflows run on GitHub-hosted runners (not self-hosted)
+- [x] All workflows run on `ubuntu-latest` (no self-hosted runners — pops CI never depends on the home lab)
 - [x] Failing workflow blocks PR merge
 
 ## Notes
 
-Path filters prevent unnecessary CI runs. API changes don't trigger shell CI, and vice versa.
+Path filters prevent unnecessary CI runs. API changes don't trigger shell CI, and vice versa. Server-side / ansible CI lives in `knoxio/homelab-infra`, not here.
