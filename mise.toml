@@ -149,10 +149,6 @@ run = "docker compose -f infra/docker-compose.dev.yml logs -f $@"
 description = "Validate Docker Compose configuration"
 run = "docker compose -f infra/docker-compose.dev.yml config"
 
-[tasks."docker:import"]
-description = "Run import tool via Docker (e.g., mise docker:import src/import-anz.ts /data/imports/anz.csv)"
-run = "docker compose -f infra/docker-compose.dev.yml --profile tools run --rm tools $@"
-
 # ============================================================================
 # Redis (local development)
 # ============================================================================
