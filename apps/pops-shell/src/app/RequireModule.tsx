@@ -9,6 +9,11 @@ import type { ReactNode } from 'react';
  * Route-level guard that renders `NotInstalledPage` for any module whose
  * id isn't in this deployment's installed set (PRD-100). Manifest is
  * fetched once via `core.shell.manifest` and cached by React Query.
+ *
+ * Optimistic: while the manifest query is still in flight (or has errored),
+ * render children. Only flip to `NotInstalledPage` when the manifest has
+ * loaded and explicitly does not include this module — avoids a flicker on
+ * every navigation in the common case where everything is installed.
  */
 export function RequireModule({
   moduleId,
@@ -19,19 +24,15 @@ export function RequireModule({
   kind?: 'app' | 'overlay';
   children?: ReactNode;
 }) {
-  const { data, isLoading } = trpc.core.shell.manifest.useQuery(undefined, {
+  const { data } = trpc.core.shell.manifest.useQuery(undefined, {
     staleTime: Infinity,
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div>
-    );
-  }
-
-  const installed = kind === 'overlay' ? data?.overlays : data?.apps;
-  if (!installed?.includes(moduleId)) {
-    return <NotInstalledPage />;
+  if (data) {
+    const installed = kind === 'overlay' ? data.overlays : data.apps;
+    if (!installed.includes(moduleId)) {
+      return <NotInstalledPage />;
+    }
   }
 
   return <>{children ?? <Outlet />}</>;

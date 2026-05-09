@@ -46,15 +46,11 @@ describe('PRD-100 module gate (tRPC)', () => {
     });
   });
 
-  it('rejects calls to absent overlay modules with NOT_FOUND', async () => {
-    process.env[APP_KEY] = 'finance,media,inventory,cerebrum,ai';
-    process.env[OVERLAY_KEY] = '';
-    // Empty list means "all known overlays", so this still passes — explicit none:
-    process.env[OVERLAY_KEY] = 'ego';
-    const caller = makeCaller();
-    // Sanity: ego available when listed
-    await expect(caller.ego.conversations.list({})).resolves.toBeDefined();
-  });
+  // Overlay gating uses the exact same `moduleGate` middleware as app gating
+  // (see trpc.ts). With ego as the only known overlay today, there's no way
+  // to "exclude ego" via POPS_OVERLAYS in the current contract — empty/unset
+  // means "all", and any non-empty value either lists ego or fails parse.
+  // The apps-rejection test above exercises the shared gate code path.
 
   it('default (env unset) installs everything', async () => {
     delete process.env[APP_KEY];
