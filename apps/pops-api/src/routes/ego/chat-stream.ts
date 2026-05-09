@@ -21,11 +21,15 @@ import {
   persistStreamResults,
   persistUserTurn,
   resolveConversation,
-} from '../../modules/ego/chat-helpers.js';
+} from '../../modules/cerebrum/ego/chat-helpers.js';
 
 import type { Request, Response } from 'express';
 
-import type { AppContext, ChatStreamPreparation, Conversation } from '../../modules/ego/types.js';
+import type {
+  AppContext,
+  ChatStreamPreparation,
+  Conversation,
+} from '../../modules/cerebrum/ego/types.js';
 
 const router: ExpressRouter = Router();
 

@@ -15,14 +15,14 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createTestDb } from '../../../shared/test-utils.js';
+import { createTestDb } from '../../../../shared/test-utils.js';
 import { ConversationPersistence } from '../persistence.js';
 import { ConversationScopeNegotiator } from '../scope-negotiator.js';
 
 import type { Database } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
-import type { RetrievalResult } from '../../cerebrum/retrieval/types.js';
+import type { RetrievalResult } from '../../retrieval/types.js';
 import type { ChatParams, ChatResult, Message } from '../types.js';
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ const mockHybrid =
     ) => Promise<RetrievalResult[]>
   >();
 
-vi.mock('../../../db.js', () => {
+vi.mock('../../../../db.js', () => {
   let testDb: BetterSQLite3Database | null = null;
   return {
     getDrizzle: () => {
@@ -53,7 +53,7 @@ vi.mock('../../../db.js', () => {
   };
 });
 
-vi.mock('../../cerebrum/retrieval/hybrid-search.js', () => ({
+vi.mock('../../retrieval/hybrid-search.js', () => ({
   HybridSearchService: class {
     hybrid = mockHybrid;
   },
@@ -70,22 +70,22 @@ vi.mock('@anthropic-ai/sdk', () => ({
   },
 }));
 
-vi.mock('../../../env.js', () => ({
+vi.mock('../../../../env.js', () => ({
   getEnv: (name: string) => {
     if (name === 'ANTHROPIC_API_KEY') return 'test-key';
     return undefined;
   },
 }));
 
-vi.mock('../../../lib/inference-middleware.js', () => ({
+vi.mock('../../../../lib/inference-middleware.js', () => ({
   trackInference: (_params: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('../../../lib/ai-retry.js', () => ({
+vi.mock('../../../../lib/ai-retry.js', () => ({
   withRateLimitRetry: (fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('../../../lib/logger.js', () => ({
+vi.mock('../../../../lib/logger.js', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -96,7 +96,7 @@ vi.mock('../../../lib/logger.js', () => ({
 
 // Dynamic import after mocks.
 const { ConversationEngine } = await import('../engine.js');
-const dbMod: Record<string, unknown> = await import('../../../db.js');
+const dbMod: Record<string, unknown> = await import('../../../../db.js');
 const setTestDrizzle = dbMod['__setTestDrizzle'] as (db: BetterSQLite3Database) => void;
 
 // ---------------------------------------------------------------------------

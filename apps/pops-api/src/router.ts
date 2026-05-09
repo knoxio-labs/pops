@@ -1,3 +1,4 @@
+import { egoRouter } from './modules/cerebrum/ego/index.js';
 /**
  * Main tRPC app router — combines domain routers.
  *
@@ -13,7 +14,6 @@
  */
 import { cerebrumRouter } from './modules/cerebrum/index.js';
 import { coreRouter } from './modules/core/index.js';
-import { egoRouter } from './modules/ego/index.js';
 import { financeRouter } from './modules/finance/index.js';
 import { inventoryRouter } from './modules/inventory/index.js';
 import { mediaRouter } from './modules/media/index.js';

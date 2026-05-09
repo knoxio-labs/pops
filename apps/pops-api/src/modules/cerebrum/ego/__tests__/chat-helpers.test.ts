@@ -9,7 +9,7 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createTestDb } from '../../../shared/test-utils.js';
+import { createTestDb } from '../../../../shared/test-utils.js';
 import { persistAssistantError, persistAssistantTurn, persistUserTurn } from '../chat-helpers.js';
 import { ConversationPersistence } from '../persistence.js';
 

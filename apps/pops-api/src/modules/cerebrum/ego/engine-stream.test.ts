@@ -19,7 +19,7 @@ const mockCitationParse = vi.fn((text: string) => ({
   cleanedAnswer: text,
   citations: [] as Array<{ id: string }>,
 }));
-vi.mock('../cerebrum/query/citation-parser.js', () => ({
+vi.mock('../query/citation-parser.js', () => ({
   CitationParser: class MockCitationParser {
     parse = mockCitationParse;
   },

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { assertModuleManifest, type ModuleManifest } from '@pops/types';
 
+import { manifest as egoManifest } from './cerebrum/ego/index.js';
 import { manifest as cerebrumManifest } from './cerebrum/index.js';
 import { manifest as coreManifest } from './core/index.js';
-import { manifest as egoManifest } from './ego/index.js';
 import { manifest as financeManifest } from './finance/index.js';
 import { manifest as inventoryManifest } from './inventory/index.js';
 import { manifest as mediaManifest } from './media/index.js';

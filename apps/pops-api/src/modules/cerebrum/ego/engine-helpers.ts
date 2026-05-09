@@ -3,9 +3,9 @@
  *
  * Extracted to keep engine.ts within the max-lines lint rule.
  */
-import { getSettingValue } from '../core/settings/service.js';
+import { getSettingValue } from '../../core/settings/service.js';
 
-import type { RetrievalFilters } from '../cerebrum/retrieval/types.js';
+import type { RetrievalFilters } from '../retrieval/types.js';
 import type { EngineConfig, Message } from './types.js';
 
 function getEgoDefaultModel(): string {

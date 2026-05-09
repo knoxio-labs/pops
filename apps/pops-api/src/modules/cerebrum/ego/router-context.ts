@@ -4,8 +4,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { getDrizzle } from '../../db.js';
-import { protectedProcedure, router } from '../../trpc.js';
+import { getDrizzle } from '../../../db.js';
+import { protectedProcedure, router } from '../../../trpc.js';
 import { ConversationPersistence } from './persistence.js';
 
 import type { AppContext } from './types.js';
