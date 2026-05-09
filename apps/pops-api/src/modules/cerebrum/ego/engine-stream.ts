@@ -4,10 +4,10 @@
  * Extracted from engine.ts to keep file sizes within the max-lines rule
  * and avoid `no-this-alias` issues with inner generator functions.
  */
-import { CitationParser } from '../cerebrum/query/citation-parser.js';
+import { CitationParser } from '../query/citation-parser.js';
 import { streamChatLlm } from './llm-client.js';
 
-import type { RetrievalResult } from '../cerebrum/retrieval/types.js';
+import type { RetrievalResult } from '../retrieval/types.js';
 import type { ChatStreamEvent } from './types.js';
 
 interface StreamGeneratorParams {

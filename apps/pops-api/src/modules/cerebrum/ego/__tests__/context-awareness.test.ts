@@ -7,7 +7,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RetrievalResult } from '../../cerebrum/retrieval/types.js';
+import type { RetrievalResult } from '../../retrieval/types.js';
 import type { AppContext, ChatParams } from '../types.js';
 
 // --- Mocks ---
@@ -22,11 +22,11 @@ const mockHybrid =
     ) => Promise<RetrievalResult[]>
   >();
 
-vi.mock('../../../db.js', () => ({
+vi.mock('../../../../db.js', () => ({
   getDrizzle: () => ({}),
 }));
 
-vi.mock('../../cerebrum/retrieval/hybrid-search.js', () => ({
+vi.mock('../../retrieval/hybrid-search.js', () => ({
   HybridSearchService: class {
     hybrid = mockHybrid;
   },
@@ -34,7 +34,7 @@ vi.mock('../../cerebrum/retrieval/hybrid-search.js', () => ({
 
 const mockEngramRead = vi.fn();
 
-vi.mock('../../cerebrum/instance.js', () => ({
+vi.mock('../../instance.js', () => ({
   getEngramService: () => ({
     read: mockEngramRead,
   }),
@@ -51,22 +51,22 @@ vi.mock('@anthropic-ai/sdk', () => ({
   },
 }));
 
-vi.mock('../../../env.js', () => ({
+vi.mock('../../../../env.js', () => ({
   getEnv: (name: string) => {
     if (name === 'ANTHROPIC_API_KEY') return 'test-key';
     return undefined;
   },
 }));
 
-vi.mock('../../../lib/inference-middleware.js', () => ({
+vi.mock('../../../../lib/inference-middleware.js', () => ({
   trackInference: (_params: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('../../../lib/ai-retry.js', () => ({
+vi.mock('../../../../lib/ai-retry.js', () => ({
   withRateLimitRetry: (fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('../../../lib/logger.js', () => ({
+vi.mock('../../../../lib/logger.js', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

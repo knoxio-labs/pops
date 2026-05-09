@@ -7,7 +7,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { protectedProcedure, router } from '../../trpc.js';
+import { protectedProcedure, router } from '../../../trpc.js';
 import {
   getEngine,
   getPersistence,

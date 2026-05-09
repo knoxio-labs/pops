@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createTestDb } from '../../../shared/test-utils.js';
+import { createTestDb } from '../../../../shared/test-utils.js';
 import { autoTitle, ConversationPersistence } from '../persistence.js';
 
 import type { Database } from 'better-sqlite3';

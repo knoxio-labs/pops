@@ -5,7 +5,7 @@
  * Extracted to avoid duplicating persistence, conversation resolution,
  * and app context comparison logic across the two code paths.
  */
-import { getDrizzle } from '../../db.js';
+import { getDrizzle } from '../../../db.js';
 import { ConversationEngine } from './engine.js';
 import { PersistenceStoreAdapter } from './persistence-store.js';
 import { ConversationPersistence } from './persistence.js';

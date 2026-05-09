@@ -7,17 +7,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Mock env before importing the module under test.
-vi.mock('../../env.js', () => ({
+vi.mock('../../../env.js', () => ({
   getEnv: vi.fn(),
 }));
 
 // Mock inference tracking (no DB in unit tests).
-vi.mock('../../lib/inference-middleware.js', () => ({
+vi.mock('../../../lib/inference-middleware.js', () => ({
   trackInference: vi.fn((_params, fn) => fn()),
 }));
 
 // Mock logger.
-vi.mock('../../lib/logger.js', () => ({
+vi.mock('../../../lib/logger.js', () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
@@ -31,7 +31,7 @@ vi.mock('@anthropic-ai/sdk', () => {
   };
 });
 
-import { getEnv } from '../../env.js';
+import { getEnv } from '../../../env.js';
 import { streamChatLlm } from './llm-client.js';
 
 import type { StreamEvent } from './llm-client.js';

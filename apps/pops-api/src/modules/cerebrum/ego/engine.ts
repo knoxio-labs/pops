@@ -4,11 +4,11 @@
  * Orchestrates the chat pipeline: scope negotiation, Thalamus retrieval,
  * context window assembly, LLM call, citation parsing, and token tracking.
  */
-import { getDrizzle } from '../../db.js';
-import { logger } from '../../lib/logger.js';
-import { CitationParser } from '../cerebrum/query/citation-parser.js';
-import { ContextAssemblyService } from '../cerebrum/retrieval/context-assembly.js';
-import { HybridSearchService } from '../cerebrum/retrieval/hybrid-search.js';
+import { getDrizzle } from '../../../db.js';
+import { logger } from '../../../lib/logger.js';
+import { CitationParser } from '../query/citation-parser.js';
+import { ContextAssemblyService } from '../retrieval/context-assembly.js';
+import { HybridSearchService } from '../retrieval/hybrid-search.js';
 import { biasScopes, loadViewedEngram } from './context-helpers.js';
 import {
   buildDefaultConfig,
@@ -20,7 +20,7 @@ import { callChatLlm, callSummariseLlm } from './llm-client.js';
 import { buildEgoSystemPrompt, buildSummarisationPrompt } from './prompts.js';
 import { ConversationScopeNegotiator } from './scope-negotiator.js';
 
-import type { RetrievalResult } from '../cerebrum/retrieval/types.js';
+import type { RetrievalResult } from '../retrieval/types.js';
 import type {
   ChatParams,
   ChatResult,

@@ -5,10 +5,10 @@
  *  - biasScopes: additive scope biasing based on active app context
  *  - loadViewedEngram: auto-load viewed engram as a synthetic RetrievalResult
  */
-import { logger } from '../../lib/logger.js';
-import { getEngramService } from '../cerebrum/instance.js';
+import { logger } from '../../../lib/logger.js';
+import { getEngramService } from '../instance.js';
 
-import type { RetrievalResult } from '../cerebrum/retrieval/types.js';
+import type { RetrievalResult } from '../retrieval/types.js';
 import type { AppContext } from './types.js';
 
 /**
