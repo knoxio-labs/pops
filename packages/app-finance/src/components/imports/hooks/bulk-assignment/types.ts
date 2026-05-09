@@ -37,8 +37,12 @@ export function pluralize(count: number): string {
 export function moveToMatched(
   prev: LocalTxState,
   transactions: ProcessedTransaction[],
-  entity: { entityId: string; entityName: string }
+  entity: { entityId: string; entityName: string; matchType?: 'manual' | 'ai' }
 ): LocalTxState {
+  // Default to 'manual' so EntitySection (which renders the AI-suggestion
+  // panel for matchType === 'ai') doesn't keep prompting the user to accept
+  // a suggestion they already accepted via Accept All / Create new for all.
+  const matchType = entity.matchType ?? 'manual';
   let updated = { ...prev };
   for (const transaction of transactions) {
     updated = {
@@ -52,7 +56,7 @@ export function moveToMatched(
           entity: {
             entityId: entity.entityId,
             entityName: entity.entityName,
-            matchType: 'ai' as const,
+            matchType,
             confidence: 1,
           },
           status: 'matched' as const,
