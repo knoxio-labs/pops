@@ -1,10 +1,9 @@
-import { egoRouter } from './modules/cerebrum/ego/index.js';
 /**
  * Main tRPC app router — combines domain routers.
  *
  * Domain structure:
  *   core      — entities, ai-usage, corrections
- *   ego       — AI conversation persistence
+ *   ego       — AI conversation persistence (lives under cerebrum/ego)
  *   finance   — transactions, budgets, imports, wishlist
  *   inventory — items
  *   media     — comparisons
@@ -12,6 +11,7 @@ import { egoRouter } from './modules/cerebrum/ego/index.js';
  *
  * Note: envs is an Express router (not tRPC) — mounted directly in app.ts.
  */
+import { egoRouter } from './modules/cerebrum/ego/index.js';
 import { cerebrumRouter } from './modules/cerebrum/index.js';
 import { coreRouter } from './modules/core/index.js';
 import { financeRouter } from './modules/finance/index.js';
