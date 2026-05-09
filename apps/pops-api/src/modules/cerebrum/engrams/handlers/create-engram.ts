@@ -159,13 +159,20 @@ export function createEngram(deps: CreateDeps, input: CreateEngramInput): string
   });
 
   const relPath = `${resolved.type}/${id}.md`;
-  writeFileAtomic(absolutePath(root, relPath), serializeEngram(frontmatter, resolved.body));
-  upsertIndex(db, {
-    id,
-    filePath: relPath,
-    frontmatter,
-    body: resolved.body,
-    customFields: resolved.customFields,
+
+  // Wrap the index insert and the file write in a single transaction so a
+  // failure on either side is fully rolled back. The transaction only commits
+  // when the callback returns; if writeFileAtomic throws, the upsertIndex
+  // savepoint is rolled back too — no orphaned row, no orphaned file.
+  db.transaction((tx) => {
+    upsertIndex(tx, {
+      id,
+      filePath: relPath,
+      frontmatter,
+      body: resolved.body,
+      customFields: resolved.customFields,
+    });
+    writeFileAtomic(absolutePath(root, relPath), serializeEngram(frontmatter, resolved.body));
   });
 
   return id;
