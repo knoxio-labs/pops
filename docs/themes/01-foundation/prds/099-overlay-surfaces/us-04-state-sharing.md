@@ -5,14 +5,15 @@
 
 ## Description
 
-As a user, I want the overlay and `/cerebrum/chat` to share conversation state so that selecting a conversation in one surface shows the same context in the other without duplicate stores.
+As a user, I want the overlay and `/cerebrum/chat` to share conversation **data** so that messages sent on one surface are visible on the other, without standing up a duplicate store.
 
 ## Acceptance Criteria
 
 - [ ] Both surfaces consume `useChatPageModel` from `@pops/overlay-ego`.
-- [ ] Conversation list, selected conversation, and message history are sourced from the same tRPC queries (`ego.conversations.list`, `ego.conversations.get`).
+- [ ] Conversation list and message history are sourced from the same tRPC queries (`ego.conversations.list`, `ego.conversations.get`); React Query's per-key cache is the synchronisation layer.
 - [ ] No Zustand or React Context "chat store" is introduced in the shell or in app-cerebrum.
-- [ ] A new message sent from the overlay appears in `/cerebrum/chat` (and vice versa) within the next React Query refresh.
+- [ ] A new message sent from one surface is visible on the other on the next React Query refresh (the per-conversation thread is invalidated on success).
+- [ ] The active **selected conversation** is intentionally not shared across surfaces in this PRD — each surface owns its own `selectedConversationId` local state. Cross-surface selection sharing (URL param, persisted preference) is out of scope and tracked separately.
 
 ## Notes
 

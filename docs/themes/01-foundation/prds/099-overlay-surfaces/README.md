@@ -36,7 +36,9 @@ The shell exposes named **chrome slots** (e.g. `'assistant'`). Overlay modules r
 
 ## Shared State
 
-Conversation state lives in tRPC queries (`ego.conversations.list`, `ego.conversations.get`, `ego.chat`). React Query's per-key cache keeps overlay and route in sync without a duplicate Zustand store: both use the same `useChatPageModel` hook, which derives state from those queries. Selecting a conversation in the overlay then opening `/cerebrum/chat` shows the same conversation; new messages flow through the same `chat.useMutation` path.
+Conversation **data** lives in tRPC queries (`ego.conversations.list`, `ego.conversations.get`, `ego.chat`). React Query's per-key cache keeps the conversation list and message threads in sync across overlay and route without a duplicate Zustand store: both consume the same `useChatPageModel` hook which reads from those queries.
+
+The **selected conversation id** is local component state inside `useChatPageModel`, so each surface starts with `null` selection independently. A new message sent from one surface is visible in the other on the next React Query refresh (the conversation list and the per-conversation message thread are both invalidated by `chat.useMutation.onSuccess`). Sharing the active selection across surfaces — via URL params or a persisted preference — is a follow-up; today the model is "shared data, independent selection".
 
 ## Settings Link
 
