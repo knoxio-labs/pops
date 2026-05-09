@@ -21,13 +21,6 @@ import { getSettingValue } from '../../../core/settings/service.js';
 import { buildEntryFromText, callApiOrThrow } from './ai-categorizer-api.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 
-export {
-  clearAllCache,
-  clearCache,
-  clearStaleCache,
-  getCacheStats,
-  type AiCacheEntry,
-} from '../../../core/ai-usage/cache.js';
 export { AiCategorizationError } from './ai-categorizer-error.js';
 
 const DEFAULT_CATEGORIZER_MODEL = 'claude-haiku-4-5-20251001';
