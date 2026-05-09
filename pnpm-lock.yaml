@@ -436,6 +436,9 @@ importers:
       '@pops/navigation':
         specifier: workspace:*
         version: link:../navigation
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../types
       '@pops/ui':
         specifier: workspace:*
         version: link:../ui
@@ -524,6 +527,9 @@ importers:
       '@pops/navigation':
         specifier: workspace:*
         version: link:../navigation
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../types
       '@pops/ui':
         specifier: workspace:*
         version: link:../ui
@@ -633,6 +639,9 @@ importers:
       '@pops/navigation':
         specifier: workspace:*
         version: link:../navigation
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../types
       '@pops/ui':
         specifier: workspace:*
         version: link:../ui
@@ -733,6 +742,9 @@ importers:
       '@pops/navigation':
         specifier: workspace:*
         version: link:../navigation
+      '@pops/types':
+        specifier: workspace:*
+        version: link:../types
       '@pops/ui':
         specifier: workspace:*
         version: link:../ui
