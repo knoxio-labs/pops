@@ -1,6 +1,7 @@
 # US-04: Frontend route filtering
 
 > PRD: [Module Runtime — Tier 1](README.md)
+> Status: In progress
 
 ## Description
 

@@ -1,6 +1,7 @@
 # US-02: Backend module gate
 
 > PRD: [Module Runtime — Tier 1](README.md)
+> Status: In progress
 
 ## Description
 

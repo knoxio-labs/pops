@@ -1,6 +1,7 @@
 # US-06: Cross-module degradation (deferred)
 
 > PRD: [Module Runtime — Tier 1](README.md)
+> Status: Not started
 
 ## Description
 

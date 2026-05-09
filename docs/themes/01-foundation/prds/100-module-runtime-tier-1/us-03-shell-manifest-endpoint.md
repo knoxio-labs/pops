@@ -1,6 +1,7 @@
 # US-03: Shell manifest endpoint
 
 > PRD: [Module Runtime — Tier 1](README.md)
+> Status: In progress
 
 ## Description
 
