@@ -12,7 +12,9 @@ import {
   getEngine,
   getPersistence,
   getStore,
-  persistChatResults,
+  persistAssistantError,
+  persistAssistantTurn,
+  persistUserTurn,
   resolveConversation,
 } from './chat-helpers.js';
 
@@ -80,6 +82,14 @@ export const chatRouter = router({
     });
     const history = await store.getMessages(conversation.id);
 
+    persistUserTurn({
+      persistence,
+      conversationId: conversation.id,
+      userMessage: input.message,
+      storedAppContext: conversation.appContext as AppContext | undefined | null,
+      incomingAppContext: appContext,
+    });
+
     let result: ChatResult;
     try {
       result = await engine.chat({
@@ -87,22 +97,24 @@ export const chatRouter = router({
         message: input.message,
         history,
         activeScopes: conversation.activeScopes,
-        appContext: conversation.appContext as AppContext | undefined,
+        // Bias retrieval on the request's *current* page context when the
+        // client supplies one — falling back to whatever the conversation
+        // had stored. The incoming context is what the user is looking at
+        // right now, which is what should drive engram boosting.
+        appContext: appContext ?? (conversation.appContext as AppContext | undefined),
         channel: input.channel ?? 'shell',
         knownScopes: input.knownScopes,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      persistAssistantError(persistence, conversation.id, message);
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message });
     }
 
-    const assistantMsg = persistChatResults({
+    const assistantMsg = persistAssistantTurn({
       persistence,
       conversationId: conversation.id,
-      userMessage: input.message,
       result,
-      storedAppContext: conversation.appContext as AppContext | undefined | null,
-      incomingAppContext: appContext,
     });
 
     return {

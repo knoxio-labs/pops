@@ -46,28 +46,44 @@ export function appContextChanged(
   );
 }
 
-export interface PersistChatParams {
+export interface PersistUserTurnParams {
   persistence: ConversationPersistence;
   conversationId: string;
   userMessage: string;
-  result: ChatResult;
   storedAppContext?: AppContext | null;
   incomingAppContext?: AppContext;
 }
 
-/** Persist chat results: scope changes, app context changes, messages, and engram context. */
-export function persistChatResults(params: PersistChatParams): Message {
-  const { persistence, conversationId, userMessage, result } = params;
-
-  if (result.scopeNegotiation?.changed) {
-    persistence.updateScopes(conversationId, result.scopeNegotiation.scopes);
-  }
+/**
+ * Persist the user's turn before any engine work.
+ *
+ * Writing up-front means a downstream pipeline failure (embedding 4xx, LLM
+ * timeout, etc.) cannot delete the user's own input from the conversation —
+ * the assistant turn or error placeholder is persisted separately afterwards.
+ */
+export function persistUserTurn(params: PersistUserTurnParams): Message {
+  const { persistence, conversationId, userMessage } = params;
 
   if (appContextChanged(params.storedAppContext, params.incomingAppContext)) {
     persistence.updateAppContext(conversationId, params.incomingAppContext ?? null);
   }
 
-  persistence.appendMessage(conversationId, { role: 'user', content: userMessage });
+  return persistence.appendMessage(conversationId, { role: 'user', content: userMessage });
+}
+
+export interface PersistAssistantTurnParams {
+  persistence: ConversationPersistence;
+  conversationId: string;
+  result: ChatResult;
+}
+
+/** Persist the assistant turn after the engine returns: scope updates, assistant message, engram context. */
+export function persistAssistantTurn(params: PersistAssistantTurnParams): Message {
+  const { persistence, conversationId, result } = params;
+
+  if (result.scopeNegotiation?.changed) {
+    persistence.updateScopes(conversationId, result.scopeNegotiation.scopes);
+  }
 
   const assistantMsg = persistence.appendMessage(conversationId, {
     role: 'assistant',
@@ -82,6 +98,18 @@ export function persistChatResults(params: PersistChatParams): Message {
   }
 
   return assistantMsg;
+}
+
+/** Persist a placeholder assistant message so a pipeline failure shows up in the thread. */
+export function persistAssistantError(
+  persistence: ConversationPersistence,
+  conversationId: string,
+  reason: string
+): Message {
+  return persistence.appendMessage(conversationId, {
+    role: 'assistant',
+    content: `⚠️ Pipeline error: ${reason}`,
+  });
 }
 
 export interface ResolveConversationParams {
@@ -114,23 +142,19 @@ export async function resolveConversation(
 export interface PersistStreamParams {
   persistence: ConversationPersistence;
   conversationId: string;
-  userMessage: string;
   content: string;
   citations: string[];
   tokensIn: number;
   tokensOut: number;
   retrievedEngrams: Array<{ engramId: string; relevanceScore: number }>;
   scopeNegotiation: ScopeNegotiation;
-  storedAppContext?: AppContext | null;
-  incomingAppContext?: AppContext;
 }
 
 /** Persist results after a streaming chat completes. */
 export function persistStreamResults(params: PersistStreamParams): Message {
-  return persistChatResults({
+  return persistAssistantTurn({
     persistence: params.persistence,
     conversationId: params.conversationId,
-    userMessage: params.userMessage,
     result: {
       response: {
         content: params.content,
@@ -141,7 +165,5 @@ export function persistStreamResults(params: PersistStreamParams): Message {
       retrievedEngrams: params.retrievedEngrams,
       scopeNegotiation: params.scopeNegotiation,
     },
-    storedAppContext: params.storedAppContext,
-    incomingAppContext: params.incomingAppContext,
   });
 }

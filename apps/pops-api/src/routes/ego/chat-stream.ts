@@ -17,7 +17,9 @@ import {
   getEngine,
   getPersistence,
   getStore,
+  persistAssistantError,
   persistStreamResults,
+  persistUserTurn,
   resolveConversation,
 } from '../../modules/ego/chat-helpers.js';
 
@@ -43,8 +45,6 @@ const bodySchema = z.object({
   knownScopes: z.array(z.string().min(1)).optional(),
 });
 
-type ValidatedInput = z.infer<typeof bodySchema>;
-
 /** Set standard SSE response headers. */
 function setSseHeaders(res: Response): void {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -64,13 +64,11 @@ interface PipeStreamParams {
   res: Response;
   preparation: ChatStreamPreparation;
   conversation: Conversation;
-  input: ValidatedInput;
-  appContext: AppContext | undefined;
 }
 
 /** Stream events to the SSE client and persist after completion. */
 async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
-  const { req, res, preparation, conversation, input, appContext } = params;
+  const { req, res, preparation, conversation } = params;
   const persistence = getPersistence();
   let clientDisconnected = false;
   req.on('close', () => {
@@ -86,15 +84,12 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
       const assistantMsg = persistStreamResults({
         persistence,
         conversationId: conversation.id,
-        userMessage: input.message,
         content: event.content,
         citations: event.citations,
         tokensIn: event.tokensIn,
         tokensOut: event.tokensOut,
         retrievedEngrams: preparation.retrievedEngrams,
         scopeNegotiation: preparation.scopeNegotiation,
-        storedAppContext: conversation.appContext as AppContext | undefined | null,
-        incomingAppContext: appContext,
       });
 
       writeSseEvent(res, {
@@ -111,6 +106,63 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
   }
 }
 
+interface ResolvedRequest {
+  conversation: Conversation;
+  history: Awaited<ReturnType<ReturnType<typeof getStore>['getMessages']>>;
+  appContext: AppContext | undefined;
+  input: z.infer<typeof bodySchema>;
+}
+
+/**
+ * Resolve the conversation, snapshot the prior history, then persist the
+ * user message. The history snapshot must be taken *before* the user turn
+ * is appended so the engine sees the prior turns plus the new `message`
+ * arg — not the new turn duplicated through both inputs.
+ *
+ * Returns null when even this step fails — at that point we have no
+ * conversation id to attach a placeholder error message to.
+ */
+async function resolveAndPersistUserTurn(
+  res: Response,
+  input: z.infer<typeof bodySchema>
+): Promise<ResolvedRequest | null> {
+  const store = getStore();
+  const persistence = getPersistence();
+  const scopes = input.scopes ?? [];
+  const appContext: AppContext | undefined = input.appContext ?? undefined;
+
+  try {
+    const conversation = await resolveConversation({
+      store,
+      persistence,
+      conversationId: input.conversationId,
+      message: input.message,
+      scopes,
+      appContext,
+    });
+    const history = await store.getMessages(conversation.id);
+    persistUserTurn({
+      persistence,
+      conversationId: conversation.id,
+      userMessage: input.message,
+      storedAppContext: conversation.appContext as AppContext | undefined | null,
+      incomingAppContext: appContext,
+    });
+    return { conversation, history, appContext, input };
+  } catch (err) {
+    logger.error(
+      { error: err instanceof Error ? err.message : String(err) },
+      '[Ego] SSE stream error (resolveConversation)'
+    );
+    writeSseEvent(res, {
+      type: 'error',
+      message: err instanceof Error ? err.message : 'Internal server error',
+    });
+    res.end();
+    return null;
+  }
+}
+
 router.post('/api/ego/chat/stream', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body);
   if (!parsed.success) {
@@ -118,44 +170,32 @@ router.post('/api/ego/chat/stream', async (req, res) => {
     return;
   }
 
-  const input = parsed.data;
   setSseHeaders(res);
 
-  const scopes = input.scopes ?? [];
-  const appContext: AppContext | undefined = input.appContext ?? undefined;
+  const resolved = await resolveAndPersistUserTurn(res, parsed.data);
+  if (!resolved) return;
+  const { conversation, history, appContext, input } = resolved;
+  const persistence = getPersistence();
 
   try {
-    const store = getStore();
-    const conversation = await resolveConversation({
-      store,
-      persistence: getPersistence(),
-      conversationId: input.conversationId,
-      message: input.message,
-      scopes,
-      appContext,
-    });
-
-    const history = await store.getMessages(conversation.id);
     const preparation = await getEngine().prepareStream({
       conversationId: conversation.id,
       message: input.message,
       history,
       activeScopes: conversation.activeScopes,
-      appContext: conversation.appContext as AppContext | undefined,
+      // Bias retrieval on the request's current page context when supplied;
+      // fall back to whatever the conversation had stored.
+      appContext: appContext ?? (conversation.appContext as AppContext | undefined),
       channel: input.channel ?? 'shell',
       knownScopes: input.knownScopes,
     });
 
-    await pipeStreamEvents({ req, res, preparation, conversation, input, appContext });
+    await pipeStreamEvents({ req, res, preparation, conversation });
   } catch (err) {
-    logger.error(
-      { error: err instanceof Error ? err.message : String(err) },
-      '[Ego] SSE stream error'
-    );
-    writeSseEvent(res, {
-      type: 'error',
-      message: err instanceof Error ? err.message : 'Internal server error',
-    });
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    logger.error({ error: message }, '[Ego] SSE stream error');
+    persistAssistantError(persistence, conversation.id, message);
+    writeSseEvent(res, { type: 'error', conversationId: conversation.id, message });
   }
 
   res.end();
