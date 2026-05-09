@@ -19,6 +19,7 @@ import { RootLayout } from './layout/RootLayout';
 import { FeaturesPage } from './pages/features-page/FeaturesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { RequireModule } from './RequireModule';
 
 /**
  * Wrap lazy-loaded routes with Suspense so React can show a fallback
@@ -60,18 +61,22 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/finance" replace /> },
       {
         path: 'finance',
+        element: <RequireModule moduleId="finance" />,
         children: withSuspense(financeRoutes),
       },
       {
         path: 'media',
+        element: <RequireModule moduleId="media" />,
         children: withSuspense(mediaRoutes),
       },
       {
         path: 'inventory',
+        element: <RequireModule moduleId="inventory" />,
         children: withSuspense(inventoryRoutes),
       },
       {
         path: 'cerebrum',
+        element: <RequireModule moduleId="cerebrum" />,
         children: withSuspense(cerebrumRoutes),
       },
       // Legacy /ai/* redirects — keep bookmarks and deep-links working.

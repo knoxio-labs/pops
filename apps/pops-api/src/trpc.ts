@@ -91,14 +91,41 @@ export const router = t.router;
 /** Merge multiple routers into a single router. */
 export const mergeRouters = t.mergeRouters;
 
+import { readInstalledModules } from './modules/env-modules.js';
+
+/**
+ * Optional domain modules — gated by `POPS_APPS` (PRD-100).
+ * `core` is always installed. `ego` is gated by `POPS_OVERLAYS` separately
+ * but lives under the same tRPC namespace, so it's gated alongside apps.
+ */
+const OPTIONAL_APP_ROUTERS = new Set(['finance', 'media', 'inventory', 'cerebrum', 'ai']);
+const OVERLAY_ROUTERS = new Set(['ego']);
+
+const moduleGate = t.middleware(({ path, next }) => {
+  const top = path.split('.')[0] ?? '';
+  const isApp = OPTIONAL_APP_ROUTERS.has(top);
+  const isOverlay = OVERLAY_ROUTERS.has(top);
+  if (!isApp && !isOverlay) return next();
+
+  const installed = readInstalledModules();
+  const set = new Set<string>(isApp ? installed.apps : installed.overlays);
+  if (!set.has(top)) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: `Module '${top}' is not installed in this deployment.`,
+    });
+  }
+  return next();
+});
+
 /** Base procedure for all endpoints (no auth required). */
-export const publicProcedure = t.procedure;
+export const publicProcedure = t.procedure.use(moduleGate);
 
 /**
  * Protected procedure that requires valid Cloudflare Access JWT.
  * Use this for all authenticated endpoints.
  */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(moduleGate).use(({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
