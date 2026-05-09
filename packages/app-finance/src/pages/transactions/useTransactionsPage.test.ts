@@ -13,6 +13,7 @@ const mockUpdateMutate = vi.fn();
 const mockDeleteMutate = vi.fn();
 const mockInvalidate = vi.fn();
 const mockSuggestTagsFetch = vi.fn();
+const mockRestoreMutate = vi.fn();
 
 vi.mock('@pops/api-client', () => ({
   trpc: {
@@ -37,6 +38,12 @@ vi.mock('@pops/api-client', () => ({
         delete: {
           useMutation: () => ({
             mutate: (...args: unknown[]) => mockDeleteMutate(...args),
+            isPending: false,
+          }),
+        },
+        restore: {
+          useMutation: () => ({
+            mutate: (...args: unknown[]) => mockRestoreMutate(...args),
             isPending: false,
           }),
         },

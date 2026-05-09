@@ -10,26 +10,6 @@ export interface MutationDeps {
   setDeletingTx: (t: Transaction | null) => void;
 }
 
-/** Build a CreateTransactionInput-shaped payload from a Transaction snapshot. */
-function snapshotToCreatePayload(
-  tx: Transaction
-): Parameters<ReturnType<typeof trpc.finance.transactions.create.useMutation>['mutate']>[0] {
-  return {
-    description: tx.description,
-    account: tx.account,
-    amount: tx.amount,
-    date: tx.date,
-    type: tx.type,
-    tags: tx.tags ?? [],
-    entityId: tx.entityId,
-    entityName: tx.entityName,
-    location: tx.location,
-    country: tx.country ?? null,
-    relatedTransactionId: tx.relatedTransactionId ?? null,
-    notes: tx.notes ?? null,
-  };
-}
-
 export function useTransactionMutations(deps: MutationDeps) {
   const utils = trpc.useUtils();
   const createMutation = trpc.finance.transactions.create.useMutation({
@@ -52,10 +32,11 @@ export function useTransactionMutations(deps: MutationDeps) {
     onError: (err) => toast.error(err.message),
   });
 
-  // Server-side delete is hard; the only path back is to re-create from a
-  // client-side snapshot. A dedicated mutation keeps the restore toast and
-  // skips the form-dialog plumbing the regular create mutation runs.
-  const restoreMutation = trpc.finance.transactions.create.useMutation({
+  // Restore re-inserts via a dedicated server endpoint that preserves the
+  // original id, checksum, raw_row, and notion_id — fields that the list
+  // shape strips. Routing through `create` would generate a fresh id and
+  // drop dedup metadata, breaking re-import deduplication.
+  const restoreMutation = trpc.finance.transactions.restore.useMutation({
     onSuccess: () => {
       toast.success('Transaction restored');
       void utils.finance.transactions.list.invalidate();
@@ -64,8 +45,6 @@ export function useTransactionMutations(deps: MutationDeps) {
     onError: (err) => toast.error(`Failed to restore transaction: ${err.message}`),
   });
 
-  // Per-call onSuccess (via mutate(..., { onSuccess })) carries the Transaction
-  // snapshot needed for Undo; the defaults below run for every caller.
   const deleteMutation = trpc.finance.transactions.delete.useMutation({
     onSuccess: () => {
       void utils.finance.transactions.list.invalidate();
@@ -75,18 +54,20 @@ export function useTransactionMutations(deps: MutationDeps) {
   });
 
   /**
-   * Confirm a delete: hard-delete on the server, then surface a toast with
-   * an Undo action that re-creates the transaction from the snapshot.
+   * Confirm a delete: hard-delete on the server, capture the full snapshot
+   * from the response, and surface a toast with an Undo action that calls
+   * `restore` with that snapshot.
    */
   const confirmDelete = (tx: Transaction): void => {
     deleteMutation.mutate(
       { id: tx.id },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
+          const { snapshot } = response;
           toast.success(`Deleted: ${tx.description}`, {
             action: {
               label: 'Undo',
-              onClick: () => restoreMutation.mutate(snapshotToCreatePayload(tx)),
+              onClick: () => restoreMutation.mutate(snapshot),
             },
             duration: 6000,
           });
