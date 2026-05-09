@@ -6,5 +6,3 @@
  */
 export { navConfig, routes } from './routes';
 export { manifest } from './manifest';
-export { ChatPanel } from './components/chat/ChatPanel';
-export { useChatPageModel } from './pages/chat-page/useChatPageModel';
