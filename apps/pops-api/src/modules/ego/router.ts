@@ -97,7 +97,11 @@ export const chatRouter = router({
         message: input.message,
         history,
         activeScopes: conversation.activeScopes,
-        appContext: conversation.appContext as AppContext | undefined,
+        // Bias retrieval on the request's *current* page context when the
+        // client supplies one — falling back to whatever the conversation
+        // had stored. The incoming context is what the user is looking at
+        // right now, which is what should drive engram boosting.
+        appContext: appContext ?? (conversation.appContext as AppContext | undefined),
         channel: input.channel ?? 'shell',
         knownScopes: input.knownScopes,
       });

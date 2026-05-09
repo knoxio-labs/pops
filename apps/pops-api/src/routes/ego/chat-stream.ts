@@ -108,14 +108,19 @@ async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
 
 interface ResolvedRequest {
   conversation: Conversation;
+  history: Awaited<ReturnType<ReturnType<typeof getStore>['getMessages']>>;
   appContext: AppContext | undefined;
   input: z.infer<typeof bodySchema>;
 }
 
 /**
- * Resolve / create the conversation and persist the user message before any
- * engine work runs. Returns null when even this step fails — at that point we
- * have no conversation id to attach a placeholder error message to.
+ * Resolve the conversation, snapshot the prior history, then persist the
+ * user message. The history snapshot must be taken *before* the user turn
+ * is appended so the engine sees the prior turns plus the new `message`
+ * arg — not the new turn duplicated through both inputs.
+ *
+ * Returns null when even this step fails — at that point we have no
+ * conversation id to attach a placeholder error message to.
  */
 async function resolveAndPersistUserTurn(
   res: Response,
@@ -135,6 +140,7 @@ async function resolveAndPersistUserTurn(
       scopes,
       appContext,
     });
+    const history = await store.getMessages(conversation.id);
     persistUserTurn({
       persistence,
       conversationId: conversation.id,
@@ -142,7 +148,7 @@ async function resolveAndPersistUserTurn(
       storedAppContext: conversation.appContext as AppContext | undefined | null,
       incomingAppContext: appContext,
     });
-    return { conversation, appContext, input };
+    return { conversation, history, appContext, input };
   } catch (err) {
     logger.error(
       { error: err instanceof Error ? err.message : String(err) },
@@ -168,17 +174,18 @@ router.post('/api/ego/chat/stream', async (req, res) => {
 
   const resolved = await resolveAndPersistUserTurn(res, parsed.data);
   if (!resolved) return;
-  const { conversation, input } = resolved;
+  const { conversation, history, appContext, input } = resolved;
   const persistence = getPersistence();
 
   try {
-    const history = await getStore().getMessages(conversation.id);
     const preparation = await getEngine().prepareStream({
       conversationId: conversation.id,
       message: input.message,
       history,
       activeScopes: conversation.activeScopes,
-      appContext: conversation.appContext as AppContext | undefined,
+      // Bias retrieval on the request's current page context when supplied;
+      // fall back to whatever the conversation had stored.
+      appContext: appContext ?? (conversation.appContext as AppContext | undefined),
       channel: input.channel ?? 'shell',
       knownScopes: input.knownScopes,
     });
