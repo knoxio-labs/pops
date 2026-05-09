@@ -38,7 +38,6 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     addPendingEntity,
     dbEntitiesData,
     setLocalTransactions,
-    openRuleProposalDialog,
   });
 
   const handleCreateAndAssignAll = useCallback(

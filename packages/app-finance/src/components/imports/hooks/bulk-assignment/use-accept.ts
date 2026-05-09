@@ -31,17 +31,16 @@ interface AcceptAllArgs {
   addPendingEntity: ReturnType<typeof useEntities>['addPendingEntity'];
   dbEntitiesData: ReturnType<typeof useEntities>['dbEntitiesData'];
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
-  openRuleProposalDialog: UseBulkAssignmentArgs['openRuleProposalDialog'];
 }
 
+/**
+ * Bulk-accept assigns the AI-suggested entity directly without opening the
+ * Correction Proposal dialog. Users who want to edit the proposed rule before
+ * applying use the per-row Accept path (`useAcceptAiSuggestion`), which still
+ * routes through the dialog.
+ */
 export function useAcceptAll(args: AcceptAllArgs) {
-  const {
-    entities,
-    addPendingEntity,
-    dbEntitiesData,
-    setLocalTransactions,
-    openRuleProposalDialog,
-  } = args;
+  const { entities, addPendingEntity, dbEntitiesData, setLocalTransactions } = args;
   return useCallback(
     async (transactions: ProcessedTransaction[]) => {
       if (transactions.length === 0) return;
@@ -64,15 +63,14 @@ export function useAcceptAll(args: AcceptAllArgs) {
         setLocalTransactions((prev) =>
           moveToMatched(prev, transactions, { entityId: resolvedEntityId, entityName })
         );
-        toast.success(`Accepted ${pluralize(transactions.length)}`);
-        if (firstTx) openRuleProposalDialog(firstTx, resolvedEntityId, entityName);
+        toast.success(`Accepted ${pluralize(transactions.length)} as "${entityName}"`);
       } catch (error) {
         toast.error(
           `Failed to accept: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
     },
-    [entities, addPendingEntity, dbEntitiesData?.data, openRuleProposalDialog, setLocalTransactions]
+    [entities, addPendingEntity, dbEntitiesData?.data, setLocalTransactions]
   );
 }
 
