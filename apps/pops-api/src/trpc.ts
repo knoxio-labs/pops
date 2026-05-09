@@ -5,6 +5,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 
 import { verifyCloudflareJWT } from './middleware/cloudflare-jwt.js';
+import { KNOWN_APPS, KNOWN_OVERLAYS, readInstalledModules } from './modules/env-modules.js';
 
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { OpenApiMeta } from 'trpc-to-openapi';
@@ -91,15 +92,14 @@ export const router = t.router;
 /** Merge multiple routers into a single router. */
 export const mergeRouters = t.mergeRouters;
 
-import { readInstalledModules } from './modules/env-modules.js';
-
 /**
- * Optional domain modules — gated by `POPS_APPS` (PRD-100).
- * `core` is always installed. `ego` is gated by `POPS_OVERLAYS` separately
- * but lives under the same tRPC namespace, so it's gated alongside apps.
+ * Optional domain modules — gated by `POPS_APPS` / `POPS_OVERLAYS` (PRD-100).
+ * `core` is always installed. The router id sets derive directly from
+ * `KNOWN_APPS` / `KNOWN_OVERLAYS` so this stays in sync with the env contract
+ * — adding a new known app there automatically extends the gate.
  */
-const OPTIONAL_APP_ROUTERS = new Set(['finance', 'media', 'inventory', 'cerebrum', 'ai']);
-const OVERLAY_ROUTERS = new Set(['ego']);
+const OPTIONAL_APP_ROUTERS: ReadonlySet<string> = new Set(KNOWN_APPS);
+const OVERLAY_ROUTERS: ReadonlySet<string> = new Set(KNOWN_OVERLAYS);
 
 const moduleGate = t.middleware(({ path, next }) => {
   const top = path.split('.')[0] ?? '';

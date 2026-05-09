@@ -47,7 +47,8 @@ services:
       PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL:-}
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
       # PRD-100 module runtime — leave empty to install everything (default behaviour).
-      # Valid apps: finance,media,inventory,ai,cerebrum. Valid overlays: ego.
+      # Valid apps: finance,media,inventory,cerebrum. Valid overlays: ego.
+      # (ai surfaces are mounted under /cerebrum/admin/*, not as a separate app.)
       POPS_APPS: ${POPS_APPS:-}
       POPS_OVERLAYS: ${POPS_OVERLAYS:-}
     expose:

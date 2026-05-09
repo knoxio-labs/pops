@@ -15,6 +15,7 @@ import { routes as financeRoutes } from '@pops/app-finance';
 import { routes as inventoryRoutes } from '@pops/app-inventory';
 import { routes as mediaRoutes } from '@pops/app-media';
 
+import { IndexRedirect } from './IndexRedirect';
 import { RootLayout } from './layout/RootLayout';
 import { FeaturesPage } from './pages/features-page/FeaturesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -58,7 +59,7 @@ export const router = createBrowserRouter([
       </div>
     ),
     children: [
-      { index: true, element: <Navigate to="/finance" replace /> },
+      { index: true, element: <IndexRedirect /> },
       {
         path: 'finance',
         element: <RequireModule moduleId="finance" />,

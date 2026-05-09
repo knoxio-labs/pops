@@ -12,18 +12,20 @@ Restart-on-change is acceptable; no hot-register.
 ## Env Contract
 
 ```
-POPS_APPS=finance,inventory,media,cerebrum,ai     # comma-separated, no spaces required around commas
+POPS_APPS=finance,inventory,media,cerebrum     # comma-separated, no spaces required around commas
 POPS_OVERLAYS=ego
 ```
 
-| Variable        | Valid values                                      | Empty / unset behaviour |
-| --------------- | ------------------------------------------------- | ----------------------- |
-| `POPS_APPS`     | `finance`, `media`, `inventory`, `ai`, `cerebrum` | Install all apps        |
-| `POPS_OVERLAYS` | `ego`                                             | Install all overlays    |
+| Variable        | Valid values                                | Empty / unset behaviour |
+| --------------- | ------------------------------------------- | ----------------------- |
+| `POPS_APPS`     | `finance`, `media`, `inventory`, `cerebrum` | Install all apps        |
+| `POPS_OVERLAYS` | `ego`                                       | Install all overlays    |
 
 `core` is always installed and is not configurable — it's the platform shell, not a domain module.
 
-Validation is strict: invalid module ids fail at startup with a clear error naming the bad value and the valid set. Operators get a typo at boot, not a silent default.
+`ai` is intentionally omitted from the apps set: AI Ops admin pages mount under `/cerebrum/admin/*` rather than at a top-level `/ai` route, and there is no top-level `ai` tRPC router for the gate to control. Reintroduce a top-level `ai` module before adding it back to the env contract.
+
+Validation is strict: invalid module ids and footgun values that parse to an empty list (e.g. `POPS_APPS=,,`) fail at startup with a clear error naming the bad value and the valid set. Operators get a typo at boot, not a silent default. The parsed result is cached on first read so subsequent calls don't re-parse `process.env`. Boot-time validation lives in `apps/pops-api/src/app.ts`, which calls `readInstalledModules()` once before any handlers register.
 
 ## API Surface
 
