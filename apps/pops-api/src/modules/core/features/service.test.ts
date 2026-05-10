@@ -1,24 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seedSetting, setupTestContext } from '../../../shared/test-utils.js';
-import { featuresRegistry } from './registry.js';
-
-import type { FeatureManifest, SettingsManifest } from '@pops/types';
-
-// Override the manifest aggregator so tests can inject SettingsManifest
-// fixtures that drive credential resolution. The real aggregator returns
-// the live install set, which is non-deterministic for unit tests of
-// `requires`/`requiresEnv` logic. Tests push fixtures into `testManifests`
-// and the mocked function returns whatever is currently registered.
-const { testManifests } = vi.hoisted(() => ({ testManifests: [] as SettingsManifest[] }));
-vi.mock('../../manifests.js', async () => {
-  const actual = await vi.importActual<typeof import('../../manifests.js')>('../../manifests.js');
-  return {
-    ...actual,
-    getAllSettingsManifests: () => testManifests.toSorted((a, b) => a.order - b.order),
-  };
-});
-
+import {
+  __resetInstalledManifestsOverride,
+  __setInstalledManifestsOverride,
+} from '../../installed-modules.js';
 import {
   clearUserPreference,
   FeatureGateError,
@@ -33,21 +19,48 @@ import { setUserSetting } from './user-settings.js';
 
 import type { Database } from 'better-sqlite3';
 
+import type { FeatureManifest, ModuleManifest, SettingsManifest } from '@pops/types';
+
 const ctx = setupTestContext();
 let db: Database;
 
+/**
+ * Test scaffolding state. Each `installFeature*` helper mutates this list
+ * and re-applies it to the manifest override; `__resetInstalledManifestsOverride()`
+ * in `afterEach` restores production behaviour.
+ */
+let installed: ModuleManifest[] = [];
+
+function applyInstalled(): void {
+  __setInstalledManifestsOverride(installed);
+}
+
 beforeEach(() => {
   ({ db } = ctx.setup());
-  testManifests.length = 0;
-  featuresRegistry.clear();
+  installed = [];
+  applyInstalled();
 });
 
 afterEach(() => {
-  testManifests.length = 0;
-  featuresRegistry.clear();
+  __resetInstalledManifestsOverride();
   ctx.teardown();
   vi.unstubAllEnvs();
 });
+
+/**
+ * Install a single test FeatureManifest under a synthetic module id.
+ * Replaces the previous `featuresRegistry.register()` helper from the
+ * pre-PRD-101-US-05 tests.
+ */
+function installFeatureManifest(manifest: FeatureManifest): void {
+  installed.push({
+    id: manifest.id,
+    name: manifest.title,
+    surfaces: ['app'],
+    features: [manifest],
+  });
+  applyInstalled();
+}
 
 function registerSimpleFeature(overrides: Partial<FeatureManifest['features'][number]> = {}) {
   const manifest: FeatureManifest = {
@@ -64,7 +77,7 @@ function registerSimpleFeature(overrides: Partial<FeatureManifest['features'][nu
       },
     ],
   };
-  featuresRegistry.register(manifest);
+  installFeatureManifest(manifest);
 }
 
 function registerSettingsManifest(fieldKeys: { key: string; envFallback?: string }[]) {
@@ -85,12 +98,36 @@ function registerSettingsManifest(fieldKeys: { key: string; envFallback?: string
       },
     ],
   };
-  testManifests.push(manifest);
+  installed.push({
+    id: manifest.id,
+    name: manifest.title,
+    surfaces: ['app'],
+    settings: [manifest],
+  });
+  applyInstalled();
 }
 
 describe('isEnabled', () => {
-  it('returns false for unknown features', () => {
-    expect(isEnabled('does.not.exist')).toBe(false);
+  it('throws FeatureNotFoundError for unknown features (loud, not silent)', () => {
+    // PRD-101 US-05: unknown key is a deliberate breaking change from the
+    // pre-existing silent-`false` behaviour. Hand-rolled registration could
+    // drift; manifest-declared can't.
+    expect(() => isEnabled('does.not.exist')).toThrow(FeatureNotFoundError);
+  });
+
+  it('FeatureNotFoundError lists searched module ids', () => {
+    registerSimpleFeature();
+    try {
+      isEnabled('not-installed.feature');
+      throw new Error('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(FeatureNotFoundError);
+      const e = err as FeatureNotFoundError;
+      expect(e.key).toBe('not-installed.feature');
+      expect(e.searched).toContain('test');
+      expect(e.message).toContain('not-installed.feature');
+      expect(e.message).toContain('test');
+    }
   });
 
   it('returns the feature default when no overrides', () => {

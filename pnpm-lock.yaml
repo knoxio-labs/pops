@@ -44,6 +44,9 @@ importers:
       '@pops/db-types':
         specifier: workspace:*
         version: link:../../packages/db-types
+      '@pops/module-registry':
+        specifier: workspace:*
+        version: link:../../packages/module-registry
       '@pops/types':
         specifier: workspace:*
         version: link:../../packages/types

@@ -1,12 +1,17 @@
 /**
- * Feature toggles module (PRD-094).
+ * Feature toggles module (PRD-094, PRD-101 US-05).
+ *
+ * The runtime registry is the manifest `features` slot on each module's
+ * `manifest.ts`, aggregated by `installedManifests()` (PRD-101 US-05); this
+ * package no longer exports a side-effect `featuresRegistry` — modules
+ * declare their FeatureManifest list directly in their manifest.
  */
-export { featuresRegistry, FeaturesRegistry } from './registry.js';
 export {
   clearUserPreference,
   FeatureGateError,
   FeatureNotFoundError,
   FeatureScopeError,
+  getFeatureManifests,
   isEnabled,
   listFeatures,
   setFeatureEnabled,

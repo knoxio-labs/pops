@@ -44,6 +44,7 @@ jobs:
         run: |
           pnpm --filter @pops/db-types build
           pnpm --filter @pops/types build
+          pnpm --filter @pops/module-registry build
       - run: cd ${{ inputs.package-path }} && pnpm typecheck
         if: inputs.skip != 'true'
 
@@ -71,6 +72,7 @@ jobs:
         run: |
           pnpm --filter @pops/db-types build
           pnpm --filter @pops/types build
+          pnpm --filter @pops/module-registry build
       - name: Run tests (with coverage if configured)
         if: inputs.skip != 'true'
         run: |

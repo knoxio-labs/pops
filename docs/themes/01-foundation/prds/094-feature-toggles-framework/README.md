@@ -120,9 +120,9 @@ interface FeatureStatus {
 
 ## Business Rules
 
-- Each module owns its FeatureManifest. Manifests are registered at API startup via `featuresRegistry.register(manifest)` — exactly mirroring the SettingsRegistry pattern.
+- Each module owns its FeatureManifest, declared in the module's `manifest.ts` `features` slot (PRD-101 US-05). The runtime aggregator joins `MODULES` (the build-time install set from `@pops/module-registry`) with the live per-module manifest exports — there is no separate runtime register.
 - Duplicate feature keys across manifests cause a startup error. The same feature key cannot be claimed twice.
-- `features.isEnabled(key, { user? })` is the single read path. Modules MUST NOT implement their own toggle reads.
+- `features.isEnabled(key, { user? })` is the single read path. Modules MUST NOT implement their own toggle reads. Unknown keys throw `FeatureNotFoundError` naming the searched modules — silent `false` is a footgun the manifest contract removes.
 - Resolution order in `isEnabled`:
   1. `capabilityCheck()` → if defined and returns `false` → feature is **unavailable**, returns `false`.
   2. `requires[]` settings → resolve each via DB then `envFallback`. Any missing → unavailable, returns `false`.
@@ -138,18 +138,18 @@ interface FeatureStatus {
 
 ## Edge Cases
 
-| Case                                                          | Behaviour                                                                                       |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Feature has no `requires`, no `capabilityCheck`               | Toggle is freely flippable; resolves from system setting then default                           |
-| `requires` lists a key that no settings manifest declares     | Treated as missing (always); operator gets a startup warning                                    |
-| Capability feature is toggled in admin                        | UI does not render a toggle — only a status badge                                               |
-| User-scoped feature read without a user context               | Falls back to system state (warning logged in dev)                                              |
-| Feature's `settingKey` differs from `key`                     | System read uses `settingKey`; admin save also writes `settingKey`                              |
-| Existing setting value is `'true'`/`'false'`                  | Parsed as boolean; any other string is treated as `false`                                       |
-| Per-user override set, then `clearUserPreference` is called   | Resolution falls back to system default                                                         |
-| Feature requires env var that's set in dev but absent in prod | `requiresEnv` evaluation uses `getEnv()` so Docker secrets work the same as env vars            |
-| Two manifests register the same key                           | Startup throws an explicit error (mirrors SettingsRegistry behaviour)                           |
-| Module is not loaded (modular apps, future)                   | Its manifest never registers; the feature does not exist; `isEnabled` returns `false` and warns |
+| Case                                                          | Behaviour                                                                                                                                                                    |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feature has no `requires`, no `capabilityCheck`               | Toggle is freely flippable; resolves from system setting then default                                                                                                        |
+| `requires` lists a key that no settings manifest declares     | Treated as missing (always); operator gets a startup warning                                                                                                                 |
+| Capability feature is toggled in admin                        | UI does not render a toggle — only a status badge                                                                                                                            |
+| User-scoped feature read without a user context               | Falls back to system state (warning logged in dev)                                                                                                                           |
+| Feature's `settingKey` differs from `key`                     | System read uses `settingKey`; admin save also writes `settingKey`                                                                                                           |
+| Existing setting value is `'true'`/`'false'`                  | Parsed as boolean; any other string is treated as `false`                                                                                                                    |
+| Per-user override set, then `clearUserPreference` is called   | Resolution falls back to system default                                                                                                                                      |
+| Feature requires env var that's set in dev but absent in prod | `requiresEnv` evaluation uses `getEnv()` so Docker secrets work the same as env vars                                                                                         |
+| Two manifests register the same key                           | Startup throws an explicit error (mirrors SettingsRegistry behaviour)                                                                                                        |
+| Module is not loaded (`POPS_APPS` excludes it)                | Its manifest never appears in `MODULES`; `isEnabled` throws `FeatureNotFoundError` naming the key and the searched module ids (PRD-101 US-05 — silent `false` was a footgun) |
 
 ## User Stories
 

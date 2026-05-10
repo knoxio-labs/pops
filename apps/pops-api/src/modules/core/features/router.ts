@@ -8,7 +8,6 @@ import { z } from 'zod';
  * system-level and per-user toggles.
  */
 import { protectedProcedure, router } from '../../../trpc.js';
-import { featuresRegistry } from './registry.js';
 import * as service from './service.js';
 import { FeatureGateError, FeatureNotFoundError, FeatureScopeError } from './service.js';
 import { FeatureManifestSchema, FeatureStatusSchema } from './types.js';
@@ -30,7 +29,7 @@ export const featuresRouter = router({
   /** Return all registered feature manifests sorted by order. */
   getManifests: protectedProcedure
     .output(z.object({ manifests: z.array(FeatureManifestSchema) }))
-    .query(() => ({ manifests: featuresRegistry.getAll() })),
+    .query(() => ({ manifests: [...service.getFeatureManifests()] })),
 
   /** Return runtime status for every feature, including credential resolution. */
   list: protectedProcedure
@@ -39,13 +38,23 @@ export const featuresRouter = router({
       features: service.listFeatures({ email: ctx.user.email }),
     })),
 
-  /** Boolean check for a single feature in the current request's user context. */
+  /**
+   * Boolean check for a single feature in the current request's user
+   * context. Throws `NOT_FOUND` (mapped from `FeatureNotFoundError`) when
+   * the key is not declared by any installed module — see PRD-101 US-05.
+   */
   isEnabled: protectedProcedure
     .input(z.object({ key: z.string() }))
     .output(z.object({ enabled: z.boolean() }))
-    .query(({ input, ctx }) => ({
-      enabled: service.isEnabled(input.key, { user: { email: ctx.user.email } }),
-    })),
+    .query(({ input, ctx }) => {
+      try {
+        return {
+          enabled: service.isEnabled(input.key, { user: { email: ctx.user.email } }),
+        };
+      } catch (err) {
+        mapServiceError(err);
+      }
+    }),
 
   /** Set the system-level enabled state. Rejects if credentials/capability gate is failing. */
   setEnabled: protectedProcedure
