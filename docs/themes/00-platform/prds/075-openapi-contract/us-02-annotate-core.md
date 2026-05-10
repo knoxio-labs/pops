@@ -9,7 +9,7 @@ As an external service developer, I access core domain data (entities, jobs, sea
 
 ## Acceptance Criteria
 
-- [x] `core.entities.list`, `core.entities.get`, `core.entities.create`, `core.entities.update` annotated with OpenAPI metadata
+- [x] `core.entities.list`, `core.entities.get`, `core.entities.create`, `core.entities.update`, `core.entities.delete` annotated with OpenAPI metadata
 - [x] `core.jobs.list`, `core.jobs.get`, `core.jobs.retry`, `core.jobs.cancel`, `core.jobs.drain`, `core.jobs.queueStats`, `core.jobs.schedulers` annotated
 - [x] `core.search.query` annotated
 - [x] `core.settings.list`, `core.settings.get`, `core.settings.set` annotated

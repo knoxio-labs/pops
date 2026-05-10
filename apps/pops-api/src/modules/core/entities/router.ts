@@ -128,15 +128,26 @@ export const entitiesRouter = router({
     }),
 
   /** Delete an entity. */
-  delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
-    try {
-      service.deleteEntity(input.id);
-      return { message: 'Entity deleted' };
-    } catch (err) {
-      if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
+  delete: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'DELETE',
+        path: '/entities/{id}',
+        summary: 'Delete entity',
+        tags: ['entities'],
+      },
+    })
+    .input(z.object({ id: z.string() }))
+    .output(z.object({ message: z.string() }))
+    .mutation(({ input }) => {
+      try {
+        service.deleteEntity(input.id);
+        return { message: 'Entity deleted' };
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
+        }
+        throw err;
       }
-      throw err;
-    }
-  }),
+    }),
 });
