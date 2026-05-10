@@ -1,7 +1,7 @@
 # US-05: Feature toggles consume the registry
 
 > PRD: [Plugin Contract](README.md)
-> Status: Not started
+> Status: Done
 
 ## Description
 
@@ -9,12 +9,12 @@ As a user, I want the Features admin page to show exactly the toggles the instal
 
 ## Acceptance Criteria
 
-- [ ] `features.isEnabled(key)` resolves the feature definition from `MODULES.flatMap(m => m.features ?? [])` instead of the runtime `featuresRegistry`.
-- [ ] `featuresRegistry.register()` is removed. Module-side `featuresRegistry.register(...)` calls are deleted; each module declares its `FeatureManifest` entries in its `manifest.ts` `features` slot.
-- [ ] Features admin page lists toggles grouped by their owning module id; ordering from manifest declaration order.
-- [ ] PRD-094 acceptance criteria for feature toggles (capability detection, credential gating, settings overrides) remain satisfied — only the source of truth moves.
-- [ ] Unknown feature key passed to `isEnabled()` throws a typed error naming the key and the modules that were searched (was: silent `false`).
-- [ ] No file outside `packages/module-registry` and the features module references the deleted `featuresRegistry` after this US lands.
+- [x] `features.isEnabled(key)` resolves the feature definition from `MODULES.flatMap(m => m.features ?? [])` instead of the runtime `featuresRegistry`.
+- [x] `featuresRegistry.register()` is removed. Module-side `featuresRegistry.register(...)` calls are deleted; each module declares its `FeatureManifest` entries in its `manifest.ts` `features` slot.
+- [x] Features admin page lists toggles grouped by their owning module id; ordering from manifest declaration order.
+- [x] PRD-094 acceptance criteria for feature toggles (capability detection, credential gating, settings overrides) remain satisfied — only the source of truth moves.
+- [x] Unknown feature key passed to `isEnabled()` throws a typed error naming the key and the modules that were searched (was: silent `false`).
+- [x] No file outside `packages/module-registry` and the features module references the deleted `featuresRegistry` after this US lands.
 
 ## Notes
 

@@ -1,33 +1,10 @@
-import * as egoModule from './cerebrum/ego/index.js';
-import * as cerebrumModule from './cerebrum/index.js';
-import * as coreModule from './core/index.js';
-import * as financeModule from './finance/index.js';
-import * as inventoryModule from './inventory/index.js';
-import * as mediaModule from './media/index.js';
+import { installedManifests } from './installed-modules.js';
 
 /**
- * Backend module manifests — single source of truth for cross-cutting
- * aggregation on the API side (PRD-101).
- *
- * Mirrors `@pops/module-registry`'s `MODULES` constant in spirit: each entry
- * is a backend `ModuleManifest` exported by its module's `index.ts`. Cross-
- * cutting concerns (settings, features, AI tools, migrations) read from this
- * list via `flatMap` rather than a separate runtime registry.
- *
- * Why duplicate the list here instead of importing `MODULES` directly from
- * `@pops/module-registry`? The registry's emitted constant is a metadata-only
- * projection (id, surfaces, capabilities, …) — it intentionally does not
- * carry the live `backend.router`, `settings`, or `aiTools` references
- * because doing so would invert the dependency graph (`@pops/module-registry`
- * is `@pops/types`-only). The aggregator here imports the live backend
- * manifests, which already declare the cross-cutting slots PRD-101 reads.
- *
- * Because each module's `index.ts` imports its own router file (which in turn
- * imports this aggregator — see `core/settings/router.ts`), the imports below
- * use namespace-style `import * as` syntax. ES modules tolerate cycles when
- * the consumer dereferences the binding lazily; reading the `manifest` export
- * inside `getBackendManifests()` (called at runtime, not at module-load time)
- * is the lazy-deref point that breaks the cycle.
+ * Backend module manifests — convenience wrapper around `installedManifests()`
+ * (PRD-101 US-05) for the settings aggregator. Both aggregators share the
+ * same source so test overrides (`__setInstalledManifestsOverride`) flow
+ * through to settings lookups.
  *
  * See `docs/themes/01-foundation/prds/101-plugin-contract/us-04-settings-from-registry.md`
  * for the settings consumer.
@@ -35,24 +12,13 @@ import * as mediaModule from './media/index.js';
 import type { ModuleManifest, SettingsManifest } from '@pops/types';
 
 /**
- * Resolve the live backend module manifest list. Computed lazily so the
- * function tolerates ES module cyclic imports between this aggregator and
- * each module's `index.ts` (the cycle is unavoidable: the settings router
- * lives inside `core/index.ts` and itself reads from this aggregator).
- *
- * Order is preserved by every aggregator that consumes the result, so the
- * relative ordering of sections in `/settings`, AI tool surfaces, and
- * migration runs is deterministic.
+ * Resolve the live backend module manifest list. Delegates to
+ * `installedManifests()` so the build-time `MODULES` install set and any
+ * test-only override applied via `__setInstalledManifestsOverride` are
+ * honoured uniformly across every cross-cutting aggregator.
  */
 export function getBackendManifests(): readonly ModuleManifest[] {
-  return [
-    coreModule.manifest,
-    financeModule.manifest,
-    inventoryModule.manifest,
-    mediaModule.manifest,
-    egoModule.manifest,
-    cerebrumModule.manifest,
-  ];
+  return installedManifests();
 }
 
 /**

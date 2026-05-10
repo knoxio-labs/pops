@@ -73,6 +73,7 @@
     "@anthropic-ai/sdk": "^0.95.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@pops/db-types": "workspace:*",
+    "@pops/module-registry": "workspace:*",
     "@pops/types": "workspace:*",
     "@trpc/client": "11.17.0",
     "@trpc/server": "^11.17.0",

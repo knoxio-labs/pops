@@ -7,13 +7,6 @@
 // Side-effect: register search adapters
 import './entities/search-adapter.js';
 
-import { coreFeaturesManifest } from './features/manifest.js';
-import { featuresRegistry } from './features/registry.js';
-import { aiConfigManifest } from './settings/ai-manifest.js';
-import { coreOperationalManifest } from './settings/operational-manifest.js';
-
-featuresRegistry.register(coreFeaturesManifest);
-
 import { router } from '../../trpc.js';
 import { aiBudgetsRouter } from './ai-budgets/router.js';
 import { aiObservabilityRouter } from './ai-observability/router.js';
@@ -22,10 +15,13 @@ import { aiUsageRouter } from './ai-usage/router.js';
 import { correctionsRouter } from './corrections/router.js';
 import { embeddingsRouter } from './embeddings/router.js';
 import { entitiesRouter } from './entities/router.js';
+import { coreFeaturesManifest } from './features/manifest.js';
 import { featuresRouter } from './features/router.js';
 import { jobsRouter } from './jobs/router.js';
 import { searchRouter } from './search/router.js';
 import { serviceAccountsRouter } from './service-accounts/router.js';
+import { aiConfigManifest } from './settings/ai-manifest.js';
+import { coreOperationalManifest } from './settings/operational-manifest.js';
 import { settingsRouter } from './settings/router.js';
 import { shellRouter } from './shell/router.js';
 import { tagRulesRouter } from './tag-rules/router.js';
@@ -63,4 +59,5 @@ export const manifest: ModuleManifest<typeof coreRouter> = {
     'Cross-cutting platform services: entities, AI usage/providers, settings, features, search.',
   backend: { router: coreRouter },
   settings: [aiConfigManifest, coreOperationalManifest],
+  features: [coreFeaturesManifest],
 };

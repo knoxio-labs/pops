@@ -4,21 +4,17 @@
 // Side-effect: register search adapters
 import './items/search-adapter.js';
 
-import { featuresRegistry } from '../core/features/index.js';
-import { inventoryFeaturesManifest } from './features.js';
-import { inventoryManifest } from './settings-manifest.js';
-
-featuresRegistry.register(inventoryFeaturesManifest);
-
 import { router } from '../../trpc.js';
 import { connectionsRouter } from './connections/index.js';
 import { documentFilesRouter } from './document-files/index.js';
 import { documentsRouter } from './documents/index.js';
+import { inventoryFeaturesManifest } from './features.js';
 import { inventoryRouter as itemsRouter } from './items/router.js';
 import { locationsRouter } from './locations/router.js';
 import { paperlessRouter } from './paperless/router.js';
 import { photosRouter } from './photos/index.js';
 import { reportsRouter } from './reports/index.js';
+import { inventoryManifest } from './settings-manifest.js';
 
 import type { ModuleManifest } from '@pops/types';
 
@@ -42,4 +38,5 @@ export const manifest: ModuleManifest<typeof inventoryRouter> = {
   description: 'Home items, locations, connections, warranties, and documents.',
   backend: { router: inventoryRouter },
   settings: [inventoryManifest],
+  features: [inventoryFeaturesManifest],
 };

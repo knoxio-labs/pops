@@ -1,10 +1,10 @@
+import { installedManifests } from '../../installed-modules.js';
 import { setRawSetting, getSettingOrNull } from '../settings/service.js';
 import { resolveCredentials } from './credentials.js';
 import { FeatureGateError, FeatureNotFoundError, FeatureScopeError } from './errors.js';
-import { featuresRegistry } from './registry.js';
 import { deleteUserSetting, getUserSetting, setUserSetting } from './user-settings.js';
 
-import type { FeatureDefinition, FeatureStatus } from '@pops/types';
+import type { FeatureDefinition, FeatureManifest, FeatureStatus } from '@pops/types';
 
 export { FeatureGateError, FeatureNotFoundError, FeatureScopeError } from './errors.js';
 
@@ -25,6 +25,47 @@ function userSettingKey(featureKey: string): string {
 function parseBoolean(raw: string | null | undefined, fallback: boolean): boolean {
   if (raw === null || raw === undefined) return fallback;
   return raw === 'true' || raw === '1';
+}
+
+/**
+ * Aggregate every `FeatureManifest` declared by an installed module's
+ * manifest `features` slot. Module declaration order is preserved (so the
+ * admin page renders modules in the order the registry installs them) and
+ * intra-module manifest order matches the array order in the manifest.
+ */
+function collectFeatureManifests(): readonly FeatureManifest[] {
+  return installedManifests().flatMap((m) => m.features ?? []);
+}
+
+interface ResolvedFeatureEntry {
+  manifest: FeatureManifest;
+  feature: FeatureDefinition;
+}
+
+/**
+ * Resolve a feature key against the installed-module manifest set.
+ * Returns `null` when the key is not declared by any installed module.
+ */
+function findFeature(key: string): ResolvedFeatureEntry | null {
+  for (const manifest of collectFeatureManifests()) {
+    const feature = manifest.features.find((f) => f.key === key);
+    if (feature) return { manifest, feature };
+  }
+  return null;
+}
+
+/**
+ * Resolve a feature key, throwing `FeatureNotFoundError` with the searched
+ * module ids when no match is found. The thrown error names the calling
+ * key plus the manifest ids that were searched so operators can quickly
+ * tell whether the call site is using a stale key or whether the owning
+ * module is excluded by `POPS_APPS`.
+ */
+function requireFeature(key: string): ResolvedFeatureEntry {
+  const entry = findFeature(key);
+  if (entry) return entry;
+  const searched = installedManifests().map((m) => m.id);
+  throw new FeatureNotFoundError(key, searched);
 }
 
 function readSystemValue(feature: FeatureDefinition): boolean | null {
@@ -102,17 +143,14 @@ function buildFeatureStatus(
 /**
  * The single read path for runtime feature gating. Resolves in order:
  * capability check → required credentials → user override → system value → default.
+ *
+ * Throws `FeatureNotFoundError` when the key is not declared by any
+ * installed module — this is a deliberate breaking change from the
+ * pre-PRD-101 silent-`false` behaviour: hand-rolled registration could
+ * drift, manifest-declared can't, so a missing key is now always a bug.
  */
 export function isEnabled(key: string, options: IsEnabledOptions = {}): boolean {
-  const entry = featuresRegistry.getFeature(key);
-  if (!entry) {
-    if (process.env['NODE_ENV'] !== 'production') {
-      console.warn(`[features] isEnabled called for unknown feature "${key}"`);
-    }
-    return false;
-  }
-
-  const { feature } = entry;
+  const { feature } = requireFeature(key);
   if (feature.capabilityCheck && !feature.capabilityCheck()) return false;
 
   const { allConfigured } = resolveCredentials(feature);
@@ -130,12 +168,21 @@ export function isEnabled(key: string, options: IsEnabledOptions = {}): boolean 
 /** Build the FeatureStatus list for the admin Features page. */
 export function listFeatures(user: UserContext | null = null): FeatureStatus[] {
   const out: FeatureStatus[] = [];
-  for (const manifest of featuresRegistry.getAll()) {
+  for (const manifest of collectFeatureManifests()) {
     for (const feature of manifest.features) {
       out.push(buildFeatureStatus(manifest.id, feature, user));
     }
   }
   return out;
+}
+
+/**
+ * Return every installed module's `FeatureManifest` sorted by `order`,
+ * matching the contract previously exposed by `featuresRegistry.getAll()`.
+ * The admin Features page consumes this directly.
+ */
+export function getFeatureManifests(): readonly FeatureManifest[] {
+  return collectFeatureManifests().toSorted((a, b) => a.order - b.order);
 }
 
 function ensureCanEnable(feature: FeatureDefinition): void {
@@ -153,9 +200,7 @@ function ensureCanEnable(feature: FeatureDefinition): void {
 
 /** Set the system-level enabled state. Rejects when gating is failing. */
 export function setFeatureEnabled(key: string, enabled: boolean): boolean {
-  const entry = featuresRegistry.getFeature(key);
-  if (!entry) throw new FeatureNotFoundError(key);
-  const { feature } = entry;
+  const { feature } = requireFeature(key);
 
   if (feature.scope === 'capability') {
     throw new FeatureScopeError(key, 'system|user', feature.scope);
@@ -167,12 +212,11 @@ export function setFeatureEnabled(key: string, enabled: boolean): boolean {
 }
 
 function requireUserScopedFeature(key: string): FeatureDefinition {
-  const entry = featuresRegistry.getFeature(key);
-  if (!entry) throw new FeatureNotFoundError(key);
-  if (entry.feature.scope !== 'user') {
-    throw new FeatureScopeError(key, 'user', entry.feature.scope);
+  const { feature } = requireFeature(key);
+  if (feature.scope !== 'user') {
+    throw new FeatureScopeError(key, 'user', feature.scope);
   }
-  return entry.feature;
+  return feature;
 }
 
 /** Set a per-user override. Rejects when the feature is not user-scoped. */
