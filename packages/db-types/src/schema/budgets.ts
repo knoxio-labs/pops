@@ -14,7 +14,7 @@ export const budgets = sqliteTable(
     // runtime behavior, not the stricter schema.ts definition.
     period: text('period'),
     amount: real('amount'),
-    active: integer('active').notNull().default(1),
+    active: integer('active').notNull().default(0),
     notes: text('notes'),
     lastEditedTime: text('last_edited_time').notNull(),
   },

@@ -17,7 +17,7 @@ Build budget tracking — spending categories with monthly or yearly limits. Sho
 | category         | TEXT    | NOT NULL    | Budget category name                    |
 | period           | TEXT    | nullable    | "monthly", "yearly", or null (one-time) |
 | amount           | REAL    | nullable    | Budget limit (null = no limit)          |
-| active           | INTEGER | DEFAULT 1   | 0/1 boolean                             |
+| active           | INTEGER | DEFAULT 0   | 0/1 boolean (matches API default)       |
 | notes            | TEXT    | nullable    |                                         |
 | last_edited_time | TEXT    | NOT NULL    | ISO 8601                                |
 
