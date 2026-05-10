@@ -96,6 +96,7 @@ export {
   rotationLog,
   rotationSources,
   seasons,
+  serviceAccounts,
   settings,
   shelfImpressions,
   syncJobResults,
