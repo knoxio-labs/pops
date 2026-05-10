@@ -4,7 +4,7 @@
  *
  * PRD-060 US-04: CI tests that verify migrations don't lose data.
  */
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -556,6 +556,154 @@ describe('migration safety', () => {
       };
       expect(row.name).toBe('The Wire');
       expect(row.original_name).toBe('The Wire');
+      db.close();
+    });
+  });
+
+  /**
+   * PRD-025 #2550: budgets.active originally defaulted to 1 in the table
+   * definition while the API CreateBudgetSchema defaulted to 0/false. This
+   * migration aligns the DB default with the API default by recreating the
+   * `budgets` table (SQLite cannot ALTER COLUMN DEFAULT).
+   */
+  describe('0052_budgets_active_default_zero migration (#2550)', () => {
+    /** Set up a DB that mimics the pre-migration schema (active DEFAULT 1). */
+    function setupOldSchema(db: BetterSqlite3.Database): void {
+      db.exec(`
+        CREATE TABLE budgets (
+          id TEXT PRIMARY KEY,
+          notion_id TEXT,
+          category TEXT NOT NULL,
+          period TEXT,
+          amount REAL,
+          active INTEGER NOT NULL DEFAULT 1,
+          notes TEXT,
+          last_edited_time TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX budgets_notion_id_unique ON budgets(notion_id);
+        CREATE UNIQUE INDEX idx_budgets_category_period
+          ON budgets(category, COALESCE(period, char(0)));
+      `);
+    }
+
+    function readMigrationSql(): string {
+      return readFileSync(
+        join(__dirname, 'drizzle-migrations', '0052_budgets_active_default_zero.sql'),
+        'utf8'
+      );
+    }
+
+    it('flips the DEFAULT for active from 1 to 0', () => {
+      const db = new BetterSqlite3(dbPath);
+      db.pragma('foreign_keys = ON');
+      setupOldSchema(db);
+
+      // Sanity: pre-migration default is 1
+      db.prepare(
+        "INSERT INTO budgets(id, category, last_edited_time) VALUES ('pre','Pre','2026-01-01')"
+      ).run();
+      const before = db.prepare("SELECT active FROM budgets WHERE id='pre'").get() as {
+        active: number;
+      };
+      expect(before.active).toBe(1);
+
+      db.exec(readMigrationSql());
+
+      // Post-migration default is 0
+      db.prepare(
+        "INSERT INTO budgets(id, category, last_edited_time) VALUES ('post','Post','2026-01-01')"
+      ).run();
+      const after = db.prepare("SELECT active FROM budgets WHERE id='post'").get() as {
+        active: number;
+      };
+      expect(after.active).toBe(0);
+
+      db.close();
+    });
+
+    it('preserves existing rows including their explicit active values', () => {
+      const db = new BetterSqlite3(dbPath);
+      db.pragma('foreign_keys = ON');
+      setupOldSchema(db);
+
+      const insert = db.prepare(
+        'INSERT INTO budgets(id, category, period, amount, active, notes, last_edited_time) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      );
+      insert.run('a', 'Groceries', null, 500, 1, null, '2026-01-01');
+      insert.run('b', 'Entertainment', 'monthly', 200, 0, 'kept off', '2026-01-01');
+      insert.run('c', 'Dining', 'monthly', null, 1, null, '2026-01-01');
+
+      db.exec(readMigrationSql());
+
+      const rows = db
+        .prepare('SELECT id, category, period, amount, active, notes FROM budgets ORDER BY id')
+        .all() as {
+        id: string;
+        category: string;
+        period: string | null;
+        amount: number | null;
+        active: number;
+        notes: string | null;
+      }[];
+
+      expect(rows).toEqual([
+        { id: 'a', category: 'Groceries', period: null, amount: 500, active: 1, notes: null },
+        {
+          id: 'b',
+          category: 'Entertainment',
+          period: 'monthly',
+          amount: 200,
+          active: 0,
+          notes: 'kept off',
+        },
+        { id: 'c', category: 'Dining', period: 'monthly', amount: null, active: 1, notes: null },
+      ]);
+
+      db.close();
+    });
+
+    it('preserves the (category, period) UNIQUE index — including null period', () => {
+      const db = new BetterSqlite3(dbPath);
+      db.pragma('foreign_keys = ON');
+      setupOldSchema(db);
+
+      db.prepare(
+        "INSERT INTO budgets(id, category, last_edited_time) VALUES ('a','Groceries','2026-01-01')"
+      ).run();
+
+      db.exec(readMigrationSql());
+
+      // Inserting another row with the same category and null period must fail.
+      expect(() =>
+        db
+          .prepare(
+            "INSERT INTO budgets(id, category, last_edited_time) VALUES ('b','Groceries','2026-01-01')"
+          )
+          .run()
+      ).toThrow(/UNIQUE constraint failed/);
+
+      db.close();
+    });
+
+    it('preserves the notion_id UNIQUE index', () => {
+      const db = new BetterSqlite3(dbPath);
+      db.pragma('foreign_keys = ON');
+      setupOldSchema(db);
+
+      db.prepare(
+        "INSERT INTO budgets(id, notion_id, category, last_edited_time) VALUES ('a','nid-1','Groceries','2026-01-01')"
+      ).run();
+
+      db.exec(readMigrationSql());
+
+      expect(() =>
+        db
+          .prepare(
+            "INSERT INTO budgets(id, notion_id, category, last_edited_time) VALUES ('b','nid-1','Other','2026-01-01')"
+          )
+          .run()
+      ).toThrow(/UNIQUE constraint failed/);
+
       db.close();
     });
   });
