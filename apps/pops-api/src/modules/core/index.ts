@@ -7,15 +7,10 @@
 // Side-effect: register search adapters
 import './entities/search-adapter.js';
 
-import { aiConfigManifest } from './settings/ai-manifest.js';
-import { coreOperationalManifest } from './settings/operational-manifest.js';
-import { settingsRegistry } from './settings/registry.js';
-
-settingsRegistry.register(aiConfigManifest);
-settingsRegistry.register(coreOperationalManifest);
-
 import { coreFeaturesManifest } from './features/manifest.js';
 import { featuresRegistry } from './features/registry.js';
+import { aiConfigManifest } from './settings/ai-manifest.js';
+import { coreOperationalManifest } from './settings/operational-manifest.js';
 
 featuresRegistry.register(coreFeaturesManifest);
 
@@ -67,4 +62,5 @@ export const manifest: ModuleManifest<typeof coreRouter> = {
   description:
     'Cross-cutting platform services: entities, AI usage/providers, settings, features, search.',
   backend: { router: coreRouter },
+  settings: [aiConfigManifest, coreOperationalManifest],
 };

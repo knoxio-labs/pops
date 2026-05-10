@@ -21,6 +21,7 @@ import {
   assertFrontend,
   assertNonEmptyString,
   assertSearch,
+  assertSettings,
   assertSurfaces,
   assertUriHandler,
   fail,
@@ -125,8 +126,14 @@ export interface ModuleManifest<TRouter = unknown, TRoutes = unknown, TNavConfig
    * a future PRD.
    */
   capabilities?: readonly Capability[];
-  /** Plugged in as a slot from PRD-093. */
-  settings?: SettingsManifest;
+  /**
+   * Per-module settings sections (PRD-093). Each entry is an independently
+   * navigable section in the `/settings` UI. A module may declare multiple
+   * sections (e.g. media owns Plex / Arr / Rotation / Operational); the
+   * settings page aggregates them via `MODULES.flatMap(m => m.settings ?? [])`
+   * — see PRD-101 US-04.
+   */
+  settings?: readonly SettingsManifest[];
   /**
    * Per-module feature toggle definitions (PRD-094). Aggregated by the
    * features admin via `MODULES.flatMap(m => m.features)` — see PRD-101 US-05.
@@ -168,6 +175,7 @@ export function assertModuleManifest(
   const moduleId = value.id as string;
   const surfaces = assertSurfaces(value.surfaces, context);
   assertCapabilities(value.capabilities, context, moduleId);
+  assertSettings(value.settings, context);
   assertFeatures(value.features, context);
   assertSearch(value.search, context);
   assertUriHandler(value.uriHandler, context);

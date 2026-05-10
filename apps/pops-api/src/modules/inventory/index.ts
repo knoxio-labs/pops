@@ -5,11 +5,9 @@
 import './items/search-adapter.js';
 
 import { featuresRegistry } from '../core/features/index.js';
-import { settingsRegistry } from '../core/settings/index.js';
 import { inventoryFeaturesManifest } from './features.js';
 import { inventoryManifest } from './settings-manifest.js';
 
-settingsRegistry.register(inventoryManifest);
 featuresRegistry.register(inventoryFeaturesManifest);
 
 import { router } from '../../trpc.js';
@@ -43,5 +41,5 @@ export const manifest: ModuleManifest<typeof inventoryRouter> = {
   surfaces: ['app'],
   description: 'Home items, locations, connections, warranties, and documents.',
   backend: { router: inventoryRouter },
-  settings: inventoryManifest,
+  settings: [inventoryManifest],
 };

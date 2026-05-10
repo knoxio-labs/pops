@@ -1,12 +1,16 @@
 import { getEnv } from '../../../env.js';
-import { settingsRegistry } from '../settings/registry.js';
+import { getAllSettingsManifests } from '../../manifests.js';
 import { getSettingOrNull } from '../settings/service.js';
 
 import type { FeatureCredentialStatus, FeatureDefinition, SettingsField } from '@pops/types';
 
-/** Find the SettingsField (across all settings manifests) for a given key. */
+/**
+ * Find the `SettingsField` for a given key by scanning every module's
+ * declared settings sections. Reads from the manifest aggregator rather
+ * than the deleted `settingsRegistry` (PRD-101 US-04).
+ */
 function findSettingsField(key: string): SettingsField | null {
-  for (const manifest of settingsRegistry.getAll()) {
+  for (const manifest of getAllSettingsManifests()) {
     for (const group of manifest.groups) {
       const field = group.fields.find((f) => f.key === key);
       if (field) return field;

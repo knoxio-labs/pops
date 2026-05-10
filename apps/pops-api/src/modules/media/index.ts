@@ -8,15 +8,9 @@ import './search/tv-shows-adapter.js';
 import './rotation/register-sources.js';
 
 import { featuresRegistry } from '../core/features/index.js';
-import { settingsRegistry } from '../core/settings/index.js';
 import { mediaFeaturesManifest } from './features.js';
 import { arrManifest, plexManifest, rotationManifest } from './settings/manifests.js';
 import { mediaOperationalManifest } from './settings/operational-manifest.js';
-
-settingsRegistry.register(plexManifest);
-settingsRegistry.register(arrManifest);
-settingsRegistry.register(rotationManifest);
-settingsRegistry.register(mediaOperationalManifest);
 
 featuresRegistry.register(mediaFeaturesManifest);
 
@@ -52,8 +46,7 @@ export const mediaRouter = router({
 /**
  * PRD-098 manifest. Metadata-only; consumed by the PRD-100 loader.
  * Media owns multiple settings manifests (Plex, Arr, Rotation, Operational);
- * they remain registered via `settingsRegistry.register` above and the
- * `settings` slot is left empty until the unified registry consolidates.
+ * each renders as its own section in `/settings` after PRD-101 US-04.
  */
 export const manifest: ModuleManifest<typeof mediaRouter> = {
   id: 'media',
@@ -62,4 +55,5 @@ export const manifest: ModuleManifest<typeof mediaRouter> = {
   surfaces: ['app'],
   description: 'Movies, TV shows, watchlist, watch history, Plex/TMDB/TVDB sync.',
   backend: { router: mediaRouter },
+  settings: [plexManifest, arrManifest, rotationManifest, mediaOperationalManifest],
 };
