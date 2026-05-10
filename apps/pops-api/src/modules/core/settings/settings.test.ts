@@ -3,11 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createCaller, seedSetting, setupTestContext } from '../../../shared/test-utils.js';
 import { SETTINGS_KEYS } from './keys.js';
-import { SettingsRegistry, settingsRegistry } from './registry.js';
 
 import type { Database } from 'better-sqlite3';
-
-import type { SettingsManifest } from '@pops/types';
 
 import type { Setting } from './types.js';
 
@@ -174,83 +171,40 @@ describe('settings.delete', () => {
 });
 
 // ---------------------------------------------------------------------------
-// SettingsRegistry unit tests
-// ---------------------------------------------------------------------------
-
-function makeManifest(id: string, order: number, keys: string[]): SettingsManifest {
-  return {
-    id,
-    title: id,
-    order,
-    groups: [
-      {
-        id: 'g',
-        title: 'Group',
-        fields: keys.map((key) => ({ key, label: key, type: 'text' as const })),
-      },
-    ],
-  };
-}
-
-describe('SettingsRegistry', () => {
-  it('getAll() returns manifests sorted by order', () => {
-    const registry = new SettingsRegistry();
-    registry.register(makeManifest('beta', 200, ['beta.key']));
-    registry.register(makeManifest('alpha', 100, ['alpha.key']));
-
-    const all = registry.getAll();
-    expect(all).toHaveLength(2);
-    expect(all[0]!.id).toBe('alpha');
-    expect(all[1]!.id).toBe('beta');
-  });
-
-  it('throws when a key is shared between two manifests', () => {
-    const registry = new SettingsRegistry();
-    registry.register(makeManifest('manifest-a', 100, ['shared.key', 'a.only']));
-
-    expect(() =>
-      registry.register(makeManifest('manifest-b', 200, ['b.only', 'shared.key']))
-    ).toThrow(/(?=.*shared\.key)(?=.*manifest-a)(?=.*manifest-b)/);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// settings.getManifests (tRPC — uses singleton, cleared after each test)
+// settings.getManifests — aggregates from the backend module manifests
+// (PRD-101 US-04). Validates that the live install set produces the
+// previously-registered sections in stable order.
 // ---------------------------------------------------------------------------
 
 describe('settings.getManifests', () => {
-  beforeEach(() => {
-    settingsRegistry.clear();
-  });
-
-  afterEach(() => {
-    settingsRegistry.clear();
-  });
-
-  it('returns empty array when no manifests are registered', async () => {
+  it('returns the union of every module manifest section, sorted by order', async () => {
     const result = await caller.core.settings.getManifests();
-    expect(result.manifests).toEqual([]);
+    const ids = result.manifests.map((m) => m.id);
+
+    // Each module's settings declarations contribute their sections — see
+    // each module's `index.ts` for the canonical list. The aggregator sorts
+    // by SettingsManifest.order so the page renders sections deterministically.
+    expect(ids).toContain('finance');
+    expect(ids).toContain('inventory');
+    expect(ids).toContain('media.plex');
+    expect(ids).toContain('media.arr');
+    expect(ids).toContain('media.rotation');
+    expect(ids).toContain('media.operational');
+    expect(ids).toContain('cerebrum');
+    expect(ids).toContain('ego');
+    expect(ids).toContain('ai.config');
+    expect(ids).toContain('core.operational');
+
+    const orders = result.manifests.map((m) => m.order);
+    const sorted = [...orders].toSorted((a, b) => a - b);
+    expect(orders).toEqual(sorted);
   });
 
-  it('returns registered manifests sorted by order', async () => {
-    settingsRegistry.register(makeManifest('z.manifest', 300, ['z.key']));
-    settingsRegistry.register(makeManifest('a.manifest', 10, ['a.key']));
-
+  it('every aggregated manifest declares a non-empty groups list', async () => {
     const result = await caller.core.settings.getManifests();
-    expect(result.manifests.map((m) => m.id)).toEqual(['a.manifest', 'z.manifest']);
-  });
-
-  it('rejects when a registered manifest contains an invalid field type', async () => {
-    settingsRegistry.register({
-      id: 'bad.manifest',
-      title: 'Bad',
-      order: 1,
-      groups: [
-        { id: 'g', title: 'G', fields: [{ key: 'k', label: 'K', type: 'not-a-type' as any }] },
-      ],
-    } as any);
-
-    await expect(caller.core.settings.getManifests()).rejects.toThrow();
+    for (const m of result.manifests) {
+      expect(m.groups.length).toBeGreaterThan(0);
+    }
   });
 });
 

@@ -58,6 +58,26 @@ export function assertCapabilities(value: unknown, context: string, moduleId: st
   }
 }
 
+export function assertSettings(value: unknown, context: string): void {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) {
+    fail(context, `'settings' must be an array when set`);
+  }
+  for (const [i, m] of (value as readonly unknown[]).entries()) {
+    if (!isObject(m)) {
+      fail(context, `'settings[${i}]' must be an object`);
+    }
+    assertNonEmptyString(m.id, context, `settings[${i}].id`);
+    assertNonEmptyString(m.title, context, `settings[${i}].title`);
+    if (typeof m.order !== 'number' || Number.isNaN(m.order)) {
+      fail(context, `'settings[${i}].order' must be a number`);
+    }
+    if (!Array.isArray(m.groups)) {
+      fail(context, `'settings[${i}].groups' must be an array`);
+    }
+  }
+}
+
 export function assertFeatures(value: unknown, context: string): void {
   if (value === undefined) return;
   if (!Array.isArray(value)) {

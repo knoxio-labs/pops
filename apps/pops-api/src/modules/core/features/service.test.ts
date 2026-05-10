@@ -1,8 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seedSetting, setupTestContext } from '../../../shared/test-utils.js';
-import { settingsRegistry } from '../settings/registry.js';
 import { featuresRegistry } from './registry.js';
+
+import type { FeatureManifest, SettingsManifest } from '@pops/types';
+
+// Override the manifest aggregator so tests can inject SettingsManifest
+// fixtures that drive credential resolution. The real aggregator returns
+// the live install set, which is non-deterministic for unit tests of
+// `requires`/`requiresEnv` logic. Tests push fixtures into `testManifests`
+// and the mocked function returns whatever is currently registered.
+const { testManifests } = vi.hoisted(() => ({ testManifests: [] as SettingsManifest[] }));
+vi.mock('../../manifests.js', async () => {
+  const actual = await vi.importActual<typeof import('../../manifests.js')>('../../manifests.js');
+  return {
+    ...actual,
+    getAllSettingsManifests: () => testManifests.toSorted((a, b) => a.order - b.order),
+  };
+});
+
 import {
   clearUserPreference,
   FeatureGateError,
@@ -17,19 +33,17 @@ import { setUserSetting } from './user-settings.js';
 
 import type { Database } from 'better-sqlite3';
 
-import type { FeatureManifest, SettingsManifest } from '@pops/types';
-
 const ctx = setupTestContext();
 let db: Database;
 
 beforeEach(() => {
   ({ db } = ctx.setup());
-  settingsRegistry.clear();
+  testManifests.length = 0;
   featuresRegistry.clear();
 });
 
 afterEach(() => {
-  settingsRegistry.clear();
+  testManifests.length = 0;
   featuresRegistry.clear();
   ctx.teardown();
   vi.unstubAllEnvs();
@@ -71,7 +85,7 @@ function registerSettingsManifest(fieldKeys: { key: string; envFallback?: string
       },
     ],
   };
-  settingsRegistry.register(manifest);
+  testManifests.push(manifest);
 }
 
 describe('isEnabled', () => {

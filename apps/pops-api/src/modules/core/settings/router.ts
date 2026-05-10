@@ -7,8 +7,8 @@ import { z } from 'zod';
 import { NotFoundError } from '../../../shared/errors.js';
 import { paginationMeta, PaginationMetaSchema } from '../../../shared/pagination.js';
 import { protectedProcedure, router } from '../../../trpc.js';
+import { getAllSettingsManifests } from '../../manifests.js';
 import { SETTINGS_KEY_VALUES } from './keys.js';
-import { settingsRegistry } from './registry.js';
 import * as service from './service.js';
 import { SettingListSchema, SettingsManifestSchema, SettingSchema, toSetting } from './types.js';
 
@@ -97,11 +97,15 @@ export const settingsRouter = router({
       }
     }),
 
-  /** Return all registered settings manifests sorted by order */
+  /**
+   * Return every module's settings sections, aggregated from each backend
+   * manifest's `settings` slot (PRD-101 US-04). Replaces the previous
+   * `settingsRegistry.getAll()` runtime aggregation.
+   */
   getManifests: protectedProcedure
     .output(z.object({ manifests: z.array(SettingsManifestSchema) }))
     .query(() => {
-      return { manifests: settingsRegistry.getAll() };
+      return { manifests: getAllSettingsManifests() };
     }),
 
   /** Fetch multiple settings by key — missing keys are omitted from result */
