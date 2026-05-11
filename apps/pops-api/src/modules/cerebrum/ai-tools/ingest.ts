@@ -39,17 +39,39 @@ function mergeTags(
   return merged.length > 0 ? merged : undefined;
 }
 
+/**
+ * Treat blank or whitespace-only string args as if the caller had omitted
+ * them. Without this, `title: ''` would suppress the JSON-derived title via
+ * `args.title ?? json.derivedTitle` because `??` does not fall through for
+ * empty strings.
+ */
+function optionalTrimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function optionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const out: string[] = [];
+  for (const v of value) {
+    if (typeof v !== 'string') continue;
+    const trimmed = v.trim();
+    if (trimmed.length === 0) continue;
+    out.push(trimmed);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 function parseArgs(raw: Record<string, unknown>): IngestArgs {
   const body = typeof raw['body'] === 'string' ? raw['body'] : '';
-  const title = typeof raw['title'] === 'string' ? raw['title'] : undefined;
-  const type = typeof raw['type'] === 'string' ? raw['type'] : undefined;
-  const scopes = Array.isArray(raw['scopes'])
-    ? (raw['scopes'] as unknown[]).filter((s): s is string => typeof s === 'string')
-    : undefined;
-  const tags = Array.isArray(raw['tags'])
-    ? (raw['tags'] as unknown[]).filter((s): s is string => typeof s === 'string')
-    : undefined;
-  return { body, title, type, scopes, tags };
+  return {
+    body,
+    title: optionalTrimmedString(raw['title']),
+    type: optionalTrimmedString(raw['type']),
+    scopes: optionalStringArray(raw['scopes']),
+    tags: optionalStringArray(raw['tags']),
+  };
 }
 
 export async function handleCerebrumIngest(raw: Record<string, unknown>): Promise<AiToolResult> {

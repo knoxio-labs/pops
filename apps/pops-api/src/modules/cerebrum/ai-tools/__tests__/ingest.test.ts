@@ -246,18 +246,33 @@ describe('handleCerebrumIngest — JSON metadata extraction (PRD-081 US-02 AC #7
 
   it('rejects prototype-pollution keys when lifting JSON into customFields', async () => {
     submitCalls.length = 0;
-    const json = JSON.stringify({
-      data: 'kept',
-      __proto__: { polluted: true },
-      constructor: { tampered: true },
-      prototype: 'no',
-    });
+    // Hand-rolled JSON string — `JSON.stringify` silently drops `__proto__` on
+    // an object literal, which would make this test pass for the wrong reason.
+    const json =
+      '{"data":"kept","__proto__":{"polluted":true},"constructor":{"tampered":true},"prototype":"no"}';
     await handleCerebrumIngest({ body: json });
 
     const call = submitCalls[0];
     const customFields = call?.['customFields'];
     expect(customFields).toEqual({ data: 'kept' });
     expect(Object.getPrototypeOf({}).polluted).toBeUndefined();
+  });
+
+  it('treats blank string args as if the caller omitted them so JSON-derived values surface', async () => {
+    submitCalls.length = 0;
+    const json = JSON.stringify({
+      title: 'JSON title',
+      type: 'meeting',
+    });
+    await handleCerebrumIngest({
+      body: json,
+      title: '   ',
+      type: '',
+    });
+
+    const call = submitCalls[0];
+    expect(call?.['title']).toBe('JSON title');
+    expect(call?.['type']).toBe('meeting');
   });
 
   it('trims whitespace from JSON-derived scopes/tags', async () => {

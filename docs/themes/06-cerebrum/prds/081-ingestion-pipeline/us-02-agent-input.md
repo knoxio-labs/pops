@@ -15,7 +15,7 @@ As an AI agent (Claude Code session or external tool), I want to write engrams t
 - [x] When `type` is omitted, the pipeline runs Cortex classification on the body and assigns the inferred type
 - [x] When `scopes` are omitted, the pipeline runs scope inference (source-based rules first, then LLM-based analysis)
 - [x] Raw Markdown input is normalised (trimmed, line endings normalised, UTF-8 validated) before processing
-- [x] Structured JSON input (detected by content inspection) is converted to Markdown with `title`/`type`/`scopes`/`tags` lifted into the ingest request and remaining keys persisted as frontmatter custom fields
+- [x] When the body parses as a plain JSON object, it is rendered as fenced JSON Markdown with `title`/`type`/`scopes`/`tags` lifted into the ingest request and remaining keys persisted as frontmatter custom fields. JSON arrays and primitives are still rendered as fenced JSON but contribute no derived metadata.
 - [x] The MCP tools return the created engram's ID, file path, type, and assigned scopes in the response
 - [x] Invalid input (empty body, malformed scopes) returns structured error messages with field-level detail, not generic 500 errors
 
