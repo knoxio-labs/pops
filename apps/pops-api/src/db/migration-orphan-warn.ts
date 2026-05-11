@@ -93,7 +93,16 @@ export function warnOrphanMigrationsByOwner(
 
   const orphans: string[] = [];
   for (const entry of journal.entries) {
-    const hash = tagHashes.get(entry.tag) ?? '';
+    const hash = tagHashes.get(entry.tag);
+    if (hash === undefined) {
+      // The two loops walk the same `journal.entries` array, so this is
+      // structurally unreachable. Crash loudly rather than ?? '' through
+      // a real bug: a silent empty-hash would skip orphan classification
+      // and quietly hide whatever drift caused the cache miss.
+      throw new Error(
+        `Hash cache miss for journal tag "${entry.tag}" — populate-then-read invariant broken.`
+      );
+    }
     if (!recorded.has(hash)) continue;
     if ((hashCounts.get(hash) ?? 0) > 1) continue;
     const owner = owners.get(entry.tag);
