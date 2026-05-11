@@ -1,17 +1,11 @@
 /**
- * Pure formatting helpers for the Plexus surface — shared between the list
- * row, the detail header and the future widget surfaces.
+ * Plexus-surface formatting helpers — status → variant/key mapping. The
+ * generic timestamp formatter lives in `../utils/format` and is
+ * re-exported here so existing imports (`../plexus/format`) keep working.
  */
 import type { PlexusAdapterStatus } from './types';
 
-export function formatTimestamp(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toISOString().replace('T', ' ').slice(0, 16);
-  } catch {
-    return iso;
-  }
-}
+export { formatTimestamp } from '../utils/format';
 
 export function statusBadgeVariant(
   status: PlexusAdapterStatus

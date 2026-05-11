@@ -5,16 +5,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@pops/ui';
 
-import type { ReflexExecution, ReflexExecutionStatus } from '../../reflex/types';
+import { formatTimestamp } from '../../utils/format';
 
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toISOString().replace('T', ' ').slice(0, 16);
-  } catch {
-    return iso;
-  }
-}
+import type { ReflexExecution, ReflexExecutionStatus } from '../../reflex/types';
 
 function statusVariant(status: ReflexExecutionStatus): 'default' | 'secondary' | 'destructive' {
   if (status === 'failed') return 'destructive';

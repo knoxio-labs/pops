@@ -25,25 +25,9 @@ import {
   type GliaActionStatus,
   type GliaActionType,
 } from '../../glia/types';
-
-const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === 'string') return msg;
-  }
-  return 'Unknown error';
-}
-
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toISOString().replace('T', ' ').slice(0, 16);
-  } catch {
-    return iso;
-  }
-}
+import { extractMessage } from '../../utils/errors';
+import { formatTimestamp } from '../../utils/format';
+import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 function statusVariant(
   status: GliaActionStatus

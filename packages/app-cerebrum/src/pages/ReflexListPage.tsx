@@ -23,19 +23,11 @@ import {
   TableRow,
 } from '@pops/ui';
 
+import { extractMessage } from '../utils/errors';
+import { TOUCH_TARGET_MIN_HEIGHT } from '../utils/touchTarget';
 import { ReflexRow } from './reflex-list/ReflexRow';
 
 import type { ReflexWithStatus } from '../reflex/types';
-
-const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === 'string') return msg;
-  }
-  return 'Unknown error';
-}
 
 function LoadingState() {
   return (

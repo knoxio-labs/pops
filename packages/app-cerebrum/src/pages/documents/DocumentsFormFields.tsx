@@ -11,8 +11,7 @@ import {
   type DocumentsFormState,
   type GenerationMode,
 } from '../../documents/types';
-
-const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
+import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 interface FieldsProps {
   form: DocumentsFormState;

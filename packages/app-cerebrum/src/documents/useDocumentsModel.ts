@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 import { trpc } from '@pops/api-client';
 
+import { extractMessage } from '../utils/errors';
 import { errorMessageKey, validateForm, type ValidatedRequest } from './form-mapping';
 import {
   DEFAULT_DOCUMENTS_FORM,
@@ -18,14 +19,6 @@ import {
   type GenerationResult,
   type PreviewResult,
 } from './types';
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === 'string') return msg;
-  }
-  return 'Unknown error';
-}
 
 export interface DocumentsModel {
   form: DocumentsFormState;

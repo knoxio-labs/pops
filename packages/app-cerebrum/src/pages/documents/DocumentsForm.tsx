@@ -6,11 +6,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@pops/ui';
 
+import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 import { DateRangeFields, FilterFields, ModeField, QueryField } from './DocumentsFormFields';
 
 import type { DocumentsFormState } from '../../documents/types';
-
-const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
 
 interface DocumentsFormProps {
   form: DocumentsFormState;

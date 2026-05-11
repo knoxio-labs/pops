@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react';
 
 import { trpc } from '@pops/api-client';
 
+import { extractMessage } from '../utils/errors';
 import {
   DEFAULT_ENGRAM_FILTERS,
   ENGRAM_STATUSES,
@@ -75,14 +76,6 @@ function buildSearchInput(filters: EngramListFilters, offset: number, limit: num
     offset,
     threshold: 0.8,
   };
-}
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === 'string') return msg;
-  }
-  return 'Unknown error';
 }
 
 function extractRetrievalIds(results: unknown): string[] {

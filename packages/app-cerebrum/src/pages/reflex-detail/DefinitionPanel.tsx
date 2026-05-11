@@ -4,17 +4,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { summariseAction, summariseTrigger } from '../../reflex/triggerSummary';
+import { formatTimestamp } from '../../utils/format';
 
 import type { ReflexWithStatus } from '../../reflex/types';
-
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toISOString().replace('T', ' ').slice(0, 16);
-  } catch {
-    return iso;
-  }
-}
 
 export function DefinitionPanel({ reflex }: { reflex: ReflexWithStatus }) {
   const { t } = useTranslation('cerebrum');
@@ -27,9 +19,9 @@ export function DefinitionPanel({ reflex }: { reflex: ReflexWithStatus }) {
         <dt className="text-muted-foreground">{t('reflex.detail.description')}</dt>
         <dd>{reflex.description || '—'}</dd>
         <dt className="text-muted-foreground">{t('reflex.detail.trigger')}</dt>
-        <dd>{summariseTrigger(reflex.trigger)}</dd>
+        <dd>{summariseTrigger(reflex.trigger, t)}</dd>
         <dt className="text-muted-foreground">{t('reflex.detail.action')}</dt>
-        <dd>{summariseAction(reflex.action)}</dd>
+        <dd>{summariseAction(reflex.action, t)}</dd>
         <dt className="text-muted-foreground">{t('reflex.detail.nextFire')}</dt>
         <dd>{formatTimestamp(reflex.nextFireTime)}</dd>
         <dt className="text-muted-foreground">{t('reflex.detail.executions')}</dt>

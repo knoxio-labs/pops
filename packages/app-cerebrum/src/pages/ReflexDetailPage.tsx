@@ -12,20 +12,12 @@ import { toast } from 'sonner';
 import { trpc } from '@pops/api-client';
 import { Button, PageHeader, Skeleton, Switch } from '@pops/ui';
 
+import { extractMessage } from '../utils/errors';
+import { TOUCH_TARGET_MIN_HEIGHT } from '../utils/touchTarget';
 import { DefinitionPanel } from './reflex-detail/DefinitionPanel';
 import { HistoryTable } from './reflex-detail/HistoryTable';
 
 import type { ReflexExecution, ReflexWithStatus } from '../reflex/types';
-
-const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === 'string') return msg;
-  }
-  return 'Unknown error';
-}
 
 interface ReflexMutations {
   isPending: boolean;

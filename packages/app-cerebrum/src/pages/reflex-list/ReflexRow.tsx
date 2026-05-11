@@ -9,19 +9,10 @@ import { Link } from 'react-router';
 import { Badge, Button, Switch, TableCell, TableRow } from '@pops/ui';
 
 import { summariseTrigger } from '../../reflex/triggerSummary';
+import { formatTimestamp } from '../../utils/format';
+import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 import type { ReflexWithStatus } from '../../reflex/types';
-
-const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
-
-function formatTimestamp(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toISOString().replace('T', ' ').slice(0, 16);
-  } catch {
-    return iso;
-  }
-}
 
 function StatusBadge({ enabled }: { enabled: boolean }) {
   const { t } = useTranslation('cerebrum');
@@ -58,7 +49,7 @@ export function ReflexRow({ reflex, onToggle, onTest, isPending }: ReflexRowProp
         <StatusBadge enabled={reflex.enabled} />
       </TableCell>
       <TableCell className="text-xs text-muted-foreground">
-        {summariseTrigger(reflex.trigger)}
+        {summariseTrigger(reflex.trigger, t)}
       </TableCell>
       <TableCell className="text-xs text-muted-foreground">
         {formatTimestamp(reflex.lastExecutionAt)}

@@ -10,6 +10,7 @@ import { useCallback, useMemo } from 'react';
 
 import { trpc } from '@pops/api-client';
 
+import { extractMessage } from '../utils/errors';
 import { clearDraft } from './draft-storage';
 import { findInvalidScopes, normaliseScope } from './scope-validation';
 import { useEngramFormState, type EngramFormState } from './useEngramFormState';
@@ -38,14 +39,6 @@ export interface EngramDetailModel {
   /** Set when a draft was restored from localStorage on mount. */
   draftRestored: boolean;
   discardDraft: () => void;
-}
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) {
-    const msg = (err as { message?: unknown }).message;
-    if (typeof msg === 'string') return msg;
-  }
-  return 'Unknown error';
 }
 
 function validate(

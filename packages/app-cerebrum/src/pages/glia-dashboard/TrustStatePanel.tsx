@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { trpc } from '@pops/api-client';
 import {
   Badge,
+  Button,
   Skeleton,
   Table,
   TableBody,
@@ -15,6 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from '@pops/ui';
+
+import { extractMessage } from '../../utils/errors';
+import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 import type { GliaTrustState } from '../../glia/types';
 
@@ -32,6 +36,57 @@ function TrustRow({ state }: { state: GliaTrustState }) {
   );
 }
 
+interface TrustBodyProps {
+  query: {
+    isLoading: boolean;
+    error: { message: string } | null;
+    refetch: () => Promise<unknown>;
+  };
+  states: GliaTrustState[];
+}
+
+function TrustBody({ query, states }: TrustBodyProps) {
+  const { t } = useTranslation('cerebrum');
+  if (query.isLoading) {
+    return <Skeleton className="h-24 w-full" data-testid="glia-trust-loading" />;
+  }
+  if (query.error) {
+    return (
+      <div className="p-6 text-center" data-testid="glia-trust-error">
+        <p className="text-destructive mb-3">
+          {t('glia.trust.error', { message: extractMessage(query.error) })}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className={TOUCH_TARGET_MIN_HEIGHT}
+          onClick={() => void query.refetch()}
+        >
+          {t('glia.trust.retry')}
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{t('glia.trust.column.type')}</TableHead>
+          <TableHead>{t('glia.trust.column.phase')}</TableHead>
+          <TableHead>{t('glia.trust.column.approved')}</TableHead>
+          <TableHead>{t('glia.trust.column.rejected')}</TableHead>
+          <TableHead>{t('glia.trust.column.reverted')}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {states.map((state) => (
+          <TrustRow key={state.actionType} state={state} />
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
 export function TrustStatePanel() {
   const { t } = useTranslation('cerebrum');
   const query = trpc.cerebrum.glia.trustState.list.useQuery();
@@ -44,26 +99,7 @@ export function TrustStatePanel() {
           {t('glia.trust.title')}
         </h3>
       </header>
-      {query.isLoading ? (
-        <Skeleton className="h-24 w-full" data-testid="glia-trust-loading" />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('glia.trust.column.type')}</TableHead>
-              <TableHead>{t('glia.trust.column.phase')}</TableHead>
-              <TableHead>{t('glia.trust.column.approved')}</TableHead>
-              <TableHead>{t('glia.trust.column.rejected')}</TableHead>
-              <TableHead>{t('glia.trust.column.reverted')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {states.map((state) => (
-              <TrustRow key={state.actionType} state={state} />
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <TrustBody query={query} states={states} />
     </section>
   );
 }

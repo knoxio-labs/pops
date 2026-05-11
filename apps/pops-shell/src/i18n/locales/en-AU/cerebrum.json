@@ -132,6 +132,10 @@
   "reflex.detail.history.action": "Action",
   "reflex.detail.history.completed": "Completed",
   "reflex.detail.historyEmpty": "No executions recorded yet.",
+  "reflex.trigger.event": "event {{event}}",
+  "reflex.trigger.threshold": "threshold {{metric}} ≥ {{value}}",
+  "reflex.trigger.schedule": "schedule {{cron}}",
+  "reflex.action.summary": "{{type}}.{{verb}}",
 
   "plexus.nav": "Plexus",
   "plexus.title": "Plexus",
@@ -169,6 +173,8 @@
   "plexus.detail.filters.field": "Field",
   "plexus.detail.filters.pattern": "Pattern",
   "plexus.detail.filters.enabled": "Enabled",
+  "plexus.detail.filters.enabledYes": "Yes",
+  "plexus.detail.filters.enabledNo": "No",
 
   "glia.nav": "Glia",
   "glia.title": "Glia / Curation",
@@ -204,6 +210,8 @@
   "glia.trust.column.approved": "Approved",
   "glia.trust.column.rejected": "Rejected",
   "glia.trust.column.reverted": "Reverted",
+  "glia.trust.error": "Failed to load trust state. {{message}}",
+  "glia.trust.retry": "Retry",
 
   "documents.nav": "Documents",
   "documents.title": "Documents",

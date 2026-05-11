@@ -76,7 +76,11 @@ export function FiltersPanel({ filters }: { filters: PlexusFilter[] }) {
               <TableCell className="text-xs">{f.filterType}</TableCell>
               <TableCell className="text-xs">{f.field}</TableCell>
               <TableCell className="text-xs font-mono">{f.pattern}</TableCell>
-              <TableCell className="text-xs">{f.enabled ? 'yes' : 'no'}</TableCell>
+              <TableCell className="text-xs">
+                {t(
+                  f.enabled ? 'plexus.detail.filters.enabledYes' : 'plexus.detail.filters.enabledNo'
+                )}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

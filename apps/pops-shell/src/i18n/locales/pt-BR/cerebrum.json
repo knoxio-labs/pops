@@ -132,6 +132,10 @@
   "reflex.detail.history.action": "Ação",
   "reflex.detail.history.completed": "Concluído",
   "reflex.detail.historyEmpty": "Nenhuma execução registrada ainda.",
+  "reflex.trigger.event": "evento {{event}}",
+  "reflex.trigger.threshold": "limiar {{metric}} ≥ {{value}}",
+  "reflex.trigger.schedule": "agendamento {{cron}}",
+  "reflex.action.summary": "{{type}}.{{verb}}",
 
   "plexus.nav": "Plexus",
   "plexus.title": "Plexus",
@@ -169,6 +173,8 @@
   "plexus.detail.filters.field": "Campo",
   "plexus.detail.filters.pattern": "Padrão",
   "plexus.detail.filters.enabled": "Ativado",
+  "plexus.detail.filters.enabledYes": "Sim",
+  "plexus.detail.filters.enabledNo": "Não",
 
   "glia.nav": "Glia",
   "glia.title": "Glia / Curadoria",
@@ -204,6 +210,8 @@
   "glia.trust.column.approved": "Aprovado",
   "glia.trust.column.rejected": "Rejeitado",
   "glia.trust.column.reverted": "Revertido",
+  "glia.trust.error": "Falha ao carregar estado de confiança. {{message}}",
+  "glia.trust.retry": "Tentar novamente",
 
   "documents.nav": "Documentos",
   "documents.title": "Documentos",
