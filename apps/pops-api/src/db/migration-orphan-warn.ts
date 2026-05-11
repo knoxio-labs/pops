@@ -80,15 +80,20 @@ export function warnOrphanMigrationsByOwner(
   const journal = readJournal();
   const recorded = appliedHashes(db);
 
+  // Hash each migration file once. The orphan loop walks the journal twice
+  // (count + classify) so caching here avoids reading every .sql file from
+  // disk N×2 times on boot.
+  const tagHashes = new Map<string, string>();
   const hashCounts = new Map<string, number>();
   for (const entry of journal.entries) {
     const hash = hashSql(readMigrationSql(entry.tag));
+    tagHashes.set(entry.tag, hash);
     hashCounts.set(hash, (hashCounts.get(hash) ?? 0) + 1);
   }
 
   const orphans: string[] = [];
   for (const entry of journal.entries) {
-    const hash = hashSql(readMigrationSql(entry.tag));
+    const hash = tagHashes.get(entry.tag) ?? '';
     if (!recorded.has(hash)) continue;
     if ((hashCounts.get(hash) ?? 0) > 1) continue;
     const owner = owners.get(entry.tag);
