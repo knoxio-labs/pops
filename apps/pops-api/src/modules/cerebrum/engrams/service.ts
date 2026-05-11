@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { NotFoundError, ValidationError } from '../../../shared/errors.js';
 import { parseEngramFile, serializeEngram } from './file.js';
 import { archiveEngram } from './handlers/archive-engram.js';
+import { changeEngramType } from './handlers/change-type.js';
 import { createEngram, type CreateEngramInput } from './handlers/create-engram.js';
 import {
   absolutePath,
@@ -44,9 +45,9 @@ export interface UpdateEngramInput {
   status?: EngramStatus;
   /**
    * Template name to assign in frontmatter. Used by the async classification
-   * worker (PRD-081 US-03) to set a template after classification. Note that
-   * `type` is deliberately not mutable here — changing type requires a file
-   * move and is tracked separately.
+   * worker (PRD-081 US-03) to set a template after classification. `type` is
+   * not mutable through this method — use `changeType` for that since it
+   * requires a file move.
    */
   template?: string;
 }
@@ -145,6 +146,17 @@ export class EngramService {
 
   archive(id: string): Engram {
     archiveEngram({ root: this.root, db: this.db, now: this.now }, id);
+    return this.loadEngram(id);
+  }
+
+  /**
+   * Move an engram to a different type folder. Used by the curation worker
+   * (PRD-081 US-03 AC #6) when classification graduates a capture into its
+   * classified type. The engram id is preserved, so existing links remain
+   * valid.
+   */
+  changeType(id: string, newType: string): Engram {
+    changeEngramType({ root: this.root, db: this.db, now: this.now }, id, newType);
     return this.loadEngram(id);
   }
 
