@@ -20,9 +20,9 @@ type OverlayComponent = ComponentType<OverlayComponentProps>;
  * mounts overlays whose `chromeSlot` matches one of these; unknown slots
  * are skipped at runtime and warned about (the registry build also warns).
  */
-const KNOWN_CHROME_SLOTS = ['assistant', 'notification', 'command'] as const;
+export const KNOWN_CHROME_SLOTS = ['assistant', 'notification', 'command'] as const;
 
-type KnownChromeSlot = (typeof KNOWN_CHROME_SLOTS)[number];
+export type KnownChromeSlot = (typeof KNOWN_CHROME_SLOTS)[number];
 
 function isKnownSlot(slot: string): slot is KnownChromeSlot {
   return (KNOWN_CHROME_SLOTS as readonly string[]).includes(slot);
@@ -56,28 +56,58 @@ function OverlayMount({ overlay, Component }: OverlayMountProps) {
   );
 }
 
+export interface OverlayHostProps {
+  /**
+   * The chrome slot this host owns. Only overlays declaring this slot are
+   * mounted here. Overlays declaring an unknown slot are dropped (with a
+   * one-shot console warning) by `KNOWN_OVERLAY_MOUNTS` below.
+   */
+  readonly slot: KnownChromeSlot;
+}
+
+interface OverlayMountEntry {
+  readonly overlay: InstalledOverlay;
+  readonly Component: OverlayComponent;
+}
+
 /**
- * Mount every installed overlay into the chrome slot declared by its
- * manifest. Lazy-loaded via `React.lazy` so absent overlays never appear
- * in the shell bundle. Renders nothing for unknown slots (and logs a dev
- * warning so the mismatch is visible).
+ * Build the per-slot mount table once at module load. Each installed
+ * overlay is matched against the known-slot set; unknown slots are dropped
+ * with a single warning so misconfiguration is observable but never
+ * crashes the shell. The table is keyed by slot name so each `OverlayHost`
+ * instance can look up just its own bucket without re-filtering.
  */
-export function OverlayHost() {
-  const mounts = useMemo(
-    () =>
-      installedOverlays
-        .filter((o): o is InstalledOverlay => {
-          if (isKnownSlot(o.chromeSlot)) return true;
-          if (typeof console !== 'undefined') {
-            console.warn(
-              `[OverlayHost] module '${o.moduleId}' declares unknown chromeSlot '${o.chromeSlot}' — skipping mount`
-            );
-          }
-          return false;
-        })
-        .map((overlay) => ({ overlay, Component: toLazyComponent(overlay) })),
-    []
-  );
+function buildSlotMounts(): Readonly<Record<KnownChromeSlot, readonly OverlayMountEntry[]>> {
+  const buckets: Record<KnownChromeSlot, OverlayMountEntry[]> = {
+    assistant: [],
+    notification: [],
+    command: [],
+  };
+  for (const overlay of installedOverlays) {
+    if (!isKnownSlot(overlay.chromeSlot)) {
+      if (typeof console !== 'undefined') {
+        console.warn(
+          `[OverlayHost] module '${overlay.moduleId}' declares unknown chromeSlot '${overlay.chromeSlot}' — skipping mount`
+        );
+      }
+      continue;
+    }
+    buckets[overlay.chromeSlot].push({ overlay, Component: toLazyComponent(overlay) });
+  }
+  return buckets;
+}
+
+const SLOT_MOUNTS = buildSlotMounts();
+
+/**
+ * Mount every installed overlay whose declared `chromeSlot` matches the
+ * `slot` prop. Lazy-loaded via `React.lazy` so absent overlays never
+ * appear in the shell bundle. `RootLayout` renders one `OverlayHost` per
+ * known slot region so overlays land where their manifest says they
+ * belong (PRD-101 US-07).
+ */
+export function OverlayHost({ slot }: OverlayHostProps) {
+  const mounts = useMemo(() => SLOT_MOUNTS[slot], [slot]);
 
   return (
     <>

@@ -12,6 +12,8 @@ interface ShortcutSpec {
   readonly needsShift: boolean;
 }
 
+const VALID_MODIFIERS = new Set(['mod', 'ctrl', 'meta', 'alt', 'option', 'shift']);
+
 function parseShortcut(shortcut: string): ShortcutSpec | null {
   const parts = shortcut
     .toLowerCase()
@@ -19,8 +21,15 @@ function parseShortcut(shortcut: string): ShortcutSpec | null {
     .map((p) => p.trim())
     .filter((p) => p.length > 0);
   const key = parts[parts.length - 1];
-  if (key === undefined) return null;
-  const modifiers = new Set(parts.slice(0, -1));
+  // Fail closed: missing key OR a modifier-shaped token in the key
+  // position (e.g. "ctrl+") means the binding is bogus.
+  if (key === undefined || VALID_MODIFIERS.has(key)) return null;
+  const modifierTokens = parts.slice(0, -1);
+  // Fail closed: any unknown modifier token (e.g. a typo like "cmd+k")
+  // must reject the entire binding rather than silently degrading to the
+  // bare key, which would silently bind the wrong shortcut.
+  if (modifierTokens.some((token) => !VALID_MODIFIERS.has(token))) return null;
+  const modifiers = new Set(modifierTokens);
   return {
     key,
     needsMod: modifiers.has('mod'),
@@ -44,6 +53,15 @@ const MODIFIER_CHECKS: readonly ModifierCheck[] = [
 
 function matchesSpec(spec: ShortcutSpec, e: KeyboardEvent): boolean {
   if (e.key.toLowerCase() !== spec.key) return false;
+  // Reject unexpected modifiers so a more specific binding (e.g.
+  // `mod+shift+k`) doesn't get swallowed by a less specific one
+  // (`mod+k`). `mod` is a virtual modifier that resolves to either Ctrl
+  // or Meta depending on platform, so unexpected-Ctrl / unexpected-Meta
+  // are tolerated whenever `needsMod` is set.
+  if (!spec.needsShift && e.shiftKey) return false;
+  if (!spec.needsAlt && e.altKey) return false;
+  if (!spec.needsCtrl && !spec.needsMod && e.ctrlKey) return false;
+  if (!spec.needsMeta && !spec.needsMod && e.metaKey) return false;
   return MODIFIER_CHECKS.every(([need, present]) => !spec[need] || present(e));
 }
 

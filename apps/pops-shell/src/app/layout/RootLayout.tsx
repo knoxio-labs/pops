@@ -67,7 +67,26 @@ export function RootLayout() {
         </div>
 
         {EGO_OVERLAY_INSTALLED && <ChatFab />}
-        <OverlayHost />
+
+        {/*
+         * One host per known chrome slot (PRD-101 US-07). Each host mounts
+         * only the overlays whose manifest declares that slot, so slot
+         * declarations actually drive placement rather than being purely
+         * informational. Positioning is intentionally bare — overlays own
+         * their own visual chrome (fixed positioning, z-index, etc.); the
+         * host wrappers are anchors so future slot-specific layout (e.g.
+         * a notification stack region) can replace these without touching
+         * overlay packages.
+         */}
+        <div data-overlay-slot="assistant">
+          <OverlayHost slot="assistant" />
+        </div>
+        <div data-overlay-slot="notification">
+          <OverlayHost slot="notification" />
+        </div>
+        <div data-overlay-slot="command">
+          <OverlayHost slot="command" />
+        </div>
       </div>
     </AppContextProvider>
   );
