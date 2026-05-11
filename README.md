@@ -30,11 +30,11 @@ External APIs
 
 ### Docker Networks
 
-| Network          | Services                                    | Purpose                      |
-| ---------------- | ------------------------------------------- | ---------------------------- |
-| `pops-frontend`  | pops-shell, pops-api, metabase              | Public-facing                |
-| `pops-backend`   | pops-api, moltbot, tools                    | Internal + SQLite access     |
-| `pops-documents` | paperless-ngx, paperless-redis              | Isolated document processing |
+| Network          | Services                       | Purpose                      |
+| ---------------- | ------------------------------ | ---------------------------- |
+| `pops-frontend`  | pops-shell, pops-api, metabase | Public-facing                |
+| `pops-backend`   | pops-api, moltbot, tools       | Internal + SQLite access     |
+| `pops-documents` | paperless-ngx, paperless-redis | Isolated document processing |
 
 ## Domains
 
