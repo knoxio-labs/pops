@@ -1,58 +1,30 @@
 /**
  * Tests for `pops cerebrum capture` — PRD-081 US-03 AC #1, #7.
  *
- * Exercises the command handler directly against a mocked `fetch`, which is
- * the only seam between the CLI and the API. Avoids spawning a subprocess so
- * the tests stay deterministic and fast.
+ * Exercises the command handler directly against a stubbed global `fetch`,
+ * which is the only seam between the CLI and the API. Avoids spawning a
+ * subprocess so the tests stay deterministic and fast.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { runCapture } from '../commands/cerebrum-capture.js';
-import { CaptureStream, pipedStdin, ttyStdin } from './test-helpers.js';
-
-const originalFetch = globalThis.fetch;
-
-function mockFetchOk<T>(body: T): vi.Mock {
-  const fn = vi.fn(
-    async () =>
-      new Response(JSON.stringify({ result: { data: { json: body } } }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      })
-  );
-  globalThis.fetch = fn as unknown as typeof globalThis.fetch;
-  return fn as unknown as vi.Mock;
-}
-
-function mockFetchTrpcError(message: string, httpStatus = 400, code = 'BAD_REQUEST'): vi.Mock {
-  const fn = vi.fn(
-    async () =>
-      new Response(
-        JSON.stringify({ error: { json: { message, code, data: { httpStatus, code } } } }),
-        {
-          status: httpStatus,
-          headers: { 'content-type': 'application/json' },
-        }
-      )
-  );
-  globalThis.fetch = fn as unknown as typeof globalThis.fetch;
-  return fn as unknown as vi.Mock;
-}
-
-function mockFetchUnreachable(): vi.Mock {
-  const fn = vi.fn(async () => {
-    throw new TypeError('fetch failed');
-  });
-  globalThis.fetch = fn as unknown as typeof globalThis.fetch;
-  return fn as unknown as vi.Mock;
-}
+import {
+  CaptureStream,
+  getFetchCall,
+  getFetchJson,
+  mockFetchOk,
+  mockFetchTrpcError,
+  mockFetchUnreachable,
+  pipedStdin,
+  ttyStdin,
+} from './test-helpers.js';
 
 describe('runCapture', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    vi.unstubAllGlobals();
   });
 
   it('captures text passed as an argument and prints engram metadata (AC #1)', async () => {
@@ -74,11 +46,10 @@ describe('runCapture', () => {
     });
 
     expect(code).toBe(0);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const { url, init } = getFetchCall(fetchSpy);
     expect(url).toBe('http://api.test/trpc/cerebrum.ingest.quickCapture');
     expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body as string)).toEqual({
+    expect(getFetchJson(fetchSpy)).toEqual({
       json: { text: 'a quick thought', source: 'cli' },
     });
     expect(stdout.text()).toContain('Captured eng_20260427_1500_idea');
@@ -165,9 +136,14 @@ describe('runCapture', () => {
       env: { POPS_API_KEY: 'pops_sa_test' },
     });
 
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    const headers = init.headers as Record<string, string>;
-    expect(headers['x-api-key']).toBe('pops_sa_test');
+    const { init } = getFetchCall(fetchSpy);
+    const headers = init.headers;
+    expect(headers).toBeDefined();
+    if (headers && !(headers instanceof Headers) && !Array.isArray(headers)) {
+      expect(headers['x-api-key']).toBe('pops_sa_test');
+    } else {
+      throw new Error('expected plain-object headers');
+    }
   });
 
   it('surfaces server-side validation errors with the API message', async () => {
@@ -206,8 +182,7 @@ describe('runCapture', () => {
       env: {},
     });
 
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toEqual({
+    expect(getFetchJson(fetchSpy)).toEqual({
       json: { text: 'from moltbot', source: 'moltbot' },
     });
   });

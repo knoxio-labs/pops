@@ -8,7 +8,7 @@
 import { trpcMutation } from '../api-client.js';
 import { loadConfig } from '../config.js';
 import { writeApiError } from '../error-output.js';
-import { readStdin } from '../stdin.js';
+import { readStdin, type StdinSource } from '../stdin.js';
 
 interface AskSource {
   id?: string;
@@ -28,7 +28,7 @@ export interface RunAskOptions {
   scopes?: string[];
   stdout?: NodeJS.WritableStream;
   stderr?: NodeJS.WritableStream;
-  stdin?: NodeJS.ReadStream;
+  stdin?: StdinSource;
   env?: NodeJS.ProcessEnv;
 }
 

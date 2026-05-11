@@ -1,28 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { runAsk } from '../commands/cerebrum-ask.js';
-import { CaptureStream, pipedStdin, ttyStdin } from './test-helpers.js';
-
-const originalFetch = globalThis.fetch;
-
-function mockFetchOk<T>(body: T): vi.Mock {
-  const fn = vi.fn(
-    async () =>
-      new Response(JSON.stringify({ result: { data: { json: body } } }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      })
-  );
-  globalThis.fetch = fn as unknown as typeof globalThis.fetch;
-  return fn as unknown as vi.Mock;
-}
+import { CaptureStream, getFetchJson, mockFetchOk, pipedStdin, ttyStdin } from './test-helpers.js';
 
 describe('runAsk', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    vi.unstubAllGlobals();
   });
 
   it('prints the answer and citations from a successful response', async () => {
@@ -101,8 +87,7 @@ describe('runAsk', () => {
       env: {},
     });
 
-    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toEqual({
+    expect(getFetchJson(fetchSpy)).toEqual({
       json: { question: 'q', scopes: ['work', 'work.platform'] },
     });
   });

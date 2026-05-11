@@ -8,7 +8,7 @@
 import { trpcMutation } from '../api-client.js';
 import { loadConfig } from '../config.js';
 import { writeApiError } from '../error-output.js';
-import { readStdin } from '../stdin.js';
+import { readStdin, type StdinSource } from '../stdin.js';
 
 export interface QuickCaptureResponse {
   id: string;
@@ -24,7 +24,7 @@ export interface RunCaptureOptions {
   stdout?: NodeJS.WritableStream;
   stderr?: NodeJS.WritableStream;
   /** Injectable for tests — defaults to process.stdin. */
-  stdin?: NodeJS.ReadStream;
+  stdin?: StdinSource;
   /** Injectable for tests — defaults to process.env. */
   env?: NodeJS.ProcessEnv;
 }
