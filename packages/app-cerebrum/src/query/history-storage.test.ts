@@ -107,6 +107,17 @@ describe('history-storage', () => {
     expect(history[0]?.id).toBe(String(entries.length - 1));
   });
 
+  it('enforces the max entry cap on read when storage holds oversized data', () => {
+    const oversized = Array.from({ length: QUERY_HISTORY_MAX_ENTRIES + 7 }, (_, i) =>
+      buildEntry({ id: String(i), question: `q${i}` })
+    );
+    storage.setItem(QUERY_HISTORY_STORAGE_KEY, JSON.stringify(oversized));
+    const read = readQueryHistory(storage);
+    expect(read).toHaveLength(QUERY_HISTORY_MAX_ENTRIES);
+    expect(read[0]?.id).toBe('0');
+    expect(read[QUERY_HISTORY_MAX_ENTRIES - 1]?.id).toBe(String(QUERY_HISTORY_MAX_ENTRIES - 1));
+  });
+
   it('removes by id', () => {
     expect(removeHistoryEntry([buildEntry({ id: 'a' }), buildEntry({ id: 'b' })], 'a')).toEqual([
       buildEntry({ id: 'b' }),

@@ -50,7 +50,7 @@ export function readQueryHistory(storage: Storage = window.localStorage): QueryH
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isHistoryEntry);
+    return parsed.filter(isHistoryEntry).slice(0, MAX_ENTRIES);
   } catch (err) {
     // Fallback is safe (empty history), but a parse/storage failure is
     // worth surfacing so real regressions don't go unnoticed.
