@@ -358,14 +358,16 @@ describe('runPerModuleMigrations', () => {
     });
   });
 
-  it('crashes if __drizzle_migrations stores tag names instead of sha256(sql) — guards against the pre-PRD-101 schema-init bug', async () => {
-    // Negative regression: prior to the fix, `initializeSchema` recorded
-    // each migration's *tag* in the hash column. Drizzle's stock migrator
-    // tolerated that because it skipped by timestamp, but the per-module
-    // runner uses hash equality and would re-run every migration, blowing
-    // up on the first non-IF-NOT-EXISTS DDL. This test pins the contract:
-    // tag-as-hash MUST produce a re-application attempt that fails when
-    // the table is non-idempotent.
+  it('backfills the hash when __drizzle_migrations has stale tag-as-hash entries (auto-heals legacy schema-init bug)', async () => {
+    // Regression for the prod outage where __drizzle_migrations contained
+    // tag names instead of sha256(sql) hashes (pre-PRD-101 schema-init bug,
+    // and a separate prod incident where 11 migrations had been applied via
+    // initializeSchema(db) but were absent from __drizzle_migrations).
+    // Either way, the runner sees the hash as missing and re-runs the
+    // migration, which crashes on `table X already exists`. The contract
+    // now: detect "already applied" SQLite errors, record the correct hash
+    // so subsequent boots short-circuit, bucket the tag as `backfilled`
+    // (not `applied`) so the operator sees the divergence.
     const dir = fakeJournalDir();
     const sql = 'CREATE TABLE budgets (id INTEGER);';
     writeJournal(dir, [{ tag: '0000_seeded', sql }]);
@@ -380,7 +382,7 @@ describe('runPerModuleMigrations', () => {
           created_at NUMERIC
         )
       `);
-      // Wrong: tag in the hash column. Reproduces the bug.
+      // Stale: tag in the hash column instead of sha256(sql).
       db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(
         '0000_seeded',
         Date.now()
@@ -389,9 +391,95 @@ describe('runPerModuleMigrations', () => {
       const a = makeManifest('core', [{ id: '0000_seeded', sql }]);
       const knownOwners = mod.migrationOwnershipMap([a]);
 
-      expect(() => mod.runPerModuleMigrations(db, [a], knownOwners)).toThrow(
-        /table .?budgets.? already exists/
-      );
+      const result = mod.runPerModuleMigrations(db, [a], knownOwners);
+
+      expect(result.applied).toEqual([]);
+      expect(result.backfilled).toEqual(['0000_seeded']);
+
+      // The correct hash is now recorded — subsequent boots short-circuit
+      // at `knownHashes.has(hash)` and treat the tag as alreadyApplied.
+      const second = mod.runPerModuleMigrations(db, [a], knownOwners);
+      expect(second.applied).toEqual([]);
+      expect(second.backfilled).toEqual([]);
+      expect(second.alreadyApplied).toEqual(['0000_seeded']);
+    });
+  });
+
+  it('backfills hashes for the multi-statement partial-divergence case', async () => {
+    // Some statements already applied, some not. Runner should skip the
+    // applied ones, run the new ones, and record the hash. Bucket: backfilled.
+    const dir = fakeJournalDir();
+    const sql = [
+      'CREATE TABLE pre_existing (id INTEGER);',
+      '--> statement-breakpoint',
+      'CREATE TABLE genuinely_new (id INTEGER);',
+    ].join('\n');
+    writeJournal(dir, [{ tag: '0000_partial', sql }]);
+    const mod = await loadRunnerWithJournalDir(dir);
+
+    await withDb((db) => {
+      db.exec('CREATE TABLE pre_existing (id INTEGER);');
+
+      const a = makeManifest('core', [{ id: '0000_partial', sql }]);
+
+      const result = mod.runPerModuleMigrations(db, [a]);
+
+      expect(result.applied).toEqual([]);
+      expect(result.backfilled).toEqual(['0000_partial']);
+
+      // Both tables present: pre_existing untouched, genuinely_new created.
+      const tables = db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        .all() as { name: string }[];
+      const names = tables.map((t) => t.name);
+      expect(names).toContain('pre_existing');
+      expect(names).toContain('genuinely_new');
+    });
+  });
+
+  it('does NOT backfill on inverse errors (no such table / no such column)', async () => {
+    // The schema is missing something the migration assumed was there.
+    // That's a true precondition failure — must surface, not silently pass.
+    const dir = fakeJournalDir();
+    const sql = 'DROP TABLE never_existed;';
+    writeJournal(dir, [{ tag: '0000_drop_missing', sql }]);
+    const mod = await loadRunnerWithJournalDir(dir);
+
+    await withDb((db) => {
+      const a = makeManifest('core', [{ id: '0000_drop_missing', sql }]);
+
+      expect(() => mod.runPerModuleMigrations(db, [a])).toThrow(/no such table/i);
+
+      const recorded = db.prepare('SELECT COUNT(*) AS cnt FROM __drizzle_migrations').get() as {
+        cnt: number;
+      };
+      expect(recorded.cnt).toBe(0);
+    });
+  });
+
+  it('treats every "already exists" variant as backfillable (table / index / duplicate column)', async () => {
+    const dir = fakeJournalDir();
+    const sql = [
+      'CREATE TABLE existing_t (id INTEGER, existing_col TEXT);',
+      '--> statement-breakpoint',
+      'CREATE INDEX existing_idx ON existing_t (id);',
+      '--> statement-breakpoint',
+      'ALTER TABLE existing_t ADD COLUMN existing_col TEXT;',
+    ].join('\n');
+    writeJournal(dir, [{ tag: '0000_mixed', sql }]);
+    const mod = await loadRunnerWithJournalDir(dir);
+
+    await withDb((db) => {
+      // Pre-create everything the migration is about to (re)declare.
+      db.exec('CREATE TABLE existing_t (id INTEGER, existing_col TEXT);');
+      db.exec('CREATE INDEX existing_idx ON existing_t (id);');
+
+      const a = makeManifest('core', [{ id: '0000_mixed', sql }]);
+
+      const result = mod.runPerModuleMigrations(db, [a]);
+
+      expect(result.backfilled).toEqual(['0000_mixed']);
+      expect(result.applied).toEqual([]);
     });
   });
 });
