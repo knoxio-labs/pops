@@ -128,7 +128,7 @@ POPS ships as Docker images on GHCR. Anyone can self-host with the compose file 
 
 ```bash
 git clone https://github.com/knoxio/pops.git && cd pops
-cp .env.example .env                  # then edit: CLOUDFLARE_TUNNEL_TOKEN, POPS_DOMAIN, etc.
+cp .env.example .env                  # then edit: POPS_DOMAIN, image tag, watchtower settings
 
 # Create one file per secret. Replace each placeholder with the real value
 # (or leave the file empty if the corresponding integration is unused).

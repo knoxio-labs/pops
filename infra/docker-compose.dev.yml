@@ -214,6 +214,8 @@ services:
         condition: service_completed_successfully
 
   # ── CLOUDFLARE TUNNEL ────────────────────────────────────────────
+  # Local-config mode: ingress + tunnel UUID + credentials are rendered
+  # onto the host by ansible (knoxio/homelab-infra cloudflare-tunnel role).
   cloudflared:
     image: cloudflare/cloudflared:2025.2.0
     container_name: pops-cloudflared
@@ -221,7 +223,9 @@ services:
     networks:
       - frontend
       - documents
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    volumes:
+      - /etc/cloudflared:/etc/cloudflared:ro
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
 
 networks:
   frontend:
