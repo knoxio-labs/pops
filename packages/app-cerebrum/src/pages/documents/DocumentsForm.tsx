@@ -1,0 +1,81 @@
+/**
+ * DocumentsForm — form fields + action buttons for the documents
+ * generate/preview surface. Composes the smaller field groups.
+ */
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@pops/ui';
+
+import { DateRangeFields, FilterFields, ModeField, QueryField } from './DocumentsFormFields';
+
+import type { DocumentsFormState } from '../../documents/types';
+
+const TOUCH_TARGET_MIN_HEIGHT = 'min-h-[44px]';
+
+interface DocumentsFormProps {
+  form: DocumentsFormState;
+  setForm: (next: DocumentsFormState) => void;
+  isGenerating: boolean;
+  isPreviewing: boolean;
+  hasGenerated: boolean;
+  onPreview: () => void;
+  onGenerate: () => void;
+  onRegenerate: () => void;
+}
+
+function Actions({
+  isGenerating,
+  isPreviewing,
+  hasGenerated,
+  onPreview,
+  onGenerate,
+  onRegenerate,
+}: Omit<DocumentsFormProps, 'form' | 'setForm'>) {
+  const { t } = useTranslation('cerebrum');
+  const disabled = isPreviewing || isGenerating;
+  return (
+    <div className="flex gap-2 pt-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        className={TOUCH_TARGET_MIN_HEIGHT}
+        onClick={onPreview}
+      >
+        {t('documents.form.preview')}
+      </Button>
+      <Button
+        size="sm"
+        disabled={disabled}
+        className={TOUCH_TARGET_MIN_HEIGHT}
+        onClick={onGenerate}
+      >
+        {isGenerating ? t('documents.form.generating') : t('documents.form.generate')}
+      </Button>
+      {hasGenerated ? (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          className={TOUCH_TARGET_MIN_HEIGHT}
+          onClick={onRegenerate}
+        >
+          {t('documents.form.regenerate')}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+export function DocumentsForm(props: DocumentsFormProps) {
+  const { form, setForm, ...actionProps } = props;
+  return (
+    <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+      <ModeField form={form} setForm={setForm} />
+      <QueryField form={form} setForm={setForm} />
+      <DateRangeFields form={form} setForm={setForm} />
+      <FilterFields form={form} setForm={setForm} />
+      <Actions {...actionProps} />
+    </section>
+  );
+}
