@@ -37,14 +37,14 @@ function useDetailMutations(adapterId: string): DetailMutations {
       invalidate();
       toast.success(t('plexus.list.healthSuccess'));
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const syncMutation = trpc.cerebrum.plexus.adapters.sync.useMutation({
     onSuccess: () => {
       invalidate();
       toast.success(t('plexus.list.syncSuccess'));
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   return {
     isPending: healthMutation.isPending || syncMutation.isPending,
@@ -143,7 +143,7 @@ export function PlexusDetailPage() {
     return (
       <div className="p-4 md:p-6" data-testid="plexus-detail-error">
         <p className="text-destructive">
-          {t('plexus.detail.error', { message: extractMessage(detail.error) })}
+          {t('plexus.detail.error', { message: extractMessage(detail.error, t('errors.unknown')) })}
         </p>
         <BackLink />
       </div>

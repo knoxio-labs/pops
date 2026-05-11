@@ -16,7 +16,6 @@ import {
   DEFAULT_DOCUMENTS_FORM,
   type DocumentsFormState,
   type GeneratedDocument,
-  type GenerationResult,
   type PreviewResult,
 } from './types';
 
@@ -44,20 +43,19 @@ export function useDocumentsModel(): DocumentsModel {
 
   const generateMutation = trpc.cerebrum.emit.generate.useMutation({
     onSuccess: (result) => {
-      const typed = result as GenerationResult | undefined;
-      setDocument(typed?.document ?? null);
-      setNotice(typed?.notice ?? null);
+      setDocument(result?.document ?? null);
+      setNotice(result?.notice ?? null);
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
 
   const runPreview = async (request: ValidatedRequest) => {
     setIsPreviewing(true);
     try {
       const result = await utils.cerebrum.emit.preview.fetch(request);
-      setPreview((result as PreviewResult | undefined) ?? null);
+      setPreview(result ?? null);
     } catch (err) {
-      toast.error(extractMessage(err));
+      toast.error(extractMessage(err, t('errors.unknown')));
     } finally {
       setIsPreviewing(false);
     }

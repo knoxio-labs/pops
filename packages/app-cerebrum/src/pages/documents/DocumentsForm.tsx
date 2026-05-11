@@ -1,7 +1,3 @@
-/**
- * DocumentsForm — form fields + action buttons for the documents
- * generate/preview surface. Composes the smaller field groups.
- */
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@pops/ui';

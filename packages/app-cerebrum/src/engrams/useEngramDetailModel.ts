@@ -54,9 +54,12 @@ function validate(
   return errors;
 }
 
-function resolveError(err: unknown): { message: string } | null {
+function resolveError(
+  err: unknown,
+  t: (key: string, vars?: Record<string, string>) => string
+): { message: string } | null {
   if (!err) return null;
-  return { message: extractMessage(err) };
+  return { message: extractMessage(err, t('errors.unknown')) };
 }
 
 function isNotFound(err: unknown): boolean {
@@ -115,7 +118,7 @@ export function useEngramDetailModel(options: UseEngramDetailOptions): EngramDet
   return {
     id,
     isLoading: getQuery.isLoading,
-    error: resolveError(getQuery.error),
+    error: resolveError(getQuery.error, t),
     notFound: isNotFound(getQuery.error),
     engram,
     body,
@@ -127,7 +130,7 @@ export function useEngramDetailModel(options: UseEngramDetailOptions): EngramDet
     updateForm: formState.updateForm,
     validationErrors,
     isSaving: updateMutation.isPending,
-    saveError: resolveError(updateMutation.error),
+    saveError: resolveError(updateMutation.error, t),
     save,
     draftRestored: formState.draftRestored,
     discardDraft: formState.discardDraft,

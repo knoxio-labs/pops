@@ -17,34 +17,44 @@ import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 import type { GliaWorkerKey } from '../../glia/types';
 
+interface WorkerMutationState {
+  isPending: boolean;
+  mutate: (input: { dryRun: boolean }, opts: { onSuccess: () => void }) => void;
+}
+
+function useSharedCallbacks() {
+  const { t } = useTranslation('cerebrum');
+  const utils = trpc.useUtils();
+  return {
+    onSuccess: () => utils.cerebrum.glia.actions.list.invalidate(),
+    onError: (err: unknown) => toast.error(extractMessage(err, t('errors.unknown'))),
+  };
+}
+
+function usePrunerMutation(): WorkerMutationState {
+  return trpc.cerebrum.glia.runPruner.useMutation(useSharedCallbacks());
+}
+
+function useConsolidatorMutation(): WorkerMutationState {
+  return trpc.cerebrum.glia.runConsolidator.useMutation(useSharedCallbacks());
+}
+
+function useLinkerMutation(): WorkerMutationState {
+  return trpc.cerebrum.glia.runLinker.useMutation(useSharedCallbacks());
+}
+
+function useAuditorMutation(): WorkerMutationState {
+  return trpc.cerebrum.glia.runAuditor.useMutation(useSharedCallbacks());
+}
+
 interface WorkerRowProps {
   worker: GliaWorkerKey;
   label: string;
+  mutation: WorkerMutationState;
 }
 
-function useWorkerMutation(worker: GliaWorkerKey) {
-  const utils = trpc.useUtils();
-  const onSuccess = () => utils.cerebrum.glia.actions.list.invalidate();
-  const onError = (err: unknown) => toast.error(extractMessage(err));
-  const pruner = trpc.cerebrum.glia.runPruner.useMutation({ onSuccess, onError });
-  const consolidator = trpc.cerebrum.glia.runConsolidator.useMutation({ onSuccess, onError });
-  const linker = trpc.cerebrum.glia.runLinker.useMutation({ onSuccess, onError });
-  const auditor = trpc.cerebrum.glia.runAuditor.useMutation({ onSuccess, onError });
-  switch (worker) {
-    case 'pruner':
-      return pruner;
-    case 'consolidator':
-      return consolidator;
-    case 'linker':
-      return linker;
-    case 'auditor':
-      return auditor;
-  }
-}
-
-function WorkerRow({ worker, label }: WorkerRowProps) {
+function WorkerRow({ worker, label, mutation }: WorkerRowProps) {
   const { t } = useTranslation('cerebrum');
-  const mutation = useWorkerMutation(worker);
   const [dryRun, setDryRun] = useState(true);
 
   const handleRun = () => {
@@ -85,6 +95,22 @@ function WorkerRow({ worker, label }: WorkerRowProps) {
   );
 }
 
+function PrunerRow({ label }: { label: string }) {
+  return <WorkerRow worker="pruner" label={label} mutation={usePrunerMutation()} />;
+}
+
+function ConsolidatorRow({ label }: { label: string }) {
+  return <WorkerRow worker="consolidator" label={label} mutation={useConsolidatorMutation()} />;
+}
+
+function LinkerRow({ label }: { label: string }) {
+  return <WorkerRow worker="linker" label={label} mutation={useLinkerMutation()} />;
+}
+
+function AuditorRow({ label }: { label: string }) {
+  return <WorkerRow worker="auditor" label={label} mutation={useAuditorMutation()} />;
+}
+
 export function WorkerPanel() {
   const { t } = useTranslation('cerebrum');
   return (
@@ -96,10 +122,10 @@ export function WorkerPanel() {
         <p className="text-xs text-muted-foreground">{t('glia.workers.description')}</p>
       </header>
       <div className="space-y-2" data-testid="glia-worker-list">
-        <WorkerRow worker="pruner" label={t('glia.workers.pruner')} />
-        <WorkerRow worker="consolidator" label={t('glia.workers.consolidator')} />
-        <WorkerRow worker="linker" label={t('glia.workers.linker')} />
-        <WorkerRow worker="auditor" label={t('glia.workers.auditor')} />
+        <PrunerRow label={t('glia.workers.pruner')} />
+        <ConsolidatorRow label={t('glia.workers.consolidator')} />
+        <LinkerRow label={t('glia.workers.linker')} />
+        <AuditorRow label={t('glia.workers.auditor')} />
       </div>
     </section>
   );

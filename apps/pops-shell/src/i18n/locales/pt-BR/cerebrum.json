@@ -204,6 +204,7 @@
   "glia.audit.filter.status": "Status",
   "glia.audit.filter.allTypes": "Todos os tipos",
   "glia.audit.filter.allStatuses": "Todos os status",
+  "glia.audit.affectedMore": " +{{count}} mais",
   "glia.trust.title": "Estado de confiança",
   "glia.trust.column.type": "Tipo de ação",
   "glia.trust.column.phase": "Fase atual",
@@ -244,5 +245,6 @@
   "documents.result.sources": "Fontes",
   "documents.result.metadata": "Metadados",
   "documents.result.notice": "{{notice}}",
-  "documents.result.empty": "Nenhum documento gerado ainda."
+  "documents.result.empty": "Nenhum documento gerado ainda.",
+  "errors.unknown": "Erro desconhecido"
 }

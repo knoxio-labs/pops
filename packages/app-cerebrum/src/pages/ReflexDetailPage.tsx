@@ -34,18 +34,18 @@ function useReflexMutations(name: string): ReflexMutations {
   };
   const enableMutation = trpc.cerebrum.reflex.enable.useMutation({
     onSuccess: invalidate,
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const disableMutation = trpc.cerebrum.reflex.disable.useMutation({
     onSuccess: invalidate,
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const testMutation = trpc.cerebrum.reflex.test.useMutation({
     onSuccess: () => {
       invalidate();
       toast.success(t('reflex.list.fireSuccess'));
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   return {
     isPending: enableMutation.isPending || disableMutation.isPending || testMutation.isPending,
@@ -141,7 +141,7 @@ export function ReflexDetailPage() {
     return (
       <div className="p-4 md:p-6" data-testid="reflex-detail-error">
         <p className="text-destructive">
-          {t('reflex.detail.error', { message: extractMessage(detail.error) })}
+          {t('reflex.detail.error', { message: extractMessage(detail.error, t('errors.unknown')) })}
         </p>
         <BackLink />
       </div>

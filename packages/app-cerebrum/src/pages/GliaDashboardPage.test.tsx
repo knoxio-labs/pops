@@ -147,4 +147,39 @@ describe('GliaDashboardPage', () => {
     renderPage();
     expect(screen.getByTestId('glia-audit-row')).toBeInTheDocument();
   });
+
+  it('shows a "+N more" indicator when affectedIds is truncated', () => {
+    mockActionsListQuery.mockReturnValue({
+      data: {
+        actions: [
+          {
+            id: 'act_1',
+            actionType: 'prune',
+            affectedIds: ['eng_1', 'eng_2', 'eng_3', 'eng_4', 'eng_5'],
+            rationale: 'stale',
+            payload: null,
+            phase: 'propose',
+            status: 'pending',
+            userDecision: null,
+            userNote: null,
+            executedAt: null,
+            decidedAt: null,
+            revertedAt: null,
+            createdAt: '2026-05-11T01:00:00Z',
+          },
+        ],
+        total: 1,
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    renderPage();
+    // 5 affectedIds → first 3 visible + "+2 more" indicator.
+    const indicator = screen.getByTestId('glia-audit-affected-more');
+    expect(indicator).toBeInTheDocument();
+    expect(indicator.textContent).toContain('eng_1');
+    expect(indicator.textContent).toContain('eng_3');
+    expect(indicator.textContent).toContain('+2');
+  });
 });

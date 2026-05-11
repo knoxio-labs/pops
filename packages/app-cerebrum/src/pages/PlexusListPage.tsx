@@ -132,14 +132,14 @@ function useAdapterMutations(): AdapterMutations {
       invalidate();
       toast.success(t('plexus.list.healthSuccess'));
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const syncMutation = trpc.cerebrum.plexus.adapters.sync.useMutation({
     onSuccess: () => {
       invalidate();
       toast.success(t('plexus.list.syncSuccess'));
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   return {
     isPending: healthMutation.isPending || syncMutation.isPending,
@@ -162,7 +162,12 @@ function PlexusListBody({ list, adapters, mutations }: ListBodyProps) {
   const { t } = useTranslation('cerebrum');
   if (list.isLoading) return <LoadingState />;
   if (list.error) {
-    return <ErrorState message={extractMessage(list.error)} onRetry={() => void list.refetch()} />;
+    return (
+      <ErrorState
+        message={extractMessage(list.error, t('errors.unknown'))}
+        onRetry={() => void list.refetch()}
+      />
+    );
   }
   if (adapters.length === 0) return <EmptyAdapters />;
   return (

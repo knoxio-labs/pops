@@ -1,11 +1,3 @@
-/**
- * ReflexListPage — `/cerebrum/reflex` (PRD-089).
- *
- * Lists reflexes loaded from `reflexes.toml` with status, trigger summary,
- * last-fired timestamp and execution count. Enable/disable toggles and a
- * manual fire (test) action are wired to the existing
- * `cerebrum.reflex.{enable,disable,test}` mutations.
- */
 import { Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -76,18 +68,18 @@ function useReflexListMutations(): ReflexListMutations {
   };
   const enableMutation = trpc.cerebrum.reflex.enable.useMutation({
     onSuccess: invalidate,
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const disableMutation = trpc.cerebrum.reflex.disable.useMutation({
     onSuccess: invalidate,
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   const testMutation = trpc.cerebrum.reflex.test.useMutation({
     onSuccess: () => {
       invalidate();
       toast.success(t('reflex.list.fireSuccess'));
     },
-    onError: (err) => toast.error(extractMessage(err)),
+    onError: (err) => toast.error(extractMessage(err, t('errors.unknown'))),
   });
   return {
     isPending: enableMutation.isPending || disableMutation.isPending || testMutation.isPending,
@@ -111,7 +103,12 @@ function ReflexListBody({ list, reflexes, mutations }: ReflexListBodyProps) {
   const { t } = useTranslation('cerebrum');
   if (list.isLoading) return <LoadingState />;
   if (list.error) {
-    return <ErrorState message={extractMessage(list.error)} onRetry={() => void list.refetch()} />;
+    return (
+      <ErrorState
+        message={extractMessage(list.error, t('errors.unknown'))}
+        onRetry={() => void list.refetch()}
+      />
+    );
   }
   if (reflexes.length === 0) return <EmptyReflexes />;
   return (

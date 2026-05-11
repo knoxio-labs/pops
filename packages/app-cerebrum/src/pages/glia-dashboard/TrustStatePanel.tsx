@@ -54,7 +54,7 @@ function TrustBody({ query, states }: TrustBodyProps) {
     return (
       <div className="p-6 text-center" data-testid="glia-trust-error">
         <p className="text-destructive mb-3">
-          {t('glia.trust.error', { message: extractMessage(query.error) })}
+          {t('glia.trust.error', { message: extractMessage(query.error, t('errors.unknown')) })}
         </p>
         <Button
           variant="outline"

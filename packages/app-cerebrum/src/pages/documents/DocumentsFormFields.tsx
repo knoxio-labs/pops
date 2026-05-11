@@ -1,7 +1,3 @@
-/**
- * Field group components for DocumentsForm. Kept thin so the parent form
- * stays under the line/complexity limits.
- */
 import { useTranslation } from 'react-i18next';
 
 import { Checkbox, Input, Label } from '@pops/ui';

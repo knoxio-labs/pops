@@ -7,15 +7,14 @@ import { useTranslation } from 'react-i18next';
 
 import { trpc } from '@pops/api-client';
 import {
-  Badge,
   Button,
   Skeleton,
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  TooltipProvider,
 } from '@pops/ui';
 
 import {
@@ -26,24 +25,8 @@ import {
   type GliaActionType,
 } from '../../glia/types';
 import { extractMessage } from '../../utils/errors';
-import { formatTimestamp } from '../../utils/format';
 import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
-
-function statusVariant(
-  status: GliaActionStatus
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-  switch (status) {
-    case 'executed':
-    case 'approved':
-      return 'default';
-    case 'rejected':
-    case 'reverted':
-      return 'destructive';
-    case 'pending':
-    default:
-      return 'secondary';
-  }
-}
+import { AuditActionRow } from './AuditActionRow';
 
 function FilterSelect<T extends string>({
   label,
@@ -78,23 +61,6 @@ function FilterSelect<T extends string>({
   );
 }
 
-function ActionRow({ action }: { action: GliaAction }) {
-  return (
-    <TableRow data-testid="glia-audit-row">
-      <TableCell className="text-xs">{formatTimestamp(action.createdAt)}</TableCell>
-      <TableCell className="text-xs">
-        <Badge variant="outline">{action.actionType}</Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={statusVariant(action.status)}>{action.status}</Badge>
-      </TableCell>
-      <TableCell className="text-xs text-muted-foreground">{action.phase}</TableCell>
-      <TableCell className="text-xs">{action.affectedIds.slice(0, 3).join(', ')}</TableCell>
-      <TableCell className="text-xs">{action.rationale}</TableCell>
-    </TableRow>
-  );
-}
-
 interface AuditBodyProps {
   query: {
     isLoading: boolean;
@@ -118,7 +84,7 @@ function AuditBody({ query, actions }: AuditBodyProps) {
     return (
       <div className="p-6 text-center" data-testid="glia-audit-error">
         <p className="text-destructive mb-3">
-          {t('glia.audit.error', { message: extractMessage(query.error) })}
+          {t('glia.audit.error', { message: extractMessage(query.error, t('errors.unknown')) })}
         </p>
         <Button
           variant="outline"
@@ -152,7 +118,7 @@ function AuditBody({ query, actions }: AuditBodyProps) {
       </TableHeader>
       <TableBody>
         {actions.map((action) => (
-          <ActionRow key={action.id} action={action} />
+          <AuditActionRow key={action.id} action={action} />
         ))}
       </TableBody>
     </Table>
@@ -172,30 +138,32 @@ export function AuditTrailPanel() {
   const actions: GliaAction[] = query.data?.actions ?? [];
 
   return (
-    <section className="space-y-3">
-      <header>
-        <h3 className="text-xs font-semibold uppercase text-muted-foreground">
-          {t('glia.audit.title')}
-        </h3>
-        <p className="text-xs text-muted-foreground">{t('glia.audit.description')}</p>
-      </header>
-      <div className="flex flex-wrap items-end gap-3">
-        <FilterSelect
-          label={t('glia.audit.filter.type')}
-          value={actionType}
-          onChange={setActionType}
-          options={GLIA_ACTION_TYPES}
-          emptyLabel={t('glia.audit.filter.allTypes')}
-        />
-        <FilterSelect
-          label={t('glia.audit.filter.status')}
-          value={status}
-          onChange={setStatus}
-          options={GLIA_ACTION_STATUSES}
-          emptyLabel={t('glia.audit.filter.allStatuses')}
-        />
-      </div>
-      <AuditBody query={query} actions={actions} />
-    </section>
+    <TooltipProvider>
+      <section className="space-y-3">
+        <header>
+          <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+            {t('glia.audit.title')}
+          </h3>
+          <p className="text-xs text-muted-foreground">{t('glia.audit.description')}</p>
+        </header>
+        <div className="flex flex-wrap items-end gap-3">
+          <FilterSelect
+            label={t('glia.audit.filter.type')}
+            value={actionType}
+            onChange={setActionType}
+            options={GLIA_ACTION_TYPES}
+            emptyLabel={t('glia.audit.filter.allTypes')}
+          />
+          <FilterSelect
+            label={t('glia.audit.filter.status')}
+            value={status}
+            onChange={setStatus}
+            options={GLIA_ACTION_STATUSES}
+            emptyLabel={t('glia.audit.filter.allStatuses')}
+          />
+        </div>
+        <AuditBody query={query} actions={actions} />
+      </section>
+    </TooltipProvider>
   );
 }

@@ -204,6 +204,7 @@
   "glia.audit.filter.status": "Status",
   "glia.audit.filter.allTypes": "All types",
   "glia.audit.filter.allStatuses": "All statuses",
+  "glia.audit.affectedMore": " +{{count}} more",
   "glia.trust.title": "Trust state",
   "glia.trust.column.type": "Action type",
   "glia.trust.column.phase": "Current phase",
@@ -244,5 +245,6 @@
   "documents.result.sources": "Sources",
   "documents.result.metadata": "Metadata",
   "documents.result.notice": "{{notice}}",
-  "documents.result.empty": "No document generated yet."
+  "documents.result.empty": "No document generated yet.",
+  "errors.unknown": "Unknown error"
 }
