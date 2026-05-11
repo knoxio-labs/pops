@@ -1,5 +1,5 @@
-import { cerebrumAiTools } from '../../mcp/tools/manifest.js';
 import { mergeRouters, router } from '../../trpc.js';
+import { cerebrumAiTools } from './ai-tools/index.js';
 import { emitRouter } from './emit/router.js';
 import { engramsRouter } from './engrams/router.js';
 import { scopesRouter } from './engrams/scopes-router.js';

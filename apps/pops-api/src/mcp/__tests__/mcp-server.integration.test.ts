@@ -142,11 +142,11 @@ vi.mock('../../shared/redis-client.js', () => ({
 
 // --- Dynamic imports AFTER mocks ---
 
-const { handleCerebrumSearch } = await import('../tools/cerebrum-search.js');
-const { handleCerebrumQuery } = await import('../tools/cerebrum-query.js');
-const { handleEngramRead } = await import('../tools/cerebrum-engram-read.js');
-const { handleEngramWrite } = await import('../tools/cerebrum-engram-write.js');
-const { handleCerebrumIngest } = await import('../tools/cerebrum-ingest.js');
+const { handleCerebrumSearch } = await import('../../modules/cerebrum/ai-tools/search.js');
+const { handleCerebrumQuery } = await import('../../modules/cerebrum/ai-tools/query.js');
+const { handleEngramRead } = await import('../../modules/cerebrum/ai-tools/engram-read.js');
+const { handleEngramWrite } = await import('../../modules/cerebrum/ai-tools/engram-write.js');
+const { handleCerebrumIngest } = await import('../../modules/cerebrum/ai-tools/ingest.js');
 const { getEngramService, resetCerebrumCache } = await import('../../modules/cerebrum/instance.js');
 const { parseResult } = await import('./test-helpers.js');
 

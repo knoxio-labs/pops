@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { parseResult } from './test-helpers.js';
 
-import type { RetrievalResult } from '../../modules/cerebrum/retrieval/types.js';
+import type { RetrievalResult } from '../../retrieval/types.js';
 
 // Mock the DB and HybridSearchService
-vi.mock('../../db.js', () => ({
+vi.mock('../../../../db.js', () => ({
   getDrizzle: () => ({}),
 }));
 
@@ -32,13 +32,13 @@ const mockHybridResults: RetrievalResult[] = [
 
 const mockHybrid = vi.fn().mockResolvedValue(mockHybridResults);
 
-vi.mock('../../modules/cerebrum/retrieval/hybrid-search.js', () => ({
+vi.mock('../../retrieval/hybrid-search.js', () => ({
   HybridSearchService: class MockHybridSearchService {
     hybrid = mockHybrid;
   },
 }));
 
-const { handleCerebrumSearch } = await import('../tools/cerebrum-search.js');
+const { handleCerebrumSearch } = await import('../search.js');
 
 describe('handleCerebrumSearch', () => {
   it('returns VALIDATION_ERROR for empty query', async () => {

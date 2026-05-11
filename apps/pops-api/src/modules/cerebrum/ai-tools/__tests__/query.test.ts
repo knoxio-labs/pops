@@ -4,14 +4,14 @@ import { extractText, parseResult } from './test-helpers.js';
 
 const mockAsk = vi.fn();
 
-vi.mock('../../modules/cerebrum/query/query-service.js', () => ({
+vi.mock('../../query/query-service.js', () => ({
   QueryService: class MockQueryService {
     ask = mockAsk;
   },
 }));
 
 // Import after mock setup.
-const { handleCerebrumQuery } = await import('../tools/cerebrum-query.js');
+const { handleCerebrumQuery } = await import('../query.js');
 
 describe('cerebrum.query MCP tool', () => {
   beforeEach(() => {
