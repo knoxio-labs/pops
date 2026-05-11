@@ -31,6 +31,7 @@ function Actions({
   return (
     <div className="flex gap-2 pt-2">
       <Button
+        type="button"
         variant="outline"
         size="sm"
         disabled={disabled}
@@ -40,6 +41,7 @@ function Actions({
         {t('documents.form.preview')}
       </Button>
       <Button
+        type="button"
         size="sm"
         disabled={disabled}
         className={TOUCH_TARGET_MIN_HEIGHT}
@@ -49,6 +51,7 @@ function Actions({
       </Button>
       {hasGenerated ? (
         <Button
+          type="button"
           variant="outline"
           size="sm"
           disabled={disabled}

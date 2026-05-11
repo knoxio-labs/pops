@@ -32,13 +32,14 @@ function AffectedIdsCell({ ids }: { ids: readonly string[] }) {
     <TableCell className="text-xs">
       <Tooltip>
         <TooltipTrigger asChild>
-          <span
-            className="cursor-help underline decoration-dotted"
+          <button
+            type="button"
+            className="cursor-help bg-transparent p-0 text-left underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             data-testid="glia-audit-affected-more"
           >
             {visible}
             {t('glia.audit.affectedMore', { count: overflow })}
-          </span>
+          </button>
         </TooltipTrigger>
         <TooltipContent>
           <span className="break-all">{ids.join(', ')}</span>
