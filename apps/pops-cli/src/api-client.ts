@@ -1,7 +1,7 @@
 /**
- * Minimal tRPC HTTP client. Speaks the SuperJSON-style transformer-free wire
- * format that pops-api uses (`{ json: <payload> }` envelopes for inputs,
- * `result.data.json` envelope on success).
+ * Minimal tRPC HTTP client. Speaks the no-transformer wire format that
+ * pops-api uses today — inputs are sent as raw JSON (no `{ json: ... }`
+ * envelope) and successes come back as `{ result: { data: <payload> } }`.
  *
  * Kept dependency-free so the CLI binary stays small. The shared
  * `@pops/api-client` package targets React and isn't appropriate here.
@@ -37,30 +37,32 @@ export class ApiUnreachableError extends Error {
 }
 
 interface TrpcSuccess<T> {
-  result: { data: { json: T } };
+  result: { data: T };
+}
+
+interface TrpcFailureBody {
+  message: string;
+  code?: number | string;
+  data?: { httpStatus?: number; code?: string };
 }
 
 interface TrpcFailure {
-  error: {
-    json: { message: string; code?: string; data?: { httpStatus?: number; code?: string } };
-  };
+  error: TrpcFailureBody;
 }
 
 function isTrpcSuccess<T>(value: unknown): value is TrpcSuccess<T> {
   if (typeof value !== 'object' || value === null) return false;
   if (!('result' in value)) return false;
   const result = (value as { result?: unknown }).result;
-  if (typeof result !== 'object' || result === null || !('data' in result)) return false;
-  const data = (result as { data?: unknown }).data;
-  if (typeof data !== 'object' || data === null) return false;
-  return 'json' in data;
+  if (typeof result !== 'object' || result === null) return false;
+  return 'data' in result;
 }
 
 function isTrpcFailure(value: unknown): value is TrpcFailure {
   if (typeof value !== 'object' || value === null) return false;
   if (!('error' in value)) return false;
   const err = (value as { error?: unknown }).error;
-  return typeof err === 'object' && err !== null && 'json' in err;
+  return typeof err === 'object' && err !== null && 'message' in err;
 }
 
 async function sendRequest(
@@ -73,7 +75,7 @@ async function sendRequest(
     return await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ json: input }),
+      body: JSON.stringify(input),
     });
   } catch (err) {
     throw new ApiUnreachableError(
@@ -97,9 +99,10 @@ async function parseBody(response: Response, url: string): Promise<unknown> {
 }
 
 function throwFailure(parsed: unknown, response: Response): never {
-  const failure = isTrpcFailure(parsed) ? parsed.error.json : null;
+  const failure = isTrpcFailure(parsed) ? parsed.error : null;
   const message = failure?.message ?? `Request failed with status ${response.status}`;
-  const code = failure?.code ?? failure?.data?.code;
+  const code =
+    failure?.data?.code ?? (typeof failure?.code === 'string' ? failure.code : undefined);
   throw new ApiError({
     message,
     code,
@@ -126,10 +129,10 @@ export async function trpcMutation<T>(
   if (!response.ok || isTrpcFailure(parsed)) throwFailure(parsed, response);
   if (!isTrpcSuccess<T>(parsed)) {
     throw new ApiError({
-      message: 'Malformed tRPC success response (no result.data.json)',
+      message: 'Malformed tRPC success response (no result.data)',
       httpStatus: response.status,
     });
   }
 
-  return parsed.result.data.json;
+  return parsed.result.data;
 }

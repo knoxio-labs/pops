@@ -88,7 +88,8 @@ describe('runAsk', () => {
     });
 
     expect(getFetchJson(fetchSpy)).toEqual({
-      json: { question: 'q', scopes: ['work', 'work.platform'] },
+      question: 'q',
+      scopes: ['work', 'work.platform'],
     });
   });
 });
