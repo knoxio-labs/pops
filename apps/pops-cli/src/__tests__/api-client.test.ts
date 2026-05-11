@@ -49,15 +49,14 @@ describe('trpcMutation wire format', () => {
 
   it('surfaces tRPC errors from `error.message` (no `.json` envelope on the error side either)', async () => {
     mockFetchTrpcError('text must be a non-empty string', 400, 'BAD_REQUEST');
-    await expect(
-      trpcMutation(
-        { apiUrl: 'http://api.test', apiKey: undefined },
-        'cerebrum.ingest.quickCapture',
-        {
-          text: '',
-        }
-      )
-    ).rejects.toThrow(ApiError);
+    const call = trpcMutation(
+      { apiUrl: 'http://api.test', apiKey: undefined },
+      'cerebrum.ingest.quickCapture',
+      { text: '' }
+    );
+    await expect(call).rejects.toBeInstanceOf(ApiError);
+    await expect(call).rejects.toThrow(/text must be a non-empty string/);
+    await expect(call).rejects.toMatchObject({ code: 'BAD_REQUEST', httpStatus: 400 });
   });
 
   it('forwards X-API-Key when the config supplies a key', async () => {
