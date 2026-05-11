@@ -12,18 +12,12 @@
  * agent input and manual input share every pipeline stage (normalise →
  * classify → extract → infer → write).
  */
+import { z } from 'zod';
+
 import { IngestService } from '../ingest/pipeline.js';
 import { mapServiceError, toolError, toolSuccess } from './result.js';
 
 import type { AiToolResult } from '@pops/types';
-
-interface IngestArgs {
-  body: string;
-  title?: string;
-  type?: string;
-  scopes?: string[];
-  tags?: string[];
-}
 
 const TITLE_KEYS = ['title', 'name', 'subject', 'label'] as const;
 
@@ -119,21 +113,35 @@ export function handleJsonBody(body: string): JsonBodyResult {
   };
 }
 
-function parseArgs(raw: Record<string, unknown>): IngestArgs {
-  const body = typeof raw['body'] === 'string' ? raw['body'] : '';
-  const title = typeof raw['title'] === 'string' ? raw['title'] : undefined;
-  const type = typeof raw['type'] === 'string' ? raw['type'] : undefined;
-  const scopes = Array.isArray(raw['scopes'])
-    ? (raw['scopes'] as unknown[]).filter((s): s is string => typeof s === 'string')
-    : undefined;
-  const tags = Array.isArray(raw['tags'])
-    ? (raw['tags'] as unknown[]).filter((s): s is string => typeof s === 'string')
-    : undefined;
-  return { body, title, type, scopes, tags };
+// Lenient string-array coercion: array inputs may include non-string entries
+// (agents sometimes send mixed JSON). Drop those rather than reject the call
+// — the dropped values weren't meaningful scopes/tags anyway.
+const stringArrayLenient = z.preprocess(
+  (value) =>
+    Array.isArray(value)
+      ? value.filter((entry): entry is string => typeof entry === 'string')
+      : value,
+  z.array(z.string()).optional()
+);
+
+const ingestArgsSchema = z.object({
+  body: z.string().optional().default(''),
+  title: z.string().optional(),
+  type: z.string().optional(),
+  scopes: stringArrayLenient,
+  tags: stringArrayLenient,
+});
+
+type IngestArgs = z.infer<typeof ingestArgsSchema>;
+
+function parseIngestArgs(raw: Record<string, unknown>): IngestArgs {
+  // `.catch` keeps the handler resilient to unexpected shapes — empty body
+  // falls through to the existing VALIDATION_ERROR path below.
+  return ingestArgsSchema.catch({ body: '' }).parse(raw);
 }
 
 export async function handleCerebrumIngest(raw: Record<string, unknown>): Promise<AiToolResult> {
-  const args = parseArgs(raw);
+  const args = parseIngestArgs(raw);
 
   if (!args.body.trim()) {
     return toolError('body is required and must be non-empty', 'VALIDATION_ERROR');
@@ -203,14 +211,9 @@ export const cerebrumIngestSchema = {
 // cerebrum.quickCapture — lightweight MCP tool for agent capture (PRD-081 US-02 AC #2)
 // ---------------------------------------------------------------------------
 
-interface QuickCaptureArgs {
-  text: string;
-}
-
-function parseQuickCaptureArgs(raw: Record<string, unknown>): QuickCaptureArgs {
-  const text = typeof raw['text'] === 'string' ? raw['text'] : '';
-  return { text };
-}
+const quickCaptureArgsSchema = z.object({
+  text: z.string().optional().default(''),
+});
 
 /**
  * MCP wrapper for `IngestService.quickCapture`. Stores raw text as a
@@ -221,7 +224,7 @@ function parseQuickCaptureArgs(raw: Record<string, unknown>): QuickCaptureArgs {
 export async function handleCerebrumQuickCapture(
   raw: Record<string, unknown>
 ): Promise<AiToolResult> {
-  const args = parseQuickCaptureArgs(raw);
+  const args = quickCaptureArgsSchema.catch({ text: '' }).parse(raw);
 
   if (!args.text.trim()) {
     return toolError('text is required and must be non-empty', 'VALIDATION_ERROR');
