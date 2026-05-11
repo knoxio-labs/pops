@@ -112,6 +112,14 @@ describe('migrationOwnershipMap', () => {
     expect(owners.get('b_1')).toBe('b');
     expect(owners.size).toBe(2);
   });
+
+  it('throws if two modules claim the same migration tag', () => {
+    const a = makeManifest('a', [{ id: 'shared_tag', sql: '' }]);
+    const b = makeManifest('b', [{ id: 'shared_tag', sql: '' }]);
+    expect(() => migrationOwnershipMap([a, b])).toThrow(
+      /Migration tag "shared_tag" is declared by both "a" and "b"\./
+    );
+  });
 });
 
 describe('runPerModuleMigrations', () => {
@@ -209,6 +217,57 @@ describe('runPerModuleMigrations', () => {
       name: string;
     }[];
     expect(tables.map((t) => t.name)).not.toContain('orphan_t');
+
+    db.close();
+  });
+
+  it('refreshes the applied-hash cache after each insert (handles identical SQL bodies)', async () => {
+    // Two distinct tags that share the same SQL body — drizzle generates
+    // these for idempotent re-creation migrations. Without the cache update
+    // after insert, the second entry would be re-executed and fail.
+    const dir = fakeJournalDir();
+    const sharedSql = 'CREATE TABLE IF NOT EXISTS shared_t (id INTEGER);';
+    writeJournal(dir, [
+      { tag: '001_first', sql: sharedSql },
+      { tag: '002_second', sql: sharedSql },
+    ]);
+    const mod = await loadRunnerWithJournalDir(dir);
+
+    const db = new BetterSqlite3(dbPath);
+    const a = makeManifest('a', [
+      { id: '001_first', sql: sharedSql },
+      { id: '002_second', sql: sharedSql },
+    ]);
+
+    const result = mod.runPerModuleMigrations(db, [a]);
+
+    // First tag applies; second is recognised as already applied (same hash)
+    // because the cache was updated mid-loop.
+    expect(result.applied).toEqual(['001_first']);
+    expect(result.alreadyApplied).toEqual(['002_second']);
+
+    db.close();
+  });
+
+  it('exposes a by-owner variant for boot-time use', async () => {
+    const dir = fakeJournalDir();
+    writeJournal(dir, [
+      { tag: '001_a', sql: 'CREATE TABLE a (id INTEGER);' },
+      { tag: '002_b', sql: 'CREATE TABLE b (id INTEGER);' },
+    ]);
+    const mod = await loadRunnerWithJournalDir(dir);
+
+    const db = new BetterSqlite3(dbPath);
+    const owners = new Map([
+      ['001_a', 'a'],
+      ['002_b', 'b'],
+    ]);
+    const installedIds = new Set(['a']);
+
+    const result = mod.runPerModuleMigrationsByOwner(db, installedIds, owners);
+
+    expect(result.applied).toEqual(['001_a']);
+    expect(result.skipped).toEqual(['002_b']);
 
     db.close();
   });

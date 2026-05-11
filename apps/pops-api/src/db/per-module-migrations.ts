@@ -86,9 +86,12 @@ export function installedMigrationTags(manifests: readonly ModuleManifest[]): Re
  * tags (known but absent module) from "unowned" tags (no module claims
  * the tag at all).
  *
- * Multiple modules MUST NOT own the same migration tag — the build-time
- * registry catches duplicates as a contract violation. If a tag appears
- * in multiple manifests the last write wins and the contract guard fires.
+ * Multiple modules MUST NOT own the same migration tag. The build-time
+ * registry guard (US-11) is the primary catch, but we fail fast here
+ * too so any runtime drift between the static map and the live manifest
+ * graph surfaces as a hard error instead of silently letting the last
+ * manifest win (which would mis-attribute a migration and break the
+ * install-set filter).
  */
 export function migrationOwnershipMap(
   manifests: readonly ModuleManifest[]
@@ -96,6 +99,12 @@ export function migrationOwnershipMap(
   const owners = new Map<string, string>();
   for (const m of manifests) {
     for (const migration of m.backend?.migrations ?? []) {
+      const existingOwner = owners.get(migration.id);
+      if (existingOwner !== undefined) {
+        throw new Error(
+          `Migration tag "${migration.id}" is declared by both "${existingOwner}" and "${m.id}".`
+        );
+      }
       owners.set(migration.id, m.id);
     }
   }
@@ -189,12 +198,33 @@ export function runPerModuleMigrations(
   manifests: readonly ModuleManifest[],
   knownOwners?: ReadonlyMap<string, string>
 ): PerModuleMigrationResult {
-  ensureDrizzleTable(db);
-
-  const journal = readJournal();
   const owners = knownOwners ?? migrationOwnershipMap(manifests);
   const installedTags = installedMigrationTags(manifests);
   const installedIds = new Set(manifests.map((m) => m.id));
+  return runPerModuleMigrationsByOwner(db, installedIds, owners, installedTags);
+}
+
+/**
+ * Boot-time variant used by `db.ts`. Mirrors {@link warnOrphanMigrationsByOwner}:
+ * the live manifest graph cannot be imported during database bootstrap
+ * (manifests transitively pull `db.ts` via their tRPC routers), so callers
+ * supply the install-set of module ids and the canonical ownership map
+ * (from `migration-ownership.ts`) directly.
+ *
+ * Optionally pass `installedTags` to enforce the manifest-level "tag is
+ * declared by an installed module's manifest" guard. When omitted, every
+ * tag whose owner is installed is treated as installed too — the static
+ * ownership map is authoritative.
+ */
+export function runPerModuleMigrationsByOwner(
+  db: BetterSqlite3.Database,
+  installedIds: ReadonlySet<string>,
+  owners: ReadonlyMap<string, string>,
+  installedTags?: ReadonlySet<string>
+): PerModuleMigrationResult {
+  ensureDrizzleTable(db);
+
+  const journal = readJournal();
 
   const applied: string[] = [];
   const skipped: string[] = [];
@@ -225,7 +255,7 @@ export function runPerModuleMigrations(
       skipped.push(entry.tag);
       continue;
     }
-    if (!installedTags.has(entry.tag)) {
+    if (installedTags !== undefined && !installedTags.has(entry.tag)) {
       // Owner is installed but manifest doesn't list the tag — possible
       // if the ownership map and manifest disagree. Skip defensively.
       skipped.push(entry.tag);
@@ -238,6 +268,10 @@ export function runPerModuleMigrations(
       }
       insert.run(hash, Date.now());
     })();
+    // Keep the applied-hash cache in sync so subsequent journal entries
+    // with the same SQL body (e.g. idempotent re-creation migrations) are
+    // recognised as already applied within this same boot.
+    knownHashes.add(hash);
     applied.push(entry.tag);
   }
 

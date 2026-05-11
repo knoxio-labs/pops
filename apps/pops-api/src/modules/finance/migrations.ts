@@ -11,7 +11,7 @@ import { drizzleMigrations } from '../../db/load-drizzle-migration.js';
 
 import type { MigrationDescriptor } from '@pops/types';
 
-export const FINANCE_MIGRATION_TAGS: readonly string[] = [
+export const financeMigrationTags: readonly string[] = [
   // transaction_corrections: add is_active.
   '0025_youthful_hulk',
   // tag_vocabulary table.
@@ -24,4 +24,4 @@ export const FINANCE_MIGRATION_TAGS: readonly string[] = [
 ];
 
 export const financeMigrations: readonly MigrationDescriptor[] =
-  drizzleMigrations(FINANCE_MIGRATION_TAGS);
+  drizzleMigrations(financeMigrationTags);

@@ -19,7 +19,7 @@ import type { MigrationDescriptor } from '@pops/types';
  * `meta/_journal.json`; the runner does a journal-driven walk so this list
  * only declares ownership, not execution order.
  */
-export const CORE_MIGRATION_TAGS: readonly string[] = [
+export const coreMigrationTags: readonly string[] = [
   // Pre-modular baseline — creates entities, transactions, budgets,
   // ai_usage, home_inventory, environments, transaction_corrections, etc.
   // Cannot be sliced retroactively without breaking every prod DB.
@@ -51,5 +51,4 @@ export const CORE_MIGRATION_TAGS: readonly string[] = [
   '0054_service_accounts',
 ];
 
-export const coreMigrations: readonly MigrationDescriptor[] =
-  drizzleMigrations(CORE_MIGRATION_TAGS);
+export const coreMigrations: readonly MigrationDescriptor[] = drizzleMigrations(coreMigrationTags);

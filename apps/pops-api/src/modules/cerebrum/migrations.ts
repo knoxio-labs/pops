@@ -11,7 +11,7 @@ import { drizzleMigrations } from '../../db/load-drizzle-migration.js';
 
 import type { MigrationDescriptor } from '@pops/types';
 
-export const CEREBRUM_MIGRATION_TAGS: readonly string[] = [
+export const cerebrumMigrationTags: readonly string[] = [
   // engram_index — knowledge graph file metadata table.
   '0031_romantic_hannibal_king',
   // embeddings — dense vector storage.
@@ -40,4 +40,4 @@ export const CEREBRUM_MIGRATION_TAGS: readonly string[] = [
 ];
 
 export const cerebrumMigrations: readonly MigrationDescriptor[] =
-  drizzleMigrations(CEREBRUM_MIGRATION_TAGS);
+  drizzleMigrations(cerebrumMigrationTags);

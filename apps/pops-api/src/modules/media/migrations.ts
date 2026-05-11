@@ -10,7 +10,7 @@ import { drizzleMigrations } from '../../db/load-drizzle-migration.js';
 
 import type { MigrationDescriptor } from '@pops/types';
 
-export const MEDIA_MIGRATION_TAGS: readonly string[] = [
+export const mediaMigrationTags: readonly string[] = [
   // movies + comparisons + media_scores + watch_history + tv_shows seasons.
   '0001_many_marvel_zombies',
   // episodes — Plex-derived episode table.
@@ -58,4 +58,4 @@ export const MEDIA_MIGRATION_TAGS: readonly string[] = [
 ];
 
 export const mediaMigrations: readonly MigrationDescriptor[] =
-  drizzleMigrations(MEDIA_MIGRATION_TAGS);
+  drizzleMigrations(mediaMigrationTags);

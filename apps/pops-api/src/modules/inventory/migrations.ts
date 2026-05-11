@@ -10,7 +10,7 @@ import { drizzleMigrations } from '../../db/load-drizzle-migration.js';
 
 import type { MigrationDescriptor } from '@pops/types';
 
-export const INVENTORY_MIGRATION_TAGS: readonly string[] = [
+export const inventoryMigrationTags: readonly string[] = [
   // locations.
   '0005_fancy_crystal',
   // home_inventory columns (asset_id, notes, location_id).
@@ -24,4 +24,4 @@ export const INVENTORY_MIGRATION_TAGS: readonly string[] = [
 ];
 
 export const inventoryMigrations: readonly MigrationDescriptor[] =
-  drizzleMigrations(INVENTORY_MIGRATION_TAGS);
+  drizzleMigrations(inventoryMigrationTags);
