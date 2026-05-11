@@ -50,6 +50,7 @@ const GliaDashboardPage = lazy(() =>
 const DocumentsPage = lazy(() =>
   import('./pages/DocumentsPage').then((m) => ({ default: m.DocumentsPage }))
 );
+const QueryPage = lazy(() => import('./pages/QueryPage').then((m) => ({ default: m.QueryPage })));
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
@@ -72,6 +73,7 @@ export const navConfig = {
   items: [
     { path: '', label: 'Ingest', labelKey: 'cerebrum.ingest', icon: 'FileText' },
     { path: '/engrams', label: 'Engrams', labelKey: 'cerebrum.engrams.nav', icon: 'Library' },
+    { path: '/query', label: 'Query', labelKey: 'cerebrum.query.nav', icon: 'Search' },
     {
       path: '/documents',
       label: 'Documents',
@@ -108,6 +110,7 @@ export const routes: RouteObject[] = [
   { path: 'engrams', element: <EngramsListPage /> },
   { path: 'engrams/:id', element: <EngramDetailPage /> },
   { path: 'documents', element: <DocumentsPage /> },
+  { path: 'query', element: <QueryPage /> },
   { path: 'reflex', element: <ReflexListPage /> },
   { path: 'reflex/:name', element: <ReflexDetailPage /> },
   { path: 'plexus', element: <PlexusListPage /> },
