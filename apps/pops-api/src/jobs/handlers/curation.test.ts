@@ -10,6 +10,7 @@ import type { Job } from 'bullmq';
 
 const mockRead = vi.fn();
 const mockUpdate = vi.fn();
+const mockChangeType = vi.fn();
 const mockClassify = vi.fn();
 const mockExtract = vi.fn();
 const mockInfer = vi.fn();
@@ -18,6 +19,7 @@ vi.mock('../../modules/cerebrum/instance.js', () => ({
   getEngramService: () => ({
     read: mockRead,
     update: mockUpdate,
+    changeType: mockChangeType,
   }),
   getScopeRuleEngine: () => ({
     getConfig: () => ({}),
@@ -196,6 +198,25 @@ describe('curation handler — classifyEngram', () => {
 
     const call = mockUpdate.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(call).not.toHaveProperty('template');
+  });
+
+  it('graduates a capture engram to its classified type via changeType (PRD-081 US-03 AC #6)', async () => {
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260427_1500_test' }));
+
+    expect(mockChangeType).toHaveBeenCalledWith('eng_20260427_1500_test', 'idea');
+  });
+
+  it('does not call changeType when the classified type matches the current type', async () => {
+    mockClassify.mockResolvedValue({
+      type: 'capture',
+      confidence: 0.3,
+      template: null,
+      suggestedTags: [],
+    });
+
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260427_1500_test' }));
+
+    expect(mockChangeType).not.toHaveBeenCalled();
   });
 
   it('throws for unknown job types', async () => {

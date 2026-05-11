@@ -89,10 +89,6 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
   }
   customFields['_enrichedHash'] = engram.contentHash;
 
-  // Persist the classified template so future renders pick up template
-  // scaffolding even though `type` itself is not mutable in-place (changing
-  // type would require a file move under {type}/{id}.md — tracked
-  // separately).
   const updateInput: UpdateEngramInput = {
     scopes: scopeResult.scopes,
     tags: mergedTags.length > 0 ? mergedTags : undefined,
@@ -102,6 +98,13 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
     updateInput.template = classification.template;
   }
   engramService.update(engramId, updateInput);
+
+  // PRD-081 US-03 AC #6: graduate capture engrams to their classified type
+  // folder. `changeType` is a no-op when types already match, so this is safe
+  // to call unconditionally.
+  if (classification.type !== engram.type) {
+    engramService.changeType(engramId, classification.type);
+  }
 
   logger.info(
     {

@@ -14,7 +14,7 @@ As a user on the go (via Moltbot on Telegram or the pops CLI), I want to fire of
 - [x] Quick capture assigns `type: capture`, `source: moltbot` (or `cli` depending on channel), and the fallback scope from `scope-rules.toml`
 - [x] Quick capture skips classification, entity extraction, and scope inference at ingestion time — the engram is written immediately
 - [x] A background job is enqueued (via BullMQ) to run Cortex classification and entity extraction on the captured engram asynchronously
-- [ ] The background job updates the engram's `type`, `template`, `tags`, and `scopes` in both the file and the index when classification completes — `template`, `tags`, and `scopes` now update; `type` change is deferred because it requires moving the file from `captures/{id}.md` to `{type}/{id}.md` (tracked in #2574)
+- [x] The background job updates the engram's `type`, `template`, `tags`, and `scopes` in both the file and the index when classification completes
 - [ ] The CLI command outputs the engram ID and a confirmation message; Moltbot responds with the engram ID and a brief confirmation — Moltbot side defined in the skill prompt (tracked together with the missing CLI in #2575)
 - [x] Captures with only whitespace or empty text are rejected with an error message
 
