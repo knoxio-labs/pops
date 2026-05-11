@@ -50,7 +50,8 @@ describe('runCapture', () => {
     expect(url).toBe('http://api.test/trpc/cerebrum.ingest.quickCapture');
     expect(init.method).toBe('POST');
     expect(getFetchJson(fetchSpy)).toEqual({
-      json: { text: 'a quick thought', source: 'cli' },
+      text: 'a quick thought',
+      source: 'cli',
     });
     expect(stdout.text()).toContain('Captured eng_20260427_1500_idea');
     expect(stdout.text()).toContain('path:   capture/eng_20260427_1500_idea.md');
@@ -183,7 +184,8 @@ describe('runCapture', () => {
     });
 
     expect(getFetchJson(fetchSpy)).toEqual({
-      json: { text: 'from moltbot', source: 'moltbot' },
+      text: 'from moltbot',
+      source: 'moltbot',
     });
   });
 });

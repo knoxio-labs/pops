@@ -58,7 +58,7 @@ function stubFetch(impl: FetchFn): FetchMock {
 export function mockFetchOk<T>(body: T): FetchMock {
   return stubFetch(
     async () =>
-      new Response(JSON.stringify({ result: { data: { json: body } } }), {
+      new Response(JSON.stringify({ result: { data: body } }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       })
@@ -72,13 +72,10 @@ export function mockFetchTrpcError(
 ): FetchMock {
   return stubFetch(
     async () =>
-      new Response(
-        JSON.stringify({ error: { json: { message, code, data: { httpStatus, code } } } }),
-        {
-          status: httpStatus,
-          headers: { 'content-type': 'application/json' },
-        }
-      )
+      new Response(JSON.stringify({ error: { message, code, data: { httpStatus, code } } }), {
+        status: httpStatus,
+        headers: { 'content-type': 'application/json' },
+      })
   );
 }
 
