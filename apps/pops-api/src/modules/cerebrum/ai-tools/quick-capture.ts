@@ -56,9 +56,8 @@ export const cerebrumQuickCaptureSchema = {
     },
     source: {
       type: 'string' as const,
-      enum: [...ENGRAM_SOURCES],
       description:
-        'Origin of the capture. One of the known engram sources (manual, agent, moltbot, cli). Falls through to the IngestService default when omitted.',
+        'Origin of the capture. One of the known engram sources (manual, agent, moltbot, cli) or a `plexus:{name}` identifier for plugin-driven ingestion. Falls through to the IngestService default when omitted.',
     },
   },
   required: ['text'] as const,
