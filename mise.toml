@@ -33,6 +33,16 @@ pnpm dev
 description = "Run all dev servers (using turbo)"
 run = "pnpm dev"
 
+[tasks."cli"]
+description = "Run the pops CLI from source (e.g. `mise cli cerebrum capture \"a thought\"`)"
+dir = "apps/pops-cli"
+run = "pnpm dev"
+
+[tasks."cli:build"]
+description = "Build the pops CLI to apps/pops-cli/dist"
+dir = "apps/pops-cli"
+run = "pnpm build"
+
 [tasks."dev:storybook"]
 description = "Run unified Storybook for all packages and apps"
 dir = "apps/pops-storybook"
