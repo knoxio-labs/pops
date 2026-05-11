@@ -23,6 +23,15 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
+  // `vi.restoreAllMocks()` clears spies but does NOT purge module mocks
+  // installed via `vi.doMock`. Without `vi.doUnmock` the mock for
+  // `./migrations-runner.js` survives into the next test in the same
+  // worker, so a later import of `per-module-migrations.js` would resolve
+  // the cached mock pointing at a `tmpDir` already removed above — making
+  // test order load-bearing. Reset the module registry too so any cached
+  // `per-module-migrations.js` binding from a previous test is dropped.
+  vi.doUnmock('./migrations-runner.js');
+  vi.resetModules();
   vi.restoreAllMocks();
 });
 

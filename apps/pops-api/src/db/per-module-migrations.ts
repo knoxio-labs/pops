@@ -245,14 +245,12 @@ export function runPerModuleMigrationsByOwner(
   const insert = db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)');
 
   for (const entry of journal.entries) {
-    const sql = readMigrationSql(entry.tag);
-    const hash = hashSql(sql);
-
-    if (knownHashes.has(hash)) {
-      alreadyApplied.push(entry.tag);
-      continue;
-    }
-
+    // Classify ownership BEFORE the hash short-circuit. If we checked the
+    // hash first, a duplicate-SQL entry owned by an absent or unknown
+    // module would be silently bucketed as `alreadyApplied` — hiding the
+    // manifest/ownership drift this result is meant to surface. Ownership
+    // classification is the authoritative signal; hash equality only
+    // matters once we've confirmed the tag belongs to the install set.
     const owner = owners.get(entry.tag);
     if (owner === undefined) {
       // No declared owner — treat as absent and warn. This is a contract
@@ -269,6 +267,14 @@ export function runPerModuleMigrationsByOwner(
       // Owner is installed but manifest doesn't list the tag — possible
       // if the ownership map and manifest disagree. Skip defensively.
       skipped.push(entry.tag);
+      continue;
+    }
+
+    const sql = readMigrationSql(entry.tag);
+    const hash = hashSql(sql);
+
+    if (knownHashes.has(hash)) {
+      alreadyApplied.push(entry.tag);
       continue;
     }
 
