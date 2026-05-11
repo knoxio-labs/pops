@@ -27,11 +27,6 @@ interface IngestArgs {
 
 const TITLE_KEYS = ['title', 'name', 'subject', 'label'] as const;
 
-/**
- * Keys that should NOT be promoted to `customFields` when extracted from a
- * JSON body — they are either consumed elsewhere (title) or duplicate the
- * body (body / content / text).
- */
 const RESERVED_JSON_KEYS = new Set<string>([...TITLE_KEYS, 'body', 'content', 'text']);
 
 /** Try to extract a title from a JSON object's well-known keys, falling back to a key summary. */
