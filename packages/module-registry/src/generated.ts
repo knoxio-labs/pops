@@ -558,6 +558,13 @@ export const MODULES = [
                 type: 'text',
                 description: 'Model for the cerebrum auditor contradiction detector.',
               },
+              {
+                key: 'ai.modelOverrides.patternContradiction',
+                label: 'Pattern Contradiction Analyzer',
+                type: 'text',
+                description:
+                  'Model for the cerebrum pattern-detection contradiction analyzer (PRD-084 US-03).',
+              },
             ],
           },
           {

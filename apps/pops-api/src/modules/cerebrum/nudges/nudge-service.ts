@@ -96,7 +96,7 @@ export class NudgeService {
     if (!type || type === 'pattern') {
       totalCreated += persistCandidates(
         this.db,
-        this.patternDetector.detect(engrams).nudges,
+        (await this.patternDetector.detect(engrams)).nudges,
         this.thresholds,
         this.now
       );

@@ -142,12 +142,32 @@ function patternTypeLabel(patternType: DetectedPattern['patternType']): string {
 
 /** Map pattern type to body description. */
 function patternTypeDescription(pattern: DetectedPattern): string {
+  if (pattern.patternType === 'contradiction' && pattern.contradiction) {
+    return `Contradiction on "${pattern.topic}": ${pattern.contradiction.conflict}`;
+  }
   const descriptions: Record<DetectedPattern['patternType'], string> = {
     recurring: `The topic "${pattern.topic}" appears in ${pattern.count} engrams within the recent window.`,
     emerging: `The topic "${pattern.topic}" is accelerating — mentioned in ${pattern.count} engrams with a rising trend.`,
     contradiction: `Engrams express contradictory positions on "${pattern.topic}".`,
   };
   return descriptions[pattern.patternType];
+}
+
+/** Build the nudge body for a contradiction pattern. */
+function contradictionBody(pattern: DetectedPattern): string {
+  const ev = pattern.contradiction;
+  if (!ev) {
+    return (
+      `Engrams express contradictory positions on "${pattern.topic}".\n\n` +
+      `Open the source engrams to compare.`
+    );
+  }
+  return (
+    `Contradiction on "${pattern.topic}": ${ev.conflict}\n\n` +
+    `From ${ev.engramA}:\n"${ev.excerptA}"\n\n` +
+    `From ${ev.engramB}:\n"${ev.excerptB}"\n\n` +
+    `Review the two engrams to reconcile.`
+  );
 }
 
 /** Convert a detected pattern into a nudge candidate. */
@@ -158,13 +178,25 @@ export function patternToNudge(pattern: DetectedPattern): NudgeCandidate {
   const rawTitle = `${typeLabel}: "${pattern.topic}" (${pattern.count} engrams${trend})`;
   const title = rawTitle.length > 100 ? rawTitle.slice(0, 97) + '...' : rawTitle;
 
-  const typeDesc = patternTypeDescription(pattern);
-  const body =
-    `${typeDesc}\n\n` +
-    `- Date range: ${pattern.dateRange.from.slice(0, 10)} to ${pattern.dateRange.to.slice(0, 10)}\n` +
-    `- Trend: ${pattern.trendDirection}\n` +
-    `- Engrams: ${pattern.engramIds.length}\n\n` +
-    `Consider creating a research summary or linking related engrams.`;
+  const body = isContradiction
+    ? contradictionBody(pattern)
+    : `${patternTypeDescription(pattern)}\n\n` +
+      `- Date range: ${pattern.dateRange.from.slice(0, 10)} to ${pattern.dateRange.to.slice(0, 10)}\n` +
+      `- Trend: ${pattern.trendDirection}\n` +
+      `- Engrams: ${pattern.engramIds.length}\n\n` +
+      `Consider creating a research summary or linking related engrams.`;
+
+  const actionLabel = isContradiction
+    ? `Review contradiction on "${pattern.topic}"`
+    : `Review ${pattern.count} engrams about "${pattern.topic}"`;
+
+  const actionParams: Record<string, unknown> = {
+    engramIds: pattern.engramIds,
+    topic: pattern.topic,
+  };
+  if (isContradiction && pattern.contradiction) {
+    actionParams['contradiction'] = pattern.contradiction;
+  }
 
   return {
     type: 'pattern',
@@ -175,8 +207,8 @@ export function patternToNudge(pattern: DetectedPattern): NudgeCandidate {
     expiresAt: null,
     action: {
       type: 'link',
-      label: `Review ${pattern.count} engrams about "${pattern.topic}"`,
-      params: { engramIds: pattern.engramIds, topic: pattern.topic },
+      label: actionLabel,
+      params: actionParams,
     },
   };
 }

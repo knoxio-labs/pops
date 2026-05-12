@@ -155,6 +155,7 @@ const LEGACY_OVERRIDE_KEYS = {
   'ai.modelOverrides.entityExtractor': 'cerebrum.entityExtractor.model',
   'ai.modelOverrides.scopeInference': 'cerebrum.scopeInference.model',
   'ai.modelOverrides.auditorContradiction': 'cerebrum.auditor.contradictionModel',
+  'ai.modelOverrides.patternContradiction': 'cerebrum.patterns.contradictionModel',
 } as const;
 
 export type AiModelOverrideKey = keyof typeof LEGACY_OVERRIDE_KEYS;
