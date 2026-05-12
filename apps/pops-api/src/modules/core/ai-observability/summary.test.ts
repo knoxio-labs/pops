@@ -1,10 +1,3 @@
-/**
- * Unit tests for the daily observability summary job (PRD-092 US-05).
- *
- * `computeSummary` is exercised against a seeded in-memory DB; `runSummary`
- * is exercised end-to-end to verify the JSON envelope is persisted to the
- * `ai.observabilitySummary` settings row.
- */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { seedAiUsage, setupTestContext } from '../../../shared/test-utils.js';
@@ -93,10 +86,7 @@ describe('computeSummary', () => {
   });
 
   it('ignores rows with future timestamps (after windowEnd)', () => {
-    // In-window baseline.
     seedAiUsage(db, { created_at: isoDaysAgo(1) });
-    // Future-dated rows — bogus clock skew or backdated inserts — must not
-    // be counted in the rolling window.
     const oneMinuteAhead = new Date(NOW.getTime() + 60_000).toISOString();
     const oneDayAhead = new Date(NOW.getTime() + DAY_MS).toISOString();
     seedAiUsage(db, { created_at: oneMinuteAhead });
@@ -140,7 +130,6 @@ describe('computeSummary', () => {
   });
 
   it('groups by model and computes avgLatencyMs over success non-cached rows only', () => {
-    // 2 qualifying success rows for model-a: 100ms, 200ms → avg 150.
     seedAiUsage(db, {
       created_at: isoDaysAgo(1),
       model: 'model-a',
@@ -155,7 +144,6 @@ describe('computeSummary', () => {
       status: 'success',
       cached: 0,
     });
-    // Cached and failed rows for model-a — excluded from the latency avg.
     seedAiUsage(db, {
       created_at: isoDaysAgo(1),
       model: 'model-a',
@@ -170,7 +158,6 @@ describe('computeSummary', () => {
       status: 'error',
       cached: 0,
     });
-    // A second model with no qualifying rows — latency falls back to 0.
     seedAiUsage(db, {
       created_at: isoDaysAgo(1),
       model: 'model-b',
@@ -213,7 +200,6 @@ describe('runSummary', () => {
     seedAiUsage(db, { created_at: isoDaysAgo(1) });
     runSummary({ now: NOW });
 
-    // Add more usage and re-run with a later "now".
     const later = new Date(NOW.getTime() + 60_000);
     seedAiUsage(db, { created_at: isoDaysAgo(1) });
     runSummary({ now: later });
