@@ -85,8 +85,14 @@ function listApplicableBudgets(provider: string, operation: string): ApplicableB
     .all();
   if (rows.length === 0) return [];
   const start = monthStart();
+  const usageByScope = new Map<string, { currentTokenUsage: number; currentCostUsage: number }>();
   return rows.map((row) => {
-    const usage = getUsageForScope(db, row, start);
+    const scopeKey = `${row.scopeType}:${row.scopeValue ?? ''}`;
+    let usage = usageByScope.get(scopeKey);
+    if (!usage) {
+      usage = getUsageForScope(db, row, start);
+      usageByScope.set(scopeKey, usage);
+    }
     return {
       id: row.id,
       scopeType: row.scopeType,
@@ -215,7 +221,7 @@ export function findFallbackProvider(): { provider: string; model: string } | nu
     .from(aiProviders)
     .innerJoin(aiModelPricing, eq(aiModelPricing.providerId, aiProviders.id))
     .where(and(eq(aiProviders.type, 'local'), eq(aiProviders.status, 'active')))
-    .orderBy(desc(aiModelPricing.isDefault), asc(aiModelPricing.modelId))
+    .orderBy(asc(aiProviders.id), desc(aiModelPricing.isDefault), asc(aiModelPricing.modelId))
     .get();
   if (!row) return null;
   return { provider: row.providerId, model: row.modelId };
