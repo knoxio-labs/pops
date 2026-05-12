@@ -10,11 +10,14 @@ interface ExpandToggleProps {
 }
 
 function ExpandToggle({ isExpanded, onToggle }: ExpandToggleProps) {
+  // Pseudo-element hit area only: the toggle lives inside a dense picker
+  // row where a full 44x44 control would intercept row-level clicks. The
+  // before:-inset-3 expansion still yields a 44x44 tap zone.
   return (
     <span
       role="button"
       tabIndex={-1}
-      className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-0.5 rounded hover:bg-accent"
+      className="relative shrink-0 p-0.5 rounded hover:bg-accent before:absolute before:-inset-3 before:content-['']"
       onClick={(e) => {
         e.stopPropagation();
         onToggle();
