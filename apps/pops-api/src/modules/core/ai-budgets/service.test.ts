@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { seedAiUsage, setupTestContext } from '../../../shared/test-utils.js';
+import { seedAiUsage, seedSetting, setupTestContext } from '../../../shared/test-utils.js';
+import { setRawSetting } from '../settings/service.js';
 import * as service from './service.js';
 
 import type { Database } from 'better-sqlite3';
@@ -128,5 +129,149 @@ describe('getBudgetStatus', () => {
     const [status] = service.getBudgetStatus();
     // percentageUsed should be based on cost (4/20 = 20%), not tokens (150/1000 = 15%)
     expect(status?.percentageUsed).toBeCloseTo(20);
+  });
+});
+
+describe('evaluateBudgetsForCall', () => {
+  it('returns no breaches when no budgets exist', () => {
+    const { breaches, allBudgets } = service.evaluateBudgetsForCall('claude', 'entity-match');
+    expect(breaches).toHaveLength(0);
+    expect(allBudgets).toHaveLength(0);
+  });
+
+  it('identifies a cost breach on a global budget', () => {
+    service.upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 1,
+      action: 'block',
+    });
+    seedAiUsage(db, { cost_usd: 1.1, created_at: new Date().toISOString() });
+
+    const { breaches } = service.evaluateBudgetsForCall('claude', 'entity-match');
+    expect(breaches).toHaveLength(1);
+    expect(breaches[0]?.limitType).toBe('cost');
+    expect(breaches[0]?.budget.id).toBe('global');
+  });
+
+  it('ignores provider-scoped budgets for a different provider', () => {
+    service.upsertBudget({
+      id: 'ollama-budget',
+      scopeType: 'provider',
+      scopeValue: 'ollama',
+      monthlyCostLimit: 1,
+      action: 'block',
+    });
+    seedAiUsage(db, {
+      provider: 'ollama',
+      cost_usd: 2,
+      created_at: new Date().toISOString(),
+    });
+
+    // The Claude call should not match the Ollama budget.
+    const { breaches: claudeBreaches } = service.evaluateBudgetsForCall('claude', 'entity-match');
+    expect(claudeBreaches).toHaveLength(0);
+
+    const { breaches: ollamaBreaches } = service.evaluateBudgetsForCall('ollama', 'entity-match');
+    expect(ollamaBreaches).toHaveLength(1);
+  });
+});
+
+describe('migrateLegacyBudgetSettings', () => {
+  it('is a no-op when no legacy settings exist', () => {
+    service.migrateLegacyBudgetSettings();
+    expect(service.listBudgets()).toHaveLength(0);
+  });
+
+  it('creates a global budget from ai.monthlyTokenBudget + ai.budgetExceededFallback=skip', () => {
+    seedSetting(db, { key: 'ai.monthlyTokenBudget', value: '50000' });
+    seedSetting(db, { key: 'ai.budgetExceededFallback', value: 'skip' });
+
+    service.migrateLegacyBudgetSettings();
+
+    const budgets = service.listBudgets();
+    expect(budgets).toHaveLength(1);
+    expect(budgets[0]?.id).toBe('global');
+    expect(budgets[0]?.scopeType).toBe('global');
+    expect(budgets[0]?.monthlyTokenLimit).toBe(50000);
+    expect(budgets[0]?.action).toBe('block');
+  });
+
+  it('maps fallback=alert to action=warn', () => {
+    seedSetting(db, { key: 'ai.monthlyTokenBudget', value: '20000' });
+    seedSetting(db, { key: 'ai.budgetExceededFallback', value: 'alert' });
+
+    service.migrateLegacyBudgetSettings();
+
+    const budgets = service.listBudgets();
+    expect(budgets[0]?.action).toBe('warn');
+  });
+
+  it('is idempotent — re-running does not duplicate or change the row', () => {
+    seedSetting(db, { key: 'ai.monthlyTokenBudget', value: '10000' });
+    service.migrateLegacyBudgetSettings();
+    expect(service.listBudgets()).toHaveLength(1);
+
+    // Mutate the legacy setting after the first migration; the migration
+    // should not re-apply (the `ai.budgetSettingsMigrated` flag gates re-runs).
+    setRawSetting('ai.monthlyTokenBudget', '99999');
+    service.migrateLegacyBudgetSettings();
+    const budgets = service.listBudgets();
+    expect(budgets).toHaveLength(1);
+    expect(budgets[0]?.monthlyTokenLimit).toBe(10000);
+  });
+
+  it('does not overwrite an existing global budget row', () => {
+    service.upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 5,
+      action: 'warn',
+    });
+    seedSetting(db, { key: 'ai.monthlyTokenBudget', value: '99999' });
+    seedSetting(db, { key: 'ai.budgetExceededFallback', value: 'skip' });
+
+    service.migrateLegacyBudgetSettings();
+    const budgets = service.listBudgets();
+    expect(budgets).toHaveLength(1);
+    expect(budgets[0]?.monthlyCostLimit).toBe(5);
+    expect(budgets[0]?.action).toBe('warn');
+  });
+});
+
+describe('findFallbackProvider', () => {
+  it('returns null when no local provider is configured', () => {
+    expect(service.findFallbackProvider()).toBeNull();
+  });
+
+  it('returns the first active local provider with its default model', () => {
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO ai_providers (id, name, type, base_url, api_key_ref, status, created_at, updated_at)
+       VALUES (?, ?, 'local', ?, NULL, 'active', ?, ?)`
+    ).run('ollama', 'Ollama', 'http://localhost:11434', now, now);
+    db.prepare(
+      `INSERT INTO ai_model_pricing
+         (provider_id, model_id, input_cost_per_mtok, output_cost_per_mtok, is_default, created_at, updated_at)
+       VALUES (?, ?, 0, 0, 1, ?, ?)`
+    ).run('ollama', 'llama3:8b', now, now);
+
+    const found = service.findFallbackProvider();
+    expect(found).toEqual({ provider: 'ollama', model: 'llama3:8b' });
+  });
+
+  it('ignores inactive local providers', () => {
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO ai_providers (id, name, type, base_url, api_key_ref, status, created_at, updated_at)
+       VALUES (?, ?, 'local', ?, NULL, 'error', ?, ?)`
+    ).run('ollama', 'Ollama', 'http://localhost:11434', now, now);
+    db.prepare(
+      `INSERT INTO ai_model_pricing
+         (provider_id, model_id, input_cost_per_mtok, output_cost_per_mtok, is_default, created_at, updated_at)
+       VALUES (?, ?, 0, 0, 1, ?, ?)`
+    ).run('ollama', 'llama3:8b', now, now);
+
+    expect(service.findFallbackProvider()).toBeNull();
   });
 });

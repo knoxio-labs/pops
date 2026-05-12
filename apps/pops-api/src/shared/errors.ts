@@ -44,3 +44,40 @@ export class ConflictError extends HttpError {
     this.name = 'ConflictError';
   }
 }
+
+/**
+ * Thrown by the inference middleware (PRD-092 US-04) when a pre-call budget
+ * check finds an applicable rule with `action='block'` (or `action='fallback'`
+ * with no viable local provider) whose current-month usage has reached or
+ * exceeded the configured limit. The 402 Payment Required status is the
+ * closest semantic match for "spending budget exhausted".
+ */
+export class BudgetExceededError extends HttpError {
+  public readonly budgetId: string;
+  public readonly limitType: 'cost' | 'token';
+  public readonly currentUsage: number;
+  public readonly limit: number;
+
+  constructor(params: {
+    budgetId: string;
+    limitType: 'cost' | 'token';
+    currentUsage: number;
+    limit: number;
+  }) {
+    super(
+      402,
+      `Budget '${params.budgetId}' exceeded: ${params.limitType} usage ${params.currentUsage} >= limit ${params.limit}`,
+      {
+        budgetId: params.budgetId,
+        limitType: params.limitType,
+        currentUsage: params.currentUsage,
+        limit: params.limit,
+      }
+    );
+    this.name = 'BudgetExceededError';
+    this.budgetId = params.budgetId;
+    this.limitType = params.limitType;
+    this.currentUsage = params.currentUsage;
+    this.limit = params.limit;
+  }
+}

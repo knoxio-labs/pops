@@ -163,3 +163,10 @@ function buildBudgetStatus(
   const fields = computeBudgetStatusFields(budget, usage, monthStartDate);
   return { ...budget, ...usage, ...fields };
 }
+
+export {
+  evaluateBudgetsForCall,
+  findFallbackProvider,
+  migrateLegacyBudgetSettings,
+} from './enforcement.js';
+export type { ApplicableBudget, BudgetBreach } from './enforcement.js';
