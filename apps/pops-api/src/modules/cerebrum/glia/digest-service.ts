@@ -147,7 +147,10 @@ export class GliaDigestService {
     report: AutonomousDigestReport,
     allTrustStates: GliaTrustState[]
   ): Promise<DigestDeliveryResult> {
-    if (report.totalAutonomousActions === 0 && report.anomalies.length === 0) {
+    if (report.totalAutonomousActions === 0) {
+      // Anomalies derived from zero in-window actions carry no actionable
+      // signal, so suppress unconditionally rather than guarding on
+      // `anomalies.length` (#2577 issue body: empty periods are not delivered).
       return {
         attempted: false,
         suppressedReason: 'No autonomous actions in period',

@@ -3,7 +3,7 @@
  *
  * Extracted from action-service.ts to keep files under the max-lines limit.
  */
-import { and, asc, desc, eq, gte, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lt, lte, sql } from 'drizzle-orm';
 
 import { gliaActions, gliaTrustState } from '@pops/db-types/schema';
 
@@ -130,6 +130,9 @@ export function listAllTrustStates(db: BetterSQLite3Database): GliaTrustState[] 
  * without user approval). Window is matched against `executed_at` because
  * created_at could be earlier than execution for delayed worker runs.
  *
+ * The end bound is exclusive (`executedAt < endDate`) so a row pinned on the
+ * boundary cannot appear in two consecutive digests.
+ *
  * No pagination — digest windows are bounded (daily/weekly) and the volume
  * is expected to be small. If this assumption breaks, callers should add
  * a cap rather than mutating this helper into a paged query.
@@ -147,7 +150,7 @@ export function listAutonomousActionsInWindow(
         eq(gliaActions.status, 'executed'),
         isNull(gliaActions.decidedAt),
         gte(gliaActions.executedAt, startDate),
-        lte(gliaActions.executedAt, endDate)
+        lt(gliaActions.executedAt, endDate)
       )
     )
     .orderBy(asc(gliaActions.executedAt))

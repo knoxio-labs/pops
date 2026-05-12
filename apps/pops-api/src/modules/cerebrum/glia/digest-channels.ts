@@ -10,6 +10,8 @@
  *     back to a no-op when unconfigured — matches the PRD note "If Moltbot is
  *     not configured, skip Telegram delivery silently."
  */
+import { randomUUID } from 'node:crypto';
+
 import { nudgeLog } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
@@ -34,7 +36,11 @@ function buildShellNudgeId(now: Date): string {
   const pad = (n: number, len: number): string => String(n).padStart(len, '0');
   const date = `${now.getFullYear()}${pad(now.getMonth() + 1, 2)}${pad(now.getDate(), 2)}`;
   const time = `${pad(now.getHours(), 2)}${pad(now.getMinutes(), 2)}${pad(now.getSeconds(), 2)}`;
-  return `nudge_${date}_${time}_gliaDigest`;
+  const ms = pad(now.getMilliseconds(), 3);
+  // Append a UUID slice so parallel triggers within the same millisecond still
+  // produce distinct IDs — second-level precision alone collides under load.
+  const nonce = randomUUID().slice(0, 8);
+  return `nudge_${date}_${time}${ms}_${nonce}_gliaDigest`;
 }
 
 /**

@@ -105,11 +105,16 @@ export function buildAutonomousDigest(input: AutonomousDigestInput): AutonomousD
     threshold
   );
 
+  // Sum from groups so the total reflects rows that survived the defensive
+  // filter in `groupAutonomousActions` — `input.actions.length` would overcount
+  // anything the caller passed in that wasn't a clean autonomous execution.
+  const totalAutonomousActions = groups.reduce((sum, group) => sum + group.count, 0);
+
   return {
     period: input.period,
     startDate: input.startDate,
     endDate: input.endDate,
-    totalAutonomousActions: input.actions.length,
+    totalAutonomousActions,
     groups,
     anomalies,
   };

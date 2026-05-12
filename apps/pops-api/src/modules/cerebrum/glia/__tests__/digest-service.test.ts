@@ -22,12 +22,10 @@ import type { Database } from 'better-sqlite3';
 import type { DigestDeliveryChannels } from '../digest-service.js';
 import type { ActionType } from '../types.js';
 
-/** Clock that returns a fixed time — no auto-advance to keep timestamps tidy. */
 function fixedClock(iso: string): () => Date {
   return () => new Date(iso);
 }
 
-/** Make a clock that returns sequential timestamps starting from `iso`. */
 function steppingClock(iso: string, stepMs = 1_000): () => Date {
   let t = new Date(iso).getTime();
   return () => {
@@ -51,7 +49,6 @@ function makeChannels(): {
   };
 }
 
-/** Seed an autonomous action by promoting the action type, then creating. */
 function seedAutonomous(
   svc: GliaActionService,
   actionType: ActionType,
@@ -123,8 +120,6 @@ describe('GliaDigestService', () => {
   });
 
   it('flags an anomaly when post-graduation rejection rate exceeds the threshold', async () => {
-    // Promote `prune` to act_report and seed 10 autonomous executions then
-    // revert 4 of them — 40% rejection rate, above the 30% default.
     actionService.updateTrustState('prune', {
       currentPhase: 'act_report',
       autonomousSince: '2026-04-01T00:00:00Z',
@@ -172,7 +167,6 @@ describe('GliaDigestService', () => {
         }).id
       );
     }
-    // 2/10 = 20% — would not trip at default 30%, must trip at 15%.
     const r0 = seeded[0];
     const r1 = seeded[1];
     if (r0) actionService.revertAction(r0);
@@ -199,7 +193,6 @@ describe('GliaDigestService', () => {
   });
 
   it('suppresses delivery when all action types in the digest are in silent phase', async () => {
-    // Seed an autonomous action while in act_report, then promote to silent.
     seedAutonomous(actionService, 'audit', { rationale: 'Quiet audit' });
     actionService.updateTrustState('audit', {
       currentPhase: 'silent',
@@ -221,7 +214,6 @@ describe('GliaDigestService', () => {
   });
 
   it('still delivers when at least one action type in the digest is in act_report', async () => {
-    // Two action types — `link` in act_report, `audit` in silent.
     seedAutonomous(actionService, 'link', { rationale: 'Linked' });
     seedAutonomous(actionService, 'audit', { rationale: 'Audited' });
     actionService.updateTrustState('audit', {
