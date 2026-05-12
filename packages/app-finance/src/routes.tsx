@@ -30,6 +30,12 @@ const WishlistPage = lazy(() =>
 const ImportPage = lazy(() =>
   import('./pages/ImportPage').then((m) => ({ default: m.ImportPage }))
 );
+const RulesBrowserPage = lazy(() =>
+  import('./pages/RulesBrowserPage').then((m) => ({ default: m.RulesBrowserPage }))
+);
+const PromptViewerPage = lazy(() =>
+  import('./pages/PromptViewerPage').then((m) => ({ default: m.PromptViewerPage }))
+);
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
   id: string;
@@ -60,6 +66,13 @@ export const navConfig = {
     { path: '/budgets', label: 'Budgets', labelKey: 'finance.budgets', icon: 'PiggyBank' },
     { path: '/wishlist', label: 'Wish List', labelKey: 'finance.wishList', icon: 'Star' },
     { path: '/import', label: 'Import', labelKey: 'finance.import', icon: 'Download' },
+    { path: '/rules', label: 'Rules', labelKey: 'finance.rules', icon: 'BookOpen' },
+    {
+      path: '/prompts',
+      label: 'Prompt Templates',
+      labelKey: 'finance.promptTemplates',
+      icon: 'FileText',
+    },
   ],
 } satisfies AppNavConfigShape;
 
@@ -70,4 +83,6 @@ export const routes: RouteObject[] = [
   { path: 'budgets', element: <BudgetsPage /> },
   { path: 'wishlist', element: <WishlistPage /> },
   { path: 'import', element: <ImportPage /> },
+  { path: 'rules', element: <RulesBrowserPage /> },
+  { path: 'prompts', element: <PromptViewerPage /> },
 ];

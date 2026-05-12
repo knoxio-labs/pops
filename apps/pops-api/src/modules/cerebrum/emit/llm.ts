@@ -10,12 +10,12 @@ import { getEnv } from '../../../env.js';
 import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { trackInference } from '../../../lib/inference-middleware.js';
 import { logger } from '../../../lib/logger.js';
-import { getSettingValue } from '../../core/settings/service.js';
+import { getAiModel, getSettingValue } from '../../core/settings/service.js';
 
 const OPERATION = 'cerebrum.emit';
 
 function getEmitModel(): string {
-  return getSettingValue('cerebrum.emit.model', 'claude-sonnet-4-6');
+  return getAiModel('ai.modelOverrides.emit', 'claude-sonnet-4-6');
 }
 
 function getEmitMaxTokens(): number {

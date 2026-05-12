@@ -11,14 +11,14 @@ import { getEnv } from '../../../env.js';
 import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { trackInference } from '../../../lib/inference-middleware.js';
 import { logger } from '../../../lib/logger.js';
-import { getSettingValue } from '../../core/settings/service.js';
+import { getAiModel, getSettingValue } from '../../core/settings/service.js';
 
 import type { EntityExtractionResult, EntityType, ExtractedEntity } from './types.js';
 
 const OPERATION = 'cerebrum.extract-entities';
 
 function getEntityExtractorModel(): string {
-  return getSettingValue('cerebrum.entityExtractor.model', 'claude-haiku-4-5-20251001');
+  return getAiModel('ai.modelOverrides.entityExtractor', 'claude-haiku-4-5-20251001');
 }
 
 function getEntityExtractorConfidenceThreshold(): number {

@@ -135,6 +135,40 @@ export function getSettingValue<T extends string | number>(key: string, fallback
   }
 }
 
+/**
+ * Resolve the LLM model for a specific pipeline.
+ *
+ * Read precedence:
+ *  1. `ai.modelOverrides.<pipeline>` — explicit per-pipeline override
+ *  2. The legacy `cerebrum.*.model` key, if one exists for this override
+ *     (kept so users who customised the old keys don't lose their setting)
+ *  3. `ai.model` — the global default
+ *  4. `fallback` — the hardcoded compile-time floor
+ *
+ * Empty/whitespace-only values count as "not set" — an accidental blank
+ * in the settings UI must not poison the model id passed to Anthropic.
+ */
+const LEGACY_OVERRIDE_KEYS = {
+  'ai.modelOverrides.query': 'cerebrum.query.model',
+  'ai.modelOverrides.emit': 'cerebrum.emit.model',
+  'ai.modelOverrides.classifier': 'cerebrum.classifier.model',
+  'ai.modelOverrides.entityExtractor': 'cerebrum.entityExtractor.model',
+  'ai.modelOverrides.scopeInference': 'cerebrum.scopeInference.model',
+  'ai.modelOverrides.auditorContradiction': 'cerebrum.auditor.contradictionModel',
+} as const;
+
+export type AiModelOverrideKey = keyof typeof LEGACY_OVERRIDE_KEYS;
+
+export function getAiModel(overrideKey: AiModelOverrideKey, fallback: string): string {
+  const override = getSettingValue(overrideKey, '').trim();
+  if (override) return override;
+  const legacyValue = getSettingValue(LEGACY_OVERRIDE_KEYS[overrideKey], '').trim();
+  if (legacyValue) return legacyValue;
+  const globalDefault = getSettingValue('ai.model', '').trim();
+  if (globalDefault) return globalDefault;
+  return fallback;
+}
+
 /** Delete a setting by key */
 export function deleteSetting(key: SettingsKey): void {
   const db = getDrizzle();

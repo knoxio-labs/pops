@@ -70,15 +70,9 @@ export const retrievalGroup: SettingsGroup = {
 export const ingestGroup: SettingsGroup = {
   id: 'ingest',
   title: 'Ingest Pipeline',
-  description: 'Classifier, entity extractor, and scope inference settings.',
+  description:
+    'Classifier, entity extractor, and scope inference settings. Model selection for each lives under AI Configuration → Per-Pipeline Model Overrides.',
   fields: [
-    {
-      key: 'cerebrum.classifier.model',
-      label: 'Classifier Model',
-      type: 'text',
-      default: 'claude-haiku-4-5-20251001',
-      description: 'LLM model used for content classification.',
-    },
     {
       key: 'cerebrum.classifier.confidenceThreshold',
       label: 'Classifier Confidence Threshold',
@@ -88,26 +82,12 @@ export const ingestGroup: SettingsGroup = {
       validation: { min: 0, max: 1 },
     },
     {
-      key: 'cerebrum.entityExtractor.model',
-      label: 'Entity Extractor Model',
-      type: 'text',
-      default: 'claude-haiku-4-5-20251001',
-      description: 'LLM model used for entity extraction.',
-    },
-    {
       key: 'cerebrum.entityExtractor.confidenceThreshold',
       label: 'Entity Extractor Confidence Threshold',
       type: 'number',
       default: '0.7',
       description: 'Minimum confidence for extracted entities (0-1).',
       validation: { min: 0, max: 1 },
-    },
-    {
-      key: 'cerebrum.scopeInference.model',
-      label: 'Scope Inference Model',
-      type: 'text',
-      default: 'claude-haiku-4-5-20251001',
-      description: 'LLM model used for scope inference.',
     },
   ],
 };

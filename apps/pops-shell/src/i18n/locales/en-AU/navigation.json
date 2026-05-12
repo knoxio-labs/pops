@@ -6,6 +6,8 @@
   "finance.budgets": "Budgets",
   "finance.wishList": "Wish List",
   "finance.import": "Import",
+  "finance.rules": "Rules",
+  "finance.promptTemplates": "Prompt Templates",
   "media": "Media",
   "media.library": "Library",
   "media.watchlist": "Watchlist",
@@ -32,8 +34,7 @@
   "cerebrum.glia.nav": "Glia",
   "cerebrum.reflex.nav": "Reflex",
   "cerebrum.plexus.nav": "Plexus",
-  "cerebrum.admin.usage": "AI Usage",
-  "cerebrum.admin.promptTemplates": "Prompt Templates",
-  "cerebrum.admin.rules": "Rules",
-  "cerebrum.admin.cache": "Cache"
+  "ai": "AI",
+  "ai.usage": "AI Usage",
+  "ai.cache": "Cache"
 }

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createCaller, seedSetting, setupTestContext } from '../../../shared/test-utils.js';
 import { SETTINGS_KEYS } from './keys.js';
+import { getAiModel } from './service.js';
 
 import type { Database } from 'better-sqlite3';
 
@@ -286,5 +287,51 @@ describe('settings.setBulk', () => {
       keys: ['tx.key.1', 'tx.key.2', 'tx.key.3'],
     });
     expect(Object.keys(result.settings)).toHaveLength(0);
+  });
+});
+
+describe('getAiModel — per-pipeline override resolution', () => {
+  // The four-layer precedence (new override → legacy cerebrum.*.model → ai.model
+  // global → hardcoded fallback) is the contract that lets users who customised
+  // the old keys keep their value after this refactor (#2615).
+  it('returns the hardcoded fallback when no settings are set', () => {
+    expect(getAiModel('ai.modelOverrides.query', 'fallback-model')).toBe('fallback-model');
+  });
+
+  it('returns the global ai.model when only ai.model is set', () => {
+    seedSetting(db, { key: SETTINGS_KEYS.AI_MODEL, value: 'global-model' });
+    expect(getAiModel('ai.modelOverrides.query', 'fallback-model')).toBe('global-model');
+  });
+
+  it('returns the legacy cerebrum.*.model value when override is not set', () => {
+    seedSetting(db, { key: SETTINGS_KEYS.AI_MODEL, value: 'global-model' });
+    seedSetting(db, { key: 'cerebrum.query.model', value: 'legacy-model' });
+    expect(getAiModel('ai.modelOverrides.query', 'fallback-model')).toBe('legacy-model');
+  });
+
+  it('returns the override value when set, ignoring legacy + global', () => {
+    seedSetting(db, { key: SETTINGS_KEYS.AI_MODEL, value: 'global-model' });
+    seedSetting(db, { key: 'cerebrum.query.model', value: 'legacy-model' });
+    seedSetting(db, {
+      key: SETTINGS_KEYS.AI_MODEL_OVERRIDE_QUERY,
+      value: 'override-model',
+    });
+    expect(getAiModel('ai.modelOverrides.query', 'fallback-model')).toBe('override-model');
+  });
+
+  it('treats an empty-string override as "not set" and falls through', () => {
+    // An explicit blank in the settings UI must not pin the answer to "" —
+    // it should fall through to the next precedence layer.
+    seedSetting(db, { key: SETTINGS_KEYS.AI_MODEL, value: 'global-model' });
+    seedSetting(db, { key: SETTINGS_KEYS.AI_MODEL_OVERRIDE_QUERY, value: '' });
+    expect(getAiModel('ai.modelOverrides.query', 'fallback-model')).toBe('global-model');
+  });
+
+  it('maps each pipeline to its own legacy key (no cross-contamination)', () => {
+    seedSetting(db, { key: 'cerebrum.classifier.model', value: 'classifier-legacy' });
+    seedSetting(db, { key: 'cerebrum.scopeInference.model', value: 'scope-legacy' });
+    expect(getAiModel('ai.modelOverrides.classifier', 'fb')).toBe('classifier-legacy');
+    expect(getAiModel('ai.modelOverrides.scopeInference', 'fb')).toBe('scope-legacy');
+    expect(getAiModel('ai.modelOverrides.entityExtractor', 'fb')).toBe('fb');
   });
 });

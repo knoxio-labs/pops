@@ -3,12 +3,6 @@
  *
  * Routes are lazy-loaded for code splitting. The shell imports
  * these via @pops/app-cerebrum and mounts them under /cerebrum/*.
- *
- * AI admin pages (usage, prompts, rules, cache) are mounted under
- * /cerebrum/admin/* by the shell, which composes them from
- * @pops/app-ai. Cross-app composition lives in the shell, not here
- * — this package may not import from another @pops/app-* per
- * PRD-097 boundaries.
  */
 import { lazy } from 'react';
 
@@ -90,15 +84,6 @@ export const navConfig = {
     { path: '/glia', label: 'Glia', labelKey: 'cerebrum.glia.nav', icon: 'Activity' },
     { path: '/reflex', label: 'Reflex', labelKey: 'cerebrum.reflex.nav', icon: 'Zap' },
     { path: '/plexus', label: 'Plexus', labelKey: 'cerebrum.plexus.nav', icon: 'Plug' },
-    { path: '/admin', label: 'AI Usage', labelKey: 'cerebrum.admin.usage', icon: 'BarChart3' },
-    {
-      path: '/admin/prompts',
-      label: 'Prompt Templates',
-      labelKey: 'cerebrum.admin.promptTemplates',
-      icon: 'FileText',
-    },
-    { path: '/admin/rules', label: 'Rules', labelKey: 'cerebrum.admin.rules', icon: 'BookOpen' },
-    { path: '/admin/cache', label: 'Cache', labelKey: 'cerebrum.admin.cache', icon: 'Database' },
   ],
 } satisfies AppNavConfigShape;
 
@@ -116,6 +101,4 @@ export const routes: RouteObject[] = [
   { path: 'plexus', element: <PlexusListPage /> },
   { path: 'plexus/:adapterId', element: <PlexusDetailPage /> },
   { path: 'glia', element: <GliaDashboardPage /> },
-  // /cerebrum/admin/* is composed by the shell from @pops/app-ai;
-  // see apps/pops-shell/src/app/router.tsx.
 ];

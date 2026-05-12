@@ -1,5 +1,5 @@
 import { iconMap } from '@/app/nav/icon-map';
-import { isPageActive } from '@/app/nav/path-utils';
+import { findActiveItem } from '@/app/nav/path-utils';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -15,7 +15,7 @@ interface SidebarNavLinkProps {
 export function SidebarNavLink({ app, item, pathname, onNavigate }: SidebarNavLinkProps) {
   const { t } = useTranslation('navigation');
   const fullPath = `${app.basePath}${item.path}`;
-  const isActive = isPageActive(pathname, app.basePath, item.path);
+  const isActive = findActiveItem(pathname, app.basePath, app.items) === item;
   const Icon = iconMap[item.icon];
 
   return (

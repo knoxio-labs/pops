@@ -6,10 +6,6 @@
  * file: route entries derive from the install set, the runtime
  * `RequireModule` guard is gone, and direct navigation to an absent
  * module's URL renders `NotInstalledPage` via the catch-all.
- *
- * Cross-module composition (e.g. `/cerebrum/admin/*` surfacing AI admin
- * pages from `@pops/app-ai`) lives in `./route-extensions` so this file
- * stays free of inline module-id literals.
  */
 import { Suspense } from 'react';
 import { createBrowserRouter, Link, Navigate, useLocation } from 'react-router';
@@ -23,7 +19,6 @@ import { FeaturesPage } from './pages/features-page/FeaturesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { NotInstalledPage } from './pages/NotInstalledPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { extensionsFor } from './route-extensions';
 
 import type { RouteObject } from 'react-router';
 
@@ -67,13 +62,12 @@ function withSuspense(routes: readonly RouteObject[]): RouteObject[] {
 
 /**
  * Build one router-level entry per installed app module. Each entry mounts
- * the module's routes under `/<id>/*` plus any cross-module extensions
- * declared in `./route-extensions`.
+ * the module's routes under `/<id>/*`.
  */
 function appRouteEntries(): RouteObject[] {
   return installedAppManifests().map((manifest) => ({
     path: manifest.id,
-    children: [...withSuspense(manifest.frontend.routes), ...extensionsFor(manifest.id)],
+    children: withSuspense(manifest.frontend.routes),
   }));
 }
 
@@ -98,13 +92,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <IndexRedirect /> },
       ...appRouteEntries(),
-      // Legacy /ai/* redirects — keep bookmarks and deep-links working
-      // after the AI app merged into /cerebrum/admin (#2333).
-      { path: 'ai', element: <Navigate to="/cerebrum" replace /> },
-      { path: 'ai/prompts', element: <Navigate to="/cerebrum/admin/prompts" replace /> },
-      { path: 'ai/config', element: <Navigate to="/settings#ai.config" replace /> },
-      { path: 'ai/rules', element: <Navigate to="/cerebrum/admin/rules" replace /> },
-      { path: 'ai/cache', element: <Navigate to="/cerebrum/admin/cache" replace /> },
+      // Legacy /cerebrum/admin/* redirects — keep bookmarks pointing into
+      // the old in-cerebrum admin surface working after the AI app moved
+      // back to its own top-level /ai/* nav (#2618). Reverses the redirects
+      // added in #2333.
+      { path: 'cerebrum/admin', element: <Navigate to="/ai" replace /> },
+      { path: 'cerebrum/admin/prompts', element: <Navigate to="/finance/prompts" replace /> },
+      { path: 'cerebrum/admin/rules', element: <Navigate to="/finance/rules" replace /> },
+      { path: 'cerebrum/admin/cache', element: <Navigate to="/ai/cache" replace /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'features', element: <FeaturesPage /> },
       // Catch-all: if the first path segment names a buildable module

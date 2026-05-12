@@ -6,15 +6,9 @@ import type { SettingsGroup } from '@pops/types';
 export const queryGroup: SettingsGroup = {
   id: 'query',
   title: 'Query Engine',
-  description: 'Natural-language Q&A pipeline settings.',
+  description:
+    'Natural-language Q&A pipeline settings. Model selection lives under AI Configuration → Per-Pipeline Model Overrides.',
   fields: [
-    {
-      key: 'cerebrum.query.model',
-      label: 'Query Model',
-      type: 'text',
-      default: 'claude-sonnet-4-6',
-      description: 'LLM model used for Q&A answer generation.',
-    },
     {
       key: 'cerebrum.query.maxSources',
       label: 'Max Sources',
@@ -45,15 +39,9 @@ export const queryGroup: SettingsGroup = {
 export const emitGroup: SettingsGroup = {
   id: 'emit',
   title: 'Document Generation',
-  description: 'Report, summary, and timeline generation settings.',
+  description:
+    'Report, summary, and timeline generation settings. Model selection lives under AI Configuration → Per-Pipeline Model Overrides.',
   fields: [
-    {
-      key: 'cerebrum.emit.model',
-      label: 'Generation Model',
-      type: 'text',
-      default: 'claude-sonnet-4-6',
-      description: 'LLM model used for document generation.',
-    },
     {
       key: 'cerebrum.emit.maxTokens',
       label: 'Generation Max Tokens',

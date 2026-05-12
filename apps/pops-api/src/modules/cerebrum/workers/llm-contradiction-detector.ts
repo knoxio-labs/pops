@@ -11,14 +11,14 @@ import { getEnv } from '../../../env.js';
 import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { trackInference } from '../../../lib/inference-middleware.js';
 import { logger } from '../../../lib/logger.js';
-import { getSettingValue } from '../../core/settings/service.js';
+import { getAiModel } from '../../core/settings/service.js';
 
 import type { ContradictionDetector } from './auditor.js';
 
 const OPERATION = 'cerebrum.auditor.contradiction';
 
 function getModel(): string {
-  return getSettingValue('cerebrum.auditor.contradictionModel', 'claude-haiku-4-20250514');
+  return getAiModel('ai.modelOverrides.auditorContradiction', 'claude-haiku-4-20250514');
 }
 
 const SYSTEM_PROMPT = `You are an impartial fact-checker. You will receive two text passages that belong to the same knowledge domain. Your task:
