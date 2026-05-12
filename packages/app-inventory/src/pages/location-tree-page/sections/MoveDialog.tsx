@@ -29,7 +29,7 @@ function MoveTargetPicker({
                 type="button"
                 disabled={disabled}
                 onClick={() => onSelect(node.id)}
-                className={`min-h-11 w-full text-left flex items-center gap-1.5 py-1.5 px-2 rounded-md transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted/50 cursor-pointer'}`}
+                className={`w-full text-left flex items-center gap-1.5 py-1.5 px-2 rounded-md transition-colors ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted/50 cursor-pointer'}`}
                 style={{
                   paddingLeft: `calc(${depth} * var(--tree-picker-step) + var(--tree-indent-base))`,
                 }}
@@ -83,7 +83,7 @@ export function MoveDialog({
           <button
             type="button"
             onClick={() => onMoveTo(null)}
-            className="min-h-11 w-full text-left flex items-center gap-1.5 py-1.5 px-2 rounded-md hover:bg-muted/50"
+            className="w-full text-left flex items-center gap-1.5 py-1.5 px-2 rounded-md hover:bg-muted/50"
             style={{ paddingLeft: 'var(--tree-indent-base)' }}
           >
             <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

@@ -39,7 +39,7 @@ export function ConnectionsList({
           <button
             type="button"
             className={cn(
-              'flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm',
+              'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
               'transition-colors hover:bg-accent/50',
               onItemClick && 'cursor-pointer'
             )}

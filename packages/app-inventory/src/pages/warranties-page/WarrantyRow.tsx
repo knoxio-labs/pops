@@ -10,7 +10,7 @@ function PaperlessLink({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex min-h-11 items-center text-xs text-primary whitespace-nowrap hover:underline"
+      className="text-xs text-primary whitespace-nowrap hover:underline"
       onClick={(e) => e.stopPropagation()}
     >
       View Warranty
@@ -70,7 +70,7 @@ export function WarrantyRow({
   return (
     <button
       type="button"
-      className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
       onClick={onClick}
     >
       <div className="flex flex-col min-w-0 flex-1">

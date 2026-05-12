@@ -43,7 +43,7 @@ function ExpandToggle({ open }: { open: boolean }) {
     >
       <button
         type="button"
-        className="inline-flex min-h-11 min-w-11 items-center justify-center p-0.5 rounded hover:bg-muted"
+        className="p-0.5 rounded hover:bg-muted"
         aria-label={open ? 'Collapse' : 'Expand'}
       >
         {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}

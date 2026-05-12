@@ -10,14 +10,11 @@ interface ExpandToggleProps {
 }
 
 function ExpandToggle({ isExpanded, onToggle }: ExpandToggleProps) {
-  // Pseudo-element hit area only: the toggle lives inside a dense picker
-  // row where a full 44x44 control would intercept row-level clicks. The
-  // before:-inset-3 expansion still yields a 44x44 tap zone.
   return (
     <span
       role="button"
       tabIndex={-1}
-      className="relative shrink-0 p-0.5 rounded hover:bg-accent before:absolute before:-inset-3 before:content-['']"
+      className="shrink-0 p-0.5 rounded hover:bg-accent"
       onClick={(e) => {
         e.stopPropagation();
         onToggle();
@@ -68,7 +65,7 @@ export function TreeNode({
       <button
         type="button"
         className={cn(
-          'flex min-h-11 w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm',
+          'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm',
           'hover:bg-accent/50 transition-colors',
           isSelected && 'bg-accent text-accent-foreground font-medium'
         )}

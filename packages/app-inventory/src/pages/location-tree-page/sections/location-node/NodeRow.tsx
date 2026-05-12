@@ -30,15 +30,11 @@ interface NodeRowProps {
 }
 
 function ExpandToggle({ open }: { open: boolean }) {
-  // Pseudo-element hit area only: the toggle lives inside a dense tree row
-  // where a full 44x44 control would intercept row-level clicks and bloat
-  // the row height. The before:-inset-3 expansion still yields a 44x44
-  // tap zone (14px icon + 6px padding + 24px inset = 44px).
   return (
     <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
-        className="relative p-0.5 rounded hover:bg-muted before:absolute before:-inset-3 before:content-['']"
+        className="p-0.5 rounded hover:bg-muted"
         aria-label={open ? 'Collapse' : 'Expand'}
       >
         {open ? (
@@ -87,7 +83,7 @@ function DragHandle({
       {...attributes}
       {...listeners}
       type="button"
-      className="relative p-0.5 rounded hover:bg-muted cursor-grab active:cursor-grabbing hidden [@media(pointer:fine)]:flex opacity-0 group-hover:opacity-100 transition-opacity touch-none before:absolute before:-inset-3 before:content-['']"
+      className="p-0.5 rounded hover:bg-muted cursor-grab active:cursor-grabbing hidden [@media(pointer:fine)]:flex opacity-0 group-hover:opacity-100 transition-opacity touch-none"
       aria-label={`Drag ${name}`}
       onClick={(e) => e.stopPropagation()}
     >
