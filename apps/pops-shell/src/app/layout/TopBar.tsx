@@ -26,26 +26,32 @@ export function TopBar() {
   return (
     <>
       <header className="bg-card border-b border-border h-14 md:h-16 flex items-center px-3 md:px-4 fixed top-0 w-full z-40">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className="min-w-[44px] min-h-[44px] mr-2 md:hidden"
-          aria-label={t('toggleSidebar')}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <div className="flex flex-1 items-center min-w-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            className="min-w-[44px] min-h-[44px] mr-2 md:hidden"
+            aria-label={t('toggleSidebar')}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
 
-        <div className="flex items-baseline gap-1.5">
-          <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-[oklch(0.7_0.2_150)] via-[oklch(0.6_0.2_260)] to-[oklch(0.6_0.2_320)] tracking-tighter">
-            POPS
-          </h1>
-          <BuildVersion />
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-br from-[oklch(0.7_0.2_150)] via-[oklch(0.6_0.2_260)] to-[oklch(0.6_0.2_320)] tracking-tighter">
+              POPS
+            </h1>
+            <BuildVersion />
+          </div>
         </div>
 
-        <SearchInput />
+        <div className="flex flex-1 justify-center min-w-0">
+          <SearchInput />
+        </div>
 
-        <TopBarActions onOpenMobileSearch={() => setMobileSearchOpen(true)} />
+        <div className="flex flex-1 justify-end items-center min-w-0">
+          <TopBarActions onOpenMobileSearch={() => setMobileSearchOpen(true)} />
+        </div>
       </header>
 
       <MobileSearchOverlay open={mobileSearchOpen} onClose={() => setMobileSearchOpen(false)} />
