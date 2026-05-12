@@ -60,7 +60,7 @@ function PaginationSection({ model }: { model: Model }) {
 }
 
 function RulesBrowserBody({ model }: { model: Model }) {
-  const { t } = useTranslation('ai');
+  const { t } = useTranslation('finance');
   // Watch the form's pattern + matchType so the preview pane stays in sync
   // with the user's edits without having to re-open the dialog.
   const watchedPattern = model.ruleForm.form.watch('descriptionPattern');

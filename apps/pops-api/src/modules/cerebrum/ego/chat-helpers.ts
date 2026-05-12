@@ -6,14 +6,13 @@
  * and app context comparison logic across the two code paths.
  */
 import { getDrizzle } from '../../../db.js';
+import { getSettingValue } from '../../core/settings/service.js';
 import { ConversationEngine } from './engine.js';
 import { PersistenceStoreAdapter } from './persistence-store.js';
 import { ConversationPersistence } from './persistence.js';
 import { autoTitle } from './types.js';
 
 import type { AppContext, ChatResult, Conversation, Message, ScopeNegotiation } from './types.js';
-
-const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 /** Lazily instantiated persistence service (uses the global Drizzle instance). */
 export function getPersistence(): ConversationPersistence {
@@ -134,7 +133,7 @@ export async function resolveConversation(
     title: autoTitle(message),
     scopes,
     appContext,
-    model: DEFAULT_MODEL,
+    model: getSettingValue('ego.defaultModel', 'claude-sonnet-4-6'),
   });
 }
 

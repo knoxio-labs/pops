@@ -190,5 +190,27 @@
   "tag.save": "Salvar",
   "tag.saving": "Salvando…",
   "tag.editTags": "Editar tags",
-  "tag.addPlaceholder": "Digite para adicionar uma tag…"
+  "tag.addPlaceholder": "Digite para adicionar uma tag…",
+
+  "rules.title": "Regras de Categorização",
+  "rules.description": "Navegar e gerenciar regras de categorização por IA",
+  "rules.addRule": "Adicionar Regra",
+  "rules.editRule": "Editar Regra",
+  "rules.newRule": "Nova Regra",
+  "rules.deleteTitle": "Excluir Regra",
+  "rules.deleteConfirm": "Tem certeza de que deseja excluir esta regra de categorização? Esta ação não pode ser desfeita.",
+  "rules.allMatchTypes": "Todos os Tipos",
+  "rules.exact": "Exato",
+  "rules.contains": "Contém",
+  "rules.regex": "Regex",
+  "rules.minConfidence": "Confiança mínima (0-1)",
+  "rules.clearFilters": "Limpar filtros",
+  "rules.priority": "Prioridade",
+  "rules.pattern": "Padrão",
+  "rules.patternPlaceholder": "ex. WOOLWORTHS",
+  "rules.matchType": "Tipo de Correspondência",
+  "rules.tags": "Tags",
+  "rules.tagsPlaceholder": "Digite e pressione Enter...",
+  "rules.active": "Ativo",
+  "rules.inactiveSkipped": "Regras inativas são ignoradas pelo matcher."
 }

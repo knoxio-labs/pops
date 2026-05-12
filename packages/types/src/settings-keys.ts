@@ -27,14 +27,21 @@ export const SETTINGS_KEYS = {
   AI_MONTHLY_TOKEN_BUDGET: 'ai.monthlyTokenBudget',
   AI_BUDGET_EXCEEDED_FALLBACK: 'ai.budgetExceededFallback',
 
+  // AI — Per-pipeline model overrides (replaces former cerebrum.*.model keys).
+  // Empty value means "use ai.model". See `getAiModel` in core/settings/service.
+  AI_MODEL_OVERRIDE_QUERY: 'ai.modelOverrides.query',
+  AI_MODEL_OVERRIDE_EMIT: 'ai.modelOverrides.emit',
+  AI_MODEL_OVERRIDE_CLASSIFIER: 'ai.modelOverrides.classifier',
+  AI_MODEL_OVERRIDE_ENTITY_EXTRACTOR: 'ai.modelOverrides.entityExtractor',
+  AI_MODEL_OVERRIDE_SCOPE_INFERENCE: 'ai.modelOverrides.scopeInference',
+  AI_MODEL_OVERRIDE_AUDITOR_CONTRADICTION: 'ai.modelOverrides.auditorContradiction',
+
   // Cerebrum — Query Engine
-  CEREBRUM_QUERY_MODEL: 'cerebrum.query.model',
   CEREBRUM_QUERY_MAX_SOURCES: 'cerebrum.query.maxSources',
   CEREBRUM_QUERY_RELEVANCE_THRESHOLD: 'cerebrum.query.relevanceThreshold',
   CEREBRUM_QUERY_TOKEN_BUDGET: 'cerebrum.query.tokenBudget',
 
   // Cerebrum — Emit (Document Generation)
-  CEREBRUM_EMIT_MODEL: 'cerebrum.emit.model',
   CEREBRUM_EMIT_MAX_TOKENS: 'cerebrum.emit.maxTokens',
   CEREBRUM_EMIT_RELEVANCE_THRESHOLD: 'cerebrum.emit.relevanceThreshold',
   CEREBRUM_EMIT_MAX_SOURCES: 'cerebrum.emit.maxSources',
@@ -50,11 +57,8 @@ export const SETTINGS_KEYS = {
   CEREBRUM_CONTEXT_TOKEN_BUDGET: 'cerebrum.context.tokenBudget',
 
   // Cerebrum — Ingest
-  CEREBRUM_CLASSIFIER_MODEL: 'cerebrum.classifier.model',
   CEREBRUM_CLASSIFIER_CONFIDENCE_THRESHOLD: 'cerebrum.classifier.confidenceThreshold',
-  CEREBRUM_ENTITY_EXTRACTOR_MODEL: 'cerebrum.entityExtractor.model',
   CEREBRUM_ENTITY_EXTRACTOR_CONFIDENCE_THRESHOLD: 'cerebrum.entityExtractor.confidenceThreshold',
-  CEREBRUM_SCOPE_INFERENCE_MODEL: 'cerebrum.scopeInference.model',
 
   // Cerebrum — Nudges
   CEREBRUM_NUDGE_CONSOLIDATION_SIMILARITY: 'cerebrum.nudge.consolidationSimilarity',

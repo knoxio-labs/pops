@@ -16,7 +16,7 @@ import { getEnv } from '../../../env.js';
 import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { trackInference } from '../../../lib/inference-middleware.js';
 import { logger } from '../../../lib/logger.js';
-import { getSettingValue } from '../../core/settings/service.js';
+import { getAiModel } from '../../core/settings/service.js';
 import { resolveScopes } from '../engrams/scope-rules.js';
 import { scopeStringSchema } from '../engrams/scope-schema.js';
 
@@ -26,7 +26,7 @@ import type { ScopeInferenceResult } from './types.js';
 const OPERATION = 'cerebrum.infer-scopes';
 
 function getScopeInferenceModel(): string {
-  return getSettingValue('cerebrum.scopeInference.model', 'claude-haiku-4-5-20251001');
+  return getAiModel('ai.modelOverrides.scopeInference', 'claude-haiku-4-5-20251001');
 }
 
 interface LlmScopeResponse {

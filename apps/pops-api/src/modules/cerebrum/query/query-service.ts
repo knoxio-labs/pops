@@ -13,7 +13,7 @@ import { getEnv } from '../../../env.js';
 import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { trackInference } from '../../../lib/inference-middleware.js';
 import { logger } from '../../../lib/logger.js';
-import { getSettingValue } from '../../core/settings/service.js';
+import { getAiModel, getSettingValue } from '../../core/settings/service.js';
 import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
 import { CitationParser } from './citation-parser.js';
@@ -33,7 +33,7 @@ import type {
 const OPERATION = 'cerebrum.query';
 
 function getQueryModel(): string {
-  return getSettingValue('cerebrum.query.model', 'claude-sonnet-4-6');
+  return getAiModel('ai.modelOverrides.query', 'claude-sonnet-4-6');
 }
 
 function getQueryMaxSources(): number {

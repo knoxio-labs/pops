@@ -1,5 +1,5 @@
 import { iconMap } from '@/app/nav/icon-map';
-import { findActiveApp, isPageActive } from '@/app/nav/path-utils';
+import { findActiveApp, findActiveItem } from '@/app/nav/path-utils';
 import { registeredApps } from '@/app/nav/registry';
 /**
  * Page navigation panel
@@ -22,6 +22,7 @@ export function PageNav() {
   if (!activeApp) return null;
 
   const appLabel = t(activeApp.labelKey);
+  const activeItem = findActiveItem(location.pathname, activeApp.basePath, activeApp.items);
 
   return (
     <nav
@@ -37,7 +38,7 @@ export function PageNav() {
       <div className="p-2 space-y-0.5">
         {activeApp.items.map((item) => {
           const fullPath = `${activeApp.basePath}${item.path}`;
-          const active = isPageActive(location.pathname, activeApp.basePath, item.path);
+          const active = activeItem === item;
           const Icon = iconMap[item.icon];
 
           return (

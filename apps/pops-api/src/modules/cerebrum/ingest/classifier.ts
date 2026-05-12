@@ -11,14 +11,14 @@ import { getEnv } from '../../../env.js';
 import { withRateLimitRetry } from '../../../lib/ai-retry.js';
 import { trackInference } from '../../../lib/inference-middleware.js';
 import { logger } from '../../../lib/logger.js';
-import { getSettingValue } from '../../core/settings/service.js';
+import { getAiModel, getSettingValue } from '../../core/settings/service.js';
 
 import type { ClassificationResult } from './types.js';
 
 const OPERATION = 'cerebrum.classify';
 
 function getClassifierModel(): string {
-  return getSettingValue('cerebrum.classifier.model', 'claude-haiku-4-5-20251001');
+  return getAiModel('ai.modelOverrides.classifier', 'claude-haiku-4-5-20251001');
 }
 
 function getClassifierConfidenceThreshold(): number {

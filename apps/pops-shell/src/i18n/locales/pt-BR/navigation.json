@@ -6,6 +6,8 @@
   "finance.budgets": "Orçamentos",
   "finance.wishList": "Lista de Desejos",
   "finance.import": "Importar",
+  "finance.rules": "Regras",
+  "finance.promptTemplates": "Modelos de Prompt",
   "media": "Mídia",
   "media.library": "Biblioteca",
   "media.watchlist": "Lista de Filmes",
@@ -32,8 +34,7 @@
   "cerebrum.glia.nav": "Glia",
   "cerebrum.reflex.nav": "Reflexo",
   "cerebrum.plexus.nav": "Plexo",
-  "cerebrum.admin.usage": "Uso de IA",
-  "cerebrum.admin.promptTemplates": "Modelos de Prompt",
-  "cerebrum.admin.rules": "Regras",
-  "cerebrum.admin.cache": "Cache"
+  "ai": "IA",
+  "ai.usage": "Uso de IA",
+  "ai.cache": "Cache"
 }

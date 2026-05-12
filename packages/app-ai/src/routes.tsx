@@ -15,14 +15,6 @@ const AiUsagePage = lazy(() =>
   import('./pages/AiUsagePage').then((m) => ({ default: m.AiUsagePage }))
 );
 
-const PromptViewerPage = lazy(() =>
-  import('./pages/PromptViewerPage').then((m) => ({ default: m.PromptViewerPage }))
-);
-
-const RulesBrowserPage = lazy(() =>
-  import('./pages/RulesBrowserPage').then((m) => ({ default: m.RulesBrowserPage }))
-);
-
 const CacheManagementPage = lazy(() =>
   import('./pages/CacheManagementPage').then((m) => ({ default: m.CacheManagementPage }))
 );
@@ -47,21 +39,14 @@ export const navConfig = {
   basePath: '/ai',
   items: [
     { path: '', label: 'AI Usage', labelKey: 'ai.usage', icon: 'BarChart3' },
-    {
-      path: '/prompts',
-      label: 'Prompt Templates',
-      labelKey: 'ai.promptTemplates',
-      icon: 'FileText',
-    },
-    { path: '/rules', label: 'Rules', labelKey: 'ai.rules', icon: 'BookOpen' },
     { path: '/cache', label: 'Cache', labelKey: 'ai.cache', icon: 'Database' },
   ],
 } satisfies AppNavConfigShape;
 
 export const routes: RouteObject[] = [
   { index: true, element: <AiUsagePage /> },
-  { path: 'prompts', element: <PromptViewerPage /> },
+  { path: 'prompts', element: <Navigate to="/finance/prompts" replace /> },
   { path: 'config', element: <Navigate to="/settings#ai.config" replace /> },
-  { path: 'rules', element: <RulesBrowserPage /> },
+  { path: 'rules', element: <Navigate to="/finance/rules" replace /> },
   { path: 'cache', element: <CacheManagementPage /> },
 ];

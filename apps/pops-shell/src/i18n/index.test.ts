@@ -222,7 +222,7 @@ describe('translation lookups', () => {
   it('resolves navigation namespace keys', () => {
     expect(i18n.t('navigation:finance')).toBe('Finance');
     expect(i18n.t('navigation:media.library')).toBe('Library');
-    expect(i18n.t('navigation:cerebrum.admin.usage')).toBe('AI Usage');
+    expect(i18n.t('navigation:ai.usage')).toBe('AI Usage');
     expect(i18n.t('navigation:inventory.connections')).toBe('Connections');
   });
 
@@ -262,7 +262,10 @@ describe('translation lookups', () => {
   it('resolves ai namespace keys', () => {
     expect(i18n.t('ai:observability')).toBe('AI Observability');
     expect(i18n.t('ai:cache.title')).toBe('Cache Management');
-    expect(i18n.t('ai:rules.title')).toBe('Categorisation Rules');
+  });
+
+  it('resolves finance rules and prompt-template keys (moved out of ai)', () => {
+    expect(i18n.t('finance:rules.title')).toBe('Categorisation Rules');
   });
 
   it('resolves media namespace keys', () => {
