@@ -13,6 +13,7 @@ import {
   registerAiAlertsScheduler,
   unregisterAiAlertsScheduler,
 } from './modules/core/ai-alerts/scheduler.js';
+import { migrateLegacyBudgetSettings } from './modules/core/ai-budgets/service.js';
 import {
   registerAiLogRetentionScheduler,
   unregisterAiLogRetentionScheduler,
@@ -69,6 +70,14 @@ const ttlWatcher = startTtlWatcher();
 startThalamus().catch((err) => {
   console.error('[thalamus] Failed to start:', err);
 });
+
+// Convert legacy `ai.monthlyTokenBudget` / `ai.budgetExceededFallback`
+// settings into a row in `ai_budgets` (PRD-092 US-04). Idempotent.
+try {
+  migrateLegacyBudgetSettings();
+} catch (err) {
+  console.error('[ai-budgets] Legacy settings migration failed:', err);
+}
 
 // Register AI inference log retention scheduler (PRD-092 US-08)
 registerAiLogRetentionScheduler().catch((err: unknown) => {

@@ -1,12 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setupTestContext } from '../shared/test-utils.js';
+import { upsertBudget } from '../modules/core/ai-budgets/service.js';
+import { BudgetExceededError } from '../shared/errors.js';
+import { seedAiUsage, setupTestContext } from '../shared/test-utils.js';
 import { trackInference } from './inference-middleware.js';
+import { logger } from './logger.js';
 
 import type { Database } from 'better-sqlite3';
+import type { MockInstance } from 'vitest';
 
 const ctx = setupTestContext();
 let db: Database;
+let warnSpy: MockInstance<typeof logger.warn> | null = null;
 
 interface LoggedRow {
   provider: string;
@@ -41,6 +46,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  warnSpy?.mockRestore();
+  warnSpy = null;
   ctx.teardown();
 });
 
@@ -199,5 +206,180 @@ describe('trackInference — Ollama-shaped responses', () => {
     const [row] = readLogs();
     expect(row?.input_tokens).toBe(0);
     expect(row?.output_tokens).toBe(0);
+  });
+});
+
+function seedLocalProvider(model = 'llama3:8b'): void {
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO ai_providers (id, name, type, base_url, api_key_ref, status, created_at, updated_at)
+     VALUES (?, ?, 'local', ?, NULL, 'active', ?, ?)`
+  ).run('ollama', 'Ollama', 'http://localhost:11434', now, now);
+  db.prepare(
+    `INSERT INTO ai_model_pricing
+       (provider_id, model_id, input_cost_per_mtok, output_cost_per_mtok, is_default, created_at, updated_at)
+     VALUES (?, ?, 0, 0, 1, ?, ?)`
+  ).run('ollama', model, now, now);
+}
+
+describe('trackInference — budget enforcement', () => {
+  it('blocks the call and logs status=budget-blocked when a cost-block budget is exceeded', async () => {
+    upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 1.0,
+      action: 'block',
+    });
+    seedAiUsage(db, { cost_usd: 0.6, created_at: new Date().toISOString() });
+    seedAiUsage(db, { cost_usd: 0.41, created_at: new Date().toISOString() });
+
+    let called = false;
+    await expect(
+      trackInference(
+        { provider: 'claude', model: 'claude-haiku-4-5-20251001', operation: 'entity-match' },
+        async () => {
+          called = true;
+          return { usage: { input_tokens: 1, output_tokens: 1 } };
+        }
+      )
+    ).rejects.toBeInstanceOf(BudgetExceededError);
+
+    expect(called).toBe(false);
+
+    const blocked = (
+      db
+        .prepare("SELECT * FROM ai_inference_log WHERE status = 'budget-blocked'")
+        .all() as LoggedRow[]
+    )[0];
+    expect(blocked).toBeDefined();
+    expect(blocked?.cost_usd).toBe(0);
+  });
+
+  it('blocks the call when a token-block budget is exceeded and surfaces limitType=token', async () => {
+    upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyTokenLimit: 1000,
+      action: 'block',
+    });
+    seedAiUsage(db, {
+      input_tokens: 600,
+      output_tokens: 500,
+      created_at: new Date().toISOString(),
+    });
+
+    let caught: BudgetExceededError | null = null;
+    try {
+      await trackInference(
+        { provider: 'claude', model: 'claude-haiku-4-5-20251001', operation: 'entity-match' },
+        async () => ({ usage: { input_tokens: 1, output_tokens: 1 } })
+      );
+    } catch (err) {
+      if (err instanceof BudgetExceededError) caught = err;
+    }
+    expect(caught).not.toBeNull();
+    expect(caught?.limitType).toBe('token');
+    expect(caught?.budgetId).toBe('global');
+    expect(caught?.limit).toBe(1000);
+    expect(caught?.currentUsage).toBe(1100);
+  });
+
+  it('proceeds and logs a warning when a warn budget is exceeded', async () => {
+    upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 0.5,
+      action: 'warn',
+    });
+    seedAiUsage(db, { cost_usd: 0.6, created_at: new Date().toISOString() });
+
+    warnSpy = vi.spyOn(logger, 'warn');
+    const result = await trackInference(
+      { provider: 'claude', model: 'claude-haiku-4-5-20251001', operation: 'entity-match' },
+      async () => ({ usage: { input_tokens: 10, output_tokens: 10 }, content: 'ok' })
+    );
+
+    expect(result).toMatchObject({ content: 'ok' });
+    const messages = warnSpy.mock.calls.map(([, msg]) => msg);
+    expect(messages.some((m) => typeof m === 'string' && m.includes('Budget warning'))).toBe(true);
+
+    const success = (
+      db.prepare("SELECT * FROM ai_inference_log WHERE status = 'success'").all() as LoggedRow[]
+    )[0];
+    expect(success).toBeDefined();
+  });
+
+  it('routes to local fallback provider when a fallback budget is exceeded', async () => {
+    seedLocalProvider('llama3:8b');
+    upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 0.5,
+      action: 'fallback',
+    });
+    seedAiUsage(db, { cost_usd: 1.0, created_at: new Date().toISOString() });
+
+    const result = await trackInference(
+      { provider: 'claude', model: 'claude-haiku-4-5-20251001', operation: 'entity-match' },
+      async () => ({ usage: { input_tokens: 5, output_tokens: 5 } })
+    );
+    expect(result).toBeDefined();
+
+    // The most recent success row should be the fallback call (ollama/llama3),
+    // not the pre-seeded usage row that put us over budget.
+    const row = (
+      db
+        .prepare(
+          "SELECT provider, model FROM ai_inference_log WHERE status = 'success' ORDER BY id DESC LIMIT 1"
+        )
+        .all() as { provider: string; model: string }[]
+    )[0];
+    expect(row?.provider).toBe('ollama');
+    expect(row?.model).toBe('llama3:8b');
+  });
+
+  it('blocks when fallback action is configured but no active local provider exists', async () => {
+    upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 0.5,
+      action: 'fallback',
+    });
+    seedAiUsage(db, { cost_usd: 1.0, created_at: new Date().toISOString() });
+
+    await expect(
+      trackInference(
+        { provider: 'claude', model: 'claude-haiku-4-5-20251001', operation: 'entity-match' },
+        async () => ({ usage: { input_tokens: 1, output_tokens: 1 } })
+      )
+    ).rejects.toBeInstanceOf(BudgetExceededError);
+
+    const blocked = (
+      db
+        .prepare("SELECT * FROM ai_inference_log WHERE status = 'budget-blocked'")
+        .all() as LoggedRow[]
+    )[0];
+    expect(blocked).toBeDefined();
+  });
+
+  it('does not enforce budgets on cached calls', async () => {
+    upsertBudget({
+      id: 'global',
+      scopeType: 'global',
+      monthlyCostLimit: 0.5,
+      action: 'block',
+    });
+    seedAiUsage(db, { cost_usd: 1.0, created_at: new Date().toISOString() });
+
+    const result = await trackInference(
+      {
+        provider: 'claude',
+        model: 'claude-haiku-4-5-20251001',
+        operation: 'entity-match',
+        cached: true,
+      },
+      async () => 'cached-result'
+    );
+    expect(result).toBe('cached-result');
   });
 });

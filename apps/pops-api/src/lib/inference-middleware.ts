@@ -1,35 +1,20 @@
 import { aiInferenceLog } from '@pops/db-types';
 
 import { getDrizzle } from '../db.js';
+import { enforceBudgets } from './inference-budget-enforcement.js';
 import { lookupPricing } from './inference-pricing.js';
 import { extractTokens } from './inference-tokens.js';
 import { logger } from './logger.js';
 
-export interface TrackInferenceParams {
-  provider: string;
-  model: string;
-  operation: string;
-  domain?: string;
-  contextId?: string;
-  cached?: boolean;
-}
+import type {
+  InferenceLogInsert,
+  ResolvedInferenceParams,
+  TrackInferenceParams,
+} from './inference-middleware-types.js';
 
-interface LogValues {
-  provider: string;
-  model: string;
-  operation: string;
-  domain: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  costUsd: number;
-  latencyMs: number;
-  status: string;
-  cached: number;
-  contextId: string | null;
-  errorMessage: string | null;
-}
+export type { TrackInferenceParams } from './inference-middleware-types.js';
 
-function insertLog(values: LogValues): void {
+function insertLog(values: InferenceLogInsert): void {
   try {
     getDrizzle()
       .insert(aiInferenceLog)
@@ -44,12 +29,7 @@ function insertLog(values: LogValues): void {
   }
 }
 
-interface ResolvedParams {
-  domain: string | null;
-  contextId: string | null;
-}
-
-function resolveParams(params: TrackInferenceParams): ResolvedParams {
+function resolveParams(params: TrackInferenceParams): ResolvedInferenceParams {
   return {
     domain: params.domain ?? null,
     contextId: params.contextId ?? null,
@@ -66,10 +46,10 @@ function classifyError(error: unknown): { msg: string; isTimeout: boolean } {
 
 function buildLogValues(
   params: TrackInferenceParams,
-  resolved: ResolvedParams,
-  partial: Partial<LogValues> &
+  resolved: ResolvedInferenceParams,
+  partial: Partial<InferenceLogInsert> &
     Pick<
-      LogValues,
+      InferenceLogInsert,
       | 'inputTokens'
       | 'outputTokens'
       | 'costUsd'
@@ -78,7 +58,7 @@ function buildLogValues(
       | 'cached'
       | 'errorMessage'
     >
-): LogValues {
+): InferenceLogInsert {
   return {
     provider: params.provider,
     model: params.model,
@@ -91,7 +71,7 @@ function buildLogValues(
 
 async function trackCachedCall<T>(
   params: TrackInferenceParams,
-  resolved: ResolvedParams,
+  resolved: ResolvedInferenceParams,
   fn: () => Promise<T>
 ): Promise<T> {
   try {
@@ -127,7 +107,7 @@ async function trackCachedCall<T>(
 
 async function trackLiveCall<T>(
   params: TrackInferenceParams,
-  resolved: ResolvedParams,
+  resolved: ResolvedInferenceParams,
   fn: () => Promise<T>
 ): Promise<T> {
   const start = Date.now();
@@ -178,5 +158,6 @@ export async function trackInference<T>(
 ): Promise<T> {
   const resolved = resolveParams(params);
   if (params.cached ?? false) return trackCachedCall(params, resolved, fn);
-  return trackLiveCall(params, resolved, fn);
+  const effective = enforceBudgets(params, resolved, insertLog);
+  return trackLiveCall(effective, resolveParams(effective), fn);
 }
