@@ -35,6 +35,7 @@ export const SETTINGS_KEYS = {
   AI_MODEL_OVERRIDE_ENTITY_EXTRACTOR: 'ai.modelOverrides.entityExtractor',
   AI_MODEL_OVERRIDE_SCOPE_INFERENCE: 'ai.modelOverrides.scopeInference',
   AI_MODEL_OVERRIDE_AUDITOR_CONTRADICTION: 'ai.modelOverrides.auditorContradiction',
+  AI_MODEL_OVERRIDE_PATTERN_CONTRADICTION: 'ai.modelOverrides.patternContradiction',
 
   // Cerebrum — Query Engine
   CEREBRUM_QUERY_MAX_SOURCES: 'cerebrum.query.maxSources',

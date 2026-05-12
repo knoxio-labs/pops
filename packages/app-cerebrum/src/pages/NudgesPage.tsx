@@ -6,6 +6,7 @@
  */
 import { trpc } from '@pops/api-client';
 
+import { ContradictionsPanel } from '../components/ContradictionsPanel';
 import { NudgeCard } from '../components/NudgeCard';
 
 export function NudgesPage() {
@@ -46,8 +47,11 @@ export function NudgesPage() {
 
   if (nudges.length === 0) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
-        No pending nudges. Everything looks good.
+      <div className="p-4 md:p-6 space-y-6 max-w-3xl">
+        <div className="p-6 text-center text-muted-foreground">
+          No pending nudges. Everything looks good.
+        </div>
+        <ContradictionsPanel />
       </div>
     );
   }
@@ -55,17 +59,20 @@ export function NudgesPage() {
   const isPending = actMutation.isPending || dismissMutation.isPending;
 
   return (
-    <div className="p-4 md:p-6 space-y-3 max-w-3xl">
-      <h2 className="text-lg font-semibold mb-4">Pending Nudges ({data?.total ?? 0})</h2>
-      {nudges.map((nudge) => (
-        <NudgeCard
-          key={nudge.id}
-          nudge={nudge}
-          onAct={(id) => actMutation.mutate({ id })}
-          onDismiss={(id) => dismissMutation.mutate({ id })}
-          disabled={isPending}
-        />
-      ))}
+    <div className="p-4 md:p-6 space-y-6 max-w-3xl">
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold mb-4">Pending Nudges ({data?.total ?? 0})</h2>
+        {nudges.map((nudge) => (
+          <NudgeCard
+            key={nudge.id}
+            nudge={nudge}
+            onAct={(id) => actMutation.mutate({ id })}
+            onDismiss={(id) => dismissMutation.mutate({ id })}
+            disabled={isPending}
+          />
+        ))}
+      </div>
+      <ContradictionsPanel />
     </div>
   );
 }

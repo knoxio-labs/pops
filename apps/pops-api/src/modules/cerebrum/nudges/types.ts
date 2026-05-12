@@ -139,4 +139,21 @@ export interface DetectedPattern {
   count: number;
   dateRange: { from: string; to: string };
   trendDirection: 'rising' | 'stable' | 'declining';
+  /** Populated only when patternType === 'contradiction'. */
+  contradiction?: ContradictionEvidence;
+}
+
+/**
+ * Evidence for a single contradiction between two engrams.
+ *
+ * Produced by an LLM analysis pass and embedded into pattern nudges so the
+ * user can compare the two sides without opening either source engram.
+ * Excerpts are short verbatim quotes (≤ 240 chars) from each side.
+ */
+export interface ContradictionEvidence {
+  engramA: string;
+  engramB: string;
+  excerptA: string;
+  excerptB: string;
+  conflict: string;
 }
