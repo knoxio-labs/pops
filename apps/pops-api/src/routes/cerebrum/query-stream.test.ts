@@ -1,12 +1,3 @@
-/**
- * Tests for the Cerebrum Query SSE streaming route (PRD-082, issue #2596).
- *
- * Mocks the QueryService so we can drive the stream from a fake async
- * generator and assert the wire-format emitted by the Express handler:
- *   data: {"type":"token","text":"..."}
- *   data: {"type":"done","answer":"...","sources":[...], ...}
- *   data: {"type":"error","message":"..."}
- */
 import { type AddressInfo } from 'node:net';
 
 import express from 'express';
