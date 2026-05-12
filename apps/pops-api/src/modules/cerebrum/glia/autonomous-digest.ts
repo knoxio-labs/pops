@@ -1,14 +1,3 @@
-/**
- * Autonomous-action digest builder (#2577 — PRD-086 US-04 AC #5/#6).
- *
- * Pure functions: takes a pre-filtered list of autonomous `glia_actions`
- * rows plus per-action-type post-graduation counts, groups by action type,
- * and flags anomalies on high rejection rates.
- *
- * Split out from `digest-reports.ts` to keep that file under the
- * `max-lines` lint threshold.
- */
-
 import type { ActionType, GliaAction, GliaTrustState } from './types.js';
 
 /**

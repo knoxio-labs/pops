@@ -1,22 +1,3 @@
-/**
- * Digest service for autonomous Glia actions (PRD-086 US-04 AC #5/#6, #2577).
- *
- * Orchestrates the autonomous-action digest pipeline:
- *   1. Query autonomous actions in the requested period.
- *   2. Gather post-graduation execution/revert counts per action type.
- *   3. Build the digest payload (`buildAutonomousDigest`).
- *   4. Optionally deliver via shell notification (nudge_log) and Moltbot
- *      (Telegram).
- *
- * Phase handling (PRD-086 US-04 AC #6):
- *   - Delivery is allowed only when at least one action type currently in
- *     the digest is in `act_report` phase.
- *   - If every action type in the digest is in `silent` phase, delivery is
- *     suppressed — silent-phase types intentionally produce no digest.
- *   - Empty digests are suppressed entirely (edge case in PRD-086 README:
- *     "Digest generated with zero autonomous actions ... no notification
- *     sent").
- */
 import {
   buildAutonomousDigest,
   dailyDigestRange,

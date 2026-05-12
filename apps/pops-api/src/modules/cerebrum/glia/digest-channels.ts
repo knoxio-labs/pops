@@ -1,15 +1,3 @@
-/**
- * Default delivery channels for the autonomous Glia digest (#2577).
- *
- * Two channels:
- *   - `shell`: persists a row in `nudge_log` so the shell notification surface
- *     picks up the digest alongside other proactive nudges (PRD-084 framework).
- *   - `moltbot`: forwards the digest body to the Moltbot Telegram chat using
- *     the same env-driven config the ai-alerts module uses
- *     (POPS_ALERTS_TELEGRAM_BOT_TOKEN / POPS_ALERTS_TELEGRAM_CHAT_ID). Falls
- *     back to a no-op when unconfigured — matches the PRD note "If Moltbot is
- *     not configured, skip Telegram delivery silently."
- */
 import { randomUUID } from 'node:crypto';
 
 import { nudgeLog } from '@pops/db-types';
