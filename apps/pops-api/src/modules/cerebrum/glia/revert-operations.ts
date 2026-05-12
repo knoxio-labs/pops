@@ -126,7 +126,10 @@ function revertLink(action: GliaAction, engramService: EngramService): RevertRes
   }
 
   try {
-    if (!engramService.exists(pair.sourceId)) {
+    // Idempotency: either side missing means the link can no longer exist.
+    // unlink() reads frontmatter from disk for both engrams, so a vanished
+    // target would surface as a read error rather than a clean no-op.
+    if (!engramService.exists(pair.sourceId) || !engramService.exists(pair.targetId)) {
       return { success: true, restoredIds: [], errors: [] };
     }
     engramService.unlink(pair.sourceId, pair.targetId);

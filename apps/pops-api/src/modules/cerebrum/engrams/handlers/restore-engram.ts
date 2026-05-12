@@ -35,6 +35,12 @@ export function restoreEngram(deps: RestoreDeps, id: string): RestoreResult {
   }
 
   const archivedAbs = absolutePath(root, row.file_path);
+  // Idempotency: the index still points to `.archive/...` but the file is
+  // gone (e.g. a previous revert was interrupted, or the archive was pruned
+  // out-of-band). Treat as a no-op rather than throwing on readFileSync.
+  if (!existsSync(archivedAbs)) {
+    return { filePath: row.file_path, moved: false };
+  }
   const existingContent = readFileSync(archivedAbs, 'utf8');
   const { frontmatter, body } = parseEngramFile(existingContent);
 

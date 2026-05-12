@@ -286,6 +286,28 @@ describe('executeRevert (filesystem)', () => {
       expect(service.read(a.id).engram.links ?? []).not.toContain(b.id);
     });
 
+    it('is idempotent when the target engram has been deleted', () => {
+      const a = service.create({ type: 'note', title: 'A', body: '# A', scopes: ['x'] });
+      const b = service.create({ type: 'note', title: 'B', body: '# B', scopes: ['x'] });
+      service.link(a.id, b.id);
+
+      // Target engram vanishes (hard-delete out-of-band). The unlink path
+      // would read b's frontmatter and throw — revert must skip cleanly.
+      service.hardDelete(b.id);
+      expect(service.exists(b.id)).toBe(false);
+      expect(service.exists(a.id)).toBe(true);
+
+      const action = makeAction({
+        actionType: 'link',
+        affectedIds: [a.id, b.id],
+        payload: { type: 'link', sourceId: a.id, targetId: b.id, reason: 'r', similarityScore: 1 },
+      });
+      const result = executeRevert(action, service);
+
+      expect(result.success).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
     it('is idempotent — re-reverting an already-unlinked pair succeeds', () => {
       const a = service.create({ type: 'note', title: 'A', body: '# A', scopes: ['x'] });
       const b = service.create({ type: 'note', title: 'B', body: '# B', scopes: ['x'] });
