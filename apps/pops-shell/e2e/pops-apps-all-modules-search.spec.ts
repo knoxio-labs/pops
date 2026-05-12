@@ -1,21 +1,5 @@
-/**
- * Install-set switching E2E — search returns media results when media
- * is installed (PRD-101 US-11 follow-up, issue #2595).
- *
- * All-modules half of the matched pair. The companion finance-only
- * assertion lives in `pops-apps-finance-only-search.spec.ts`; together
- * they satisfy the deferred acceptance criterion from
- * `docs/themes/01-foundation/prds/101-plugin-contract/us-11-test-matrix.md`:
- *
- *   With every module installed, searching for a known media title
- *   returns a media result; with `POPS_APPS=finance` the same query
- *   returns zero media results.
- *
- * "The Matrix" is a seeded movie title (see `apps/pops-api/src/db/seeder.ts`),
- * so the same query the finance-only spec issues must produce a movies
- * section here. Same query, two builds, two outcomes — that's the
- * contract.
- */
+// Paired with pops-apps-finance-only-search.spec.ts: same query must produce
+// media results here and none under POPS_APPS=finance.
 import { expect, test } from '@playwright/test';
 
 import { useRealApi } from './helpers/use-real-api';

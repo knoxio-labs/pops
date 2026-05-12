@@ -44,6 +44,7 @@ test.describe('Shell — search narrows to installed modules (finance-only build
     await searchResponse;
 
     const panel = page.getByTestId('search-results-panel');
+    await expect(panel).toBeVisible({ timeout: 10_000 });
     await expect(panel.getByTestId('section-movies')).toHaveCount(0);
     await expect(panel.getByTestId('section-tv-shows')).toHaveCount(0);
   });
