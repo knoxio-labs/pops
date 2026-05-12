@@ -81,7 +81,7 @@ export function BrowseRuleSidebarRowSortable(props: RowProps) {
       <div className="flex items-start gap-1">
         <button
           type="button"
-          className="relative mt-0.5 shrink-0 cursor-grab touch-none rounded p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing before:absolute before:-inset-2.5 before:content-['']"
+          className="relative mt-0.5 shrink-0 cursor-grab touch-none rounded p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing before:absolute before:-inset-3 before:content-['']"
           aria-label={`Drag to reorder rule: ${rule.descriptionPattern}`}
           onClick={(e) => e.stopPropagation()}
           {...listeners}

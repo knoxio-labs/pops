@@ -106,7 +106,7 @@ function ExpandToggle({
           ? `Hide overview for episode ${item.episodeNumber}`
           : `Show overview for episode ${item.episodeNumber}`
       }
-      className="relative mt-0.5 text-muted-foreground shrink-0 hover:text-foreground before:absolute before:-inset-3 before:content-['']"
+      className="relative mt-0.5 text-muted-foreground shrink-0 hover:text-foreground before:absolute before:-inset-3.5 before:content-['']"
     >
       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
     </button>
