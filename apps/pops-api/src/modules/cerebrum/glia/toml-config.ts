@@ -13,6 +13,7 @@ import { statSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { parse as parseToml } from 'smol-toml';
+import { z } from 'zod';
 
 import type { GraduationThresholds } from './types.js';
 
@@ -33,48 +34,69 @@ export function gliaTomlPath(engramRoot: string): string {
   return join(engramRoot, CONFIG_RELATIVE_PATH);
 }
 
-function readNumber(obj: Record<string, unknown>, key: string): number | undefined {
-  const value = obj[key];
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  return undefined;
-}
+const nonNegativeInt = z.number().int().nonnegative();
+const rejectionRate = z.number().min(0).max(1);
 
-function pickGraduationSection(parsed: Record<string, unknown>): Record<string, unknown> {
-  const trust = parsed['trust'];
-  if (typeof trust !== 'object' || trust === null) return {};
-  const graduation = (trust as Record<string, unknown>)['graduation'];
-  if (typeof graduation !== 'object' || graduation === null) return {};
-  return graduation as Record<string, unknown>;
-}
+const graduationSchema = z
+  .object({
+    propose_to_act_report_min_approved: nonNegativeInt.optional(),
+    propose_to_act_report_max_rejection_rate: rejectionRate.optional(),
+    act_report_to_silent_min_days: nonNegativeInt.optional(),
+    demotion_revert_threshold: nonNegativeInt.optional(),
+    demotion_window_days: nonNegativeInt.optional(),
+  })
+  .strip();
+
+const gliaTomlSchema = z
+  .object({
+    trust: z
+      .object({
+        graduation: graduationSchema.optional(),
+      })
+      .strip()
+      .optional(),
+  })
+  .strip();
 
 /** Parse the `[trust.graduation]` block into a partial thresholds object. */
 export function parseGliaToml(content: string): PartialGraduationThresholds {
-  let raw: Record<string, unknown>;
+  let raw: unknown;
   try {
-    raw = parseToml(content) as Record<string, unknown>;
+    raw = parseToml(content);
   } catch (err) {
     console.warn(`[cerebrum] glia.toml parse failed: ${(err as Error).message}`);
     return {};
   }
 
-  const section = pickGraduationSection(raw);
+  const parsed = gliaTomlSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.warn(
+      `[cerebrum] glia.toml validation failed: ${parsed.error.issues
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .join('; ')}`
+    );
+    return {};
+  }
+
+  const section = parsed.data.trust?.graduation;
+  if (!section) return {};
+
   const result: PartialGraduationThresholds = {};
-
-  const proposeMinApproved = readNumber(section, 'propose_to_act_report_min_approved');
-  if (proposeMinApproved !== undefined) result.proposeToActReportMinApproved = proposeMinApproved;
-
-  const maxRejectionRate = readNumber(section, 'propose_to_act_report_max_rejection_rate');
-  if (maxRejectionRate !== undefined) result.proposeToActReportMaxRejectionRate = maxRejectionRate;
-
-  const minDays = readNumber(section, 'act_report_to_silent_min_days');
-  if (minDays !== undefined) result.actReportToSilentMinDays = minDays;
-
-  const demotionThreshold = readNumber(section, 'demotion_revert_threshold');
-  if (demotionThreshold !== undefined) result.demotionRevertThreshold = demotionThreshold;
-
-  const demotionWindow = readNumber(section, 'demotion_window_days');
-  if (demotionWindow !== undefined) result.demotionWindowDays = demotionWindow;
-
+  if (section.propose_to_act_report_min_approved !== undefined) {
+    result.proposeToActReportMinApproved = section.propose_to_act_report_min_approved;
+  }
+  if (section.propose_to_act_report_max_rejection_rate !== undefined) {
+    result.proposeToActReportMaxRejectionRate = section.propose_to_act_report_max_rejection_rate;
+  }
+  if (section.act_report_to_silent_min_days !== undefined) {
+    result.actReportToSilentMinDays = section.act_report_to_silent_min_days;
+  }
+  if (section.demotion_revert_threshold !== undefined) {
+    result.demotionRevertThreshold = section.demotion_revert_threshold;
+  }
+  if (section.demotion_window_days !== undefined) {
+    result.demotionWindowDays = section.demotion_window_days;
+  }
   return result;
 }
 
@@ -91,7 +113,11 @@ export function loadGliaToml(engramRoot: string): PartialGraduationThresholds {
   let mtimeMs: number;
   try {
     mtimeMs = statSync(path).mtimeMs;
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== 'ENOENT') {
+      console.warn(`[cerebrum] glia.toml stat failed at ${path}: ${(err as Error).message}`);
+    }
     cache.delete(path);
     return {};
   }

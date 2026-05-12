@@ -6,11 +6,12 @@
  * - missing/unreadable toml falls back to the settings DB
  * - mtime invalidation picks up in-process edits without restart
  */
+import * as fs from 'node:fs';
 import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeDb, setDb } from '../../../../db.js';
 import { createTestDb } from '../../../../shared/test-utils.js';
@@ -34,6 +35,16 @@ function bumpMtime(path: string, deltaSeconds: number): void {
   // even when two writes occur within the same millisecond.
   const now = Date.now() / 1000 + deltaSeconds;
   utimesSync(path, now, now);
+}
+
+/**
+ * Build a typed `NodeJS.ErrnoException` for tests that need to simulate a
+ * specific errno from `fs` without resorting to `as any`.
+ */
+function makeErrnoError(code: string, message: string): NodeJS.ErrnoException {
+  const err: NodeJS.ErrnoException = new Error(message);
+  err.code = code;
+  return err;
 }
 
 describe('loadGliaToml', () => {
@@ -85,7 +96,9 @@ propose_to_act_report_min_approved = 7
     expect(loadGliaToml(root)).toEqual({ proposeToActReportMinApproved: 7 });
   });
 
-  it('ignores non-numeric values', () => {
+  it('returns {} when any value has the wrong type', () => {
+    // Zod boundary validation rejects the whole file rather than silently
+    // skipping bad keys — this surfaces config bugs instead of hiding them.
     writeGliaToml(
       root,
       `
@@ -94,12 +107,107 @@ propose_to_act_report_min_approved = "not a number"
 demotion_revert_threshold = 4
 `
     );
-    expect(loadGliaToml(root)).toEqual({ demotionRevertThreshold: 4 });
+    expect(loadGliaToml(root)).toEqual({});
   });
 
   it('returns an empty object on malformed toml', () => {
     writeGliaToml(root, 'this is = = not valid toml [');
     expect(loadGliaToml(root)).toEqual({});
+  });
+
+  it('rejects out-of-range rejection rate (>1)', () => {
+    writeGliaToml(
+      root,
+      `
+[trust.graduation]
+propose_to_act_report_max_rejection_rate = 1.5
+demotion_revert_threshold = 4
+`
+    );
+    // Entire file fails validation → fallback to {} so callers cascade to DB / defaults.
+    expect(loadGliaToml(root)).toEqual({});
+  });
+
+  it('rejects negative count fields', () => {
+    writeGliaToml(
+      root,
+      `
+[trust.graduation]
+propose_to_act_report_min_approved = -1
+`
+    );
+    expect(loadGliaToml(root)).toEqual({});
+  });
+
+  it('rejects non-integer day fields', () => {
+    writeGliaToml(
+      root,
+      `
+[trust.graduation]
+act_report_to_silent_min_days = 7.5
+`
+    );
+    expect(loadGliaToml(root)).toEqual({});
+  });
+
+  it('returns {} and warns when statSync fails with a non-ENOENT error', () => {
+    // Force EACCES by chmodding the .config directory to 0 so the kernel
+    // refuses stat on the file inside it. This exercises the real fs error
+    // path without monkey-patching ESM namespaces.
+    writeGliaToml(
+      root,
+      `
+[trust.graduation]
+propose_to_act_report_min_approved = 5
+`
+    );
+    const configDir = join(root, '.config');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    let errnoCode: string | undefined;
+    fs.chmodSync(configDir, 0o000);
+    try {
+      // The stat call should throw an errno error. Capture it directly to
+      // assert the precondition and skip the test if the platform doesn't
+      // enforce dir perms (e.g., running as root in CI).
+      try {
+        fs.statSync(gliaTomlPath(root));
+      } catch (err) {
+        errnoCode = (err as NodeJS.ErrnoException).code;
+      }
+      if (errnoCode === undefined || errnoCode === 'ENOENT') {
+        // Skip — the environment doesn't reproduce the EACCES path.
+        return;
+      }
+
+      expect(loadGliaToml(root)).toEqual({});
+      expect(warnSpy).toHaveBeenCalled();
+      const message = warnSpy.mock.calls[0]?.[0];
+      expect(typeof message).toBe('string');
+      expect(message).toContain('stat failed');
+    } finally {
+      // Restore perms so afterEach can remove the directory.
+      fs.chmodSync(configDir, 0o700);
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('produces a typed errno for the typed-throw helper', () => {
+    // Verifies that makeErrnoError stays in sync with NodeJS.ErrnoException
+    // — the property the loader narrows on. Cheap insurance against drift.
+    const err = makeErrnoError('EACCES', 'permission denied');
+    expect(err.code).toBe('EACCES');
+    expect(err.message).toBe('permission denied');
+  });
+
+  it('does not warn for ENOENT (expected fallback)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(loadGliaToml(root)).toEqual({});
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('picks up file edits via mtime invalidation', () => {
