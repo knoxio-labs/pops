@@ -1,15 +1,5 @@
 /**
  * View model for the Query page (`/cerebrum/query`, PRD-082).
- *
- * Composes the history state, mutation wrappers and action callbacks
- * extracted into sibling modules. Kept deliberately small so the page
- * component stays a dumb consumer and so each sub-piece stays
- * unit-testable in isolation.
- *
- * Streaming is not yet supported server-side — `cerebrum.query.ask`
- * returns the answer in one shot. When PRD-082 adds streaming, the
- * answer panel is already laid out for a progressively-rendered
- * answer; only the mutation wrapper needs to change.
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
