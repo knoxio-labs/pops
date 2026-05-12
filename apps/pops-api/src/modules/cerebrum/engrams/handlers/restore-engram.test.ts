@@ -17,6 +17,7 @@ import { createTestDb, makeClock } from '../../../../shared/test-utils.js';
 import { TemplateRegistry } from '../../templates/registry.js';
 import { seedDefaultTemplates } from '../../templates/seed.js';
 import { EngramService } from '../service.js';
+import { getIndexRow } from './upsert-index.js';
 
 import type { Database } from 'better-sqlite3';
 
@@ -59,5 +60,6 @@ describe('restoreEngram idempotency', () => {
 
     expect(result.moved).toBe(false);
     expect(result.filePath).toBe(archivedRel);
+    expect(getIndexRow(drizzle(db), engram.id).status).toBe('archived');
   });
 });

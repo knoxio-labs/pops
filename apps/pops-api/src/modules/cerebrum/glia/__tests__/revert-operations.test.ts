@@ -275,6 +275,7 @@ describe('executeRevert (filesystem)', () => {
 
       expect(result.success).toBe(true);
       expect(service.read(a.id).engram.links ?? []).not.toContain(b.id);
+      expect(service.read(b.id).engram.links ?? []).not.toContain(a.id);
     });
 
     it('is idempotent when the target engram has been deleted', () => {
