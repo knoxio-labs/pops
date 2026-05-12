@@ -168,8 +168,12 @@ export function migrateLegacyBudgetSettings(): void {
   if (getSettingOrNull(LEGACY_MIGRATED_FLAG_KEY)) return;
 
   const db = getDrizzle();
-  const existing = db.select().from(aiBudgets).where(eq(aiBudgets.id, 'global')).all();
-  if (existing.length > 0) {
+  const existingGlobal = db
+    .select({ id: aiBudgets.id })
+    .from(aiBudgets)
+    .where(eq(aiBudgets.scopeType, 'global'))
+    .get();
+  if (existingGlobal) {
     setRawSetting(LEGACY_MIGRATED_FLAG_KEY, '1');
     return;
   }
