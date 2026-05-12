@@ -81,6 +81,8 @@ export interface GraduationThresholds {
 }
 
 import { getSettingValue } from '../../core/settings/service.js';
+import { getEngramRoot } from '../instance.js';
+import { loadGliaToml } from './toml-config.js';
 
 /** Hardcoded graduation thresholds per ADR-021. */
 const FALLBACK_THRESHOLDS: GraduationThresholds = {
@@ -91,29 +93,46 @@ const FALLBACK_THRESHOLDS: GraduationThresholds = {
   demotionWindowDays: 7,
 };
 
-/** Read graduation thresholds from settings (with hardcoded fallbacks). */
+/**
+ * Read graduation thresholds for the trust machine.
+ *
+ * Precedence (PRD-086 US-03 AC #7): `engrams/.config/glia.toml` is the source
+ * of truth — it is re-read on every call (mtime-cached) so user edits take
+ * effect on the next evaluation without restart. The settings DB acts as a
+ * per-key fallback for thresholds the toml file does not set; the hardcoded
+ * ADR-021 defaults are the last resort. The toml file wins over the DB
+ * because the PRD documents the file as the user-facing knob.
+ */
 export function getGliaThresholds(): GraduationThresholds {
+  const toml = loadGliaToml(getEngramRoot());
   return {
-    proposeToActReportMinApproved: getSettingValue(
-      'cerebrum.glia.proposeMinApproved',
-      FALLBACK_THRESHOLDS.proposeToActReportMinApproved
-    ),
-    proposeToActReportMaxRejectionRate: getSettingValue(
-      'cerebrum.glia.proposeMaxRejectionRate',
-      FALLBACK_THRESHOLDS.proposeToActReportMaxRejectionRate
-    ),
-    actReportToSilentMinDays: getSettingValue(
-      'cerebrum.glia.actReportMinDays',
-      FALLBACK_THRESHOLDS.actReportToSilentMinDays
-    ),
-    demotionRevertThreshold: getSettingValue(
-      'cerebrum.glia.demotionRevertThreshold',
-      FALLBACK_THRESHOLDS.demotionRevertThreshold
-    ),
-    demotionWindowDays: getSettingValue(
-      'cerebrum.glia.demotionWindowDays',
-      FALLBACK_THRESHOLDS.demotionWindowDays
-    ),
+    proposeToActReportMinApproved:
+      toml.proposeToActReportMinApproved ??
+      getSettingValue(
+        'cerebrum.glia.proposeMinApproved',
+        FALLBACK_THRESHOLDS.proposeToActReportMinApproved
+      ),
+    proposeToActReportMaxRejectionRate:
+      toml.proposeToActReportMaxRejectionRate ??
+      getSettingValue(
+        'cerebrum.glia.proposeMaxRejectionRate',
+        FALLBACK_THRESHOLDS.proposeToActReportMaxRejectionRate
+      ),
+    actReportToSilentMinDays:
+      toml.actReportToSilentMinDays ??
+      getSettingValue(
+        'cerebrum.glia.actReportMinDays',
+        FALLBACK_THRESHOLDS.actReportToSilentMinDays
+      ),
+    demotionRevertThreshold:
+      toml.demotionRevertThreshold ??
+      getSettingValue(
+        'cerebrum.glia.demotionRevertThreshold',
+        FALLBACK_THRESHOLDS.demotionRevertThreshold
+      ),
+    demotionWindowDays:
+      toml.demotionWindowDays ??
+      getSettingValue('cerebrum.glia.demotionWindowDays', FALLBACK_THRESHOLDS.demotionWindowDays),
   };
 }
 
