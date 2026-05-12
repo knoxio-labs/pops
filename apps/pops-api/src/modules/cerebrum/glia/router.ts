@@ -20,6 +20,8 @@ import { protectedProcedure, router } from '../../../trpc.js';
 import { getGliaServices } from './instance.js';
 import { ACTION_STATUSES, ACTION_TYPES, USER_DECISIONS } from './types.js';
 
+const periodSchema = z.enum(['daily', 'weekly']);
+
 import type { ActionType } from './types.js';
 
 const actionTypeSchema = z.enum(ACTION_TYPES);
@@ -172,7 +174,31 @@ const trustStateRouter = router({
   }),
 });
 
+/** Audit-trail surface for PRD-086 US-04 AC #5/#6 — suppression semantics live in the service. */
+const digestProcedure = protectedProcedure
+  .input(
+    z
+      .object({
+        period: periodSchema.optional(),
+        actionType: actionTypeSchema.optional(),
+        rejectionRateThreshold: z.number().gt(0).lte(1).optional(),
+        deliver: z.boolean().optional(),
+      })
+      .optional()
+  )
+  .mutation(async ({ input }) => {
+    try {
+      const { digestService } = getGliaServices();
+      // Await so a rejected Promise is funnelled through `toTrpcError` instead
+      // of escaping the procedure unchanged.
+      return await digestService.generate(input ?? {});
+    } catch (err) {
+      toTrpcError(err);
+    }
+  });
+
 export const gliaRouter = router({
   actions: actionsRouter,
   trustState: trustStateRouter,
+  digest: digestProcedure,
 });
