@@ -192,6 +192,26 @@ propose_to_act_report_min_approved = 5
     }
   });
 
+  it('returns an independent object each call (cache cannot be mutated)', () => {
+    writeGliaToml(
+      root,
+      `
+[trust.graduation]
+propose_to_act_report_min_approved = 5
+`
+    );
+    const first = loadGliaToml(root);
+    expect(first.proposeToActReportMinApproved).toBe(5);
+
+    // Mutate the returned object — the cached entry must be unaffected.
+    first.proposeToActReportMinApproved = 999;
+    delete first.proposeToActReportMinApproved;
+
+    const second = loadGliaToml(root);
+    expect(second).not.toBe(first);
+    expect(second.proposeToActReportMinApproved).toBe(5);
+  });
+
   it('produces a typed errno for the typed-throw helper', () => {
     // Verifies that makeErrnoError stays in sync with NodeJS.ErrnoException
     // — the property the loader narrows on. Cheap insurance against drift.

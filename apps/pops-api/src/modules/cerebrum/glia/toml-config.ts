@@ -124,7 +124,10 @@ export function loadGliaToml(engramRoot: string): PartialGraduationThresholds {
 
   const cached = cache.get(path);
   if (cached && cached.mtimeMs === mtimeMs) {
-    return cached.thresholds;
+    // Defensive copy — never hand callers the cached reference, otherwise
+    // a downstream mutation poisons every subsequent read until the file's
+    // mtime changes.
+    return { ...cached.thresholds };
   }
 
   let content: string;
@@ -143,7 +146,8 @@ export function loadGliaToml(engramRoot: string): PartialGraduationThresholds {
 
   const thresholds = parseGliaToml(content);
   cache.set(path, { mtimeMs, thresholds });
-  return thresholds;
+  // Return a copy so mutation by the caller can't corrupt the cache entry.
+  return { ...thresholds };
 }
 
 /** Test hook — clear the mtime cache. */
