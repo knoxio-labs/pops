@@ -52,7 +52,7 @@ export function FeatureCard({ feature }: { feature: FeatureStatus }) {
       {isUserScoped && feature.userOverride && (
         <button
           type="button"
-          className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+          className="relative inline-flex items-center text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline before:absolute before:-inset-3 before:content-['']"
           onClick={resetUserOverride}
         >
           Reset to default

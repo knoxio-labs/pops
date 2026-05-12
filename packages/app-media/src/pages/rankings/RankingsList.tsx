@@ -55,7 +55,7 @@ function PaginationFooter({
           type="button"
           onClick={onPrev}
           disabled={offset === 0}
-          className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+          className="relative text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline before:absolute before:-inset-3 before:content-['']"
         >
           Previous
         </button>
@@ -63,7 +63,7 @@ function PaginationFooter({
           type="button"
           onClick={onNext}
           disabled={!hasMore}
-          className="text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+          className="relative text-sm text-primary hover:underline disabled:text-muted-foreground disabled:no-underline before:absolute before:-inset-3 before:content-['']"
         >
           Next
         </button>

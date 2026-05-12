@@ -91,7 +91,7 @@ function PhotoCell({
         <button
           type="button"
           onClick={() => onDelete(photo.id)}
-          className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-background/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+          className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-background/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background before:absolute before:-inset-2.5 before:content-['']"
           aria-label={`Delete photo ${photo.caption ?? photo.id}`}
         >
           <Trash2 className="h-3.5 w-3.5" />

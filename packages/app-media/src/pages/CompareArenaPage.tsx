@@ -21,7 +21,10 @@ function ArenaError({ message, onRetry }: { message: string; onRetry: () => void
       <p className="text-lg mb-2">Something went wrong</p>
       <p className="text-sm">
         {message}{' '}
-        <button onClick={onRetry} className="text-primary underline">
+        <button
+          onClick={onRetry}
+          className="relative text-primary underline before:absolute before:-inset-3 before:content-['']"
+        >
           Try again
         </button>
       </p>

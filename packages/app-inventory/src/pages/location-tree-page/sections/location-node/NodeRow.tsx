@@ -34,7 +34,7 @@ function ExpandToggle({ open }: { open: boolean }) {
     <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
-        className="p-0.5 rounded hover:bg-muted"
+        className="relative p-0.5 rounded hover:bg-muted before:absolute before:-inset-3 before:content-['']"
         aria-label={open ? 'Collapse' : 'Expand'}
       >
         {open ? (
@@ -83,7 +83,7 @@ function DragHandle({
       {...attributes}
       {...listeners}
       type="button"
-      className="p-0.5 rounded hover:bg-muted cursor-grab active:cursor-grabbing hidden [@media(pointer:fine)]:flex opacity-0 group-hover:opacity-100 transition-opacity touch-none"
+      className="relative p-0.5 rounded hover:bg-muted cursor-grab active:cursor-grabbing hidden [@media(pointer:fine)]:flex opacity-0 group-hover:opacity-100 transition-opacity touch-none before:absolute before:-inset-3 before:content-['']"
       aria-label={`Drag ${name}`}
       onClick={(e) => e.stopPropagation()}
     >
