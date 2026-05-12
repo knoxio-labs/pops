@@ -14,10 +14,10 @@ As a developer, I want typed nav config interfaces and a central app registry so
 - [x] Registry is the single source of truth — sidebar/rail reads from it, no hardcoded nav lists
 - [x] At least one app (finance) registered with Lucide icon references (not emoji)
 - [x] Adding a new app to the registry is a one-line import + array push
-- [x] Icon name strings in navConfig resolve to actual icon components — missing mappings fail visibly at dev time (TypeScript error or runtime warning), not silently at render time
+- [x] Every icon identifier declared in nav config resolves to a real icon component; missing mappings fail at build or CI time, never silently at render time
 
 ## Notes
 
 The `color` field on `AppNavConfig` is optional — it's consumed by the theme colour propagation system (PRD-007). The registry doesn't need to handle it yet, just include it in the type.
 
-The typed catalogue is the `IconName` union in `@pops/navigation` plus `AppNavConfig` / `AppNavItem` in the shell. Build-time validation is enforced two ways: each app's `navConfig` declaration uses `satisfies AppNavConfigShape` (with `icon: IconName`), and the shell's `iconMap` uses `satisfies Record<IconName, LucideIcon>` so every member of the union must have a component. A registry-validation test (`apps/pops-shell/src/app/nav/registry.test.ts`) additionally asserts every registered nav icon resolves through `iconMap` and that app ids / basePaths / item paths are unique — drift fails CI.
+The contract: the set of allowed icon identifiers is a closed, build-validated catalogue; every app's nav declaration is checked against it at compile time, and a CI guardrail additionally rejects duplicate app ids, duplicate or unrooted basePaths, and any icon identifier that has no resolved component.

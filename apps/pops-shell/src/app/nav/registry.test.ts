@@ -1,19 +1,5 @@
-/**
- * Registry-validation tests for the typed nav catalogue (PRD-006 US-01).
- *
- * The compile-time guarantees live in:
- * - `AppNavConfig.icon: IconName` and `AppNavItem.icon: IconName` (`./types`)
- * - `iconMap satisfies Record<IconName, LucideIcon>` (`./icon-map`)
- * - Each app's `navConfig satisfies AppNavConfigShape` (per-app `routes.tsx`)
- *
- * Together those mean an unknown icon name fails the type check before the
- * code reaches the bundler. These runtime tests close the remaining acceptance
- * criterion in `us-01-nav-types-registry.md`: every icon string in every
- * registered `navConfig` must resolve through `iconMap`, no app-id collisions,
- * no `basePath` collisions, and `basePath`s must be rooted. Drift in any of
- * those invariants fails CI rather than silently rendering a fallback letter
- * (see `AppRailIcon.tsx`).
- */
+// CI guardrail against silent nav drift: missing icon mappings would otherwise
+// render a fallback letter instead of failing the build.
 import { describe, expect, it } from 'vitest';
 
 import { iconMap } from './icon-map';
