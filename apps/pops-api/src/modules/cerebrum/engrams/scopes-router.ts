@@ -17,6 +17,7 @@ import { protectedProcedure, router } from '../../../trpc.js';
 import { getEngramRoot, getEngramService } from '../instance.js';
 import { reclassifyScopes } from './reclassify.js';
 import { filterByScopes } from './scope-filter.js';
+import { createScopeReconciliationService } from './scope-reconciliation.js';
 import { normaliseScope, scopeStringSchema, validateScope } from './scope-schema.js';
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -181,6 +182,18 @@ export const scopesRouter = router({
     if (result.valid) return { valid: true as const, scope: result.scope };
     return { valid: false as const, errors: result.errors };
   }),
+
+  /**
+   * Reconcile user-suggested scopes against the known scope vocabulary.
+   * Pure lexical/structural — no LLM, no write. See PRD-081 US-10.
+   */
+  reconcile: protectedProcedure
+    .input(z.object({ suggestedScopes: scopesArraySchema }))
+    .query(({ input }) => {
+      const knownScopes = listScopes(getDrizzle());
+      const svc = createScopeReconciliationService();
+      return svc.reconcile({ suggestedScopes: input.suggestedScopes, knownScopes });
+    }),
 
   /**
    * Return engrams matching scope prefixes with optional secret opt-in.
