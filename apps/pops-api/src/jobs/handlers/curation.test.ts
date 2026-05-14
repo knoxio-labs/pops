@@ -376,6 +376,41 @@ describe('curation handler — scope reconciliation (PRD-081 US-10)', () => {
     expect(customFields).not.toHaveProperty('_scope_suggestions');
   });
 
+  it('clears stale _scope_suggestions when reconciliation is no longer active', async () => {
+    // Engram had reconciliation suggestions on a previous run, but the opt-in
+    // flag has since been cleared (e.g. user dropped to fallback inference).
+    // Stale suggestions must not survive into the new enrichment record.
+    mockRead.mockReturnValue({
+      engram: {
+        id: 'eng_20260514_1700_test',
+        title: 'Karbon meeting notes',
+        type: 'capture',
+        scopes: ['personal.captures'],
+        tags: [],
+        source: 'cli',
+        created: '2026-05-14T17:00:00Z',
+        contentHash: 'reconcile-hash',
+        customFields: {
+          _scope_suggestions: [
+            { original: 'old', canonical: 'old.canonical', confidence: 0.9, reason: 'stale' },
+          ],
+        },
+      },
+      body: 'Met with Karbon team about meeting cadence',
+    });
+    mockInfer.mockResolvedValue({
+      scopes: ['work.karbon.fedx.meetings'],
+      source: 'llm',
+      confidence: 0.9,
+    });
+
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260514_1700_test' }));
+
+    const call = mockUpdate.mock.calls[0]?.[1] as Record<string, unknown>;
+    const customFields = call?.['customFields'] as Record<string, unknown>;
+    expect(customFields).not.toHaveProperty('_scope_suggestions');
+  });
+
   it('falls back to scope inference when _reconcile_scopes is not set', async () => {
     mockRead.mockReturnValue({
       engram: {

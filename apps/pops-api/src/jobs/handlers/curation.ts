@@ -91,13 +91,14 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
   customFields['_enrichedHash'] = engram.contentHash;
 
   const scopeResolution = await resolveScopes(engram, body, classification.type, mergedTags);
-  if (scopeResolution.reconciled) {
-    if (scopeResolution.suggestions.length > 0) {
-      customFields['_scope_suggestions'] = scopeResolution.suggestions;
-    } else {
-      // Clear any stale suggestions from a previous enrichment run.
-      delete customFields['_scope_suggestions'];
-    }
+  // Always clear stale suggestions from any prior enrichment run; only the
+  // current reconciliation pass (when active and producing matches) gets to
+  // populate them. This handles the case where `_reconcile_scopes` was true
+  // on a previous run but is now false.
+  if (scopeResolution.reconciled && scopeResolution.suggestions.length > 0) {
+    customFields['_scope_suggestions'] = scopeResolution.suggestions;
+  } else {
+    delete customFields['_scope_suggestions'];
   }
 
   const updateInput: UpdateEngramInput = {

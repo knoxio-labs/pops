@@ -111,8 +111,12 @@ function pickHigherConfidence(
   if (!current) return next;
   if (next.confidence > current.confidence) return next;
   if (next.confidence < current.confidence) return current;
-  // Tie — break by canonical usage count (higher wins).
-  return next.count > current.count ? next : current;
+  // Tie on confidence — break by canonical usage count (higher wins).
+  if (next.count > current.count) return next;
+  if (next.count < current.count) return current;
+  // Still tied — break lexicographically on canonical scope so the result
+  // is deterministic regardless of `knownScopes` iteration order.
+  return next.canonical < current.canonical ? next : current;
 }
 
 function scoreCandidate(
