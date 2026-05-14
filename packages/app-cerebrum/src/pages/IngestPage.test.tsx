@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -16,6 +16,8 @@ const captureOnSuccess: { current: ((data: unknown) => void) | null } = { curren
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { error: vi.fn() }),
 }));
+
+const { toast: mockToast } = await import('sonner');
 
 vi.mock('@pops/api-client', () => ({
   trpc: {
@@ -307,6 +309,26 @@ describe('IngestPage — capture-first surface (PRD-081 US-01)', () => {
     await user.type(body, '{Escape}');
 
     expect(body.value).toBe('');
+  });
+
+  it('Esc shows an Undo toast that restores the cleared body', async () => {
+    const user = userEvent.setup();
+    render(<IngestPage />);
+
+    const body = screen.getByLabelText('Body') as HTMLTextAreaElement;
+    await user.type(body, 'Worth saving after all');
+    await user.type(body, '{Escape}');
+
+    expect(body.value).toBe('');
+    const calls = (mockToast as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const lastCall = calls.at(-1);
+    if (!lastCall) throw new Error('expected toast to have been called');
+    expect(lastCall[0]).toBe('Body cleared');
+    const action = (lastCall[1] as { action: { label: string; onClick: () => void } }).action;
+    expect(action.label).toBe('Undo');
+    // Firing the undo callback restores the original text once React flushes.
+    act(() => action.onClick());
+    await waitFor(() => expect(body.value).toBe('Worth saving after all'));
   });
 
   it('shows the result view after a successful capture', async () => {

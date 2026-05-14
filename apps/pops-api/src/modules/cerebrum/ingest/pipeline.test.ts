@@ -83,6 +83,15 @@ describe('IngestService.quickCapture', () => {
     expect(createInput['customFields']).toBeUndefined();
   });
 
+  it('trims leading/trailing whitespace from suggested scopes before writing', async () => {
+    const svc = new IngestService();
+    await svc.quickCapture('hello world', 'manual', ['  work.karbon.fedx.meetings  ']);
+
+    const createInput = expectCreateCall();
+    expect(createInput['scopes']).toEqual(['work.karbon.fedx.meetings']);
+    expect(createInput['customFields']).toEqual({ _reconcile_scopes: true });
+  });
+
   it('always enqueues the classifyEngram job after writing', async () => {
     const svc = new IngestService();
     await svc.quickCapture('hello world', 'manual', ['work.karbon.fedx.meetings']);

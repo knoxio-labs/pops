@@ -31,18 +31,11 @@ export function useTemplateAndScopeData() {
   const knownTags = tagsRef.current;
 
   const typeOptions = useMemo(() => {
-    const templatesByName = new Map<string, TemplateSummary>(
-      templates.map((t: TemplateSummary) => [t.name, t])
-    );
-    return ENGRAM_TYPES.map((typeName) => {
-      const tpl = templatesByName.get(typeName);
-      return {
-        value: typeName,
-        label: ENGRAM_TYPE_LABELS[typeName],
-        description: tpl?.description ?? '',
-      };
-    });
-  }, [templates]);
+    return ENGRAM_TYPES.map((typeName) => ({
+      value: typeName,
+      label: ENGRAM_TYPE_LABELS[typeName],
+    }));
+  }, []);
 
   const scopeSuggestions = useMemo(
     () =>

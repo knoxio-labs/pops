@@ -184,11 +184,14 @@ export function IngestForm({ model }: IngestFormProps) {
       }
       if (e.key === 'Escape' && model.form.body.length > 0) {
         e.preventDefault();
+        // Capture the value BEFORE clearing — otherwise the Undo callback
+        // closes over the now-empty form state.
+        const cleared = model.form.body;
         model.updateField('body', '');
         toast(t('ingest.cleared'), {
           action: {
             label: t('ingest.undo'),
-            onClick: () => model.updateField('body', model.form.body),
+            onClick: () => model.updateField('body', cleared),
           },
         });
       }

@@ -7,7 +7,6 @@ import { Select } from '@pops/ui';
 interface TypeOption {
   value: string;
   label: string;
-  description: string;
 }
 
 interface TypeSelectorProps {

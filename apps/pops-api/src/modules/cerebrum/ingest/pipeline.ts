@@ -174,7 +174,8 @@ export class IngestService {
   ): Promise<QuickCaptureResult> {
     const body = normaliseBody(text);
 
-    const trimmedSuggestions = suggestedScopes?.filter((s) => s.trim().length > 0) ?? [];
+    const trimmedSuggestions =
+      suggestedScopes?.map((s) => s.trim()).filter((s) => s.length > 0) ?? [];
     const hasSuggestions = trimmedSuggestions.length > 0;
 
     let scopes: string[];
