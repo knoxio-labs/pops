@@ -25,10 +25,8 @@ As a user in the pops shell, I want a one-input capture surface that takes my ra
 
 ## Notes
 
-- This US replaces the previous form-first design. The implementation in `packages/app-cerebrum/src/components/IngestForm.tsx` and `packages/app-cerebrum/src/pages/ingest-page/*` exposes every field upfront and routes to `cerebrum.ingest.submit`. That code is the starting point but does not satisfy the new acceptance criteria — capture mode is the new default and Advanced is the disclosure.
 - The scope input is intentionally part of capture mode (not Advanced) because scope is the one piece of structure the user can give cheaply that high-leverages retrieval. Type/tags can be inferred well; scope-from-content is hit-or-miss without context only the user has.
 - The scope-as-suggestion semantics decouple "fast write" from "canonical scope vocabulary". The user gets immediate feedback with their chosen scope; the worker reconciles it against the existing scope index and proposes a canonical version in US-07 if a near-match exists. The user accepts (chip update) or ignores (their suggestion stands). See US-10 for reconciliation rules.
-- Capture mode does not run scope inference at submit time, so the result view does not show the `ScopeConfirmDialog`. Scope confirmation/reconciliation is now handled in US-07 (post-ingest review) after the curation worker completes.
-- The Advanced form should reuse the existing `TagPicker` and `TemplateFields` components. The existing `ScopePicker` and `ScopeConfirmDialog` are subsumed by the new capture-mode scope input — they can be removed once US-07 lands.
-- The capture surface is the same component invoked by US-09 (global hotkey modal). Build it as a self-contained component that can render full-page or inside a dialog.
-- The 500 ms response budget is achievable because `quickCapture` writes the engram, enqueues a BullMQ job, and returns — no LLM calls on the hot path. If Redis is unavailable, the engram is still written and the worker enqueue is logged as a warning per PRD-081 business rules.
+- Capture mode does not run scope inference at submit time, so it does not surface a scope-confirmation step. Scope confirmation/reconciliation is handled in US-07 (post-ingest review) after the curation worker completes.
+- The capture surface is the same component invoked by US-09 (global hotkey modal); design it to render full-page or inside a dialog without forking.
+- The 500 ms response budget is achievable because `quickCapture` writes the engram, enqueues an enrichment job, and returns — no LLM calls on the hot path. If the job queue is unavailable, the engram is still written and the missed enqueue is logged as a warning per PRD-081 business rules.

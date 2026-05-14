@@ -24,9 +24,9 @@ As a user who just captured an engram in capture mode (US-01) or via the global 
 
 ## Notes
 
-- The async enrichment job is `classifyEngram` on the `pops-curation` BullMQ queue, handled by `apps/pops-api/src/jobs/handlers/curation.ts`. The handler is idempotent via the `_enrichedHash` custom field — re-running it on unchanged content is a no-op.
-- For enrichment status updates, prefer SSE or polling against a new `cerebrum.ingest.enrichmentStatus` query (input: `engramId`) over adding websockets just for this view. Polling at 1 s for the first 10 s, then 5 s for the next 30 s, then stop and require manual refresh is acceptable.
-- The chip edit popovers should reuse the same scope autocomplete component built for the capture surface (US-01) rather than re-implementing.
-- Scope-suggestion data lives on the engram itself in custom fields `_scope_suggestions: Array<{ original: string, canonical: string, confidence: number }>` and `_scope_suggestions_dismissed: string[]` (segment-set keys, e.g. `karbon|meetings|fedx|work`). Reconciliation is implemented in US-10.
-- The "retry enrichment" action requires exposing a small mutation that enqueues `{ type: 'classifyEngram', engramId }` on the curation queue — this can sit on the existing `cerebrum.ingest` router.
+- The async enrichment job is the `classifyEngram` background job. It is idempotent via the `_enrichedHash` custom field — re-running it on unchanged content is a no-op, so the retry action can fire freely.
+- For enrichment status updates, prefer polling against a new `cerebrum.ingest.enrichmentStatus` query (input: `engramId`) over adding a streaming channel just for this view. Polling at 1 s for the first 10 s, then 5 s for the next 30 s, then stop and require manual refresh is acceptable.
+- The chip edit popovers reuse the same scope autocomplete component built for the capture surface (US-01).
+- Scope-suggestion data lives on the engram itself in custom fields `_scope_suggestions: Array<{ original, canonical, confidence, reason }>` and `_scope_suggestions_dismissed: string[]` (segment-set keys, e.g. `fedx|karbon|meetings|work`). The reconciliation algorithm is in US-10.
+- The "retry enrichment" action requires exposing a mutation on the existing `cerebrum.ingest` router that re-enqueues the `classifyEngram` job for a given engram id.
 - This US assumes the engram already exists; there is no creation path here. Creation is US-01 (capture mode) or US-02 (agent input).

@@ -25,8 +25,8 @@ As the Cerebrum system, I need to reconcile user-suggested scopes against the ex
 ## Notes
 
 - This US is the algorithmic backbone of US-01's scope-as-suggestion semantics and US-07's "Did you mean" affordance. Without reconciliation, scope vocabulary drifts every time a user types a scope from memory under a different convention.
-- Segment-set keys (used for the dismissal field) are sorted segment arrays joined by `|`, e.g. `["work", "karbon", "fedx", "meetings"].sort().join("|")` → `"fedx|karbon|meetings|work"`. Two scopes that reconcile to the same canonical share the same key, so dismissing once dismisses for any rephrasing.
-- Usage count from `cerebrum.scopes.list` is the only ranking signal; recency or per-source weighting is out of scope. Scopes with `count: 0` (in the index but never used) are excluded from candidates.
-- The 50 ms budget is achievable with a precomputed segment-set → canonical map cached in memory, invalidated on engram write/scope mutation. The cache lives in the same module as `listScopes`.
+- Segment-set keys (used for the dismissal field) are sorted segment arrays joined by `|` — e.g. `work.karbon.fedx.meetings` → `fedx|karbon|meetings|work`. Two scopes that reconcile to the same canonical share the same key, so dismissing once dismisses for any rephrasing.
+- Usage count from `cerebrum.scopes.list` is the only ranking signal; recency or per-source weighting is out of scope. Scopes with `count: 0` are excluded from candidates.
+- The 50 ms budget is achievable with a precomputed segment-set → canonical map cached in memory and invalidated on scope mutation.
 - This US does not change the three-tier scope inference for engrams that come in _without_ user-suggested scopes (PRD-081 US-06 handles that path). Reconciliation only runs when the user has provided scopes via the manual surface or via API with `_reconcile_scopes: true`.
-- `ScopeReconciliationService` belongs in `apps/pops-api/src/modules/cerebrum/engrams/` (it's a vocabulary concern, not an ingestion concern). The curation worker imports and invokes it.
+- Reconciliation is a vocabulary concern, not an ingestion-pipeline concern — keep it co-located with the rest of the scope-management code rather than under the ingest module.

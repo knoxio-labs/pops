@@ -22,8 +22,8 @@ As a user working anywhere in the pops shell — finance, media, inventory, dash
 
 ## Notes
 
-- The hotkey letter must be configurable per user — store under a new `cerebrum.captureHotkey` setting in the existing settings module. Default `c`. Allow the user to disable by setting it to empty string.
-- Focus capture/restore is critical for keyboard-driven users — use the same focus-trap pattern as the existing dialog primitives in `@pops/ui` rather than rolling a new one.
-- The modal must respect `prefers-reduced-motion` per the design context in `.impeccable.md` — open/close transitions should be opacity only when reduced motion is set.
-- The modal is intentionally not nested under any app package — it lives in `apps/pops-shell` so every app benefits from it without coupling. The component implementation can still come from `@pops/app-cerebrum` (it's the same surface as `/cerebrum`); only the wiring lives in the shell.
+- The hotkey letter must be configurable per user via a new `cerebrum.captureHotkey` setting. Default `c`. Empty string disables it.
+- Focus capture/restore is critical for keyboard-driven users — reuse the existing dialog focus-trap rather than rolling a new one.
+- The modal must respect `prefers-reduced-motion` (Cerebrum's design language calls for opacity-only transitions when reduced motion is set).
+- The hotkey wiring lives at the shell root so every app benefits without coupling, even though the capture component itself ships in the cerebrum app package — same surface as the `/cerebrum` route, just rendered inside a dialog.
 - This US does not depend on US-08 functionally — bulk paste works through the shared component. But shipping US-08 first means the hotkey gets bulk-paste support for free.
