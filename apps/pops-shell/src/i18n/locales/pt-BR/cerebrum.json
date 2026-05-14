@@ -15,7 +15,7 @@
   "ingest.capture": "Capturar",
   "ingest.captureBulk": "Capturar {{count}} entradas",
   "ingest.captureHint": "Cmd+Enter para salvar · Esc limpa",
-  "ingest.bulkHint": "--- em linha própria divide em engramas separados · Cmd+Shift+Enter força divisão",
+  "ingest.bulkHint": "--- em linha própria divide em engramas separados · Cmd/Ctrl+Shift+Enter força divisão",
   "ingest.bulkPreview.heading": "segmentos detectados",
   "ingest.advanced": "Avançado",
   "ingest.advancedHint": "Campos explícitos pulam a auto-classificação",
@@ -23,6 +23,14 @@
   "ingest.undo": "Desfazer",
   "ingest.loadingTemplates": "Carregando modelos…",
   "ingest.scopeInput": "Entrada de escopo",
+
+  "ingest.bulk.heading": "Captura em massa",
+  "ingest.bulk.summary": "{{completed}}/{{total}} concluídos",
+  "ingest.bulk.failedCount": "{{count}} falhou",
+  "ingest.bulk.inFlight": "{{count}} em andamento",
+  "ingest.bulk.captureAnother": "Capturar outro lote",
+  "ingest.bulk.retry": "Tentar novamente",
+  "ingest.bulk.open": "Abrir",
 
   "ingest.result.success": "Engrama criado com sucesso",
   "ingest.result.id": "ID: {{id}}",

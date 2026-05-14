@@ -10,18 +10,11 @@ const SEPARATOR_LINE = /^\s*---\s*$/;
 const PREVIEW_CHARS = 60;
 
 export interface BulkSegment {
-  /** 0-based index in the original paste, useful for error reporting. */
   index: number;
-  /** Segment body, normalised (trimmed leading/trailing blank lines). */
   body: string;
-  /** Short preview for the inline submit-button affordance. */
   preview: string;
 }
 
-/**
- * Split `body` on `---` separator lines. Returns an empty array when the body
- * contains no non-empty segments.
- */
 export function splitOnSeparator(body: string): BulkSegment[] {
   const lines = body.split('\n');
   const segments: string[][] = [[]];
@@ -41,13 +34,11 @@ export function splitOnSeparator(body: string): BulkSegment[] {
   return out;
 }
 
-/** Whether the body contains at least one separator line. */
 export function hasSeparator(body: string): boolean {
   return body.split('\n').some((line) => SEPARATOR_LINE.test(line));
 }
 
 function previewOf(text: string): string {
-  // Replace newlines with spaces so the preview stays a single line.
   const flat = text.replace(/\s+/g, ' ').trim();
   if (flat.length <= PREVIEW_CHARS) return flat;
   return `${flat.slice(0, PREVIEW_CHARS - 1).trimEnd()}…`;

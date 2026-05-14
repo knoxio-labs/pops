@@ -413,7 +413,9 @@ describe('IngestPage — bulk paste (PRD-081 US-08)', () => {
     await user.click(body);
     await user.paste('alpha\n---\nbeta');
     await user.click(screen.getByRole('button', { name: /capture 2 entries/i }));
-    expect(screen.getByText(/Bulk capture/i)).toBeInTheDocument();
-    expect(screen.getByText(/2\/2 done/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Bulk capture/i)).toBeInTheDocument();
+      expect(screen.getByText(/2\/2 done/i)).toBeInTheDocument();
+    });
   });
 });

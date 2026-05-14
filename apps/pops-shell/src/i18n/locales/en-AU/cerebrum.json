@@ -15,7 +15,7 @@
   "ingest.capture": "Capture",
   "ingest.captureBulk": "Capture {{count}} entries",
   "ingest.captureHint": "Cmd+Enter to save \u00b7 Esc clears",
-  "ingest.bulkHint": "--- on its own line splits into separate engrams \u00b7 Cmd+Shift+Enter forces split",
+  "ingest.bulkHint": "--- on its own line splits into separate engrams \u00b7 Cmd/Ctrl+Shift+Enter forces split",
   "ingest.bulkPreview.heading": "segments detected",
   "ingest.advanced": "Advanced",
   "ingest.advancedHint": "Explicit fields bypass auto-classification",
@@ -23,6 +23,14 @@
   "ingest.undo": "Undo",
   "ingest.loadingTemplates": "Loading templates\u2026",
   "ingest.scopeInput": "Scope input",
+
+  "ingest.bulk.heading": "Bulk capture",
+  "ingest.bulk.summary": "{{completed}}/{{total}} done",
+  "ingest.bulk.failedCount": "{{count}} failed",
+  "ingest.bulk.inFlight": "{{count}} in flight",
+  "ingest.bulk.captureAnother": "Capture another batch",
+  "ingest.bulk.retry": "Retry",
+  "ingest.bulk.open": "Open",
 
   "ingest.result.success": "Engram created successfully",
   "ingest.result.id": "ID: {{id}}",

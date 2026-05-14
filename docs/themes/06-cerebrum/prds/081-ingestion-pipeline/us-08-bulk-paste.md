@@ -16,7 +16,7 @@ As a user migrating content from another system (Notion, Apple Notes, a text dum
 - [x] A small inline preview above the submit button shows the detected segment count and the first 60 characters of each segment so the user can sanity-check before submitting
 - [x] Submission processes segments in order and returns when all engrams have been written; the result view shows a list of created engrams with id, fallback scope, and a per-row enrichment status that updates in place per US-07
 - [x] If a single segment fails (validation error, write failure), the remaining segments still process; the failed segment is shown in the result list with the error message and a "retry" action that re-submits just that segment
-- [x] The first 30 characters of each segment, or its first H1 heading if present, becomes the derived title — using the pipeline's existing title-derivation rules (PRD-081 business rules: H1 then first line, truncated)
+- [x] Each segment's derived title follows the pipeline's existing title-derivation rules (first H1 if present, otherwise first line, with standard truncation)
 - [x] A keyboard shortcut (e.g. Cmd/Ctrl+Shift+Enter) explicitly forces split-on-`---` even if the user did not see the separator preview, for muscle-memory-driven bulk submits
 
 ## Notes
