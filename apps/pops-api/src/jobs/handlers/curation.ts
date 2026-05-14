@@ -11,6 +11,9 @@
  */
 import pino from 'pino';
 
+import { getDrizzle } from '../../db.js';
+import { createScopeReconciliationService } from '../../modules/cerebrum/engrams/scope-reconciliation.js';
+import { listScopes } from '../../modules/cerebrum/engrams/scopes-router.js';
 import { CortexClassifier } from '../../modules/cerebrum/ingest/classifier.js';
 import { CortexEntityExtractor } from '../../modules/cerebrum/ingest/entity-extractor.js';
 import { createScopeInferenceService } from '../../modules/cerebrum/ingest/scope-inference.js';
@@ -18,8 +21,16 @@ import { getEngramService, getScopeRuleEngine } from '../../modules/cerebrum/ins
 
 import type { Job } from 'bullmq';
 
+import type { ScopeSuggestion } from '../../modules/cerebrum/engrams/scope-reconciliation.js';
 import type { UpdateEngramInput } from '../../modules/cerebrum/engrams/service.js';
+import type { Engram } from '../../modules/cerebrum/engrams/types.js';
 import type { ClassifyEngramJobData, CurationQueueJobData } from '../types.js';
+
+interface ScopeResolutionResult {
+  scopes: string[];
+  reconciled: boolean;
+  suggestions: ScopeSuggestion[];
+}
 
 const logger = pino({ name: 'worker:curation' });
 
@@ -72,16 +83,6 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
 
   const mergedTags = dedupe([...engram.tags, ...entityTags, ...classification.suggestedTags]);
 
-  const config = getScopeRuleEngine().getConfig();
-  const scopeService = createScopeInferenceService(config);
-  const scopeResult = await scopeService.infer({
-    body,
-    type: classification.type,
-    tags: mergedTags,
-    source: engram.source,
-    explicitScopes: undefined,
-  });
-
   // Build custom fields: merge referenced_dates + enrichment hash.
   const customFields: Record<string, unknown> = { ...engram.customFields };
   if (referencedDates.length > 0) {
@@ -89,8 +90,18 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
   }
   customFields['_enrichedHash'] = engram.contentHash;
 
+  const scopeResolution = await resolveScopes(engram, body, classification.type, mergedTags);
+  if (scopeResolution.reconciled) {
+    if (scopeResolution.suggestions.length > 0) {
+      customFields['_scope_suggestions'] = scopeResolution.suggestions;
+    } else {
+      // Clear any stale suggestions from a previous enrichment run.
+      delete customFields['_scope_suggestions'];
+    }
+  }
+
   const updateInput: UpdateEngramInput = {
-    scopes: scopeResult.scopes,
+    scopes: scopeResolution.scopes,
     tags: mergedTags.length > 0 ? mergedTags : undefined,
     customFields,
   };
@@ -112,13 +123,54 @@ async function processClassifyEngram(engramId: string): Promise<{ engramId: stri
       type: classification.type,
       template: classification.template,
       confidence: classification.confidence,
-      scopes: scopeResult.scopes,
+      scopes: scopeResolution.scopes,
+      reconciled: scopeResolution.reconciled,
+      scopeSuggestions: scopeResolution.suggestions.length,
       referencedDates: referencedDates.length,
     },
     '[curation] Engram enriched'
   );
 
   return { engramId };
+}
+
+/**
+ * Decide what scopes to write for the engram. When the engram opted into
+ * scope reconciliation (`_reconcile_scopes: true`, set by quickCapture when
+ * the user provides scopes from the manual surface), preserve the user's
+ * scopes and propose canonical alternatives via the reconciliation service
+ * (PRD-081 US-10). Otherwise, run the standard scope inference pipeline.
+ */
+async function resolveScopes(
+  engram: Engram,
+  body: string,
+  classifiedType: string,
+  mergedTags: string[]
+): Promise<ScopeResolutionResult> {
+  if (engram.customFields['_reconcile_scopes'] === true) {
+    const dismissed = engram.customFields['_scope_suggestions_dismissed'];
+    const dismissedKeys = Array.isArray(dismissed)
+      ? dismissed.filter((v): v is string => typeof v === 'string')
+      : [];
+    const reconciler = createScopeReconciliationService();
+    const { suggestions } = reconciler.reconcile({
+      suggestedScopes: engram.scopes,
+      knownScopes: listScopes(getDrizzle()),
+      dismissedSegmentSetKeys: dismissedKeys,
+    });
+    return { scopes: engram.scopes, reconciled: true, suggestions };
+  }
+
+  const config = getScopeRuleEngine().getConfig();
+  const scopeService = createScopeInferenceService(config);
+  const scopeResult = await scopeService.infer({
+    body,
+    type: classifiedType,
+    tags: mergedTags,
+    source: engram.source,
+    explicitScopes: undefined,
+  });
+  return { scopes: scopeResult.scopes, reconciled: false, suggestions: [] };
 }
 
 function dedupe(values: string[]): string[] {

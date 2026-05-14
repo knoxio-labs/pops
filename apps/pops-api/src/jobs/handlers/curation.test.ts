@@ -14,6 +14,8 @@ const mockChangeType = vi.fn();
 const mockClassify = vi.fn();
 const mockExtract = vi.fn();
 const mockInfer = vi.fn();
+const mockListScopes = vi.fn();
+const mockReconcile = vi.fn();
 
 vi.mock('../../modules/cerebrum/instance.js', () => ({
   getEngramService: () => ({
@@ -42,6 +44,20 @@ vi.mock('../../modules/cerebrum/ingest/scope-inference.js', () => ({
   createScopeInferenceService: () => ({
     infer: mockInfer,
   }),
+}));
+
+vi.mock('../../modules/cerebrum/engrams/scopes-router.js', () => ({
+  listScopes: (...args: unknown[]) => mockListScopes(...args),
+}));
+
+vi.mock('../../modules/cerebrum/engrams/scope-reconciliation.js', () => ({
+  createScopeReconciliationService: () => ({
+    reconcile: mockReconcile,
+  }),
+}));
+
+vi.mock('../../db.js', () => ({
+  getDrizzle: () => ({}),
 }));
 
 const { process: processJob } = await import('./curation.js');
@@ -90,6 +106,9 @@ describe('curation handler — classifyEngram', () => {
       source: 'rules',
       confidence: 0.8,
     });
+
+    mockListScopes.mockReturnValue([]);
+    mockReconcile.mockReturnValue({ suggestions: [] });
   });
 
   it('updates scopes, tags, and customFields with referenced_dates', async () => {
@@ -222,6 +241,169 @@ describe('curation handler — classifyEngram', () => {
   it('throws for unknown job types', async () => {
     await expect(processJob(makeJob({ type: 'unknownType' }))).rejects.toThrow(
       'Curation handler not implemented'
+    );
+  });
+});
+
+describe('curation handler — scope reconciliation (PRD-081 US-10)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockRead.mockReturnValue({
+      engram: {
+        id: 'eng_20260514_1700_test',
+        title: 'Karbon meeting notes',
+        type: 'capture',
+        scopes: ['karbon.meetings'],
+        tags: [],
+        source: 'manual',
+        created: '2026-05-14T17:00:00Z',
+        contentHash: 'reconcile-hash',
+        customFields: { _reconcile_scopes: true },
+      },
+      body: 'Met with Karbon team about meeting cadence',
+    });
+
+    mockClassify.mockResolvedValue({
+      type: 'meeting',
+      confidence: 0.92,
+      template: 'meeting',
+      suggestedTags: [],
+    });
+
+    mockExtract.mockResolvedValue({
+      entities: [],
+      tags: [],
+      referencedDates: [],
+    });
+
+    mockListScopes.mockReturnValue([{ scope: 'work.karbon.fedx.meetings', count: 12 }]);
+  });
+
+  it('preserves user-suggested scopes and skips scope inference when _reconcile_scopes is true', async () => {
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260514_1700_test' }));
+
+    expect(mockInfer).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith(
+      'eng_20260514_1700_test',
+      expect.objectContaining({ scopes: ['karbon.meetings'] })
+    );
+  });
+
+  it('runs reconciliation against listScopes and stores suggestions in customFields', async () => {
+    mockReconcile.mockReturnValue({
+      suggestions: [
+        {
+          original: 'karbon.meetings',
+          canonical: 'work.karbon.fedx.meetings',
+          confidence: 0.85,
+          reason: 'matches longer canonical scope',
+        },
+      ],
+    });
+
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260514_1700_test' }));
+
+    expect(mockReconcile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        suggestedScopes: ['karbon.meetings'],
+        knownScopes: [{ scope: 'work.karbon.fedx.meetings', count: 12 }],
+      })
+    );
+    const call = mockUpdate.mock.calls[0]?.[1] as Record<string, unknown>;
+    const customFields = call?.['customFields'] as Record<string, unknown>;
+    expect(customFields?.['_scope_suggestions']).toEqual([
+      expect.objectContaining({
+        original: 'karbon.meetings',
+        canonical: 'work.karbon.fedx.meetings',
+        confidence: 0.85,
+      }),
+    ]);
+  });
+
+  it('passes previously dismissed segment-set keys to the reconciliation service', async () => {
+    mockRead.mockReturnValue({
+      engram: {
+        id: 'eng_20260514_1700_test',
+        title: 'Karbon meeting notes',
+        type: 'capture',
+        scopes: ['karbon.meetings'],
+        tags: [],
+        source: 'manual',
+        created: '2026-05-14T17:00:00Z',
+        contentHash: 'reconcile-hash',
+        customFields: {
+          _reconcile_scopes: true,
+          _scope_suggestions_dismissed: ['fedx|karbon|meetings|work'],
+        },
+      },
+      body: 'Met with Karbon team about meeting cadence',
+    });
+
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260514_1700_test' }));
+
+    expect(mockReconcile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dismissedSegmentSetKeys: ['fedx|karbon|meetings|work'],
+      })
+    );
+  });
+
+  it('clears stale suggestions when reconciliation returns none', async () => {
+    mockRead.mockReturnValue({
+      engram: {
+        id: 'eng_20260514_1700_test',
+        title: 'Karbon meeting notes',
+        type: 'capture',
+        scopes: ['karbon.meetings'],
+        tags: [],
+        source: 'manual',
+        created: '2026-05-14T17:00:00Z',
+        contentHash: 'reconcile-hash',
+        customFields: {
+          _reconcile_scopes: true,
+          _scope_suggestions: [{ original: 'old', canonical: 'old.canonical', confidence: 0.9 }],
+        },
+      },
+      body: 'Met with Karbon team about meeting cadence',
+    });
+    mockReconcile.mockReturnValue({ suggestions: [] });
+
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260514_1700_test' }));
+
+    const call = mockUpdate.mock.calls[0]?.[1] as Record<string, unknown>;
+    const customFields = call?.['customFields'] as Record<string, unknown>;
+    expect(customFields).not.toHaveProperty('_scope_suggestions');
+  });
+
+  it('falls back to scope inference when _reconcile_scopes is not set', async () => {
+    mockRead.mockReturnValue({
+      engram: {
+        id: 'eng_20260514_1700_test',
+        title: 'Karbon meeting notes',
+        type: 'capture',
+        scopes: ['personal.captures'],
+        tags: [],
+        source: 'cli',
+        created: '2026-05-14T17:00:00Z',
+        contentHash: 'reconcile-hash',
+        customFields: {},
+      },
+      body: 'Met with Karbon team about meeting cadence',
+    });
+    mockInfer.mockResolvedValue({
+      scopes: ['work.karbon.fedx.meetings'],
+      source: 'llm',
+      confidence: 0.9,
+    });
+
+    await processJob(makeJob({ type: 'classifyEngram', engramId: 'eng_20260514_1700_test' }));
+
+    expect(mockInfer).toHaveBeenCalled();
+    expect(mockReconcile).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith(
+      'eng_20260514_1700_test',
+      expect.objectContaining({ scopes: ['work.karbon.fedx.meetings'] })
     );
   });
 });
