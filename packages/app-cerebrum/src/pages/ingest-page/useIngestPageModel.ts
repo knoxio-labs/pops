@@ -23,6 +23,7 @@ export function useIngestPageModel() {
     handleTypeChange: formState.handleTypeChange,
     isValid: formState.isValid,
     advancedTouched: formState.advancedTouched,
+    segments: formState.segments,
     typeOptions: data.typeOptions,
     selectedTemplate: formState.selectedTemplate,
     scopeSuggestions: data.scopeSuggestions,
@@ -31,9 +32,11 @@ export function useIngestPageModel() {
     scopesLoading: data.scopesLoading,
     tagsLoading: data.tagsLoading,
     handleSubmit: submission.handleSubmit,
+    retrySegment: submission.retrySegment,
     isSubmitting: submission.isSubmitting,
     submitError: submission.submitError,
     submitResult: submission.submitResult,
+    bulkResults: submission.bulkResults,
     resetForm: submission.resetForm,
   };
 }

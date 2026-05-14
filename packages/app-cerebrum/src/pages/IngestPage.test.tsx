@@ -77,15 +77,21 @@ vi.mock('@pops/api-client', () => ({
         quickCapture: {
           useMutation: (opts: { onSuccess?: (data: unknown) => void; onError?: unknown }) => {
             captureOnSuccess.current = opts.onSuccess ?? null;
+            const response = {
+              id: 'eng_20260514_1700_capture',
+              path: 'capture/eng_20260514_1700_capture.md',
+              type: 'capture',
+              scopes: ['personal.captures'],
+            };
             return {
               mutate: (...args: unknown[]) => {
                 mockQuickCaptureMutate(...args);
-                captureOnSuccess.current?.({
-                  id: 'eng_20260514_1700_capture',
-                  path: 'capture/eng_20260514_1700_capture.md',
-                  type: 'capture',
-                  scopes: ['personal.captures'],
-                });
+                captureOnSuccess.current?.(response);
+              },
+              mutateAsync: async (...args: unknown[]) => {
+                mockQuickCaptureMutate(...args);
+                captureOnSuccess.current?.(response);
+                return response;
               },
               isPending: false,
               error: null,
@@ -365,5 +371,51 @@ describe('IngestPage — capture-first surface (PRD-081 US-01)', () => {
     await user.click(screen.getByRole('button', { name: /capture/i }));
 
     expect(screen.getByText('eng_20260514_1700_capture')).toBeInTheDocument();
+  });
+});
+
+describe('IngestPage — bulk paste (PRD-081 US-08)', () => {
+  it('flips the submit button to a count when the body contains separators', async () => {
+    const user = userEvent.setup();
+    render(<IngestPage />);
+    // userEvent.type doesn't insert raw newlines easily; use fireEvent shape
+    // by typing one segment, manually inserting separator + extra segments via paste.
+    const body = screen.getByLabelText('Body') as HTMLTextAreaElement;
+    await user.click(body);
+    await user.paste('one\n---\ntwo\n---\nthree');
+    expect(screen.getByRole('button', { name: /capture 3 entries/i })).toBeInTheDocument();
+  });
+
+  it('submits one quickCapture per segment when bulk is detected', async () => {
+    const user = userEvent.setup();
+    render(<IngestPage />);
+    const body = screen.getByLabelText('Body');
+    await user.click(body);
+    await user.paste('one\n---\ntwo');
+    await user.click(screen.getByRole('button', { name: /capture 2 entries/i }));
+    expect(mockQuickCaptureMutate).toHaveBeenCalledTimes(2);
+    expect(mockQuickCaptureMutate).toHaveBeenNthCalledWith(1, {
+      text: 'one',
+      source: 'manual',
+      scopes: undefined,
+    });
+    expect(mockQuickCaptureMutate).toHaveBeenNthCalledWith(2, {
+      text: 'two',
+      source: 'manual',
+      scopes: undefined,
+    });
+  });
+
+  it('renders a per-segment result list after a bulk capture', async () => {
+    const user = userEvent.setup();
+    render(<IngestPage />);
+    const body = screen.getByLabelText('Body');
+    await user.click(body);
+    await user.paste('alpha\n---\nbeta');
+    await user.click(screen.getByRole('button', { name: /capture 2 entries/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Bulk capture/i)).toBeInTheDocument();
+      expect(screen.getByText(/2\/2 done/i)).toBeInTheDocument();
+    });
   });
 });

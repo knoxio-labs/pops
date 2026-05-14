@@ -66,6 +66,15 @@ export interface SubmitResult {
   type: string;
 }
 
+/** A per-segment outcome rendered in the bulk-paste result list (US-08). */
+export interface BulkSegmentOutcome {
+  index: number;
+  preview: string;
+  body: string;
+  result?: SubmitResult;
+  error?: string;
+}
+
 export const INITIAL_FORM: IngestFormValues = {
   type: 'capture',
   template: '',

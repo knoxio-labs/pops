@@ -1,23 +1,23 @@
 /**
- * IngestForm — capture-first ingest surface (PRD-081 US-01).
+ * IngestForm — capture-first ingest surface (PRD-081 US-01 + US-08).
  *
  * Primary affordance is a single body editor with optional title and a
  * scope autocomplete. Type/template/tags/customFields are tucked behind an
- * Advanced disclosure. Submitting routes to `quickCapture` unless any
- * Advanced field has been touched, in which case it routes to `submit`.
+ * Advanced disclosure. Submission routes to `quickCapture` (single or bulk)
+ * unless any Advanced field has been touched, in which case it routes to
+ * `submit`.
  */
 import { Loader2 } from 'lucide-react';
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import { Button, Textarea, TextInput } from '@pops/ui';
 
+import { BulkResultList } from './BulkResultList';
+import { BulkSegmentPreview } from './BulkSegmentPreview';
+import { IngestAdvancedSection } from './IngestAdvancedSection';
 import { ScopePicker } from './ScopePicker';
 import { SubmitResult } from './SubmitResult';
-import { TagPicker } from './TagPicker';
-import { TemplateFields } from './TemplateFields';
-import { TypeSelector } from './TypeSelector';
+import { useIngestKeyboard } from './useIngestKeyboard';
 
 import type { useIngestPageModel } from '../pages/ingest-page/useIngestPageModel';
 
@@ -56,33 +56,46 @@ function BodyEditor({
 }
 
 function getActionLabel(
-  t: (key: string) => string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
   isSubmitting: boolean,
-  advancedTouched: boolean
+  advancedTouched: boolean,
+  segmentCount: number
 ): string {
   if (isSubmitting) return t('ingest.submitting');
   if (advancedTouched) return t('ingest.submit');
+  if (segmentCount > 1) return t('ingest.captureBulk', { count: segmentCount });
   return t('ingest.capture');
+}
+
+function getActionHint(
+  t: (key: string) => string,
+  advancedTouched: boolean,
+  segmentCount: number
+): string {
+  if (advancedTouched) return t('ingest.advancedHint');
+  if (segmentCount > 1) return t('ingest.bulkHint');
+  return t('ingest.captureHint');
 }
 
 function FormActions({
   isValid,
   isSubmitting,
   advancedTouched,
+  segmentCount,
   onSubmit,
 }: {
   isValid: boolean;
   isSubmitting: boolean;
   advancedTouched: boolean;
+  segmentCount: number;
   onSubmit: () => void;
 }) {
   const { t } = useTranslation('cerebrum');
-  const label = getActionLabel(t, isSubmitting, advancedTouched);
+  const label = getActionLabel(t, isSubmitting, advancedTouched, segmentCount);
+  const hint = getActionHint(t, advancedTouched, segmentCount);
   return (
     <div className="flex justify-between items-center pt-4">
-      <p className="text-xs text-muted-foreground">
-        {advancedTouched ? t('ingest.advancedHint') : t('ingest.captureHint')}
-      </p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
       <Button
         onClick={onSubmit}
         disabled={!isValid || isSubmitting}
@@ -91,39 +104,6 @@ function FormActions({
         {label}
       </Button>
     </div>
-  );
-}
-
-function AdvancedSection({ model }: IngestFormProps) {
-  const { t } = useTranslation('cerebrum');
-  return (
-    <details className="border border-border rounded-md">
-      <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-foreground hover:bg-accent/50 rounded-md">
-        {t('ingest.advanced')}
-      </summary>
-      <div className="border-t border-border p-4 space-y-6">
-        <TypeSelector
-          value={model.form.type}
-          options={model.typeOptions}
-          loading={model.templatesLoading}
-          onChange={model.handleTypeChange}
-        />
-        {model.selectedTemplate?.custom_fields && (
-          <TemplateFields
-            fields={model.selectedTemplate.custom_fields}
-            values={model.form.customFields}
-            onChange={model.updateCustomField}
-            requiredFields={model.selectedTemplate.required_fields}
-          />
-        )}
-        <TagPicker
-          value={model.form.tags}
-          suggestions={model.tagSuggestions}
-          loading={model.tagsLoading}
-          onChange={(v) => model.updateField('tags', v)}
-        />
-      </div>
-    </details>
   );
 }
 
@@ -152,7 +132,8 @@ function IngestFormFields({
         loading={model.scopesLoading}
         onChange={(v) => model.updateField('scopes', v)}
       />
-      <AdvancedSection model={model} />
+      <IngestAdvancedSection model={model} />
+      {!model.advancedTouched && <BulkSegmentPreview segments={model.segments} />}
       {model.submitError && (
         <div className="text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
           {model.submitError}
@@ -162,42 +143,32 @@ function IngestFormFields({
         isValid={model.isValid}
         isSubmitting={model.isSubmitting}
         advancedTouched={model.advancedTouched}
-        onSubmit={model.handleSubmit}
+        segmentCount={model.advancedTouched ? 1 : model.segments.length}
+        onSubmit={() => model.handleSubmit()}
       />
     </div>
   );
 }
 
-function isModifierEnter(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
-  return e.key === 'Enter' && (e.metaKey || e.ctrlKey);
-}
-
 export function IngestForm({ model }: IngestFormProps) {
-  const { t } = useTranslation('cerebrum');
+  const onBodyKeyDown = useIngestKeyboard({
+    body: model.form.body,
+    isValid: model.isValid,
+    isSubmitting: model.isSubmitting,
+    handleSubmit: model.handleSubmit,
+    setBody: (value) => model.updateField('body', value),
+  });
 
-  const handleBodyKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (isModifierEnter(e) && model.isValid && !model.isSubmitting) {
-        e.preventDefault();
-        model.handleSubmit();
-        return;
-      }
-      if (e.key === 'Escape' && model.form.body.length > 0) {
-        e.preventDefault();
-        // Capture the value BEFORE clearing — otherwise the Undo callback
-        // closes over the now-empty form state.
-        const cleared = model.form.body;
-        model.updateField('body', '');
-        toast(t('ingest.cleared'), {
-          action: {
-            label: t('ingest.undo'),
-            onClick: () => model.updateField('body', cleared),
-          },
-        });
-      }
-    },
-    [model, t]
-  );
+  if (model.bulkResults) {
+    return (
+      <BulkResultList
+        results={model.bulkResults}
+        isSubmitting={model.isSubmitting}
+        onRetry={model.retrySegment}
+        onReset={model.resetForm}
+      />
+    );
+  }
 
   if (model.submitResult) {
     return (
@@ -210,5 +181,5 @@ export function IngestForm({ model }: IngestFormProps) {
     );
   }
 
-  return <IngestFormFields model={model} onBodyKeyDown={handleBodyKeyDown} />;
+  return <IngestFormFields model={model} onBodyKeyDown={onBodyKeyDown} />;
 }
