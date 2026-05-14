@@ -1,6 +1,7 @@
 /** Sub-hook: form value state, field updaters, type change handler. */
 import { useCallback, useMemo, useState } from 'react';
 
+import { splitOnSeparator } from './bulk-paste';
 import { INITIAL_FORM } from './types';
 
 import type { IngestFormValues, TemplateSummary } from './types';
@@ -62,6 +63,7 @@ export function useFormState(templates: TemplateSummary[]) {
   const resetForm = useCallback(() => setForm(INITIAL_FORM), []);
   const isValid = form.body.trim().length > 0;
   const advancedTouched = isAdvancedTouched(form);
+  const segments = useMemo(() => splitOnSeparator(form.body), [form.body]);
 
   return {
     form,
@@ -72,5 +74,6 @@ export function useFormState(templates: TemplateSummary[]) {
     resetForm,
     isValid,
     advancedTouched,
+    segments,
   };
 }

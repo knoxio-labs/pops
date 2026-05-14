@@ -66,6 +66,20 @@ export interface SubmitResult {
   type: string;
 }
 
+/** A per-segment outcome rendered in the bulk-paste result list (US-08). */
+export interface BulkSegmentOutcome {
+  /** 0-based segment index from the original paste. */
+  index: number;
+  /** Single-line preview of the segment body (used as the row title). */
+  preview: string;
+  /** Full segment body — needed to retry just this segment. */
+  body: string;
+  /** Capture result, set when the segment was written successfully. */
+  result?: SubmitResult;
+  /** Error message, set when the segment failed. Leaves `result` undefined. */
+  error?: string;
+}
+
 export const INITIAL_FORM: IngestFormValues = {
   type: 'capture',
   template: '',
