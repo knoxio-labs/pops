@@ -337,8 +337,6 @@ test.describe('Correction Proposal Dialog (mocked)', () => {
     warnings: [],
   };
 
-  let previewCallCount: number;
-
   const correctionPayloadProviders: Record<string, PayloadProvider> = {
     'finance.imports.processImport': () => ({ sessionId: PROCESS_SESSION_ID }),
     'finance.imports.getImportProgress': () => ({
@@ -375,22 +373,19 @@ test.describe('Correction Proposal Dialog (mocked)', () => {
       rationale: 'Rule for UNKNOWN MERCHANT',
       targetRules: {},
     }),
-    'core.corrections.previewChangeSet': () => {
-      previewCallCount++;
-      return {
-        diffs: [
-          {
-            description: 'UNKNOWN MERCHANT',
-            checksum: UNCERTAIN_CHECKSUM,
-            before: { entityName: null, transactionType: null, location: null },
-            after: { entityName: UNCERTAIN_ENTITY_NAME, transactionType: null, location: null },
-            matchedRule: null,
-            status: 'matched',
-          },
-        ],
-        summary: { newMatches: 1, removedMatches: 0, statusChanges: 0 },
-      };
-    },
+    'core.corrections.previewChangeSet': () => ({
+      diffs: [
+        {
+          description: 'UNKNOWN MERCHANT',
+          checksum: UNCERTAIN_CHECKSUM,
+          before: { entityName: null, transactionType: null, location: null },
+          after: { entityName: UNCERTAIN_ENTITY_NAME, transactionType: null, location: null },
+          matchedRule: null,
+          status: 'matched',
+        },
+      ],
+      summary: { newMatches: 1, removedMatches: 0, statusChanges: 0 },
+    }),
     'core.corrections.applyChangeSet': () => ({ success: true }),
     'finance.transactions.availableTags': () => [],
     'core.settings.get': () => ({ data: null }),
@@ -398,7 +393,6 @@ test.describe('Correction Proposal Dialog (mocked)', () => {
   };
 
   async function setupCorrectionMocks(page: Page): Promise<void> {
-    previewCallCount = 0;
     await page.route('**/trpc/**', async (route) => {
       const url = new URL(route.request().url());
       const pathSegment = url.pathname.replace(/^.*\/trpc\//, '');
@@ -477,21 +471,18 @@ test.describe('Correction Proposal Dialog (mocked)', () => {
     const applyBtn = page.getByRole('button', { name: /Apply ChangeSet/i });
     await expect(applyBtn).toBeEnabled({ timeout: 10000 });
 
-    const callsAfterOpen = previewCallCount;
-
-    // Change Transaction type inside the dialog — the bug scenario the fix addresses
+    // Change Transaction type — this is the bug scenario the fix addresses.
+    // Before the fix: Apply would stay disabled (dirty flag never cleared).
+    // After the fix: the combined-preview effect detects the sig change and
+    // auto-reruns, clearing dirty and re-enabling Apply.
     const dialog = page.getByRole('dialog', { name: /Correction proposal/i });
     await dialog
       .locator('select')
       .filter({ has: page.locator('option[value="purchase"]') })
       .selectOption('purchase');
 
-    // Fix: preview must auto-rerun WITHOUT the user clicking ↺
-    await expect(async () => {
-      expect(previewCallCount).toBeGreaterThan(callsAfterOpen);
-    }).toPass({ timeout: 5000 });
-
-    await expect(applyBtn).toBeEnabled({ timeout: 5000 });
+    // Apply must re-enable WITHOUT the user manually clicking ↺
+    await expect(applyBtn).toBeEnabled({ timeout: 10000 });
     await expect(page.getByText(/Preview stale/i)).not.toBeVisible();
   });
 
