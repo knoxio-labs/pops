@@ -44,13 +44,27 @@ export interface CombinedEffectArgs extends BaseEffectShared {
 function opContentSig(o: LocalOp): string {
   if (o.kind === 'add') {
     const d = o.data;
-    return `${o.clientId}:${d.descriptionPattern}:${d.matchType}:${d.entityName ?? ''}:${d.transactionType ?? ''}:${d.location ?? ''}`;
+    return JSON.stringify([
+      o.clientId,
+      d.descriptionPattern,
+      d.matchType,
+      d.entityName ?? '',
+      d.transactionType ?? '',
+      d.location ?? '',
+    ]);
   }
   if (o.kind === 'edit') {
     const d = o.data;
-    return `${o.clientId}:${d.descriptionPattern ?? ''}:${d.matchType ?? ''}:${d.entityName ?? ''}:${d.transactionType ?? ''}:${d.location ?? ''}`;
+    return JSON.stringify([
+      o.clientId,
+      d.descriptionPattern ?? '',
+      d.matchType ?? '',
+      d.entityName ?? '',
+      d.transactionType ?? '',
+      d.location ?? '',
+    ]);
   }
-  return `${o.clientId}:${o.rationale}`;
+  return JSON.stringify([o.clientId, o.rationale]);
 }
 
 export function useCombinedEffect(args: CombinedEffectArgs): void {
