@@ -66,21 +66,19 @@ export function GroupHeader(props: GroupHeaderProps) {
         group.aiSuggestion ? 'bg-purple-50 dark:bg-purple-950' : 'bg-gray-50 dark:bg-gray-900'
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
           <CollapsibleTrigger
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0 w-full"
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
             <ChevronRight
-              className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+              className={`w-5 h-5 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
               aria-hidden="true"
             />
-            <div className="flex items-center gap-2">
-              {group.aiSuggestion && (
-                <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              )}
-              <h3 className="font-semibold text-lg">{group.entityName}</h3>
+            <div className="flex items-center gap-2 min-w-0">
+              {group.aiSuggestion && <Sparkles className="w-5 h-5 shrink-0 text-app-accent" />}
+              <h3 className="font-semibold text-lg truncate">{group.entityName}</h3>
             </div>
           </CollapsibleTrigger>
           <div className="flex items-center gap-3 mt-2 ml-7">
