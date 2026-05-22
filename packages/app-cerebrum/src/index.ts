@@ -7,8 +7,6 @@
 export { navConfig, routes } from './routes';
 export { manifest } from './manifest';
 
-// Capture surface — exported for the global hotkey modal in pops-shell
-// (PRD-081 US-09).
 export { IngestForm } from './components/IngestForm';
 export { useIngestPageModel } from './pages/ingest-page/useIngestPageModel';
 

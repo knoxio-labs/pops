@@ -1,10 +1,12 @@
 import { trpc } from '@/lib/trpc';
 import { useCallback, useState } from 'react';
 
+import { SETTINGS_KEYS } from '@pops/types';
+
 import { CaptureModal } from './CaptureModal';
 import { useCaptureHotkey } from './useCaptureHotkey';
 
-const settingKey = 'cerebrum.captureHotkey' as const;
+const settingKey = SETTINGS_KEYS.CEREBRUM_CAPTURE_HOTKEY;
 const defaultHotkey = 'c';
 
 export function CaptureHotkeyHost() {
