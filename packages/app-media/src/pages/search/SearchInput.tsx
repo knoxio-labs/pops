@@ -29,9 +29,15 @@ export function SearchInput({ query, mode, onQueryChange, onModeChange }: Search
 
       <Tabs value={mode} onValueChange={(v: string) => onModeChange(v as SearchMode)}>
         <TabsList>
-          <TabsTrigger value="both">Both</TabsTrigger>
-          <TabsTrigger value="movies">Movies</TabsTrigger>
-          <TabsTrigger value="tv">TV Shows</TabsTrigger>
+          <TabsTrigger value="both" className="px-4">
+            Both
+          </TabsTrigger>
+          <TabsTrigger value="movies" className="px-4">
+            Movies
+          </TabsTrigger>
+          <TabsTrigger value="tv" className="px-4">
+            TV Shows
+          </TabsTrigger>
         </TabsList>
       </Tabs>
     </>
