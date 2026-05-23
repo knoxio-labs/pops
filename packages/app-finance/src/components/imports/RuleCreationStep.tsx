@@ -63,18 +63,18 @@ function computeProposals(confirmedTransactions: ConfirmedTransaction[]): RulePr
   return proposals;
 }
 
-function buildChangeSet(proposal: RuleProposal): TagRuleChangeSet {
+function buildChangeSet(p: RuleProposal): TagRuleChangeSet {
   return {
     source: 'import-batch',
-    reason: `Rule detected from import batch tags for ${proposal.entityName}`,
+    reason: `Rule detected from import batch for ${p.entityName}`,
     ops: [
       {
         op: 'add',
         data: {
-          descriptionPattern: proposal.pattern,
+          descriptionPattern: p.pattern,
           matchType: 'contains',
-          entityId: proposal.entityId,
-          tags: proposal.tags,
+          entityId: p.entityId,
+          tags: p.tags,
           confidence: 0.9,
           isActive: true,
         },
@@ -154,6 +154,7 @@ function StepFooter({
   selectedCount: number;
   hasProposals: boolean;
 }) {
+  const label = `Create ${selectedCount > 0 ? `${selectedCount} ` : ''}${selectedCount === 1 ? 'rule' : 'rules'} →`;
   return (
     <div className="flex justify-between pt-2">
       <Button variant="outline" onClick={onSkip}>
@@ -161,8 +162,7 @@ function StepFooter({
       </Button>
       {hasProposals && (
         <Button onClick={onCreate} disabled={selectedCount === 0}>
-          Create {selectedCount > 0 ? `${selectedCount} ` : ''}
-          {selectedCount === 1 ? 'rule' : 'rules'} →
+          {label}
         </Button>
       )}
     </div>

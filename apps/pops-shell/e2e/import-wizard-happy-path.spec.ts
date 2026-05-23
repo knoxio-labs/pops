@@ -1,7 +1,7 @@
 /**
  * Smoke test — Finance import wizard happy path (#2101)
  *
- * Tier 1 minimum: walks the full 7-step import wizard end-to-end with a
+ * Tier 1 minimum: walks the full 8-step import wizard end-to-end with a
  * 2-transaction CSV where the backend is fully mocked via `page.route()`:
  *
  *   1. Upload CSV         → parsed client-side (no tRPC call)
@@ -9,8 +9,9 @@
  *   3. Processing         → polls getImportProgress until `completed`
  *   4. Review             → both transactions land in Matched tab
  *   5. Tag Review         → no edits, continue
- *   6. Final Review       → Approve & Commit All
- *   7. Summary            → "Import Complete" with 2 transactions imported
+ *   6. Create Rules       → skip (no patterns in mocked data)
+ *   7. Final Review       → Approve & Commit All
+ *   8. Summary            → "Import Complete" with 2 transactions imported
  *
  * Why mocked:
  *   The import wizard orchestrates many tRPC endpoints (processImport,
@@ -285,13 +286,16 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     });
     await page.getByRole('button', { name: /continue to final review/i }).click();
 
-    // Step 6: Final Review — approve & commit.
+    // Step 6: Create Rules — no patterns in mocked test, skip.
+    await page.getByRole('button', { name: /^skip$/i }).click();
+
+    // Step 7: Final Review — approve & commit.
     await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
       timeout: 5_000,
     });
     await page.getByRole('button', { name: /approve & commit all/i }).click();
 
-    // Step 7: Summary — wizard auto-advances on commit success, no Continue click.
+    // Step 8: Summary — wizard auto-advances on commit success, no Continue click.
     await expect(page.getByRole('heading', { name: 'Import Complete' })).toBeVisible({
       timeout: 15_000,
     });

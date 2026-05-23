@@ -523,9 +523,11 @@ test.describe.skip('Import Wizard - Complete Flow', () => {
       const continueToFinal = page.getByRole('button', { name: /continue to final review/i });
       await expect(continueToFinal).toBeEnabled();
       await continueToFinal.click();
+      // Step 6: Create Rules — skip
+      await page.getByRole('button', { name: /^skip$/i }).click();
     });
 
-    // Step 6–7: Final Review (commit) → Summary
+    // Step 7–8: Final Review (commit) → Summary
     await test.step('Final review and summary', async () => {
       await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
         timeout: 5000,
@@ -836,6 +838,7 @@ test.describe.skip('Import Wizard - Transfer and Income Transactions', () => {
     await page.getByRole('button', { name: /continue to tag review/i }).click();
     await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: /continue to final review/i }).click();
+    await page.getByRole('button', { name: /^skip$/i }).click();
     await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
       timeout: 5000,
     });
@@ -1060,6 +1063,7 @@ test.describe.skip('Import Wizard - Progress Polling', () => {
     await navigateToTagReviewStep(page);
 
     await page.getByRole('button', { name: /continue to final review/i }).click();
+    await page.getByRole('button', { name: /^skip$/i }).click();
     await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
       timeout: 5000,
     });
@@ -1203,6 +1207,7 @@ test.describe.skip('Import Wizard - Warnings and Errors', () => {
     await navigateToTagReviewStep(page);
 
     await page.getByRole('button', { name: /continue to final review/i }).click();
+    await page.getByRole('button', { name: /^skip$/i }).click();
     await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
       timeout: 5000,
     });
@@ -1367,6 +1372,7 @@ test.describe.skip('Import Wizard - Complete Import Flows', () => {
 
     await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: /continue to final review/i }).click();
+    await page.getByRole('button', { name: /^skip$/i }).click();
     await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
       timeout: 5000,
     });
@@ -1578,6 +1584,7 @@ test.describe.skip('Import Wizard - Error Recovery', () => {
     await navigateToTagReviewStep(page);
 
     await page.getByRole('button', { name: /continue to final review/i }).click();
+    await page.getByRole('button', { name: /^skip$/i }).click();
     await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
       timeout: 5000,
     });
