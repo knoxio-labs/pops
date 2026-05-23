@@ -12,6 +12,7 @@ import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { entities, transactionTagRules } from '@pops/db-types';
 
 import { getDrizzle } from '../db.js';
+import { logger } from '../lib/logger.js';
 import { findAllMatchingCorrections } from '../modules/core/corrections/service.js';
 import { normalizeDescription } from '../modules/core/corrections/types-base.js';
 import { parseJsonStringArray } from './json.js';
@@ -109,7 +110,11 @@ function findMatchingTagRules(description: string, entityId: string | null): Tag
   const regex = regexCandidates.filter((r) => {
     try {
       return new RegExp(r.descriptionPattern, 'i').test(description);
-    } catch {
+    } catch (err) {
+      logger.warn(
+        { pattern: r.descriptionPattern, err },
+        '[tag-rules] invalid regex pattern — skipping rule'
+      );
       return false;
     }
   });
