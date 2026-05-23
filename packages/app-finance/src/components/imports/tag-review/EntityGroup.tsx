@@ -28,7 +28,7 @@ function pluralizeTransactions(count: number): string {
 }
 
 function useEntityGroupState(props: EntityGroupProps) {
-  const { group, localTags, suggestedTagMeta, onApplyGroupTags } = props;
+  const { group, localTags, suggestedTagMeta, onApplyGroupTags, onUpdateTag } = props;
   const [expanded, setExpanded] = useState(true);
   const [groupStagedTags, setGroupStagedTags] = useState<string[]>([]);
 
@@ -43,9 +43,18 @@ function useEntityGroupState(props: EntityGroupProps) {
 
   const handleApplySuggestions = useCallback(() => {
     if (suggestedUnion.length === 0) return;
-    onApplyGroupTags(group, suggestedUnion);
-    toast.success(`Suggestions merged into ${pluralizeTransactions(group.transactions.length)}`);
-  }, [group, suggestedUnion, onApplyGroupTags]);
+    let applied = 0;
+    for (const tx of group.transactions) {
+      const suggestions = (suggestedTagMeta[tx.checksum] ?? []).map((s) => s.tag);
+      if (suggestions.length === 0) continue;
+      onUpdateTag(
+        tx.checksum,
+        Array.from(new Set([...(localTags[tx.checksum] ?? []), ...suggestions]))
+      );
+      applied++;
+    }
+    if (applied > 0) toast.success(`Suggestions applied to ${pluralizeTransactions(applied)}`);
+  }, [group.transactions, suggestedUnion, suggestedTagMeta, localTags, onUpdateTag]);
 
   const handleApplyStagedToGroup = useCallback(() => {
     if (groupStagedTags.length === 0) return;
