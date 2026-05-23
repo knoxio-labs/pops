@@ -2,7 +2,46 @@ import { formatImportError } from '../../../../lib/errors.js';
 import { buildSuggestedTags } from './tag-management.js';
 
 import type { ParsedTransaction, ProcessedTransaction } from '../types.js';
+import type { AiCategorizationError } from './ai-categorizer.js';
 import type { EntityEntry } from './entity-lookup.js';
+import type { AliasMap, EntityLookupMap } from './entity-matcher.js';
+
+export interface AiCounters {
+  aiError: AiCategorizationError | null;
+  aiFailureCount: number;
+  aiApiCalls: number;
+  aiCacheHits: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCostUsd: number;
+}
+
+export interface ProcessContext {
+  entityLookup: EntityLookupMap;
+  aliases: AliasMap;
+  knownTags: string[];
+  importBatchId: string;
+}
+
+export interface TransactionProcessResult {
+  matched?: ProcessedTransaction;
+  uncertain?: ProcessedTransaction;
+  failed?: ProcessedTransaction;
+  batchStatus: 'success' | 'failed';
+  errorEntry?: { description: string; error: string };
+}
+
+export function createAiCounters(): AiCounters {
+  return {
+    aiError: null,
+    aiFailureCount: 0,
+    aiApiCalls: 0,
+    aiCacheHits: 0,
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCostUsd: 0,
+  };
+}
 
 export interface MatchedFromEntityArgs {
   transaction: ParsedTransaction;
