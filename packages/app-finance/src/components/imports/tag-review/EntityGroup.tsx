@@ -49,11 +49,7 @@ function useEntityGroupState(props: EntityGroupProps) {
       const suggestions = (suggestedTagMeta[tx.checksum] ?? []).map((s) => s.tag);
       if (suggestions.length === 0) continue;
       const mergedTags = Array.from(new Set([...currentTags, ...suggestions]));
-      if (
-        mergedTags.length === currentTags.length &&
-        mergedTags.every((t, i) => t === currentTags[i])
-      )
-        continue;
+      if (mergedTags.length === currentTags.length) continue; // all suggestions already present
       onUpdateTag(tx.checksum, mergedTags);
       applied++;
     }
