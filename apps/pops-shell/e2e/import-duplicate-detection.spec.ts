@@ -84,6 +84,8 @@ async function commitAndReachSummary(page: Page): Promise<void> {
   });
 
   await page.getByRole('button', { name: /continue to final review/i }).click();
+  // Step 6: Create Rules — skip (no patterns in mocked test)
+  await page.getByRole('button', { name: /^skip$/i }).click();
   await expect(page.getByRole('heading', { name: 'Final Review' })).toBeVisible({
     timeout: 10_000,
   });

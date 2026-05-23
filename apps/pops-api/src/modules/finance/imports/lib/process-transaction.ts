@@ -1,6 +1,3 @@
-/**
- * Core processing logic for a single transaction during import.
- */
 import { logger } from '../../../../lib/logger.js';
 import { AiCategorizationError, categorizeWithAi } from './ai-categorizer.js';
 import { applyLearnedCorrection } from './correction-application.js';
@@ -11,48 +8,21 @@ import {
   buildMatchedTransfer,
   buildUncertainFromAi,
   buildUncertainNoMatch,
+  type AiCategorizationResult,
+  type AiCounters,
+  type ProcessContext,
+  type TransactionProcessResult,
 } from './process-transaction-helpers.js';
 import { isTransferOrIncomeRow } from './transfer-classifier.js';
 
+export {
+  createAiCounters,
+  type AiCounters,
+  type ProcessContext,
+  type TransactionProcessResult,
+} from './process-transaction-helpers.js';
+
 import type { ParsedTransaction, ProcessedTransaction } from '../types.js';
-import type { AliasMap, EntityLookupMap } from './entity-matcher.js';
-
-export interface AiCounters {
-  aiError: AiCategorizationError | null;
-  aiFailureCount: number;
-  aiApiCalls: number;
-  aiCacheHits: number;
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  totalCostUsd: number;
-}
-
-export interface ProcessContext {
-  entityLookup: EntityLookupMap;
-  aliases: AliasMap;
-  knownTags: string[];
-  importBatchId: string;
-}
-
-export interface TransactionProcessResult {
-  matched?: ProcessedTransaction;
-  uncertain?: ProcessedTransaction;
-  failed?: ProcessedTransaction;
-  batchStatus: 'success' | 'failed';
-  errorEntry?: { description: string; error: string };
-}
-
-export function createAiCounters(): AiCounters {
-  return {
-    aiError: null,
-    aiFailureCount: 0,
-    aiApiCalls: 0,
-    aiCacheHits: 0,
-    totalInputTokens: 0,
-    totalOutputTokens: 0,
-    totalCostUsd: 0,
-  };
-}
 
 function tryEntityMatch(
   transaction: ParsedTransaction,
@@ -60,16 +30,12 @@ function tryEntityMatch(
 ): ProcessedTransaction | null {
   const match = matchEntity(transaction.description, context.entityLookup, context.aliases);
   if (!match) return null;
-
   const entityEntry = context.entityLookup.get(match.entityName.toLowerCase());
-  if (!entityEntry) {
-    throw new Error(`Entity lookup failed for matched entity: ${match.entityName}`);
-  }
+  if (!entityEntry) throw new Error(`Entity lookup failed for matched entity: ${match.entityName}`);
   return buildMatchedFromEntity({
     transaction,
     entry: entityEntry,
     matchType: match.matchType,
-    category: null,
     knownTags: context.knownTags,
   });
 }
@@ -78,10 +44,13 @@ async function tryAiCategorization(
   transaction: ParsedTransaction,
   context: ProcessContext,
   counters: AiCounters
-): Promise<{ entityName: string | null; category: string | null } | null> {
+): Promise<AiCategorizationResult | null> {
   try {
-    const { result, usage } = await categorizeWithAi(transaction.rawRow, context.importBatchId);
-
+    const { result, usage } = await categorizeWithAi(
+      transaction.rawRow,
+      context.importBatchId,
+      context.knownTags
+    );
     if (usage) {
       counters.aiApiCalls++;
       counters.totalInputTokens += usage.inputTokens;
@@ -90,9 +59,12 @@ async function tryAiCategorization(
     } else {
       counters.aiCacheHits++;
     }
-
     if (!result?.entityName) return null;
-    return { entityName: result.entityName, category: result.category ?? null };
+    return {
+      entityName: result.entityName,
+      aiTags: result.tags ?? [],
+      aiCategory: result.tags?.length ? null : (result.category ?? null),
+    };
   } catch (error) {
     if (error instanceof AiCategorizationError) {
       counters.aiError = error;
@@ -105,21 +77,27 @@ async function tryAiCategorization(
 
 function resolveAiResult(
   transaction: ParsedTransaction,
-  aiEntityName: string,
-  category: string | null,
+  ai: AiCategorizationResult,
   context: ProcessContext
 ): ProcessedTransaction {
-  const entry = context.entityLookup.get(aiEntityName.toLowerCase());
+  const entry = context.entityLookup.get(ai.entityName.toLowerCase());
   if (entry) {
     return buildMatchedFromEntity({
       transaction,
       entry,
       matchType: 'ai',
-      category,
+      aiTags: ai.aiTags,
+      category: ai.aiCategory,
       knownTags: context.knownTags,
     });
   }
-  return buildUncertainFromAi(transaction, aiEntityName, category, context.knownTags);
+  return buildUncertainFromAi({
+    transaction,
+    entityName: ai.entityName,
+    aiTags: ai.aiTags,
+    aiCategory: ai.aiCategory,
+    knownTags: context.knownTags,
+  });
 }
 
 export interface ProcessTransactionArgs {
@@ -134,6 +112,7 @@ async function classifyTransaction(
   args: ProcessTransactionArgs
 ): Promise<TransactionProcessResult> {
   const { transaction, context, counters, index, total } = args;
+
   const correctionApplied = applyLearnedCorrection({
     transaction,
     minConfidence: 0.7,
@@ -148,10 +127,6 @@ async function classifyTransaction(
     } as TransactionProcessResult;
   }
 
-  // Auto-classify inbound transfers / income before the entity-matcher and AI
-  // cascade — these rows are not merchants and surfacing them in the
-  // Review/uncertain bucket asks the user a question that has no good answer
-  // (#2448).
   if (isTransferOrIncomeRow(transaction)) {
     logger.debug(
       {
@@ -185,7 +160,7 @@ async function classifyTransaction(
 
   const aiResult = await tryAiCategorization(transaction, context, counters);
   if (aiResult?.entityName) {
-    const processed = resolveAiResult(transaction, aiResult.entityName, aiResult.category, context);
+    const processed = resolveAiResult(transaction, aiResult, context);
     const bucket = processed.status === 'matched' ? 'matched' : 'uncertain';
     return { [bucket]: processed, batchStatus: 'success' } as TransactionProcessResult;
   }

@@ -2,14 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { suggestTags } from './tag-suggester.js';
 
-// Mock entity lookup via DB
+// Mock entity lookup and tag-rules queries via DB
 const mockEntityGet = vi.fn<() => { defaultTags: string | null } | null>(() => null);
+const mockTagRulesAll = vi.fn<() => { tags: string; descriptionPattern: string }[]>(() => []);
+
 vi.mock('../db.js', () => ({
   getDrizzle: vi.fn(() => ({
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
           get: (...args: unknown[]) => mockEntityGet(...(args as [])),
+          orderBy: vi.fn(() => ({
+            all: (...args: unknown[]) => mockTagRulesAll(...(args as [])),
+          })),
         })),
       })),
     })),
@@ -29,6 +34,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockFindAllMatchingCorrections.mockReturnValue([]);
   mockEntityGet.mockReturnValue(null);
+  mockTagRulesAll.mockReturnValue([]);
 });
 
 describe('suggestTags', () => {
@@ -78,37 +84,153 @@ describe('suggestTags', () => {
     });
   });
 
-  describe('AI category tags (source: ai)', () => {
-    it('adds AI category when it matches a known tag (case-insensitive)', () => {
-      const result = suggestTags({
-        description: 'NETFLIX',
-        entityId: null,
-        aiCategory: 'entertainment',
-        knownTags: ['Entertainment', 'Groceries', 'Transport'],
-      });
+  describe('tag rule tags from transaction_tag_rules (source: rule)', () => {
+    it('returns tags from matching tag rules', () => {
+      mockTagRulesAll.mockReturnValue([
+        { tags: '["Transport","Public Transport"]', descriptionPattern: 'transportfornsw' },
+      ]);
 
-      expect(result).toEqual([{ tag: 'Entertainment', source: 'ai' }]);
+      const result = suggestTags({ description: 'TRANSPORTFORNSWTRAVEL SYDNEY', entityId: null });
+
+      expect(result).toEqual([
+        { tag: 'Transport', source: 'rule', pattern: 'transportfornsw' },
+        { tag: 'Public Transport', source: 'rule', pattern: 'transportfornsw' },
+      ]);
     });
 
-    it('skips AI category when it does not match any known tag', () => {
-      const result = suggestTags({
-        description: 'NETFLIX',
-        entityId: null,
-        aiCategory: 'streaming',
-        knownTags: ['Entertainment', 'Groceries'],
-      });
+    it('deduplicates tag rule tags against correction tags', () => {
+      mockFindAllMatchingCorrections.mockReturnValue([
+        { tags: '["Transport"]', descriptionPattern: 'TRANSPORTFORNSW%' },
+      ]);
+      mockTagRulesAll.mockReturnValue([
+        { tags: '["Transport","Public Transport"]', descriptionPattern: 'transportfornsw' },
+      ]);
 
-      expect(result).toEqual([]);
+      const result = suggestTags({ description: 'TRANSPORTFORNSWTRAVEL SYDNEY', entityId: null });
+
+      // Transport already added by correction; tag rule contributes only Public Transport
+      expect(result).toEqual([
+        { tag: 'Transport', source: 'rule', pattern: 'TRANSPORTFORNSW%' },
+        { tag: 'Public Transport', source: 'rule', pattern: 'transportfornsw' },
+      ]);
     });
 
-    it('skips AI category when knownTags not provided', () => {
-      const result = suggestTags({
-        description: 'NETFLIX',
-        entityId: null,
-        aiCategory: 'entertainment',
+    it('returns empty when tag rules return nothing', () => {
+      mockTagRulesAll.mockReturnValue([]);
+      const result = suggestTags({ description: 'UNKNOWN', entityId: null });
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('AI tags (source: ai)', () => {
+    describe('legacy aiCategory (validates against knownTags)', () => {
+      it('adds AI category when it matches a known tag (case-insensitive)', () => {
+        const result = suggestTags({
+          description: 'NETFLIX',
+          entityId: null,
+          aiCategory: 'entertainment',
+          knownTags: ['Entertainment', 'Groceries', 'Transport'],
+        });
+
+        expect(result).toEqual([{ tag: 'Entertainment', source: 'ai' }]);
       });
 
-      expect(result).toEqual([]);
+      it('skips AI category when it does not match any known tag', () => {
+        const result = suggestTags({
+          description: 'NETFLIX',
+          entityId: null,
+          aiCategory: 'streaming',
+          knownTags: ['Entertainment', 'Groceries'],
+        });
+
+        expect(result).toEqual([]);
+      });
+
+      it('skips AI category when knownTags not provided', () => {
+        const result = suggestTags({
+          description: 'NETFLIX',
+          entityId: null,
+          aiCategory: 'entertainment',
+        });
+
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('aiTags array (direct multi-tag from AI)', () => {
+      it('adds all aiTags that are in knownTags', () => {
+        const result = suggestTags({
+          description: 'AMPOL SYDNEY',
+          entityId: null,
+          aiTags: ['Charging', 'EV'],
+          knownTags: ['Charging', 'EV', 'Transport'],
+        });
+
+        expect(result).toEqual([
+          { tag: 'Charging', source: 'ai' },
+          { tag: 'EV', source: 'ai' },
+        ]);
+      });
+
+      it('marks aiTags not in knownTags as isNew', () => {
+        const result = suggestTags({
+          description: 'SOME MARKET',
+          entityId: null,
+          aiTags: ['Groceries', 'Farmers Market'],
+          knownTags: ['Groceries'],
+        });
+
+        expect(result).toEqual([
+          { tag: 'Groceries', source: 'ai' },
+          { tag: 'Farmers Market', source: 'ai', isNew: true },
+        ]);
+      });
+
+      it('marks all aiTags as isNew when knownTags is empty', () => {
+        const result = suggestTags({
+          description: 'SOME PLACE',
+          entityId: null,
+          aiTags: ['Coffee', 'Purchase'],
+          knownTags: [],
+        });
+
+        expect(result).toEqual([
+          { tag: 'Coffee', source: 'ai', isNew: true },
+          { tag: 'Purchase', source: 'ai', isNew: true },
+        ]);
+      });
+
+      it('prefers aiTags over aiCategory when both present', () => {
+        const result = suggestTags({
+          description: 'NETFLIX',
+          entityId: null,
+          aiTags: ['Streaming', 'Entertainment'],
+          aiCategory: 'Entertainment',
+          knownTags: ['Entertainment'],
+        });
+
+        // aiTags takes precedence; aiCategory is ignored when aiTags present
+        expect(result).toEqual([
+          { tag: 'Streaming', source: 'ai', isNew: true },
+          { tag: 'Entertainment', source: 'ai' },
+        ]);
+      });
+
+      it('deduplicates aiTags against correction tags', () => {
+        const result = suggestTags({
+          description: 'AMPOL SYDNEY',
+          entityId: null,
+          correctionTags: ['Charging'],
+          correctionPattern: 'AMPOL%',
+          aiTags: ['Charging', 'EV'],
+          knownTags: ['Charging', 'EV'],
+        });
+
+        expect(result).toEqual([
+          { tag: 'Charging', source: 'rule', pattern: 'AMPOL%' },
+          { tag: 'EV', source: 'ai' },
+        ]);
+      });
     });
   });
 
@@ -193,6 +315,30 @@ describe('suggestTags', () => {
         { tag: 'groceries', source: 'rule', pattern: 'WOOLWORTHS%' },
         { tag: 'Food', source: 'ai' },
         { tag: 'essentials', source: 'entity' },
+      ]);
+    });
+
+    it('priority order: correction > tag-rule > ai > entity', () => {
+      mockTagRulesAll.mockReturnValue([
+        { tags: '["Groceries","Fresh"]', descriptionPattern: 'woolworths' },
+      ]);
+      mockEntityGet.mockReturnValue({ defaultTags: '["Groceries","Supermarket"]' });
+
+      const result = suggestTags({
+        description: 'WOOLWORTHS BONDI',
+        entityId: 'entity-1',
+        correctionTags: ['Groceries'],
+        correctionPattern: 'WOOLWORTHS%',
+        aiTags: ['Groceries', 'Food'],
+        knownTags: ['Groceries', 'Fresh', 'Food', 'Supermarket'],
+      });
+
+      // Correction wins Groceries; tag-rule adds Fresh; AI adds Food; entity adds Supermarket
+      expect(result).toEqual([
+        { tag: 'Groceries', source: 'rule', pattern: 'WOOLWORTHS%' },
+        { tag: 'Fresh', source: 'rule', pattern: 'woolworths' },
+        { tag: 'Food', source: 'ai' },
+        { tag: 'Supermarket', source: 'entity' },
       ]);
     });
   });

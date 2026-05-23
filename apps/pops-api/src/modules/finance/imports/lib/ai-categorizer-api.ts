@@ -23,14 +23,21 @@ export interface ApiCallOptions {
   importBatchId: string | undefined;
   model: string;
   maxTokens: number;
+  knownTags: string[];
 }
 
-export function buildPrompt(rawRow: string): string {
-  return `Given this bank transaction data, identify the merchant/entity name and a spending category.
+export function buildPrompt(rawRow: string, knownTags: string[]): string {
+  const tagList =
+    knownTags.length > 0
+      ? knownTags.join(', ')
+      : 'Groceries, Transport, Dining, Shopping, Utilities, Subscriptions, Entertainment, Health, Insurance';
+  return `Given this bank transaction data, identify the merchant/entity name and relevant spending tags.
 
 Transaction data: ${rawRow}
 
-Reply in JSON only: {"entityName": "...", "category": "..."}
+Known tags: ${tagList}
+
+Reply in JSON only: {"entityName": "...", "tags": ["tag1", "tag2"]}
 
 entityName rules:
 - Return the brand or chain name only (e.g. "Woolworths", "Metro Petroleum", "Transport for NSW").
@@ -39,20 +46,13 @@ entityName rules:
 - If you cannot identify a real merchant from the description, return entityName as null.
   Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.
 
-Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopping, Health, Insurance, Subscriptions, Income, Transfer, Government, Education, Travel, Rent, Other.`;
+tags rules:
+- Return 1-4 tags that describe this transaction.
+- Prefer tags from the Known tags list when they fit.
+- You MAY suggest new tags not in the list when they better describe this transaction (e.g. "EV", "Homelab", "Gift Card", "Fast Food").
+- Do NOT use vague tags like "Other" or "Spending" unless nothing else fits.`;
 }
 
-/**
- * Patterns the LLM uses to invent placeholder entity names when it cannot
- * recover a real merchant from the description (#2449). Surfacing these as
- * suggested entities pollutes the entities table — treat as null instead so
- * the row falls into the manual-pick bucket.
- *
- * Word-boundary `\b` ensures real names like "Generic Pharma Co" or "Unknown
- * Pleasures Records" — should they ever be merchant names — are not blocked,
- * since they wouldn't match the leading-word-only pattern. Only entries
- * starting with the placeholder word are stripped.
- */
 const PLACEHOLDER_LEADING_WORDS = [
   'unknown',
   'unidentified',
@@ -66,17 +66,6 @@ const PLACEHOLDER_LEADING_WORDS = [
 
 const PLACEHOLDER_REGEX = new RegExp(`^(${PLACEHOLDER_LEADING_WORDS.join('|')})\\b`, 'i');
 
-/**
- * Strip trailing tokens that look like store numbers or location codes — the
- * model occasionally leaks these into entityName despite the prompt
- * instruction (#2450). Specifically removes any trailing run that begins with
- * a 3+ digit token, since real merchant names rarely end with raw numbers.
- *
- * Examples (input → output):
- *   "Metro Petroleum 7342896 Hurlstone Par" → "Metro Petroleum"
- *   "WW Metro 1130 Park"                    → "WW Metro"
- *   "7-Eleven"                              → "7-Eleven"  (digit not a trailing token)
- */
 function stripTrailingStoreCodes(name: string): string {
   return name.replace(/\s+\d{3,}\b.*$/, '').trim();
 }
@@ -98,7 +87,7 @@ export function sanitizeEntityName(name: string | null): string | null {
 }
 
 export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
-  const { client, rawRow, sanitizedDescription, importBatchId, model, maxTokens } = opts;
+  const { client, rawRow, sanitizedDescription, importBatchId, model, maxTokens, knownTags } = opts;
   const response = await trackInference(
     {
       provider: 'claude',
@@ -113,7 +102,7 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
           client.messages.create({
             model,
             max_tokens: maxTokens,
-            messages: [{ role: 'user', content: buildPrompt(rawRow) }],
+            messages: [{ role: 'user', content: buildPrompt(rawRow, knownTags) }],
           }),
         sanitizedDescription,
         { logger, logPrefix: '[AI]' }
@@ -133,13 +122,18 @@ export function buildEntryFromText(text: string, rawRow: string): AiCacheEntry {
     .replaceAll(/^```(?:json)?\s*\n?/gm, '')
     .replaceAll(/\n?```\s*$/gm, '');
   const parsed = JSON.parse(cleanedText) as {
-    entityName: string | null;
-    category: string;
+    entityName?: string | null;
+    tags?: unknown;
+    category?: string;
   };
+  const tags = Array.isArray(parsed.tags)
+    ? parsed.tags.filter((t): t is string => typeof t === 'string')
+    : undefined;
   return {
     description: rawRow.trim(),
-    entityName: sanitizeEntityName(parsed.entityName),
-    category: parsed.category,
+    entityName: sanitizeEntityName(parsed.entityName ?? null),
+    category: tags?.[0] ?? parsed.category ?? '',
+    tags,
     cachedAt: new Date().toISOString(),
   };
 }

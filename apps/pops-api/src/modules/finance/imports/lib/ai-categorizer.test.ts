@@ -304,7 +304,7 @@ describe('categorizeWithAi', () => {
       expect(result?.category).toBe('Groceries');
     });
 
-    it('handles JSON with partial data (missing category)', async () => {
+    it('handles JSON with partial data (missing tags and category)', async () => {
       mockCreate.mockResolvedValue({
         content: [{ type: 'text', text: '{"entityName": "Woolworths"}' }],
         usage: { input_tokens: 50, output_tokens: 20 },
@@ -313,7 +313,8 @@ describe('categorizeWithAi', () => {
       const { result } = await categorizeWithAi('TEST');
 
       expect(result?.entityName).toBe('Woolworths');
-      expect(result?.category).toBeUndefined();
+      expect(result?.category).toBe('');
+      expect(result?.tags).toBeUndefined();
     });
 
     it('handles special characters in response', async () => {
