@@ -29,13 +29,17 @@ export function useTestActionHandler() {
       const parts = procedure.split('.');
       let current: unknown = utils.client;
       for (const part of parts) {
-        if (current === null || current === undefined || typeof current !== 'object') {
+        if (
+          current === null ||
+          current === undefined ||
+          (typeof current !== 'object' && typeof current !== 'function')
+        ) {
           throw new Error(`Unknown procedure: ${procedure}`);
         }
         current = (current as Record<string, unknown>)[part];
-        if (!current) throw new Error(`Unknown procedure: ${procedure}`);
+        if (current == null) throw new Error(`Unknown procedure: ${procedure}`);
       }
-      if (current !== null && typeof current === 'object') {
+      if (current !== null && (typeof current === 'object' || typeof current === 'function')) {
         const node = current as Record<string, unknown>;
         if (typeof node.query === 'function') {
           const result = await (node.query as () => Promise<unknown>)();

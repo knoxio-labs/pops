@@ -33,6 +33,12 @@ export interface SettingsField {
     procedure: string;
     label: string;
   };
+  /** Load options dynamically from a tRPC query procedure. The procedure must return `{ data: Record<string, unknown>[] }`. */
+  optionsLoader?: {
+    procedure: string;
+    valueKey: string;
+    labelKey: string;
+  };
 }
 
 export interface SettingsGroup {
