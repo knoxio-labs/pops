@@ -6,6 +6,7 @@ import { useImportStore } from '../../store/importStore';
 import { ColumnMapStep } from './ColumnMapStep';
 import { FinalReviewStep } from './FinalReviewStep';
 import { ProcessingStep } from './ProcessingStep';
+import { RuleCreationStep } from './RuleCreationStep';
 import { SummaryStep } from './SummaryStep';
 import { TagReviewStep } from './TagReviewStep';
 import { UploadStep } from './UploadStep';
@@ -24,8 +25,9 @@ const STEPS: Step[] = [
   { number: 3, label: 'Process', component: ProcessingStep },
   { number: 4, label: 'Review', component: ReviewStep },
   { number: 5, label: 'Tags', component: TagReviewStep },
-  { number: 6, label: 'Commit', component: FinalReviewStep },
-  { number: 7, label: 'Summary', component: SummaryStep },
+  { number: 6, label: 'Rules', component: RuleCreationStep },
+  { number: 7, label: 'Commit', component: FinalReviewStep },
+  { number: 8, label: 'Summary', component: SummaryStep },
 ];
 
 function getStepClasses(stepNumber: number, currentStep: number): { text: string; circle: string } {
