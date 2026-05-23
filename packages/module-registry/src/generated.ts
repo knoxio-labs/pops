@@ -1196,6 +1196,34 @@ export const MODULES = [
               },
             ],
           },
+          {
+            id: 'download_defaults',
+            title: 'Download Defaults',
+            description:
+              'Quality profile and root folder used when downloading movies via the Download button.',
+            fields: [
+              {
+                key: 'rotation_quality_profile_id',
+                label: 'Quality Profile',
+                type: 'select',
+                optionsLoader: {
+                  procedure: 'media.arr.getQualityProfiles',
+                  valueKey: 'id',
+                  labelKey: 'name',
+                },
+              },
+              {
+                key: 'rotation_root_folder_path',
+                label: 'Root Folder',
+                type: 'select',
+                optionsLoader: {
+                  procedure: 'media.arr.getRootFolders',
+                  valueKey: 'path',
+                  labelKey: 'path',
+                },
+              },
+            ],
+          },
         ],
       },
       {

@@ -85,7 +85,9 @@ export function RequestMovieFormContent(props: RequestMovieFormContentProps) {
   if (props.isDownloadMode) {
     return (
       <p className="text-sm text-muted-foreground">
-        This movie will be added to Radarr using your rotation settings and marked as protected.
+        This movie will be added to Radarr using your configured quality profile and root folder. It
+        will be marked as protected, meaning it won&apos;t be automatically removed by rotation for
+        the duration of your protection window.
       </p>
     );
   }

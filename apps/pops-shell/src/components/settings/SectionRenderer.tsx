@@ -7,6 +7,7 @@ import { GroupRenderer } from './section-renderer/GroupRenderer';
 import { useAutoSave } from './section-renderer/useAutoSave';
 import { useDynamicOptions } from './section-renderer/useDynamicOptions';
 import { useSettingsValues } from './section-renderer/useSettingsValues';
+import { useTrpcOptionsLoaders } from './section-renderer/useTrpcOptionsLoaders';
 
 import type { SettingsManifest } from '@pops/types';
 
@@ -46,7 +47,14 @@ export function SectionRenderer({ manifest, optionsLoaders, onTestAction }: Sect
   const setBulkMutation = trpc.core.settings.setBulk.useMutation();
 
   const { values, setValues, loadedKeys } = useSettingsValues({ data, manifest });
-  const { dynamicOptions, loadingOptionKeys } = useDynamicOptions(optionsLoaders);
+  const trpcLoaders = useTrpcOptionsLoaders(manifest);
+  const mergedLoaders = useMemo(
+    () => (optionsLoaders ? { ...trpcLoaders, ...optionsLoaders } : trpcLoaders),
+    [trpcLoaders, optionsLoaders]
+  );
+  const { dynamicOptions, loadingOptionKeys } = useDynamicOptions(
+    Object.keys(mergedLoaders).length > 0 ? mergedLoaders : undefined
+  );
   const { saveStates, handleChange } = useAutoSave({ setBulkMutation, fieldsByKey, setValues });
 
   const handleTestAction = useCallback(
