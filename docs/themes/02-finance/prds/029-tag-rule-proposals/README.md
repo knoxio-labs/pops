@@ -111,17 +111,22 @@ The UI must support accepting/rejecting suggestions at either scope:
 
 ## User Stories
 
-| #   | Story                                                                       | Summary                                                       | Status | Parallelisable   |
-| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------- | ------ | ---------------- |
-| 01  | [us-01-tag-rule-contract](us-01-tag-rule-contract.md)                       | Define tag rule model + ChangeSet operations + impact preview | Done   | No (first)       |
-| 02  | [us-02-generate-tag-proposal](us-02-generate-tag-proposal.md)               | Generate bundled tag-rule proposal from tag edits             | Done   | Blocked by us-01 |
-| 03  | [us-03-approve-reject-tag-proposals](us-03-approve-reject-tag-proposals.md) | Approve/apply or reject-with-feedback tag rule ChangeSets     | Done   | Blocked by us-01 |
+| #   | Story                                                                       | Summary                                                                               | Status | Parallelisable   |
+| --- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-tag-rule-contract](us-01-tag-rule-contract.md)                       | Define tag rule model + ChangeSet operations + impact preview                         | Done   | No (first)       |
+| 02  | [us-02-generate-tag-proposal](us-02-generate-tag-proposal.md)               | Generate bundled tag-rule proposal from tag edits                                     | Done   | Blocked by us-01 |
+| 03  | [us-03-approve-reject-tag-proposals](us-03-approve-reject-tag-proposals.md) | Approve/apply or reject-with-feedback tag rule ChangeSets                             | Done   | Blocked by us-01 |
+| 04  | us-04-tag-rule-application (inline)                                         | Wire transaction_tag_rules into import pipeline so committed rules apply on re-import | Done   | After us-01      |
+| 05  | us-05-import-rule-creation-step (inline)                                    | Step 6 in import wizard: detect tag patterns from batch and propose rules to save     | Done   | After us-03      |
 
 ## Verification
 
-- Tag edits in the current import can produce a proposal that increases the quality of future tag suggestions. _`TagRuleProposalDialog` is wired into `TagReviewStep` at both scopes: group-scope via "Save tag rule…" per entity group (knoxio/pops#1886, knoxio/pops#1940) and transaction-scope via "Save rule…" per individual row (closes knoxio/pops#1954)._
-- Approving a tag rule proposal immediately improves suggested tags for remaining transactions in the current import without altering entity/type classification. _Apply is wired and stores the ChangeSet in the import store. Live re-suggestion propagates `preview.affected` into `localTags` and `suggestedTagMeta` for non-user-edited transactions at both scopes._
+- Tag edits in the current import can produce a proposal that increases the quality of future tag suggestions. _`TagRuleProposalDialog` is wired into `TagReviewStep` at both scopes: group-scope via "Save tag rule…" per entity group and transaction-scope via "Save rule…" per individual row._
+- Approving a tag rule proposal immediately improves suggested tags for remaining transactions in the current import without altering entity/type classification.
+- Committed `transaction_tag_rules` are applied by `tag-suggester.ts` during all future imports via `findMatchingTagRules`, with entity-scoped and global pattern matching (exact/contains/regex).
+- Step 6 of the import wizard (`RuleCreationStep`) detects tag patterns from the current import batch (grouping by entity, threshold ≥50% occurrence) and allows the user to save selected rules in one click before committing.
+- AI returns `tags: string[]` instead of a single category string. Tags not in the known vocabulary are flagged `isNew: true` and surfaced in Tag Review for explicit acceptance.
 
 ## Drift Check
 
-last checked: 2026-04-19
+last checked: 2026-05-23

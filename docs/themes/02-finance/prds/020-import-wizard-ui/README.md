@@ -5,11 +5,11 @@
 
 ## Overview
 
-Build a 7-step import wizard for ingesting bank transactions into the transaction ledger. The wizard guides the user from CSV upload through processing, review, tag confirmation, final review with commit, and summary.
+Build an 8-step import wizard for ingesting bank transactions into the transaction ledger. The wizard guides the user from CSV upload through processing, review, tag confirmation, rule creation, final review with commit, and summary.
 
 The import experience must feel like a guided “cleanup session”: every unresolved item is surfaced, fixes are fast, and the system learns in a transparent, user-controlled way.
 
-Nothing touches the database until the user explicitly commits in Step 6. All entity creations, rule changes, and tag assignments are buffered locally during Steps 1-5 (see PRD-030).
+Nothing touches the database until the user explicitly commits in Step 7. All entity creations, rule changes, and tag assignments are buffered locally during Steps 1-6 (see PRD-030).
 
 ## Wizard Flow
 
@@ -19,8 +19,9 @@ Step 1: Upload CSV
     → Step 3: Processing (backend: dedup + match + AI, polled)
       → Step 4: Review Entities (resolve uncertain/failed matches)
         → Step 5: Tag Review (accept/edit suggested tags + propose tag rules)
-          → Step 6: Final Review & Commit (review all pending changes, atomic commit)
-            → Step 7: Summary (import results + reclassification counts)
+          → Step 6: Create Rules (detect tag patterns from batch, propose rules to save)
+            → Step 7: Final Review & Commit (review all pending changes, atomic commit)
+              → Step 8: Summary (import results + reclassification counts)
 ```
 
 ### Step 1: Upload
@@ -100,9 +101,19 @@ Edits to a rule-matched transaction must generate a new Correction Proposal Chan
 - "Accept All Suggestions" button (top-level)
 - Tag suggestions can be proposed at **group scope** (apply to all transactions in a group) and **transaction scope** (apply to one transaction). The UI must support accept/reject at both scopes, with transaction-level overrides.
 - Tag rule learning is separate from entity/type correction rules. If the user chooses to learn from tag edits, it must follow the same proposal + bundled approval + reject-with-feedback model, scoped to tag rules only (PRD-029).
-- On continue: advances to Step 6 (Final Review & Commit)
+- On continue: advances to Step 6 (Create Rules)
 
-### Step 6: Final Review & Commit
+### Step 6: Create Rules
+
+- Detects tag patterns from the current import batch by grouping confirmed transactions by entity
+- For each entity group where ≥50% of transactions share the same tags, proposes a `contains` rule
+- Shows proposed rules as toggleable cards: entity name, pattern, tag chips, affected count
+- All proposals are checked by default; user can uncheck individual rules to skip them
+- "Skip" skips rule creation and advances without saving anything
+- "Create N rules →" adds selected proposals to `pendingTagRuleChangeSets` and advances to Step 7
+- Empty state shown when no tagged transactions produced detectable patterns
+
+### Step 7: Final Review & Commit
 
 - Displays all pending changes in a read-only summary: new entities, rule changes (grouped by ChangeSet with add/edit/disable/remove badges), transaction count, tag assignment count
 - "Approve & Commit All" button triggers `finance.imports.commitImport` (PRD-031 US-03), which atomically writes entities, rules, transactions, and runs retroactive reclassification (PRD-031 US-04)
@@ -110,7 +121,7 @@ Edits to a rule-matched transaction must generate a new Correction Proposal Chan
 - On completion: displays entity/rule/transaction/reclassification counts, then advances to Summary
 - Editing goes back to the relevant earlier step
 
-### Step 7: Summary
+### Step 8: Summary
 
 - Displays: imported count, failed count with error details, skipped count, retroactive reclassification count
 - Buttons: "New Import" (resets wizard), "View Transactions" (navigates to list)
@@ -211,28 +222,36 @@ interface ImportStore {
 | 18  | [us-18-tag-source-badges](us-18-tag-source-badges.md)       | Source badges on suggested tags: rule (with pattern tooltip), AI, entity            | Done   | Blocked by us-17 |
 | 19  | [us-19-per-transaction-tags](us-19-per-transaction-tags.md) | Per-transaction TagEditor with autocomplete (server + session tags)                 | Done   | Blocked by us-17 |
 | 20  | [us-20-bulk-tag-apply](us-20-bulk-tag-apply.md)             | Group-level bulk tag application (merge semantics, never replaces individual edits) | Done   | Blocked by us-19 |
-| 21  | [us-21-execute-import](us-21-execute-import.md)             | Advance to Final Review; persist tags to session only — no DB write until Step 6    | Done   | Blocked by us-19 |
+| 21  | [us-21-execute-import](us-21-execute-import.md)             | Advance to Create Rules; persist tags to session only — no DB write until Step 7    | Done   | Blocked by us-19 |
 
-### Final Review & Commit (Step 6)
+### Create Rules (Step 6)
+
+| #   | Story                                    | Summary                                                                                                              | Status | Parallelisable   |
+| --- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------ | ---------------- |
+| 24  | us-24-import-rule-creation-step (inline) | Detect tag patterns from import batch, propose togglable rules, save selected to pendingTagRuleChangeSets on confirm | Done   | Blocked by us-21 |
+
+### Final Review & Commit (Step 7)
 
 See PRD-031 for the full spec and user stories for this step.
 
-### Summary (Step 7)
+### Summary (Step 8)
 
 | #   | Story                             | Summary                                                                          | Status | Parallelisable                     |
 | --- | --------------------------------- | -------------------------------------------------------------------------------- | ------ | ---------------------------------- |
-| 22  | [us-22-summary](us-22-summary.md) | Display commit results from Step 6, "New Import" and "View Transactions" buttons | Done   | Blocked by PRD-031 / Step 6 commit |
+| 22  | [us-22-summary](us-22-summary.md) | Display commit results from Step 7, "New Import" and "View Transactions" buttons | Done   | Blocked by PRD-031 / Step 7 commit |
 
 US-03 and US-04 can parallelise. US-11, US-12, US-13, US-14, US-15 can parallelise after US-10. US-18 and US-19 can parallelise after US-17.
 
 ## Verification
 
-- Full import flow works end-to-end: CSV → review → tags → Final Review → `commitImport` → database
+- Full import flow works end-to-end: CSV → review → tags → rules → Final Review → `commitImport` → database
 - Duplicate CSVs are detected and skipped
 - Entity matching results categorise correctly (matched vs uncertain)
-- Tags from corrections, AI, and entity defaults all appear with correct source badges
+- Tags from corrections, tag rules, AI, and entity defaults all appear with correct source badges
+- New AI-suggested tags not in vocabulary shown with `isNew` indicator
 - Group-level tag apply merges correctly
 - Save & Learn creates correction patterns
+- Step 6 detects tag patterns from the batch and proposes rules; selected rules are committed atomically
 - Progress polling shows real-time updates
 - All edge cases handled gracefully
 
@@ -244,4 +263,4 @@ US-03 and US-04 can parallelise. US-11, US-12, US-13, US-14, US-15 can paralleli
 
 ## Drift Check
 
-last checked: 2026-04-18
+last checked: 2026-05-23

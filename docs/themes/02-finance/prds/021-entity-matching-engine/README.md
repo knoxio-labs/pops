@@ -56,10 +56,12 @@ Remove apostrophes from both description and entity names, retry stages 2-4.
 
 If no match from stages 0-5, call Claude Haiku API:
 
-- Send raw CSV row (JSON) — merchant description context only, no PII
-- Claude returns `{ entityName, category }`
+- Send raw CSV row (JSON) + current tag vocabulary as context — merchant description only, no PII
+- Claude returns `{ entityName, tags: string[] }` (1-4 tags; may include new tags not in vocabulary)
 - If returned entity exists in lookup → **matched**
 - If returned entity is new → **uncertain** with confidence 0.7
+- Tags not in known vocabulary are flagged `isNew: true` in `suggestedTags` for user acceptance
+- Old cache entries with `{ entityName, category }` are handled via legacy fallback path
 - Cache result: in-memory + disk (`ai_entity_cache.json`)
 - Cache key: normalized raw row (uppercase, trimmed)
 - Rate limiting: exponential backoff on HTTP 429 (50 RPM Anthropic limit), max 5 retries
@@ -94,13 +96,14 @@ If no match from stages 0-5, call Claude Haiku API:
 
 ## User Stories
 
-| #   | Story                                               | Summary                                                                   | Status | Parallelisable   |
-| --- | --------------------------------------------------- | ------------------------------------------------------------------------- | ------ | ---------------- |
-| 01  | [us-01-entity-lookup](us-01-entity-lookup.md)       | Load entity lookup and alias maps from database                           | Done   | No (first)       |
-| 02  | [us-02-correction-match](us-02-correction-match.md) | Stage 0: match against learned corrections (fuzzy, confidence threshold)  | Done   | Blocked by us-01 |
-| 03  | [us-03-rule-matching](us-03-rule-matching.md)       | Stages 1-5: alias, exact, prefix, contains, punctuation stripping         | Done   | Yes              |
-| 04  | [us-04-ai-fallback](us-04-ai-fallback.md)           | Stage 6: Claude Haiku API call with caching, rate limiting, cost tracking | Done   | Yes              |
-| 05  | [us-05-tag-suggestion](us-05-tag-suggestion.md)     | Tag suggestion pipeline: correction tags → AI category → entity defaults  | Done   | Blocked by us-01 |
+| #   | Story                                               | Summary                                                                          | Status | Parallelisable   |
+| --- | --------------------------------------------------- | -------------------------------------------------------------------------------- | ------ | ---------------- |
+| 01  | [us-01-entity-lookup](us-01-entity-lookup.md)       | Load entity lookup and alias maps from database                                  | Done   | No (first)       |
+| 02  | [us-02-correction-match](us-02-correction-match.md) | Stage 0: match against learned corrections (fuzzy, confidence threshold)         | Done   | Blocked by us-01 |
+| 03  | [us-03-rule-matching](us-03-rule-matching.md)       | Stages 1-5: alias, exact, prefix, contains, punctuation stripping                | Done   | Yes              |
+| 04  | [us-04-ai-fallback](us-04-ai-fallback.md)           | Stage 6: Claude Haiku API call with caching, rate limiting, cost tracking        | Done   | Yes              |
+| 05  | [us-05-tag-suggestion](us-05-tag-suggestion.md)     | Tag suggestion pipeline: correction tags → tag rules → AI tags → entity defaults | Done   | Blocked by us-01 |
+| 06  | us-06-ai-multi-tag (inline)                         | AI returns tags array; new tags flagged isNew; vocab passed as context           | Done   | After us-04      |
 
 US-02, US-03, US-04 can parallelise after US-01.
 
@@ -112,6 +115,8 @@ US-02, US-03, US-04 can parallelise after US-01.
 - Cost tracking is accurate per API call
 - Named environments skip AI entirely
 - All match types correctly identified in output
+- AI returns `tags: string[]`; tags not in vocabulary marked `isNew: true` in suggestions
+- `transaction_tag_rules` applied in `tag-suggester.ts` after corrections, before AI and entity defaults
 
 ## Out of Scope
 
@@ -121,4 +126,4 @@ US-02, US-03, US-04 can parallelise after US-01.
 
 ## Drift Check
 
-last checked: 2026-04-17
+last checked: 2026-05-23
