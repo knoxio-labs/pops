@@ -44,6 +44,8 @@ export const suggestedTagSchema = z.object({
   source: z.enum(['ai', 'rule', 'entity']),
   /** For rule-sourced tags: the description_pattern from the matched correction */
   pattern: z.string().optional(),
+  /** True when the tag does not yet exist in the user's tag vocabulary */
+  isNew: z.boolean().optional(),
 });
 
 export type SuggestedTag = z.infer<typeof suggestedTagSchema>;

@@ -12,7 +12,10 @@ export interface AiCacheEntry {
    * uncertain bucket instead of inventing a placeholder entity.
    */
   entityName: string | null;
+  /** Legacy single-category string. Prefer `tags` when present. */
   category: string;
+  /** Multi-tag array returned by the updated prompt. Absent in old cache entries. */
+  tags?: string[];
   cachedAt: string;
 }
 

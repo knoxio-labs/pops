@@ -8,7 +8,10 @@ export interface MatchedFromEntityArgs {
   transaction: ParsedTransaction;
   entry: EntityEntry;
   matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai';
-  category: string | null;
+  /** AI-returned tags array. Use aiTags for new code; category is legacy. */
+  aiTags?: string[];
+  /** @deprecated Use aiTags. */
+  category?: string | null;
   knownTags: string[];
 }
 
@@ -25,7 +28,8 @@ export function buildMatchedFromEntity(args: MatchedFromEntityArgs): ProcessedTr
       description: args.transaction.description,
       entityId: args.entry.id,
       correctionTags: [],
-      aiCategory: args.category,
+      aiTags: args.aiTags,
+      aiCategory: args.category ?? null,
       knownTags: args.knownTags,
     }),
   };
@@ -56,12 +60,22 @@ export function buildMatchedTransfer(
   };
 }
 
-export function buildUncertainFromAi(
-  transaction: ParsedTransaction,
-  entityName: string,
-  category: string | null,
-  knownTags: string[]
-): ProcessedTransaction {
+export interface AiCategorizationResult {
+  entityName: string;
+  aiTags: string[];
+  aiCategory: string | null;
+}
+
+export interface UncertainFromAiArgs {
+  transaction: ParsedTransaction;
+  entityName: string;
+  aiTags: string[];
+  aiCategory: string | null;
+  knownTags: string[];
+}
+
+export function buildUncertainFromAi(args: UncertainFromAiArgs): ProcessedTransaction {
+  const { transaction, entityName, aiTags, aiCategory, knownTags } = args;
   return {
     ...transaction,
     entity: { entityName, matchType: 'ai', confidence: 0.7 },
@@ -70,7 +84,8 @@ export function buildUncertainFromAi(
       description: transaction.description,
       entityId: null,
       correctionTags: [],
-      aiCategory: category,
+      aiTags,
+      aiCategory,
       knownTags,
     }),
   };

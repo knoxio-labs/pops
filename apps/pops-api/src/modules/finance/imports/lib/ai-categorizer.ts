@@ -72,7 +72,8 @@ export function normalizeCacheKey(rawRow: string): string {
 
 export async function categorizeWithAi(
   rawRow: string,
-  importBatchId?: string
+  importBatchId?: string,
+  knownTags: string[] = []
 ): Promise<AiCallResult> {
   const key = normalizeCacheKey(rawRow);
   const sanitizedDescription = rawRow.trim().slice(0, 100);
@@ -87,7 +88,7 @@ export async function categorizeWithAi(
       {
         description: sanitizedDescription,
         entityName: cached.entityName,
-        category: cached.category,
+        tags: cached.tags ?? [cached.category],
       },
       '[AI] Cache hit'
     );
@@ -110,6 +111,7 @@ export async function categorizeWithAi(
     importBatchId,
     model: getCategorizerModel(),
     maxTokens: getCategorizerMaxTokens(),
+    knownTags,
   });
 
   if (!response.text) return { result: null };
@@ -123,7 +125,7 @@ export async function categorizeWithAi(
     {
       description: sanitizedDescription,
       entityName: entry.entityName,
-      category: entry.category,
+      tags: entry.tags ?? [entry.category],
       inputTokens: response.inputTokens,
       outputTokens: response.outputTokens,
       costUsd: costUsd.toFixed(6),

@@ -145,4 +145,25 @@ describe('buildEntryFromText — integration', () => {
     const entry = buildEntryFromText(text, 'MEMBERSHIP FEE');
     expect(entry.entityName).toBeNull();
   });
+
+  it('extracts tags array from new prompt format', () => {
+    const text = '{"entityName": "Ampol", "tags": ["Charging", "EV", "Novated Lease"]}';
+    const entry = buildEntryFromText(text, 'AMPOL SYDNEY');
+    expect(entry.entityName).toBe('Ampol');
+    expect(entry.tags).toEqual(['Charging', 'EV', 'Novated Lease']);
+    expect(entry.category).toBe('Charging');
+  });
+
+  it('handles new format with both entity and multiple tags', () => {
+    const text = '{"entityName": "Woolworths", "tags": ["Groceries", "Fresh Produce"]}';
+    const entry = buildEntryFromText(text, 'WOOLWORTHS 1034');
+    expect(entry.entityName).toBe('Woolworths');
+    expect(entry.tags).toEqual(['Groceries', 'Fresh Produce']);
+  });
+
+  it('filters non-string values from tags array', () => {
+    const text = '{"entityName": "Foo", "tags": ["Valid", 42, null, "Also Valid"]}';
+    const entry = buildEntryFromText(text, 'FOO BAR');
+    expect(entry.tags).toEqual(['Valid', 'Also Valid']);
+  });
 });

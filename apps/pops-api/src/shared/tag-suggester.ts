@@ -1,19 +1,19 @@
-import { eq } from 'drizzle-orm';
-
 /**
  * Suggest tags for a transaction with source attribution.
  *
  * Strategy (order = priority for deduplication):
- * 1. Correction rules — tags from matching corrections (source: "rule")
- * 2. AI category — validated against knownTags (source: "ai")
- * 3. Entity defaults — from entity.default_tags (source: "entity")
- *
- * Returns SuggestedTag[] with source attribution and optional pattern.
+ * 1. Correction rules — tags from matching entity corrections (source: "rule")
+ * 2. Tag rules — tags from transaction_tag_rules (source: "rule")
+ * 3. AI tags — returned directly by AI or validated category string (source: "ai")
+ * 4. Entity defaults — from entity.default_tags (source: "entity")
  */
-import { entities } from '@pops/db-types';
+import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
+
+import { entities, transactionTagRules } from '@pops/db-types';
 
 import { getDrizzle } from '../db.js';
 import { findAllMatchingCorrections } from '../modules/core/corrections/service.js';
+import { normalizeDescription } from '../modules/core/corrections/types-base.js';
 import { parseJsonStringArray } from './json.js';
 
 import type { SuggestedTag } from '../modules/finance/imports/types.js';
@@ -21,13 +21,10 @@ import type { SuggestedTag } from '../modules/finance/imports/types.js';
 export interface SuggestTagsOptions {
   description: string;
   entityId: string | null;
-  /** AI-suggested category string (validated against knownTags). */
+  aiTags?: string[];
   aiCategory?: string | null;
-  /** All tag strings currently in the transactions table (for AI validation). */
   knownTags?: string[];
-  /** Pre-parsed correction tags (skips DB lookup when caller already has them). */
   correctionTags?: string[];
-  /** The description_pattern from the matched correction (for attribution). */
   correctionPattern?: string;
 }
 
@@ -39,7 +36,7 @@ interface RuleTagsArgs {
   result: SuggestedTag[];
 }
 
-function addRuleTags(args: RuleTagsArgs): void {
+function addCorrectionTags(args: RuleTagsArgs): void {
   const { description, correctionTags, correctionPattern, seen, result } = args;
   if (correctionTags && correctionTags.length > 0) {
     for (const tag of correctionTags) {
@@ -58,18 +55,108 @@ function addRuleTags(args: RuleTagsArgs): void {
   }
 }
 
-function addAiTag(
-  aiCategory: string | null | undefined,
-  knownTags: string[] | undefined,
+type TagRuleRow = { tags: string; descriptionPattern: string };
+
+function buildEntityFilter(entityId: string | null): ReturnType<typeof or> {
+  return entityId !== null
+    ? or(isNull(transactionTagRules.entityId), eq(transactionTagRules.entityId, entityId))
+    : isNull(transactionTagRules.entityId);
+}
+
+function findMatchingTagRules(description: string, entityId: string | null): TagRuleRow[] {
+  const db = getDrizzle();
+  const norm = normalizeDescription(description);
+  const ef = buildEntityFilter(entityId);
+  const cols = {
+    tags: transactionTagRules.tags,
+    descriptionPattern: transactionTagRules.descriptionPattern,
+  };
+  const base = and(eq(transactionTagRules.isActive, true), ef);
+
+  const exact = db
+    .select(cols)
+    .from(transactionTagRules)
+    .where(
+      and(
+        base,
+        eq(transactionTagRules.matchType, 'exact'),
+        eq(transactionTagRules.descriptionPattern, norm)
+      )
+    )
+    .orderBy(desc(transactionTagRules.confidence))
+    .all();
+
+  const contains = db
+    .select(cols)
+    .from(transactionTagRules)
+    .where(
+      and(
+        base,
+        eq(transactionTagRules.matchType, 'contains'),
+        sql`${norm} LIKE '%' || upper(${transactionTagRules.descriptionPattern}) || '%'`
+      )
+    )
+    .orderBy(desc(transactionTagRules.confidence))
+    .all();
+
+  const regexCandidates = db
+    .select(cols)
+    .from(transactionTagRules)
+    .where(and(base, eq(transactionTagRules.matchType, 'regex')))
+    .orderBy(desc(transactionTagRules.confidence))
+    .all();
+
+  const regex = regexCandidates.filter((r) => {
+    try {
+      return new RegExp(r.descriptionPattern, 'i').test(norm);
+    } catch {
+      return false;
+    }
+  });
+
+  return [...exact, ...contains, ...regex];
+}
+
+function addTagRuleTags(
+  description: string,
+  entityId: string | null,
   seen: Set<string>,
   result: SuggestedTag[]
 ): void {
-  if (!aiCategory || !knownTags) return;
-  const lowerCategory = aiCategory.toLowerCase();
-  const matched = knownTags.find((t) => t.toLowerCase() === lowerCategory) ?? null;
-  if (matched && !seen.has(matched)) {
-    seen.add(matched);
-    result.push({ tag: matched, source: 'ai' });
+  for (const rule of findMatchingTagRules(description, entityId)) {
+    for (const tag of parseJsonStringArray(rule.tags)) {
+      if (seen.has(tag)) continue;
+      seen.add(tag);
+      result.push({ tag, source: 'rule', pattern: rule.descriptionPattern });
+    }
+  }
+}
+
+interface AddAiTagsArgs {
+  aiTags: string[] | undefined;
+  aiCategory: string | null | undefined;
+  knownTags: string[] | undefined;
+  seen: Set<string>;
+  result: SuggestedTag[];
+}
+
+function addAiTags(args: AddAiTagsArgs): void {
+  const { aiTags, aiCategory, knownTags, seen, result } = args;
+  const knownSet = new Set(knownTags?.map((t) => t.toLowerCase()) ?? []);
+  let tags: string[];
+  if (aiTags && aiTags.length > 0) {
+    tags = aiTags;
+  } else if (aiCategory && knownTags) {
+    const matched = knownTags.find((t) => t.toLowerCase() === aiCategory.toLowerCase());
+    tags = matched ? [matched] : [];
+  } else {
+    return;
+  }
+  for (const tag of tags) {
+    if (seen.has(tag)) continue;
+    seen.add(tag);
+    const isNew = !knownSet.has(tag.toLowerCase()) || undefined;
+    result.push({ tag, source: 'ai', ...(isNew ? { isNew: true } : {}) });
   }
 }
 
@@ -81,7 +168,6 @@ function addEntityTags(entityId: string | null, seen: Set<string>, result: Sugge
     .where(eq(entities.id, entityId))
     .get();
   if (!entity?.defaultTags) return;
-
   for (const tag of parseJsonStringArray(entity.defaultTags)) {
     if (seen.has(tag)) continue;
     seen.add(tag);
@@ -92,16 +178,21 @@ function addEntityTags(entityId: string | null, seen: Set<string>, result: Sugge
 export function suggestTags(opts: SuggestTagsOptions): SuggestedTag[] {
   const seen = new Set<string>();
   const result: SuggestedTag[] = [];
-
-  addRuleTags({
+  addCorrectionTags({
     description: opts.description,
     correctionTags: opts.correctionTags,
     correctionPattern: opts.correctionPattern,
     seen,
     result,
   });
-  addAiTag(opts.aiCategory, opts.knownTags, seen, result);
+  addTagRuleTags(opts.description, opts.entityId, seen, result);
+  addAiTags({
+    aiTags: opts.aiTags,
+    aiCategory: opts.aiCategory,
+    knownTags: opts.knownTags,
+    seen,
+    result,
+  });
   addEntityTags(opts.entityId, seen, result);
-
   return result;
 }

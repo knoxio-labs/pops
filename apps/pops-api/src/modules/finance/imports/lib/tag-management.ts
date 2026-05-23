@@ -78,6 +78,9 @@ export interface BuildSuggestedTagsOptions {
   description: string;
   entityId: string | null;
   correctionTags: string[];
+  /** AI-returned tags array (preferred over aiCategory). */
+  aiTags?: string[];
+  /** Legacy single-category AI result (validated against knownTags). */
   aiCategory: string | null;
   knownTags: string[];
   correctionPattern?: string;
@@ -87,6 +90,7 @@ export function buildSuggestedTags(opts: BuildSuggestedTagsOptions): SuggestedTa
   return suggestTags({
     description: opts.description,
     entityId: opts.entityId,
+    aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
     knownTags: opts.knownTags,
     correctionTags: opts.correctionTags,
