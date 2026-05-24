@@ -5,16 +5,15 @@
 
 ## Goal
 
-Implement MCP tools for fixture list, get, create, update, and delete in `inventory-fixtures.ts`, with full unit test coverage.
+Implement MCP tools for fixture list, get, create, update, and delete; wire them into the fixture tool module; full unit test coverage.
 
 ## Acceptance Criteria
 
-- [x] `apps/pops-mcp/src/tools/inventory-fixtures.ts` — exports `fixtureTools: ToolDef[]` containing 8 tools
+- [x] Fixture tool module exports all 8 fixture tools as a typed array
 - [x] `inventory.fixtures.list` — accepts `locationId?`, `type?`, `limit?`, `offset?`; calls `client.inventory.fixtures.list.query`
 - [x] `inventory.fixtures.get` — accepts `id` (required); calls `client.inventory.fixtures.get.query`
 - [x] `inventory.fixtures.create` — accepts `name`, `type`, `locationId?`, `notes?`; calls `client.inventory.fixtures.create.mutate`
-- [x] `inventory.fixtures.update` — accepts `id`, `name?`, `type?`, `locationId?` (nullable), `notes?` (nullable); uses `nullStr`; calls `client.inventory.fixtures.update.mutate`
+- [x] `inventory.fixtures.update` — accepts `id`, `name?`, `type?`, `locationId?` (nullable), `notes?` (nullable); absent fields are no-ops; explicit null clears the field
 - [x] `inventory.fixtures.delete` — accepts `id`; calls `client.inventory.fixtures.delete.mutate`
-- [x] `inventory-fixtures.test.ts` — unit tests for all 5 CRUD tools covering happy path and error propagation
-- [x] File stays under 200 lines
-- [x] Pre-commit lint + typecheck pass
+- [x] Unit tests for all 5 CRUD tools covering happy path and error propagation
+- [x] Tool module stays under the 200-line lint limit

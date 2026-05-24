@@ -5,14 +5,14 @@
 
 ## Goal
 
-Add connect, disconnect, and listForItem tools to `inventory-fixtures.ts`, wire the barrel, update the tool count test, and complete unit test coverage for all 8 fixture tools.
+Add connect, disconnect, and listForItem tools for item-fixture connections; wire all 8 fixture tools into the tool registry; complete unit test coverage for all fixture tools.
 
 ## Acceptance Criteria
 
 - [x] `inventory.fixtures.connect` — accepts `itemId`, `fixtureId`; calls `client.inventory.fixtures.connect.mutate`
 - [x] `inventory.fixtures.disconnect` — accepts `itemId`, `fixtureId`; calls `client.inventory.fixtures.disconnect.mutate`
 - [x] `inventory.fixtures.listForItem` — accepts `itemId`, `limit?`, `offset?`; calls `client.inventory.fixtures.listForItem.query`
-- [x] `apps/pops-mcp/src/tools/index.ts` — `fixtureTools` spread into `allTools` alongside `inventoryTools`, `financeTools`, `mediaTools`, `cerebrumTools`
-- [x] `apps/pops-mcp/src/tools/index.test.ts` — tool count assertion updated from 14 to 22
-- [x] `inventory-fixtures.test.ts` — tests for connect, disconnect, listForItem; covers CONFLICT/NOT_FOUND propagation
+- [x] Tool registry includes all 8 fixture tools alongside the existing inventory, finance, media, and cerebrum tool groups
+- [x] Index coverage updated to reflect the new tool count (8 fixture tools added to the registry)
+- [x] Tests cover connect, disconnect, and listForItem — including CONFLICT and NOT_FOUND error propagation
 - [x] Full test suite green (`pnpm test` in `apps/pops-mcp`)
