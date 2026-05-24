@@ -230,7 +230,8 @@ services:
     networks:
       - backend
     secrets:
-      - pops_api_key
+      - source: pops_api_key
+        mode: 0444
     environment:
       NODE_ENV: production
       POPS_API_URL: http://pops-api:3000
