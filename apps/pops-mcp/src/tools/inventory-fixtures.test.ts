@@ -184,6 +184,12 @@ describe('inventory.fixtures.update', () => {
     expect(result.isError).toBe(true);
     expect(mockClient.inventory.fixtures.update.mutate).not.toHaveBeenCalled();
   });
+
+  it('returns toolError when no patch fields provided', async () => {
+    const result = await tool.handler({ id: 'fixture_1' });
+    expect(result.isError).toBe(true);
+    expect(mockClient.inventory.fixtures.update.mutate).not.toHaveBeenCalled();
+  });
 });
 
 describe('inventory.fixtures.delete', () => {

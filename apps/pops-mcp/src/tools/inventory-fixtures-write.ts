@@ -62,6 +62,7 @@ const fixturesUpdate: ToolDef = {
     if (locationId !== undefined) data['locationId'] = locationId;
     const notes = nullStr(args, 'notes');
     if (notes !== undefined) data['notes'] = notes;
+    if (Object.keys(data).length === 0) return toolError('No fields to update');
     const result = await getClient().inventory.fixtures.update.mutate({ id, data });
     return ok(result);
   },
