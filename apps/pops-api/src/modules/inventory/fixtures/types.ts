@@ -4,44 +4,8 @@ import type { FixtureRow, ItemFixtureConnectionRow } from '@pops/db-types';
 
 export type { FixtureRow, ItemFixtureConnectionRow };
 
-export interface Fixture {
-  id: string;
-  name: string;
-  type: string;
-  locationId: string | null;
-  notes: string | null;
-  createdAt: string;
-  lastEditedTime: string;
-}
-
-export function toFixture(row: FixtureRow): Fixture {
-  return {
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    locationId: row.locationId ?? null,
-    notes: row.notes ?? null,
-    createdAt: row.createdAt,
-    lastEditedTime: row.lastEditedTime,
-  };
-}
-
-export interface ItemFixtureConnection {
-  id: number;
-  itemId: string;
-  fixtureId: string;
-  createdAt: string;
-}
-
-export function toItemFixtureConnection(row: ItemFixtureConnectionRow): ItemFixtureConnection {
-  return {
-    id: row.id,
-    itemId: row.itemId,
-    fixtureId: row.fixtureId,
-    createdAt: row.createdAt,
-  };
-}
-
+// Single source of truth for the API shape: the Zod schema. The TS types are
+// derived from it, so the wire contract and the static types cannot drift.
 export const FixtureSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -51,6 +15,7 @@ export const FixtureSchema = z.object({
   createdAt: z.string(),
   lastEditedTime: z.string(),
 });
+export type Fixture = z.infer<typeof FixtureSchema>;
 
 export const ItemFixtureConnectionSchema = z.object({
   id: z.number(),
@@ -58,6 +23,7 @@ export const ItemFixtureConnectionSchema = z.object({
   fixtureId: z.string(),
   createdAt: z.string(),
 });
+export type ItemFixtureConnection = z.infer<typeof ItemFixtureConnectionSchema>;
 
 export const CreateFixtureSchema = z.object({
   name: z.string().min(1, 'Name is required'),
