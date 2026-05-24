@@ -5,14 +5,12 @@
 
 ## Goal
 
-Add connect, disconnect, and listForItem tools for item-fixture connections; wire all 8 fixture tools into the tool registry; complete unit test coverage for all fixture tools.
+Add connect, disconnect, and listForItem tools for item-fixture connections; wire all 8 fixture tools into the MCP interface; complete test coverage for all fixture tools.
 
 ## Acceptance Criteria
 
-- [x] `inventory.fixtures.connect` — accepts `itemId`, `fixtureId`; calls `client.inventory.fixtures.connect.mutate`
-- [x] `inventory.fixtures.disconnect` — accepts `itemId`, `fixtureId`; calls `client.inventory.fixtures.disconnect.mutate`
-- [x] `inventory.fixtures.listForItem` — accepts `itemId`, `limit?`, `offset?`; calls `client.inventory.fixtures.listForItem.query`
-- [x] Tool registry includes all 8 fixture tools alongside the existing inventory, finance, media, and cerebrum tool groups
-- [x] Index coverage updated to reflect the new tool count (8 fixture tools added to the registry)
-- [x] Tests cover connect, disconnect, and listForItem — including CONFLICT and NOT_FOUND error propagation
-- [x] Full test suite green (`pnpm test` in `apps/pops-mcp`)
+- [x] `inventory.fixtures.connect` — accepts an item identifier and fixture identifier; links the item to the fixture
+- [x] `inventory.fixtures.disconnect` — accepts an item identifier and fixture identifier; removes the link between them
+- [x] `inventory.fixtures.listForItem` — accepts an item identifier and optional pagination; returns all fixtures linked to that item
+- [x] All 8 fixture tools accessible via the MCP interface
+- [x] All fixture tools verified functional, including CONFLICT and NOT_FOUND error propagation
