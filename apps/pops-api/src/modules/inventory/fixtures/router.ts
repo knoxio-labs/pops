@@ -1,8 +1,7 @@
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import { ConflictError, NotFoundError } from '../../../shared/errors.js';
 import { paginationMeta, PaginationMetaSchema } from '../../../shared/pagination.js';
+import { mapDomainErrors } from '../../../shared/trpc-error-mapper.js';
 import { protectedProcedure, router } from '../../../trpc.js';
 import * as service from './service.js';
 import {
@@ -12,13 +11,15 @@ import {
   FixtureQuerySchema,
   FixtureSchema,
   ItemFixtureConnectionSchema,
-  toFixture,
-  toItemFixtureConnection,
   UpdateFixtureSchema,
 } from './types.js';
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
+
+const FixtureMutationResponse = z.object({ data: FixtureSchema, message: z.string() });
+const DeleteResponse = z.object({ message: z.string() });
+const ConnectResponse = z.object({ data: ItemFixtureConnectionSchema, message: z.string() });
 
 export const fixturesRouter = router({
   list: protectedProcedure
@@ -33,80 +34,63 @@ export const fixturesRouter = router({
         limit,
         offset,
       });
-      return { data: rows.map(toFixture), total };
+      return { data: rows, total };
     }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .output(z.object({ data: FixtureSchema }))
-    .query(({ input }) => {
-      try {
-        return { data: toFixture(service.getFixture(input.id)) };
-      } catch (err) {
-        if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
-        }
-        throw err;
-      }
-    }),
+    .query(({ input }) => mapDomainErrors(() => ({ data: service.getFixture(input.id) }))),
 
-  create: protectedProcedure.input(CreateFixtureSchema).mutation(({ input }) => {
-    const row = service.createFixture(input);
-    return { data: toFixture(row), message: 'Fixture created' };
-  }),
+  create: protectedProcedure
+    .input(CreateFixtureSchema)
+    .output(FixtureMutationResponse)
+    .mutation(({ input }) =>
+      mapDomainErrors(() => ({
+        data: service.createFixture(input),
+        message: 'Fixture created',
+      }))
+    ),
 
   update: protectedProcedure
     .input(z.object({ id: z.string().min(1), data: UpdateFixtureSchema }))
-    .mutation(({ input }) => {
-      try {
-        const row = service.updateFixture(input.id, input.data);
-        return { data: toFixture(row), message: 'Fixture updated' };
-      } catch (err) {
-        if (err instanceof NotFoundError) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
-        }
-        throw err;
-      }
-    }),
+    .output(FixtureMutationResponse)
+    .mutation(({ input }) =>
+      mapDomainErrors(() => ({
+        data: service.updateFixture(input.id, input.data),
+        message: 'Fixture updated',
+      }))
+    ),
 
-  delete: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(({ input }) => {
-    try {
-      service.deleteFixture(input.id);
-      return { message: 'Fixture deleted' };
-    } catch (err) {
-      if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
-      }
-      throw err;
-    }
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .output(DeleteResponse)
+    .mutation(({ input }) =>
+      mapDomainErrors(() => {
+        service.deleteFixture(input.id);
+        return { message: 'Fixture deleted' };
+      })
+    ),
 
-  connect: protectedProcedure.input(ConnectFixtureSchema).mutation(({ input }) => {
-    try {
-      const row = service.connectItemToFixture(input.itemId, input.fixtureId);
-      return { data: toItemFixtureConnection(row), message: 'Item connected to fixture' };
-    } catch (err) {
-      if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
-      }
-      if (err instanceof ConflictError) {
-        throw new TRPCError({ code: 'CONFLICT', message: err.message });
-      }
-      throw err;
-    }
-  }),
+  connect: protectedProcedure
+    .input(ConnectFixtureSchema)
+    .output(ConnectResponse)
+    .mutation(({ input }) =>
+      mapDomainErrors(() => ({
+        data: service.connectItemToFixture(input.itemId, input.fixtureId),
+        message: 'Item connected to fixture',
+      }))
+    ),
 
-  disconnect: protectedProcedure.input(ConnectFixtureSchema).mutation(({ input }) => {
-    try {
-      service.disconnectItemFromFixture(input.itemId, input.fixtureId);
-      return { message: 'Item disconnected from fixture' };
-    } catch (err) {
-      if (err instanceof NotFoundError) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: err.message });
-      }
-      throw err;
-    }
-  }),
+  disconnect: protectedProcedure
+    .input(ConnectFixtureSchema)
+    .output(DeleteResponse)
+    .mutation(({ input }) =>
+      mapDomainErrors(() => {
+        service.disconnectItemFromFixture(input.itemId, input.fixtureId);
+        return { message: 'Item disconnected from fixture' };
+      })
+    ),
 
   listForItem: protectedProcedure
     .input(FixtureConnectionQuerySchema)
@@ -118,7 +102,7 @@ export const fixturesRouter = router({
       const offset = input.offset ?? DEFAULT_OFFSET;
       const { rows, total } = service.listFixturesForItem(input.itemId, limit, offset);
       return {
-        data: rows.map(toItemFixtureConnection),
+        data: rows,
         pagination: paginationMeta(total, limit, offset),
       };
     }),

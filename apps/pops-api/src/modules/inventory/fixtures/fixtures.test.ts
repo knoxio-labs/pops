@@ -1,4 +1,3 @@
-import { TRPCError } from '@trpc/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -71,6 +70,30 @@ describe('inventory.fixtures.list', () => {
     const page2 = await caller.inventory.fixtures.list({ limit: 2, offset: 2 });
     expect(page2.data).toHaveLength(1);
   });
+
+  // Deterministic pagination — when two rows share createdAt, the id tiebreak
+  // must keep the ordering stable across pages. Without the tiebreak, SQLite
+  // can return rows in arbitrary order and a paginated walk loses or repeats.
+  it('orders by createdAt, id for stable pagination on duplicate createdAt', async () => {
+    // Hand-craft three fixtures with the SAME createdAt to force the tiebreak path.
+    db.prepare(
+      `INSERT INTO fixtures (id, name, type, created_at, last_edited_time)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run('aaa', 'A', 't', '2024-01-01 00:00:00', '2024-01-01T00:00:00.000Z');
+    db.prepare(
+      `INSERT INTO fixtures (id, name, type, created_at, last_edited_time)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run('bbb', 'B', 't', '2024-01-01 00:00:00', '2024-01-01T00:00:00.000Z');
+    db.prepare(
+      `INSERT INTO fixtures (id, name, type, created_at, last_edited_time)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run('ccc', 'C', 't', '2024-01-01 00:00:00', '2024-01-01T00:00:00.000Z');
+
+    const page1 = await caller.inventory.fixtures.list({ limit: 2, offset: 0 });
+    const page2 = await caller.inventory.fixtures.list({ limit: 2, offset: 2 });
+    expect(page1.data.map((r) => r.id)).toEqual(['aaa', 'bbb']);
+    expect(page2.data.map((r) => r.id)).toEqual(['ccc']);
+  });
 });
 
 describe('inventory.fixtures.get', () => {
@@ -91,12 +114,9 @@ describe('inventory.fixtures.get', () => {
   });
 
   it('throws NOT_FOUND for nonexistent id', async () => {
-    await expect(caller.inventory.fixtures.get({ id: 'nonexistent' })).rejects.toThrow(TRPCError);
-    try {
-      await caller.inventory.fixtures.get({ id: 'nonexistent' });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('NOT_FOUND');
-    }
+    await expect(caller.inventory.fixtures.get({ id: 'nonexistent' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 });
 
@@ -134,6 +154,12 @@ describe('inventory.fixtures.create', () => {
     expect(row).toBeDefined();
     expect(row!.name).toBe('Outlet A');
   });
+
+  it('rejects empty name with BAD_REQUEST', async () => {
+    await expect(
+      caller.inventory.fixtures.create({ name: '', type: 'power_outlet' })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
 });
 
 describe('inventory.fixtures.update', () => {
@@ -142,6 +168,19 @@ describe('inventory.fixtures.update', () => {
     const result = await caller.inventory.fixtures.update({ id, data: { name: 'New Name' } });
     expect(result.data.name).toBe('New Name');
     expect(result.message).toBe('Fixture updated');
+  });
+
+  it('updates multiple fields at once', async () => {
+    const id = seedFixture(db, { name: 'A', type: 'old_type', notes: null });
+    const locId = seedLocation(db, { name: 'Garage' });
+    const result = await caller.inventory.fixtures.update({
+      id,
+      data: { name: 'B', type: 'new_type', locationId: locId, notes: 'updated' },
+    });
+    expect(result.data.name).toBe('B');
+    expect(result.data.type).toBe('new_type');
+    expect(result.data.locationId).toBe(locId);
+    expect(result.data.notes).toBe('updated');
   });
 
   it('clears nullable field with null', async () => {
@@ -164,15 +203,27 @@ describe('inventory.fixtures.update', () => {
     expect(result.data.locationId).toBeNull();
   });
 
+  it('bumps lastEditedTime', async () => {
+    const id = seedFixture(db, { name: 'Outlet', type: 'power_outlet' });
+    const before = await caller.inventory.fixtures.get({ id });
+    await new Promise((r) => setTimeout(r, 5));
+    const after = await caller.inventory.fixtures.update({ id, data: { name: 'New' } });
+    expect(new Date(after.data.lastEditedTime).getTime()).toBeGreaterThan(
+      new Date(before.data.lastEditedTime).getTime()
+    );
+  });
+
+  it('rejects empty patch with BAD_REQUEST', async () => {
+    const id = seedFixture(db, { name: 'Outlet', type: 'power_outlet' });
+    await expect(caller.inventory.fixtures.update({ id, data: {} })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+  });
+
   it('throws NOT_FOUND for nonexistent id', async () => {
     await expect(
       caller.inventory.fixtures.update({ id: 'nope', data: { name: 'X' } })
-    ).rejects.toThrow(TRPCError);
-    try {
-      await caller.inventory.fixtures.update({ id: 'nope', data: { name: 'X' } });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('NOT_FOUND');
-    }
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
 
@@ -199,12 +250,25 @@ describe('inventory.fixtures.delete', () => {
   });
 
   it('throws NOT_FOUND for nonexistent id', async () => {
-    await expect(caller.inventory.fixtures.delete({ id: 'nope' })).rejects.toThrow(TRPCError);
-    try {
-      await caller.inventory.fixtures.delete({ id: 'nope' });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('NOT_FOUND');
-    }
+    await expect(caller.inventory.fixtures.delete({ id: 'nope' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+});
+
+describe('locations → fixtures cascade', () => {
+  it('sets fixture.locationId to NULL when its location is deleted', async () => {
+    const locId = seedLocation(db, { name: 'Soon-Gone Room' });
+    const fixtureId = seedFixture(db, {
+      name: 'Outlet',
+      type: 'power_outlet',
+      location_id: locId,
+    });
+
+    db.prepare('DELETE FROM locations WHERE id = ?').run(locId);
+
+    const after = await caller.inventory.fixtures.get({ id: fixtureId });
+    expect(after.data.locationId).toBeNull();
   });
 });
 
@@ -232,14 +296,16 @@ describe('inventory.fixtures.connect', () => {
     expect(result.data).toHaveLength(2);
   });
 
-  it('allows multiple items on the same fixture', async () => {
+  it('allows multiple items on the same fixture (e.g. power strip)', async () => {
     const item1 = seedInventoryItem(db, { item_name: 'TV' });
     const item2 = seedInventoryItem(db, { item_name: 'Speakers' });
     const fixtureId = seedFixture(db, { name: 'Outlet A', type: 'power_outlet' });
 
     await caller.inventory.fixtures.connect({ itemId: item1, fixtureId });
     await caller.inventory.fixtures.connect({ itemId: item2, fixtureId });
-    // No error — a power strip can serve multiple items
+
+    const result = await caller.inventory.fixtures.list({});
+    expect(result.total).toBe(1);
   });
 
   it('throws CONFLICT when same item-fixture pair connected twice', async () => {
@@ -247,38 +313,23 @@ describe('inventory.fixtures.connect', () => {
     const fixtureId = seedFixture(db, { name: 'Outlet', type: 'power_outlet' });
 
     await caller.inventory.fixtures.connect({ itemId, fixtureId });
-    await expect(caller.inventory.fixtures.connect({ itemId, fixtureId })).rejects.toThrow(
-      TRPCError
-    );
-    try {
-      await caller.inventory.fixtures.connect({ itemId, fixtureId });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('CONFLICT');
-    }
+    await expect(caller.inventory.fixtures.connect({ itemId, fixtureId })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
   });
 
   it('throws NOT_FOUND when item does not exist', async () => {
     const fixtureId = seedFixture(db, { name: 'Outlet', type: 'power_outlet' });
-    await expect(caller.inventory.fixtures.connect({ itemId: 'nope', fixtureId })).rejects.toThrow(
-      TRPCError
-    );
-    try {
-      await caller.inventory.fixtures.connect({ itemId: 'nope', fixtureId });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('NOT_FOUND');
-    }
+    await expect(
+      caller.inventory.fixtures.connect({ itemId: 'nope', fixtureId })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('throws NOT_FOUND when fixture does not exist', async () => {
     const itemId = seedInventoryItem(db, { item_name: 'Laptop' });
-    await expect(caller.inventory.fixtures.connect({ itemId, fixtureId: 'nope' })).rejects.toThrow(
-      TRPCError
-    );
-    try {
-      await caller.inventory.fixtures.connect({ itemId, fixtureId: 'nope' });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('NOT_FOUND');
-    }
+    await expect(
+      caller.inventory.fixtures.connect({ itemId, fixtureId: 'nope' })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
 
@@ -316,14 +367,9 @@ describe('inventory.fixtures.disconnect', () => {
     const itemId = seedInventoryItem(db, { item_name: 'Laptop' });
     const fixtureId = seedFixture(db, { name: 'Outlet', type: 'power_outlet' });
 
-    await expect(caller.inventory.fixtures.disconnect({ itemId, fixtureId })).rejects.toThrow(
-      TRPCError
+    await expect(caller.inventory.fixtures.disconnect({ itemId, fixtureId })).rejects.toMatchObject(
+      { code: 'NOT_FOUND' }
     );
-    try {
-      await caller.inventory.fixtures.disconnect({ itemId, fixtureId });
-    } catch (err) {
-      expect((err as TRPCError).code).toBe('NOT_FOUND');
-    }
   });
 });
 
@@ -378,25 +424,23 @@ describe('inventory.fixtures.listForItem', () => {
   });
 });
 
+// Loop the auth assertions so we can't accidentally cover only some endpoints.
 describe('inventory.fixtures auth', () => {
-  it('throws UNAUTHORIZED without auth on list', async () => {
-    const unauth = createCaller(false);
-    await expect(unauth.inventory.fixtures.list({})).rejects.toMatchObject({
-      code: 'UNAUTHORIZED',
+  const cases: Array<[string, (c: ReturnType<typeof createCaller>) => Promise<unknown>]> = [
+    ['list', (c) => c.inventory.fixtures.list({})],
+    ['get', (c) => c.inventory.fixtures.get({ id: 'x' })],
+    ['create', (c) => c.inventory.fixtures.create({ name: 'A', type: 't' })],
+    ['update', (c) => c.inventory.fixtures.update({ id: 'x', data: { name: 'B' } })],
+    ['delete', (c) => c.inventory.fixtures.delete({ id: 'x' })],
+    ['connect', (c) => c.inventory.fixtures.connect({ itemId: 'a', fixtureId: 'b' })],
+    ['disconnect', (c) => c.inventory.fixtures.disconnect({ itemId: 'a', fixtureId: 'b' })],
+    ['listForItem', (c) => c.inventory.fixtures.listForItem({ itemId: 'a' })],
+  ];
+
+  for (const [name, invoke] of cases) {
+    it(`throws UNAUTHORIZED without auth on ${name}`, async () => {
+      const unauth = createCaller(false);
+      await expect(invoke(unauth)).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
     });
-  });
-
-  it('throws UNAUTHORIZED without auth on create', async () => {
-    const unauth = createCaller(false);
-    await expect(
-      unauth.inventory.fixtures.create({ name: 'Outlet', type: 'power_outlet' })
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-  });
-
-  it('throws UNAUTHORIZED without auth on connect', async () => {
-    const unauth = createCaller(false);
-    await expect(
-      unauth.inventory.fixtures.connect({ itemId: 'a', fixtureId: 'b' })
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-  });
+  }
 });

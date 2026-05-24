@@ -1,26 +1,30 @@
-import { and, asc, count, eq, sql } from 'drizzle-orm';
+import { and, asc, count, eq } from 'drizzle-orm';
 
 import { fixtures, homeInventory, itemFixtureConnections } from '@pops/db-types';
 
 import { getDrizzle } from '../../../db.js';
 import { ConflictError, NotFoundError } from '../../../shared/errors.js';
+import {
+  isForeignKeyConstraintError,
+  isUniqueConstraintError,
+} from '../../../shared/sqlite-errors.js';
 
 import type {
   CreateFixtureInput,
-  FixtureRow,
-  ItemFixtureConnectionRow,
+  Fixture,
+  ItemFixtureConnection,
   UpdateFixtureInput,
 } from './types.js';
 
 const NOW = (): string => new Date().toISOString();
 
 export interface FixtureListResult {
-  rows: FixtureRow[];
+  rows: Fixture[];
   total: number;
 }
 
 export interface FixtureConnectionListResult {
-  rows: ItemFixtureConnectionRow[];
+  rows: ItemFixtureConnection[];
   total: number;
 }
 
@@ -48,39 +52,36 @@ export function listFixtures(opts: {
   return { rows, total: countResult?.total ?? 0 };
 }
 
-export function getFixture(id: string): FixtureRow {
+export function getFixture(id: string): Fixture {
   const db = getDrizzle();
   const [row] = db.select().from(fixtures).where(eq(fixtures.id, id)).all();
   if (!row) throw new NotFoundError('Fixture', id);
   return row;
 }
 
-export function createFixture(input: CreateFixtureInput): FixtureRow {
+export function createFixture(input: CreateFixtureInput): Fixture {
   const db = getDrizzle();
-  const now = NOW();
-  db.insert(fixtures)
+  const [row] = db
+    .insert(fixtures)
     .values({
       name: input.name,
       type: input.type,
       locationId: input.locationId ?? null,
       notes: input.notes ?? null,
-      lastEditedTime: now,
+      lastEditedTime: NOW(),
     })
-    .run();
-
-  const [row] = db
-    .select()
-    .from(fixtures)
-    .where(sql`rowid = last_insert_rowid()`)
+    .returning()
     .all();
-  if (!row) throw new Error('Failed to retrieve created fixture');
+  if (!row) throw new Error('Failed to create fixture');
   return row;
 }
 
-export function updateFixture(id: string, input: UpdateFixtureInput): FixtureRow {
+export function updateFixture(id: string, input: UpdateFixtureInput): Fixture {
   const db = getDrizzle();
-  const existing = getFixture(id);
 
+  // Three-state per field: absent → leave, null → clear, value → set.
+  // `UpdateFixtureSchema.refine` guarantees at least one input key, so the
+  // patch is never empty (`lastEditedTime` aside).
   const patch: Record<string, unknown> = { lastEditedTime: NOW() };
   if ('name' in input && input.name !== undefined) patch['name'] = input.name;
   if ('type' in input && input.type !== undefined) patch['type'] = input.type;
@@ -88,71 +89,58 @@ export function updateFixture(id: string, input: UpdateFixtureInput): FixtureRow
     patch['locationId'] = input.locationId;
   if ('notes' in input && input.notes !== undefined) patch['notes'] = input.notes;
 
-  db.update(fixtures).set(patch).where(eq(fixtures.id, existing.id)).run();
-
-  return getFixture(id);
+  const [row] = db.update(fixtures).set(patch).where(eq(fixtures.id, id)).returning().all();
+  if (!row) throw new NotFoundError('Fixture', id);
+  return row;
 }
 
 export function deleteFixture(id: string): void {
   const db = getDrizzle();
-  const existing = getFixture(id);
-  db.delete(fixtures).where(eq(fixtures.id, existing.id)).run();
+  const result = db.delete(fixtures).where(eq(fixtures.id, id)).run();
+  if (result.changes === 0) throw new NotFoundError('Fixture', id);
 }
 
-export function connectItemToFixture(itemId: string, fixtureId: string): ItemFixtureConnectionRow {
+// Optimistic insert: the foreign keys on item_fixture_connections enforce
+// existence, so a pre-check would only widen the TOCTOU window without buying
+// correctness. We catch the constraint failures and reach for nicer error
+// messages only on the unhappy path.
+export function connectItemToFixture(itemId: string, fixtureId: string): ItemFixtureConnection {
   const db = getDrizzle();
-
-  const [item] = db
-    .select({ id: homeInventory.id })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, itemId))
-    .all();
-  if (!item) throw new NotFoundError('Inventory item', itemId);
-
-  const [fixture] = db
-    .select({ id: fixtures.id })
-    .from(fixtures)
-    .where(eq(fixtures.id, fixtureId))
-    .all();
-  if (!fixture) throw new NotFoundError('Fixture', fixtureId);
-
   try {
-    db.insert(itemFixtureConnections).values({ itemId, fixtureId }).run();
+    const [row] = db.insert(itemFixtureConnections).values({ itemId, fixtureId }).returning().all();
+    if (!row) throw new Error('Failed to create item-fixture connection');
+    return row;
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+    if (isUniqueConstraintError(err)) {
       throw new ConflictError(`Item '${itemId}' is already connected to fixture '${fixtureId}'`);
+    }
+    if (isForeignKeyConstraintError(err)) {
+      const [item] = db
+        .select({ id: homeInventory.id })
+        .from(homeInventory)
+        .where(eq(homeInventory.id, itemId))
+        .all();
+      if (!item) throw new NotFoundError('Inventory item', itemId);
+      throw new NotFoundError('Fixture', fixtureId);
     }
     throw err;
   }
-
-  const [created] = db
-    .select()
-    .from(itemFixtureConnections)
-    .where(
-      and(
-        eq(itemFixtureConnections.itemId, itemId),
-        eq(itemFixtureConnections.fixtureId, fixtureId)
-      )
-    )
-    .all();
-  if (!created) throw new Error('Failed to retrieve created fixture connection');
-  return created;
 }
 
 export function disconnectItemFromFixture(itemId: string, fixtureId: string): void {
   const db = getDrizzle();
-  const [row] = db
-    .select({ id: itemFixtureConnections.id })
-    .from(itemFixtureConnections)
+  const result = db
+    .delete(itemFixtureConnections)
     .where(
       and(
         eq(itemFixtureConnections.itemId, itemId),
         eq(itemFixtureConnections.fixtureId, fixtureId)
       )
     )
-    .all();
-  if (!row) throw new NotFoundError('Item-fixture connection', `${itemId}-${fixtureId}`);
-  db.delete(itemFixtureConnections).where(eq(itemFixtureConnections.id, row.id)).run();
+    .run();
+  if (result.changes === 0) {
+    throw new NotFoundError('Item-fixture connection', `${itemId}-${fixtureId}`);
+  }
 }
 
 export function listFixturesForItem(
