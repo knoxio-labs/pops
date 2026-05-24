@@ -408,6 +408,31 @@ export function createTestDb(): Database {
     CREATE INDEX IF NOT EXISTS idx_item_connections_a ON item_connections(item_a_id);
     CREATE INDEX IF NOT EXISTS idx_item_connections_b ON item_connections(item_b_id);
 
+    CREATE TABLE IF NOT EXISTS fixtures (
+      id               TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      name             TEXT NOT NULL,
+      type             TEXT NOT NULL,
+      location_id      TEXT REFERENCES locations(id) ON DELETE SET NULL,
+      notes            TEXT,
+      created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+      last_edited_time TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_fixtures_location ON fixtures(location_id);
+    CREATE INDEX IF NOT EXISTS idx_fixtures_type ON fixtures(type);
+    CREATE INDEX IF NOT EXISTS idx_fixtures_name ON fixtures(name);
+
+    CREATE TABLE IF NOT EXISTS item_fixture_connections (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id    TEXT NOT NULL,
+      fixture_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (item_id) REFERENCES home_inventory(id) ON DELETE CASCADE,
+      FOREIGN KEY (fixture_id) REFERENCES fixtures(id) ON DELETE CASCADE
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_item_fixture_connections_pair ON item_fixture_connections(item_id, fixture_id);
+    CREATE INDEX IF NOT EXISTS idx_item_fixture_conn_item ON item_fixture_connections(item_id);
+    CREATE INDEX IF NOT EXISTS idx_item_fixture_conn_fixture ON item_fixture_connections(fixture_id);
+
     CREATE TABLE IF NOT EXISTS item_photos (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       item_id    TEXT NOT NULL,
@@ -1453,6 +1478,51 @@ export function setupTestContext() {
   }
 
   return { setup, teardown };
+}
+
+/**
+ * Seed a single fixture row into the test DB.
+ * Returns the id.
+ */
+export function seedFixture(
+  db: Database,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    type: string;
+    location_id: string | null;
+    notes: string | null;
+    last_edited_time: string;
+  }> = {}
+): string {
+  const id = overrides.id ?? crypto.randomUUID();
+
+  db.prepare(
+    `INSERT INTO fixtures (id, name, type, location_id, notes, last_edited_time)
+     VALUES (@id, @name, @type, @location_id, @notes, @last_edited_time)`
+  ).run({
+    id,
+    name: overrides.name ?? 'Test Fixture',
+    type: overrides.type ?? 'power_outlet',
+    location_id: overrides.location_id ?? null,
+    notes: overrides.notes ?? null,
+    last_edited_time: overrides.last_edited_time ?? '2025-01-01T00:00:00.000Z',
+  });
+
+  return id;
+}
+
+/**
+ * Seed an item-fixture connection row into the test DB.
+ * Returns the auto-incremented id.
+ */
+export function seedItemFixtureConnection(db: Database, itemId: string, fixtureId: string): number {
+  const result = db
+    .prepare(
+      `INSERT INTO item_fixture_connections (item_id, fixture_id) VALUES (@item_id, @fixture_id)`
+    )
+    .run({ item_id: itemId, fixture_id: fixtureId });
+  return Number(result.lastInsertRowid);
 }
 
 /**

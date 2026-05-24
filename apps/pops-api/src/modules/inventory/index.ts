@@ -8,6 +8,7 @@ import { connectionsRouter } from './connections/index.js';
 import { documentFilesRouter } from './document-files/index.js';
 import { documentsRouter } from './documents/index.js';
 import { inventoryFeaturesManifest } from './features.js';
+import { fixturesRouter } from './fixtures/index.js';
 import { inventoryRouter as itemsRouter } from './items/router.js';
 import { inventoryItemsSearchAdapter } from './items/search-adapter.js';
 import { locationsRouter } from './locations/router.js';
@@ -23,6 +24,7 @@ export const inventoryRouter = router({
   items: itemsRouter,
   locations: locationsRouter,
   connections: connectionsRouter,
+  fixtures: fixturesRouter,
   photos: photosRouter,
   reports: reportsRouter,
   documents: documentsRouter,
