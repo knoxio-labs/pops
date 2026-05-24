@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "db395c49-2841-4427-b2a1-43e190716d80",
-  "prevId": "fb813f35-5a5f-4a9a-b6df-960970baba39",
+  "id": "48cddebd-17c1-4a4b-856c-c858d60d6634",
+  "prevId": "db395c49-2841-4427-b2a1-43e190716d80",
   "tables": {
     "ai_alert_rules": {
       "name": "ai_alert_rules",
@@ -2472,6 +2472,92 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "fixtures": {
+      "name": "fixtures",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        },
+        "last_edited_time": {
+          "name": "last_edited_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_fixtures_location": {
+          "name": "idx_fixtures_location",
+          "columns": ["location_id"],
+          "isUnique": false
+        },
+        "idx_fixtures_type": {
+          "name": "idx_fixtures_type",
+          "columns": ["type"],
+          "isUnique": false
+        },
+        "idx_fixtures_name": {
+          "name": "idx_fixtures_name",
+          "columns": ["name"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "fixtures_location_id_locations_id_fk": {
+          "name": "fixtures_location_id_locations_id_fk",
+          "tableFrom": "fixtures",
+          "tableTo": "locations",
+          "columnsFrom": ["location_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "glia_actions": {
       "name": "glia_actions",
       "columns": {
@@ -3078,6 +3164,80 @@
           "tableFrom": "item_documents",
           "tableTo": "home_inventory",
           "columnsFrom": ["item_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "item_fixture_connections": {
+      "name": "item_fixture_connections",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fixture_id": {
+          "name": "fixture_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {
+        "idx_item_fixture_conn_item": {
+          "name": "idx_item_fixture_conn_item",
+          "columns": ["item_id"],
+          "isUnique": false
+        },
+        "idx_item_fixture_conn_fixture": {
+          "name": "idx_item_fixture_conn_fixture",
+          "columns": ["fixture_id"],
+          "isUnique": false
+        },
+        "uq_item_fixture_connections_pair": {
+          "name": "uq_item_fixture_connections_pair",
+          "columns": ["item_id", "fixture_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "item_fixture_connections_item_id_home_inventory_id_fk": {
+          "name": "item_fixture_connections_item_id_home_inventory_id_fk",
+          "tableFrom": "item_fixture_connections",
+          "tableTo": "home_inventory",
+          "columnsFrom": ["item_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "item_fixture_connections_fixture_id_fixtures_id_fk": {
+          "name": "item_fixture_connections_fixture_id_fixtures_id_fk",
+          "tableFrom": "item_fixture_connections",
+          "tableTo": "fixtures",
+          "columnsFrom": ["fixture_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"

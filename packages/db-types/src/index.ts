@@ -29,9 +29,11 @@ import type { engramIndex, engramLinks, engramScopes, engramTags } from './schem
 import type { entities } from './schema/entities.js';
 import type { environments } from './schema/environments.js';
 import type { episodes } from './schema/episodes.js';
+import type { fixtures } from './schema/fixtures.js';
 import type { homeInventory } from './schema/inventory.js';
 import type { itemConnections } from './schema/item-connections.js';
 import type { itemDocuments } from './schema/item-documents.js';
+import type { itemFixtureConnections } from './schema/item-fixture-connections.js';
 import type { itemPhotos } from './schema/item-photos.js';
 import type { itemUploadedFiles } from './schema/item-uploaded-files.js';
 import type { locations } from './schema/locations.js';
@@ -85,8 +87,10 @@ export {
   reflexExecutions,
   environments,
   episodes,
+  fixtures,
   homeInventory,
   itemConnections,
+  itemFixtureConnections,
   itemDocuments,
   itemPhotos,
   itemUploadedFiles,
@@ -151,7 +155,10 @@ export type ComparisonDimensionRow = InferSelectModel<typeof comparisonDimension
 export type ComparisonRow = InferSelectModel<typeof comparisons>;
 export type MediaScoreRow = InferSelectModel<typeof mediaScores>;
 export type LocationRow = InferSelectModel<typeof locations>;
+export type FixtureRow = InferSelectModel<typeof fixtures>;
+export type FixtureInsert = InferInsertModel<typeof fixtures>;
 export type ItemConnectionRow = InferSelectModel<typeof itemConnections>;
+export type ItemFixtureConnectionRow = InferSelectModel<typeof itemFixtureConnections>;
 export type ItemPhotoRow = InferSelectModel<typeof itemPhotos>;
 export type ItemUploadedFileRow = InferSelectModel<typeof itemUploadedFiles>;
 export type ItemDocumentRow = InferSelectModel<typeof itemDocuments>;
