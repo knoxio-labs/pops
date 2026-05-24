@@ -1,26 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { describe, expect, it } from 'vitest';
 
+import { captureReject, captureThrow } from './capture-errors.js';
 import { BudgetExceededError, ConflictError, NotFoundError, ValidationError } from './errors.js';
 import { mapDomainErrors, mapDomainErrorsAsync } from './trpc-error-mapper.js';
-
-function captureThrow(fn: () => unknown): unknown {
-  try {
-    fn();
-  } catch (err) {
-    return err;
-  }
-  throw new Error('expected the call to throw, but it returned normally');
-}
-
-async function captureReject(fn: () => Promise<unknown>): Promise<unknown> {
-  try {
-    await fn();
-  } catch (err) {
-    return err;
-  }
-  throw new Error('expected the call to reject, but it resolved');
-}
 
 describe('mapDomainErrors', () => {
   it('returns the inner value when no throw', () => {

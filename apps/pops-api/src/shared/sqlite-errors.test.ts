@@ -1,6 +1,7 @@
 import BetterSqlite3 from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 
+import { captureThrow } from './capture-errors.js';
 import { isForeignKeyConstraintError, isUniqueConstraintError } from './sqlite-errors.js';
 
 // These helpers gate user-facing error mapping, so cover them against the real
@@ -17,15 +18,6 @@ function freshDb(): BetterSqlite3.Database {
     );
   `);
   return db;
-}
-
-function captureThrow(fn: () => void): unknown {
-  try {
-    fn();
-  } catch (err) {
-    return err;
-  }
-  throw new Error('expected the call to throw, but it returned normally');
 }
 
 describe('isUniqueConstraintError', () => {
