@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { extractText, mockClient, parseResult } from './test-helpers.js';
 
 vi.mock('../client.js', () => ({ getClient: () => mockClient }));
+
+beforeEach(() => vi.clearAllMocks());
 
 const { cerebrumTools } = await import('./cerebrum.js');
 

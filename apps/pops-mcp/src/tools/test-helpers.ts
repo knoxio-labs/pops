@@ -62,7 +62,10 @@ interface TextResultLike {
 
 export function extractText(result: TextResultLike): string {
   const first = result.content[0];
-  return first && typeof first.text === 'string' ? first.text : '{}';
+  if (!first || typeof first.text !== 'string') {
+    throw new Error(`MCP result has no text content: ${JSON.stringify(result)}`);
+  }
+  return first.text;
 }
 
 export function parseResult(result: TextResultLike): unknown {
