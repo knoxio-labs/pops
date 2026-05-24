@@ -1,6 +1,5 @@
 import { getClient } from '../client.js';
-
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { ok } from './utils.js';
 
 import type { ToolDef } from './index.js';
 
@@ -15,10 +14,6 @@ const ENTITY_TYPES = [
 ] as const;
 
 type EntityType = (typeof ENTITY_TYPES)[number];
-
-function ok(data: unknown): CallToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
-}
 
 const transactionsList: ToolDef = {
   name: 'finance.transactions.list',

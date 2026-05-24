@@ -5,11 +5,11 @@
 
 ## Goal
 
-Expose a `POST /mcp` endpoint using the MCP Streamable HTTP transport. The server starts with `node dist/index.js` (or `pnpm dev` for development) and handles MCP JSON-RPC requests from any HTTP client.
+Expose a `POST /mcp` endpoint using the MCP Streamable HTTP transport. The server starts on `MCP_PORT` (default 3002) and handles MCP JSON-RPC requests from any HTTP client.
 
 ## Acceptance Criteria
 
-- [x] `apps/pops-mcp/src/index.ts` starts an Express server on `MCP_PORT` (default 3002)
+- [x] Server starts on `MCP_PORT` (default 3002) and responds to requests
 - [x] `POST /mcp` accepts MCP JSON-RPC requests and returns MCP JSON-RPC responses
 - [x] Stateless transport (`sessionIdGenerator: undefined`) — no session state retained between requests
 - [x] `GET /health` returns `{ status: 'ok', tools: N }` for health checks

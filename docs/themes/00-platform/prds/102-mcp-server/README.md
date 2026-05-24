@@ -17,14 +17,14 @@ The server runs as a Docker Compose service (`--profile mcp`), calls pops-api vi
 
 ## Architecture
 
-```
+```text
 AI client (Claude Desktop / Claude Code / any MCP client)
     │  POST /mcp  (MCP Streamable HTTP, port 3002)
     ▼
-pops-mcp (apps/pops-mcp)
+pops-mcp
     │  tRPC over HTTP, X-API-Key auth
     ▼
-pops-api (apps/pops-api, port 3000)
+pops-api (port 3000)
     │
     ▼
 SQLite database
@@ -62,7 +62,7 @@ Both services run in the `pops-backend` Docker network. pops-mcp is on that netw
 | US-05 | Cerebrum tools               | Done        |
 | US-06 | Docker image + compose entry | Done        |
 | US-07 | Tool handler tests           | In progress |
-| US-08 | CI publish pipeline          | Pending     |
+| US-08 | CI publish pipeline          | Done        |
 
 ## Configuration
 

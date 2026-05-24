@@ -1,12 +1,7 @@
 import { getClient } from '../client.js';
-
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { ok, toolError } from './utils.js';
 
 import type { ToolDef } from './index.js';
-
-function ok(data: unknown): CallToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
-}
 
 const locationTree: ToolDef = {
   name: 'inventory.locations.tree',
@@ -74,9 +69,10 @@ const itemGet: ToolDef = {
     required: ['id'],
   },
   handler: async (args) => {
-    const result = await getClient().inventory.items.get.query({
-      id: String(args['id']),
-    });
+    if (typeof args['id'] !== 'string' || args['id'].length === 0) {
+      return toolError('Invalid "id"');
+    }
+    const result = await getClient().inventory.items.get.query({ id: args['id'] });
     return ok(result.data);
   },
 };
@@ -95,8 +91,11 @@ const connectionsList: ToolDef = {
     required: ['itemId'],
   },
   handler: async (args) => {
+    if (typeof args['itemId'] !== 'string' || args['itemId'].length === 0) {
+      return toolError('Invalid "itemId"');
+    }
     const result = await getClient().inventory.connections.listForItem.query({
-      itemId: String(args['itemId']),
+      itemId: args['itemId'],
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
@@ -117,8 +116,11 @@ const connectionsGraph: ToolDef = {
     required: ['itemId'],
   },
   handler: async (args) => {
+    if (typeof args['itemId'] !== 'string' || args['itemId'].length === 0) {
+      return toolError('Invalid "itemId"');
+    }
     const result = await getClient().inventory.connections.graph.query({
-      itemId: String(args['itemId']),
+      itemId: args['itemId'],
       maxDepth: typeof args['maxDepth'] === 'number' ? args['maxDepth'] : undefined,
     });
     return ok(result.data);

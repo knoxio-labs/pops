@@ -1,12 +1,7 @@
 import { getClient } from '../client.js';
-
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { ok, toolError } from './utils.js';
 
 import type { ToolDef } from './index.js';
-
-function ok(data: unknown): CallToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
-}
 
 const engramsList: ToolDef = {
   name: 'cerebrum.engrams.list',
@@ -69,7 +64,10 @@ const engramGet: ToolDef = {
     required: ['id'],
   },
   handler: async (args) => {
-    const result = await getClient().cerebrum.engrams.get.query({ id: String(args['id']) });
+    if (typeof args['id'] !== 'string' || args['id'].length === 0) {
+      return toolError('Invalid "id"');
+    }
+    const result = await getClient().cerebrum.engrams.get.query({ id: args['id'] });
     return ok(result);
   },
 };
@@ -92,8 +90,11 @@ const cerebrumSearch: ToolDef = {
     required: ['query'],
   },
   handler: async (args) => {
+    if (typeof args['query'] !== 'string' || args['query'].trim().length === 0) {
+      return toolError('Invalid "query"');
+    }
     const result = await getClient().cerebrum.retrieval.search.query({
-      query: typeof args['query'] === 'string' ? args['query'] : '',
+      query: args['query'],
       mode:
         args['mode'] === 'semantic' || args['mode'] === 'structured' || args['mode'] === 'hybrid'
           ? args['mode']

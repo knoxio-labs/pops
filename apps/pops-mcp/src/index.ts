@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { config } from 'dotenv';
 
 config();
-config({ path: '../../.env', override: false });
 
 // Docker secret pattern: read POPS_API_KEY from file when _FILE variant is set
 const keyFile = process.env['POPS_API_KEY_FILE'];
@@ -18,11 +17,11 @@ if (keyFile && !process.env['POPS_API_KEY']) {
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import express from 'express';
+import express, { type Express } from 'express';
 
 import { allTools } from './tools/index.js';
 
-function createMcpServer(): Server {
+export function createMcpServer(): Server {
   const server = new Server({ name: 'pops', version: '1.0.0' }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -56,8 +55,8 @@ function createMcpServer(): Server {
   return server;
 }
 
-const app = express();
-app.use(express.json());
+export const app: Express = express();
+app.use(express.json({ limit: '1mb' }));
 
 app.post('/mcp', async (req, res) => {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -75,7 +74,10 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', tools: allTools.length });
 });
 
-const port = Number(process.env['MCP_PORT'] ?? 3002);
-app.listen(port, '0.0.0.0', () => {
-  console.warn(`[pops-mcp] HTTP MCP server on port ${port} (${allTools.length} tools)`);
-});
+// Only start listening when run directly (not in tests)
+if (process.env['NODE_ENV'] !== 'test') {
+  const port = Number(process.env['MCP_PORT'] ?? 3002);
+  app.listen(port, '0.0.0.0', () => {
+    console.warn(`[pops-mcp] HTTP MCP server on port ${port} (${allTools.length} tools)`);
+  });
+}

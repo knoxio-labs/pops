@@ -7,7 +7,10 @@ let cachedClient: ReturnType<typeof createTRPCClient<AppRouter>> | null = null;
 export function getClient(): ReturnType<typeof createTRPCClient<AppRouter>> {
   if (!cachedClient) {
     const apiUrl = process.env['POPS_API_URL'] ?? 'http://localhost:3000';
-    const apiKey = process.env['POPS_API_KEY'] ?? '';
+    const apiKey = process.env['POPS_API_KEY'];
+    if (!apiKey) {
+      throw new Error('POPS_API_KEY is required');
+    }
 
     cachedClient = createTRPCClient<AppRouter>({
       links: [

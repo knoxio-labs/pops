@@ -29,6 +29,10 @@ A standalone HTTP service (`pops-mcp`) that exposes POPS data through the Model 
 | ------------------------------------------- | --------------------------------------------------- | ----------- |
 | [PRD-102](../prds/102-mcp-server/README.md) | HTTP MCP server, all domain tools, Docker packaging | In progress |
 
+**Dependencies:** PRD-102 requires pops-api to be running and a service-account API key provisioned (shared with moltbot). No other PRDs depend on this epic.
+
+**Parallelization:** PRD-102 user stories can mostly run in parallel — tool implementation (US-02 through US-05) is independent of Docker packaging (US-06) and CI publishing (US-08). The HTTP server entry point (US-01) must land first as other stories build on it. Tests (US-07) can be written alongside tool implementation.
+
 ## Key Decisions
 
 | Decision         | Choice                                            | Rationale                                                           |

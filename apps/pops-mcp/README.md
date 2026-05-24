@@ -25,7 +25,7 @@ mise dev:mcp
 
 Set `POPS_API_URL` and `POPS_API_KEY` in `apps/pops-mcp/.env` (or the root `.env`):
 
-```
+```env
 POPS_API_URL=http://localhost:3000
 POPS_API_KEY=sa_your_service_account_key_here
 MCP_PORT=3002
