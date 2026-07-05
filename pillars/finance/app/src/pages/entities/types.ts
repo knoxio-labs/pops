@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export { ENTITY_TYPES } from '@pops/db-types';
+export { ENTITY_TYPES } from '@pops/finance';
 
 export interface Entity {
   id: string;

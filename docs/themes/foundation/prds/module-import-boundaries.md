@@ -21,13 +21,13 @@ The workspace has two unit kinds. There is no `apps/` directory, no `pops-api` m
 
 The boundary rules, by the actual rule names that appear in CI output:
 
-| Rule                       | From                                                               | Forbidden target                                                                                    |
-| -------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `lib-no-pillar-import`     | `libs/**`                                                          | Any `pillars/**` path, any `@pops/<pillar>` contract package, any `@pops/app-*`                     |
-| `pillar-no-cross-internal` | `pillars/<x>/**`                                                   | `pillars/<y>/**` by filesystem path where x ≠ y (consume the peer's `@pops/<y>` package instead)    |
-| `no-deep-internal-import`  | anywhere                                                           | `@pops/<pkg>/(src\|dist\|lib\|internal)/...` — a subpath the package's exports map does not declare |
-| `no-circular`              | anywhere                                                           | any cyclic dependency between modules                                                               |
-| `lib-layering`             | leaf libs (`types`, `db-types`, `sdk`, `settings`, `ai-telemetry`) | any `@pops/*` outside the leaf set                                                                  |
+| Rule                       | From                                                   | Forbidden target                                                                                    |
+| -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `lib-no-pillar-import`     | `libs/**`                                              | Any `pillars/**` path, any `@pops/<pillar>` contract package, any `@pops/app-*`                     |
+| `pillar-no-cross-internal` | `pillars/<x>/**`                                       | `pillars/<y>/**` by filesystem path where x ≠ y (consume the peer's `@pops/<y>` package instead)    |
+| `no-deep-internal-import`  | anywhere                                               | `@pops/<pkg>/(src\|dist\|lib\|internal)/...` — a subpath the package's exports map does not declare |
+| `no-circular`              | anywhere                                               | any cyclic dependency between modules                                                               |
+| `lib-layering`             | leaf libs (`types`, `sdk`, `settings`, `ai-telemetry`) | any `@pops/*` outside the leaf set                                                                  |
 
 A pillar consumes another pillar's **types** through its published `@pops/<id>` package (contract types + api-types + OpenAPI) and makes **calls** through the pillar's REST API via the `pillar()` SDK helper. Cross-pillar frontend communication is the same: through REST or shared libs, never a direct import of a peer pillar's `app/`.
 
@@ -38,7 +38,6 @@ A pillar frontend (`pillars/<id>/app/`) may import any shared lib (none of the r
 - `@pops/ui`
 - `@pops/navigation`
 - `@pops/types`
-- `@pops/db-types`
 
 This list is encoded in the `.dependency-cruiser.cjs` header comment for discoverability, not as a separate forbidding rule. Adding a new shared lib needs no rule change; the lib's own boundaries (`lib-no-pillar-import`, `lib-layering`) keep it extractable.
 
@@ -46,16 +45,17 @@ This list is encoded in the `.dependency-cruiser.cjs` header comment for discove
 
 The lake-migration collapsed every per-pillar `*-db` / `*-contract` / `*-api` package and the `pops-api` monolith into `pillars/<id>/`. The retired specifiers are tombstoned so no new code re-imports them; consumers go through the live `@pops/<id>` package and the REST API instead. One rule per retired family:
 
-| Rule                        | Tombstoned specifiers                                                                                 |
-| --------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `no-dead-lists-pkgs`        | `@pops/app-lists-db`, `@pops/lists-db`, `@pops/lists-contract`, `@pops/lists-api`                     |
-| `no-dead-inventory-pkgs`    | `@pops/app-inventory-db`, `@pops/inventory-db`, `@pops/inventory-contract`, `@pops/inventory-api`     |
-| `no-dead-food-pkgs`         | `@pops/app-food-db`, `@pops/food-db`, `@pops/food-contract`, `@pops/food-contracts`, `@pops/food-api` |
-| `no-dead-finance-pkgs`      | `@pops/app-finance-db`, `@pops/finance-db`, `@pops/finance-contract`, `@pops/finance-api`             |
-| `no-dead-cerebrum-pkgs`     | `@pops/cerebrum-db`, `@pops/cerebrum-contract`, `@pops/cerebrum-api`                                  |
-| `no-dead-media-pkgs`        | `@pops/app-media-db`, `@pops/media-db`, `@pops/media-contract`, `@pops/media-api`                     |
-| `no-dead-core-pkgs`         | `@pops/core-db`, `@pops/core-contract`, `@pops/core-api` (core is now `pillars/registry/`)            |
-| `no-dead-shared-schema-pkg` | `@pops/shared-schema` (each pillar owns a byte-compatible local copy of its tables)                   |
+| Rule                        | Tombstoned specifiers                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `no-dead-lists-pkgs`        | `@pops/app-lists-db`, `@pops/lists-db`, `@pops/lists-contract`, `@pops/lists-api`                        |
+| `no-dead-inventory-pkgs`    | `@pops/app-inventory-db`, `@pops/inventory-db`, `@pops/inventory-contract`, `@pops/inventory-api`        |
+| `no-dead-food-pkgs`         | `@pops/app-food-db`, `@pops/food-db`, `@pops/food-contract`, `@pops/food-contracts`, `@pops/food-api`    |
+| `no-dead-finance-pkgs`      | `@pops/app-finance-db`, `@pops/finance-db`, `@pops/finance-contract`, `@pops/finance-api`                |
+| `no-dead-cerebrum-pkgs`     | `@pops/cerebrum-db`, `@pops/cerebrum-contract`, `@pops/cerebrum-api`                                     |
+| `no-dead-media-pkgs`        | `@pops/app-media-db`, `@pops/media-db`, `@pops/media-contract`, `@pops/media-api`                        |
+| `no-dead-core-pkgs`         | `@pops/core-db`, `@pops/core-contract`, `@pops/core-api` (core is now `pillars/registry/`)               |
+| `no-dead-shared-schema-pkg` | `@pops/shared-schema` (each pillar owns a byte-compatible local copy of its tables)                      |
+| `no-dead-db-types-pkg`      | `@pops/db-types` (cross-pillar literal-union constants now owned by `@pops/finance` / `@pops/inventory`) |
 
 ## Tool
 
@@ -119,7 +119,7 @@ The current baseline holds 82 entries, dominated by:
 - [x] `pillar-no-cross-internal` forbids `pillars/<x>/**` from reaching into `pillars/<y>/**` by filesystem path (x ≠ y) — supersedes the original cross-app rule and extends it to all cross-pillar internals.
 - [x] `lib-no-pillar-import` forbids any `libs/**` module from importing a pillar (by path or by `@pops/<pillar>` / `@pops/app-*` specifier).
 - [x] `no-deep-internal-import` forbids importing an undeclared `src`/`dist`/`lib`/`internal` subpath of any `@pops/*` package.
-- [x] `lib-layering` forbids leaf libs (`types`, `db-types`, `sdk`, `settings`, `ai-telemetry`) from importing any non-leaf `@pops/*` lib.
+- [x] `lib-layering` forbids leaf libs (`types`, `sdk`, `settings`, `ai-telemetry`) from importing any non-leaf `@pops/*` lib.
 - [x] `no-circular` forbids any cyclic dependency between modules.
 - [x] Retired per-pillar packages are tombstoned (`no-dead-*-pkgs`, `no-dead-shared-schema-pkg`); no new code may import them.
 - [x] The shared-lib allow-list for pillar frontends is encoded in the config header comment, not as a separate forbidding rule.

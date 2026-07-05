@@ -18,6 +18,13 @@
  * budgets, alerts, the cross-pillar telemetry ingest) out of it.
  * The `registry` pillar (formerly `core`) is the platform registry /
  * discovery / settings host.
+ *
+ * Kept static rather than derived from the live registry snapshot (the
+ * nginx generator's static mode is a build-time artifact with no registry
+ * to query — see generate-nginx-conf.ts). Drift between this list and the
+ * on-disk data pillars is instead caught by a disk-derived CI guard,
+ * `scripts/ci/check-known-pillars-coverage.mjs`: it fails when a
+ * `pillars/<id>` that owns a persisted DB has no entry here (or vice versa).
  */
 export const PILLARS = [
   'registry',

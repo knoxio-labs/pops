@@ -191,7 +191,7 @@ describe('discoverUnits — against the live repo', () => {
     const units = discoverUnits();
     const names = new Set(units.map((u) => u.name));
     expect(names.has('@pops/types')).toBe(true);
-    expect(names.has('@pops/db-types')).toBe(true);
+    expect(names.has('@pops/pillar-sdk')).toBe(true);
     // contacts is a Rust crate (no package.json) — never discovered here.
     expect([...names].every((n) => typeof n === 'string')).toBe(true);
   });

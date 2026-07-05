@@ -26,7 +26,6 @@ on:
       - "pillars/**"
       - "libs/sdk/**"
       - "libs/types/**"
-      - "libs/db-types/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"

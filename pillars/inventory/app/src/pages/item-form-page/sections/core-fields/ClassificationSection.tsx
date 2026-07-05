@@ -1,6 +1,6 @@
 import { Controller } from 'react-hook-form';
 
-import { INVENTORY_CONDITIONS } from '@pops/db-types';
+import { INVENTORY_CONDITIONS } from '@pops/inventory';
 import { CheckboxInput, Select } from '@pops/ui';
 
 import { LocationPicker } from '../../../../components/LocationPicker';

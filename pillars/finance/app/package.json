@@ -18,7 +18,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hey-api/client-fetch": "^0.13.1",
     "@hookform/resolvers": "^5.4.0",
-    "@pops/db-types": "workspace:*",
     "@pops/finance": "workspace:*",
     "@pops/navigation": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",

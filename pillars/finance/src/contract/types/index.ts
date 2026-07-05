@@ -4,6 +4,7 @@
  * schema under `schemas/`. The round-trip test enforces that they agree.
  */
 export type { Budget, BudgetPeriod } from './budget.js';
-export type { Entity } from './entity.js';
+export { ENTITY_TYPES } from './entity.js';
+export type { Entity, EntityType } from './entity.js';
 export type { Transaction } from './transaction.js';
 export type { WishListItem, WishListPriority } from './wish-list-item.js';

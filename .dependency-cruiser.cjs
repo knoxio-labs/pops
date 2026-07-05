@@ -10,7 +10,7 @@
  *   pillar's @pops/<pillar> entrypoint and its REST API.
  *
  * Shared workspace packages available to pillar frontends: @pops/ui,
- * @pops/navigation, @pops/types, @pops/db-types.
+ * @pops/navigation, @pops/types.
  *
  * See docs/themes/01-foundation/prds/097-module-import-boundaries/ and
  * docs/themes/13-pillar-finale/prds/156-consumer-import-discipline/.
@@ -61,12 +61,20 @@ module.exports = {
       name: 'lib-layering',
       severity: 'error',
       comment:
-        'ISO-R5: leaf libs (types, db-types, sdk, settings, ai-telemetry) must not import any other @pops/* lib — they are the extraction floor.',
-      from: { path: '^libs/(types|db-types|sdk|settings|ai-telemetry)/' },
+        'ISO-R5: leaf libs (types, sdk, settings, ai-telemetry) must not import any other @pops/* lib — they are the extraction floor.',
+      from: { path: '^libs/(types|sdk|settings|ai-telemetry)/' },
       to: {
         path: '^@pops/',
-        pathNot: '^@pops/(types|db-types|pillar-sdk|pillar-settings|ai-telemetry)(/|$)',
+        pathNot: '^@pops/(types|pillar-sdk|pillar-settings|ai-telemetry)(/|$)',
       },
+    },
+    {
+      name: 'no-dead-db-types-pkg',
+      severity: 'error',
+      comment:
+        'The `@pops/db-types` package no longer exists — its cross-pillar literal-union constants (ENTITY_TYPES, MEDIA_TYPES, INVENTORY_CONDITIONS) moved into their owning pillar contract packages (`@pops/finance`, `@pops/inventory`), completing the ADR-026 retirement. Consumers go through the owning pillar contract package.',
+      from: { path: '.*' },
+      to: { path: '^@pops/db-types(/|$)' },
     },
     {
       name: 'no-dead-lists-pkgs',
