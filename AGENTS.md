@@ -293,7 +293,7 @@ User-facing entry point: the **Import Wizard** (8-step UI in `pillars/finance/ap
 5. **Prefix match** — description starts with entity name (longest wins).
 6. **Contains match** — entity name anywhere in description (min 4 chars, longest wins).
 7. **Punctuation stripping** — strip apostrophes/backticks, retry stages 3–6.
-8. **AI fallback** — Claude Haiku API call, env-gated (`FINANCE_AI_CATEGORIZER_ENABLED`, default off), no disk or DB cache, exponential-backoff retry on 429 (max 5 attempts). Any failure is non-fatal — the row degrades to `uncertain`.
+8. **AI fallback** — Claude Haiku API call, env-gated (`FINANCE_AI_CATEGORIZER_ENABLED`, default off), no disk or DB cache, exponential-backoff retry on 429 (max 5 retries, 6 total attempts). Any failure is non-fatal — the row degrades to `uncertain`.
 
 Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine.md`.
 
