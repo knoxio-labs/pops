@@ -8,6 +8,10 @@
  * description plus its amount and date — never the raw CSV row or any
  * account/card/reference columns. `contextId` is an opaque import-batch key,
  * never the description, so the telemetry store carries no PII.
+ *
+ * The batched sibling (`categorizeBatchWithAi`, CP025/#3656) lives in
+ * `ai-categorizer-batch-api.ts` and reuses the prompt-rule constants and
+ * `callRawApi`/`entryFromParsed` exported here rather than duplicating them.
  */
 import { callWithLogging } from '@pops/ai-telemetry';
 
@@ -15,13 +19,21 @@ import { extractJsonFromReply } from '../ai-json.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
+import {
+  buildTransactionData,
+  CONFIDENCE_RULES,
+  ENTITY_NAME_RULES,
+  knownEntitiesSection,
+  knownTagsList,
+  TAGS_RULES,
+} from './ai-categorizer-prompt.js';
 import { sanitizeEntityName } from './entity-name.js';
 
 export { sanitizeEntityName } from './entity-name.js';
 
 import type Anthropic from '@anthropic-ai/sdk';
 
-import type { AiCacheEntry, CategorizerInput } from './ai-categorizer.js';
+import type { AiCacheEntry, CategorizerInput } from './ai-categorizer-types.js';
 
 export const CATEGORIZE_OPERATION = 'imports.categorize';
 
@@ -47,94 +59,46 @@ export interface ApiCallOptions {
   contextId?: string;
 }
 
-const PROMPT_FIELD_MAX_CHARS = 200;
-
-/**
- * Normalize an allowlisted string before it crosses into the prompt: collapse
- * every whitespace run (including newlines) to a single space, trim, and cap
- * length. Without this a description carrying newlines could inject extra prompt
- * lines (e.g. a forged `Known tags:` directive) and an unbounded one would bloat
- * token usage/cost. The fields are still allowlisted upstream — this only
- * hardens their rendering.
- */
-function sanitizePromptField(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().slice(0, PROMPT_FIELD_MAX_CHARS);
+export interface RawApiCallOptions {
+  client: Anthropic;
+  prompt: string;
+  sanitizedDescription: string;
+  model: string;
+  maxTokens: number;
+  operation: string;
+  contextId?: string;
 }
 
-/**
- * Render the allowlisted transaction fields as the prompt's "Transaction data"
- * block. Only {@link CategorizerInput} fields are interpolated — never a raw
- * row or arbitrary column values (CF008) — and each is sanitized at the
- * boundary. Non-finite amounts are dropped rather than rendered as `NaN`/`Infinity`.
- */
-function buildTransactionData(input: CategorizerInput): string {
-  const lines = [`Description: ${sanitizePromptField(input.description)}`];
-  if (input.amount !== undefined && Number.isFinite(input.amount)) {
-    lines.push(`Amount: ${input.amount}`);
-  }
-  if (input.date !== undefined && input.date !== '') {
-    lines.push(`Date: ${sanitizePromptField(input.date)}`);
-  }
-  return lines.join('\n');
-}
+const SINGLE_KNOWN_ENTITY_INSTRUCTION =
+  "If the transaction is from one of the known entities, return its name exactly as listed above (same spelling/casing) — do NOT invent a variant spelling. Only return a name outside this list when the merchant genuinely isn't one of them.";
 
 export function buildPrompt(
   input: CategorizerInput,
   knownTags: string[],
   knownEntityNames: string[] = []
 ): string {
-  const tagList =
-    knownTags.length > 0
-      ? knownTags.join(', ')
-      : 'Groceries, Transport, Dining, Shopping, Utilities, Subscriptions, Entertainment, Health, Insurance';
-  const knownEntitiesSection =
-    knownEntityNames.length > 0
-      ? `\n\nKnown entities: ${knownEntityNames.join(', ')}\nIf the transaction is from one of the known entities, return its name exactly as listed above (same spelling/casing) — do NOT invent a variant spelling. Only return a name outside this list when the merchant genuinely isn't one of them.`
-      : '';
-
   return `Given this bank transaction, identify the merchant/entity name and relevant spending tags.
 
 ${buildTransactionData(input)}
 
-Known tags: ${tagList}${knownEntitiesSection}
+Known tags: ${knownTagsList(knownTags)}${knownEntitiesSection(knownEntityNames, SINGLE_KNOWN_ENTITY_INSTRUCTION)}
 
 Reply in JSON only: {"entityName": "...", "tags": ["tag1", "tag2"], "confidence": 0.0-1.0}
 
-entityName rules:
-- Return the brand or chain name only (e.g. "Woolworths", "Metro Petroleum", "Transport for NSW").
-- Do NOT include store numbers, location codes, or postcode segments — strip them.
-- Do NOT include trailing suburb / city names or postcodes present in the description — strip location noise from the merchant name.
-- Strip company/legal-entity suffixes from the name — "Pty", "Pty Ltd", "Ltd", "Limited", "Inc", "Incorporated", "LLC", "PLC", "GmbH", "Co", "Corp", including punctuation variants like "Pty. Ltd.". e.g. "THE REDFERN PTY LTD" -> "The Redfern".
-- Return the brand's natural / title casing, NOT the verbatim ALL-CAPS from the bank description — UNLESS the brand is conventionally written in all caps (e.g. IKEA, KFC, BP, IGA, HSBC, H&M). Preserve genuinely mixed-case brands exactly (e.g. eBay, iiNet).
-- If you cannot identify a real merchant from the description, return entityName as null.
-  Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.
+${ENTITY_NAME_RULES}
 
-tags rules:
-- Return 1-4 tags that describe this transaction.
-- Prefer tags from the Known tags list when they fit.
-- You MAY suggest new tags not in the list when they better describe this transaction (e.g. "EV", "Homelab", "Gift Card", "Fast Food").
-- Do NOT use vague tags like "Other" or "Spending" unless nothing else fits.
+${TAGS_RULES}
 
-confidence rules:
-- Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
+${CONFIDENCE_RULES}`;
 }
 
-export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
-  const {
-    client,
-    input,
-    sanitizedDescription,
-    model,
-    maxTokens,
-    knownTags,
-    knownEntityNames,
-    contextId,
-  } = opts;
+export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallResponse> {
+  const { client, prompt, sanitizedDescription, model, maxTokens, operation, contextId } = opts;
   const response = await callWithLogging(
     {
       provider: ANTHROPIC_PROVIDER,
       model,
-      operation: CATEGORIZE_OPERATION,
+      operation,
       domain: FINANCE_DOMAIN,
       ...(contextId !== undefined ? { contextId } : {}),
       call: async () => {
@@ -143,9 +107,7 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
             client.messages.create({
               model,
               max_tokens: maxTokens,
-              messages: [
-                { role: 'user', content: buildPrompt(input, knownTags, knownEntityNames) },
-              ],
+              messages: [{ role: 'user', content: prompt }],
             }),
           sanitizedDescription
         );
@@ -169,36 +131,26 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
   };
 }
 
-/**
- * Parse the model's reply into an {@link AiCacheEntry}. Throws
- * `AiCategorizationError('…','PARSE_ERROR')` when the reply holds no parseable
- * JSON object, so the caller degrades the row to *uncertain* rather than
- * hard-failing the whole transaction.
- */
-export function buildEntryFromText(text: string): AiCacheEntry {
-  const jsonSlice = extractJsonFromReply(text);
-  if (jsonSlice === null) {
-    throw new AiCategorizationError(
-      `AI categorizer returned no JSON object: ${text.slice(0, 120)}`,
-      'PARSE_ERROR'
-    );
-  }
-  let parsed: {
-    entityName?: string | null;
-    tags?: unknown;
-    category?: string;
-    confidence?: unknown;
-  };
-  try {
-    parsed = JSON.parse(jsonSlice) as typeof parsed;
-  } catch (error) {
-    throw new AiCategorizationError(
-      `AI categorizer returned unparseable JSON: ${
-        error instanceof Error ? error.message : 'parse error'
-      }`,
-      'PARSE_ERROR'
-    );
-  }
+export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
+  return callRawApi({
+    client: opts.client,
+    prompt: buildPrompt(opts.input, opts.knownTags, opts.knownEntityNames),
+    sanitizedDescription: opts.sanitizedDescription,
+    model: opts.model,
+    maxTokens: opts.maxTokens,
+    operation: CATEGORIZE_OPERATION,
+    ...(opts.contextId !== undefined ? { contextId: opts.contextId } : {}),
+  });
+}
+
+export interface RawCategorizerEntry {
+  entityName?: string | null;
+  tags?: unknown;
+  category?: string;
+  confidence?: unknown;
+}
+
+export function entryFromParsed(parsed: RawCategorizerEntry): AiCacheEntry {
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags.filter((t): t is string => typeof t === 'string')
     : undefined;
@@ -214,24 +166,68 @@ export function buildEntryFromText(text: string): AiCacheEntry {
   };
 }
 
-export function throwApiError(error: unknown): never {
-  if (error && typeof error === 'object' && 'status' in error) {
-    const apiError = error as {
-      status: number;
-      message?: string;
-      error?: { error?: { message?: string } };
-    };
-    if (apiError.status === 400) {
-      const msg = apiError.error?.error?.message ?? apiError.message ?? 'Unknown API error';
-      if (msg.toLowerCase().includes('credit balance')) {
-        throw new AiCategorizationError(
-          'Anthropic API credit balance too low. Please add credits at https://console.anthropic.com/settings/plans',
-          'INSUFFICIENT_CREDITS'
-        );
-      }
-    }
+/**
+ * Parse the model's reply into an {@link AiCacheEntry}. Throws
+ * `AiCategorizationError('…','PARSE_ERROR')` when the reply holds no parseable
+ * JSON object, so the caller degrades the row to *uncertain* rather than
+ * hard-failing the whole transaction.
+ */
+export function buildEntryFromText(text: string): AiCacheEntry {
+  const jsonSlice = extractJsonFromReply(text);
+  if (jsonSlice === null) {
     throw new AiCategorizationError(
-      `Anthropic API error: ${apiError.message ?? 'Unknown error'}`,
+      `AI categorizer returned no JSON object: ${text.slice(0, 120)}`,
+      'PARSE_ERROR'
+    );
+  }
+  let parsed: RawCategorizerEntry;
+  try {
+    parsed = JSON.parse(jsonSlice) as RawCategorizerEntry;
+  } catch (error) {
+    throw new AiCategorizationError(
+      `AI categorizer returned unparseable JSON: ${
+        error instanceof Error ? error.message : 'parse error'
+      }`,
+      'PARSE_ERROR'
+    );
+  }
+  return entryFromParsed(parsed);
+}
+
+interface ParsedApiError {
+  status: number;
+  message?: string;
+  error?: { error?: { message?: string } };
+}
+
+function isParsedApiError(error: unknown): error is ParsedApiError {
+  return typeof error === 'object' && error !== null && 'status' in error;
+}
+
+/** Maps a status-carrying API error to a specific `AiCategorizationError`, or `null` for the generic fallback. */
+function mapKnownApiError(apiError: ParsedApiError): AiCategorizationError | null {
+  if (apiError.status === 429) {
+    return new AiCategorizationError(
+      `Anthropic API rate limit exhausted: ${apiError.message ?? 'Too Many Requests'}`,
+      'RATE_LIMITED'
+    );
+  }
+  const creditMessage = apiError.error?.error?.message ?? apiError.message ?? '';
+  if (apiError.status === 400 && creditMessage.toLowerCase().includes('credit balance')) {
+    return new AiCategorizationError(
+      'Anthropic API credit balance too low. Please add credits at https://console.anthropic.com/settings/plans',
+      'INSUFFICIENT_CREDITS'
+    );
+  }
+  return null;
+}
+
+export function throwApiError(error: unknown): never {
+  if (isParsedApiError(error)) {
+    const known = mapKnownApiError(error);
+    if (known) throw known;
+    throw new AiCategorizationError(
+      `Anthropic API error: ${error.message ?? 'Unknown error'}`,
       'API_ERROR'
     );
   }

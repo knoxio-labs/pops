@@ -3,11 +3,16 @@
  *
  * Dedup routes through the pillar's `importsService`; the entity-match maps are
  * built from the contact set fetched live from the contacts pillar per run (no
- * mirror); per-row classification through `process-transaction.ts`.
+ * mirror). Classification runs in two passes (CP025/#3656): the deterministic
+ * ladder (`classifyWithoutAi`) resolves each row synchronously, and every row
+ * that falls through to the AI stage is deferred to `resolvePendingAi`, which
+ * folds them into shared batched Claude calls instead of one round-trip per row.
  */
 import { type FinanceDb, importsService } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
-import { processTransactionSafely } from './process-transaction.js';
+import { type PendingAiItem, resolvePendingAi } from './ai-batch-resolver.js';
+import { buildFailure } from './process-transaction-helpers.js';
+import { classifyWithoutAi, type TransactionProcessResult } from './process-transaction.js';
 import {
   appendBatchItem,
   buildAiUsage,
@@ -70,10 +75,7 @@ function buildSkippedBucket(duplicates: ParsedTransaction[]): ProcessedTransacti
   }));
 }
 
-function pushClassified(
-  buckets: ProcessBuckets,
-  result: Awaited<ReturnType<typeof processTransactionSafely>>
-): void {
+function pushClassified(buckets: ProcessBuckets, result: TransactionProcessResult): void {
   if (result.matched) buckets.matched.push(result.matched);
   if (result.uncertain) buckets.uncertain.push(result.uncertain);
   if (result.failed) buckets.failed.push(result.failed);
@@ -88,33 +90,66 @@ interface ProcessLoopArgs {
   onProgress?: ImportProgressCallback;
 }
 
+/**
+ * Pass 1: run the synchronous, non-AI ladder for every row. Rows it resolves
+ * land straight in `results`; rows that fall through collect into the
+ * returned `pending` list for the batched AI pass. A thrown error (e.g. a DB
+ * failure) degrades that one row to `failed` rather than aborting the run.
+ */
+function classifyWithoutAiPass(
+  loopArgs: Pick<ProcessLoopArgs, 'db' | 'newTransactions' | 'context' | 'counters'>,
+  results: (TransactionProcessResult | undefined)[]
+): PendingAiItem[] {
+  const { db, newTransactions, context, counters } = loopArgs;
+  const pending: PendingAiItem[] = [];
+  for (let i = 0; i < newTransactions.length; i++) {
+    const transaction = newTransactions[i];
+    if (!transaction) continue;
+    try {
+      const staged = classifyWithoutAi({ db, transaction, context, counters });
+      if (staged.kind === 'resolved') {
+        results[i] = staged.result;
+      } else {
+        pending.push({ index: i, transaction });
+      }
+    } catch (error) {
+      const { failed, errorEntry } = buildFailure(transaction, error);
+      results[i] = { failed, batchStatus: 'failed', errorEntry };
+    }
+  }
+  return pending;
+}
+
 async function runProcessLoop(args: ProcessLoopArgs): Promise<{ errors: ErrorEntry[] }> {
   const { db, newTransactions, context, counters, buckets, onProgress } = args;
+  const results: (TransactionProcessResult | undefined)[] = Array.from({
+    length: newTransactions.length,
+  });
+
+  const pending = classifyWithoutAiPass(args, results);
+  if (pending.length > 0) {
+    await resolvePendingAi({ db, pending, context, counters, results });
+  }
+
   const currentBatch: ProgressBatchItem[] = [];
   const errors: ErrorEntry[] = [];
 
   for (let i = 0; i < newTransactions.length; i++) {
     const transaction = newTransactions[i];
-    if (!transaction) continue;
+    const result = results[i];
+    if (!transaction || !result) continue;
 
-    const batchItem: ProgressBatchItem = {
-      description: transaction.description.slice(0, 50),
-      status: 'processing',
-    };
+    pushClassified(buckets, result);
+    if (result.errorEntry) errors.push(result.errorEntry);
+
     if (onProgress) {
-      appendBatchItem(currentBatch, batchItem);
+      appendBatchItem(currentBatch, {
+        description: transaction.description.slice(0, 50),
+        status: result.batchStatus,
+        ...(result.errorEntry ? { error: result.errorEntry.error } : {}),
+      });
       onProgress({ processedCount: i + 1, currentBatch: [...currentBatch] });
     }
-
-    const result = await processTransactionSafely({ db, transaction, context, counters });
-    pushClassified(buckets, result);
-    batchItem.status = result.batchStatus;
-    if (result.errorEntry) {
-      batchItem.error = result.errorEntry.error;
-      if (onProgress) errors.push(result.errorEntry);
-    }
-
-    if (onProgress) onProgress({ currentBatch: [...currentBatch] });
   }
 
   return { errors };

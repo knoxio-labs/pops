@@ -12,14 +12,6 @@ import { buildSuggestedTags } from './tag-management.js';
 import type { EntityLookupEntry } from '../../../db/index.js';
 import type { ErrorEntry, ParsedTransaction, ProcessedTransaction } from './types.js';
 
-export interface AiCategorizationResult {
-  entityName: string;
-  aiTags: string[];
-  aiCategory: string | null;
-  /** The model's reported confidence (0.0-1.0) that `entityName` is correct (CF037/#3655). */
-  confidence: number;
-}
-
 export interface MatchedFromEntityArgs {
   transaction: ParsedTransaction;
   entry: EntityLookupEntry;

@@ -75,6 +75,21 @@ describe('finance.entities.list', () => {
     const call = entities.list.mock.lastCall?.[0];
     expect((call as Record<string, unknown>)['type']).toBe('company');
   });
+
+  it('declares its valid type values in the tool schema (CF073)', () => {
+    const properties = tool.inputSchema.properties as
+      | Record<string, { enum?: readonly string[] }>
+      | undefined;
+    expect(properties?.['type']?.enum).toEqual([
+      'company',
+      'person',
+      'government',
+      'bank',
+      'place',
+      'brand',
+      'organisation',
+    ]);
+  });
 });
 
 describe('finance.budgets.list', () => {

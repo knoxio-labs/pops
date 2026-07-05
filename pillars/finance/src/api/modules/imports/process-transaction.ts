@@ -2,21 +2,25 @@
  * Single-transaction classification: correction rules → transfer heuristic →
  * entity matcher → AI fallback → no-match.
  *
- * Ported from the monolith `lib/process-transaction.ts`, db-injected. The AI
- * stage calls `categorizeWithAi`; when the categorizer is disabled (the
- * default) it returns `{ result: null }` so the no-match reason is
- * `'No entity match found'` and the AI counters stay zero. An
- * `AiCategorizationError` (enabled but key/API failure) degrades to an
- * uncertain row with reason `'AI categorization unavailable'`.
+ * Ported from the monolith `lib/process-transaction.ts`, db-injected. The
+ * non-AI stages (`classifyWithoutAi`) and the AI-result finalizer
+ * (`finalizeAiResult`) are exported separately so the import batch resolver
+ * (`ai-batch-resolver.ts`, CP025/#3656) can run the cheap stages per row and
+ * defer the AI stage to a shared batched call instead of one round-trip per
+ * row; `classifyTransaction`/`processTransactionSafely` compose the same two
+ * pieces for a single row. When the categorizer is disabled (the default) it
+ * returns `{ result: null }` so the no-match reason is `'No entity match
+ * found'` and the AI counters stay zero. An `AiCategorizationError` (enabled
+ * but key/API failure) degrades to an uncertain row with reason `'AI
+ * categorization unavailable'`.
  */
 import { type EntityLookupEntry, type FinanceDb } from '../../../db/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
-import { categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
+import { type AiCacheEntry, categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
 import { applyLearnedCorrection } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
 import { buildKnownEntityHint } from './entity-vocabulary.js';
 import {
-  type AiCategorizationResult,
   buildFailure,
   buildMatchedFromEntity,
   buildMatchedTransfer,
@@ -47,6 +51,11 @@ export interface ProcessTransactionArgs {
   counters: AiCounters;
 }
 
+/** Outcome of the non-AI classification stages — either a final result, or a signal that the row needs the AI fallback. */
+export type ClassifyStageResult =
+  | { kind: 'resolved'; result: TransactionProcessResult }
+  | { kind: 'needsAi' };
+
 function tryEntityMatch(
   db: FinanceDb,
   transaction: ParsedTransaction,
@@ -65,11 +74,55 @@ function tryEntityMatch(
   });
 }
 
+/**
+ * Run the correction/transfer/entity-match ladder for one row, without ever
+ * calling the AI. Returns `{kind:'needsAi'}` when none of those stages
+ * resolve it, so the caller can route the row to either the single-row AI
+ * fallback (`classifyTransaction`) or a shared batched call
+ * (`ai-batch-resolver.ts`).
+ */
+export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageResult {
+  const { db, transaction, context } = args;
+
+  const correctionApplied = applyLearnedCorrection(db, {
+    transaction,
+    minConfidence: 0.7,
+    knownTags: context.knownTags,
+    entityDefaultTags: context.entityDefaultTags,
+  });
+  if (correctionApplied) {
+    return {
+      kind: 'resolved',
+      result: {
+        [correctionApplied.bucket]: correctionApplied.processed,
+        batchStatus: 'success',
+      } as TransactionProcessResult,
+    };
+  }
+
+  if (isTransferOrIncomeRow(transaction)) {
+    return {
+      kind: 'resolved',
+      result: {
+        matched: buildMatchedTransfer(db, transaction, context.knownTags),
+        batchStatus: 'success',
+      },
+    };
+  }
+
+  const entityMatched = tryEntityMatch(db, transaction, context);
+  if (entityMatched) {
+    return { kind: 'resolved', result: { matched: entityMatched, batchStatus: 'success' } };
+  }
+
+  return { kind: 'needsAi' };
+}
+
 async function tryAiCategorization(
   transaction: ParsedTransaction,
   context: ProcessContext,
   counters: AiCounters
-): Promise<AiCategorizationResult | null> {
+): Promise<AiCacheEntry | null> {
   let call: Awaited<ReturnType<typeof categorizeWithAi>>;
   try {
     call = await categorizeWithAi(
@@ -95,13 +148,7 @@ async function tryAiCategorization(
   } else if (result) {
     counters.aiCacheHits++;
   }
-  if (!result?.entityName) return null;
-  return {
-    entityName: result.entityName,
-    aiTags: result.tags ?? [],
-    aiCategory: result.tags?.length ? null : (result.category ?? null),
-    confidence: result.confidence,
-  };
+  return result;
 }
 
 /**
@@ -123,66 +170,40 @@ function resolveAiEntity(
   return canonicalName ? context.entityLookup.get(canonicalName.toLowerCase()) : undefined;
 }
 
-function resolveAiResult(
-  db: FinanceDb,
-  transaction: ParsedTransaction,
-  ai: AiCategorizationResult,
-  context: ProcessContext
-): ProcessedTransaction {
-  const entry = resolveAiEntity(ai.entityName, context);
-  if (entry) {
-    return buildMatchedFromEntity(db, {
-      transaction,
-      entry,
-      matchType: 'ai',
-      aiTags: ai.aiTags,
-      category: ai.aiCategory,
-      confidence: ai.confidence,
-      knownTags: context.knownTags,
-      entityDefaultTags: context.entityDefaultTags,
-    });
-  }
-  return buildUncertainFromAi(db, {
-    transaction,
-    entityName: ai.entityName,
-    aiTags: ai.aiTags,
-    aiCategory: ai.aiCategory,
-    confidence: ai.confidence,
-    knownTags: context.knownTags,
-  });
-}
-
-async function classifyTransaction(
-  args: ProcessTransactionArgs
-): Promise<TransactionProcessResult> {
+/**
+ * Turn an AI categorization outcome (or `null`, on a disabled/failed/no-op
+ * call) into the row's final `TransactionProcessResult`. Shared by the
+ * single-row path (`classifyTransaction`) and the batched import resolver, so
+ * both routes bucket a batch reply exactly like a live per-row call would.
+ */
+export function finalizeAiResult(
+  args: ProcessTransactionArgs,
+  aiEntry: AiCacheEntry | null
+): TransactionProcessResult {
   const { db, transaction, context, counters } = args;
-
-  const correctionApplied = applyLearnedCorrection(db, {
-    transaction,
-    minConfidence: 0.7,
-    knownTags: context.knownTags,
-    entityDefaultTags: context.entityDefaultTags,
-  });
-  if (correctionApplied) {
-    return {
-      [correctionApplied.bucket]: correctionApplied.processed,
-      batchStatus: 'success',
-    } as TransactionProcessResult;
-  }
-
-  if (isTransferOrIncomeRow(transaction)) {
-    return {
-      matched: buildMatchedTransfer(db, transaction, context.knownTags),
-      batchStatus: 'success',
-    };
-  }
-
-  const entityMatched = tryEntityMatch(db, transaction, context);
-  if (entityMatched) return { matched: entityMatched, batchStatus: 'success' };
-
-  const aiResult = await tryAiCategorization(transaction, context, counters);
-  if (aiResult?.entityName) {
-    const processed = resolveAiResult(db, transaction, aiResult, context);
+  if (aiEntry?.entityName) {
+    const aiTags = aiEntry.tags ?? [];
+    const aiCategory = aiEntry.tags?.length ? null : (aiEntry.category ?? null);
+    const entry = resolveAiEntity(aiEntry.entityName, context);
+    const processed = entry
+      ? buildMatchedFromEntity(db, {
+          transaction,
+          entry,
+          matchType: 'ai',
+          aiTags,
+          category: aiCategory,
+          confidence: aiEntry.confidence,
+          knownTags: context.knownTags,
+          entityDefaultTags: context.entityDefaultTags,
+        })
+      : buildUncertainFromAi(db, {
+          transaction,
+          entityName: aiEntry.entityName,
+          aiTags,
+          aiCategory,
+          confidence: aiEntry.confidence,
+          knownTags: context.knownTags,
+        });
     const bucket = processed.status === 'matched' ? 'matched' : 'uncertain';
     return { [bucket]: processed, batchStatus: 'success' } as TransactionProcessResult;
   }
@@ -192,6 +213,17 @@ async function classifyTransaction(
     uncertain: buildUncertainNoMatch(db, transaction, reason, context.knownTags),
     batchStatus: 'success',
   };
+}
+
+async function classifyTransaction(
+  args: ProcessTransactionArgs
+): Promise<TransactionProcessResult> {
+  const staged = classifyWithoutAi(args);
+  if (staged.kind === 'resolved') return staged.result;
+
+  const { transaction, context, counters } = args;
+  const aiEntry = await tryAiCategorization(transaction, context, counters);
+  return finalizeAiResult(args, aiEntry);
 }
 
 export async function processTransactionSafely(

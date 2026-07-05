@@ -139,3 +139,64 @@ describe('createMcpServer — CallTool handler', () => {
     expect(mockToolHandler).toHaveBeenCalledWith({});
   });
 });
+
+describe('createMcpServer — CallTool structured logging (CF087)', () => {
+  beforeEach(() => {
+    capturedHandlers.clear();
+    mockToolHandler.mockClear();
+    createMcpServer();
+  });
+
+  it('logs tool=<name> status=ok with a latency on success', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+
+    await handler({ params: { name: 'test.echo', arguments: {} } });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/tool=test\.echo status=ok latencyMs=\d+/)
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('logs tool=<name> status=error with the failure message on a thrown exception', async () => {
+    mockToolHandler.mockRejectedValueOnce(new Error('upstream failed'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+
+    await handler({ params: { name: 'test.echo', arguments: {} } });
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/tool=test\.echo status=error latencyMs=\d+ error=upstream failed/)
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('logs tool=<name> status=error for a result that carries isError', async () => {
+    mockToolHandler.mockResolvedValueOnce({
+      content: [{ type: 'text', text: 'bad request' }],
+      isError: true,
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+
+    await handler({ params: { name: 'test.echo', arguments: {} } });
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/tool=test\.echo status=error latencyMs=\d+/)
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('logs an unknown-tool call as an error with no latency crash', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+
+    await handler({ params: { name: 'no.such.tool', arguments: {} } });
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/tool=no\.such\.tool status=error latencyMs=\d+ error=unknown tool/)
+    );
+    errorSpy.mockRestore();
+  });
+});
