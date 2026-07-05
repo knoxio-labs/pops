@@ -2,10 +2,12 @@
  * Up Bank webhook route tests.
  *
  * Exercises the signature-verification contract end-to-end through Express:
- * missing header → 401, bad signature → 403, valid signature → 200, the
- * `UP_WEBHOOK_SECRET_FILE` secret source, the missing-secret → 500 path, and
- * the liveness ping. The app under test wires the same path-scoped raw parser
- * the real factory uses, so the Buffer-body assumption is covered too.
+ * missing header → 401, bad (short) signature → 403, bad (same-length)
+ * signature → 403 (exercises the `timingSafeEqual` branch, not just the
+ * length-mismatch guard), valid signature → 200, the `UP_WEBHOOK_SECRET_FILE`
+ * secret source, the missing-secret → 500 path, and the liveness ping. The
+ * app under test wires the same path-scoped raw parser the real factory
+ * uses, so the Buffer-body assumption is covered too.
  */
 import { createHmac } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -69,6 +71,22 @@ describe('POST /webhooks/up', () => {
       .post('/webhooks/up')
       .set('content-type', 'application/json')
       .set('x-up-authenticity-signature', 'not-the-real-hmac')
+      .send(EVENT_BODY);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: 'Invalid signature' });
+  });
+
+  it('rejects a same-length signature that differs only in its last character (403)', async () => {
+    // Exercises the crypto.timingSafeEqual comparison itself, not just the
+    // length-mismatch short-circuit ahead of it.
+    const real = sign(EVENT_BODY);
+    const tampered = real.slice(0, -1) + (real.at(-1) === '0' ? '1' : '0');
+
+    const res = await supertest(buildApp())
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', tampered)
       .send(EVENT_BODY);
 
     expect(res.status).toBe(403);

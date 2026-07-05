@@ -9,8 +9,15 @@
  *
  * The endpoint bypasses gateway auth by design (Cloudflare Access excludes the
  * Up webhook path); authenticity is established by the signature check alone.
+ *
+ * Explicit no-op: the handler verifies the signature and acknowledges every
+ * event with `200`, as Up requires, but does not fetch or persist the
+ * transaction — batch + webhook persistence is tracked in full at
+ * `docs/ideas/up-bank-api-import.md` and knoxio/pops#1874. Ingestion staying
+ * silent is surfaced separately via the `import` staleness fields on
+ * `GET /health` (see `handlers.ts`), not by this route.
  */
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { type Router as ExpressRouter, Router } from 'express';
@@ -27,8 +34,10 @@ function getWebhookSecret(): string {
 
 function verifySignature(body: Buffer, signature: string): boolean {
   const secret = getWebhookSecret();
-  const expected = createHmac('sha256', secret).update(body).digest('hex');
-  return expected === signature;
+  const expected = Buffer.from(createHmac('sha256', secret).update(body).digest('hex'), 'utf8');
+  const provided = Buffer.from(signature, 'utf8');
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(expected, provided);
 }
 
 /**
@@ -62,7 +71,9 @@ export function createUpBankWebhookRouter(): ExpressRouter {
     const eventType = payload.data?.attributes?.eventType;
     const transactionId = payload.data?.relationships?.transaction?.data?.id;
 
-    console.warn(`[webhook/up] Event: ${eventType}, Transaction: ${transactionId}`);
+    console.warn(
+      `[webhook/up] no-op (tracked: knoxio/pops#1874) — event=${eventType} transaction=${transactionId}`
+    );
 
     res.status(200).json({ received: true });
   });
