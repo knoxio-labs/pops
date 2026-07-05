@@ -5,9 +5,10 @@
  * each row maps a description pattern (exact/contains/regex) to a list of
  * suggested tags, optionally scoped to an entity. The `tags` column is a
  * JSON-encoded `string[]` — there is no SQL foreign key from `tags` to
- * `tag_vocabulary.tag` (the only schema-level FK is `entity_id` →
- * `entities.id`). The logical relationship to the vocabulary is enforced
- * at the application layer.
+ * `tag_vocabulary.tag`, and `entity_id` carries no schema-level FK either:
+ * entities live in the `contacts` pillar, not this DB, so `entity_id` is an
+ * opaque foreign id this table cannot enforce at the schema level. Both
+ * relationships are the caller's responsibility to keep consistent.
  *
  * Standard service pattern: db-arg services (callers control the connection
  * and can pass a transaction), plain functions, typed domain errors, no HTTP

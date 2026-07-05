@@ -259,11 +259,11 @@ External APIs: Finance = Up API (webhooks) + ANZ/Amex/ING CSV | Media = Plex/TMD
 
 ### Finance
 
-1. Bank data arrives (Up webhook or CSV download).
-2. Import script parses, normalizes, cleans.
-3. Entity matching: aliases → exact → prefix → contains → AI fallback (cached).
-4. Deduplication: date + amount count-based against existing records.
-5. Write to the finance pillar's SQLite DB.
+1. Bank data arrives as a CSV export, uploaded through the Import Wizard (Up Bank ships only a signature-verified webhook that logs and drops the event — no batch import or webhook persistence yet).
+2. The wizard parses the CSV client-side (Papa Parse), maps columns, and builds `ParsedTransaction[]`, each row carrying a canonical SHA-256 dedup checksum.
+3. `POST /imports/process` partitions the batch by checksum against existing transactions (dedup), then runs the entity-matching ladder on survivors — see [Import Pipeline](#import-pipeline).
+4. Steps 4–6 of the wizard (review entities, tag review, rule creation) buffer every edit, entity creation, and rule ChangeSet locally; nothing is written to SQLite yet.
+5. `POST /imports/commit` writes entities, correction/tag-rule ChangeSets, and transactions in one atomic pass, then retroactively reclassifies existing rows against the updated rule set.
 
 ### Media
 
@@ -282,19 +282,20 @@ External APIs: Finance = Up API (webhooks) + ANZ/Amex/ING CSV | Media = Plex/TMD
 
 ## Import Pipeline
 
-User-facing entry point: the **Import Wizard** (multi-step UI in `pillars/finance/app`), driving the pipeline in `pillars/finance/src/api/modules/imports/`.
+User-facing entry point: the **Import Wizard** (8-step UI in `pillars/finance/app`), driving the pipeline in `pillars/finance/src/api/modules/imports/`. Dedup runs first (checksum probe against existing transactions), then the survivors run through the entity-matching ladder below.
 
-**Entity Matching Chain** — highest priority first:
+**Entity Matching Chain** — highest priority first, first hit wins:
 
-1. **Learned corrections** — fuzzy match on normalized description against `v_active_corrections`.
-2. **Manual aliases** — case-insensitive substring match from per-entity alias map.
-3. **Exact match** — full description equals entity name.
-4. **Prefix match** — description starts with entity name (longest wins).
-5. **Contains match** — entity name anywhere in description (min 4 chars, longest wins).
-6. **Punctuation stripping** — strip apostrophes, retry stages 2–5.
-7. **AI fallback** — Claude Haiku API call, cached to disk + DB, rate-limited.
+1. **Learned corrections** — `findAllMatchingTransactionCorrectionsFromDb` scans active `transaction_corrections` rows (`confidence >= 0.7`) ordered `priority ASC, id ASC`; the first whose pattern matches wins. Match types are `exact` / `contains` / `regex` — not fuzzy. `>= 0.9` confidence → `matched`, else `uncertain`.
+2. **Transfer/income heuristic** — rows that look like transfers/income short-circuit to a `matched` transfer with no entity.
+3. **Manual aliases** — case-insensitive substring match from per-entity alias map.
+4. **Exact match** — full description equals entity name.
+5. **Prefix match** — description starts with entity name (longest wins).
+6. **Contains match** — entity name anywhere in description (min 4 chars, longest wins).
+7. **Punctuation stripping** — strip apostrophes/backticks, retry stages 3–6.
+8. **AI fallback** — Claude Haiku API call, env-gated (`FINANCE_AI_CATEGORIZER_ENABLED`, default off), no disk or DB cache, exponential-backoff retry on 429 (max 5 attempts). Any failure is non-fatal — the row degrades to `uncertain`.
 
-Hit rate ~95–100% with aliases; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine/`.
+Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine.md`.
 
 ---
 
@@ -427,7 +428,7 @@ pages/
 
 ## Design Context
 
-Full context in `.impeccable.md`.
+Design tokens live in `libs/ui/src/theme/globals.css`; every app UI answers to the principles below.
 
 - **Personality:** Precise, Warm, Confident. Linear's clarity + Up Bank's approachability. **Emotions:** Confidence ("everything is under control") and calm focus ("no noise, just signal").
 - **Anti-patterns:** Generic SaaS dashboards; brutalist/raw developer aesthetics.

@@ -70,6 +70,10 @@ Approval and persistence ride the imports sub-router, not corrections:
 - [x] `POST /corrections/revise-changeset` rewrites an in-progress ChangeSet from a free-text instruction and validates the AI output against the ChangeSet schema.
 - [x] Every Claude call reports usage/cost to the ai pillar via `@pops/ai-telemetry`; rules written in a prior commit benefit the next import.
 
+## Not Built (see ideas)
+
+- Confidence-threshold-gated confirmation UI, in-session re-suggestion suppression, and a background batch driver → [ideas/ai-rule-creation-gaps](../ideas/ai-rule-creation-gaps.md).
+
 ## Out of Scope
 
 - AI usage tracking UI (owned by the AI pillar).
