@@ -9,8 +9,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "generate:api": "openapi-ts && oxfmt --write src/ai-api",
-    "generate:finance-client": "openapi-ts -f openapi-ts.finance.config.ts && oxfmt --write src/finance-api"
+    "generate:api": "openapi-ts && oxfmt --write src/ai-api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
@@ -32,7 +31,6 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.98.2",
-    "@pops/finance": "workspace:*",
     "@pops/locales": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

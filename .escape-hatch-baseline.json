@@ -23,15 +23,6 @@
   "pillars/cerebrum/scripts/generate-openapi.ts": {
     "as unknown as": 2
   },
-  "pillars/finance/app/src/components/imports/correction-proposal/workflow/WorkflowSlots.tsx": {
-    "eslint-disable": 1
-  },
-  "pillars/finance/app/src/components/imports/processing/useProcessing.ts": {
-    "eslint-disable": 1
-  },
-  "pillars/finance/app/src/components/imports/tag-rule-dialog/useTagRuleProposal.ts": {
-    "eslint-disable": 1
-  },
   "pillars/finance/scripts/generate-openapi.ts": {
     "as unknown as": 2
   },
