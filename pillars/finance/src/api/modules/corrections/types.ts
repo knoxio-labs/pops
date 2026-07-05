@@ -32,6 +32,18 @@ export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMa
 }
 
 /**
+ * A rule's usable entity id, or `null` when it carries none. The corrections
+ * schema stores `entityId` verbatim and allows any string, so a blank or
+ * whitespace-only value is not a real entity and must be treated as entity-less
+ * — otherwise it slips past the "has entity" gate and can auto-apply (or, in
+ * reclassification, overwrite a real merchant with an invalid id).
+ */
+export function normalizeEntityId(entityId: string | null | undefined): string | null {
+  const trimmed = entityId?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
  * Resolve the status a correction rule yields when applied automatically —
  * shared by live import and retroactive reclassification so both gate on the
  * same routing:
@@ -45,11 +57,13 @@ export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMa
  *   confidence-based classification.
  * - A rule that provides neither an entity nor a transaction type has nothing to
  *   apply and yields `null`.
+ *
+ * A blank/whitespace `entityId` counts as entity-less (see {@link normalizeEntityId}).
  */
 export function resolveCorrectionApplyStatus(
   correction: CorrectionRow
 ): CorrectionMatchStatus | null {
-  if (correction.entityId) return classifyCorrectionMatch(correction).status;
+  if (normalizeEntityId(correction.entityId)) return classifyCorrectionMatch(correction).status;
   if (!correction.transactionType) return null;
   return correction.transactionType === 'purchase'
     ? 'uncertain'

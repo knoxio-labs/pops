@@ -15,6 +15,7 @@ import { type FinanceDb, transactionCorrections, transactions } from '../../../d
 import {
   type CorrectionRow,
   findMatchingCorrectionFromRules,
+  normalizeEntityId,
   resolveCorrectionApplyStatus,
 } from '../corrections/index.js';
 
@@ -46,7 +47,7 @@ function providedEntityChange(
   txn: BatchTxn,
   rule: CorrectionRow
 ): { entityId: string; entityName: string | null } | null {
-  const ruleEntityId = rule.entityId ?? null;
+  const ruleEntityId = normalizeEntityId(rule.entityId);
   if (ruleEntityId === null || ruleEntityId === (txn.entityId ?? null)) return null;
   return { entityId: ruleEntityId, entityName: rule.entityName ?? null };
 }

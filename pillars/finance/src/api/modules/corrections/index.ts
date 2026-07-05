@@ -23,6 +23,7 @@ export {
 export {
   classifyCorrectionMatch,
   resolveCorrectionApplyStatus,
+  normalizeEntityId,
   parseCorrectionTags,
   HIGH_CONFIDENCE_THRESHOLD,
   type CorrectionMatchResult,

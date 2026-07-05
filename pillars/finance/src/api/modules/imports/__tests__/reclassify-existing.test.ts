@@ -146,6 +146,29 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
     expect(row.entityName).toBe('My Bank');
   });
 
+  it('treats a whitespace-only entityId as entity-less: never overwrites a merchant with a blank id', () => {
+    const txnId = seedTxn({
+      description: 'TRANSFER TO SAVINGS',
+      type: 'Expense',
+      entityId: 'ent-existing',
+      entityName: 'My Bank',
+    });
+    seedRule({
+      descriptionPattern: 'TRANSFER TO SAVINGS',
+      entityId: '   ',
+      entityName: null,
+      transactionType: 'transfer',
+      confidence: 0.99,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    const row = readTxn(txnId);
+    expect(row.type).toBe('Transfer');
+    expect(row.entityId).toBe('ent-existing');
+    expect(row.entityName).toBe('My Bank');
+  });
+
   it('applies a confident (>=0.9) entity rule: sets entity and type', () => {
     const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
     seedRule({
