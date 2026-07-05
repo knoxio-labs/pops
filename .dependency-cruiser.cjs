@@ -28,7 +28,7 @@ module.exports = {
         path: [
           '^pillars/',
           // KNOWN_PILLAR_IDS (disk-derived; `core` is now `registry` post-rename):
-          '^@pops/(ai|cerebrum|contacts|registry|docs|finance|food|inventory|lists|mcp|media|moltbot|orchestrator|shell)(/|$)',
+          '^@pops/(ai|cerebrum|contacts|registry|docs|documents|finance|food|inventory|lists|mcp|media|moltbot|orchestrator|shell)(/|$)',
           '^@pops/app-',
         ],
       },

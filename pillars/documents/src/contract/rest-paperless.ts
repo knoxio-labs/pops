@@ -1,15 +1,15 @@
 /**
  * `paperless.*` sub-router — Paperless-ngx integration status + document
- * search proxy. Search returns 412 when Paperless is not configured.
+ * search. This is the canonical wire definition for the documents pillar's
+ * paperless bridge (ADR-035 / ADR-039); `search` returns 412 when Paperless
+ * is not configured.
  *
- * Inventory's own wire contract, unchanged by the ADR-039 workstream-13
- * move: the paperless-ngx integration itself (the HTTP client, the raw
- * thumbnail proxy) now lives in the `documents` bridge pillar
- * (`pillars/documents/src/contract/rest-paperless.ts`, the canonical
- * definition). This copy stays so inventory's frontend keeps calling its
- * own backend unchanged; the handler implementation
- * (`../api/rest/paperless-handlers.ts`) now proxies to
- * `pillar('documents')` instead of an embedded client.
+ * Moved from `pillars/inventory/src/contract/rest-paperless.ts` (workstream
+ * 13, ADR-039 invariant 3): the documents pillar now owns the paperless
+ * integration. Inventory keeps its own identically-shaped pass-through
+ * contract for its frontend, backed by a `pillar('documents')` proxy call
+ * instead of an embedded client — see
+ * `pillars/inventory/src/api/documents/client.ts`.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { ErrorBodySchema } from './rest-schemas.js';
 
 const c = initContract();
 
-export const inventoryPaperlessContract = c.router({
+export const documentsPaperlessContract = c.router({
   status: {
     method: 'GET',
     path: '/paperless/status',

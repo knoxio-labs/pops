@@ -9,6 +9,7 @@ import { getPillarRegistry } from './pillars/registry.js';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedInventoryDb } from '../db/index.js';
+import type { DocumentsClient } from './documents/client.js';
 
 export interface InventoryApiDeps {
   /** Open handle to the inventory pillar's SQLite. */
@@ -21,6 +22,13 @@ export interface InventoryApiDeps {
    * have to special-case the host pillar.
    */
   selfBaseUrl: string;
+  /**
+   * The `documents` pillar client backing the `paperless.*` handlers.
+   * Optional — production omits it (defaults to the live
+   * `pillar('documents')` proxy); tests inject a stub. See
+   * `pillars/inventory/src/api/rest/handlers.ts`.
+   */
+  documents?: DocumentsClient;
 }
 
 export interface HealthResponse {

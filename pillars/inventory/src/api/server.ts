@@ -17,6 +17,7 @@ import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bo
 
 import { openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
+import { createDocumentsClient } from './documents/client.js';
 import { resolveInventorySqlitePath } from './inventory-sqlite-path.js';
 import { buildInventoryCapabilityReporter, buildInventoryManifest } from './manifest.js';
 import { parseBareOrigin } from './pillars/env.js';
@@ -56,7 +57,12 @@ function resolveSelfBaseUrl(): string {
 const selfBaseUrl = resolveSelfBaseUrl();
 
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
-const app = createInventoryApiApp({ inventoryDb, version, selfBaseUrl });
+const app = createInventoryApiApp({
+  inventoryDb,
+  version,
+  selfBaseUrl,
+  documents: createDocumentsClient(),
+});
 
 const server = app.listen(port, () => {
   console.warn(`[inventory-api] Listening on port ${port}`);
