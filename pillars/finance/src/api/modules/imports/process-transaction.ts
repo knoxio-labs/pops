@@ -79,6 +79,7 @@ async function tryAiCategorization(
   } catch (err) {
     if (err instanceof AiCategorizationError) {
       counters.aiError = true;
+      counters.aiFailureCount++;
       return null;
     }
     throw err;
