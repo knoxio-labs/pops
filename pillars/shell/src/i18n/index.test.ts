@@ -262,7 +262,7 @@ describe('translation lookups', () => {
 
   it('resolves ai namespace keys', () => {
     expect(i18n.t('ai:observability')).toBe('AI Observability');
-    expect(i18n.t('ai:cache.title')).toBe('Cache Management');
+    expect(i18n.t('ai:kpi.cacheHitRate')).toBe('Cache Hit Rate');
   });
 
   it('resolves finance rules and prompt-template keys (moved out of ai)', () => {

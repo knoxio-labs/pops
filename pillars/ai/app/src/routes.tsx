@@ -15,10 +15,6 @@ const AiUsagePage = lazy(() =>
   import('./pages/AiUsagePage').then((m) => ({ default: m.AiUsagePage }))
 );
 
-const CacheManagementPage = lazy(() =>
-  import('./pages/CacheManagementPage').then((m) => ({ default: m.CacheManagementPage }))
-);
-
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
   id: string;
@@ -37,10 +33,7 @@ export const navConfig = {
   icon: 'Bot',
   color: 'violet',
   basePath: '/ai',
-  items: [
-    { path: '', label: 'AI Usage', labelKey: 'ai.usage', icon: 'BarChart3' },
-    { path: '/cache', label: 'Cache', labelKey: 'ai.cache', icon: 'Database' },
-  ],
+  items: [{ path: '', label: 'AI Usage', labelKey: 'ai.usage', icon: 'BarChart3' }],
 } satisfies AppNavConfigShape;
 
 export const routes: RouteObject[] = [
@@ -48,5 +41,4 @@ export const routes: RouteObject[] = [
   { path: 'prompts', element: <Navigate to="/finance/prompts" replace /> },
   { path: 'config', element: <Navigate to="/settings#ai.config" replace /> },
   { path: 'rules', element: <Navigate to="/finance/rules" replace /> },
-  { path: 'cache', element: <CacheManagementPage /> },
 ];

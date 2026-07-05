@@ -18,20 +18,6 @@
   "kpi.totalCallsDesc": "{{count}} tokens",
   "kpi.totalCostDesc": "{{count}} chamadas totais",
 
-  "cache.title": "Gerenciamento de Cache",
-  "cache.description": "Visualizar e gerenciar o cache de categorização de entidades por IA",
-  "cache.totalEntries": "Total de Entradas",
-  "cache.cachedCategorisations": "Categorizações de entidades em cache",
-  "cache.diskSize": "Tamanho em Disco",
-  "cache.diskSizeDesc": "Tamanho aproximado do arquivo de cache",
-  "cache.hitRate": "Taxa de Acerto",
-  "cache.cachedResults": "{{count}} resultados em cache",
-  "cache.failedToLoad": "Falha ao carregar estatísticas do cache",
-  "cache.breadcrumb": "Uso de IA",
-  "cache.staleDaysLabel": "Limite de dias para entradas obsoletas",
-  "cache.clearStale": "Limpar Obsoletas",
-  "cache.clearAll": "Limpar Tudo",
-
   "dateFilter.startDate": "Data inicial",
   "dateFilter.endDate": "Data final"
 }

@@ -96,7 +96,7 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 
 **Pillar kinds (ADR-035):** a pillar is any service registered with `registry` that exposes `/manifest.json`. **Data** pillars own a domain DB; **bridge** pillars adapt external systems; **UI** pillars host frontend SPAs (`pops-shell` registers as `id: 'shell'`).
 
-**Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`).
+**Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its OWN pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Backend-to-backend cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`); a browser page that needs another pillar's data directly uses a sanctioned **per-consumer generated client** instead — see [Cross-pillar generated FE clients](#cross-pillar-generated-fe-clients) and [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md).
 
 `docs/roadmap.md` is the implementation tracker — single source of truth for status across all pillars.
 
@@ -422,6 +422,12 @@ pages/
 - **JSON columns** — stored as TEXT, parsed on read (e.g. tags, genres).
 - **Env vars** — read via a pillar env accessor (e.g. `getEnv()`), which reads `process.env`. Production secrets are Docker file-based secrets mounted at `/run/secrets/` (see Security) — a separate mechanism, not read by `getEnv()`.
 - Schema changes go through Drizzle per pillar (generate/review/migrate flow — see Production hard rule).
+
+### Cross-pillar generated FE clients
+
+A pillar's app talks to its OWN backend over the client `generate:api` produces. When one pillar's frontend needs to read another pillar's data directly (not through a backend proxy), it gets its own **per-consumer** Hey API client instead of reaching for `@pops/pillar-sdk` (that SDK is for backend-to-backend calls only): `pnpm --filter <app> generate:<pillar>-client`, projecting the producer's `./openapi` package export (or a vendored snapshot per [ADR-033](docs/architecture/adr-033-cross-language-pillar-contracts.md) when the producer has no npm package, e.g. the Rust `contacts` pillar) to `src/<pillar>-api/`. Live legs: `food/app` -> `lists`, `finance/app` -> `contacts`.
+
+This is sanctioned, not incidental — but every leg is **mandatory-gated**: CI (`cross-pillar-clients` job, `.github/workflows/quality.yml`) regenerates each leg's client from the producer's current contract and fails the build on any diff, so a producer-side change can't ship without the consumer's committed client following. Adding a new leg means adding it to that job's regenerate + diff step, not just wiring the codegen config. See [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md) for the full decision, including why hand-duplicated Rust wire-contract twins (`libs/pops-settings`, `libs/pops-ai`) are a different, currently-consumerless case that doesn't yet need the same treatment.
 
 ---
 

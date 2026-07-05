@@ -128,7 +128,6 @@ export function buildRouter(
         { path: 'cerebrum/admin', element: <Navigate to="/ai" replace /> },
         { path: 'cerebrum/admin/prompts', element: <Navigate to="/finance/prompts" replace /> },
         { path: 'cerebrum/admin/rules', element: <Navigate to="/finance/rules" replace /> },
-        { path: 'cerebrum/admin/cache', element: <Navigate to="/ai/cache" replace /> },
         { path: 'settings', element: <SettingsPage /> },
         { path: 'features', element: <FeaturesPage /> },
         // Catch-all: if the first path segment names a buildable module

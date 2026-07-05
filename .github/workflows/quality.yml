@@ -323,6 +323,40 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  cross-pillar-clients:
+    name: Cross-pillar generated FE clients (ADR-040)
+    # Per-consumer generated FE clients (a consumer app's own Hey API client
+    # for a producer pillar's contract, e.g. food/app <- lists, finance/app
+    # <- contacts) are a sanctioned but easily-forgotten seam: nothing forces
+    # a regenerate when the producer's contract changes, so the committed
+    # client can silently outrun it (see ADR-040 and AGENTS.md "Cross-pillar
+    # generated FE clients"). This regenerates every such client from its
+    # producer's current `./openapi` export and fails on any diff. The
+    # `contacts` leg additionally vendors its OpenAPI snapshot (ADR-033); that
+    # copy's own drift is covered separately by the `vendored-contracts` job
+    # above — this job only re-runs codegen against whatever is committed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Regenerate every per-consumer cross-pillar client
+        run: |
+          pnpm --filter @pops/app-food generate:lists-client
+          pnpm --filter @pops/app-finance generate:contacts-client
+      - name: Verify generated clients are up to date
+        run: |
+          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api; then
+            echo ""
+            echo "::error::A cross-pillar generated FE client is out of date."
+            echo "Run the owning app's generate:*-client script locally and commit the result."
+            exit 1
+          fi
+
   escape-hatches:
     name: Escape-hatch ratchet
     # Type-safety escape hatches (`as any`, `as unknown as`, `as never`,
