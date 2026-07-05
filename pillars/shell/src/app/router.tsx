@@ -72,9 +72,10 @@ function withSuspense(routes: readonly RouteObject[]): RouteObject[] {
  * the subtree renders the `PillarUnavailableRoute` placeholder when the
  * owning pillar's health is `'unavailable'` (ADR-026 P3).
  *
- * `pillarIdForModule` resolves modules with a dedicated in-repo pillar to
- * that pillar's own id; other modules fall back to the platform `registry`
- * pillar.
+ * `pillarIdForModule` resolves each module to its own pillar id (module ids
+ * are pillar ids for both in-repo and external, registry-synthesized pillars);
+ * only shell-hosted overlays with no backend pillar fall back to the platform
+ * `registry` pillar.
  */
 function appRouteEntries(manifests: readonly FrontendManifest[]): RouteObject[] {
   return filterAppManifests(manifests).map((manifest) => {
