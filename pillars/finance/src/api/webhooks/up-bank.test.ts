@@ -18,7 +18,7 @@ import express, { type Express } from 'express';
 import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createUpBankWebhookRouter } from './up-bank.js';
+import { __resetWebhookSecretCacheForTests, createUpBankWebhookRouter } from './up-bank.js';
 
 const SECRET = 'test-up-webhook-secret';
 
@@ -47,11 +47,13 @@ beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'up-bank-webhook-test-'));
   process.env['UP_WEBHOOK_SECRET'] = SECRET;
   delete process.env['UP_WEBHOOK_SECRET_FILE'];
+  __resetWebhookSecretCacheForTests();
 });
 
 afterEach(() => {
   delete process.env['UP_WEBHOOK_SECRET'];
   delete process.env['UP_WEBHOOK_SECRET_FILE'];
+  __resetWebhookSecretCacheForTests();
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -119,6 +121,41 @@ describe('POST /webhooks/up', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ received: true });
+  });
+
+  it('reuses the cached secret across requests instead of re-reading UP_WEBHOOK_SECRET_FILE (CF083/#3670)', async () => {
+    const originalSecret = 'secret-from-file';
+    const secretPath = join(tmpDir, 'up-secret');
+    writeFileSync(secretPath, `${originalSecret}\n`, 'utf-8');
+    delete process.env['UP_WEBHOOK_SECRET'];
+    process.env['UP_WEBHOOK_SECRET_FILE'] = secretPath;
+
+    const app = buildApp();
+    const first = await supertest(app)
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
+      .send(EVENT_BODY);
+    expect(first.status).toBe(200);
+
+    // Rewrite the secret file after the first request; a request signed with
+    // the ORIGINAL (cached) secret should still verify, and one signed with
+    // the new on-disk secret should not — proving the file isn't re-read.
+    writeFileSync(secretPath, 'rotated-secret\n', 'utf-8');
+
+    const stillUsesCached = await supertest(app)
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
+      .send(EVENT_BODY);
+    expect(stillUsesCached.status).toBe(200);
+
+    const rejectsRotated = await supertest(app)
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(EVENT_BODY, 'rotated-secret'))
+      .send(EVENT_BODY);
+    expect(rejectsRotated.status).toBe(403);
   });
 
   it('fails closed (500) when no webhook secret is configured', async () => {

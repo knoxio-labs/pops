@@ -226,7 +226,7 @@ describe('computeMergedRules', () => {
     expect(new Set(pendingIds).size).toBe(3);
   });
 
-  it('is memoized — same input refs return same output ref', () => {
+  it('is pure — same input refs recompute a fresh but equal output (no internal caching, CF082/#3670)', () => {
     const dbRules = [makeRule()];
     const pending = [
       makePendingChangeSet({
@@ -236,7 +236,8 @@ describe('computeMergedRules', () => {
 
     const result1 = computeMergedRules(dbRules, pending);
     const result2 = computeMergedRules(dbRules, pending);
-    expect(result1).toBe(result2);
+    expect(result1).not.toBe(result2);
+    expect(result1).toEqual(result2);
   });
 
   it('recomputes when input refs change', () => {
@@ -346,13 +347,14 @@ describe('computeMergedEntities', () => {
     expect(typeof result[0].lastEditedTime).toBe('string');
   });
 
-  it('is memoized — same input refs return same output ref', () => {
+  it('is pure — same input refs recompute a fresh but equal output (no internal caching, CF082/#3670)', () => {
     const dbEntities = [makeEntity()];
     const pending = [makePendingEntity()];
 
     const result1 = computeMergedEntities(dbEntities, pending);
     const result2 = computeMergedEntities(dbEntities, pending);
-    expect(result1).toBe(result2);
+    expect(result1).not.toBe(result2);
+    expect(result1).toEqual(result2);
   });
 
   it('recomputes when input refs change', () => {

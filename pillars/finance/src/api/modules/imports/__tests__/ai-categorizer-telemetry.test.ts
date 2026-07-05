@@ -16,8 +16,10 @@ vi.mock('@anthropic-ai/sdk', () => ({
   },
 }));
 
-const { categorizeWithAi } = await import('../ai-categorizer.js');
+const { categorizeWithAi, categorizeBatchWithAi } = await import('../ai-categorizer.js');
 const { __setFinanceTelemetryDepsForTests } = await import('../../ai-telemetry-deps.js');
+const { PROMPT_VERSION_CATEGORIZE, PROMPT_VERSION_CATEGORIZE_BATCH } =
+  await import('../ai-categorizer-prompt.js');
 
 const FLAG = 'FINANCE_AI_CATEGORIZER_ENABLED';
 const KEY = 'ANTHROPIC_API_KEY';
@@ -97,6 +99,7 @@ describe('categorizeWithAi — telemetry', () => {
     expect(record.outputTokens).toBe(20);
     expect(record.costUsd).toBeCloseTo(0.0002, 9);
     expect(record.contextId).toBe('import_batch:batch-9');
+    expect(record.promptVersion).toBe(PROMPT_VERSION_CATEGORIZE);
   });
 
   it('keeps the description out of telemetry (no raw row in contextId/metadata)', async () => {
@@ -124,5 +127,21 @@ describe('categorizeWithAi — telemetry', () => {
     expect(record.inputTokens).toBe(0);
     expect(record.outputTokens).toBe(0);
     expect(record.errorMessage).toBeDefined();
+  });
+});
+
+describe('categorizeBatchWithAi — telemetry (CF096/#3671)', () => {
+  it('tags the batch prompt with its own promptVersion, distinct from the single-row prompt', async () => {
+    const captured = captureReports();
+    createMock.mockResolvedValue(
+      textResponse('[{"entityName":"Woolworths","tags":["groceries"]}]')
+    );
+
+    await categorizeBatchWithAi([{ description: 'WOOLWORTHS 1234' }], 'batch-10', ['groceries']);
+    const record = await captured.nextReport();
+
+    expect(record.operation).toBe('imports.categorize_batch');
+    expect(record.promptVersion).toBe(PROMPT_VERSION_CATEGORIZE_BATCH);
+    expect(record.promptVersion).not.toBe(PROMPT_VERSION_CATEGORIZE);
   });
 });

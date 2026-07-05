@@ -9,17 +9,17 @@ import { extractJsonFromReply } from '../ai-json.js';
 import {
   callRawApi,
   entryFromParsed,
-  throwApiError,
   type ApiCallResponse,
   type RawCategorizerEntry,
 } from './ai-categorizer-api.js';
-import { AiCategorizationError } from './ai-categorizer-error.js';
+import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
   buildTransactionData,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
   knownTagsList,
+  PROMPT_VERSION_CATEGORIZE_BATCH,
   TAGS_RULES,
 } from './ai-categorizer-prompt.js';
 
@@ -85,6 +85,7 @@ export async function callBatchApi(opts: BatchApiCallOptions): Promise<ApiCallRe
     model: opts.model,
     maxTokens: opts.maxTokens,
     operation: CATEGORIZE_BATCH_OPERATION,
+    promptVersion: PROMPT_VERSION_CATEGORIZE_BATCH,
     ...(opts.contextId !== undefined ? { contextId: opts.contextId } : {}),
   });
 }

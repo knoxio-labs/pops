@@ -18,13 +18,14 @@ import { callWithLogging } from '@pops/ai-telemetry';
 import { extractJsonFromReply } from '../ai-json.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
-import { AiCategorizationError } from './ai-categorizer-error.js';
+import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
   buildTransactionData,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
   knownTagsList,
+  PROMPT_VERSION_CATEGORIZE,
   TAGS_RULES,
 } from './ai-categorizer-prompt.js';
 import { sanitizeEntityName } from './entity-name.js';
@@ -67,6 +68,8 @@ export interface RawApiCallOptions {
   maxTokens: number;
   operation: string;
   contextId?: string;
+  /** Versioned prompt tag for accept/reject telemetry joins (CF096/#3671). */
+  promptVersion?: string;
 }
 
 const SINGLE_KNOWN_ENTITY_INSTRUCTION =
@@ -93,7 +96,16 @@ ${CONFIDENCE_RULES}`;
 }
 
 export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallResponse> {
-  const { client, prompt, sanitizedDescription, model, maxTokens, operation, contextId } = opts;
+  const {
+    client,
+    prompt,
+    sanitizedDescription,
+    model,
+    maxTokens,
+    operation,
+    contextId,
+    promptVersion,
+  } = opts;
   const response = await callWithLogging(
     {
       provider: ANTHROPIC_PROVIDER,
@@ -101,6 +113,7 @@ export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallRespon
       operation,
       domain: FINANCE_DOMAIN,
       ...(contextId !== undefined ? { contextId } : {}),
+      ...(promptVersion !== undefined ? { promptVersion } : {}),
       call: async () => {
         const created = await withRateLimitRetry(
           () =>
@@ -139,6 +152,7 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
     model: opts.model,
     maxTokens: opts.maxTokens,
     operation: CATEGORIZE_OPERATION,
+    promptVersion: PROMPT_VERSION_CATEGORIZE,
     ...(opts.contextId !== undefined ? { contextId: opts.contextId } : {}),
   });
 }
@@ -192,49 +206,6 @@ export function buildEntryFromText(text: string): AiCacheEntry {
     );
   }
   return entryFromParsed(parsed);
-}
-
-interface ParsedApiError {
-  status: number;
-  message?: string;
-  error?: { error?: { message?: string } };
-}
-
-function isParsedApiError(error: unknown): error is ParsedApiError {
-  return typeof error === 'object' && error !== null && 'status' in error;
-}
-
-/** Maps a status-carrying API error to a specific `AiCategorizationError`, or `null` for the generic fallback. */
-function mapKnownApiError(apiError: ParsedApiError): AiCategorizationError | null {
-  if (apiError.status === 429) {
-    return new AiCategorizationError(
-      `Anthropic API rate limit exhausted: ${apiError.message ?? 'Too Many Requests'}`,
-      'RATE_LIMITED'
-    );
-  }
-  const creditMessage = apiError.error?.error?.message ?? apiError.message ?? '';
-  if (apiError.status === 400 && creditMessage.toLowerCase().includes('credit balance')) {
-    return new AiCategorizationError(
-      'Anthropic API credit balance too low. Please add credits at https://console.anthropic.com/settings/plans',
-      'INSUFFICIENT_CREDITS'
-    );
-  }
-  return null;
-}
-
-export function throwApiError(error: unknown): never {
-  if (isParsedApiError(error)) {
-    const known = mapKnownApiError(error);
-    if (known) throw known;
-    throw new AiCategorizationError(
-      `Anthropic API error: ${error.message ?? 'Unknown error'}`,
-      'API_ERROR'
-    );
-  }
-  throw new AiCategorizationError(
-    `Failed to categorize: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    'API_ERROR'
-  );
 }
 
 export async function callApiOrThrow(opts: ApiCallOptions): Promise<ApiCallResponse> {

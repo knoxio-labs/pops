@@ -6,6 +6,16 @@
  */
 import type { CategorizerInput } from './ai-categorizer-types.js';
 
+/**
+ * Versioned telemetry tag for the single-row categorizer prompt (CF096/#3671)
+ * — bump on every prompt-shape change so accept/reject quality is joinable
+ * per prompt revision.
+ */
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v1.0';
+
+/** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v1.0';
+
 const PROMPT_FIELD_MAX_CHARS = 200;
 
 /**

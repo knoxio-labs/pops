@@ -6,9 +6,7 @@
  *
  * `unwrap` turns a Hey API `{ data, error, response }` result into its
  * data payload, throwing `ContactsApiError` (carrying the HTTP status)
- * on failure. The status lets call sites distinguish:
- *   - 404            → "not found"   (isNotFoundError)
- *   - 5xx / no status → "unavailable" (isUnavailableError)
+ * on failure so call sites can inspect `.status`.
  */
 
 interface SdkErrorBody {
@@ -37,14 +35,4 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response?: Respon
     throw new ContactsApiError('contacts API returned no data', result.response?.status);
   }
   return result.data;
-}
-
-/** True when the failure was a 404 (entity missing). */
-export function isNotFoundError(err: unknown): boolean {
-  return err instanceof ContactsApiError && err.status === 404;
-}
-
-/** True when the pillar was unreachable or errored server-side (no status / 5xx). */
-export function isUnavailableError(err: unknown): boolean {
-  return err instanceof ContactsApiError && (err.status === undefined || err.status >= 500);
 }

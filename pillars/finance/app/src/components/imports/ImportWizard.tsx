@@ -74,7 +74,7 @@ function StepContent({ currentStep }: { currentStep: number }) {
 }
 
 /**
- * Import wizard orchestrator - manages 7-step flow
+ * Import wizard orchestrator - manages the 8-step flow
  */
 export function ImportWizard() {
   const currentStep = useImportStore((state) => state.currentStep);
