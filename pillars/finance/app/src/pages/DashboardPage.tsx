@@ -10,7 +10,7 @@ import { RecentTransactions } from './dashboard/RecentTransactions';
 import { computeStats, StatsGrid } from './dashboard/StatsGrid';
 
 const TRANSACTIONS_LIST_INPUT = { limit: 10 } as const;
-const BUDGETS_LIST_INPUT = { limit: 5 } as const;
+const BUDGETS_LIST_INPUT = { limit: 3, active: 'true' } as const;
 
 export function DashboardPage() {
   const { t } = useTranslation('finance');

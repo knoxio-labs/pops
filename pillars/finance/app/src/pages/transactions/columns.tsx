@@ -154,7 +154,20 @@ export function buildColumns(args: BuildColumnsArgs): ColumnDef<Transaction>[] {
   return [...buildCoreColumns(args.t), ...buildInteractiveColumns(args)];
 }
 
-export function buildTransactionFilters(t: TFunction<'finance'>): ColumnFilter[] {
+/** Distinct account names present in the loaded transactions, alphabetised for the filter dropdown. */
+export function getDistinctAccounts(
+  transactions: Pick<Transaction, 'account'>[] | undefined
+): string[] {
+  if (!transactions) return [];
+  return Array.from(new Set(transactions.map((transaction) => transaction.account))).toSorted(
+    (a, b) => a.localeCompare(b)
+  );
+}
+
+export function buildTransactionFilters(
+  t: TFunction<'finance'>,
+  accounts: string[]
+): ColumnFilter[] {
   return [
     { id: 'date', type: 'daterange', label: t('filter.dateRange') },
     {
@@ -163,11 +176,7 @@ export function buildTransactionFilters(t: TFunction<'finance'>): ColumnFilter[]
       label: t('filter.account'),
       options: [
         { label: t('filter.allAccounts'), value: '' },
-        { label: 'ANZ Everyday', value: 'ANZ Everyday' },
-        { label: 'ANZ Savings', value: 'ANZ Savings' },
-        { label: 'Amex', value: 'Amex' },
-        { label: 'ING Savings', value: 'ING Savings' },
-        { label: 'Up Everyday', value: 'Up Everyday' },
+        ...accounts.map((account) => ({ label: account, value: account })),
       ],
     },
     {

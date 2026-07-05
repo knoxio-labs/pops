@@ -51,7 +51,7 @@ export function ActiveBudgets({
   }
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {budgets.slice(0, 3).map((budget) => (
+      {budgets.map((budget) => (
         <BudgetCard key={budget.id} budget={budget} />
       ))}
     </div>
