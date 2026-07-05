@@ -5,6 +5,10 @@
  * Rule: a negative-amount row whose description contains a transfer/income
  * keyword is an inter-account movement, not a merchant purchase. Copied verbatim
  * from the monolith `lib/transfer-classifier.ts`.
+ *
+ * Scheduled for replacement by the rule-driven classifier specified in
+ * `pillars/finance/docs/prds/transaction-classification.md` (this keyword/sign
+ * heuristic is the exact behaviour that PRD retires).
  */
 import type { ParsedTransaction } from './types.js';
 

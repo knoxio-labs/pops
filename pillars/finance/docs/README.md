@@ -48,12 +48,13 @@ The merchant/payee registry that transactions match against is owned by the `con
 
 Learned classification rules and separate tag rules that improve over time — pattern matching (exact / contains / regex) with confidence scoring, bundled ChangeSet proposals with impact preview, and explicit priority ordering.
 
-| PRD                                                                      | Summary                                                                                              | Status  |
-| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------- |
-| [Corrections](prds/corrections.md)                                       | Classification corrections: pattern matching, confidence/activation semantics, transfer-only support | Done    |
-| [Correction Proposal Engine](prds/correction-proposal-engine.md)         | Bundled ChangeSet proposals with impact preview, approve/apply, reject-with-feedback                 | Partial |
-| [Tag Rule Proposals](prds/tag-rule-proposals.md)                         | Tag-rule learning proposals, separate from classification rules, with a seed taxonomy                | Done    |
-| [Global Rule Manager & Priority Ordering](prds/rule-manager-priority.md) | Browse-all rule CRUD, priority column, drag-to-reorder, override indicators, orphaned entities       | Partial |
+| PRD                                                                      | Summary                                                                                                                                         | Status      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| [Corrections](prds/corrections.md)                                       | Classification corrections: pattern matching, confidence/activation semantics, transfer-only support                                            | Done        |
+| [Correction Proposal Engine](prds/correction-proposal-engine.md)         | Bundled ChangeSet proposals with impact preview, approve/apply, reject-with-feedback                                                            | Partial     |
+| [Tag Rule Proposals](prds/tag-rule-proposals.md)                         | Tag-rule learning proposals, separate from classification rules, with a seed taxonomy                                                           | Done        |
+| [Global Rule Manager & Priority Ordering](prds/rule-manager-priority.md) | Browse-all rule CRUD, priority column, drag-to-reorder, override indicators, orphaned entities                                                  | Partial     |
+| [Transaction Classification](prds/transaction-classification.md)         | Rework: two-axis direction×type model, 8-value taxonomy, rule-driven classifier (retires the keyword/sign heuristic), paired-transfer detection | Not started |
 
 **Budgets**
 
