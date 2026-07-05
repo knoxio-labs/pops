@@ -8,6 +8,10 @@ Stand up `ha-bridge` — the first bridge pillar. It subscribes to a Home Assist
 
 The pillar has the same shape as any POPS pillar (`finance`, `media`, ...): a self-contained container, a per-pillar SQLite, a REST contract (ts-rest + zod, emitting OpenAPI), a `./manifest` export, and self-registration with the `registry` pillar on boot. The only thing that makes it a "bridge" is that its source of truth is upstream (HA), not user-entered data. Ports land in the standard pillar range, after the existing fleet.
 
+## Scope boundary
+
+Per [ADR-039](../architecture/adr-039-pillar-isolation.md) Invariant 4 (pops-vs-infra boundary): Home Assistant, mosquitto, zigbee2mqtt, and matter are **homelab infrastructure, not pops**. `ha-bridge` is a pops pillar that talks to an upstream HA instance over its WebSocket API — it never runs, composes, or owns HA/mosquitto/zigbee2mqtt/matter as services. This pillar's own SQLite (`ha-bridge.db`) follows the standard per-pillar Litestream convention (Invariant 2); the homelab's HA/MQTT/Zigbee2MQTT/Matter stack is backed up by the homelab-infra repo's own mechanism, on its own schedule and bucket, never the pops backup job.
+
 ## Data model
 
 Per-pillar SQLite at `pillars/ha-bridge/data/ha-bridge.db`. Two tables.
