@@ -171,7 +171,14 @@ jobs:
               pnpm --filter "${{ matrix.app.pkg }}" "$s"
               echo "::endgroup::"
             done <<< "$scripts"
-            git diff --exit-code "$dir/"
+            git add --intent-to-add "$dir/"
+            drift=$(git status --porcelain -- "$dir/")
+            if [ -n "$drift" ]; then
+              echo "::error::codegen drift under $dir/ — commit the regenerated output"
+              echo "$drift"
+              git diff -- "$dir/"
+              exit 1
+            fi
           fi
 
       - name: Typecheck
