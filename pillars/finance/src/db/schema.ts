@@ -17,6 +17,7 @@ export type { TransactionMatchType } from './match-types.js';
 export { aiUsage } from './schema/ai-usage.js';
 export { budgets } from './schema/budgets.js';
 export { transactionCorrections } from './schema/corrections.js';
+export { entityPrecreateOutbox } from './schema/entity-precreate-outbox.js';
 export { tagVocabulary } from './schema/tag-vocabulary.js';
 export { settings } from './schema/settings.js';
 export { transactionTagRules } from './schema/transaction-tag-rules.js';

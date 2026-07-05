@@ -18,6 +18,7 @@ import { openFinanceDb } from '../db/index.js';
 import { createFinanceApiApp } from './app.js';
 import { createContactsClient } from './contacts/client.js';
 import { createPillarOwnerUriLookup } from './cron/pillar-lookup.js';
+import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-outbox.js';
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
@@ -53,22 +54,37 @@ function resolveSelfBaseUrl(): string {
 const selfBaseUrl = resolveSelfBaseUrl();
 
 const financeDb = openFinanceDb(resolveFinanceSqlitePath());
+const contacts = createContactsClient();
 const app = createFinanceApiApp({
   financeDb,
   version,
   selfBaseUrl,
-  contacts: createContactsClient(),
+  contacts,
 });
+
+const reconcileLogger = {
+  info: (msg: string, meta?: Record<string, unknown>) =>
+    console.warn(`[finance-api] ${msg}`, meta ?? {}),
+  warn: (msg: string, meta?: Record<string, unknown>) =>
+    console.warn(`[finance-api] ${msg}`, meta ?? {}),
+};
 
 // Nightly cross-pillar URI reconciliation. Reads peer pillars over HTTP
 // via the pillar SDK proxy — no compile-time coupling.
 const reconcileHandle = startReconcileCrossPillarWorker({
   db: financeDb.db,
   lookupOwnerUri: createPillarOwnerUriLookup(),
-  logger: {
-    info: (msg, meta) => console.warn(`[finance-api] ${msg}`, meta ?? {}),
-    warn: (msg, meta) => console.warn(`[finance-api] ${msg}`, meta ?? {}),
-  },
+  logger: reconcileLogger,
+});
+
+// Contacts pre-create outbox reconciliation (issue #3683): drains
+// `entity_precreate_outbox` on a short interval so a commit that queued a
+// pending contact during a contacts outage gets resolved to the real
+// contact id as soon as contacts recovers.
+const reconcileOutboxHandle = startReconcileContactsOutboxWorker({
+  db: financeDb.db,
+  contacts,
+  logger: reconcileLogger,
 });
 
 const server = app.listen(port, () => {
@@ -90,6 +106,7 @@ function shutdown(signal: NodeJS.Signals): void {
   shuttingDown = true;
   console.warn(`[finance-api] Shutting down (${signal})`);
   reconcileHandle.stop();
+  reconcileOutboxHandle.stop();
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
     server.close(() => {
       financeDb.raw.close();

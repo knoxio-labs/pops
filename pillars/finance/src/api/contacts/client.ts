@@ -21,7 +21,12 @@
  * contact. The fetch-first step gives a clean `created: false` reuse and a
  * stable id without depending on a 409 round-trip; contacts itself enforces
  * name uniqueness case-INSENSITIVELY (`WHERE name COLLATE NOCASE = ?`), so the
- * 409 fallback is the backstop for a genuine concurrent insert.
+ * 409 fallback is the backstop for a genuine concurrent insert. A `create`
+ * failure that ISN'T a 409 is split into two error kinds so a caller can react
+ * differently: `unavailable`/`degraded` throw {@link ContactsUnavailableError}
+ * (TRANSIENT — retry later), while `bad-request`/`unauthorized`/
+ * `contract-mismatch`/`not-found` throw {@link ContactsPermanentError}
+ * (PERMANENT — retrying the same input never helps).
  */
 import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
 
@@ -99,19 +104,59 @@ export interface ContactsClient {
    * Resolve a contact for `name`, creating it only when absent. Fetches by
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
-   * whether THIS call inserted a new contact. Throws only on a genuine failure
-   * (contacts down / contract-mismatch) — the commit path cannot silently
-   * drop a pending entity.
+   * whether THIS call inserted a new contact. Never resolves silently on
+   * failure: a TRANSIENT failure (contacts unreachable / mid-recovery) throws
+   * {@link ContactsUnavailableError}; a PERMANENT one (malformed request, auth,
+   * contract mismatch) throws {@link ContactsPermanentError}. `commitImport`
+   * (issue #3683) is the one caller that catches `ContactsUnavailableError`
+   * specifically and degrades to a `pending:contact:{uuid}` placeholder + an
+   * outbox row instead of aborting; `ContactsPermanentError` and every other
+   * caller still let the failure propagate and abort.
    */
   createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult>;
 }
 
-/** Thrown when a contact pre-create cannot resolve to an id (contacts unreachable). */
+/**
+ * Thrown when a contact pre-create fails for a reason expected to clear on
+ * retry — contacts unreachable, or mid-recovery (`degraded`). The ONE failure
+ * mode `commitImport` degrades to an outbox row instead of aborting; retrying
+ * the same `{ name, type }` later is expected to eventually succeed.
+ */
 export class ContactsUnavailableError extends Error {
   override readonly name = 'ContactsUnavailableError';
   constructor(detail: string) {
     super(`contacts pillar unavailable during entity pre-create: ${detail}`);
   }
+}
+
+/**
+ * Thrown when a contact pre-create fails for a reason retrying will NEVER
+ * fix — a malformed request, an auth failure, or an SDK/contacts contract
+ * mismatch. Retrying `createOrFetchByName` with the same `{ name, type }`
+ * would fail identically forever, so this must abort the commit loudly
+ * rather than degrade to the outbox the way {@link ContactsUnavailableError}
+ * does.
+ */
+export class ContactsPermanentError extends Error {
+  override readonly name = 'ContactsPermanentError';
+  constructor(detail: string) {
+    super(`contacts pillar rejected entity pre-create: ${detail}`);
+  }
+}
+
+/**
+ * The `create` result kinds retrying can never resolve. Everything else
+ * non-ok/non-conflict (`unavailable`, `degraded`) is treated as transient.
+ */
+type PermanentCreateFailureKind = Exclude<
+  CallResult<unknown>['kind'],
+  'ok' | 'conflict' | 'unavailable' | 'degraded'
+>;
+
+function isPermanentCreateFailureKind(
+  kind: Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>
+): kind is PermanentCreateFailureKind {
+  return kind !== 'unavailable' && kind !== 'degraded';
 }
 
 /** Per-page size for the bulk list sweep — matches the contacts list `MAX_LIMIT`. */
@@ -200,12 +245,15 @@ export function createContactsClient(
       if (isOk(created)) {
         return { id: created.value.data.id, name: created.value.data.name, created: true };
       }
-      if (created.kind !== 'conflict') {
-        throw new ContactsUnavailableError(created.kind);
+      if (created.kind === 'conflict') {
+        const raced = await fetchByExactName(handle, name, maxPages);
+        if (raced) return { id: raced.id, name: raced.name, created: false };
+        throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
       }
-      const raced = await fetchByExactName(handle, name, maxPages);
-      if (raced) return { id: raced.id, name: raced.name, created: false };
-      throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
+      if (isPermanentCreateFailureKind(created.kind)) {
+        throw new ContactsPermanentError(created.kind);
+      }
+      throw new ContactsUnavailableError(created.kind);
     },
   };
 }

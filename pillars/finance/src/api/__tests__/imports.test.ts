@@ -21,6 +21,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { type CallResult } from '@pops/pillar-sdk/client';
+
 import {
   importsService,
   openFinanceDb,
@@ -28,6 +30,12 @@ import {
   type OpenedFinanceDb,
 } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
+import { page, stubHandle } from '../contacts/__tests__/stub-handle.js';
+import {
+  createContactsClient,
+  type ContactEntity,
+  type ContactsClient,
+} from '../contacts/client.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake, type ContactsFake, type SeedContact } from './contacts-fake.js';
 import { makeClient, waitForImportCompletion } from './test-utils.js';
@@ -48,7 +56,7 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-function client(contacts: ContactsFake = makeContactsFake()) {
+function client(contacts: ContactsClient = makeContactsFake()) {
   return makeClient(
     createFinanceApiApp({
       financeDb,
@@ -970,6 +978,181 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(res.data.entitiesCreated).toBe(2);
     expect(res.data.transactionsImported).toBe(3);
     expect(contacts.entities.map((e) => e.name).toSorted()).toEqual(['Coles', 'Woolworths']);
+  });
+});
+
+describe('imports.commitImport — contacts pre-create outbox during an outage (#3683)', () => {
+  it('commits with a pending placeholder instead of aborting, and queues one outbox row', async () => {
+    const contacts = makeContactsFake({ unavailable: true });
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-00000000ab01';
+
+    const res = await c.imports.commitImport({
+      entities: [{ tempId, name: 'Woolworths', type: 'company' }],
+      transactions: [
+        confirmed({
+          description: 'WOOLWORTHS OUTAGE',
+          checksum: 'outbox-commit-1',
+          entityId: tempId,
+          entityName: 'Woolworths',
+        }),
+      ],
+    });
+
+    // The commit succeeds — no 5xx, no throw — even though contacts never
+    // resolved the pending entity.
+    expect(res.data.transactionsImported).toBe(1);
+    expect(res.data.transactionsFailed).toBe(0);
+    expect(res.data.entitiesCreated).toBe(0);
+
+    const txn = financeDb.raw
+      .prepare('SELECT entity_id FROM transactions WHERE description = ?')
+      .get('WOOLWORTHS OUTAGE') as { entity_id: string };
+    expect(txn.entity_id).toMatch(/^pending:contact:/);
+
+    const outboxRow = financeDb.raw
+      .prepare(
+        'SELECT id, name, type, status, attempts FROM entity_precreate_outbox WHERE name = ?'
+      )
+      .get('Woolworths') as {
+      id: string;
+      name: string;
+      type: string;
+      status: string;
+      attempts: number;
+    };
+    expect(outboxRow.id).toBe(txn.entity_id);
+    expect(outboxRow.type).toBe('company');
+    expect(outboxRow.status).toBe('pending');
+    expect(outboxRow.attempts).toBe(0);
+  });
+
+  it('threads the placeholder through a correction ChangeSet add op too', async () => {
+    const contacts = makeContactsFake({ unavailable: true });
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-00000000ab02';
+
+    await c.imports.commitImport({
+      entities: [{ tempId, name: 'ATO', type: 'government' }],
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'AUSTRALIAN TAX OFFICE',
+                matchType: 'exact',
+                entityId: tempId,
+                entityName: 'ATO',
+              },
+            },
+          ],
+        },
+      ],
+      transactions: [confirmed({ checksum: 'outbox-commit-2' })],
+    });
+
+    const rule = financeDb.raw
+      .prepare('SELECT entity_id FROM transaction_corrections WHERE description_pattern = ?')
+      .get('AUSTRALIAN TAX OFFICE') as { entity_id: string };
+    expect(rule.entity_id).toMatch(/^pending:contact:/);
+
+    const outboxRow = financeDb.raw
+      .prepare('SELECT id FROM entity_precreate_outbox WHERE name = ?')
+      .get('ATO') as { id: string };
+    expect(outboxRow.id).toBe(rule.entity_id);
+  });
+
+  it('queues an independent outbox row per pending entity in the same commit', async () => {
+    const contacts = makeContactsFake({ unavailable: true });
+    const c = client(contacts);
+    const tempId1 = 'temp:entity:00000000-0000-0000-0000-00000000ab03';
+    const tempId2 = 'temp:entity:00000000-0000-0000-0000-00000000ab04';
+
+    await c.imports.commitImport({
+      entities: [
+        { tempId: tempId1, name: 'Woolworths', type: 'company' },
+        { tempId: tempId2, name: 'Coles', type: 'company' },
+      ],
+      transactions: [
+        confirmed({
+          description: 'WOOLWORTHS A',
+          checksum: 'outbox-commit-3a',
+          entityId: tempId1,
+          entityName: 'Woolworths',
+        }),
+        confirmed({
+          description: 'COLES A',
+          checksum: 'outbox-commit-3b',
+          entityId: tempId2,
+          entityName: 'Coles',
+        }),
+      ],
+    });
+
+    const rows = financeDb.raw
+      .prepare('SELECT name, status FROM entity_precreate_outbox ORDER BY name')
+      .all() as { name: string; status: string }[];
+    expect(rows).toEqual([
+      { name: 'Coles', status: 'pending' },
+      { name: 'Woolworths', status: 'pending' },
+    ]);
+  });
+
+  it('a rollback later in the same commit rolls back the outbox row too', async () => {
+    const contacts = makeContactsFake({ unavailable: true });
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-00000000ab05';
+
+    await expect(
+      c.imports.commitImport({
+        entities: [{ tempId, name: 'RollbackOutboxTest', type: 'company' }],
+        changeSets: [
+          { ops: [{ op: 'edit', id: 'non-existent-rule-id', data: { confidence: 0.9 } }] },
+        ],
+        transactions: [
+          confirmed({
+            checksum: 'outbox-rollback-1',
+            entityId: tempId,
+            entityName: 'RollbackOutboxTest',
+          }),
+        ],
+      })
+    ).rejects.toMatchObject({ status: 404 });
+
+    const outboxRows = financeDb.raw
+      .prepare('SELECT count(*) as c FROM entity_precreate_outbox WHERE name = ?')
+      .get('RollbackOutboxTest') as { c: number };
+    expect(outboxRows.c).toBe(0);
+  });
+
+  it('a PERMANENT contacts failure (bad-request) still aborts the commit before the tx opens', async () => {
+    const list = () => Promise.resolve(page([], false));
+    const create = () =>
+      Promise.resolve<CallResult<{ data: ContactEntity; message: string }>>({
+        kind: 'bad-request',
+        pillar: 'contacts',
+        message: 'entity type is not recognised',
+      });
+    const contacts = createContactsClient(() => stubHandle({ list, create }));
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-00000000ab06';
+
+    await expect(
+      c.imports.commitImport({
+        entities: [{ tempId, name: 'GenuineBug', type: 'company' }],
+        transactions: [confirmed({ checksum: 'outbox-genuine-error' })],
+      })
+    ).rejects.toMatchObject({ status: 500 });
+
+    const txnRows = financeDb.raw
+      .prepare('SELECT count(*) as c FROM transactions WHERE checksum = ?')
+      .get('outbox-genuine-error') as { c: number };
+    expect(txnRows.c).toBe(0);
+    const outboxRows = financeDb.raw
+      .prepare('SELECT count(*) as c FROM entity_precreate_outbox')
+      .get() as { c: number };
+    expect(outboxRows.c).toBe(0);
   });
 });
 

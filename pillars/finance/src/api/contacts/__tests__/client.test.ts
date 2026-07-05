@@ -13,88 +13,15 @@ import { describe, expect, it, vi } from 'vitest';
  *    case-variant must be deduped client-side by the fetch-FIRST step, and a
  *    genuine 409 race must re-fetch the existing id.
  */
-import {
-  type CallDynamicFn,
-  type CallResult,
-  type CallableProcedure,
-  type PillarHandle,
-} from '@pops/pillar-sdk/client';
+import { type CallResult } from '@pops/pillar-sdk/client';
 
 import {
+  ContactsPermanentError,
   createContactsClient,
   type ContactEntity,
-  type ContactsRouter,
   type ListResponse,
 } from '../client.js';
-
-function ok<T>(value: T): CallResult<T> {
-  return { kind: 'ok', value };
-}
-
-function conflict<T>(message: string): CallResult<T> {
-  return { kind: 'conflict', pillar: 'contacts', message };
-}
-
-function proc<Args extends readonly unknown[], Output>(
-  fn: (...args: Args) => Promise<CallResult<Output>>
-): CallableProcedure<Args, Output> {
-  const orThrow = async (...args: Args): Promise<Output> => {
-    const result = await fn(...args);
-    if (result.kind !== 'ok') throw new Error(`stub orThrow: ${result.kind}`);
-    return result.value;
-  };
-  return Object.assign(fn, { orThrow });
-}
-
-const callDynamic: CallDynamicFn = () => {
-  throw new Error('callDynamic is not used by the contacts client');
-};
-
-interface StubImpls {
-  list: (input: {
-    search?: string;
-    type?: string;
-    limit?: number;
-    offset?: number;
-  }) => Promise<CallResult<ListResponse>>;
-  get?: (input: { id: string }) => Promise<CallResult<{ data: ContactEntity }>>;
-  create?: (input: {
-    name: string;
-    type: string;
-  }) => Promise<CallResult<{ data: ContactEntity; message: string }>>;
-}
-
-function unexpected(name: string): never {
-  throw new Error(`stub ${name} called unexpectedly`);
-}
-
-function stubHandle(impls: StubImpls): PillarHandle<ContactsRouter> {
-  return {
-    entities: {
-      list: proc(impls.list),
-      get: proc(impls.get ?? (() => unexpected('entities.get'))),
-      create: proc(impls.create ?? (() => unexpected('entities.create'))),
-    },
-    callDynamic,
-  };
-}
-
-function entity(over: Partial<ContactEntity> & { id: string; name: string }): ContactEntity {
-  return {
-    type: 'company',
-    abn: null,
-    aliases: [],
-    defaultTransactionType: null,
-    defaultTags: [],
-    notes: null,
-    lastEditedTime: '2026-01-01T00:00:00.000Z',
-    ...over,
-  };
-}
-
-function page(data: ContactEntity[], hasMore: boolean, offset = 0): CallResult<ListResponse> {
-  return ok({ data, pagination: { total: data.length, limit: 200, offset, hasMore } });
-}
+import { conflict, entity, ok, page, stubHandle, unexpected } from './stub-handle.js';
 
 describe('createContactsClient.fetchAllEntities — no-silent-cap paging', () => {
   it('pages until hasMore is false and concatenates every page', async () => {
@@ -183,21 +110,6 @@ describe('createContactsClient.createOrFetchByName — robust against case-sensi
     expect(list).toHaveBeenCalledTimes(2);
   });
 
-  it('throws when create fails for a non-conflict reason (contacts down)', async () => {
-    const list = vi.fn(async () => page([], false));
-    const create = vi.fn(
-      async (): Promise<CallResult<{ data: ContactEntity; message: string }>> => ({
-        kind: 'unavailable',
-        pillar: 'contacts',
-      })
-    );
-    const client = createContactsClient(() => stubHandle({ list, create }));
-
-    await expect(client.createOrFetchByName('Anything', 'company')).rejects.toThrow(
-      'contacts pillar unavailable'
-    );
-  });
-
   it('throws when a 409 is reported but no existing contact can be re-fetched', async () => {
     const list = vi.fn(async () => page([], false));
     const create = vi.fn(
@@ -209,4 +121,46 @@ describe('createContactsClient.createOrFetchByName — robust against case-sensi
       'but no existing contact found'
     );
   });
+});
+
+describe('createContactsClient.createOrFetchByName — TRANSIENT vs PERMANENT create failures', () => {
+  function createFailing(
+    result: CallResult<{ data: ContactEntity; message: string }>
+  ): ReturnType<typeof createContactsClient> {
+    const list = vi.fn(async () => page([], false));
+    const create = vi.fn(async () => result);
+    return createContactsClient(() => stubHandle({ list, create }));
+  }
+
+  it.each([
+    ['unavailable', { kind: 'unavailable', pillar: 'contacts' }],
+    ['degraded', { kind: 'degraded', pillar: 'contacts', reason: 'reconciling' }],
+  ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
+    'throws ContactsUnavailableError (TRANSIENT) for a %s create result',
+    async (_label, result) => {
+      const client = createFailing(result);
+
+      await expect(client.createOrFetchByName('Anything', 'company')).rejects.toThrow(
+        'contacts pillar unavailable'
+      );
+    }
+  );
+
+  it.each([
+    ['bad-request', { kind: 'bad-request', pillar: 'contacts', message: 'invalid name' }],
+    ['unauthorized', { kind: 'unauthorized', pillar: 'contacts' }],
+    [
+      'contract-mismatch',
+      { kind: 'contract-mismatch', pillar: 'contacts', expected: 'Entity', actual: 'unknown' },
+    ],
+  ] satisfies [string, CallResult<{ data: ContactEntity; message: string }>][])(
+    'throws ContactsPermanentError for a %s create result',
+    async (_label, result) => {
+      const client = createFailing(result);
+
+      await expect(client.createOrFetchByName('Anything', 'company')).rejects.toThrow(
+        ContactsPermanentError
+      );
+    }
+  );
 });

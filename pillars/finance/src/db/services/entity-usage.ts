@@ -15,6 +15,7 @@
 import { isNotNull, sql } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
+import { isPendingContactId } from './entity-precreate-outbox.js';
 import { type FinanceDb } from './internal.js';
 
 import type { ContactEntity, ContactsClient } from '../../api/contacts/client.js';
@@ -37,9 +38,18 @@ export interface EntityUsageListResult {
 /**
  * Count finance transactions per `entityId` in a single grouped query.
  * Returns a map keyed by entity id; entities absent from the map have zero
- * transactions (orphans).
+ * transactions (orphans). `pending:contact:{uuid}` outbox placeholders (see
+ * `entity-precreate-outbox.ts`) are excluded here rather than left for the
+ * caller to skip: they're never a real contact the contacts pillar can
+ * return from `fetchAllEntities`, so a count keyed by one would only ever be
+ * dead weight in this map, not a row `listEntityUsage` could join against.
+ *
+ * Exported (beyond `listEntityUsage`'s own use) purely so a unit test can
+ * assert the placeholder-exclusion directly, without depending on there
+ * being no other way a placeholder could ever surface through the wider
+ * rollup.
  */
-function transactionCountsByEntity(db: FinanceDb): Map<string, number> {
+export function transactionCountsByEntity(db: FinanceDb): Map<string, number> {
   const rows = db
     .select({
       entityId: transactions.entityId,
@@ -52,7 +62,9 @@ function transactionCountsByEntity(db: FinanceDb): Map<string, number> {
 
   const counts = new Map<string, number>();
   for (const row of rows) {
-    if (row.entityId !== null) counts.set(row.entityId, row.count);
+    if (row.entityId !== null && !isPendingContactId(row.entityId)) {
+      counts.set(row.entityId, row.count);
+    }
   }
   return counts;
 }
