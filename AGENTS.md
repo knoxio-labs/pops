@@ -106,6 +106,8 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 
 POPS uses [mise](https://mise.jdx.dev/) for task running and tool versions. **Run `mise tasks`** rather than memorising names — the task list is the source of truth.
 
+**Toolchain pin:** the root `mise.toml` `[tools]` block (node/pnpm/rust) is the shared default every unit inherits — mise merges config **up** the directory tree, so a unit's own `mise.toml` only needs to declare the tool(s) it wants to _override_, not the full set. A pillar or lib that must trial or lag a Node bump adds its own `[tools]` table (e.g. `pillars/<id>/mise.toml`); any tool it doesn't redeclare still resolves from the root pin. This works because pnpm workspace scripts (`pnpm --filter <pkg> <script>`, and the root `run-all` fan-out) execute with the package directory as cwd, so mise's shim resolves the merged config for that directory — including in CI, where `jdx/mise-action@v2` plus mise's `not_found_auto_install` default transparently installs an override version on first use. Rust is a **single Cargo workspace** (root `Cargo.toml`) — `cargo build -p <crate>` always resolves one toolchain from the invocation directory (repo root), so a per-crate `rust` override has no effect until that crate becomes its own Cargo workspace; don't add one expecting it to do anything yet. Don't override `pnpm` per unit — one pnpm version manages the whole workspace lockfile.
+
 ```bash
 mise setup            # Initial setup (install deps + tools)
 mise tasks            # Discover dev/test/db tasks (defined in mise.toml)
