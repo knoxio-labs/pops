@@ -32,8 +32,10 @@ in-person" is a normal tag applied via `transaction_tag_rules`, not a field.
   `downstreamReset` so stale processed/confirmed/pending state can never leak
   into a new run.
 
-`ParsedTransaction` = `{ date (YYYY-MM-DD), description, amount, account,
-location?, rawRow (JSON of the source row), checksum (SHA-256 of rawRow) }`.
+`ParsedTransaction` = `{ date (YYYY-MM-DD), description, amount, account (the
+selected bankType), location?, rawRow (JSON of the source row), checksum (SHA-256
+of the canonical dedup key — date + amount + normalized description + bank
+reference — see import-dedup-csv) }`.
 
 ## REST API surface (finance pillar, `imports.*` contract)
 
@@ -62,14 +64,14 @@ fetched once and cached for the review step.
 - [x] Bank radio picker (ANZ / Amex / ING / Up); help card shows bank-specific export instructions for the selection.
 - [x] CSV file input, max 25 MB; parsed client-side with PapaParse (`header: true`, skip empty lines).
 - [x] Validates file present, CSV non-empty, headers present; invalid files show an error and block advance.
-- [x] On success stores `headers`/`rows` and advances. (Bank selection drives help copy only; the parsed `account` field is fixed and not yet derived from `bankType`.)
+- [x] On success stores `headers`/`rows` and advances. Bank selection drives the help copy and sets each parsed transaction's `account` (`bankType`, threaded into validation and the `/imports/process` body — #3608).
 
 ### 2. Column mapping
 
 - [x] Auto-detects date / description / amount / location from header names; user can override each via a per-field dropdown of all headers.
 - [x] Required: date, description, amount. Optional: location. Cannot advance until all required are mapped; unmapped required fields are flagged.
 - [x] Preview table of the first 10 rows with mapped values.
-- [x] Client-side row parsing: date `DD/MM/YYYY` → `YYYY-MM-DD`; amount strip currency, parse, invert sign (bank charges positive → expenses negative); location first line, title-cased; `rawRow` preserved as JSON; checksum = SHA-256 of `rawRow`.
+- [x] Client-side row parsing: date `DD/MM/YYYY` → `YYYY-MM-DD`; amount strip currency, parse, invert sign (bank charges positive → expenses negative); location first line, title-cased; `rawRow` preserved as JSON; checksum = SHA-256 of the canonical dedup key (date + amount + normalized description + bank reference — #3611), not the raw row.
 - [x] Invalid rows excluded; first 10 validation errors shown.
 - [x] Output `ParsedTransaction[]` stored in the store.
 

@@ -87,8 +87,16 @@ function StepFooter({
 }
 
 function useColumnMapState() {
-  const { headers, rows, columnMap, setColumnMap, setParsedTransactions, nextStep, prevStep } =
-    useImportStore();
+  const {
+    headers,
+    rows,
+    columnMap,
+    bankType,
+    setColumnMap,
+    setParsedTransactions,
+    nextStep,
+    prevStep,
+  } = useImportStore();
   const [localColumnMap, setLocalColumnMap] = useState(columnMap);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
@@ -112,7 +120,7 @@ function useColumnMapState() {
     setIsValidating(true);
     setValidationErrors([]);
     setTimeout(() => {
-      const validation = validateAllRows(rows, localColumnMap);
+      const validation = validateAllRows(rows, localColumnMap, bankType);
       if (!validation.valid) {
         setValidationErrors(validation.errors);
         setIsValidating(false);
@@ -122,7 +130,7 @@ function useColumnMapState() {
       setIsValidating(false);
       nextStep();
     }, 100);
-  }, [rows, localColumnMap, setParsedTransactions, nextStep]);
+  }, [rows, localColumnMap, bankType, setParsedTransactions, nextStep]);
 
   return {
     headers,

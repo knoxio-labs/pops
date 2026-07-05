@@ -29,6 +29,7 @@ let mockProcessedTransactions: typeof emptyProcessed = emptyProcessed;
 let mockParsedTransactionsFingerprint = 'fp-current';
 let mockProcessedForFingerprint: string | null = null;
 let mockProcessSessionId: string | null = null;
+let mockBankType = 'ANZ';
 
 vi.mock('../../store/importStore', () => ({
   useImportStore: () => ({
@@ -36,6 +37,7 @@ vi.mock('../../store/importStore', () => ({
     parsedTransactionsFingerprint: mockParsedTransactionsFingerprint,
     processedForFingerprint: mockProcessedForFingerprint,
     processedTransactions: mockProcessedTransactions,
+    bankType: mockBankType,
     setProcessSessionId: mockSetProcessSessionId,
     processSessionId: mockProcessSessionId,
     setProcessedTransactions: mockSetProcessedTransactions,
@@ -67,16 +69,17 @@ beforeEach(() => {
   mockParsedTransactionsFingerprint = 'fp-current';
   mockProcessedForFingerprint = null;
   mockProcessSessionId = null;
+  mockBankType = 'ANZ';
 });
 
 describe('ProcessingStep', () => {
-  it('auto-triggers processImport on mount with the parsed transactions as the body', async () => {
+  it('auto-triggers processImport on mount with the parsed transactions and the selected bank as the body', async () => {
     render(renderStep());
     await waitFor(() =>
       expect(mockProcessImport).toHaveBeenCalledWith({
         body: {
           transactions: [{ date: '2026-01-01', description: 'Test', amount: -50 }],
-          account: 'Amex',
+          account: 'ANZ',
         },
       })
     );
@@ -107,7 +110,7 @@ describe('ProcessingStep', () => {
     expect(mockProcessImport).toHaveBeenLastCalledWith({
       body: {
         transactions: [{ date: '2026-01-01', description: 'Test', amount: -50 }],
-        account: 'Amex',
+        account: 'ANZ',
       },
     });
   });

@@ -1,4 +1,4 @@
-import { index, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const transactions = sqliteTable(
   'transactions',
@@ -29,6 +29,6 @@ export const transactions = sqliteTable(
     index('idx_transactions_entity').on(table.entityId),
     index('idx_transactions_last_edited').on(table.lastEditedTime),
     index('idx_transactions_notion_id').on(table.notionId),
-    uniqueIndex('idx_transactions_checksum').on(table.checksum),
+    index('idx_transactions_checksum').on(table.checksum),
   ]
 );
