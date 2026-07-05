@@ -135,6 +135,19 @@ vi.mock('@pops/ui', async () => {
       ),
     Card: ({ children, className }: { children: React.ReactNode; className?: string }) =>
       React.createElement('div', { className }, children),
+    EmptyState: ({
+      title,
+      description,
+    }: {
+      title: React.ReactNode;
+      description?: React.ReactNode;
+    }) =>
+      React.createElement(
+        'div',
+        null,
+        React.createElement('p', null, title),
+        description && React.createElement('p', null, description)
+      ),
     Dialog: ({
       children,
       open,

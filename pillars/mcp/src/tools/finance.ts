@@ -121,7 +121,7 @@ const entitiesList: ToolDef = {
     type: 'object',
     properties: {
       search: { type: 'string', description: 'Search by entity name' },
-      type: { type: 'string', description: 'Filter by entity type' },
+      type: { type: 'string', enum: ENTITY_TYPES, description: 'Filter by entity type' },
       limit: { type: 'number', description: 'Max results (default 50)' },
       offset: { type: 'number', description: 'Pagination offset (default 0)' },
     },

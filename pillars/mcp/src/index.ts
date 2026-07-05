@@ -22,6 +22,23 @@ import express, { type Express } from 'express';
 import { inboundAuth } from './auth.js';
 import { allTools } from './tools/index.js';
 
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+/** Structured per-call operational log (CF087) — tool name, ok/error, and latency, so a production issue is visible without re-instrumenting. */
+function logToolCall(
+  name: string,
+  status: 'ok' | 'error',
+  latencyMs: number,
+  detail?: string
+): void {
+  const base = `[pops-mcp] tool=${name} status=${status} latencyMs=${latencyMs}`;
+  if (status === 'error') {
+    console.error(detail ? `${base} error=${detail}` : base);
+  } else {
+    console.warn(base);
+  }
+}
+
 export function createMcpServer(): Server {
   const server = new Server({ name: 'pops', version: '1.0.0' }, { capabilities: { tools: {} } });
 
@@ -35,8 +52,10 @@ export function createMcpServer(): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: rawArgs } = req.params;
+    const start = Date.now();
     const tool = allTools.find((t) => t.name === name);
     if (!tool) {
+      logToolCall(name, 'error', Date.now() - start, 'unknown tool');
       return {
         content: [{ type: 'text' as const, text: `Unknown tool: ${name}` }],
         isError: true,
@@ -44,9 +63,12 @@ export function createMcpServer(): Server {
     }
     const args: Record<string, unknown> = rawArgs ?? {};
     try {
-      return await tool.handler(args);
+      const result: CallToolResult = await tool.handler(args);
+      logToolCall(name, result.isError ? 'error' : 'ok', Date.now() - start);
+      return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      logToolCall(name, 'error', Date.now() - start, message);
       return {
         content: [{ type: 'text' as const, text: `Tool error: ${message}` }],
         isError: true,

@@ -188,7 +188,7 @@ export function ColumnMapStep() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold mb-2">Map Columns</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Map CSV columns to transaction fields. Showing first 10 rows.
         </p>
       </div>

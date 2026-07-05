@@ -16,8 +16,8 @@ import {
 } from './utils.js';
 
 describe('ok / toolError', () => {
-  it('ok wraps JSON-stringified data', () => {
-    expect(ok({ a: 1 })).toEqual({ content: [{ type: 'text', text: '{\n  "a": 1\n}' }] });
+  it('ok wraps compact JSON-stringified data (no pretty-print whitespace)', () => {
+    expect(ok({ a: 1 })).toEqual({ content: [{ type: 'text', text: '{"a":1}' }] });
   });
 
   it('toolError sets isError and surfaces the message', () => {

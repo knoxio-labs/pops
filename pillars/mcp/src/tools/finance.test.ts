@@ -87,6 +87,21 @@ describe('finance.entities.list', () => {
     const result = await tool.handler({});
     expect(result.isError).toBe(true);
   });
+
+  it('declares its valid type values in the tool schema (CF073)', () => {
+    const properties = tool.inputSchema.properties as
+      | Record<string, { enum?: readonly string[] }>
+      | undefined;
+    expect(properties?.['type']?.enum).toEqual([
+      'company',
+      'person',
+      'government',
+      'bank',
+      'place',
+      'brand',
+      'organisation',
+    ]);
+  });
 });
 
 describe('finance.budgets.list', () => {

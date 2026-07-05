@@ -199,11 +199,11 @@ function RulePickerItem({
       <div className="flex flex-col min-w-0 flex-1 gap-0.5">
         <div className="flex items-center gap-2">
           <code className="truncate text-xs font-mono">{rule.descriptionPattern}</code>
-          <Badge variant="outline" className="text-[10px] shrink-0">
+          <Badge variant="outline" className="text-2xs shrink-0">
             {rule.matchType}
           </Badge>
           {!rule.isActive && (
-            <Badge variant="secondary" className="text-[10px] shrink-0">
+            <Badge variant="secondary" className="text-2xs shrink-0">
               off
             </Badge>
           )}

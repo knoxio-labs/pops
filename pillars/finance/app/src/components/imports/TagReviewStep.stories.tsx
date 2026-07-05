@@ -133,7 +133,7 @@ const meta: Meta<typeof TagReviewStep> = {
       const transactions = (context.parameters.transactions as ConfirmedTransaction[]) ?? [];
       return (
         <StoreSeeder transactions={transactions}>
-          <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg border shadow-sm">
+          <div className="max-w-3xl mx-auto p-6 bg-card rounded-lg border shadow-sm">
             <Story />
           </div>
         </StoreSeeder>
