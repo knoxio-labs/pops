@@ -46,13 +46,15 @@ function stripLegalSuffixTokens(name: string): string {
   const tokens = name.split(/\s+/);
   let end = tokens.length;
   while (end > 0) {
-    const token = tokens[end - 1]?.replace(/[.,]/g, '').toLowerCase() ?? '';
+    const token = tokens[end - 1]?.replaceAll(/[.,]/g, '').toLowerCase() ?? '';
     if (!LEGAL_SUFFIX_TOKENS.has(token)) break;
     end -= 1;
   }
   if (end === tokens.length) return name;
-  const kept = tokens.slice(0, end).join(' ').trim();
-  return kept.length > 0 ? kept : name;
+  return tokens
+    .slice(0, end)
+    .join(' ')
+    .replaceAll(/^[\s.,]+|[\s.,]+$/g, '');
 }
 
 function capitalizeWord(word: string): string {

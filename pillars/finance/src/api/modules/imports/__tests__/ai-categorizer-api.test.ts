@@ -85,6 +85,11 @@ describe('buildEntryFromText — parsing robustness', () => {
     const entry = buildEntryFromText('{"entityName":"THE REDFERN PTY LTD","tags":["Dining"]}');
     expect(entry.entityName).toBe('The Redfern');
   });
+
+  it('coerces an entityName that is only legal-suffix tokens to null', () => {
+    const entry = buildEntryFromText('{"entityName":"Pty Ltd","tags":["Shopping"]}');
+    expect(entry.entityName).toBeNull();
+  });
 });
 
 describe('sanitizeEntityName — legal-suffix + casing backstop', () => {
@@ -113,6 +118,23 @@ describe('sanitizeEntityName — legal-suffix + casing backstop', () => {
     ];
     for (const [input, expected] of cases) {
       expect(sanitizeEntityName(input)).toBe(expected);
+    }
+  });
+
+  it('trims leftover punctuation when a suffix is punctuation-separated', () => {
+    const cases: Array<[string, string]> = [
+      ['ACME, INC', 'Acme'],
+      ['Acme, Pty. Ltd.', 'Acme'],
+      ['The Redfern, Pty Ltd', 'The Redfern'],
+    ];
+    for (const [input, expected] of cases) {
+      expect(sanitizeEntityName(input)).toBe(expected);
+    }
+  });
+
+  it('degrades a name composed entirely of legal-suffix tokens to null', () => {
+    for (const input of ['Pty Ltd', 'PTY LTD', 'Ltd', 'Pty. Ltd.', 'Inc', 'LLC']) {
+      expect(sanitizeEntityName(input)).toBeNull();
     }
   });
 
