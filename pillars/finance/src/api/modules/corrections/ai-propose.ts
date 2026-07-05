@@ -11,6 +11,7 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
+import { extractJsonFromReply } from '../ai-json.js';
 import { interpretRejectionFeedback, loadLatestRejectedFeedback } from './ai-feedback.js';
 import { getClaudeCompleter } from './ai-runtime.js';
 import {
@@ -159,13 +160,13 @@ Return ONLY: {"changeSet": <revised ChangeSet>, "rationale": "<one-line explanat
 }
 
 function parseReviseResult(text: string): { changeSet: ChangeSet; rationale: string } {
-  const cleaned = text
-    .trim()
-    .replaceAll(/^```(?:json)?\s*\n?/gm, '')
-    .replaceAll(/\n?```\s*$/gm, '');
+  const jsonSlice = extractJsonFromReply(text);
+  if (jsonSlice === null) {
+    throw new Error('reviseChangeSet: AI returned no JSON object');
+  }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(cleaned);
+    parsed = JSON.parse(jsonSlice);
   } catch (cause) {
     throw new Error('reviseChangeSet: AI returned invalid JSON', { cause });
   }

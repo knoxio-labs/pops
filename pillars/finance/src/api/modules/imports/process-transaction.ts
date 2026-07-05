@@ -9,7 +9,7 @@
  * `AiCategorizationError` (enabled but key/API failure) degrades to an
  * uncertain row with reason `'AI categorization unavailable'`.
  */
-import { type FinanceDb } from '../../../db/index.js';
+import { type EntityLookupEntry, type FinanceDb } from '../../../db/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 import { categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
 import { applyLearnedCorrection } from './apply-learned-correction.js';
@@ -101,13 +101,32 @@ async function tryAiCategorization(
   };
 }
 
+/**
+ * Resolve the AI's suggested entity name against the same canonical +
+ * alias lookups the deterministic matcher uses (CF024): the AI can only see
+ * the transaction description, not which of several known spellings is
+ * canonical, so a reply that happens to match a stored alias rather than the
+ * entity's canonical name must still resolve — the deterministic stage one
+ * step earlier would have.
+ */
+function resolveAiEntity(
+  aiEntityName: string,
+  context: ProcessContext
+): EntityLookupEntry | undefined {
+  const key = aiEntityName.toLowerCase();
+  const direct = context.entityLookup.get(key);
+  if (direct) return direct;
+  const canonicalName = context.aliases.get(key);
+  return canonicalName ? context.entityLookup.get(canonicalName.toLowerCase()) : undefined;
+}
+
 function resolveAiResult(
   db: FinanceDb,
   transaction: ParsedTransaction,
   ai: AiCategorizationResult,
   context: ProcessContext
 ): ProcessedTransaction {
-  const entry = context.entityLookup.get(ai.entityName.toLowerCase());
+  const entry = resolveAiEntity(ai.entityName, context);
   if (entry) {
     return buildMatchedFromEntity(db, {
       transaction,

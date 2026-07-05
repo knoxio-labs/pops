@@ -5,6 +5,7 @@
  * routed through the injectable Claude completer (`ai-runtime.ts`).
  */
 import { type FinanceDb, transactions, transactionCorrectionsService } from '../../../db/index.js';
+import { extractJsonFromReply } from '../ai-json.js';
 import { getClaudeCompleter } from './ai-runtime.js';
 import { type CorrectionAnalysis, type ProposedRule } from './ai-types.js';
 import { parseCorrectionTags } from './types.js';
@@ -44,13 +45,6 @@ function patternMatchesDescription(
   }
 }
 
-function stripFences(text: string): string {
-  return text
-    .trim()
-    .replaceAll(/^```(?:json)?\s*\n?/gm, '')
-    .replaceAll(/\n?```\s*$/gm, '');
-}
-
 function buildAnalyzePrompt(input: CorrectionInput): string {
   return `You are a bank transaction pattern analyzer. A user has assigned a transaction to an entity and we need a reusable rule that will identify FUTURE transactions belonging to the same entity.
 
@@ -69,8 +63,10 @@ Return ONLY the JSON object, no markdown.`;
 }
 
 function parseAnalysis(text: string): CorrectionAnalysis | null {
+  const jsonSlice = extractJsonFromReply(text);
+  if (jsonSlice === null) return null;
   try {
-    const parsed = JSON.parse(stripFences(text)) as Record<string, unknown>;
+    const parsed = JSON.parse(jsonSlice) as Record<string, unknown>;
     const matchType = typeof parsed['matchType'] === 'string' ? parsed['matchType'] : '';
     const pattern = typeof parsed['pattern'] === 'string' ? parsed['pattern'] : '';
     const confidence = typeof parsed['confidence'] === 'number' ? parsed['confidence'] : 0;
@@ -135,8 +131,10 @@ Return ONLY the JSON array, no markdown.`;
 }
 
 function parseProposals(text: string): ProposedRule[] {
+  const jsonSlice = extractJsonFromReply(text);
+  if (jsonSlice === null) return [];
   try {
-    const parsed = JSON.parse(stripFences(text)) as unknown;
+    const parsed = JSON.parse(jsonSlice) as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter(

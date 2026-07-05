@@ -1,19 +1,26 @@
 /**
  * 5-stage entity matching pipeline (pure, no DB).
  *
- *   1. Manual aliases — alias substring → entity name
+ *   1. Manual aliases — alias substring → entity name (min 4 chars, longest wins)
  *   2. Exact match — case-insensitive against the entity lookup
  *   3. Prefix match — description starts with entity name (longest wins)
  *   4. Contains match — entity name anywhere in description (min 4 chars, longest wins)
  *   5. Punctuation stripping — drop apostrophes, retry stages 2-4
  *
  * The AI fallback (stage 6) is handled by the caller. Copied verbatim from the
- * monolith `lib/entity-matcher.ts`.
+ * monolith `lib/entity-matcher.ts`, with the alias stage (CF023) given the
+ * same specificity guards as contains/prefix: a short/generic alias (under
+ * `MIN_ALIAS_LENGTH` chars) is skipped rather than allowed to hijack a better
+ * match, and when several aliases match the same description the longest
+ * (most specific) alias key wins instead of whichever came first in Map
+ * iteration order.
  */
 import type { EntityLookupEntry } from '../../../db/index.js';
 
 export type EntityLookupMap = Map<string, EntityLookupEntry>;
 export type AliasMap = Map<string, string>;
+
+const MIN_ALIAS_LENGTH = 4;
 
 export interface EntityMatch {
   entityName: string;
@@ -89,6 +96,32 @@ function findByName(entityName: string, lookup: EntityLookupMap): EntityLookupEn
   return lookup.get(entityName.toLowerCase());
 }
 
+function findAliasMatch(
+  normalized: string,
+  aliases: AliasMap,
+  entityLookup: EntityLookupMap
+): EntityMatch | null {
+  let best: (EntityMatch & { keyLength: number }) | null = null;
+  for (const [key, entityName] of aliases) {
+    if (key.length < MIN_ALIAS_LENGTH) continue;
+    const upperKey = key.toUpperCase();
+    if (!normalized.includes(upperKey)) continue;
+    const entry = findByName(entityName, entityLookup);
+    if (!entry) continue;
+    if (!best || upperKey.length > best.keyLength) {
+      best = {
+        entityName: entry.name,
+        entityId: entry.id,
+        matchType: 'alias',
+        keyLength: upperKey.length,
+      };
+    }
+  }
+  if (!best) return null;
+  const { entityName, entityId, matchType } = best;
+  return { entityName, entityId, matchType };
+}
+
 /** Match a transaction description to an entity, or null if no stage hits. */
 export function matchEntity(
   description: string,
@@ -97,12 +130,8 @@ export function matchEntity(
 ): EntityMatch | null {
   const normalized = description.toUpperCase().trim();
 
-  for (const [key, entityName] of aliases) {
-    if (normalized.includes(key.toUpperCase())) {
-      const entry = findByName(entityName, entityLookup);
-      if (entry) return { entityName: entry.name, entityId: entry.id, matchType: 'alias' };
-    }
-  }
+  const aliasMatch = findAliasMatch(normalized, aliases, entityLookup);
+  if (aliasMatch) return aliasMatch;
 
   const result = tryMatch(normalized, entityLookup);
   if (result) return result;

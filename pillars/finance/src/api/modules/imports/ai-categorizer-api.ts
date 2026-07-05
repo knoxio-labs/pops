@@ -11,9 +11,10 @@
  */
 import { callWithLogging } from '@pops/ai-telemetry';
 
+import { extractJsonFromReply } from '../ai-json.js';
+import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
-import { withRateLimitRetry } from './ai-retry.js';
 import { sanitizeEntityName } from './entity-name.js';
 
 export { sanitizeEntityName } from './entity-name.js';
@@ -140,42 +141,6 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
   };
 }
 
-function stripCodeFences(text: string): string {
-  return text
-    .trim()
-    .replaceAll(/^```(?:json)?\s*\n?/gm, '')
-    .replaceAll(/\n?```\s*$/gm, '');
-}
-
-/**
- * Extract the first balanced top-level JSON object from `text`, tolerating
- * prose the model may add before or after it — Haiku sometimes pretty-prints
- * the object and then appends an explanatory sentence, which naive
- * whole-string `JSON.parse` rejects ("Unexpected non-whitespace character
- * after JSON"). String literals are respected so braces inside values don't
- * unbalance the scan. Returns null when no complete object is present.
- */
-function extractFirstJsonObject(text: string): string | null {
-  const start = text.indexOf('{');
-  if (start === -1) return null;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') inString = true;
-    else if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return text.slice(start, i + 1);
-  }
-  return null;
-}
-
 /**
  * Parse the model's reply into an {@link AiCacheEntry}. Throws
  * `AiCategorizationError('…','PARSE_ERROR')` when the reply holds no parseable
@@ -183,7 +148,7 @@ function extractFirstJsonObject(text: string): string | null {
  * hard-failing the whole transaction.
  */
 export function buildEntryFromText(text: string): AiCacheEntry {
-  const jsonSlice = extractFirstJsonObject(stripCodeFences(text));
+  const jsonSlice = extractJsonFromReply(text);
   if (jsonSlice === null) {
     throw new AiCategorizationError(
       `AI categorizer returned no JSON object: ${text.slice(0, 120)}`,
