@@ -1,10 +1,10 @@
 # Idea: Up Bank API import (batch + webhook persistence)
 
-> Status: Partial scaffold only. A signature-verified webhook endpoint exists (`POST /webhooks/up`, `POST /webhooks/up/ping`) but it only logs the event — it does not fetch the transaction or persist anything. There is no API batch import.
+> Status: Partial scaffold only, and an explicit no-op — tracked at knoxio/pops#1874. A signature-verified webhook endpoint exists (`POST /webhooks/up`, `POST /webhooks/up/ping`) but it only logs the event — it does not fetch the transaction or persist anything. There is no API batch import. `GET /health` surfaces `import.daysSinceLastImport` / `import.stale` as an ops signal for silent ingestion, independent of this gap.
 
 ## Problem
 
-Up Bank has no CSV export worth importing through the column-mapping flow; it has a REST API and webhooks. Today neither path lands a transaction in the finance DB. The webhook handler verifies `X-Up-Authenticity-Signature` (HMAC-SHA256 of the raw body) and returns `200 { received: true }`, then drops the event.
+Up Bank has no CSV export worth importing through the column-mapping flow; it has a REST API and webhooks. Today neither path lands a transaction in the finance DB. The webhook handler verifies `X-Up-Authenticity-Signature` (HMAC-SHA256 of the raw body, compared with `crypto.timingSafeEqual`) and returns `200 { received: true }`, then drops the event.
 
 ## Proposed work
 

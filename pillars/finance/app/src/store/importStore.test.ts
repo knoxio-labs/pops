@@ -135,6 +135,16 @@ describe('importStore — step range', () => {
     useImportStore.getState().goToStep(5);
     expect(useImportStore.getState().currentStep).toBe(5);
   });
+
+  it('goToStep clamps a step above the last step down to 8', () => {
+    useImportStore.getState().goToStep(42);
+    expect(useImportStore.getState().currentStep).toBe(8);
+  });
+
+  it('goToStep clamps a step below the first step up to 1', () => {
+    useImportStore.getState().goToStep(-3);
+    expect(useImportStore.getState().currentStep).toBe(1);
+  });
 });
 
 const sampleChangeSet: ChangeSet = {

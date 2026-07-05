@@ -90,6 +90,46 @@ describe('buildEntryFromText — parsing robustness', () => {
     const entry = buildEntryFromText('{"entityName":"Pty Ltd","tags":["Shopping"]}');
     expect(entry.entityName).toBeNull();
   });
+
+  it('returns a null category (not an empty string) when tags and category are both absent', () => {
+    const entry = buildEntryFromText('{"entityName":"Woolworths"}');
+    expect(entry.category).toBeNull();
+  });
+});
+
+describe('buildEntryFromText — confidence parsing (CF037/#3655)', () => {
+  it('threads a valid model-reported confidence', () => {
+    const entry = buildEntryFromText(
+      '{"entityName":"Woolworths","tags":["Groceries"],"confidence":0.92}'
+    );
+    expect(entry.confidence).toBe(0.92);
+  });
+
+  it('falls back to the default confidence when the field is missing', () => {
+    const entry = buildEntryFromText('{"entityName":"Woolworths","tags":["Groceries"]}');
+    expect(entry.confidence).toBe(0.7);
+  });
+
+  it.each([-0.1, 1.1, 'high', true])(
+    'falls back to the default confidence for an invalid value (%s)',
+    (bad) => {
+      const entry = buildEntryFromText(
+        `{"entityName":"Woolworths","tags":["Groceries"],"confidence":${JSON.stringify(bad)}}`
+      );
+      expect(entry.confidence).toBe(0.7);
+    }
+  );
+
+  it('accepts the boundary values 0 and 1', () => {
+    expect(
+      buildEntryFromText('{"entityName":"Woolworths","tags":["Groceries"],"confidence":0}')
+        .confidence
+    ).toBe(0);
+    expect(
+      buildEntryFromText('{"entityName":"Woolworths","tags":["Groceries"],"confidence":1}')
+        .confidence
+    ).toBe(1);
+  });
 });
 
 describe('sanitizeEntityName — legal-suffix + casing backstop', () => {
@@ -228,5 +268,28 @@ describe('buildPrompt — allowlist rendering (CF008)', () => {
     expect(buildPrompt({ description: 'ALDI', amount: Number.POSITIVE_INFINITY }, [])).not.toMatch(
       /^Amount:/m
     );
+  });
+});
+
+describe('buildPrompt — known-entity closed-set hint (CF062/#3661)', () => {
+  it('omits the Known entities section when no known entities are passed', () => {
+    const prompt = buildPrompt({ description: 'ALDI' }, ['Groceries']);
+    expect(prompt).not.toContain('Known entities:');
+  });
+
+  it('renders the Known entities section and instructs exact reuse', () => {
+    const prompt = buildPrompt(
+      { description: 'WOOLWORTHS 2246' },
+      ['Groceries'],
+      ['Woolworths', 'Coles']
+    );
+    expect(prompt).toContain('Known entities: Woolworths, Coles');
+    expect(prompt).toMatch(/return its name exactly as listed/i);
+  });
+
+  it('asks the model for a confidence value', () => {
+    const prompt = buildPrompt({ description: 'ALDI' }, []);
+    expect(prompt).toContain('"confidence": 0.0-1.0');
+    expect(prompt).toMatch(/confidence rules:/i);
   });
 });

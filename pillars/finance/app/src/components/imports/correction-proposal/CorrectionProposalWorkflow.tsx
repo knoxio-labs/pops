@@ -16,7 +16,7 @@ import {
 export type { CorrectionProposalWorkflowProps };
 
 export function CorrectionProposalWorkflow(props: CorrectionProposalWorkflowProps) {
-  const { open, signal, triggeringTransaction } = props;
+  const { open, signal, triggeringTransaction, patternConfidence } = props;
   const hooks = useWorkflowHooks(props);
   const { localOpsHook, previewHook, mutationsHook, proposeQuery, handleCloseRef } = hooks;
   const view = useViewSelection(localOpsHook, previewHook);
@@ -46,7 +46,13 @@ export function CorrectionProposalWorkflow(props: CorrectionProposalWorkflowProp
       title="Correction proposal"
       description="Edit the proposed rule changes and preview their impact before applying."
       columns={isProposalGridReady ? 3 : undefined}
-      header={renderHeader(isProposalGridReady, signal, triggeringTransaction, hooks)}
+      header={renderHeader({
+        ready: isProposalGridReady,
+        signal,
+        triggeringTransaction,
+        hooks,
+        patternConfidence,
+      })}
       subpanel={isProposalGridReady ? renderSubpanel(mutationsHook) : undefined}
       footer={renderFooter(mutationsHook, previewHook, localOpsHook, () => handleOpenChange(false))}
     >

@@ -19,7 +19,7 @@ export function LocationField({ transaction }: LocationFieldProps) {
 
   if (!details.location) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <MapPin className="w-4 h-4" />
         <span>No location data</span>
       </div>
@@ -28,7 +28,7 @@ export function LocationField({ transaction }: LocationFieldProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <MapPin className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+      <MapPin className="w-4 h-4 text-muted-foreground" />
       <span className="text-sm">{details.location}</span>
 
       {details.source && (
@@ -41,12 +41,14 @@ export function LocationField({ transaction }: LocationFieldProps) {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <Info className="w-4 h-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent>
               <p className="text-xs">{details.extractedFrom}</p>
               {details.confidence && (
-                <p className="text-xs text-gray-400 mt-1">Confidence: {details.confidence}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Confidence: {details.confidence}
+                </p>
               )}
             </TooltipContent>
           </Tooltip>

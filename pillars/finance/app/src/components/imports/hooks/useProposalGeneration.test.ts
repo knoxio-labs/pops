@@ -32,15 +32,18 @@ function makeDeferred<T>(): Deferred<T> {
 }
 
 type AnalyzeEnvelope = {
-  data: { data: { pattern: string; matchType: 'exact' | 'contains' | 'regex' } | null };
+  data: {
+    data: { pattern: string; matchType: 'exact' | 'contains' | 'regex'; confidence: number } | null;
+  };
   error: undefined;
 };
 
 function analyzeEnvelope(
   pattern: string,
-  matchType: 'exact' | 'contains' | 'regex' = 'contains'
+  matchType: 'exact' | 'contains' | 'regex' = 'contains',
+  confidence = 0.85
 ): AnalyzeEnvelope {
-  return { data: { data: { pattern, matchType } }, error: undefined };
+  return { data: { data: { pattern, matchType, confidence } }, error: undefined };
 }
 
 function makeTransaction(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransaction {
@@ -108,7 +111,7 @@ describe('useProposalGeneration — concurrent accept guard', () => {
 
     // Resolve the first proposal; its signal is the one that lands.
     await act(async () => {
-      deferred.resolve(analyzeEnvelope('STARBUCKS', 'contains'));
+      deferred.resolve(analyzeEnvelope('STARBUCKS', 'contains', 0.88));
       await deferred.promise;
     });
 
@@ -117,6 +120,7 @@ describe('useProposalGeneration — concurrent accept guard', () => {
     expect(result.current.proposalSignal?.entityName).toBe('Starbucks');
     expect(result.current.proposalSignal?.descriptionPattern).toBe('STARBUCKS');
     expect(result.current.proposalTriggeringTransaction?.description).toBe('STARBUCKS STORE 123');
+    expect(result.current.proposalConfidence).toBe(0.88);
     // The blocked second accept never overrode the pending window.
     expect(result.current.proposalSignal?.entityName).not.toBe('McDonalds');
   });
@@ -224,5 +228,46 @@ describe('useProposalGeneration — concurrent accept guard', () => {
     expect(result.current.proposalOpen).toBe(true);
     expect(result.current.proposalSignal?.matchType).toBe('contains');
     expect(analyzeMock).toHaveBeenCalledTimes(1);
+    // A fallback pattern has no model-reported confidence to surface (CF038/#3655).
+    expect(result.current.proposalConfidence).toBeNull();
+  });
+});
+
+describe('useProposalGeneration — AI confidence threading (CF038/#3655)', () => {
+  it('carries the AI-reported confidence into proposalConfidence', async () => {
+    analyzeMock.mockResolvedValueOnce(analyzeEnvelope('ALDI', 'contains', 0.35));
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useProposalGeneration(), { wrapper });
+
+    act(() => {
+      void result.current.generateProposal({
+        triggeringTransaction: makeTransaction({ description: 'ALDI 123' }),
+        entityId: 'ent-aldi',
+        entityName: 'Aldi',
+      });
+    });
+
+    await waitFor(() => expect(result.current.isGeneratingProposal).toBe(false));
+    expect(result.current.proposalConfidence).toBe(0.35);
+  });
+
+  it('leaves proposalConfidence null when the analysis has no usable pattern (fallback used)', async () => {
+    analyzeMock.mockResolvedValueOnce({ data: { data: null }, error: undefined });
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useProposalGeneration(), { wrapper });
+
+    act(() => {
+      void result.current.generateProposal({
+        triggeringTransaction: makeTransaction({ description: 'UNKNOWN MERCHANT' }),
+        entityId: 'ent-x',
+        entityName: 'Unknown',
+      });
+    });
+
+    await waitFor(() => expect(result.current.isGeneratingProposal).toBe(false));
+    expect(result.current.proposalConfidence).toBeNull();
+    expect(result.current.proposalSignal?.matchType).toBe('contains');
   });
 });

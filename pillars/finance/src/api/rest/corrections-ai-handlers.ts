@@ -29,7 +29,7 @@ export function makeCorrectionsAiHandlers(db: FinanceDb) {
     analyzeCorrection: ({ body }: Req['analyzeCorrection']) =>
       runHttp(async () => ({
         status: 200 as const,
-        body: { data: await analyzeCorrection(body) },
+        body: { data: await analyzeCorrection(db, body) },
       })),
 
     generateRules: ({ body }: Req['generateRules']) =>

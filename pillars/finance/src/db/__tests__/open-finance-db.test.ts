@@ -128,6 +128,23 @@ describe('openFinanceDb', () => {
     }
   });
 
+  it('adds the nullable match-provenance columns (0060, CF057/#3658)', () => {
+    const path = join(tmpDir, 'finance.db');
+    const { raw } = openFinanceDb(path);
+    try {
+      const columns = raw.prepare('PRAGMA table_info(transactions)').all() as {
+        name: string;
+        notnull: number;
+      }[];
+      const byName = new Map(columns.map((c) => [c.name, c]));
+      expect(byName.get('match_type')?.notnull).toBe(0);
+      expect(byName.get('match_rule_id')?.notnull).toBe(0);
+      expect(byName.get('match_confidence')?.notnull).toBe(0);
+    } finally {
+      raw.close();
+    }
+  });
+
   it('is idempotent — re-opening the same DB does not re-apply migrations', () => {
     const path = join(tmpDir, 'finance.db');
 

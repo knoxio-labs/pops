@@ -112,6 +112,37 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
     expect(setLocalTransactions).not.toHaveBeenCalled();
   });
 
+  it('forces the edited transaction status to match its current bucket when a reconcile moved it', () => {
+    // The `transaction` snapshot is captured at edit start with status
+    // 'uncertain'. A server reconciliation between edit start and save moved
+    // this checksum into the `failed` bucket. On save the edit must land in
+    // `failed` carrying status 'failed', not the stale 'uncertain' — otherwise
+    // the bucket/status invariant breaks and downstream UI/commit misbehaves.
+    const { result, setLocalTransactions } = setup();
+    const transaction = makeTransaction({
+      ruleProvenance: undefined,
+      status: 'uncertain',
+      entity: { matchType: 'exact', entityId: 'ent-1', entityName: 'Woolworths' },
+    });
+
+    act(() => {
+      result.current.handleSaveEdit(transaction, {
+        description: 'WOOLWORTHS METRO',
+        amount: transaction.amount,
+        entity: transaction.entity,
+      });
+    });
+
+    const updater = setLocalTransactions.mock.calls[0][0] as (
+      prev: ReturnType<typeof emptyLocalTx>
+    ) => ReturnType<typeof emptyLocalTx>;
+    const next = updater({ ...emptyLocalTx(), failed: [{ ...transaction, status: 'failed' }] });
+
+    expect(next.uncertain).toHaveLength(0);
+    expect(next.failed).toHaveLength(1);
+    expect(next.failed[0]).toMatchObject({ description: 'WOOLWORTHS METRO', status: 'failed' });
+  });
+
   it('does not flag a change when editedFields omits a field entirely', () => {
     const { result, generateProposal, setLocalTransactions } = setup();
     const transaction = makeTransaction();

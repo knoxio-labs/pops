@@ -27,7 +27,7 @@ export const OP_BADGE: Record<string, { label: string; icon: React.ReactNode; cl
     disable: {
       label: 'Disable',
       icon: <Ban className="h-3 w-3" />,
-      className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+      className: 'bg-warning/10 text-warning dark:bg-warning/10 dark:text-warning/60',
     },
     remove: {
       label: 'Remove',

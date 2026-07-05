@@ -41,7 +41,10 @@ CREATE TABLE transactions (
   notes text,
   checksum text,
   raw_row text,
-  last_edited_time text NOT NULL
+  last_edited_time text NOT NULL,
+  match_type text,
+  match_rule_id text,
+  match_confidence real
 );
 CREATE UNIQUE INDEX idx_transactions_checksum ON transactions (checksum);
 `;

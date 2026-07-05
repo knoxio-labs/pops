@@ -18,7 +18,9 @@ import { type FinanceDb } from '../../../db/index.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+/** Default model for the corrections AI cluster, overridable via `FINANCE_CORRECTIONS_AI_MODEL`. */
+export const CORRECTIONS_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+const DEFAULT_MODEL = CORRECTIONS_DEFAULT_MODEL;
 
 export interface ClaudeRequest {
   prompt: string;

@@ -2,10 +2,12 @@
  * Up Bank webhook route tests.
  *
  * Exercises the signature-verification contract end-to-end through Express:
- * missing header → 401, bad signature → 403, valid signature → 200, the
- * `UP_WEBHOOK_SECRET_FILE` secret source, the missing-secret → 500 path, and
- * the liveness ping. The app under test wires the same path-scoped raw parser
- * the real factory uses, so the Buffer-body assumption is covered too.
+ * missing header → 401, bad (short) signature → 403, bad (same-length)
+ * signature → 403 (exercises the `timingSafeEqual` branch, not just the
+ * length-mismatch guard), valid signature → 200, the `UP_WEBHOOK_SECRET_FILE`
+ * secret source, the missing-secret → 500 path, and the liveness ping. The
+ * app under test wires the same path-scoped raw parser the real factory
+ * uses, so the Buffer-body assumption is covered too.
  */
 import { createHmac } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -16,7 +18,7 @@ import express, { type Express } from 'express';
 import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createUpBankWebhookRouter } from './up-bank.js';
+import { __resetWebhookSecretCacheForTests, createUpBankWebhookRouter } from './up-bank.js';
 
 const SECRET = 'test-up-webhook-secret';
 
@@ -45,11 +47,13 @@ beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'up-bank-webhook-test-'));
   process.env['UP_WEBHOOK_SECRET'] = SECRET;
   delete process.env['UP_WEBHOOK_SECRET_FILE'];
+  __resetWebhookSecretCacheForTests();
 });
 
 afterEach(() => {
   delete process.env['UP_WEBHOOK_SECRET'];
   delete process.env['UP_WEBHOOK_SECRET_FILE'];
+  __resetWebhookSecretCacheForTests();
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -69,6 +73,22 @@ describe('POST /webhooks/up', () => {
       .post('/webhooks/up')
       .set('content-type', 'application/json')
       .set('x-up-authenticity-signature', 'not-the-real-hmac')
+      .send(EVENT_BODY);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: 'Invalid signature' });
+  });
+
+  it('rejects a same-length signature that differs only in its last character (403)', async () => {
+    // Exercises the crypto.timingSafeEqual comparison itself, not just the
+    // length-mismatch short-circuit ahead of it.
+    const real = sign(EVENT_BODY);
+    const tampered = real.slice(0, -1) + (real.at(-1) === '0' ? '1' : '0');
+
+    const res = await supertest(buildApp())
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', tampered)
       .send(EVENT_BODY);
 
     expect(res.status).toBe(403);
@@ -101,6 +121,41 @@ describe('POST /webhooks/up', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ received: true });
+  });
+
+  it('reuses the cached secret across requests instead of re-reading UP_WEBHOOK_SECRET_FILE (CF083/#3670)', async () => {
+    const originalSecret = 'secret-from-file';
+    const secretPath = join(tmpDir, 'up-secret');
+    writeFileSync(secretPath, `${originalSecret}\n`, 'utf-8');
+    delete process.env['UP_WEBHOOK_SECRET'];
+    process.env['UP_WEBHOOK_SECRET_FILE'] = secretPath;
+
+    const app = buildApp();
+    const first = await supertest(app)
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
+      .send(EVENT_BODY);
+    expect(first.status).toBe(200);
+
+    // Rewrite the secret file after the first request; a request signed with
+    // the ORIGINAL (cached) secret should still verify, and one signed with
+    // the new on-disk secret should not — proving the file isn't re-read.
+    writeFileSync(secretPath, 'rotated-secret\n', 'utf-8');
+
+    const stillUsesCached = await supertest(app)
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
+      .send(EVENT_BODY);
+    expect(stillUsesCached.status).toBe(200);
+
+    const rejectsRotated = await supertest(app)
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(EVENT_BODY, 'rotated-secret'))
+      .send(EVENT_BODY);
+    expect(rejectsRotated.status).toBe(403);
   });
 
   it('fails closed (500) when no webhook secret is configured', async () => {

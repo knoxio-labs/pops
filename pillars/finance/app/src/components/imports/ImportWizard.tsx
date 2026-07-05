@@ -44,8 +44,8 @@ function getStepClasses(stepNumber: number, currentStep: number): { text: string
     };
   }
   return {
-    text: 'text-gray-400 dark:text-gray-600',
-    circle: 'bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700',
+    text: 'text-muted-foreground',
+    circle: 'bg-muted border-2 border-border',
   };
 }
 
@@ -74,7 +74,7 @@ function StepContent({ currentStep }: { currentStep: number }) {
 }
 
 /**
- * Import wizard orchestrator - manages 7-step flow
+ * Import wizard orchestrator - manages the 8-step flow
  */
 export function ImportWizard() {
   const currentStep = useImportStore((state) => state.currentStep);
@@ -91,7 +91,7 @@ export function ImportWizard() {
         <Progress value={progress} className="h-2" />
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-lg border shadow-sm p-6">
+      <div className="bg-card rounded-lg border shadow-sm p-6">
         <StepContent currentStep={currentStep} />
       </div>
     </div>

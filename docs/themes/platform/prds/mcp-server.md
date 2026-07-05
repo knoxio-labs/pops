@@ -48,7 +48,7 @@ await inventory.inventory.locations.list();
 `configureServerSdk` is seeded with:
 
 - the **service-account key** (`POPS_INTERNAL_API_KEY`, or legacy `POPS_API_KEY`, optionally via the `POPS_API_KEY_FILE` Docker-secret pattern);
-- an **`internalBaseUrls` map** pinning Docker-network hostnames per pillar (`inventory-api:3003`, `finance-api:3004`, `registry-api:3001`, `media-api:3005`, `cerebrum-api:3006`, `contacts-api:3010`), each overridable via `POPS_<PILLAR>_API_URL`;
+- an **`internalBaseUrls` map** pinning Docker-network hostnames per pillar (`inventory-api:3002`, `finance-api:3004`, `registry-api:3001`, `media-api:3003`, `cerebrum-api:3007`, `contacts-api:3010`), each overridable via `POPS_<PILLAR>_API_URL`;
 - an optional **registry URL** (`POPS_REGISTRY_URL`) so discovery falls back through the registry pillar when an internal hostname is not pinned.
 
 The SDK memoises per-pillar handles, so repeated `getPillar` calls share a discovery cache.
@@ -117,11 +117,11 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 | `MCP_PORT`               | `3011`                      | Port the HTTP server listens on (bound `0.0.0.0`)                            |
 | `MCP_BIND_ADDR`          | `0.0.0.0`                   | Host bind address for the published compose port                             |
 | `POPS_REGISTRY_URL`      | —                           | Registry pillar URL for discovery fallback                                   |
-| `POPS_INVENTORY_API_URL` | `http://inventory-api:3003` | Pinned Docker-network base URL for the inventory pillar                      |
+| `POPS_INVENTORY_API_URL` | `http://inventory-api:3002` | Pinned Docker-network base URL for the inventory pillar                      |
 | `POPS_FINANCE_API_URL`   | `http://finance-api:3004`   | Pinned base URL for the finance pillar                                       |
 | `POPS_CONTACTS_API_URL`  | `http://contacts-api:3010`  | Pinned base URL for the contacts pillar (entities)                           |
-| `POPS_MEDIA_API_URL`     | `http://media-api:3005`     | Pinned base URL for the media pillar                                         |
-| `POPS_CEREBRUM_API_URL`  | `http://cerebrum-api:3006`  | Pinned base URL for the cerebrum pillar                                      |
+| `POPS_MEDIA_API_URL`     | `http://media-api:3003`     | Pinned base URL for the media pillar                                         |
+| `POPS_CEREBRUM_API_URL`  | `http://cerebrum-api:3007`  | Pinned base URL for the cerebrum pillar                                      |
 | `POPS_REGISTRY_API_URL`  | `http://registry-api:3001`  | Pinned base URL for the registry pillar                                      |
 
 ## Packaging & deployment

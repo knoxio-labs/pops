@@ -1,6 +1,8 @@
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-import { Alert, Button, DataTable, Skeleton } from '@pops/ui';
+import { useSetPageContext } from '@pops/navigation';
+import { Alert, Button, DataTable, PageHeader, Skeleton } from '@pops/ui';
 
 import { buildWishlistColumns, WISHLIST_TABLE_FILTERS } from './wishlist/columns';
 import { DeleteWishlistDialog } from './wishlist/DeleteWishlistDialog';
@@ -8,35 +10,24 @@ import { useWishlistPage } from './wishlist/useWishlistPage';
 import { WishlistFormDialog } from './wishlist/WishlistFormDialog';
 
 function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { t } = useTranslation('finance');
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Wish List</h1>
+      <PageHeader title={t('wishlist')} />
       <Alert variant="destructive">
-        <p className="font-semibold">Failed to load wish list</p>
+        <p className="font-semibold">{t('wishlist.failedToLoad')}</p>
         <p className="text-sm">{message}</p>
         <Button variant="outline" size="sm" onClick={onRetry} className="mt-4">
-          Try again
+          {t('common:tryAgain')}
         </Button>
       </Alert>
     </div>
   );
 }
 
-function PageHeader({ totalText, onAdd }: { totalText: string; onAdd: () => void }) {
-  return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Wish List</h1>
-        <p className="text-muted-foreground text-sm">{totalText}</p>
-      </div>
-      <Button onClick={onAdd} prefix={<Plus className="h-4 w-4" />}>
-        Add Item
-      </Button>
-    </div>
-  );
-}
-
 export function WishlistPage() {
+  const { t } = useTranslation('finance');
+  useSetPageContext({ page: 'wishlist' });
   const state = useWishlistPage();
   const { query } = state;
 
@@ -44,13 +35,22 @@ export function WishlistPage() {
     return <ErrorPanel message={query.error.message} onRetry={() => query.refetch()} />;
 
   const columns = buildWishlistColumns({ onEdit: state.handleEdit, onDelete: state.setDeletingId });
-  const totalText = query.data
-    ? `${query.data.pagination.total} items to save for`
-    : 'Tracking your goals';
 
   return (
     <div className="space-y-6">
-      <PageHeader totalText={totalText} onAdd={state.handleAdd} />
+      <PageHeader
+        title={t('wishlist')}
+        description={
+          query.data
+            ? t('wishlist.totalCount', { count: query.data.pagination.total })
+            : t('wishlist.trackingGoals')
+        }
+        actions={
+          <Button onClick={state.handleAdd} prefix={<Plus className="h-4 w-4" />}>
+            {t('wishlist.addItem')}
+          </Button>
+        }
+      />
       {query.isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-10 w-full" />
@@ -62,7 +62,7 @@ export function WishlistPage() {
           data={query.data?.data ?? []}
           searchable
           searchColumn="item"
-          searchPlaceholder="Search items..."
+          searchPlaceholder={t('wishlist.searchPlaceholder')}
           paginated
           defaultPageSize={50}
           filters={WISHLIST_TABLE_FILTERS}

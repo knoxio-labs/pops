@@ -25,6 +25,17 @@ describe('FileUpload', () => {
     expect(screen.getByText('transactions.csv')).toBeInTheDocument();
   });
 
+  it('accepts an uppercase .CSV extension', () => {
+    const onFileSelect = vi.fn();
+    render(<FileUpload onFileSelect={onFileSelect} />);
+
+    const file = makeFile('Transactions.CSV', 1024);
+    fireEvent.change(getFileInput(), { target: { files: [file] } });
+
+    expect(onFileSelect).toHaveBeenCalledWith(file);
+    expect(screen.getByText('Transactions.CSV')).toBeInTheDocument();
+  });
+
   it('rejecting a wrong-extension file notifies the parent the store file is gone, not just the display', () => {
     const onFileSelect = vi.fn();
     render(<FileUpload onFileSelect={onFileSelect} />);

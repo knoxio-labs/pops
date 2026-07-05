@@ -22,6 +22,7 @@ import { ImportTransactionPersistError } from '../errors.js';
 import { transactions } from '../schema.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
+import type { TransactionMatchType } from '../match-types.js';
 import type { FinanceDb } from './internal.js';
 
 /** Single entry in the entity name lookup map. */
@@ -29,6 +30,13 @@ export interface EntityLookupEntry {
   id: string;
   /** Original-case entity name as stored in the contacts pillar. */
   name: string;
+  /**
+   * Contact entity type (e.g. `company`, `person`, `government`) — used to keep
+   * personal-name PII out of AI prompts. Optional because only the live
+   * `buildEntityMaps` path (which always sets it) needs it; local matcher
+   * fixtures may omit it.
+   */
+  type?: string;
 }
 
 /** Two pre-built maps consumed by the import matching stages. */
@@ -52,6 +60,12 @@ export interface InsertImportTransactionInput {
   location: string | null;
   rawRow?: string;
   checksum?: string;
+  /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
+  matchType?: TransactionMatchType | null;
+  /** Winning correction rule id, only set when `matchType` is `learned`. */
+  matchRuleId?: string | null;
+  /** Match confidence (0-1), only set for `ai`/`learned` matches. */
+  matchConfidence?: number | null;
 }
 
 /** Raw drizzle row shape returned by `insertImportTransaction`. */
@@ -102,7 +116,11 @@ export function buildEntityMaps(contacts: ContactEntity[]): EntityMaps {
   const aliasMap = new Map<string, string>();
 
   for (const contact of contacts) {
-    entityLookup.set(contact.name.toLowerCase(), { id: contact.id, name: contact.name });
+    entityLookup.set(contact.name.toLowerCase(), {
+      id: contact.id,
+      name: contact.name,
+      type: contact.type,
+    });
     for (const raw of contact.aliases) {
       const alias = raw.trim();
       if (alias.length === 0) continue;
@@ -158,6 +176,9 @@ export function insertImportTransaction(
       checksum: input.checksum ?? null,
       rawRow: input.rawRow ?? null,
       lastEditedTime: now,
+      matchType: input.matchType ?? null,
+      matchRuleId: input.matchRuleId ?? null,
+      matchConfidence: input.matchConfidence ?? null,
     })
     .run();
 

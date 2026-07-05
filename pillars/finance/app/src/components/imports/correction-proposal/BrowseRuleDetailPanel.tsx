@@ -17,12 +17,12 @@ export function BrowseRuleDetailPanel(props: {
           Rule details
         </div>
         {isPending && (
-          <Badge variant="default" className="text-[10px] bg-amber-500">
+          <Badge variant="default" className="text-2xs bg-warning text-warning-foreground">
             pending
           </Badge>
         )}
         {!rule.isActive && (
-          <Badge variant="secondary" className="text-[10px]">
+          <Badge variant="secondary" className="text-2xs">
             disabled
           </Badge>
         )}
@@ -46,7 +46,7 @@ function RuleDetailFields({ rule }: { rule: CorrectionRule }) {
   return (
     <div className="rounded-md border bg-muted/30 p-3 space-y-2">
       <div className="space-y-1">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Pattern</div>
+        <div className="text-2xs uppercase tracking-wide text-muted-foreground">Pattern</div>
         <code className="text-sm rounded bg-background px-1 py-0.5">{rule.descriptionPattern}</code>
         <span className="ml-2 text-xs text-muted-foreground">{rule.matchType}</span>
       </div>
@@ -64,7 +64,7 @@ function RuleDetailFields({ rule }: { rule: CorrectionRule }) {
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-2xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="text-sm">{value}</div>
     </div>
   );

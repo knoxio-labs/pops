@@ -37,7 +37,7 @@ function TextField({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-white dark:bg-gray-800"
+        className="bg-background"
       />
     </div>
   );

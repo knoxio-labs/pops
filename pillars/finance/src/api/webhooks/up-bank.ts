@@ -9,26 +9,48 @@
  *
  * The endpoint bypasses gateway auth by design (Cloudflare Access excludes the
  * Up webhook path); authenticity is established by the signature check alone.
+ *
+ * Explicit no-op: the handler verifies the signature and acknowledges every
+ * event with `200`, as Up requires, but does not fetch or persist the
+ * transaction — batch + webhook persistence is tracked in full at
+ * `docs/ideas/up-bank-api-import.md` and knoxio/pops#1874. Ingestion staying
+ * silent is surfaced separately via the `import` staleness fields on
+ * `GET /health` (see `handlers.ts`), not by this route.
  */
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { type Router as ExpressRouter, Router } from 'express';
 
+// Cached after the first successful resolution — the secret is a Docker
+// secret/env var fixed for the process lifetime, so re-reading the file on
+// every webhook delivery is a pointless synchronous disk hit (CF083/#3670).
+let cachedWebhookSecret: string | null = null;
+
 function getWebhookSecret(): string {
+  if (cachedWebhookSecret !== null) return cachedWebhookSecret;
+
   const filePath = process.env['UP_WEBHOOK_SECRET_FILE'];
-  if (filePath) {
-    return readFileSync(filePath, 'utf-8').trim();
-  }
-  const envVal = process.env['UP_WEBHOOK_SECRET'];
-  if (envVal) return envVal;
-  throw new Error('Missing UP_WEBHOOK_SECRET_FILE or UP_WEBHOOK_SECRET');
+  const secret = filePath
+    ? readFileSync(filePath, 'utf-8').trim()
+    : process.env['UP_WEBHOOK_SECRET'];
+  if (!secret) throw new Error('Missing UP_WEBHOOK_SECRET_FILE or UP_WEBHOOK_SECRET');
+
+  cachedWebhookSecret = secret;
+  return secret;
+}
+
+/** Test seam: clear the cached secret so a test can swap env/file sources. */
+export function __resetWebhookSecretCacheForTests(): void {
+  cachedWebhookSecret = null;
 }
 
 function verifySignature(body: Buffer, signature: string): boolean {
   const secret = getWebhookSecret();
-  const expected = createHmac('sha256', secret).update(body).digest('hex');
-  return expected === signature;
+  const expected = Buffer.from(createHmac('sha256', secret).update(body).digest('hex'), 'utf8');
+  const provided = Buffer.from(signature, 'utf8');
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(expected, provided);
 }
 
 /**
@@ -62,7 +84,9 @@ export function createUpBankWebhookRouter(): ExpressRouter {
     const eventType = payload.data?.attributes?.eventType;
     const transactionId = payload.data?.relationships?.transaction?.data?.id;
 
-    console.warn(`[webhook/up] Event: ${eventType}, Transaction: ${transactionId}`);
+    console.warn(
+      `[webhook/up] no-op (tracked: knoxio/pops#1874) — event=${eventType} transaction=${transactionId}`
+    );
 
     res.status(200).json({ received: true });
   });

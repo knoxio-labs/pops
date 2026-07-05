@@ -23,12 +23,12 @@ export function OpRow({ op, selected, disabled, onSelect, onDelete }: OpRowProps
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-1.5">
-            <Badge variant={opKindBadgeVariant(op.kind)} className="text-[10px] h-4 px-1.5">
+            <Badge variant={opKindBadgeVariant(op.kind)} className="text-2xs h-4 px-1.5">
               {opKindLabel(op.kind)}
             </Badge>
             {op.dirty && (
               <span
-                className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                className="h-1.5 w-1.5 rounded-full bg-warning"
                 title="Unsaved edits — preview stale"
               />
             )}

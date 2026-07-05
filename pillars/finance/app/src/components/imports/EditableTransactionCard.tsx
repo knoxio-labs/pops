@@ -76,7 +76,7 @@ function EditActions({
         variant="default"
         size="sm"
         onClick={() => onSave(true)}
-        className="bg-purple-600 hover:bg-purple-700"
+        className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90"
       >
         <Save className="w-4 h-4 mr-1" />
         Save & Learn
@@ -119,8 +119,8 @@ function EntityOrTransferNotice({
   }
   if (transactionType === 'transfer') {
     return (
-      <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4 text-sm">
-        <p className="text-gray-700 dark:text-gray-300">
+      <div className="p-3 bg-muted rounded-lg mb-4 text-sm">
+        <p className="text-foreground">
           💡 <strong>Transfer transactions</strong> don't require an entity. They represent money
           moving between your accounts (e.g., credit card payments, savings transfers).
         </p>

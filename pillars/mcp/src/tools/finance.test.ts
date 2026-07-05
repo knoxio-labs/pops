@@ -88,6 +88,33 @@ describe('finance.entities.list', () => {
     const call = entities.list.mock.lastCall?.[0];
     expect((call as Record<string, unknown>)['type']).toBe('company');
   });
+
+  it('returns isError on unavailable', async () => {
+    entities.list.mockResolvedValueOnce(callUnavailable('contacts'));
+    const result = await tool.handler({});
+    expect(result.isError).toBe(true);
+  });
+
+  it('returns isError on contract-mismatch', async () => {
+    entities.list.mockResolvedValueOnce(callContractMismatch('contacts', '1.0.0', '2.0.0'));
+    const result = await tool.handler({});
+    expect(result.isError).toBe(true);
+  });
+
+  it('declares its valid type values in the tool schema (CF073)', () => {
+    const properties = tool.inputSchema.properties as
+      | Record<string, { enum?: readonly string[] }>
+      | undefined;
+    expect(properties?.['type']?.enum).toEqual([
+      'company',
+      'person',
+      'government',
+      'bank',
+      'place',
+      'brand',
+      'organisation',
+    ]);
+  });
 });
 
 describe('finance.budgets.list', () => {

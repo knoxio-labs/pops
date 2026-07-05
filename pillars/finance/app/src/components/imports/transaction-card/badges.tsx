@@ -1,4 +1,4 @@
-import { Zap } from 'lucide-react';
+import { Sparkles, Zap } from 'lucide-react';
 
 import { Badge, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
 
@@ -8,27 +8,61 @@ import type { ProcessedTransaction } from '../../../store/import-store-types';
 
 type EntityMatchType = NonNullable<ProcessedTransaction['entity']>['matchType'];
 
-/** Match types the system produced on its own — as opposed to `manual`, an explicit/`learned` rule, or `none`. */
-const AUTO_MATCH_TYPES: readonly EntityMatchType[] = ['alias', 'exact', 'prefix', 'contains', 'ai'];
+/**
+ * Match types the system resolved deterministically — as opposed to `ai` (a
+ * model guess, no guaranteed-correct trust signal), `manual`, an explicit/
+ * `learned` rule, or `none`. Kept distinct from `ai` (CF037/#3655): an AI
+ * match carries no deterministic guarantee and must not read as identical
+ * trust to alias/exact/prefix/contains.
+ */
+const AUTO_MATCH_TYPES: readonly EntityMatchType[] = ['alias', 'exact', 'prefix', 'contains'];
+
+/** Below this, the AI-matched badge calls out low confidence rather than just reporting a number. */
+const LOW_AI_CONFIDENCE_THRESHOLD = 0.7;
+
+function aiMatchedTitle(confidence: number | undefined): string {
+  if (confidence === undefined) return 'Entity resolved by AI (no reported confidence)';
+  const pct = Math.round(confidence * 100);
+  return confidence < LOW_AI_CONFIDENCE_THRESHOLD
+    ? `Entity resolved by AI — low confidence (${pct}%), review before trusting`
+    : `Entity resolved by AI — confidence ${pct}%`;
+}
+
+function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
+  const isLowConfidence = confidence !== undefined && confidence < LOW_AI_CONFIDENCE_THRESHOLD;
+  return (
+    <Badge
+      variant={isLowConfidence ? 'destructive' : 'outline'}
+      className="text-xs flex items-center gap-1"
+      title={aiMatchedTitle(confidence)}
+    >
+      <Sparkles className="w-3 h-3" />
+      AI-matched
+      {confidence !== undefined && ` ${Math.round(confidence * 100)}%`}
+    </Badge>
+  );
+}
+
+function ruleMatchedTitle(ruleProvenance: ProcessedTransaction['ruleProvenance']): string {
+  if (!ruleProvenance) return 'Rule matched';
+  return [
+    'Rule matched',
+    `Pattern: ${ruleProvenance.pattern}`,
+    `Match type: ${ruleProvenance.matchType}`,
+    `Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`,
+  ].join('\n');
+}
 
 export function HeaderBadges({ transaction }: { transaction: ProcessedTransaction }) {
   const matchType = transaction.entity?.matchType;
   const isAutoMatched = matchType !== undefined && AUTO_MATCH_TYPES.includes(matchType);
-  const isEdited = transaction.manuallyEdited;
+  const isAiMatched = matchType === 'ai';
   const ruleProvenance = transaction.ruleProvenance;
-  const isRuleMatched = Boolean(ruleProvenance) || transaction.entity?.matchType === 'learned';
+  const isRuleMatched = Boolean(ruleProvenance) || matchType === 'learned';
   const overriddenRules = transaction.matchedRules?.slice(1) ?? [];
-  const ruleTitle = ruleProvenance
-    ? [
-        'Rule matched',
-        `Pattern: ${ruleProvenance.pattern}`,
-        `Match type: ${ruleProvenance.matchType}`,
-        `Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`,
-      ].join('\n')
-    : 'Rule matched';
   return (
     <>
-      {isEdited && (
+      {transaction.manuallyEdited && (
         <Badge variant="secondary" className="text-xs">
           Edited
         </Badge>
@@ -39,8 +73,9 @@ export function HeaderBadges({ transaction }: { transaction: ProcessedTransactio
           Auto-matched
         </Badge>
       )}
+      {isAiMatched && <AiMatchedBadge confidence={transaction.entity?.confidence} />}
       {isRuleMatched && (
-        <Badge variant="secondary" className="text-xs" title={ruleTitle}>
+        <Badge variant="secondary" className="text-xs" title={ruleMatchedTitle(ruleProvenance)}>
           Rule matched
         </Badge>
       )}
@@ -72,7 +107,7 @@ function OverriddenRulesPopover({ rules }: { rules: MatchedRule[] }) {
                 <code className="font-mono truncate max-w-[18ch]" title={rule.pattern}>
                   {rule.pattern}
                 </code>
-                <Badge variant="outline" className="text-[10px] shrink-0">
+                <Badge variant="outline" className="text-2xs shrink-0">
                   {rule.matchType}
                 </Badge>
               </div>

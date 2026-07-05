@@ -60,7 +60,10 @@ CREATE TABLE transactions (
   notes text,
   checksum text,
   raw_row text,
-  last_edited_time text NOT NULL
+  last_edited_time text NOT NULL,
+  match_type text,
+  match_rule_id text,
+  match_confidence real
 );
 CREATE INDEX idx_transactions_date ON transactions (date);
 `;

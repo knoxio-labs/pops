@@ -3,13 +3,9 @@ import { moveOneToMatched } from '../../review/useReviewActions';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { ProcessedTransaction } from '../../../../store/importStore';
+import type { LocalTxState } from '../local-tx-reconcile';
 
-export type LocalTxState = {
-  matched: ProcessedTransaction[];
-  uncertain: ProcessedTransaction[];
-  failed: ProcessedTransaction[];
-  skipped: ProcessedTransaction[];
-};
+export type { LocalTxState } from '../local-tx-reconcile';
 
 export interface UseBulkAssignmentArgs {
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;

@@ -263,5 +263,7 @@ export {
   collectAvailableTags,
   type DescriptionPreviewResult,
   type DescriptionPreviewRow,
+  getLastImportInfo,
+  type LastImportInfo,
   listDescriptionsForPreview,
 } from './transactions-reads.js';

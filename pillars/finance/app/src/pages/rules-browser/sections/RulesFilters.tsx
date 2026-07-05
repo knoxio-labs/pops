@@ -34,6 +34,7 @@ export function RulesFilters({
       />
       <TextInput
         type="number"
+        aria-label="Min confidence (0-1)"
         placeholder="Min confidence (0-1)"
         value={minConfidence}
         onChange={(e) => {

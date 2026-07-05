@@ -20,10 +20,10 @@ function AiSuggestionPanel({
   onCreateEntity,
 }: AiSuggestionProps) {
   return (
-    <div className="mb-2 p-2 bg-purple-50 dark:bg-purple-950 rounded-md border border-purple-200 dark:border-purple-800">
+    <div className="mb-2 p-2 bg-app-accent/10 rounded-md border border-app-accent/20">
       <div className="flex items-center gap-2 mb-2">
-        <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-        <span className="text-sm text-purple-700 dark:text-purple-300">
+        <Sparkles className="w-4 h-4 text-app-accent" />
+        <span className="text-sm text-app-accent">
           AI suggestion: {transaction.entity?.entityName}
         </span>
       </div>
@@ -33,7 +33,7 @@ function AiSuggestionPanel({
             variant="default"
             size="sm"
             onClick={() => onAcceptAiSuggestion(transaction)}
-            className="bg-purple-600 hover:bg-purple-700 flex-1"
+            className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90 flex-1"
           >
             {aiSuggestedEntityExists ? '✓' : '+'} Accept "{transaction.entity?.entityName}"
           </Button>
@@ -112,7 +112,7 @@ export function ReadonlyEntitySummary({
   return (
     <div className="mb-3">
       <div className="text-sm">
-        <span className="text-gray-500">Entity:</span>{' '}
+        <span className="text-muted-foreground">Entity:</span>{' '}
         <span className="font-medium">{transaction.entity.entityName}</span>
       </div>
       {showMatchType && (

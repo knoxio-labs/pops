@@ -1,14 +1,20 @@
 /**
- * Atomic import commit: apply correction + tag-rule ChangeSets, write
- * transactions, and retroactively re-classify existing rows — all inside one
- * SQLite transaction so a failure anywhere rolls the lot back.
+ * Import commit: apply correction + tag-rule ChangeSets, write transactions,
+ * and retroactively re-classify existing rows inside one SQLite transaction.
+ * A thrown error anywhere in the ChangeSet-apply or reclassification phases
+ * rolls the whole SQLite transaction back. Per-transaction inserts are the
+ * exception: `writeTransactionsPhase` catches and counts individual insert
+ * failures rather than throwing, so one bad row lands in `failedDetails`
+ * without rolling back the ChangeSets or the other rows already written.
  *
  * Pending contacts are pre-created against the contacts pillar BEFORE the
  * SQLite transaction opens (network can't live inside a better-sqlite3 sync
  * transaction). Each pre-create carries `{ name, type }` and is idempotent —
  * a 409 dup-name fetches the existing contact id so a retry after a rolled-back
  * finance tx reuses the contact. The resolved tempId→id map is threaded into
- * the synchronous transaction.
+ * the synchronous transaction. Because this happens before the finance
+ * transaction opens, a rollback of the finance side does not undo any
+ * contacts already created there.
  *
  * The outer `db.transaction` handle (`tx`) is threaded into every inner service
  * so the correction/tag-rule ChangeSet applies nest as savepoints rather than
@@ -37,6 +43,26 @@ interface RuleApplyCounts {
   edit: number;
   disable: number;
   remove: number;
+}
+
+interface SanitizedProvenance {
+  matchType: CommitPayload['transactions'][number]['matchType'] | null;
+  matchRuleId: string | null;
+  matchConfidence: number | null;
+}
+
+/**
+ * Drop provenance fields that are meaningless for the given `matchType` before
+ * persisting, so the DB never stores an inconsistent combination sent by a
+ * client (e.g. `matchType: 'exact'` carrying a `matchRuleId`). A rule id is only
+ * meaningful for `learned` matches; a confidence only for `ai`/`learned` ones.
+ */
+function sanitizeProvenance(txn: CommitPayload['transactions'][number]): SanitizedProvenance {
+  const matchType = txn.matchType ?? null;
+  const matchRuleId = matchType === 'learned' ? (txn.matchRuleId ?? null) : null;
+  const matchConfidence =
+    matchType === 'ai' || matchType === 'learned' ? (txn.matchConfidence ?? null) : null;
+  return { matchType, matchRuleId, matchConfidence };
 }
 
 /**
@@ -129,6 +155,7 @@ function writeTransactionsPhase(
 
   for (const txn of payload.transactions) {
     const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
+    const provenance = sanitizeProvenance(txn);
     try {
       importsService.insertImportTransaction(tx, {
         description: txn.description,
@@ -142,6 +169,9 @@ function writeTransactionsPhase(
         location: txn.location ?? null,
         rawRow: txn.rawRow,
         checksum: txn.checksum,
+        matchType: provenance.matchType,
+        matchRuleId: provenance.matchRuleId,
+        matchConfidence: provenance.matchConfidence,
       });
       imported++;
     } catch (error) {
@@ -156,11 +186,13 @@ function writeTransactionsPhase(
 }
 
 /**
- * Atomically commit an import. Pending contacts are pre-created against the
- * contacts pillar first (network, outside the tx); the resolved tempId→id map
- * then feeds the synchronous SQLite transaction that writes transactions +
- * applies ChangeSets + reclassifies. A pre-create failure (contacts down)
- * throws BEFORE the transaction opens, so nothing is half-committed.
+ * Commit an import. Pending contacts are pre-created against the contacts
+ * pillar first (network, outside the tx); the resolved tempId→id map then
+ * feeds the synchronous SQLite transaction that applies ChangeSets, writes
+ * transactions, and reclassifies. A pre-create failure (contacts down) throws
+ * before the SQLite transaction opens, so no finance-side row is written for
+ * that attempt — but pre-created contacts themselves are not part of that
+ * transaction and are not rolled back if a later phase fails.
  */
 export async function commitImport(
   db: FinanceDb,

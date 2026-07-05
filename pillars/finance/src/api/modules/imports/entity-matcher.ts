@@ -57,13 +57,53 @@ function normalizeKey(key: string, stripPunctuation: boolean): string {
   return stripped.toUpperCase();
 }
 
+/**
+ * An entity lookup entry with both normalization variants (plain and
+ * punctuation-stripped) precomputed once, rather than re-running
+ * `normalizeKey` per entity on every one of the up-to-6 passes
+ * `matchEntity` makes over the lookup per transaction (CF092/#3670).
+ */
+interface NormalizedEntityEntry {
+  keyLength: number;
+  entry: EntityLookupEntry;
+  normalized: string;
+  normalizedStripped: string;
+}
+
+/**
+ * Cached per `EntityLookupMap` instance — the map is built once per import
+ * run (`buildEntityMaps`) and reused across every transaction in that run,
+ * so keying on its reference lets the whole run share one precomputed pass
+ * without threading a new parameter through every caller. A `WeakMap` lets
+ * the cache entry be collected once the run's lookup map is.
+ */
+const normalizedEntriesCache = new WeakMap<EntityLookupMap, NormalizedEntityEntry[]>();
+
+function getNormalizedEntries(entityLookup: EntityLookupMap): NormalizedEntityEntry[] {
+  const cached = normalizedEntriesCache.get(entityLookup);
+  if (cached) return cached;
+
+  const entries: NormalizedEntityEntry[] = [];
+  for (const [key, entry] of entityLookup) {
+    entries.push({
+      keyLength: key.length,
+      entry,
+      normalized: normalizeKey(key, false),
+      normalizedStripped: normalizeKey(key, true),
+    });
+  }
+  normalizedEntriesCache.set(entityLookup, entries);
+  return entries;
+}
+
 function findExactMatch(
   normalized: string,
-  entries: [string, EntityLookupEntry][],
+  entries: NormalizedEntityEntry[],
   stripPunctuation: boolean
 ): EntityMatch | null {
-  for (const [key, entry] of entries) {
-    if (normalized === normalizeKey(key, stripPunctuation)) {
+  for (const { entry, normalized: plain, normalizedStripped } of entries) {
+    const upper = stripPunctuation ? normalizedStripped : plain;
+    if (normalized === upper) {
       return { entityName: entry.name, entityId: entry.id, matchType: 'exact' };
     }
   }
@@ -72,12 +112,12 @@ function findExactMatch(
 
 function findPrefixMatch(
   normalized: string,
-  entries: [string, EntityLookupEntry][],
+  entries: NormalizedEntityEntry[],
   stripPunctuation: boolean
 ): EntityMatch | null {
   let best: EntityMatch | null = null;
-  for (const [key, entry] of entries) {
-    const upper = normalizeKey(key, stripPunctuation);
+  for (const { entry, normalized: plain, normalizedStripped } of entries) {
+    const upper = stripPunctuation ? normalizedStripped : plain;
     if (!normalized.startsWith(upper)) continue;
     if (!best || entry.name.length > best.entityName.length) {
       best = { entityName: entry.name, entityId: entry.id, matchType: 'prefix' };
@@ -88,13 +128,13 @@ function findPrefixMatch(
 
 function findContainsMatch(
   normalized: string,
-  entries: [string, EntityLookupEntry][],
+  entries: NormalizedEntityEntry[],
   stripPunctuation: boolean
 ): EntityMatch | null {
   let best: EntityMatch | null = null;
-  for (const [key, entry] of entries) {
-    if (key.length < 4) continue;
-    const upper = normalizeKey(key, stripPunctuation);
+  for (const { keyLength, entry, normalized: plain, normalizedStripped } of entries) {
+    if (keyLength < 4) continue;
+    const upper = stripPunctuation ? normalizedStripped : plain;
     if (!normalized.includes(upper)) continue;
     if (!best || entry.name.length > best.entityName.length) {
       best = { entityName: entry.name, entityId: entry.id, matchType: 'contains' };
@@ -108,7 +148,7 @@ function tryMatch(
   entityLookup: EntityLookupMap,
   stripPunctuation = false
 ): EntityMatch | null {
-  const entries = [...entityLookup.entries()];
+  const entries = getNormalizedEntries(entityLookup);
   return (
     findExactMatch(normalized, entries, stripPunctuation) ??
     findPrefixMatch(normalized, entries, stripPunctuation) ??

@@ -63,8 +63,6 @@ pillars/lists/
 ├── openapi/
 │   └── lists.openapi.json  canonical wire contract (committed)
 ├── migrations/             drizzle journal
-├── infra/
-│   └── litestream.yml      SQLite replication config (reference)
 ├── scripts/                codegen — openapi + api-types
 └── src/
     ├── contract/   PUBLIC: ts-rest contract (rest.ts), types, zod schemas, manifest, errors

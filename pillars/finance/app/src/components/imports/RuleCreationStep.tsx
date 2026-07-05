@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { Badge, Button, Checkbox, Label } from '@pops/ui';
+import { Badge, Button, Checkbox, EmptyState, Label } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
 import { buildChangeSet, computeProposals, type RuleProposal } from './rule-creation/utils';
@@ -54,13 +54,35 @@ function ProposalCard({
   );
 }
 
-function EmptyState() {
+function ProposalsList({
+  proposals,
+  checked,
+  onToggle,
+}: {
+  proposals: RuleProposal[];
+  checked: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  if (proposals.length === 0) {
+    return (
+      <EmptyState
+        size="sm"
+        className="rounded-lg border border-dashed"
+        title="No tag patterns detected in this import."
+        description="Tag transactions in the previous step to enable rule detection."
+      />
+    );
+  }
   return (
-    <div className="rounded-lg border border-dashed p-8 text-center space-y-2">
-      <p className="text-sm text-muted-foreground">No tag patterns detected in this import.</p>
-      <p className="text-xs text-muted-foreground">
-        Tag transactions in the previous step to enable rule detection.
-      </p>
+    <div className="space-y-3">
+      {proposals.map((proposal) => (
+        <ProposalCard
+          key={proposal.id}
+          proposal={proposal}
+          checked={checked.has(proposal.id)}
+          onToggle={() => onToggle(proposal.id)}
+        />
+      ))}
     </div>
   );
 }
@@ -135,20 +157,7 @@ export function RuleCreationStep() {
           future imports.
         </p>
       </div>
-      {proposals.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="space-y-3">
-          {proposals.map((proposal) => (
-            <ProposalCard
-              key={proposal.id}
-              proposal={proposal}
-              checked={checked.has(proposal.id)}
-              onToggle={() => toggle(proposal.id)}
-            />
-          ))}
-        </div>
-      )}
+      <ProposalsList proposals={proposals} checked={checked} onToggle={toggle} />
       <StepFooter
         onBack={prevStep}
         onSkip={nextStep}

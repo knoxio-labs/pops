@@ -18,20 +18,6 @@
   "kpi.totalCallsDesc": "{{count}} tokens",
   "kpi.totalCostDesc": "{{count}} total calls",
 
-  "cache.title": "Cache Management",
-  "cache.description": "View and manage the AI entity categorisation cache",
-  "cache.totalEntries": "Total Entries",
-  "cache.cachedCategorisations": "Cached entity categorisations",
-  "cache.diskSize": "Disk Size",
-  "cache.diskSizeDesc": "Approximate cache file size",
-  "cache.hitRate": "Hit Rate",
-  "cache.cachedResults": "{{count}} cached results",
-  "cache.failedToLoad": "Failed to load cache stats",
-  "cache.breadcrumb": "AI Usage",
-  "cache.staleDaysLabel": "Days threshold for stale entries",
-  "cache.clearStale": "Clear Stale",
-  "cache.clearAll": "Clear All",
-
   "dateFilter.startDate": "Start date",
   "dateFilter.endDate": "End date"
 }

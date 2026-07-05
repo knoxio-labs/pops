@@ -1,5 +1,4 @@
 export * from './types/index.js';
-export * from './schemas/index.js';
 export * from './errors.js';
 export type { FinanceRouter } from './router.js';
 export type { FinanceContract } from './manifest.js';

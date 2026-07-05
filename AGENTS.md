@@ -96,7 +96,7 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 
 **Pillar kinds (ADR-035):** a pillar is any service registered with `registry` that exposes `/manifest.json`. **Data** pillars own a domain DB; **bridge** pillars adapt external systems; **UI** pillars host frontend SPAs (`pops-shell` registers as `id: 'shell'`).
 
-**Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`).
+**Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its OWN pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Backend-to-backend cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`); a browser page that needs another pillar's data directly uses a sanctioned **per-consumer generated client** instead — see [Cross-pillar generated FE clients](#cross-pillar-generated-fe-clients) and [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md).
 
 `docs/roadmap.md` is the implementation tracker — single source of truth for status across all pillars.
 
@@ -105,6 +105,8 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 ## Commands
 
 POPS uses [mise](https://mise.jdx.dev/) for task running and tool versions. **Run `mise tasks`** rather than memorising names — the task list is the source of truth.
+
+**Toolchain pin:** the root `mise.toml` `[tools]` block (node/pnpm/rust) is the shared default every unit inherits — mise merges config **up** the directory tree, so a unit's own `mise.toml` only needs to declare the tool(s) it wants to _override_, not the full set. A pillar or lib that must trial or lag a Node bump adds its own `[tools]` table (e.g. `pillars/<id>/mise.toml`); any tool it doesn't redeclare still resolves from the root pin. This works because pnpm workspace scripts (`pnpm --filter <pkg> <script>`, and the root `run-all` fan-out) execute with the package directory as cwd, so mise's shim resolves the merged config for that directory — including in CI workflows that run `mise` directly (via `jdx/mise-action@v2`), where an override version is installed on first use only when mise's `not_found_auto_install` is enabled; workflows that pin Node through `actions/setup-node` instead won't pick up a per-unit override. Rust is a **single Cargo workspace** (root `Cargo.toml`) — `cargo build -p <crate>` always resolves one toolchain from the invocation directory (repo root), so a per-crate `rust` override has no effect until that crate becomes its own Cargo workspace; don't add one expecting it to do anything yet. Don't override `pnpm` per unit — one pnpm version manages the whole workspace lockfile.
 
 ```bash
 mise setup            # Initial setup (install deps + tools)
@@ -259,11 +261,11 @@ External APIs: Finance = Up API (webhooks) + ANZ/Amex/ING CSV | Media = Plex/TMD
 
 ### Finance
 
-1. Bank data arrives (Up webhook or CSV download).
-2. Import script parses, normalizes, cleans.
-3. Entity matching: aliases → exact → prefix → contains → AI fallback (cached).
-4. Deduplication: date + amount count-based against existing records.
-5. Write to the finance pillar's SQLite DB.
+1. Bank data arrives as a CSV export, uploaded through the Import Wizard (Up Bank ships only a signature-verified webhook that logs and drops the event — no batch import or webhook persistence yet).
+2. The wizard parses the CSV client-side (Papa Parse), maps columns, and builds `ParsedTransaction[]`, each row carrying a canonical SHA-256 dedup checksum.
+3. `POST /imports/process` partitions the batch by checksum against existing transactions (dedup), then runs the entity-matching ladder on survivors — see [Import Pipeline](#import-pipeline).
+4. Steps 4–6 of the wizard (review entities, tag review, rule creation) buffer every edit, entity creation, and rule ChangeSet locally; nothing is written to SQLite yet.
+5. `POST /imports/commit` writes entities, correction/tag-rule ChangeSets, and transactions in one atomic pass, then retroactively reclassifies existing rows against the updated rule set.
 
 ### Media
 
@@ -282,19 +284,20 @@ External APIs: Finance = Up API (webhooks) + ANZ/Amex/ING CSV | Media = Plex/TMD
 
 ## Import Pipeline
 
-User-facing entry point: the **Import Wizard** (multi-step UI in `pillars/finance/app`), driving the pipeline in `pillars/finance/src/api/modules/imports/`.
+User-facing entry point: the **Import Wizard** (8-step UI in `pillars/finance/app`), driving the pipeline in `pillars/finance/src/api/modules/imports/`. Dedup runs first (checksum probe against existing transactions), then the survivors run through the entity-matching ladder below.
 
-**Entity Matching Chain** — highest priority first:
+**Entity Matching Chain** — highest priority first, first hit wins:
 
-1. **Learned corrections** — fuzzy match on normalized description against `v_active_corrections`.
-2. **Manual aliases** — case-insensitive substring match from per-entity alias map.
-3. **Exact match** — full description equals entity name.
-4. **Prefix match** — description starts with entity name (longest wins).
-5. **Contains match** — entity name anywhere in description (min 4 chars, longest wins).
-6. **Punctuation stripping** — strip apostrophes, retry stages 2–5.
-7. **AI fallback** — Claude Haiku API call, cached to disk + DB, rate-limited.
+1. **Learned corrections** — `findAllMatchingTransactionCorrectionsFromDb` scans active `transaction_corrections` rows (`confidence >= 0.7`) ordered `priority ASC, id ASC`; the first whose pattern matches wins. Match types are `exact` / `contains` / `regex` — not fuzzy. `>= 0.9` confidence → `matched`, else `uncertain`.
+2. **Transfer/income heuristic** — rows that look like transfers/income short-circuit to a `matched` transfer with no entity.
+3. **Manual aliases** — case-insensitive substring match from per-entity alias map.
+4. **Exact match** — full description equals entity name.
+5. **Prefix match** — description starts with entity name (longest wins).
+6. **Contains match** — entity name anywhere in description (min 4 chars, longest wins).
+7. **Punctuation stripping** — strip apostrophes/backticks, retry stages 3–6.
+8. **AI fallback** — Claude Haiku API call, env-gated (`FINANCE_AI_CATEGORIZER_ENABLED`, default off), no disk or DB cache, exponential-backoff retry on 429 (max 5 retries, 6 total attempts). Any failure is non-fatal — the row degrades to `uncertain`.
 
-Hit rate ~95–100% with aliases; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine/`.
+Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine.md`.
 
 ---
 
@@ -423,11 +426,17 @@ pages/
 - **Env vars** — read via a pillar env accessor (e.g. `getEnv()`), which reads `process.env`. Production secrets are Docker file-based secrets mounted at `/run/secrets/` (see Security) — a separate mechanism, not read by `getEnv()`.
 - Schema changes go through Drizzle per pillar (generate/review/migrate flow — see Production hard rule).
 
+### Cross-pillar generated FE clients
+
+A pillar's app talks to its OWN backend over the client `generate:api` produces. When one pillar's frontend needs to read another pillar's data directly (not through a backend proxy), it gets its own **per-consumer** Hey API client instead of reaching for `@pops/pillar-sdk` (that SDK is for backend-to-backend calls only): `pnpm --filter <app> generate:<pillar>-client`, projecting the producer's `./openapi` package export (or a vendored snapshot per [ADR-033](docs/architecture/adr-033-cross-language-pillar-contracts.md) when the producer has no npm package, e.g. the Rust `contacts` pillar) to `src/<pillar>-api/`. Live legs: `food/app` -> `lists`, `finance/app` -> `contacts`.
+
+This is sanctioned, not incidental — but every leg is **mandatory-gated**: CI (`cross-pillar-clients` job, `.github/workflows/quality.yml`) regenerates each leg's client from the producer's current contract and fails the build on any diff, so a producer-side change can't ship without the consumer's committed client following. Adding a new leg means adding it to that job's regenerate + diff step, not just wiring the codegen config. See [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md) for the full decision, including why hand-duplicated Rust wire-contract twins (`libs/pops-settings`, `libs/pops-ai`) are a different, currently-consumerless case that doesn't yet need the same treatment.
+
 ---
 
 ## Design Context
 
-Full context in `.impeccable.md`.
+Design tokens live in `libs/ui/src/theme/globals.css`; every app UI answers to the principles below.
 
 - **Personality:** Precise, Warm, Confident. Linear's clarity + Up Bank's approachability. **Emotions:** Confidence ("everything is under control") and calm focus ("no noise, just signal").
 - **Anti-patterns:** Generic SaaS dashboards; brutalist/raw developer aesthetics.

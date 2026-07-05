@@ -119,6 +119,10 @@ fetched once and cached for the review step.
 - [x] Cards for entities created, rules applied (with add/edit/disable/remove breakdown incl. tag rules), transactions imported, and transactions failed; failed list is expandable with per-row checksum + error; retroactive reclassification count shown.
 - [x] "New Import" resets the wizard; "View Transactions" navigates to the transactions list.
 
+## Not Built (see ideas)
+
+- The `isNew` "New" marker on AI-suggested tags and per-tag accept/reject in Tag Review — the wire carries `isNew` but the UI never renders or acts on it → [ideas/import-tag-accept-reject-and-new-markers](../ideas/import-tag-accept-reject-and-new-markers.md).
+
 ## Business rules
 
 - Steps are sequential — you can go back but not skip ahead.

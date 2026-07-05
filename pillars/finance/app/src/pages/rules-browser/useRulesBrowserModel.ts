@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { unwrap } from '../../finance-api-helpers.js';
 import { correctionsDelete, correctionsList } from '../../finance-api/index.js';
@@ -77,6 +77,28 @@ function useCorrectionsListQuery(filters: FilterState) {
   });
 }
 
+/**
+ * A delete (or a filter change that shrinks the result set) can leave the
+ * current offset past the end of the new total — e.g. deleting the last rule
+ * on the last page. Clamp back to the new last page instead of rendering a
+ * stranded empty page (CF084/#3670).
+ */
+function useOffsetClamp(
+  pagination: CorrectionsListResult['pagination'] | undefined,
+  offset: number,
+  setOffset: FilterState['setOffset']
+) {
+  useEffect(() => {
+    if (!pagination) return;
+    if (pagination.total > 0 && pagination.total <= offset) {
+      const lastValidOffset = Math.floor((pagination.total - 1) / PAGE_SIZE) * PAGE_SIZE;
+      setOffset(lastValidOffset);
+    } else if (pagination.total === 0 && offset > 0) {
+      setOffset(0);
+    }
+  }, [pagination, offset, setOffset]);
+}
+
 export function useRulesBrowserModel() {
   const filters = useFilterState();
   const del = useDeleteFlow();
@@ -94,6 +116,8 @@ export function useRulesBrowserModel() {
   const currentPage = Math.floor(filters.offset / PAGE_SIZE) + 1;
 
   const resetPage = useCallback(() => filters.setOffset(0), [filters]);
+
+  useOffsetClamp(pagination, filters.offset, filters.setOffset);
 
   const handleAddRule = useCallback(() => {
     ruleForm.handleAdd();

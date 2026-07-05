@@ -55,7 +55,7 @@ export function buildNavigation(set: StoreSet) {
   return {
     nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 8) })),
     prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
-    goToStep: (step: number) => set({ currentStep: step }),
+    goToStep: (step: number) => set({ currentStep: Math.min(Math.max(step, 1), 8) }),
     reset: () => set(initialState),
   };
 }
@@ -134,24 +134,6 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
 
 export function buildTransactionActions(set: StoreSet, get: StoreGet) {
   return {
-    updateTransaction: (
-      transaction: ProcessedTransaction,
-      updates: Partial<ProcessedTransaction>
-    ) => {
-      set((state) => {
-        const updateInArray = (arr: ProcessedTransaction[]) =>
-          arr.map((t) => (t === transaction ? { ...t, ...updates } : t));
-        return {
-          processedTransactions: {
-            ...state.processedTransactions,
-            matched: updateInArray(state.processedTransactions.matched),
-            uncertain: updateInArray(state.processedTransactions.uncertain),
-            failed: updateInArray(state.processedTransactions.failed),
-            skipped: updateInArray(state.processedTransactions.skipped),
-          },
-        };
-      });
-    },
     findSimilar: (transaction: ProcessedTransaction): ProcessedTransaction[] => {
       const state = get();
       const allTransactions: ProcessedTransaction[] = [
