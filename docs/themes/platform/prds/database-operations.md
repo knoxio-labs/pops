@@ -98,7 +98,7 @@ Restore is per-pillar: stop the pillar's container so it isn't writing, then `li
 - [x] Each pillar resolves its SQLite path via a standalone `resolve<X>SqlitePath()` with precedence `<ID>_SQLITE_PATH` → `<dirname(SQLITE_PATH)>/<id>.db` → `./data/<id>.db`. No placeholder paths.
 - [x] Drizzle is the only migration system: no manual SQL runner, no shared `pops.db`, no second journal table.
 - [x] Schema-change workflow is documented in `AGENTS.md`: edit schema → `drizzle-kit generate` → review → commit → deploy → auto-migrate on startup.
-- [x] Each pillar has a Litestream replication config at `infra/litestream/<id>.yml` for independent offsite backup.
+- [ ] Each pillar has a Litestream replication config at `infra/litestream/<id>.yml` **and a running per-pillar sidecar** replicating it offsite. The config files exist but are reference stubs — no sidecar runs them, and the deployed backup is a separate (currently broken) central job. Per-pillar sidecar wiring, per-pillar volume isolation, and a restore drill are tracked by [ADR-039](../../../architecture/adr-039-pillar-isolation.md) and issue #3636.
 - [x] Dev seed/reset tooling is pillar-scoped and refuses to run when `NODE_ENV=production`.
 
 ## Out of Scope
