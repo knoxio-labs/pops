@@ -65,6 +65,15 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
     expect(res.body.error).toContain('not available');
   });
 
+  it('returns 503 when pillar discovery throws (registry unreachable)', async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const lookup = () => Promise.reject(new Error('registry unreachable'));
+    const res = await request(app(lookup, fetchImpl)).get('/inventory/documents/42/thumbnail');
+    expect(res.status).toBe(503);
+    expect(res.body.error).toContain('not available');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('returns 502 when the documents pillar is unreachable', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new Error('connection refused'));
     const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(

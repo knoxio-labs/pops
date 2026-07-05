@@ -87,41 +87,28 @@ export interface CreateInventoryFilesRouterOptions {
   fetchImpl?: typeof fetch;
 }
 
-/** Build the inventory pillar's raw file-serving router. */
-export function createInventoryFilesRouter(
-  options: CreateInventoryFilesRouterOptions = {}
-): ExpressRouter {
-  const lookupDocumentsPillar = options.lookupDocumentsPillar ?? defaultLookupPillar;
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const router = Router();
-
-  router.get('/api/inventory/photos/items/:itemId/:filename', async (req, res): Promise<void> => {
-    await serveItemFile(req, res, {
-      baseDir: getInventoryImagesDir(),
-      filenameRe: PHOTO_FILENAME_RE,
-      notFound: 'Photo not found',
-    });
-  });
-
-  router.get(
-    '/api/inventory/documents/items/:itemId/:filename',
-    async (req, res): Promise<void> => {
-      await serveItemFile(req, res, {
-        baseDir: getInventoryDocumentsDir(),
-        filenameRe: DOC_FILENAME_RE,
-        notFound: 'Document not found',
-      });
-    }
-  );
-
-  router.get('/inventory/documents/:id/thumbnail', async (req, res): Promise<void> => {
+function createThumbnailProxyHandler(
+  lookupDocumentsPillar: typeof defaultLookupPillar,
+  fetchImpl: typeof fetch
+) {
+  return async (req: Request<{ id: string }>, res: ExpressResponse): Promise<void> => {
     const { id } = req.params;
     if (!/^\d+$/.test(id)) {
       res.status(400).json({ error: `Invalid document id: ${id}` });
       return;
     }
 
-    const documentsPillar = await lookupDocumentsPillar(DOCUMENTS_PILLAR_ID);
+    let documentsPillar: Awaited<ReturnType<typeof lookupDocumentsPillar>>;
+    try {
+      documentsPillar = await lookupDocumentsPillar(DOCUMENTS_PILLAR_ID);
+    } catch (err) {
+      // Discovery throws (e.g. RegistryUnreachableError) only when its cache
+      // is empty AND the registry is unreachable — degrade the same way as an
+      // unregistered pillar rather than surfacing an unhandled 500.
+      console.error('[inventory/documents] Thumbnail discovery error:', err);
+      res.status(503).json({ error: 'Documents service is not available' });
+      return;
+    }
     if (!documentsPillar) {
       res.status(503).json({ error: 'Documents service is not available' });
       return;
@@ -152,7 +139,40 @@ export function createInventoryFilesRouter(
     const contentType = response.headers.get('content-type') ?? 'image/png';
     res.set({ 'Content-Type': contentType, 'Cache-Control': THUMBNAIL_CACHE_CONTROL });
     res.send(Buffer.from(await response.arrayBuffer()));
+  };
+}
+
+/** Build the inventory pillar's raw file-serving router. */
+export function createInventoryFilesRouter(
+  options: CreateInventoryFilesRouterOptions = {}
+): ExpressRouter {
+  const lookupDocumentsPillar = options.lookupDocumentsPillar ?? defaultLookupPillar;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const router = Router();
+
+  router.get('/api/inventory/photos/items/:itemId/:filename', async (req, res): Promise<void> => {
+    await serveItemFile(req, res, {
+      baseDir: getInventoryImagesDir(),
+      filenameRe: PHOTO_FILENAME_RE,
+      notFound: 'Photo not found',
+    });
   });
+
+  router.get(
+    '/api/inventory/documents/items/:itemId/:filename',
+    async (req, res): Promise<void> => {
+      await serveItemFile(req, res, {
+        baseDir: getInventoryDocumentsDir(),
+        filenameRe: DOC_FILENAME_RE,
+        notFound: 'Document not found',
+      });
+    }
+  );
+
+  router.get(
+    '/inventory/documents/:id/thumbnail',
+    createThumbnailProxyHandler(lookupDocumentsPillar, fetchImpl)
+  );
 
   return router;
 }
