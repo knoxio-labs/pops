@@ -2,11 +2,13 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNextStep = vi.fn();
+const mockPrevStep = vi.fn();
 const mockAddPendingTagRuleChangeSet = vi.fn();
 
 let storeState: Record<string, unknown> = {
   confirmedTransactions: [],
   nextStep: mockNextStep,
+  prevStep: mockPrevStep,
   addPendingTagRuleChangeSet: mockAddPendingTagRuleChangeSet,
 };
 
@@ -37,6 +39,7 @@ beforeEach(() => {
   storeState = {
     confirmedTransactions: [],
     nextStep: mockNextStep,
+    prevStep: mockPrevStep,
     addPendingTagRuleChangeSet: mockAddPendingTagRuleChangeSet,
   };
 });
@@ -106,6 +109,21 @@ describe('RuleCreationStep', () => {
     storeState.confirmedTransactions = [makeTxn({ tags: [] }), makeTxn({ tags: undefined })];
     render(<RuleCreationStep />);
     expect(screen.getByText(/No tag patterns detected/i)).toBeInTheDocument();
+  });
+
+  it('shows a Back button that calls prevStep, in the empty state', () => {
+    render(<RuleCreationStep />);
+    fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    expect(mockPrevStep).toHaveBeenCalledOnce();
+    expect(mockNextStep).not.toHaveBeenCalled();
+  });
+
+  it('shows a Back button that calls prevStep, with proposals present', () => {
+    storeState.confirmedTransactions = [makeTxn()];
+    render(<RuleCreationStep />);
+    fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
+    expect(mockPrevStep).toHaveBeenCalledOnce();
+    expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
   });
 
   it('only includes tags appearing on ≥50% of transactions in a group', () => {

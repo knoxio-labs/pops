@@ -66,11 +66,13 @@ function EmptyState() {
 }
 
 function StepFooter({
+  onBack,
   onSkip,
   onCreate,
   selectedCount,
   hasProposals,
 }: {
+  onBack: () => void;
   onSkip: () => void;
   onCreate: () => void;
   selectedCount: number;
@@ -79,14 +81,19 @@ function StepFooter({
   const label = `Create ${selectedCount > 0 ? `${selectedCount} ` : ''}${selectedCount === 1 ? 'rule' : 'rules'} →`;
   return (
     <div className="flex justify-between pt-2">
-      <Button variant="outline" onClick={onSkip}>
-        Skip
+      <Button variant="outline" onClick={onBack}>
+        Back
       </Button>
-      {hasProposals && (
-        <Button onClick={onCreate} disabled={selectedCount === 0}>
-          {label}
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onSkip}>
+          Skip
         </Button>
-      )}
+        {hasProposals && (
+          <Button onClick={onCreate} disabled={selectedCount === 0}>
+            {label}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -95,6 +102,7 @@ export function RuleCreationStep() {
   const confirmedTransactions = useImportStore((s) => s.confirmedTransactions);
   const addPendingTagRuleChangeSet = useImportStore((s) => s.addPendingTagRuleChangeSet);
   const nextStep = useImportStore((s) => s.nextStep);
+  const prevStep = useImportStore((s) => s.prevStep);
   const proposals = useMemo(() => computeProposals(confirmedTransactions), [confirmedTransactions]);
   const [checked, setChecked] = useState<Set<string>>(() => new Set(proposals.map((p) => p.id)));
 
@@ -142,6 +150,7 @@ export function RuleCreationStep() {
         </div>
       )}
       <StepFooter
+        onBack={prevStep}
         onSkip={nextStep}
         onCreate={handleCreate}
         selectedCount={proposals.filter((p) => checked.has(p.id)).length}

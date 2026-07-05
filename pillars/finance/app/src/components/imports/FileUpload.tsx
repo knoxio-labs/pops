@@ -134,11 +134,13 @@ export function FileUpload({
       if (!file.name.endsWith('.csv')) {
         setError('invalid file type. Please upload a CSV file.');
         setSelectedFile(null);
+        onFileSelect(null);
         return;
       }
       if (file.size > maxSizeBytes) {
         setError(`File too large. Maximum size is ${maxSizeMB}MB.`);
         setSelectedFile(null);
+        onFileSelect(null);
         return;
       }
       setError(null);
