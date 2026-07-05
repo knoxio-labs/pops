@@ -145,6 +145,11 @@ in-band via `Promise.race` against `FOOD_INGEST_TIMEOUT_SEC` (returns a
 - [x] Vitest suite (`src/api/__tests__/ingest.test.ts`) covers no-Redis
       degradation, row rollback, unknown-source status/cancel, worker-complete
       success/idempotency/failure, internal-token rejection, and media serving.
+- [x] `food-api` mounts the SAME `food-ingest-data` volume as `pops-worker-food`
+      and sets `FOOD_INGEST_DIR` to the identical container path (compose), so
+      screenshot writes and worker reads/retries agree on one directory; an
+      unset `FOOD_INGEST_DIR` fails loud in production instead of silently
+      falling back to an ephemeral, unshared local path.
 
 ## Out of scope
 

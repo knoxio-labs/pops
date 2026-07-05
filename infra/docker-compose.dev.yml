@@ -183,6 +183,9 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Local cache of downloaded poster/backdrop art (regeneratable —
+      # excluded from Litestream, see AGENTS.md's exclusion list).
+      - media-images-data:/data/media/images
     environment:
       NODE_ENV: production
       PORT: '3003'
@@ -191,6 +194,7 @@ services:
       # Cross-pillar registry. Includes registry-api + inventory-api by default
       # so /pillars surfaces every host pillar on the synthetic-entry list.
       POPS_PILLARS: ${POPS_PILLARS:-registry:http://registry-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006}
+      MEDIA_IMAGES_DIR: /data/media/images
     expose:
       - '3003'
     depends_on:
@@ -225,6 +229,10 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Shares the ingest media root with pops-worker-food — the worker
+      # writes downloaded media here and the API serves it back; both must
+      # resolve the SAME path or reads/writes silently miss each other.
+      - food-ingest-data:/data/food/ingest
     environment:
       NODE_ENV: production
       PORT: '3005'
@@ -237,6 +245,7 @@ services:
       # Cross-pillar registry — included for parity with siblings even
       # though food-api today only exposes /health.
       POPS_PILLARS: ${POPS_PILLARS:-registry:http://registry-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006}
+      FOOD_INGEST_DIR: /data/food/ingest
     expose:
       - '3005'
     depends_on:
@@ -791,6 +800,10 @@ volumes:
     name: pops-paperless-redis
   cerebrum-engrams-data:
     name: pops-cerebrum-engrams-data
+  food-ingest-data:
+    name: pops-food-ingest-data
+  media-images-data:
+    name: pops-media-images-data
 
 secrets:
   notion_api_token:

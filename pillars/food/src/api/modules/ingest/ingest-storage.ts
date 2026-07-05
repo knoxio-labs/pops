@@ -11,19 +11,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { resolveFoodIngestRoot } from './ingest-dir.js';
+
 export const SCREENSHOT_MAX_BYTES = 8 * 1024 * 1024;
 
-/** Mirror of the ingest path layout in `pillars/food/app/src/storage/ingest-paths.ts`; duplicated so the API does not depend on the app package. */
-const DEFAULT_FOOD_INGEST_DIR = './data/food/ingest';
-
-function ingestRootDir(): string {
-  const configured = process.env['FOOD_INGEST_DIR'];
-  const raw = configured && configured.length > 0 ? configured : DEFAULT_FOOD_INGEST_DIR;
-  return resolve(raw);
-}
-
 export function ingestDirFor(sourceId: number): string {
-  return resolve(ingestRootDir(), String(sourceId));
+  return resolve(resolveFoodIngestRoot(), String(sourceId));
 }
 
 const MIME_TO_EXT: Record<string, string> = {

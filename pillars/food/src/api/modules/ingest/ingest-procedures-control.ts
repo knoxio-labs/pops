@@ -13,12 +13,11 @@ import { eq, sql } from 'drizzle-orm';
 
 import { type FoodDb, ingestSources } from '../../../db/index.js';
 import { getFoodIngestQueue } from '../../queue.js';
+import { resolveFoodIngestRoot } from './ingest-dir.js';
 import { enqueueIngestJob, type EnqueueResult } from './ingest-enqueue.js';
 
 import type { IngestJobData } from '../../../contract/queue/index.js';
 
-/** Mirror of `pillars/food/app/src/storage/ingest-paths.ts`. */
-const DEFAULT_FOOD_INGEST_DIR = './data/food/ingest';
 const MIME_BY_EXT: Record<string, 'image/jpeg' | 'image/png' | 'image/webp'> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
@@ -29,9 +28,7 @@ const MIME_BY_EXT: Record<string, 'image/jpeg' | 'image/png' | 'image/webp'> = {
 function findOnDiskScreenshot(
   sourceId: number
 ): { mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; filename: string } | null {
-  const configured = process.env['FOOD_INGEST_DIR'];
-  const root = configured && configured.length > 0 ? configured : DEFAULT_FOOD_INGEST_DIR;
-  const dir = resolve(root, String(sourceId));
+  const dir = resolve(resolveFoodIngestRoot(), String(sourceId));
   let entries: string[];
   try {
     entries = readdirSync(dir);
