@@ -22,7 +22,7 @@ interface BrowseDialogProps {
   setOpen: (v: boolean) => void;
   sessionId: string;
   previewTransactions: Array<{ checksum: string; description: string }>;
-  setLocalTransactions: ReturnType<typeof useTransactionReview>['setLocalTransactions'];
+  applyReevaluatedResult: ReturnType<typeof useTransactionReview>['applyReevaluatedResult'];
 }
 
 function BrowseDialog({
@@ -30,7 +30,7 @@ function BrowseDialog({
   setOpen,
   sessionId,
   previewTransactions,
-  setLocalTransactions,
+  applyReevaluatedResult,
 }: BrowseDialogProps) {
   const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
   const reevaluateMutation = useMutation({
@@ -49,7 +49,7 @@ function BrowseDialog({
       },
       {
         onSuccess: ({ result, affectedCount }) => {
-          setLocalTransactions(result);
+          applyReevaluatedResult(result);
           toast.success(
             `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? '' : 's'} re-evaluated`
           );
@@ -104,7 +104,7 @@ export function ReviewDialogs({
         setOpen={proposal.setBrowseOpen}
         sessionId={processSessionId}
         previewTransactions={allPreviewTransactions}
-        setLocalTransactions={review.setLocalTransactions}
+        applyReevaluatedResult={review.applyReevaluatedResult}
       />
       <EntityCreateDialog
         open={bulk.showCreateDialog}

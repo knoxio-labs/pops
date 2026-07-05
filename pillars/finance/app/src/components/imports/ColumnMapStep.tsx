@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button, Label, Select as UiSelect } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
-import { autoDetectColumns, type ColumnMap } from './column-map/parsers';
+import { autoDetectColumns, isEmptyColumnMap, type ColumnMap } from './column-map/parsers';
 import { PreviewTable } from './column-map/PreviewTable';
 import { validateAllRows } from './column-map/validation';
 
@@ -86,6 +86,39 @@ function StepFooter({
   );
 }
 
+/**
+ * Auto-detects columns from `headers` and applies the result at most once
+ * per mount, and only when nothing is mapped yet. UploadStep re-parses the
+ * CSV (a brand-new `headers` array) on every Next click, and this step fully
+ * unmounts/remounts on Back navigation, so re-running auto-detect on every
+ * `headers` change would clobber a manual override the moment the user
+ * clicks Back then Next without reselecting the file (#3621). Reading the
+ * current values through refs (rather than depending on `headers`/
+ * `columnMap` directly) also avoids looping forever when a header set has
+ * nothing recognizable to detect, since `autoDetectColumns` would otherwise
+ * keep returning a fresh-but-still-empty map on every re-run.
+ */
+function useAutoDetectColumnsOnce(
+  headers: string[],
+  columnMap: ColumnMap,
+  setColumnMap: (columnMap: ColumnMap) => void,
+  setLocalColumnMap: (columnMap: ColumnMap) => void
+) {
+  const headersRef = useRef(headers);
+  headersRef.current = headers;
+  const columnMapRef = useRef(columnMap);
+  columnMapRef.current = columnMap;
+  const hasAutoDetectedRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoDetectedRef.current) return;
+    hasAutoDetectedRef.current = true;
+    if (!isEmptyColumnMap(columnMapRef.current)) return;
+    const detected = autoDetectColumns(headersRef.current);
+    setLocalColumnMap(detected);
+    setColumnMap(detected);
+  }, [setColumnMap, setLocalColumnMap]);
+}
+
 function useColumnMapState() {
   const {
     headers,
@@ -101,11 +134,7 @@ function useColumnMapState() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
-  useEffect(() => {
-    const detected = autoDetectColumns(headers);
-    setLocalColumnMap(detected);
-    setColumnMap(detected);
-  }, [headers, setColumnMap]);
+  useAutoDetectColumnsOnce(headers, columnMap, setColumnMap, setLocalColumnMap);
 
   const handleColumnChange = useCallback(
     (field: keyof ColumnMap, value: string) => {

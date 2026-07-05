@@ -25,17 +25,18 @@ interface UseTransactionEditingArgs {
   generateProposal: GenerateProposal;
 }
 
+const COMPARABLE_FIELDS = ['description', 'amount', 'location', 'transactionType'] as const;
+
 function detectChange(
   transaction: ProcessedTransaction,
   editedFields: Partial<ProcessedTransaction>
 ): boolean {
-  return (
-    editedFields.description !== transaction.description ||
-    editedFields.amount !== transaction.amount ||
-    editedFields.entity?.entityId !== transaction.entity?.entityId ||
-    editedFields.location !== transaction.location ||
-    editedFields.transactionType !== transaction.transactionType
+  const fieldChanged = COMPARABLE_FIELDS.some(
+    (field) => field in editedFields && editedFields[field] !== transaction[field]
   );
+  const entityChanged =
+    'entity' in editedFields && editedFields.entity?.entityId !== transaction.entity?.entityId;
+  return fieldChanged || entityChanged;
 }
 
 function pickValue<T>(edited: T | undefined, original: T | undefined, fallback: T): T {
