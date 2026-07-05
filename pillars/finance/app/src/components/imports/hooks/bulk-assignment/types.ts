@@ -1,3 +1,5 @@
+import { moveOneToMatched } from '../../review/useReviewActions';
+
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { ProcessedTransaction } from '../../../../store/importStore';
@@ -34,6 +36,15 @@ export function pluralize(count: number): string {
   return `${count} transaction${count !== 1 ? 's' : ''}`;
 }
 
+/**
+ * Bulk sibling of `moveOneToMatched` — assigns the same entity to every
+ * transaction in `transactions`, one at a time, through the same
+ * checksum-based dedupe/replace-in-place invariant (#3590). Without routing
+ * through `moveOneToMatched`, a transaction already in `matched` (e.g.
+ * re-running Accept All / Create-entity-for-all) gets appended a second time
+ * instead of replaced, producing a duplicate-checksum row that fails the
+ * unique index at commit (#3620).
+ */
 export function moveToMatched(
   prev: LocalTxState,
   transactions: ProcessedTransaction[],
@@ -43,26 +54,14 @@ export function moveToMatched(
   // panel for matchType === 'ai') doesn't keep prompting the user to accept
   // a suggestion they already accepted via Accept All / Create new for all.
   const matchType = entity.matchType ?? 'manual';
-  let updated = { ...prev };
+  let updated: LocalTxState = prev;
   for (const transaction of transactions) {
-    updated = {
-      ...updated,
-      uncertain: updated.uncertain.filter((t) => t !== transaction),
-      failed: updated.failed.filter((t) => t !== transaction),
-      matched: [
-        ...updated.matched,
-        {
-          ...transaction,
-          entity: {
-            entityId: entity.entityId,
-            entityName: entity.entityName,
-            matchType,
-            confidence: 1,
-          },
-          status: 'matched' as const,
-        } as ProcessedTransaction,
-      ],
-    };
+    updated = moveOneToMatched(updated, {
+      transaction,
+      entityId: entity.entityId,
+      entityName: entity.entityName,
+      matchType,
+    });
   }
   return updated;
 }
