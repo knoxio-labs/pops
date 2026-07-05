@@ -8,7 +8,7 @@
  */
 import { z } from 'zod';
 
-import { ENTITY_TYPES } from '../db/index.js';
+import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
 
@@ -26,7 +26,7 @@ export const ParsedTransactionSchema = z.object({
 export const EntityMatchSchema = z.object({
   entityId: z.string().optional(),
   entityName: z.string().optional(),
-  matchType: z.enum(['alias', 'exact', 'prefix', 'contains', 'ai', 'learned', 'manual', 'none']),
+  matchType: z.enum(TRANSACTION_MATCH_TYPES),
   confidence: z.number().min(0).max(1).optional(),
 });
 
@@ -77,7 +77,7 @@ export const ConfirmedTransactionSchema = ParsedTransactionSchema.extend({
   /** How the entity assignment was produced (CF057/#3658), persisted verbatim at commit. */
   matchType: EntityMatchSchema.shape.matchType.optional(),
   /** Winning correction rule id, only set when `matchType` is `learned`. */
-  matchRuleId: z.string().optional(),
+  matchRuleId: z.string().min(1).optional(),
   /** Match confidence (0-1), only set for `ai`/`learned` matches. */
   matchConfidence: z.number().min(0).max(1).optional(),
 });

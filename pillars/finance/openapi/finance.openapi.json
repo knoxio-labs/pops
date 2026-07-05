@@ -7410,6 +7410,7 @@
                           "type": "number"
                         },
                         "matchRuleId": {
+                          "minLength": 1,
                           "type": "string"
                         },
                         "matchType": {
@@ -13511,14 +13512,27 @@
                     "type": "string"
                   },
                   "matchConfidence": {
+                    "maximum": 1,
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },
                   "matchRuleId": {
+                    "minLength": 1,
                     "nullable": true,
                     "type": "string"
                   },
                   "matchType": {
+                    "enum": [
+                      "alias",
+                      "exact",
+                      "prefix",
+                      "contains",
+                      "ai",
+                      "learned",
+                      "manual",
+                      "none"
+                    ],
                     "nullable": true,
                     "type": "string"
                   },
@@ -13861,14 +13875,27 @@
                           "type": "string"
                         },
                         "matchConfidence": {
+                          "maximum": 1,
+                          "minimum": 0,
                           "nullable": true,
                           "type": "number"
                         },
                         "matchRuleId": {
+                          "minLength": 1,
                           "nullable": true,
                           "type": "string"
                         },
                         "matchType": {
+                          "enum": [
+                            "alias",
+                            "exact",
+                            "prefix",
+                            "contains",
+                            "ai",
+                            "learned",
+                            "manual",
+                            "none"
+                          ],
                           "nullable": true,
                           "type": "string"
                         },

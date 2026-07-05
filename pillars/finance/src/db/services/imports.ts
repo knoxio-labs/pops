@@ -22,6 +22,7 @@ import { ImportTransactionPersistError } from '../errors.js';
 import { transactions } from '../schema.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
+import type { TransactionMatchType } from '../match-types.js';
 import type { FinanceDb } from './internal.js';
 
 /** Single entry in the entity name lookup map. */
@@ -60,7 +61,7 @@ export interface InsertImportTransactionInput {
   rawRow?: string;
   checksum?: string;
   /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
-  matchType?: string | null;
+  matchType?: TransactionMatchType | null;
   /** Winning correction rule id, only set when `matchType` is `learned`. */
   matchRuleId?: string | null;
   /** Match confidence (0-1), only set for `ai`/`learned` matches. */

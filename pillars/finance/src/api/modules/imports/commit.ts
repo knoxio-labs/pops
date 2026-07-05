@@ -45,6 +45,26 @@ interface RuleApplyCounts {
   remove: number;
 }
 
+interface SanitizedProvenance {
+  matchType: CommitPayload['transactions'][number]['matchType'] | null;
+  matchRuleId: string | null;
+  matchConfidence: number | null;
+}
+
+/**
+ * Drop provenance fields that are meaningless for the given `matchType` before
+ * persisting, so the DB never stores an inconsistent combination sent by a
+ * client (e.g. `matchType: 'exact'` carrying a `matchRuleId`). A rule id is only
+ * meaningful for `learned` matches; a confidence only for `ai`/`learned` ones.
+ */
+function sanitizeProvenance(txn: CommitPayload['transactions'][number]): SanitizedProvenance {
+  const matchType = txn.matchType ?? null;
+  const matchRuleId = matchType === 'learned' ? (txn.matchRuleId ?? null) : null;
+  const matchConfidence =
+    matchType === 'ai' || matchType === 'learned' ? (txn.matchConfidence ?? null) : null;
+  return { matchType, matchRuleId, matchConfidence };
+}
+
 /**
  * Pre-create every pending contact against the contacts pillar BEFORE the
  * finance transaction opens, returning the tempId→contact-id map. Each create
@@ -135,6 +155,7 @@ function writeTransactionsPhase(
 
   for (const txn of payload.transactions) {
     const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
+    const provenance = sanitizeProvenance(txn);
     try {
       importsService.insertImportTransaction(tx, {
         description: txn.description,
@@ -148,9 +169,9 @@ function writeTransactionsPhase(
         location: txn.location ?? null,
         rawRow: txn.rawRow,
         checksum: txn.checksum,
-        matchType: txn.matchType ?? null,
-        matchRuleId: txn.matchRuleId ?? null,
-        matchConfidence: txn.matchConfidence ?? null,
+        matchType: provenance.matchType,
+        matchRuleId: provenance.matchRuleId,
+        matchConfidence: provenance.matchConfidence,
       });
       imported++;
     } catch (error) {

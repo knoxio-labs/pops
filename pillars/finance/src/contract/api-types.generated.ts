@@ -6177,7 +6177,17 @@ export interface operations {
           location: string | null;
           matchConfidence: number | null;
           matchRuleId: string | null;
-          matchType: string | null;
+          /** @enum {string|null} */
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none'
+            | null;
           notes: string | null;
           notionId: string | null;
           rawRow: string | null;
@@ -6397,7 +6407,17 @@ export interface operations {
               location: string | null;
               matchConfidence: number | null;
               matchRuleId: string | null;
-              matchType: string | null;
+              /** @enum {string|null} */
+              matchType:
+                | 'alias'
+                | 'exact'
+                | 'prefix'
+                | 'contains'
+                | 'ai'
+                | 'learned'
+                | 'manual'
+                | 'none'
+                | null;
               notes: string | null;
               notionId: string | null;
               rawRow: string | null;

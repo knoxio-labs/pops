@@ -19,12 +19,12 @@ test.describe('Finance — entities delete', () => {
 
   let pageErrors: string[] = [];
   let consoleErrors: string[] = [];
-
-  const entityName = `E2E Delete Entity ${Date.now()}`;
+  let entityName = '';
 
   test.beforeEach(async ({ page }) => {
     pageErrors = [];
     consoleErrors = [];
+    entityName = `E2E Delete Entity ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await useRealApi(page);
     page.on('pageerror', (err) => pageErrors.push(err.message));
     page.on('console', (msg) => {

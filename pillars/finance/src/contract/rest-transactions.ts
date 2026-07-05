@@ -8,6 +8,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { ERR_RESPONSES, LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 const c = initContract();
@@ -54,9 +55,9 @@ export const TransactionSnapshotSchema = z.object({
   checksum: z.string().nullable(),
   rawRow: z.string().nullable(),
   lastEditedTime: z.string(),
-  matchType: z.string().nullable(),
-  matchRuleId: z.string().nullable(),
-  matchConfidence: z.number().nullable(),
+  matchType: z.enum(TRANSACTION_MATCH_TYPES).nullable(),
+  matchRuleId: z.string().min(1).nullable(),
+  matchConfidence: z.number().min(0).max(1).nullable(),
 });
 
 const CreateTransactionBody = z.object({

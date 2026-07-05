@@ -1,5 +1,7 @@
 import { index, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { TRANSACTION_MATCH_TYPES } from '../match-types.js';
+
 export const transactions = sqliteTable(
   'transactions',
   {
@@ -29,7 +31,7 @@ export const transactions = sqliteTable(
      * (no entity — e.g. a transfer). Nullable — rows committed before this
      * column existed carry no provenance.
      */
-    matchType: text('match_type'),
+    matchType: text('match_type', { enum: TRANSACTION_MATCH_TYPES }),
     /** Winning correction rule id, set only when `matchType` is `learned`. */
     matchRuleId: text('match_rule_id'),
     /** Match confidence (0-1), set only for `ai`/`learned` matches. */
