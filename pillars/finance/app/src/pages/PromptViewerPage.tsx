@@ -1,46 +1,16 @@
+import PROMPTS from '@pops/finance/prompt-catalog';
 /**
- * Read-only view of the AI prompt templates used for transaction
- * categorisation and rule generation, with model attribution.
+ * Read-only view of the AI prompt templates used across the finance pillar,
+ * with model attribution.
+ *
+ * `PROMPTS` is `@pops/finance/prompt-catalog` — generated at build time by
+ * calling the real `build*Prompt` functions with representative sample
+ * inputs (`pillars/finance/src/api/modules/prompt-catalog.ts`), so this page
+ * can never drift from what is actually sent to Claude (CF028, #2619). CI's
+ * codegen-drift gate re-runs the generator and fails the build if a
+ * `build*Prompt` edit isn't reflected here.
  */
 import { PageHeader } from '@pops/ui';
-
-const PROMPTS = [
-  {
-    title: 'Transaction Categorisation',
-    model: 'claude-haiku-4-5-20251001',
-    description:
-      'Used when a bank transaction cannot be matched to a known entity. Extracts merchant name and spending category from the raw transaction description.',
-    template: `Given this bank transaction data, identify the merchant/entity name and a spending category.
-
-Transaction data: {rawRow}
-
-Reply in JSON only: {"entityName": "...", "category": "..."}
-Common categories: Groceries, Dining, Transport, Utilities, Entertainment, Shopping, Health, Insurance, Subscriptions, Income, Transfer, Government, Education, Travel, Rent, Other.`,
-  },
-  {
-    title: 'Rule Generation',
-    model: 'claude-haiku-4-5-20251001',
-    description:
-      'Proposes reusable tagging rules from a batch of transactions. Rules are stored and applied automatically to future imports.',
-    template: `You are a transaction categorization assistant. Given these bank transactions, propose reusable tagging rules that could apply to similar transactions in the future.
-
-Available tags: {tagList}
-
-Transactions:
-{transactionLines}
-
-Return a JSON array of proposed rules. Each rule should:
-- Have a short description_pattern (the key merchant/description fragment to match)
-- Specify match_type: "exact" (full normalized match), "contains" (pattern appears in description), or "regex"
-- List relevant tags from the available tags list
-- Include brief reasoning
-
-Format:
-[{"descriptionPattern":"...","matchType":"exact|contains|regex","tags":["Tag1","Tag2"],"reasoning":"..."}]
-
-Return ONLY the JSON array, no markdown, no explanation.`,
-  },
-];
 
 export function PromptViewerPage() {
   return (
@@ -52,7 +22,7 @@ export function PromptViewerPage() {
 
       <div className="space-y-8">
         {PROMPTS.map((prompt) => (
-          <div key={prompt.title} className="border rounded-lg overflow-hidden">
+          <div key={prompt.id} className="border rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-muted/30 border-b">
               <h2 className="font-semibold">{prompt.title}</h2>
               <p className="text-sm text-muted-foreground mt-1">{prompt.description}</p>

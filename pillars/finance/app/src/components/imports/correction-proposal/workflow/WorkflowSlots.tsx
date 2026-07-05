@@ -117,12 +117,16 @@ export function renderBody(
   );
 }
 
-export function renderHeader(
-  ready: boolean,
-  signal: CorrectionProposalWorkflowProps['signal'],
-  triggeringTransaction: CorrectionProposalWorkflowProps['triggeringTransaction'],
-  hooks: ReturnType<typeof useWorkflowHooks>
-): ReactNode {
+export interface RenderHeaderArgs {
+  ready: boolean;
+  signal: CorrectionProposalWorkflowProps['signal'];
+  triggeringTransaction: CorrectionProposalWorkflowProps['triggeringTransaction'];
+  hooks: ReturnType<typeof useWorkflowHooks>;
+  patternConfidence?: number | null;
+}
+
+export function renderHeader(args: RenderHeaderArgs): ReactNode {
+  const { ready, signal, triggeringTransaction, hooks, patternConfidence } = args;
   if (!ready || !signal) return undefined;
   return (
     <ContextHeader
@@ -131,6 +135,7 @@ export function renderHeader(
       rationale={hooks.localOpsHook.rationale}
       opCount={hooks.localOpsHook.localOps.length}
       combinedSummary={hooks.previewHook.combinedPreview?.summary ?? null}
+      patternConfidence={patternConfidence ?? null}
     />
   );
 }

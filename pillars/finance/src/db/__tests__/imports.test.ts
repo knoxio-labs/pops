@@ -155,7 +155,11 @@ describe('buildEntityMaps', () => {
 
   it('keys the lookup by lowercased name but stores the original case', () => {
     const { entityLookup } = buildEntityMaps([contact({ id: 'e1', name: 'Coles Express' })]);
-    expect(entityLookup.get('coles express')).toEqual({ id: 'e1', name: 'Coles Express' });
+    expect(entityLookup.get('coles express')).toEqual({
+      id: 'e1',
+      name: 'Coles Express',
+      type: 'company',
+    });
     expect(entityLookup.has('Coles Express')).toBe(false);
   });
 

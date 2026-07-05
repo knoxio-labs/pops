@@ -29,6 +29,13 @@ export interface EntityLookupEntry {
   id: string;
   /** Original-case entity name as stored in the contacts pillar. */
   name: string;
+  /**
+   * Contact entity type (e.g. `company`, `person`, `government`) — used to keep
+   * personal-name PII out of AI prompts. Optional because only the live
+   * `buildEntityMaps` path (which always sets it) needs it; local matcher
+   * fixtures may omit it.
+   */
+  type?: string;
 }
 
 /** Two pre-built maps consumed by the import matching stages. */
@@ -102,7 +109,11 @@ export function buildEntityMaps(contacts: ContactEntity[]): EntityMaps {
   const aliasMap = new Map<string, string>();
 
   for (const contact of contacts) {
-    entityLookup.set(contact.name.toLowerCase(), { id: contact.id, name: contact.name });
+    entityLookup.set(contact.name.toLowerCase(), {
+      id: contact.id,
+      name: contact.name,
+      type: contact.type,
+    });
     for (const raw of contact.aliases) {
       const alias = raw.trim();
       if (alias.length === 0) continue;
