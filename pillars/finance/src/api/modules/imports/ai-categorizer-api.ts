@@ -4,9 +4,10 @@
  * to the ai pillar through `@pops/ai-telemetry` (`callWithLogging`,
  * fire-and-forget) — telemetry never alters the call's behaviour.
  *
- * Only the merchant description is sent to the API — no account/card numbers
- * or personal identifiers. `contextId` is an opaque import-batch key, never the
- * description, so the telemetry store carries no PII.
+ * Only an allowlist of transaction fields is sent to the API — the merchant
+ * description plus its amount and date — never the raw CSV row or any
+ * account/card/reference columns. `contextId` is an opaque import-batch key,
+ * never the description, so the telemetry store carries no PII.
  */
 import { callWithLogging } from '@pops/ai-telemetry';
 
@@ -19,7 +20,7 @@ export { sanitizeEntityName } from './entity-name.js';
 
 import type Anthropic from '@anthropic-ai/sdk';
 
-import type { AiCacheEntry } from './ai-categorizer.js';
+import type { AiCacheEntry, CategorizerInput } from './ai-categorizer.js';
 
 export const CATEGORIZE_OPERATION = 'imports.categorize';
 
@@ -31,7 +32,7 @@ export interface ApiCallResponse {
 
 export interface ApiCallOptions {
   client: Anthropic;
-  rawRow: string;
+  input: CategorizerInput;
   sanitizedDescription: string;
   model: string;
   maxTokens: number;
@@ -40,14 +41,26 @@ export interface ApiCallOptions {
   contextId?: string;
 }
 
-export function buildPrompt(rawRow: string, knownTags: string[]): string {
+/**
+ * Render the allowlisted transaction fields as the prompt's "Transaction data"
+ * block. Only {@link CategorizerInput} fields are interpolated — never a raw
+ * row or arbitrary column values (CF008).
+ */
+function buildTransactionData(input: CategorizerInput): string {
+  const lines = [`Description: ${input.description}`];
+  if (input.amount !== undefined) lines.push(`Amount: ${input.amount}`);
+  if (input.date !== undefined && input.date !== '') lines.push(`Date: ${input.date}`);
+  return lines.join('\n');
+}
+
+export function buildPrompt(input: CategorizerInput, knownTags: string[]): string {
   const tagList =
     knownTags.length > 0
       ? knownTags.join(', ')
       : 'Groceries, Transport, Dining, Shopping, Utilities, Subscriptions, Entertainment, Health, Insurance';
-  return `Given this bank transaction data, identify the merchant/entity name and relevant spending tags.
+  return `Given this bank transaction, identify the merchant/entity name and relevant spending tags.
 
-Transaction data: ${rawRow}
+${buildTransactionData(input)}
 
 Known tags: ${tagList}
 
@@ -56,7 +69,7 @@ Reply in JSON only: {"entityName": "...", "tags": ["tag1", "tag2"]}
 entityName rules:
 - Return the brand or chain name only (e.g. "Woolworths", "Metro Petroleum", "Transport for NSW").
 - Do NOT include store numbers, location codes, or postcode segments — strip them.
-- Do NOT include trailing suburb / city names that are duplicated in the source row's location field.
+- Do NOT include trailing suburb / city names or postcodes present in the description — strip location noise from the merchant name.
 - Strip company/legal-entity suffixes from the name — "Pty", "Pty Ltd", "Ltd", "Limited", "Inc", "Incorporated", "LLC", "PLC", "GmbH", "Co", "Corp", including punctuation variants like "Pty. Ltd.". e.g. "THE REDFERN PTY LTD" -> "The Redfern".
 - Return the brand's natural / title casing, NOT the verbatim ALL-CAPS from the bank description — UNLESS the brand is conventionally written in all caps (e.g. IKEA, KFC, BP, IGA, HSBC, H&M). Preserve genuinely mixed-case brands exactly (e.g. eBay, iiNet).
 - If you cannot identify a real merchant from the description, return entityName as null.
@@ -70,7 +83,7 @@ tags rules:
 }
 
 export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
-  const { client, rawRow, sanitizedDescription, model, maxTokens, knownTags, contextId } = opts;
+  const { client, input, sanitizedDescription, model, maxTokens, knownTags, contextId } = opts;
   const response = await callWithLogging(
     {
       provider: ANTHROPIC_PROVIDER,
@@ -84,7 +97,7 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
             client.messages.create({
               model,
               max_tokens: maxTokens,
-              messages: [{ role: 'user', content: buildPrompt(rawRow, knownTags) }],
+              messages: [{ role: 'user', content: buildPrompt(input, knownTags) }],
             }),
           sanitizedDescription
         );

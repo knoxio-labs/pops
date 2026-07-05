@@ -170,7 +170,7 @@ describe('sanitizeEntityName — legal-suffix + casing backstop', () => {
 });
 
 describe('buildPrompt — entityName guidance', () => {
-  const prompt = buildPrompt('THE REDFERN PTY LTD REDFERN', ['Dining']);
+  const prompt = buildPrompt({ description: 'THE REDFERN PTY LTD REDFERN' }, ['Dining']);
 
   it('instructs the model to strip legal-entity suffixes', () => {
     expect(prompt).toContain('Pty Ltd');
@@ -181,5 +181,29 @@ describe('buildPrompt — entityName guidance', () => {
     expect(prompt).toMatch(/ALL-CAPS/);
     expect(prompt).toContain('IKEA');
     expect(prompt).toContain('eBay');
+  });
+});
+
+describe('buildPrompt — allowlist rendering (CF008)', () => {
+  it('renders only the description, amount and date it is given', () => {
+    const prompt = buildPrompt(
+      { description: 'WOOLWORTHS METRO', amount: 42.5, date: '2026-01-02' },
+      ['Groceries']
+    );
+    expect(prompt).toContain('Description: WOOLWORTHS METRO');
+    expect(prompt).toContain('Amount: 42.5');
+    expect(prompt).toContain('Date: 2026-01-02');
+  });
+
+  it('omits the amount/date lines when they are absent', () => {
+    const prompt = buildPrompt({ description: 'ALDI' }, []);
+    expect(prompt).toContain('Description: ALDI');
+    expect(prompt).not.toMatch(/^Amount:/m);
+    expect(prompt).not.toMatch(/^Date:/m);
+  });
+
+  it('never emits a "Transaction data" blob (the old raw-row interpolation)', () => {
+    const prompt = buildPrompt({ description: 'ALDI', amount: 1, date: '2026-01-01' }, []);
+    expect(prompt).not.toContain('Transaction data:');
   });
 });

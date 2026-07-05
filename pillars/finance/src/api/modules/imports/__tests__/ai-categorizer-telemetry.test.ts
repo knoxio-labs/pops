@@ -80,7 +80,9 @@ describe('categorizeWithAi — telemetry', () => {
     const captured = captureReports();
     createMock.mockResolvedValue(textResponse('{"entityName":"Woolworths","tags":["groceries"]}'));
 
-    const out = await categorizeWithAi('WOOLWORTHS 1234', 'batch-9', ['groceries']);
+    const out = await categorizeWithAi({ description: 'WOOLWORTHS 1234' }, 'batch-9', [
+      'groceries',
+    ]);
     const record = await captured.nextReport();
 
     expect(out.result?.entityName).toBe('Woolworths');
@@ -101,7 +103,7 @@ describe('categorizeWithAi — telemetry', () => {
     const captured = captureReports();
     createMock.mockResolvedValue(textResponse('{"entityName":"Aldi","tags":[]}'));
 
-    await categorizeWithAi('ALDI SUPERMARKET 4455 SYDNEY', 'batch-1');
+    await categorizeWithAi({ description: 'ALDI SUPERMARKET 4455 SYDNEY' }, 'batch-1');
     const record = await captured.nextReport();
 
     const serialized = JSON.stringify(record);
@@ -113,7 +115,7 @@ describe('categorizeWithAi — telemetry', () => {
     const captured = captureReports();
     createMock.mockRejectedValue(new Error('network down'));
 
-    await expect(categorizeWithAi('X', 'batch-2')).rejects.toBeDefined();
+    await expect(categorizeWithAi({ description: 'X' }, 'batch-2')).rejects.toBeDefined();
     const record = await captured.nextReport();
 
     expect(record.status).toBe('error');
