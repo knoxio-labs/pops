@@ -290,48 +290,6 @@
   },
   {
     "type": "cycle",
-    "from": "pillars/ai/app/src/finance-api-runtime-config.ts",
-    "to": "pillars/ai/app/src/finance-api/client.gen.ts",
-    "unresolvedTo": "./finance-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/ai/app/src/finance-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/ai/app/src/finance-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/ai/app/src/finance-api/client/types.gen.ts",
-    "to": "pillars/ai/app/src/finance-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/ai/app/src/finance-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/ai/app/src/finance-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "pillars/ai/src/api/modules/ai-budgets/enforcement.ts",
     "to": "pillars/ai/src/api/modules/ai-budgets/service.ts",
     "unresolvedTo": "./service.js",
@@ -537,27 +495,6 @@
       {
         "name": "pillars/finance/app/src/finance-api/client/types.gen.ts",
         "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/finance/src/api/modules/imports/ai-categorizer-api.ts",
-    "to": "pillars/finance/src/api/modules/imports/ai-categorizer.ts",
-    "unresolvedTo": "./ai-categorizer.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/finance/src/api/modules/imports/ai-categorizer.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/finance/src/api/modules/imports/ai-categorizer-api.ts",
-        "dependencyTypes": ["local", "import"]
       }
     ]
   },
@@ -1002,27 +939,6 @@
       },
       {
         "name": "pillars/mcp/src/tools/cerebrum.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/mcp/src/tools/finance.ts",
-    "to": "pillars/mcp/src/tools/index.ts",
-    "unresolvedTo": "./index.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/mcp/src/tools/index.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/mcp/src/tools/finance.ts",
         "dependencyTypes": ["local", "import"]
       }
     ]
@@ -1592,7 +1508,7 @@
     "type": "cycle",
     "from": "pillars/shell/src/registry-api-runtime-config.ts",
     "to": "pillars/shell/src/registry-api/client.gen.ts",
-    "unresolvedTo": "./core-api/client.gen.js",
+    "unresolvedTo": "./registry-api/client.gen.js",
     "dependencyTypes": ["local", "type-only", "import"],
     "rule": {
       "severity": "error",

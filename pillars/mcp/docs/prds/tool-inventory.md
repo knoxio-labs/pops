@@ -2,7 +2,7 @@
 
 > Domain: [MCP Gateway](../README.md) · Gateway plumbing: [MCP Server PRD](../../../../docs/themes/platform/prds/mcp-server.md)
 
-Status: Done — 30 tools wired into `allTools`, every family vitest-covered.
+Status: Done — 38 tools wired into `allTools`, every family vitest-covered.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Catalogue the tools the MCP gateway advertises and the pillar each one drives. T
 
 Each tool is an adapter in `pillars/mcp/src/tools/*`. A handler reads MCP args, calls the owning pillar through `getPillar<TRouter>(id).<domain>.<op>(...)`, and returns `mapCallResult(...)`: SDK `kind: 'ok'` → the value as pretty JSON text; every failure shape → `{ isError: true }` with a human-readable reason the model can act on. Tools register flat into `allTools` (`tools/index.ts`); the server lists them via `ListTools` and routes a `CallTool` by name.
 
-## Tool surface (30 tools)
+## Tool surface (38 tools)
 
 Tool names are the MCP-facing identifiers. The endpoint column is the REST route on the owning pillar reached by the SDK.
 
@@ -62,13 +62,21 @@ Fixtures are non-owned infrastructure objects (outlets, patch panels, cable runs
 
 ### Finance (`finance` + `contacts` pillars)
 
-| Tool                        | Pillar     | REST endpoint       | Required | Optional / notes                                                                                             |
-| --------------------------- | ---------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `finance.transactions.list` | `finance`  | `GET /transactions` | —        | `search`, `startDate`, `endDate`, `entityId`, `account`, `type` (income/expense/transfer), `limit`, `offset` |
-| `finance.entities.list`     | `contacts` | `GET /entities`     | —        | `search`, `type` (company/person/government/bank/place/brand/organisation), `limit`, `offset`                |
-| `finance.budgets.list`      | `finance`  | `GET /budgets`      | —        | `search`, `period` (monthly/yearly), `active` ("true"/"false"), `limit`, `offset`                            |
+| Tool                                | Pillar     | REST endpoint               | Required    | Optional / notes                                                                                             |
+| ----------------------------------- | ---------- | --------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `finance.transactions.list`         | `finance`  | `GET /transactions`         | —           | `search`, `startDate`, `endDate`, `entityId`, `account`, `type` (income/expense/transfer), `limit`, `offset` |
+| `finance.transactions.get`          | `finance`  | `GET /transactions/:id`     | `id`        | —                                                                                                            |
+| `finance.entities.list`             | `contacts` | `GET /entities`             | —           | `search`, `type` (company/person/government/bank/place/brand/organisation), `limit`, `offset`                |
+| `finance.budgets.list`              | `finance`  | `GET /budgets`              | —           | `search`, `period` (monthly/yearly), `active` ("true"/"false"), `limit`, `offset`                            |
+| `finance.budgets.get`               | `finance`  | `GET /budgets/:id`          | `id`        | includes `spent` / `remaining` aggregates                                                                    |
+| `finance.corrections.list`          | `finance`  | `GET /corrections`          | —           | `minConfidence` (0-1), `matchType` (exact/contains/regex), `limit`, `offset`                                 |
+| `finance.tagRules.vocabulary`       | `finance`  | `GET /tag-rules/vocabulary` | —           | no args — every tag ever applied to a transaction                                                            |
+| `finance.wishlist.list`             | `finance`  | `GET /wishlist`             | —           | `search`, `priority`, `limit`, `offset`                                                                      |
+| `finance.wishlist.get`              | `finance`  | `GET /wishlist/:id`         | `id`        | —                                                                                                            |
+| `finance.imports.getImportProgress` | `finance`  | `GET /imports/progress`     | `sessionId` | polls an in-progress import session; `null` when unknown/expired                                             |
+| `finance.search`                    | `finance`  | `POST /search`              | `text`      | `filters[]` ({field, operator, value}); aggregates transactions + budgets + wishlist hits                    |
 
-`finance.entities.list` reads the `contacts` pillar — the authoritative entity store — not `finance`.
+`finance.entities.list` reads the `contacts` pillar — the authoritative entity store — not `finance`. All finance tools are **read-only** — no create/update/delete tool is wired for the finance pillar.
 
 ### Media (`media` pillar)
 
@@ -141,7 +149,11 @@ Inventory — fixtures
 
 Finance / Media / Cerebrum
 
-- [x] `finance.transactions.list` and `finance.budgets.list` hit the `finance` pillar; `finance.entities.list` hits the `contacts` pillar with entity-type validation.
+- [x] `finance.transactions.list` / `.get` and `finance.budgets.list` / `.get` hit the `finance` pillar; `finance.entities.list` hits the `contacts` pillar with entity-type validation.
+- [x] `finance.corrections.list` validates `matchType` against the allowed set; `finance.tagRules.vocabulary` takes no args.
+- [x] `finance.wishlist.list` / `.get` mirror the budgets/transactions list+get shape.
+- [x] `finance.imports.getImportProgress` requires `sessionId`; `finance.search` requires non-empty `text` and drops malformed `filters[]` entries.
+- [x] Every finance tool is read-only — none call a `create` / `update` / `delete` procedure (guarded by a dedicated vitest assertion).
 - [x] `media.library.list` defaults `type` to `all` and coerces `page`/`pageSize`; `media.watchlist.list` filters by `mediaType`.
 - [x] `cerebrum.engrams.list` forwards scope/tag/status/search filters; `cerebrum.engrams.get` requires `id`; `cerebrum.search` requires a non-empty `query` and defaults `mode` to `hybrid`.
 

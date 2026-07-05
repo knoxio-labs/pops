@@ -1,78 +1,11 @@
-import { getPillar } from '../pillar-client.js';
-import { mapCallResult } from './utils.js';
+import { ENTITY_TYPES, contacts, finance, type EntityType } from './finance-client.js';
+import { correctionsTools } from './finance-corrections.js';
+import { importsTools } from './finance-imports.js';
+import { searchTools } from './finance-search.js';
+import { wishlistTools } from './finance-wishlist.js';
+import { mapCallResult, reqStr, toolError } from './utils.js';
 
-import type { PillarHandle } from '@pops/pillar-sdk/client';
-
-import type { ToolDef } from './index.js';
-
-type TransactionListInput = {
-  search?: string;
-  startDate?: string;
-  endDate?: string;
-  entityId?: string;
-  account?: string;
-  type?: 'income' | 'expense' | 'transfer';
-  limit?: number;
-  offset?: number;
-};
-
-type BudgetListInput = {
-  search?: string;
-  period?: 'monthly' | 'yearly';
-  active?: 'true' | 'false';
-  limit?: number;
-  offset?: number;
-};
-
-type FinancePillarShape = {
-  finance: {
-    transactions: {
-      list: (input: TransactionListInput) => unknown;
-    };
-    budgets: {
-      list: (input: BudgetListInput) => unknown;
-    };
-  };
-};
-
-function finance(): PillarHandle<FinancePillarShape>['finance'] {
-  return getPillar<FinancePillarShape>('finance').finance;
-}
-
-const ENTITY_TYPES = [
-  'company',
-  'person',
-  'government',
-  'bank',
-  'place',
-  'brand',
-  'organisation',
-] as const;
-
-type EntityType = (typeof ENTITY_TYPES)[number];
-
-type ContactsEntityListInput = {
-  search?: string;
-  type?: EntityType;
-  limit?: number;
-  offset?: number;
-};
-
-// Entities live on the CONTACTS pillar — the authoritative entity store
-// (pillars/contacts/docs/prds/entities). The finance↔transactions usage rollup
-// is finance's, but the entity table itself is contacts'. Reached over the same
-// REST pillar SDK as the finance calls above.
-type ContactsShape = {
-  contacts: {
-    entities: {
-      list: (input: ContactsEntityListInput) => unknown;
-    };
-  };
-};
-
-function contacts(): PillarHandle<ContactsShape>['contacts'] {
-  return getPillar<ContactsShape>('contacts').contacts;
-}
+import type { ToolDef } from './tool-def.js';
 
 const transactionsList: ToolDef = {
   name: 'finance.transactions.list',
@@ -110,6 +43,21 @@ const transactionsList: ToolDef = {
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
     return mapCallResult(result);
+  },
+};
+
+const transactionsGet: ToolDef = {
+  name: 'finance.transactions.get',
+  description: 'Get a single financial transaction by ID.',
+  inputSchema: {
+    type: 'object',
+    properties: { id: { type: 'string', description: 'Transaction ID' } },
+    required: ['id'],
+  },
+  handler: async (args) => {
+    const id = reqStr(args, 'id');
+    if (!id) return toolError('Missing required field: id');
+    return mapCallResult(await finance().transactions.get({ id }));
   },
 };
 
@@ -169,4 +117,29 @@ const budgetsList: ToolDef = {
   },
 };
 
-export const financeTools: readonly ToolDef[] = [transactionsList, entitiesList, budgetsList];
+const budgetsGet: ToolDef = {
+  name: 'finance.budgets.get',
+  description: 'Get a single budget by ID, including current spend and remaining amount.',
+  inputSchema: {
+    type: 'object',
+    properties: { id: { type: 'string', description: 'Budget ID' } },
+    required: ['id'],
+  },
+  handler: async (args) => {
+    const id = reqStr(args, 'id');
+    if (!id) return toolError('Missing required field: id');
+    return mapCallResult(await finance().budgets.get({ id }));
+  },
+};
+
+export const financeTools: readonly ToolDef[] = [
+  transactionsList,
+  transactionsGet,
+  entitiesList,
+  budgetsList,
+  budgetsGet,
+  ...correctionsTools,
+  ...wishlistTools,
+  ...importsTools,
+  ...searchTools,
+];
