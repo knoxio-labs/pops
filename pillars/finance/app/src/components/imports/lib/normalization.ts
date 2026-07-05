@@ -1,20 +1,16 @@
 /**
- * Client-side normalization and matching helpers.
+ * Client-side matching helpers.
  *
  * Extracted from correction-proposal-shared.ts (tb-365).
  */
+import { normalizeDescription } from '@pops/finance';
 
-/** Client-side mirror of the server's normalizeDescription (corrections/types.ts).
- *  Uppercases, strips digits, collapses whitespace. Duplicated here to avoid
- *  pulling server code into the frontend bundle. */
-export function normalizeForMatch(value: string): string {
-  return value.toUpperCase().replaceAll(/\d+/g, '').replaceAll(/\s+/g, ' ').trim();
-}
+export { normalizeDescription };
 
 /**
  * Mirror the server matcher in `findMatchingCorrectionFromRules` / the
  * preview pipeline. Semantics:
- *  - For `exact`/`contains`: both sides are normalized via `normalizeForMatch`
+ *  - For `exact`/`contains`: both sides are normalized via `normalizeDescription`
  *    (patterns are stored already-normalized in the DB, but we normalize the
  *    client-side pattern too because the user can type a raw value in the
  *    detail editor before the server has a chance to normalize it).
@@ -29,7 +25,7 @@ export function transactionMatchesSignal(
   pattern: string,
   matchType: 'exact' | 'contains' | 'regex'
 ): boolean {
-  const normDesc = normalizeForMatch(description);
+  const normDesc = normalizeDescription(description);
   if (matchType === 'regex') {
     if (pattern.length === 0) return false;
     try {
@@ -38,7 +34,7 @@ export function transactionMatchesSignal(
       return false;
     }
   }
-  const normPattern = normalizeForMatch(pattern);
+  const normPattern = normalizeDescription(pattern);
   if (!normPattern) return false;
   if (matchType === 'exact') return normDesc === normPattern;
   return normDesc.includes(normPattern);

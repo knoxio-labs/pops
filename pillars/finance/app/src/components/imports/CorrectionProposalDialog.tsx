@@ -18,7 +18,7 @@ export type {
 } from './correction-proposal-shared';
 export {
   matchTypeLabel,
-  normalizeForMatch,
+  normalizeDescription,
   opKindBadgeVariant,
   opKindLabel,
   opSummary,
