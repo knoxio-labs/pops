@@ -59,6 +59,12 @@ export interface InsertImportTransactionInput {
   location: string | null;
   rawRow?: string;
   checksum?: string;
+  /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
+  matchType?: string | null;
+  /** Winning correction rule id, only set when `matchType` is `learned`. */
+  matchRuleId?: string | null;
+  /** Match confidence (0-1), only set for `ai`/`learned` matches. */
+  matchConfidence?: number | null;
 }
 
 /** Raw drizzle row shape returned by `insertImportTransaction`. */
@@ -169,6 +175,9 @@ export function insertImportTransaction(
       checksum: input.checksum ?? null,
       rawRow: input.rawRow ?? null,
       lastEditedTime: now,
+      matchType: input.matchType ?? null,
+      matchRuleId: input.matchRuleId ?? null,
+      matchConfidence: input.matchConfidence ?? null,
     })
     .run();
 

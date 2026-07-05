@@ -7404,6 +7404,27 @@
                         "location": {
                           "type": "string"
                         },
+                        "matchConfidence": {
+                          "maximum": 1,
+                          "minimum": 0,
+                          "type": "number"
+                        },
+                        "matchRuleId": {
+                          "type": "string"
+                        },
+                        "matchType": {
+                          "enum": [
+                            "alias",
+                            "exact",
+                            "prefix",
+                            "contains",
+                            "ai",
+                            "learned",
+                            "manual",
+                            "none"
+                          ],
+                          "type": "string"
+                        },
                         "rawRow": {
                           "type": "string"
                         },
@@ -13489,6 +13510,18 @@
                     "nullable": true,
                     "type": "string"
                   },
+                  "matchConfidence": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "matchRuleId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "matchType": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "notes": {
                     "nullable": true,
                     "type": "string"
@@ -13529,7 +13562,10 @@
                   "notes",
                   "checksum",
                   "rawRow",
-                  "lastEditedTime"
+                  "lastEditedTime",
+                  "matchType",
+                  "matchRuleId",
+                  "matchConfidence"
                 ],
                 "type": "object"
               }
@@ -13824,6 +13860,18 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "matchConfidence": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "matchRuleId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "matchType": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "notes": {
                           "nullable": true,
                           "type": "string"
@@ -13864,7 +13912,10 @@
                         "notes",
                         "checksum",
                         "rawRow",
-                        "lastEditedTime"
+                        "lastEditedTime",
+                        "matchType",
+                        "matchRuleId",
+                        "matchConfidence"
                       ],
                       "type": "object"
                     }

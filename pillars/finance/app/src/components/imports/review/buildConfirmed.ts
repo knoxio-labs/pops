@@ -23,5 +23,8 @@ export function buildConfirmedTransactions(
       entityName: t.entity?.entityName,
       tags: (t.suggestedTags ?? []).map((s) => s.tag),
       suggestedTags: t.suggestedTags,
+      matchType: t.entity?.matchType,
+      matchRuleId: t.ruleProvenance?.ruleId,
+      matchConfidence: t.entity?.confidence,
     }));
 }

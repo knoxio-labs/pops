@@ -74,6 +74,12 @@ export const ConfirmedTransactionSchema = ParsedTransactionSchema.extend({
   entityName: z.string().optional(),
   tags: z.array(z.string()).optional(),
   suggestedTags: z.array(SuggestedTagSchema).optional(),
+  /** How the entity assignment was produced (CF057/#3658), persisted verbatim at commit. */
+  matchType: EntityMatchSchema.shape.matchType.optional(),
+  /** Winning correction rule id, only set when `matchType` is `learned`. */
+  matchRuleId: z.string().optional(),
+  /** Match confidence (0-1), only set for `ai`/`learned` matches. */
+  matchConfidence: z.number().min(0).max(1).optional(),
 });
 
 export const ImportWarningSchema = z.object({

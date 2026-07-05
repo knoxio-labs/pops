@@ -148,6 +148,9 @@ function writeTransactionsPhase(
         location: txn.location ?? null,
         rawRow: txn.rawRow,
         checksum: txn.checksum,
+        matchType: txn.matchType ?? null,
+        matchRuleId: txn.matchRuleId ?? null,
+        matchConfidence: txn.matchConfidence ?? null,
       });
       imported++;
     } catch (error) {

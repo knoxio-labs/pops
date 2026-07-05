@@ -507,6 +507,58 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(list.data).toHaveLength(1);
   });
 
+  it('persists match provenance from the confirmed transaction (CF057/#3658)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'SPOTIFY AB',
+          checksum: 'commit-provenance-learned',
+          entityId: 'ent-spotify',
+          entityName: 'Spotify',
+          matchType: 'learned',
+          matchRuleId: 'rule-42',
+          matchConfidence: 0.91,
+        }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare(
+        'SELECT match_type, match_rule_id, match_confidence FROM transactions WHERE checksum = ?'
+      )
+      .get('commit-provenance-learned') as {
+      match_type: string | null;
+      match_rule_id: string | null;
+      match_confidence: number | null;
+    };
+    expect(row).toEqual({
+      match_type: 'learned',
+      match_rule_id: 'rule-42',
+      match_confidence: 0.91,
+    });
+  });
+
+  it('persists no provenance when the confirmed transaction carries none (backward compatible)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({ description: 'COLES SUPERMARKET', checksum: 'commit-no-provenance' }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare(
+        'SELECT match_type, match_rule_id, match_confidence FROM transactions WHERE checksum = ?'
+      )
+      .get('commit-no-provenance') as {
+      match_type: string | null;
+      match_rule_id: string | null;
+      match_confidence: number | null;
+    };
+    expect(row).toEqual({ match_type: null, match_rule_id: null, match_confidence: null });
+  });
+
   it('pre-creates pending contacts and resolves temp ids to the contact id', async () => {
     const contacts = makeContactsFake();
     const c = client(contacts);

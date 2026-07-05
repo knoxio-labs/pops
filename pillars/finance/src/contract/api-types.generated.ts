@@ -3706,6 +3706,18 @@ export interface operations {
             entityId?: string;
             entityName?: string;
             location?: string;
+            matchConfidence?: number;
+            matchRuleId?: string;
+            /** @enum {string} */
+            matchType?:
+              | 'alias'
+              | 'exact'
+              | 'prefix'
+              | 'contains'
+              | 'ai'
+              | 'learned'
+              | 'manual'
+              | 'none';
             rawRow: string;
             suggestedTags?: {
               isNew?: boolean;
@@ -6163,6 +6175,9 @@ export interface operations {
           id: string;
           lastEditedTime: string;
           location: string | null;
+          matchConfidence: number | null;
+          matchRuleId: string | null;
+          matchType: string | null;
           notes: string | null;
           notionId: string | null;
           rawRow: string | null;
@@ -6380,6 +6395,9 @@ export interface operations {
               id: string;
               lastEditedTime: string;
               location: string | null;
+              matchConfidence: number | null;
+              matchRuleId: string | null;
+              matchType: string | null;
               notes: string | null;
               notionId: string | null;
               rawRow: string | null;

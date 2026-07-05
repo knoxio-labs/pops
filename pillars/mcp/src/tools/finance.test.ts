@@ -75,6 +75,18 @@ describe('finance.entities.list', () => {
     const call = entities.list.mock.lastCall?.[0];
     expect((call as Record<string, unknown>)['type']).toBe('company');
   });
+
+  it('returns isError on unavailable', async () => {
+    entities.list.mockResolvedValueOnce(callUnavailable('contacts'));
+    const result = await tool.handler({});
+    expect(result.isError).toBe(true);
+  });
+
+  it('returns isError on contract-mismatch', async () => {
+    entities.list.mockResolvedValueOnce(callContractMismatch('contacts', '1.0.0', '2.0.0'));
+    const result = await tool.handler({});
+    expect(result.isError).toBe(true);
+  });
 });
 
 describe('finance.budgets.list', () => {

@@ -54,6 +54,9 @@ export const TransactionSnapshotSchema = z.object({
   checksum: z.string().nullable(),
   rawRow: z.string().nullable(),
   lastEditedTime: z.string(),
+  matchType: z.string().nullable(),
+  matchRuleId: z.string().nullable(),
+  matchConfidence: z.number().nullable(),
 });
 
 const CreateTransactionBody = z.object({

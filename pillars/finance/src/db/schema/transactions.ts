@@ -22,6 +22,18 @@ export const transactions = sqliteTable(
     checksum: text('checksum'),
     rawRow: text('raw_row'),
     lastEditedTime: text('last_edited_time').notNull(),
+    /**
+     * How the entity assignment was produced at commit time (CF057/#3658):
+     * one of the entity-matcher's stages (`alias`/`exact`/`prefix`/`contains`),
+     * `ai`, `learned` (a correction rule), `manual` (user override), or `none`
+     * (no entity — e.g. a transfer). Nullable — rows committed before this
+     * column existed carry no provenance.
+     */
+    matchType: text('match_type'),
+    /** Winning correction rule id, set only when `matchType` is `learned`. */
+    matchRuleId: text('match_rule_id'),
+    /** Match confidence (0-1), set only for `ai`/`learned` matches. */
+    matchConfidence: real('match_confidence'),
   },
   (table) => [
     index('idx_transactions_date').on(table.date),
