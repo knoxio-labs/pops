@@ -108,8 +108,22 @@ export const mockPillarFinance = {
   finance: {
     transactions: {
       list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
+      get: vi.fn().mockResolvedValue(callOk({ data: null })),
     },
-    budgets: { list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })) },
+    budgets: {
+      list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
+      get: vi.fn().mockResolvedValue(callOk({ data: null })),
+    },
+    corrections: {
+      list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
+    },
+    tagRules: { vocabulary: vi.fn().mockResolvedValue(callOk({ tags: [] })) },
+    wishlist: {
+      list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
+      get: vi.fn().mockResolvedValue(callOk({ data: null })),
+    },
+    imports: { getImportProgress: vi.fn().mockResolvedValue(callOk(null)) },
+    search: { search: vi.fn().mockResolvedValue(callOk({ hits: [] })) },
   },
 };
 

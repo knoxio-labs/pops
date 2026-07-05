@@ -12,12 +12,18 @@ name: App Quality
 # discovered matrix that runs each app's `typecheck` + `test` script directly.
 #
 # App units have NO standalone `build` script (they build via the shell), so
-# this lane is typecheck + test only — there is nothing to `pnpm build` on the
-# unit itself. The dependency closure IS built (`^...`) so the app's compiled
-# deps (`@pops/types`, `@pops/ui`, the owning pillar's
+# this lane is codegen-drift + typecheck + test — there is nothing to
+# `pnpm build` on the unit itself. The dependency closure IS built (`^...`)
+# so the app's compiled deps (`@pops/types`, `@pops/ui`, the owning pillar's
 # generated client, …) resolve before typecheck/test import them. This
 # generalises the former single-app `ai-quality.yml` (now retired — app-ai is
 # just another row in this matrix) to all 7 app units.
+#
+# Codegen drift: each app's generated Hey API client (`generate:*` scripts,
+# e.g. app-finance's `generate:finance-client` / `generate:contacts-client`)
+# is checked-in output, not built at image time — `unit-quality.yml`'s own
+# codegen-drift gate never sees it (maxdepth-1 exclusion above), so this lane
+# runs every `generate:*` script and diffs, mirroring that gate for apps.
 #
 # Selectors use the manifest `name` (`@pops/app-<id>`) discovered from disk,
 # never a hardcoded list, so a newly added pillar app is covered with no edit.
@@ -141,6 +147,28 @@ jobs:
         # only the deps (`^...`) are built here, never the unit itself. This
         # materialises the compiled .d.ts the app's typecheck + test import.
         run: pnpm --filter "${{ matrix.app.pkg }}^..." build
+
+      - name: Codegen drift
+        # Run every `generate:*` script the app declares (its generated Hey
+        # API client(s)), then fail on any diff against the committed output.
+        # Mirrors unit-quality.yml's codegen-drift step, which excludes
+        # `pillars/*/app` (maxdepth-2 members) by design — this is that gate
+        # for the app lane.
+        run: |
+          set -euo pipefail
+          dir='${{ matrix.app.dir }}'
+          scripts=$(node -e "const s=require('./$dir/package.json').scripts||{};process.stdout.write(Object.keys(s).filter(k=>k.startsWith('generate:')).join('\n'))")
+          if [ -z "$scripts" ]; then
+            echo "no generate:* scripts for ${{ matrix.app.pkg }} — skip codegen drift"
+          else
+            while IFS= read -r s; do
+              [ -z "$s" ] && continue
+              echo "::group::pnpm --filter ${{ matrix.app.pkg }} $s"
+              pnpm --filter "${{ matrix.app.pkg }}" "$s"
+              echo "::endgroup::"
+            done <<< "$scripts"
+            git diff --exit-code "$dir/"
+          fi
 
       - name: Typecheck
         run: pnpm --filter "${{ matrix.app.pkg }}" typecheck

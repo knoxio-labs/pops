@@ -107,6 +107,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (urlPath: string) => urlPath.replace(/^\/cerebrum-api/, ''),
       },
+      '/ai-api': {
+        target: 'http://localhost:3008',
+        changeOrigin: true,
+        rewrite: (urlPath: string) => urlPath.replace(/^\/ai-api/, ''),
+      },
+      '/contacts-api': {
+        target: 'http://localhost:3010',
+        changeOrigin: true,
+        rewrite: (urlPath: string) => urlPath.replace(/^\/contacts-api/, ''),
+      },
       // The orchestrator (ADR-029, epic 06) federates search over the pillars
       // and serves `POST /search` at root. The shell's global search panel
       // (`@pops/navigation` useSearchInputData) posts to `/orchestrator-api/search`;
