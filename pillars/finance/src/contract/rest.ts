@@ -12,7 +12,6 @@
  */
 import { initContract } from '@ts-rest/core';
 
-import { financeAiCacheContract } from './rest-ai-cache.js';
 import { financeBudgetsContract } from './rest-budgets.js';
 import { financeCorrectionsContract } from './rest-corrections.js';
 import { financeEntityUsageContract } from './rest-entity-usage.js';
@@ -36,7 +35,6 @@ export const financeContract = c.router(
     imports: financeImportsContract,
     search: financeSearchContract,
     settings: financeSettingsContract,
-    aiCache: financeAiCacheContract,
   },
   {
     pathPrefix: '',
