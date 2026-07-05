@@ -128,7 +128,7 @@ function findAliasMatch(
   let best: (EntityMatch & { keyLength: number }) | null = null;
   for (const [key, entityName] of aliases) {
     if (key.length < MIN_ALIAS_LENGTH) continue;
-    const upperKey = key.toUpperCase();
+    const upperKey = foldDiacritics(key).toUpperCase();
     if (!normalized.includes(upperKey)) continue;
     const entry = findByName(entityName, entityLookup);
     if (!entry) continue;

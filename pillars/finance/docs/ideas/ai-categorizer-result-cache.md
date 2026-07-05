@@ -6,7 +6,7 @@
 
 The import-time AI fallback (`categorizeWithAi`) calls Anthropic fresh for every unmatched description. There is no result cache in the categorization path, so re-importing the same merchant — or two rows with the same description in one batch — can each pay for an API call. Cost control today relies only on the env gate (AI off by default) and the model being cheap.
 
-A disk cache module (`api/modules/ai-usage-cache.ts`, `ai_entity_cache.json`) and its maintenance endpoints (`/ai-usage/cache`, `…/prune`) still exist, but the categorizer neither reads nor writes them — they are inert except for stats/prune.
+A disk cache module (`api/modules/ai-usage-cache.ts`, `ai_entity_cache.json`) and its maintenance endpoints (`/ai-usage/cache`, `…/prune`) once existed but were inert — the categorizer never read or wrote them — so they were removed. Reviving this idea means rebuilding the cache module from scratch (the notes below assume the old shape as a starting point).
 
 ## Build later
 

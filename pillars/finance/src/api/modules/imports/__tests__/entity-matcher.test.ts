@@ -96,6 +96,24 @@ describe('matchEntity — diacritic folding + broadened punctuation stripping (C
     expect(result).toEqual({ entityName: 'Café Nero', entityId: 'cafe-nero', matchType: 'exact' });
   });
 
+  it('matches an accented alias against a folded (plain-ASCII) description', () => {
+    const entityLookup = lookup([['nero group', { id: 'nero', name: 'Nero Group' }]]);
+    const aliasMap = aliases([['café nero', 'Nero Group']]);
+
+    const result = matchEntity('CAFE NERO SYDNEY', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Nero Group', entityId: 'nero', matchType: 'alias' });
+  });
+
+  it('matches a plain-ASCII alias against an accented description', () => {
+    const entityLookup = lookup([['nero group', { id: 'nero', name: 'Nero Group' }]]);
+    const aliasMap = aliases([['cafe nero', 'Nero Group']]);
+
+    const result = matchEntity('Café Nero Sydney', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Nero Group', entityId: 'nero', matchType: 'alias' });
+  });
+
   it('matches a hyphenated description against a space-separated entity name via the punctuation-retry stage', () => {
     const entityLookup = lookup([['ww metro', { id: 'ww', name: 'WW Metro' }]]);
 
