@@ -119,7 +119,7 @@ The migration eliminates these packages:
 
 - **True crash isolation.** A bug in food never affects finance.
 - **Independent deploys.** Update food alone; finance keeps running.
-- **Per-pillar Litestream backups.** Each pillar's DB is a separate stream.
+- **Per-pillar Litestream backups.** Each pillar's DB is a separate stream. (Operational isolation of storage and backup — the physical substrate is still shared today — is specified by [ADR-039](adr-039-pillar-isolation.md).)
 - **Forced discipline.** Cross-pillar coupling becomes structurally impossible. Reviewers don't have to look for it.
 - **CI narrows naturally.** A change inside `food-db` triggers only food's tests. A change inside `food-contract` triggers food + any pillar that imports the contract type-only — which is a tiny set.
 - **External consumers (iOS, MCP, future web clients) consume each pillar's contract independently** and don't need to know about other pillars.
