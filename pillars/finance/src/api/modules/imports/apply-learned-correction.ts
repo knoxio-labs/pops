@@ -131,11 +131,14 @@ function handleNoEntityCorrection(
 ): ApplyLearnedCorrectionResult | null {
   if (!correction.transactionType) return null;
   // The review step resolves a merchant entity for every purchase, so an
-  // entity-less purchase rule is not a finished match — it still needs one and
-  // belongs in `uncertain`. Transfers and income carry no merchant, so their
-  // type-only rules stay matched.
+  // entity-less purchase rule is never a finished match — it always needs one
+  // and belongs in `uncertain`, regardless of confidence. Transfers and income
+  // carry no merchant, so they follow the normal confidence-based
+  // classification (matched only at/above the high-confidence threshold).
   const status: CorrectionMatchStatus =
-    correction.transactionType === 'purchase' ? 'uncertain' : 'matched';
+    correction.transactionType === 'purchase'
+      ? 'uncertain'
+      : classifyCorrectionMatch(correction).status;
   return {
     processed: buildTypeOnlyMatch({
       db,
@@ -166,12 +169,12 @@ export function applyLearnedCorrection(
   const correction = allMatchingRules[0];
   if (!correction) return null;
 
-  const { status } = classifyCorrectionMatch(correction);
   const entityId = correction.entityId;
   const matchedRules = toMatchedRules(allMatchingRules);
 
   if (!entityId) return handleNoEntityCorrection(db, args, correction, matchedRules);
 
+  const { status } = classifyCorrectionMatch(correction);
   return {
     processed: buildEntityMatch({
       db,
