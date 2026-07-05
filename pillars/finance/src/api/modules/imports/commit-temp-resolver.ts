@@ -1,10 +1,13 @@
 /**
  * Resolve `temp:entity:{uuid}` placeholders in ChangeSet/tag-rule ops to the
- * real entity ids minted during the commit's entity-creation phase.
+ * real entity ids minted during the commit's entity-creation phase. A temp id
+ * with no mapping — or any id still carrying a `temp:` prefix — throws via
+ * {@link assertPersistableEntityId} rather than being silently persisted, so a
+ * missed mapping rolls the commit back instead of planting a dead placeholder.
  *
  * Ported from the monolith `lib/commit-temp-resolver.ts`.
  */
-import { COMMIT_TEMP_ENTITY_PREFIX } from './commit-validation.js';
+import { assertPersistableEntityId, COMMIT_TEMP_ENTITY_PREFIX } from './commit-validation.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
 import type { CommitPayload } from './types.js';
@@ -13,14 +16,15 @@ function resolveOpEntityId<TOp extends { op: string; data?: { entityId?: string 
   op: TOp,
   tempIdMap: Map<string, string>
 ): TOp {
-  if (
-    (op.op === 'add' || op.op === 'edit') &&
-    op.data?.entityId?.startsWith(COMMIT_TEMP_ENTITY_PREFIX)
-  ) {
-    const realId = tempIdMap.get(op.data.entityId);
-    return { ...op, data: { ...op.data, entityId: realId ?? op.data.entityId } };
-  }
-  return op;
+  if (op.op !== 'add' && op.op !== 'edit') return op;
+  const entityId = op.data?.entityId;
+  if (entityId == null) return op;
+
+  const resolved = entityId.startsWith(COMMIT_TEMP_ENTITY_PREFIX)
+    ? tempIdMap.get(entityId)
+    : entityId;
+  assertPersistableEntityId(entityId, resolved);
+  return { ...op, data: { ...op.data, entityId: resolved } };
 }
 
 export function resolveChangeSetTempIds(

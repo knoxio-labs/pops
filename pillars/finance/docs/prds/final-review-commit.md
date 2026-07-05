@@ -85,17 +85,21 @@ Reads `CommitResult` from the store:
 
 ## Validation & edge cases
 
-`validateCommitPayload` runs before the transaction opens and rejects: duplicate temp IDs, duplicate (case-insensitive) entity names, and any temp ID referenced by a changeSet op or a transaction that has no matching pending entity. `ValidationError` → 400.
+`validateCommitPayload` runs before the transaction opens and rejects: duplicate temp IDs, duplicate (case-insensitive) entity names, and any `temp:`-prefixed entity id referenced by a changeSet op or a transaction that has no matching pending entity — including stray placeholder schemes that are not a well-formed `temp:entity:{uuid}` pending reference. `ValidationError` → 400.
 
-| Case                                              | Behaviour                                                                                              |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Only transactions, no entities/rules              | Entity + rule phases skipped; transactions written.                                                    |
-| Temp entity used by both a rule and a transaction | Resolved once, reused by both writes.                                                                  |
-| Reclassification finds zero affected              | Commit succeeds; count 0; Summary shows "No existing transactions affected."                           |
-| Single transaction write fails                    | Recorded in `failedDetails`; commit continues for the rest.                                            |
-| Commit throws inside the tx                       | Whole tx rolls back; user sees the error and can retry (contacts already created are reused on retry). |
-| Contacts pillar down                              | Pre-create throws before the tx opens; nothing written.                                                |
-| Very large reclassification (10k+)                | Batched 500/page.                                                                                      |
+As a last line of defence, the temp-id resolver itself is fail-loud: when it resolves a referenced `temp:entity:` id and the pre-create map has no entry — or when any id about to be written still carries a `temp:` prefix — it throws (`ValidationError` → 400) and rolls the commit back rather than silently persisting the placeholder string into `entity_id` (the CF016 regression). No commit ever writes a `temp:`-prefixed entity id.
+
+| Case                                                  | Behaviour                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Only transactions, no entities/rules                  | Entity + rule phases skipped; transactions written.                                                    |
+| Temp entity used by both a rule and a transaction     | Resolved once, reused by both writes.                                                                  |
+| Reclassification finds zero affected                  | Commit succeeds; count 0; Summary shows "No existing transactions affected."                           |
+| Single transaction write fails                        | Recorded in `failedDetails`; commit continues for the rest.                                            |
+| Commit throws inside the tx                           | Whole tx rolls back; user sees the error and can retry (contacts already created are reused on retry). |
+| Contacts pillar down                                  | Pre-create throws before the tx opens; nothing written.                                                |
+| Referenced temp id missing from the pre-create map    | Resolver throws (400); whole commit rolls back; no placeholder `entity_id` persisted.                  |
+| Stray `temp:`-prefixed entity id (not `temp:entity:`) | Rejected by validation (400) before any write; resolver would also refuse it.                          |
+| Very large reclassification (10k+)                    | Batched 500/page.                                                                                      |
 
 ## Acceptance criteria
 
@@ -105,7 +109,8 @@ Reads `CommitResult` from the store:
 - [x] Correction changeSets applied via `applyChangeSet`, counted by add/edit/disable/remove; tag-rule changeSets applied with referenced tags upserted into the vocabulary, counted in `tagRulesApplied`.
 - [x] Transactions written with temp entity IDs resolved; a failed row lands in `failedDetails` without aborting the batch.
 - [x] Zero entities or zero changeSets skip their phases without error.
-- [x] `validateCommitPayload` rejects duplicate temp IDs, duplicate entity names, and dangling temp-id references with a 400 before any write.
+- [x] `validateCommitPayload` rejects duplicate temp IDs, duplicate entity names, and dangling/stray `temp:`-prefixed entity-id references with a 400 before any write.
+- [x] The commit never persists a `temp:`-prefixed placeholder into `entity_id`: an unresolved `temp:entity:` reference or any residual `temp:` id throws (400) and rolls the whole commit back, rather than silently writing the placeholder string (CF016).
 - [x] Retroactive reclassification re-evaluates existing rows (excluding this batch by checksum) against the full rule set via `findMatchingCorrectionFromRules`, in 500-row batches.
 - [x] Only rows whose entity/type/location changed are updated; `retroactiveReclassifications` counts only those; type-only rules clear the entity and still count.
 - [x] Reclassification runs inside the commit tx; its failure rolls back the whole commit.

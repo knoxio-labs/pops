@@ -23,7 +23,11 @@ import {
   resolveChangeSetTempIds,
   resolveTagRuleChangeSetTempIds,
 } from './commit-temp-resolver.js';
-import { COMMIT_TEMP_ENTITY_PREFIX, validateCommitPayload } from './commit-validation.js';
+import {
+  assertPersistableEntityId,
+  COMMIT_TEMP_ENTITY_PREFIX,
+  validateCommitPayload,
+} from './commit-validation.js';
 import { reclassifyExistingTransactions } from './reclassify-existing.js';
 
 import type { CommitPayload, CommitResult, FailedTransactionDetail } from './types.js';
@@ -106,10 +110,12 @@ function resolveTxnEntityId(
   entityId: string | undefined,
   tempIdMap: Map<string, string>
 ): string | undefined {
-  if (entityId?.startsWith(COMMIT_TEMP_ENTITY_PREFIX)) {
-    return tempIdMap.get(entityId) ?? entityId;
-  }
-  return entityId;
+  if (entityId == null) return undefined;
+  const resolved = entityId.startsWith(COMMIT_TEMP_ENTITY_PREFIX)
+    ? tempIdMap.get(entityId)
+    : entityId;
+  assertPersistableEntityId(entityId, resolved);
+  return resolved;
 }
 
 function writeTransactionsPhase(
