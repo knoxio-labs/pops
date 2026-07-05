@@ -196,6 +196,9 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Local cache of downloaded poster/backdrop art (regeneratable —
+      # excluded from Litestream, see AGENTS.md's exclusion list).
+      - media-images-data:/data/media/images
     environment:
       NODE_ENV: production
       PORT: '3003'
@@ -203,6 +206,7 @@ services:
       MEDIA_SELF_BASE_URL: http://media-api:3003
       POPS_REGISTRY_ENABLED: 'true'
       POPS_PILLARS: ${POPS_PILLARS:-}
+      MEDIA_IMAGES_DIR: /data/media/images
     expose:
       - '3003'
     depends_on:
@@ -240,6 +244,10 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Shares the ingest media root with pops-worker-food — the worker
+      # writes downloaded media here and the API serves it back; both must
+      # resolve the SAME path or reads/writes silently miss each other.
+      - food-ingest-data:/data/food/ingest
     environment:
       NODE_ENV: production
       PORT: '3005'
@@ -251,6 +259,7 @@ services:
       POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
       POPS_PILLARS: ${POPS_PILLARS:-}
+      FOOD_INGEST_DIR: /data/food/ingest
     expose:
       - '3005'
     depends_on:
@@ -875,6 +884,8 @@ volumes:
     name: pops-food-ingest-data
   cerebrum-engrams-data:
     name: pops-cerebrum-engrams-data
+  media-images-data:
+    name: pops-media-images-data
 
 secrets:
   notion_api_token:

@@ -192,6 +192,10 @@ and validates the resolved path stays inside `MEDIA_IMAGES_DIR` (no traversal).
       below two watched movies.
 - [x] `GET /media/images/...` serves cached bytes, falls back to on-demand
       download, and rejects path traversal outside `MEDIA_IMAGES_DIR`.
+- [x] `media-api` mounts a dedicated `media-images-data` volume at the path
+      `MEDIA_IMAGES_DIR` resolves to (compose), so the cache survives
+      container recreation and is excluded from Litestream (see AGENTS.md's
+      exclusion list) instead of resolving to an undeclared, ephemeral path.
 
 ## Edge Cases
 
