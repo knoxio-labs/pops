@@ -102,7 +102,6 @@ vi.mock('@pops/ui', async () => {
   };
 });
 
-// eslint-disable-next-line prefer-const
 let mockOnAppliedFn: ((...args: unknown[]) => void) | null = null;
 
 /** Captures the last signal and previewTransactions passed to TagRuleProposalDialog. */

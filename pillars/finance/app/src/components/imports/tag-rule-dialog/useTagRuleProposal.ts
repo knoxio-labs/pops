@@ -81,17 +81,35 @@ function buildProposeInput(args: ProposeInputArgs) {
 }
 
 function useResetOnOpen(props: TagRuleProposalDialogProps, form: FormState) {
+  const {
+    setPattern,
+    setMatchType,
+    setTagsText,
+    setRejectOpen,
+    setRejectFeedback,
+    setAcceptedNewTags,
+    setFollowUpProposal,
+  } = form;
   useEffect(() => {
     if (!props.open || !props.signal) return;
-    form.setPattern(props.signal.descriptionPattern);
-    form.setMatchType(props.signal.matchType);
-    form.setTagsText(props.signal.tags.join(', '));
-    form.setRejectOpen(false);
-    form.setRejectFeedback('');
-    form.setAcceptedNewTags(new Set());
-    form.setFollowUpProposal(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open, props.signal]);
+    setPattern(props.signal.descriptionPattern);
+    setMatchType(props.signal.matchType);
+    setTagsText(props.signal.tags.join(', '));
+    setRejectOpen(false);
+    setRejectFeedback('');
+    setAcceptedNewTags(new Set());
+    setFollowUpProposal(null);
+  }, [
+    props.open,
+    props.signal,
+    setPattern,
+    setMatchType,
+    setTagsText,
+    setRejectOpen,
+    setRejectFeedback,
+    setAcceptedNewTags,
+    setFollowUpProposal,
+  ]);
 }
 
 function useSyncAcceptedTags(
