@@ -8,6 +8,8 @@ import { DeleteEntityDialog } from './entities/DeleteEntityDialog';
 import { EntityFormDialog } from './entities/EntityFormDialog';
 import { useEntitiesPage } from './entities/useEntitiesPage';
 
+import type { EntityUsageListResponse } from '../finance-api/index.js';
+
 function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void }) {
   const { t } = useTranslation('finance');
   return (
@@ -26,15 +28,7 @@ function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void
 
 interface TableSectionProps {
   isLoading: boolean;
-  data:
-    | {
-        data: ReturnType<typeof useEntitiesPage>['query']['data'] extends infer T
-          ? T extends { data: infer U }
-            ? U
-            : never
-          : never;
-      }
-    | undefined;
+  data: { data: EntityUsageListResponse['data'] } | undefined;
   showOrphanedOnly: boolean;
   setShowOrphanedOnly: React.Dispatch<React.SetStateAction<boolean>>;
   columns: ReturnType<typeof buildEntityColumns>;

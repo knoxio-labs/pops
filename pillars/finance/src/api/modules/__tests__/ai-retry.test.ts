@@ -12,6 +12,12 @@ function rateLimitError(): Error {
   return err;
 }
 
+function serverError(status = 503): Error {
+  const err = new Error('Service Unavailable') as Error & { status: number };
+  err.status = status;
+  return err;
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -58,5 +64,26 @@ describe('withRateLimitRetry', () => {
     await assertion;
 
     expect(fn).toHaveBeenCalledTimes(6);
+  });
+
+  it('retries on a 5xx and succeeds once the transient failure clears', async () => {
+    const fn = vi.fn().mockRejectedValueOnce(serverError(503)).mockResolvedValue('ok');
+
+    const promise = withRateLimitRetry(fn, 'ctx');
+    await vi.runAllTimersAsync();
+
+    await expect(promise).resolves.toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('rethrows the 5xx once its smaller retry budget is exhausted', async () => {
+    const fn = vi.fn().mockRejectedValue(serverError(500));
+
+    const promise = withRateLimitRetry(fn, 'ctx');
+    const assertion = expect(promise).rejects.toMatchObject({ status: 500 });
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    expect(fn).toHaveBeenCalledTimes(3);
   });
 });

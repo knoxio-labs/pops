@@ -1,7 +1,7 @@
 /**
- * Public entity types for the finance pillar. Hand-maintained — adding
- * a new entity means adding both a file under `types/` and a matching
- * schema under `schemas/`. The round-trip test enforces that they agree.
+ * Public entity types for the finance pillar. Hand-maintained against the
+ * `rest-*.ts` zod contracts (the single source of truth for the served wire
+ * shape) rather than a separate parallel schema module (CF079/#3670).
  */
 export type { Budget, BudgetPeriod } from './budget.js';
 export { ENTITY_TYPES } from './entity.js';

@@ -129,7 +129,7 @@ export function FileUpload({
 
   const handleFile = useCallback(
     (file: File) => {
-      if (!file.name.endsWith('.csv')) {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
         setError('invalid file type. Please upload a CSV file.');
         setSelectedFile(null);
         onFileSelect(null);

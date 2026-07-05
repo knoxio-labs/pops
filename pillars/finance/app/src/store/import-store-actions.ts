@@ -55,7 +55,7 @@ export function buildNavigation(set: StoreSet) {
   return {
     nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 8) })),
     prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
-    goToStep: (step: number) => set({ currentStep: step }),
+    goToStep: (step: number) => set({ currentStep: Math.min(Math.max(step, 1), 8) }),
     reset: () => set(initialState),
   };
 }

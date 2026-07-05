@@ -22,14 +22,27 @@ import { readFileSync } from 'node:fs';
 
 import { type Router as ExpressRouter, Router } from 'express';
 
+// Cached after the first successful resolution — the secret is a Docker
+// secret/env var fixed for the process lifetime, so re-reading the file on
+// every webhook delivery is a pointless synchronous disk hit (CF083/#3670).
+let cachedWebhookSecret: string | null = null;
+
 function getWebhookSecret(): string {
+  if (cachedWebhookSecret !== null) return cachedWebhookSecret;
+
   const filePath = process.env['UP_WEBHOOK_SECRET_FILE'];
-  if (filePath) {
-    return readFileSync(filePath, 'utf-8').trim();
-  }
-  const envVal = process.env['UP_WEBHOOK_SECRET'];
-  if (envVal) return envVal;
-  throw new Error('Missing UP_WEBHOOK_SECRET_FILE or UP_WEBHOOK_SECRET');
+  const secret = filePath
+    ? readFileSync(filePath, 'utf-8').trim()
+    : process.env['UP_WEBHOOK_SECRET'];
+  if (!secret) throw new Error('Missing UP_WEBHOOK_SECRET_FILE or UP_WEBHOOK_SECRET');
+
+  cachedWebhookSecret = secret;
+  return secret;
+}
+
+/** Test seam: clear the cached secret so a test can swap env/file sources. */
+export function __resetWebhookSecretCacheForTests(): void {
+  cachedWebhookSecret = null;
 }
 
 function verifySignature(body: Buffer, signature: string): boolean {

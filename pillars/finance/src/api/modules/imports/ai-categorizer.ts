@@ -39,6 +39,8 @@ const DEFAULT_MAX_TOKENS = 200;
 // Claude Haiku pricing (USD per 1M tokens) for the cost estimate.
 const INPUT_COST_PER_M = 1.0;
 const OUTPUT_COST_PER_M = 5.0;
+/** Client-side request timeout (ms) — the SDK default (10min) is far too long for a single-row/batch categorization call (CF078/#3670). */
+const CLIENT_TIMEOUT_MS = 30_000;
 
 /** Default rows per batched categorization call, overridable via `FINANCE_AI_CATEGORIZER_BATCH_SIZE` (CP025/#3656). */
 export const DEFAULT_CATEGORIZER_BATCH_SIZE = 10;
@@ -103,7 +105,7 @@ export async function categorizeWithAi(
     throw new AiCategorizationError('ANTHROPIC_API_KEY not configured', 'NO_API_KEY');
   }
 
-  const client = new Anthropic({ apiKey, maxRetries: 0 });
+  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CLIENT_TIMEOUT_MS });
   const response = await callApiOrThrow({
     client,
     input,
@@ -153,7 +155,7 @@ export async function categorizeBatchWithAi(
     throw new AiCategorizationError('ANTHROPIC_API_KEY not configured', 'NO_API_KEY');
   }
 
-  const client = new Anthropic({ apiKey, maxRetries: 0 });
+  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: CLIENT_TIMEOUT_MS });
   const response = await callBatchApiOrThrow({
     client,
     inputs,

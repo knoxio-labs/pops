@@ -240,3 +240,44 @@ describe('matchEntity — base ladder precedence + tie-breaks (CF072/#3649/#3658
     expect(result).toBeNull();
   });
 });
+
+describe('matchEntity — normalized-key cache is scoped per lookup map instance (CF092/#3670)', () => {
+  it('does not leak a match across two different lookup maps with distinct entities', () => {
+    const firstRunLookup = lookup([['cafe deluxe', { id: 'cafe-1', name: 'Cafe Deluxe' }]]);
+    const firstMatch = matchEntity('CAFE DELUXE', firstRunLookup, new Map());
+    expect(firstMatch).toEqual({
+      entityName: 'Cafe Deluxe',
+      entityId: 'cafe-1',
+      matchType: 'exact',
+    });
+
+    // A second, unrelated import run builds a brand-new lookup map (same
+    // shape, different entity) — the precomputed-normalization cache is
+    // keyed by map reference, so it must not resolve against the first run's
+    // (now-stale) entries.
+    const secondRunLookup = lookup([['cafe deluxe', { id: 'cafe-2', name: 'Cafe Deluxe Two' }]]);
+    const secondMatch = matchEntity('CAFE DELUXE', secondRunLookup, new Map());
+    expect(secondMatch).toEqual({
+      entityName: 'Cafe Deluxe Two',
+      entityId: 'cafe-2',
+      matchType: 'exact',
+    });
+
+    // Re-querying the first run's map after the second run still resolves
+    // to the first run's entity, proving neither cache entry overwrote the
+    // other.
+    const firstMatchAgain = matchEntity('CAFE DELUXE', firstRunLookup, new Map());
+    expect(firstMatchAgain?.entityId).toBe('cafe-1');
+  });
+
+  it('reflects an accented entity name added to the lookup after an unrelated map was already queried', () => {
+    // Priming a different map instance first must not poison the cache for
+    // a later map whose entity requires diacritic folding.
+    matchEntity('IKEA STORE', lookup([['ikea', { id: 'ikea', name: 'IKEA' }]]), new Map());
+
+    const cafeLookup = lookup([['café deluxe', { id: 'cafe', name: 'Café Deluxe' }]]);
+    const result = matchEntity('CAFE DELUXE', cafeLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Café Deluxe', entityId: 'cafe', matchType: 'exact' });
+  });
+});
