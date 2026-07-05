@@ -19,6 +19,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express, { type Express } from 'express';
 
+import { inboundAuth } from './auth.js';
 import { allTools } from './tools/index.js';
 
 export function createMcpServer(): Server {
@@ -74,7 +75,7 @@ export function attachServerCleanup(
   });
 }
 
-app.post('/mcp', async (req, res) => {
+app.post('/mcp', inboundAuth, async (req, res) => {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   const server = createMcpServer();
 
