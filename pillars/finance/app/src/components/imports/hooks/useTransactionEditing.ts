@@ -1,16 +1,12 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
+import { bucketOfChecksum, replaceByChecksum } from './local-tx-reconcile';
+
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
-
-type LocalTxState = {
-  matched: ProcessedTransaction[];
-  uncertain: ProcessedTransaction[];
-  failed: ProcessedTransaction[];
-  skipped: ProcessedTransaction[];
-};
+import type { LocalTxState } from './local-tx-reconcile';
 
 type GenerateProposal = (args: {
   triggeringTransaction: ProcessedTransaction;
@@ -60,6 +56,19 @@ function buildLearnArgs(
   };
 }
 
+/**
+ * Apply an inline edit through the canonical `replaceByChecksum` identity
+ * (#3590/#3620) instead of matching by object reference — an edited
+ * transaction is a new object, so reference-equality replace silently
+ * dropped the edit whenever the bucket array had been rebuilt (e.g. by a
+ * server reconciliation) between render and save.
+ *
+ * The inserted transaction's `status` is forced to `targetBucket`: the stale
+ * `transaction` snapshot was captured at edit start, so a server reconciliation
+ * in the meantime can have moved this checksum into a different bucket. Keeping
+ * the snapshot's `status` would insert the card into `targetBucket` while
+ * carrying a mismatched status, breaking the bucket/status invariant.
+ */
 function applyEditToBucket(
   prev: LocalTxState,
   transaction: ProcessedTransaction,
@@ -67,28 +76,13 @@ function applyEditToBucket(
 ): LocalTxState {
   const isNoEntityType =
     updatedTx.transactionType === 'transfer' || updatedTx.transactionType === 'income';
-  if (isNoEntityType) {
-    return {
-      ...prev,
-      matched: prev.matched.some((t) => t === transaction)
-        ? prev.matched.map((t) =>
-            t === transaction ? { ...updatedTx, status: 'matched' as const } : t
-          )
-        : [...prev.matched, { ...updatedTx, status: 'matched' as const }],
-      uncertain: prev.uncertain.filter((t) => t !== transaction),
-      failed: prev.failed.filter((t) => t !== transaction),
-      skipped: prev.skipped.filter((t) => t !== transaction),
-    };
-  }
-  const replace = (list: ProcessedTransaction[]): ProcessedTransaction[] =>
-    list.map((t) => (t === transaction ? updatedTx : t));
-  return {
-    ...prev,
-    matched: replace(prev.matched),
-    uncertain: replace(prev.uncertain),
-    failed: replace(prev.failed),
-    skipped: replace(prev.skipped),
-  };
+  const targetBucket = isNoEntityType
+    ? 'matched'
+    : (bucketOfChecksum(prev, transaction.checksum) ?? 'matched');
+  return replaceByChecksum(prev, transaction.checksum, targetBucket, () => ({
+    ...updatedTx,
+    status: targetBucket,
+  }));
 }
 
 function showLearnToast(invokeRetry: () => void): void {

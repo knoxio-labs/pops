@@ -111,10 +111,6 @@ export interface ImportStore {
   listPendingTagRuleChangeSets: () => PendingTagRuleChangeSet[];
   removePendingTagRuleChangeSet: (tempId: string) => void;
 
-  updateTransaction: (
-    transaction: ProcessedTransaction,
-    updates: Partial<ProcessedTransaction>
-  ) => void;
   findSimilar: (transaction: ProcessedTransaction) => ProcessedTransaction[];
 
   updateTransactionTags: (checksum: string, tags: string[]) => void;
