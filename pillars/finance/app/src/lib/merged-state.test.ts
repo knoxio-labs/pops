@@ -180,6 +180,52 @@ describe('computeMergedRules', () => {
     expect(addedRule?.descriptionPattern).toBe('ALDI');
   });
 
+  it('gives every pending add across separate ChangeSets a distinct temp id', () => {
+    // Regression (#3596): each pending rule is its own single-`add` ChangeSet.
+    // The fold applies one ChangeSet at a time, so a per-call counter that
+    // restarted at `temp:1` made all pending rules collide on a single id —
+    // clicking one in the rule manager then highlighted every one.
+    const dbRules = [makeRule({ id: 'rule-1' })];
+    const addOp = (descriptionPattern: string, entityName: string): ChangeSet['ops'][number] => ({
+      op: 'add',
+      data: { descriptionPattern, matchType: 'exact', entityName, confidence: 0.8 },
+    });
+    const pending = [
+      makePendingChangeSet({ ops: [addOp('aldi', 'Aldi')] }),
+      makePendingChangeSet({ ops: [addOp('kmart', 'Kmart')] }),
+      makePendingChangeSet({ ops: [addOp('bunnings', 'Bunnings')] }),
+    ];
+
+    const result = computeMergedRules(dbRules, pending);
+    const pendingIds = result.filter((r) => r.id.startsWith('temp:')).map((r) => r.id);
+
+    expect(pendingIds).toHaveLength(3);
+    expect(new Set(pendingIds).size).toBe(3);
+  });
+
+  it('keeps temp ids unique when a single ChangeSet adds several rules', () => {
+    const pending = [
+      makePendingChangeSet({
+        ops: [
+          { op: 'add', data: { descriptionPattern: 'aldi', matchType: 'exact', confidence: 0.8 } },
+          { op: 'add', data: { descriptionPattern: 'kmart', matchType: 'exact', confidence: 0.8 } },
+        ],
+      }),
+      makePendingChangeSet({
+        ops: [
+          { op: 'add', data: { descriptionPattern: 'ikea', matchType: 'exact', confidence: 0.8 } },
+        ],
+      }),
+    ];
+
+    const pendingIds = computeMergedRules([], pending)
+      .filter((r) => r.id.startsWith('temp:'))
+      .map((r) => r.id);
+
+    expect(pendingIds).toHaveLength(3);
+    expect(new Set(pendingIds).size).toBe(3);
+  });
+
   it('is memoized — same input refs return same output ref', () => {
     const dbRules = [makeRule()];
     const pending = [

@@ -453,6 +453,36 @@ describe('corrections — listMerged', () => {
     expect(merged.data.some((c) => c.id.startsWith('temp:'))).toBe(true);
   });
 
+  it('assigns a distinct temp id to each pending add across separate ChangeSets', async () => {
+    // Regression (#3596): the rule manager posts one single-`add` ChangeSet per
+    // proposed rule. The fold applied each ChangeSet independently, so a counter
+    // that restarted at `temp:1` per call made every pending row share one id —
+    // the sidebar then keyed and selected them all as one.
+    const merged = await client().corrections.listMerged({
+      pendingChangeSets: [
+        {
+          changeSet: {
+            ops: [{ op: 'add', data: { descriptionPattern: 'ALDI', matchType: 'exact' } }],
+          },
+        },
+        {
+          changeSet: {
+            ops: [{ op: 'add', data: { descriptionPattern: 'KMART', matchType: 'exact' } }],
+          },
+        },
+        {
+          changeSet: {
+            ops: [{ op: 'add', data: { descriptionPattern: 'IKEA', matchType: 'exact' } }],
+          },
+        },
+      ],
+    });
+
+    const tempIds = merged.data.filter((c) => c.id.startsWith('temp:')).map((c) => c.id);
+    expect(tempIds).toHaveLength(3);
+    expect(new Set(tempIds).size).toBe(3);
+  });
+
   it('reflects pending edit/disable ops over persisted rows', async () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'EDITME',
