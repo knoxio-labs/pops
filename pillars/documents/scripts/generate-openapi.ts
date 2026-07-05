@@ -49,16 +49,16 @@ const PACKAGE_JSON_PATH = resolve(HERE, '..', 'package.json');
 const PACKAGE_JSON: { version?: string } = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8'));
 const CONTRACT_VERSION = PACKAGE_JSON.version ?? '0.0.0';
 
-function sortJson<T>(value: T): T {
+function sortJson(value: unknown): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) => sortJson(item)) as unknown as T;
+    return value.map((item) => sortJson(item));
   }
   if (value !== null && typeof value === 'object') {
     const entries = value as Record<string, unknown>;
     const sortedKeys = Object.keys(entries).toSorted();
     const sorted: Record<string, unknown> = {};
     for (const key of sortedKeys) sorted[key] = sortJson(entries[key]);
-    return sorted as T;
+    return sorted;
   }
   return value;
 }
