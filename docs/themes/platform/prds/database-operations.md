@@ -1,11 +1,11 @@
 # Database Operations
 
 > Theme: [Platform](../README.md)
-> Status: Done
+> Status: Partial — the per-pillar database lifecycle (opener, migrations, path resolution) is done; per-pillar offsite backup is NOT wired (the `infra/litestream/<id>.yml` files are reference stubs, no sidecar runs; see [ADR-039](../../../architecture/adr-039-pillar-isolation.md) and #3636).
 
 ## Overview
 
-Each pillar owns its own SQLite database and applies its own committed migration journal at startup. There is no shared database, no global init/seed/clear, and no second migration system. Schema changes flow through Drizzle per pillar: edit the pillar's schema, generate a migration, review the SQL, commit it, deploy — the pillar auto-migrates its own file on boot. Backups are per-pillar continuous streams, independent of every other pillar.
+Each pillar owns its own SQLite database and applies its own committed migration journal at startup. There is no shared database, no global init/seed/clear, and no second migration system. Schema changes flow through Drizzle per pillar: edit the pillar's schema, generate a migration, review the SQL, commit it, deploy — the pillar auto-migrates its own file on boot. The target backup model is per-pillar continuous streams independent of every other pillar; that offsite replication is specified here but not yet operational (see Backup).
 
 This PRD specifies the database lifecycle that every pillar implements identically: how a database is opened, how migrations are applied and journaled, where the SQLite file lives, and how a pillar's data is replicated offsite.
 
@@ -61,6 +61,8 @@ Schema changes go through Drizzle, per pillar:
 A baseline migration (e.g. finance's `0053_finance_pillar_baseline`, inventory's `0006_inventory_pillar_baseline`) provisions a pillar's core tables, and replaying the journal in full from its first entry brings a fresh database fully up to date with no out-of-band bootstrap step.
 
 ## Backup
+
+> **Not operational yet.** The design below is the target. Today the `infra/litestream/<id>.yml` files are reference stubs with no sidecar running them, and the deployed backup is a separate central job that is itself broken (targets a nonexistent `pops.db`). Wiring per-pillar sidecars, splitting pops-vs-homelab backup scope, and running restore drills are tracked by [ADR-039](../../../architecture/adr-039-pillar-isolation.md) and #3636.
 
 Each pillar streams its SQLite file offsite continuously via Litestream. `infra/litestream/<id>.yml` is the canonical reference the deployer copies into its own Litestream config; the replica target (bucket, region, credentials) comes from the deployer's environment as a `${<ID>_LITESTREAM_REPLICA_URL}` placeholder. Per-pillar configs mean a single-pillar restore never pulls the whole fleet's data. Production provisioning (ansible, secrets, the actual replica credentials) lives in private [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra); day-to-day rollouts are handled by Watchtower.
 

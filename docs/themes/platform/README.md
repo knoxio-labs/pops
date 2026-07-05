@@ -35,9 +35,9 @@ GitHub Actions gates quality on every PR and publishes per-pillar images to GHCR
 
 Each pillar applies its own Drizzle migration journal at boot, resolves its SQLite path safely, guards production data, and backs up independently, so a pillar's database survives any number of schema changes without data loss.
 
-| PRD                                                | Summary                                                                                                        | Status |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ |
-| [Database Operations](prds/database-operations.md) | Per-pillar SQLite lifecycle: Drizzle migration journal at boot, path resolution, independent Litestream backup | Done   |
+| PRD                                                | Summary                                                                                                        | Status  |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------- |
+| [Database Operations](prds/database-operations.md) | Per-pillar SQLite lifecycle: Drizzle migration journal at boot, path resolution, independent Litestream backup | Partial |
 
 ### Cortex runtime
 
