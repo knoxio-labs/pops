@@ -67,10 +67,16 @@ describe('progress-store idle TTL', () => {
     updateProgress('session-1', { processedCount: 5 });
 
     vi.advanceTimersByTime(4 * 60 * 1000);
+    const result: ImportProgress['result'] = {
+      matched: [],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    };
     updateProgress('session-1', {
       status: 'completed',
       processedCount: 10,
-      result: { transactions: [], errors: [] } as unknown as ImportProgress['result'],
+      result,
     });
 
     const progress = getProgress('session-1');
