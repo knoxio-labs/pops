@@ -302,3 +302,68 @@ describe('startReconcileContactsOutboxWorker', () => {
     }
   });
 });
+
+describe('recordAttemptFailure concurrency guard', () => {
+  function readRow(id: string): {
+    status: string;
+    attempts: number;
+    last_error: string | null;
+    resolved_entity_id: string | null;
+  } {
+    return opened.raw
+      .prepare(
+        'SELECT status, attempts, last_error, resolved_entity_id FROM entity_precreate_outbox WHERE id = ?'
+      )
+      .get(id) as {
+      status: string;
+      attempts: number;
+      last_error: string | null;
+      resolved_entity_id: string | null;
+    };
+  }
+
+  it('leaves a row a concurrent pass already resolved untouched', () => {
+    const id = seedOutboxRow('RaceCo');
+    entityPrecreateOutboxService.markResolved(
+      opened.db,
+      id,
+      'real-entity-1',
+      '2026-07-06T00:00:00.000Z'
+    );
+
+    const outcome = entityPrecreateOutboxService.recordAttemptFailure(opened.db, id, {
+      nowIso: '2026-07-06T00:00:01.000Z',
+      error: 'contacts unavailable',
+      maxAttempts: 1,
+    });
+
+    expect(outcome).toBe('pending');
+    const row = readRow(id);
+    expect(row.status).toBe('resolved');
+    expect(row.attempts).toBe(0);
+    expect(row.last_error).toBeNull();
+    expect(row.resolved_entity_id).toBe('real-entity-1');
+  });
+
+  it('does not re-fail or re-bump a row a concurrent pass already dead-lettered', () => {
+    const id = seedOutboxRow('DeadRaceCo');
+    const first = entityPrecreateOutboxService.recordAttemptFailure(opened.db, id, {
+      nowIso: '2026-07-06T00:00:00.000Z',
+      error: 'boom',
+      maxAttempts: 1,
+    });
+    expect(first).toBe('failed');
+
+    const second = entityPrecreateOutboxService.recordAttemptFailure(opened.db, id, {
+      nowIso: '2026-07-06T00:00:02.000Z',
+      error: 'boom again',
+      maxAttempts: 1,
+    });
+
+    expect(second).toBe('pending');
+    const row = readRow(id);
+    expect(row.status).toBe('failed');
+    expect(row.attempts).toBe(1);
+    expect(row.last_error).toBe('boom');
+  });
+});

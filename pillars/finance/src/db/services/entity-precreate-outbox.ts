@@ -18,7 +18,7 @@
  * and can pass a transaction), plain functions, typed domain errors, no HTTP
  * concerns.
  */
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import {
   entityPrecreateOutbox,
@@ -106,6 +106,13 @@ export interface RecordAttemptFailureInput {
  * dead-lettered (`status = 'failed'`) instead of staying `pending` forever,
  * so a contacts outage that never clears can't grow the outbox / retry loop
  * without bound; `listPending` stops selecting a `'failed'` row.
+ *
+ * Every mutation is guarded on `status = 'pending'` inside a single
+ * transaction: reconciler passes interleave at the `await` on contacts, so a
+ * losing pass must not resurrect or corrupt a row a concurrent pass already
+ * marked `resolved` (or `failed`). If the guard matches no row this attempt is
+ * a no-op and reports `'pending'` — the winning pass already recorded the
+ * terminal state.
  */
 export function recordAttemptFailure(
   db: FinanceDb,
@@ -113,27 +120,31 @@ export function recordAttemptFailure(
   input: RecordAttemptFailureInput
 ): AttemptFailureOutcome {
   const maxAttempts = input.maxAttempts ?? DEFAULT_MAX_RECONCILE_ATTEMPTS;
-  db.update(entityPrecreateOutbox)
-    .set({
-      attempts: sql`${entityPrecreateOutbox.attempts} + 1`,
-      lastAttemptAt: input.nowIso,
-      lastError: input.error,
-    })
-    .where(eq(entityPrecreateOutbox.id, id))
-    .run();
+  return db.transaction((tx) => {
+    const bumped = tx
+      .update(entityPrecreateOutbox)
+      .set({
+        attempts: sql`${entityPrecreateOutbox.attempts} + 1`,
+        lastAttemptAt: input.nowIso,
+        lastError: input.error,
+      })
+      .where(and(eq(entityPrecreateOutbox.id, id), eq(entityPrecreateOutbox.status, 'pending')))
+      .run();
+    if (bumped.changes === 0) return 'pending';
 
-  const updated = db
-    .select({ attempts: entityPrecreateOutbox.attempts })
-    .from(entityPrecreateOutbox)
-    .where(eq(entityPrecreateOutbox.id, id))
-    .get();
-  if ((updated?.attempts ?? 0) < maxAttempts) return 'pending';
+    const updated = tx
+      .select({ attempts: entityPrecreateOutbox.attempts })
+      .from(entityPrecreateOutbox)
+      .where(eq(entityPrecreateOutbox.id, id))
+      .get();
+    if ((updated?.attempts ?? 0) < maxAttempts) return 'pending';
 
-  db.update(entityPrecreateOutbox)
-    .set({ status: 'failed' })
-    .where(eq(entityPrecreateOutbox.id, id))
-    .run();
-  return 'failed';
+    tx.update(entityPrecreateOutbox)
+      .set({ status: 'failed' })
+      .where(and(eq(entityPrecreateOutbox.id, id), eq(entityPrecreateOutbox.status, 'pending')))
+      .run();
+    return 'failed';
+  });
 }
 
 /** Mark a row resolved once contacts confirms the real entity id. Does NOT
