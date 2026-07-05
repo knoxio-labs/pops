@@ -32,6 +32,13 @@ import { tryServeFile } from './serve-file.js';
 
 const DOCUMENTS_PILLAR_ID = 'documents';
 
+/**
+ * Bound the proxied thumbnail fetch so a hung `documents` service can't pin an
+ * inventory request (and its worker) indefinitely. Mirrors the 10s budget the
+ * old direct Paperless client used for thumbnail fetches.
+ */
+const THUMBNAIL_FETCH_TIMEOUT_MS = 10_000;
+
 /** Uploaded item bytes can change on re-upload, so cache privately + short. */
 const UPLOAD_CACHE_CONTROL = 'private, max-age=3600';
 const THUMBNAIL_CACHE_CONTROL = 'public, max-age=3600';
@@ -116,8 +123,15 @@ function createThumbnailProxyHandler(
 
     let response: Response;
     try {
-      response = await fetchImpl(`${documentsPillar.baseUrl}/documents/${id}/thumbnail`);
+      response = await fetchImpl(`${documentsPillar.baseUrl}/documents/${id}/thumbnail`, {
+        signal: AbortSignal.timeout(THUMBNAIL_FETCH_TIMEOUT_MS),
+      });
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        console.error('[inventory/documents] Thumbnail proxy timed out:', err);
+        res.status(504).json({ error: 'The documents pillar timed out' });
+        return;
+      }
       console.error('[inventory/documents] Thumbnail proxy error:', err);
       res.status(502).json({ error: 'Failed to reach the documents pillar' });
       return;

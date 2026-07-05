@@ -83,6 +83,17 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
     expect(res.body.error).toContain('Failed to reach');
   });
 
+  it('returns 504 when the proxied fetch times out', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new DOMException('The operation timed out', 'TimeoutError'));
+    const res = await request(app(() => Promise.resolve(documentsSnapshot()), fetchImpl)).get(
+      '/inventory/documents/42/thumbnail'
+    );
+    expect(res.status).toBe(504);
+    expect(res.body.error).toContain('timed out');
+  });
+
   it('proxies the thumbnail image on success', async () => {
     const bytes = Buffer.from('fake-image-data');
     const fetchImpl = vi
@@ -98,7 +109,10 @@ describe('GET /inventory/documents/:id/thumbnail', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('image/webp');
     expect(res.headers['cache-control']).toBe('public, max-age=3600');
-    expect(fetchImpl).toHaveBeenCalledWith('http://documents-api:3012/documents/42/thumbnail');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://documents-api:3012/documents/42/thumbnail',
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
   });
 
   it('defaults content-type to image/png when the header is missing', async () => {
