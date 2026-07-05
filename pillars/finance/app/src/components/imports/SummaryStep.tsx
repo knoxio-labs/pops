@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle, List, Plus, RefreshCw, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
-import { Button, SummaryCard } from '@pops/ui';
+import { Button, EmptyState, SummaryCard } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
 
@@ -22,9 +22,7 @@ function SummaryHeader() {
     <div className="text-center">
       <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
       <h2 className="text-2xl font-semibold mb-2">Import Complete</h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
-        All changes have been committed successfully.
-      </p>
+      <p className="text-sm text-muted-foreground">All changes have been committed successfully.</p>
     </div>
   );
 }
@@ -65,7 +63,7 @@ function SummaryCards({
         />
       ) : (
         <SummaryCard
-          icon={<AlertCircle className="w-5 h-5 text-gray-400" />}
+          icon={<AlertCircle className="w-5 h-5 text-muted-foreground" />}
           value={0}
           label="Transactions Failed"
           variant="neutral"
@@ -164,17 +162,6 @@ function FooterActions({ onReset, onView }: { onReset: () => void; onView: () =>
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="text-center py-12 space-y-4">
-      <p className="text-gray-500">No commit results available.</p>
-      <p className="text-sm text-gray-400">
-        Complete the final review and commit before viewing the summary.
-      </p>
-    </div>
-  );
-}
-
 /**
  * Final import-flow step: the commit summary. Renders the empty state when
  * reached by direct navigation without a prior commit.
@@ -183,7 +170,13 @@ export function SummaryStep() {
   const commitResult = useImportStore((s) => s.commitResult);
   const reset = useImportStore((s) => s.reset);
   const navigate = useNavigate();
-  if (!commitResult) return <EmptyState />;
+  if (!commitResult)
+    return (
+      <EmptyState
+        title="No commit results available."
+        description="Complete the final review and commit before viewing the summary."
+      />
+    );
   const totalRules = totalRulesApplied(commitResult);
   return (
     <div className="space-y-6">

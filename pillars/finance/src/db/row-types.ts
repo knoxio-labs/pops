@@ -8,20 +8,11 @@
  * Hosted here so all finance row shapes are re-exported from a single
  * `./index.ts` (the pillar-internal db barrel).
  */
-import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
+import type { InferInsertModel } from 'drizzle-orm';
 
-import type {
-  budgets,
-  tierOverrides,
-  transactionCorrections,
-  transactions,
-  wishList,
-} from './schema.js';
+import type { budgets, transactionCorrections, transactions, wishList } from './schema.js';
 
 export type TransactionInsert = InferInsertModel<typeof transactions>;
 export type BudgetInsert = InferInsertModel<typeof budgets>;
 export type WishListInsert = InferInsertModel<typeof wishList>;
 export type TransactionCorrectionInsert = InferInsertModel<typeof transactionCorrections>;
-
-export type TierOverrideRow = InferSelectModel<typeof tierOverrides>;
-export type TierOverrideInsert = InferInsertModel<typeof tierOverrides>;

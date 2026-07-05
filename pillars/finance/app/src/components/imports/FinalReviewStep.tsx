@@ -90,7 +90,7 @@ export function FinalReviewStep() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold mb-2">Final Review</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Review all pending changes before committing. Navigate back to make edits.
         </p>
       </div>

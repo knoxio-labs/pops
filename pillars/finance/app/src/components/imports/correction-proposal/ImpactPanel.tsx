@@ -69,10 +69,10 @@ function PanelLabel({
   return (
     <div className="px-4 py-2 text-xs text-muted-foreground">
       {label}
-      {stale && <span className="ml-2 text-amber-600">(stale)</span>}
+      {stale && <span className="ml-2 text-warning">(stale)</span>}
       {truncated && (
         <span
-          className="ml-2 text-amber-600"
+          className="ml-2 text-warning"
           title={`Previewed against the first ${PREVIEW_CHANGESET_MAX_TRANSACTIONS} matching transactions. The counts below are an under-count — narrow the pattern or re-run after importing in smaller batches to see full impact.`}
         >
           (preview truncated)
@@ -112,17 +112,17 @@ function TwoSectionView({
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+        <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
           Import transactions
         </div>
         <ImpactContent result={previewResult} />
       </div>
       <div className="border-t pt-3">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+        <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
           Existing transactions
           {dbTruncated && dbTotal !== undefined && (
             <span
-              className="text-amber-600 normal-case font-normal"
+              className="text-warning normal-case font-normal"
               title={`Preview truncated — showing first ${PREVIEW_CHANGESET_MAX_TRANSACTIONS} of ${dbTotal} existing transactions.`}
             >
               (preview truncated — first {PREVIEW_CHANGESET_MAX_TRANSACTIONS} of {dbTotal})

@@ -24,7 +24,7 @@ function GroupBulkActions(props: GroupBulkActionsProps) {
             variant="default"
             size="sm"
             onClick={() => onAcceptAll(group.transactions)}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90"
           >
             {entityExists ? '✓' : '+'} Accept All as "{group.entityName}"
           </Button>
@@ -61,11 +61,7 @@ export interface GroupHeaderProps extends GroupBulkActionsProps {
 export function GroupHeader(props: GroupHeaderProps) {
   const { group, isExpanded, totalAmount } = props;
   return (
-    <div
-      className={`p-4 ${
-        group.aiSuggestion ? 'bg-purple-50 dark:bg-purple-950' : 'bg-gray-50 dark:bg-gray-900'
-      }`}
-    >
+    <div className={`p-4 ${group.aiSuggestion ? 'bg-app-accent/10' : 'bg-muted'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <CollapsibleTrigger
@@ -86,9 +82,7 @@ export function GroupHeader(props: GroupHeaderProps) {
               {group.transactions.length} transaction
               {group.transactions.length !== 1 ? 's' : ''}
             </Badge>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Total: ${totalAmount.toFixed(2)}
-            </span>
+            <span className="text-sm text-muted-foreground">Total: ${totalAmount.toFixed(2)}</span>
             {group.category && (
               <Badge variant="outline" className="text-xs">
                 {group.category}

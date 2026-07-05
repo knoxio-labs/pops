@@ -27,7 +27,7 @@ interface DropZoneProps extends DragHandlers {
 
 function DropZone(props: DropZoneProps) {
   const { isDragging, hasError, acceptedTypes, maxSizeMB } = props;
-  const borderClass = isDragging ? 'border-info bg-info/5' : 'border-gray-300 dark:border-gray-700';
+  const borderClass = isDragging ? 'border-info bg-info/5' : 'border-border';
   const errorClass = hasError ? 'border-destructive bg-destructive/5' : '';
   return (
     <div
@@ -41,13 +41,13 @@ function DropZone(props: DropZoneProps) {
         htmlFor="file-upload"
         className="flex flex-col items-center justify-center cursor-pointer"
       >
-        <Upload className={`w-12 h-12 mb-4 ${hasError ? 'text-destructive' : 'text-gray-400'}`} />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <Upload
+          className={`w-12 h-12 mb-4 ${hasError ? 'text-destructive' : 'text-muted-foreground'}`}
+        />
+        <span className="text-sm font-medium text-foreground mb-1">
           Drop CSV file here or click to browse
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          Maximum file size: {maxSizeMB}MB
-        </span>
+        <span className="text-xs text-muted-foreground">Maximum file size: {maxSizeMB}MB</span>
         <input
           id="file-upload"
           type="file"
@@ -68,17 +68,15 @@ function SelectedFileCard({ file, onRemove }: { file: File; onRemove: () => void
       <div className="flex items-center gap-3">
         <FileText className="w-8 h-8 text-success" />
         <div>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{file.name}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {(file.size / 1024).toFixed(2)} KB
-          </p>
+          <p className="text-sm font-medium text-foreground">{file.name}</p>
+          <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(2)} KB</p>
         </div>
       </div>
       <Button
         variant="ghost"
         size="icon"
         onClick={onRemove}
-        className="text-gray-500 hover:text-destructive"
+        className="text-muted-foreground hover:text-destructive"
         aria-label="Remove file"
       >
         <X className="w-5 h-5" />

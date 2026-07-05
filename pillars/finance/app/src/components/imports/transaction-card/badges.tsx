@@ -107,7 +107,7 @@ function OverriddenRulesPopover({ rules }: { rules: MatchedRule[] }) {
                 <code className="font-mono truncate max-w-[18ch]" title={rule.pattern}>
                   {rule.pattern}
                 </code>
-                <Badge variant="outline" className="text-[10px] shrink-0">
+                <Badge variant="outline" className="text-2xs shrink-0">
                   {rule.matchType}
                 </Badge>
               </div>

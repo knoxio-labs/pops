@@ -13,21 +13,24 @@ export function BrowseRuleSidebarRowContent(props: { rule: CorrectionRule; hasLo
     <div className="flex-1 min-w-0 space-y-1">
       <div className="flex items-center gap-1.5 flex-wrap">
         <code className="text-xs truncate max-w-45">{rule.descriptionPattern}</code>
-        <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+        <Badge variant="outline" className="text-2xs h-4 px-1.5">
           {rule.matchType}
         </Badge>
         {isPending && (
-          <Badge variant="default" className="text-[10px] h-4 px-1.5 bg-amber-500">
+          <Badge
+            variant="default"
+            className="text-2xs h-4 px-1.5 bg-warning text-warning-foreground"
+          >
             pending
           </Badge>
         )}
         {hasLocalOp && (
-          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+          <Badge variant="secondary" className="text-2xs h-4 px-1.5">
             edited
           </Badge>
         )}
         {!rule.isActive && (
-          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+          <Badge variant="secondary" className="text-2xs h-4 px-1.5">
             disabled
           </Badge>
         )}
