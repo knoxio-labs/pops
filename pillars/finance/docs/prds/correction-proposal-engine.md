@@ -56,7 +56,7 @@ AI cluster (Anthropic via the finance env key; degrades when unavailable):
 - **Deterministic preview** — impact is computed by the same matcher used in processing, over the merged rule set (DB rules + pending ChangeSets) as baseline. Editing any op marks its preview stale and blocks Apply until regenerated.
 - **Scope control** — proposal/preview inputs are bounded: `generate-rules` ≤ 50 txns, preview ≤ 2000 txns, ≤ 200 pending ChangeSets, `maxPreviewItems` ≤ 500.
 - **Pattern validity** — `analyze` requires the AI pattern to be a case-insensitive substring of the description (≥ 3 chars, uppercased); on mismatch it returns null and the caller falls back to a computed pattern. This is the fix for hallucinated patterns when the entity name is absent from the description (e.g. "MEMBERSHIP FEE" assigned to "American Express" keeps `MEMBERSHIP FEE` as the pattern).
-- **Type-only learning is terminal** — a transfer/income rule with no entity classifies a matching row as a terminal `matched` result in import processing and re-evaluation, and counts toward the affected count. No entity is required.
+- **Type-only learning is terminal for transfer/income only** — a transfer/income rule with no entity classifies a matching row as a terminal `matched` result in import processing and re-evaluation, and counts toward the affected count; no entity is required. A `purchase` rule with no entity is not terminal: the review step still requires a merchant, so a matching row buckets as `uncertain` rather than `matched`.
 - **Rejection is the escape hatch** — "this whole direction is wrong, start over", requiring a short feedback message. Day-to-day refinement uses the editor and AI helper, not reject-and-retry.
 
 ## Proposal dialog (frontend, import review)

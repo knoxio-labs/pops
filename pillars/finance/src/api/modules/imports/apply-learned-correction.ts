@@ -9,6 +9,7 @@
 import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
 import {
   classifyCorrectionMatch,
+  type CorrectionMatchStatus,
   type CorrectionRow,
   findAllMatchingCorrectionFromRules,
   parseCorrectionTags,
@@ -49,10 +50,11 @@ interface TypeOnlyMatchArgs {
   correction: CorrectionRow;
   matchedRules: MatchedRule[];
   knownTags: string[];
+  status: CorrectionMatchStatus;
 }
 
 function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
-  const { db, transaction, correction, matchedRules, knownTags } = args;
+  const { db, transaction, correction, matchedRules, knownTags, status } = args;
   return {
     ...transaction,
     location: correction.location ?? transaction.location,
@@ -66,7 +68,7 @@ function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
       confidence: correction.confidence,
     },
     matchedRules,
-    status: 'matched',
+    status,
     suggestedTags: buildSuggestedTags(db, {
       description: transaction.description,
       entityId: null,
@@ -128,6 +130,12 @@ function handleNoEntityCorrection(
   matchedRules: MatchedRule[]
 ): ApplyLearnedCorrectionResult | null {
   if (!correction.transactionType) return null;
+  // The review step resolves a merchant entity for every purchase, so an
+  // entity-less purchase rule is not a finished match — it still needs one and
+  // belongs in `uncertain`. Transfers and income carry no merchant, so their
+  // type-only rules stay matched.
+  const status: CorrectionMatchStatus =
+    correction.transactionType === 'purchase' ? 'uncertain' : 'matched';
   return {
     processed: buildTypeOnlyMatch({
       db,
@@ -135,8 +143,9 @@ function handleNoEntityCorrection(
       correction,
       matchedRules,
       knownTags: args.knownTags,
+      status,
     }),
-    bucket: 'matched',
+    bucket: status,
   };
 }
 

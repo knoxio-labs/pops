@@ -57,7 +57,7 @@ A second matcher groups all matches by `[exact, contains, regex]` (each group so
 `findMatch` returns the winning rule plus a status: `matched` when `confidence ≥ 0.9`, else `uncertain`. In the import pipeline:
 
 - [x] An **entity** match buckets as `matched` (confidence ≥ 0.9) or `uncertain` (below).
-- [x] A **type-only** match (no `entity_id`, but a `transaction_type`, e.g. a PayID/"SAVINGS TRANSFER" transfer rule) is a **terminal `matched`** outcome with no entity, and counts toward `affectedCount` in import processing and re-evaluation.
+- [x] A **type-only** match (no `entity_id`, but a `transaction_type: transfer | income`, e.g. a PayID/"SAVINGS TRANSFER" transfer rule) is a **terminal `matched`** outcome with no entity, and counts toward `affectedCount` in import processing and re-evaluation. A `purchase` pattern with no entity is **not** terminal — the review step still requires a merchant, so it buckets as `uncertain`.
 - [x] A PayID transfer rule classifies later PayID rows as `transfer` without requiring an entity.
 
 ## REST API (`corrections.*`, finance pillar)
