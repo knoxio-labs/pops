@@ -142,6 +142,7 @@ export function renderBody(
       previewHook={hooks.previewHook}
       excludeIds={view.excludeIds}
       isBusy={hooks.mutationsHook.isBusy}
+      isEditorLocked={hooks.mutationsHook.isEditorLocked}
       previewView={view.previewView}
       setPreviewView={view.setPreviewView}
       currentPreviewLabel={view.currentPreviewLabel}

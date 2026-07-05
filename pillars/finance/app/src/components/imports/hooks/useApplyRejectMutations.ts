@@ -181,7 +181,8 @@ export function useApplyRejectMutations(
     setAiBusy,
   });
 
-  const isBusy = isFetching || previewMutationPending || rejectMutation.isPending || aiBusy;
+  const isEditorLocked = isFetching || rejectMutation.isPending || aiBusy;
+  const isBusy = isEditorLocked || previewMutationPending;
   const canApply =
     !isBusy && localOps.length > 0 && !hasDirty && Boolean(sessionId) && !combinedPreviewError;
 
@@ -204,6 +205,7 @@ export function useApplyRejectMutations(
     setAiMessages,
     aiBusy,
     isBusy,
+    isEditorLocked,
     canApply,
     handleApprove,
     handleConfirmReject,

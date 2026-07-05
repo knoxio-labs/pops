@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -518,6 +519,34 @@ describe('CorrectionProposalDialog', () => {
     // After rerun completes, dirty flag clears and Apply re-enables.
     await waitFor(() => expect(applyBtn).not.toBeDisabled());
     expect(screen.queryByText(/Preview stale/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps focus in the pattern field while the live preview reruns per keystroke (#3593)', async () => {
+    // A never-resolving preview mimics a slow backend: the impact preview is
+    // still in flight while the user keeps typing. The regression was that the
+    // in-flight preview flag was folded into the rule editor's `disabled` prop,
+    // so every keystroke disabled the focused input — the browser then blurred
+    // it, forcing a re-click before each character.
+    mockPreviewMutateAsync.mockReturnValue(new Promise<never>(() => undefined));
+    seedTwoAddOps();
+    renderDialog();
+
+    const input = (await screen.findByDisplayValue('WOOLWORTHS')) as HTMLInputElement;
+    // The editor must stay editable even though a preview is in flight.
+    expect(input).toBeEnabled();
+
+    input.focus();
+    expect(input).toHaveFocus();
+
+    const user = userEvent.setup();
+    await user.type(input, ' METRO');
+
+    // Same DOM node (no remount / no re-created editor), still focused, and
+    // every character landed — proving onChange fired per keystroke.
+    const after = screen.getByDisplayValue('WOOLWORTHS METRO');
+    expect(after).toBe(input);
+    expect(after).toHaveFocus();
+    expect(after).toBeEnabled();
   });
 
   it('changing transaction type select auto-reruns preview and re-enables Apply', async () => {
