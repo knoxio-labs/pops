@@ -22,8 +22,11 @@ services:
   # `core`). Sibling pillars treat the registry container as the authoritative
   # pillar registry: `GET /pillars` returns a snapshot derived from the
   # `POPS_PILLARS` env plus a synthetic `registry` entry.
-  # Startup ordering is enforced by `depends_on: registry-api` (below) so
-  # consumers can rely on the snapshot being available when they boot.
+  # `depends_on: registry-api (started)` (below) only orders container start —
+  # it no longer gates on the registry healthcheck. Every sibling pillar
+  # listens before it registers and retries registration in the background
+  # (ADR-039 E08), so a slow or unhealthy registry delays self-registration,
+  # never fleet cold-start.
   #
   # DUAL-ALIAS RENAME WINDOW: the service is named `registry-api` but carries
   # the legacy `core-api` network alias on BOTH networks so a not-yet-rebuilt
@@ -114,7 +117,7 @@ services:
       - '3002'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -163,7 +166,7 @@ services:
       - '3004'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -211,7 +214,7 @@ services:
       - '3003'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -264,7 +267,7 @@ services:
       - '3005'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -308,7 +311,7 @@ services:
       - '3006'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -357,7 +360,7 @@ services:
       - '3008'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -485,7 +488,7 @@ services:
       pops-redis:
         condition: service_healthy
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -578,7 +581,7 @@ services:
       - '3010'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:3010/health']
       interval: 30s
@@ -611,7 +614,7 @@ services:
       - '3009'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
@@ -775,7 +778,7 @@ services:
         condition: service_completed_successfully
 
   # ── MCP HTTP SERVER ──────────────────────────────────────────────
-  # Exposes pops data as an MCP server over HTTP (port 3002), reachable on the
+  # Exposes pops data as an MCP server over HTTP (port 3011), reachable on the
   # local network and (optionally) via Cloudflare Tunnel. The access control is
   # the MCP_INBOUND_TOKEN bearer check below, NOT network placement — every
   # POST /mcp must present it. The host port stays published: the shell nginx has
@@ -803,23 +806,23 @@ services:
       # (per-pillar POPS_*_API_URL with built-in docker-network defaults); the
       # legacy single POPS_API_URL tRPC client was removed in the 02 decommission.
       POPS_API_KEY_FILE: /run/secrets/pops_api_key
-      MCP_PORT: '3002'
+      MCP_PORT: '3011'
       # Inbound shared secret. When set, every POST /mcp must send
       # `Authorization: Bearer <token>`; unset leaves the route open and logs a
       # loud warning. Provision before onboarding clients (see MCP PRD).
       MCP_INBOUND_TOKEN: ${MCP_INBOUND_TOKEN:-}
     ports:
-      - '${MCP_BIND_ADDR:-0.0.0.0}:3002:3002'
+      - '${MCP_BIND_ADDR:-0.0.0.0}:3011:3011'
     depends_on:
       registry-api:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test:
         [
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3002/health').then(r=>{if(!r.ok)process.exit(1)})",
+          "fetch('http://localhost:3011/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s

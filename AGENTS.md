@@ -77,20 +77,20 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 
 ### Pillars and ports
 
-| Pillar         | Port | Owns                                                      | Notes                                                                                             |
-| -------------- | ---- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `registry`     | 3001 | registry / settings / users / service-accounts / features | data pillar; formerly `core`                                                                      |
-| `inventory`    | 3002 | items, locations, warranties, insurance                   | data pillar                                                                                       |
-| `media`        | 3003 | movies, TV, watchlist, watch history                      | data pillar; Plex/TMDB/TVDB                                                                       |
-| `finance`      | 3004 | transactions, budgets, wishlists, entities, CSV import    | data pillar                                                                                       |
-| `food`         | 3005 | food domain                                               | data pillar; runs a worker                                                                        |
-| `lists`        | 3006 | lists                                                     | data pillar                                                                                       |
-| `cerebrum`     | 3007 | memory / retrieval / ego                                  | data pillar; runs a worker                                                                        |
-| `ai`           | 3008 | AI-ops: providers, usage/telemetry, ingest                |                                                                                                   |
-| `orchestrator` | 3009 | federated search + AI-tool registry (`GET /ai/tools`)     | stateless, owns **no DB**                                                                         |
-| `contacts`     | 3010 | contacts                                                  | **Rust** (axum + OpenAPI), `src/entities/`                                                        |
-| `mcp`          | 3002 | MCP gateway                                               | **binds :3002 in code** (`MCP_PORT ?? 3002`) — overlaps `inventory`; documents what the code says |
-| `shell`        | 5568 | React SPA host                                            | UI pillar; Vite + nginx, **not** the default 5173                                                 |
+| Pillar         | Port | Owns                                                      | Notes                                             |
+| -------------- | ---- | --------------------------------------------------------- | ------------------------------------------------- |
+| `registry`     | 3001 | registry / settings / users / service-accounts / features | data pillar; formerly `core`                      |
+| `inventory`    | 3002 | items, locations, warranties, insurance                   | data pillar                                       |
+| `media`        | 3003 | movies, TV, watchlist, watch history                      | data pillar; Plex/TMDB/TVDB                       |
+| `finance`      | 3004 | transactions, budgets, wishlists, entities, CSV import    | data pillar                                       |
+| `food`         | 3005 | food domain                                               | data pillar; runs a worker                        |
+| `lists`        | 3006 | lists                                                     | data pillar                                       |
+| `cerebrum`     | 3007 | memory / retrieval / ego                                  | data pillar; runs a worker                        |
+| `ai`           | 3008 | AI-ops: providers, usage/telemetry, ingest                |                                                   |
+| `orchestrator` | 3009 | federated search + AI-tool registry (`GET /ai/tools`)     | stateless, owns **no DB**                         |
+| `contacts`     | 3010 | contacts                                                  | **Rust** (axum + OpenAPI), `src/entities/`        |
+| `mcp`          | 3011 | MCP gateway                                               | **binds :3011 in code** (`MCP_PORT ?? 3011`)      |
+| `shell`        | 5568 | React SPA host                                            | UI pillar; Vite + nginx, **not** the default 5173 |
 
 The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `shell`, and `docs` own no DB.
 
@@ -185,7 +185,7 @@ pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (
 ├── contacts/              # Rust (axum + OpenAPI) (:3010): src/entities, migrations/, Cargo.toml, tests/
 ├── orchestrator/          # Federated search + AI-tool registry (GET /ai/tools); stateless, no DB
 ├── shell/                 # UI pillar: React SPA host (Vite + nginx reverse proxy), lazy-loads each pillar's app/
-├── mcp/                   # MCP gateway (binds :3002 in code via MCP_PORT)
+├── mcp/                   # MCP gateway (binds :3011 in code via MCP_PORT)
 ├── docs/                  # OpenAPI docs browser (Stoplight Elements over each contract's snapshot)
 └── moltbot/               # Telegram bot config + skills (no Dockerfile, uses upstream image)
 

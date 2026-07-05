@@ -85,14 +85,14 @@ POPS is a working multi-pillar REST platform. There is no tRPC, no `pops-api` mo
 
 **Other pillars:**
 
-| Pillar           | Port | Role                                                                                                                |
-| ---------------- | ---- | ------------------------------------------------------------------------------------------------------------------- |
-| **contacts**     | 3010 | Rust pillar (axum + OpenAPI) — contacts / CRM-lite                                                                  |
-| **orchestrator** | 3009 | Cross-pillar service, no DB — federates over the running pillars                                                    |
-| **mcp**          | 3002 | MCP HTTP gateway (binds `MCP_PORT`, overlapping inventory's port in code); exposes pillar data as tools, owns no DB |
-| **shell**        | —    | Frontend host — mounts each pillar's `app/` into one UI                                                             |
-| **docs**         | —    | Documentation pillar                                                                                                |
-| **moltbot**      | —    | Telegram channel for POPS                                                                                           |
+| Pillar           | Port | Role                                                                          |
+| ---------------- | ---- | ----------------------------------------------------------------------------- |
+| **contacts**     | 3010 | Rust pillar (axum + OpenAPI) — contacts / CRM-lite                            |
+| **orchestrator** | 3009 | Cross-pillar service, no DB — federates over the running pillars              |
+| **mcp**          | 3011 | MCP HTTP gateway (binds `MCP_PORT`); exposes pillar data as tools, owns no DB |
+| **shell**        | —    | Frontend host — mounts each pillar's `app/` into one UI                       |
+| **docs**         | —    | Documentation pillar                                                          |
+| **moltbot**      | —    | Telegram channel for POPS                                                     |
 
 Cross-pillar communication goes through `@pops/pillar-sdk` (`libs/sdk`). The only two structural units are **PILLAR** (`pillars/`) and **LIB** (`libs/`) — there is no `apps/` directory and no `packages/*`. Build is per-unit via mise + pnpm + cargo (no turbo).
 

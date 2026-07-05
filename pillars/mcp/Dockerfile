@@ -40,6 +40,6 @@ COPY --from=builder --chown=node:node /app/pillars/mcp/dist ./dist
 ARG BUILD_VERSION=dev
 ENV BUILD_VERSION=$BUILD_VERSION
 
-EXPOSE 3002
+EXPOSE 3011
 USER node
 CMD ["node", "dist/index.js"]

@@ -3,7 +3,7 @@
 MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, media, and Cerebrum data — read and write — as tools that AI agents (Claude Desktop, Claude Code, any MCP client) call over the local network. Each tool dispatches to the owning pillar over REST through `@pops/pillar-sdk`; the gateway owns no database and no business logic.
 
 - **Transport:** Streamable HTTP (`POST /mcp`), stateless — a fresh server + transport per request
-- **Port:** 3002 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; internal-only (`expose:`), reached through the shell proxy / Cloudflare Access rather than a host port
+- **Port:** 3011 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; internal-only (`expose:`), reached through the shell proxy / Cloudflare Access rather than a host port
 - **Inbound auth:** `POST /mcp` requires `Authorization: Bearer <MCP_INBOUND_TOKEN>` when `MCP_INBOUND_TOKEN` is set. If it is unset the route stays open and logs a loud warning (fail-open rollout so live access is never locked out before clients are updated). `/health` and `/ready` stay open.
 - **Outbound auth:** Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern).
 
@@ -24,7 +24,7 @@ Per-pillar base URLs default to the Docker-network hostnames; override any with 
 
 ```env
 POPS_INTERNAL_API_KEY=sa_your_service_account_key_here
-MCP_PORT=3002
+MCP_PORT=3011
 # Optional inbound bearer secret. Set it to require `Authorization: Bearer <token>`
 # on POST /mcp; leave unset for an open (loudly-warned) local route.
 MCP_INBOUND_TOKEN=
@@ -71,9 +71,9 @@ Point the URL at the proxied gateway host (the container is not host-published).
 ## Health & readiness
 
 ```bash
-curl http://localhost:3002/health
+curl http://localhost:3011/health
 # {"status":"ok","tools":30}
 
-curl http://localhost:3002/ready
+curl http://localhost:3011/ready
 # {"status":"ready","apiKeyConfigured":true,"tools":30}  (503/degraded if no key)
 ```

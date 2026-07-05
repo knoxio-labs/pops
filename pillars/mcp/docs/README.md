@@ -11,10 +11,10 @@ The gateway is intentionally thin: it owns no database and no business logic. Ev
 ## Shape
 
 - **Transport.** Streamable HTTP, stateless. Agents `POST /mcp`; a fresh `Server` + `StreamableHTTPServerTransport` is created per request and torn down on response close (no session state, no shared in-memory cursor).
-- **Port.** `3002` (override with `MCP_PORT`), bound `0.0.0.0` for LAN reach.
+- **Port.** `3011` (override with `MCP_PORT`), bound `0.0.0.0` for LAN reach.
 - **Pillar access.** Tools call pillars through `getPillar<TRouter>(id)` (`src/pillar-client.ts`), a thin wrapper over `@pops/pillar-sdk` `pillar()`. The SDK is configured once at module load with a service-account key and a map of Docker-internal pillar base URLs; it memoises per-pillar handles. Discovery falls back through the registry pillar when an internal hostname is not pinned.
 - **Auth.** Outbound only. The gateway authenticates to pillars with a service-account key read from `POPS_INTERNAL_API_KEY` (or legacy `POPS_API_KEY`, optionally via the `POPS_API_KEY_FILE` Docker-secret pattern). Inbound MCP connections are unauthenticated — callers on the LAN are trusted; front a reverse proxy if client auth is required.
-- **Packaging.** A container (`Dockerfile`) building `@pops/mcp` and `@pops/pillar-sdk` into a standalone Node image, exposing `3002`. Liveness is `GET /health`; readiness is `GET /ready` (503 until a service-account key is present).
+- **Packaging.** A container (`Dockerfile`) building `@pops/mcp` and `@pops/pillar-sdk` into a standalone Node image, exposing `3011`. Liveness is `GET /health`; readiness is `GET /ready` (503 until a service-account key is present).
 
 ## Tool families
 
