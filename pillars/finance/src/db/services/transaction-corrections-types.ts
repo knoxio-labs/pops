@@ -66,12 +66,22 @@ export interface TransactionCorrectionListQuery {
 /**
  * Canonical pattern normalisation used by the matcher and on insert/update.
  *
- * Uppercases, strips digits, collapses whitespace, and trims. Kept identical
- * to the in-tree implementation so a cutover (PR 3) is a routing flip — not
- * a behavioural change.
+ * Folds diacritics, treats hyphens as a space and strips ampersands/periods,
+ * uppercases, strips digits, collapses whitespace, and trims. Kept identical
+ * to `contract/corrections-pure.ts`'s `normalizeDescription` (CF056/CP022) —
+ * the two must stay in lockstep — and to the entity-matcher's
+ * `normalizeKey`, which folds diacritics and punctuation the same way.
  */
 export function normalizeDescription(description: string): string {
-  return description.toUpperCase().replaceAll(/\d+/g, '').replaceAll(/\s+/g, ' ').trim();
+  return description
+    .normalize('NFKD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .replaceAll(/-/g, ' ')
+    .replaceAll(/[&.]/g, '')
+    .toUpperCase()
+    .replaceAll(/\d+/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 }
 
 /**

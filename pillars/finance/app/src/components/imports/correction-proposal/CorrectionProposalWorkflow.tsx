@@ -1,5 +1,6 @@
 import { WorkflowDialog } from '@pops/ui';
 
+import { useResetOnClose } from './workflow/useResetOnClose';
 import {
   type CorrectionProposalWorkflowProps,
   useWorkflowHooks,
@@ -9,7 +10,6 @@ import {
   renderFooter,
   renderHeader,
   renderSubpanel,
-  useResetOnClose,
   useViewSelection,
 } from './workflow/WorkflowSlots';
 

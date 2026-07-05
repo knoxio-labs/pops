@@ -4,13 +4,6 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
-  AiCacheCacheStatsData,
-  AiCacheCacheStatsResponses,
-  AiCacheClearAllCacheData,
-  AiCacheClearAllCacheResponses,
-  AiCacheClearStaleCacheData,
-  AiCacheClearStaleCacheErrors,
-  AiCacheClearStaleCacheResponses,
   BudgetsCreateData,
   BudgetsCreateErrors,
   BudgetsCreateResponses,
@@ -193,51 +186,6 @@ export type Options<
    */
   meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
-
-/**
- * Clear the entire AI cache
- */
-export const aiCacheClearAllCache = <ThrowOnError extends boolean = false>(
-  options?: Options<AiCacheClearAllCacheData, ThrowOnError>
-): RequestResult<AiCacheClearAllCacheResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).delete<AiCacheClearAllCacheResponses, unknown, ThrowOnError>({
-    url: '/ai-usage/cache',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-
-/**
- * Get AI cache statistics (entry count, on-disk size)
- */
-export const aiCacheCacheStats = <ThrowOnError extends boolean = false>(
-  options?: Options<AiCacheCacheStatsData, ThrowOnError>
-): RequestResult<AiCacheCacheStatsResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<AiCacheCacheStatsResponses, unknown, ThrowOnError>({
-    url: '/ai-usage/cache',
-    ...options,
-  });
-
-/**
- * Remove AI cache entries older than maxAgeDays
- */
-export const aiCacheClearStaleCache = <ThrowOnError extends boolean = false>(
-  options?: Options<AiCacheClearStaleCacheData, ThrowOnError>
-): RequestResult<AiCacheClearStaleCacheResponses, AiCacheClearStaleCacheErrors, ThrowOnError> =>
-  (options?.client ?? client).post<
-    AiCacheClearStaleCacheResponses,
-    AiCacheClearStaleCacheErrors,
-    ThrowOnError
-  >({
-    url: '/ai-usage/cache/prune',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
 
 /**
  * List budgets with optional search / period / active filters and pagination

@@ -44,7 +44,6 @@ The contract (`src/contract/rest.ts`) composes these sub-routers:
 | `imports`      | CSV / Up Bank import + atomic commit                          |
 | `tagRules`     | tag rules + suggester                                         |
 | `corrections`  | AI-assisted correction proposals                              |
-| `aiCache`      | AI entity-resolution cache                                    |
 | `entityUsage`  | read-only usage counts for `contacts` entities                |
 | `search`       | cross-domain search                                           |
 | `settings`     | per-pillar settings                                           |

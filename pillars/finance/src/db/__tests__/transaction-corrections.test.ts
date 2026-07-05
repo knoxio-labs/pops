@@ -128,6 +128,17 @@ describe('normalizeDescription', () => {
     const once = normalizeDescription('Café Latte 12');
     expect(normalizeDescription(once)).toBe(once);
   });
+
+  it('folds diacritics so an accented merchant matches its plain-ASCII spelling (CF056)', () => {
+    expect(normalizeDescription('Café Nero')).toBe('CAFE NERO');
+    expect(normalizeDescription('CAFE NERO')).toBe(normalizeDescription('Café Nero'));
+  });
+
+  it('treats a hyphen as a space and strips ampersands/periods (CF056)', () => {
+    expect(normalizeDescription('WW-METRO')).toBe('WW METRO');
+    expect(normalizeDescription('M&S FOOD')).toBe('MS FOOD');
+    expect(normalizeDescription('J.CREW')).toBe('JCREW');
+  });
 });
 
 describe('createOrUpdateTransactionCorrection — insert path', () => {

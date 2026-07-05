@@ -5,7 +5,15 @@
  *   2. Exact match — case-insensitive against the entity lookup
  *   3. Prefix match — description starts with entity name (longest wins)
  *   4. Contains match — entity name anywhere in description (min 4 chars, longest wins)
- *   5. Punctuation stripping — drop apostrophes, retry stages 2-4
+ *   5. Punctuation stripping — treat hyphens as a space, drop apostrophes/
+ *      ampersands/periods, retry stages 2-4
+ *
+ * Diacritics (accents, e.g. "café" → "cafe") are folded unconditionally on
+ * every stage, not just the stage-5 retry — an accented merchant should
+ * exact-match a plain-ASCII entity name on the first pass (CF056/CP022:
+ * `normalizeDescription` in `contract/corrections-pure.ts` and
+ * `db/services/transaction-corrections-types.ts` fold diacritics the same
+ * way and must stay in lockstep with this).
  *
  * The AI fallback (stage 6) is handled by the caller. Copied verbatim from the
  * monolith `lib/entity-matcher.ts`, with the alias stage (CF023) given the
@@ -28,8 +36,24 @@ export interface EntityMatch {
   matchType: 'alias' | 'exact' | 'prefix' | 'contains';
 }
 
+/** Strip combining diacritical marks left behind by an NFKD decomposition (e.g. "é" → "e"). */
+function foldDiacritics(value: string): string {
+  return value.normalize('NFKD').replaceAll(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Broaden the punctuation-retry stage: a hyphen is a word separator like a
+ * space ("WW-METRO" ~ "WW METRO"), so it's replaced rather than dropped;
+ * apostrophes/ampersands/periods carry no separating meaning, so they're
+ * simply removed ("M&S" → "MS", "J.Crew" → "JCREW").
+ */
+function stripPunctuationForRetry(value: string): string {
+  return value.replaceAll(/-/g, ' ').replaceAll(/['`&.]/g, '');
+}
+
 function normalizeKey(key: string, stripPunctuation: boolean): string {
-  const stripped = stripPunctuation ? key.replaceAll(/[''`]/g, '') : key;
+  const folded = foldDiacritics(key);
+  const stripped = stripPunctuation ? stripPunctuationForRetry(folded) : folded;
   return stripped.toUpperCase();
 }
 
@@ -104,7 +128,7 @@ function findAliasMatch(
   let best: (EntityMatch & { keyLength: number }) | null = null;
   for (const [key, entityName] of aliases) {
     if (key.length < MIN_ALIAS_LENGTH) continue;
-    const upperKey = key.toUpperCase();
+    const upperKey = foldDiacritics(key).toUpperCase();
     if (!normalized.includes(upperKey)) continue;
     const entry = findByName(entityName, entityLookup);
     if (!entry) continue;
@@ -128,7 +152,7 @@ export function matchEntity(
   entityLookup: EntityLookupMap,
   aliases: AliasMap
 ): EntityMatch | null {
-  const normalized = description.toUpperCase().trim();
+  const normalized = foldDiacritics(description).toUpperCase().trim();
 
   const aliasMatch = findAliasMatch(normalized, aliases, entityLookup);
   if (aliasMatch) return aliasMatch;
@@ -136,6 +160,6 @@ export function matchEntity(
   const result = tryMatch(normalized, entityLookup);
   if (result) return result;
 
-  const stripped = normalized.replaceAll(/[''`]/g, '');
+  const stripped = stripPunctuationForRetry(normalized);
   return tryMatch(stripped, entityLookup, true);
 }

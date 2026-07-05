@@ -78,3 +78,63 @@ describe('matchEntity — alias stage guards (CF023)', () => {
     expect(result).toEqual({ entityName: 'IKEA', entityId: 'ikea', matchType: 'prefix' });
   });
 });
+
+describe('matchEntity — diacritic folding + broadened punctuation stripping (CF056)', () => {
+  it('exact-matches an accented description against a plain-ASCII entity name', () => {
+    const entityLookup = lookup([['cafe nero', { id: 'cafe-nero', name: 'Cafe Nero' }]]);
+
+    const result = matchEntity('Café Nero', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Cafe Nero', entityId: 'cafe-nero', matchType: 'exact' });
+  });
+
+  it('exact-matches a plain-ASCII description against an accented entity name', () => {
+    const entityLookup = lookup([['café nero', { id: 'cafe-nero', name: 'Café Nero' }]]);
+
+    const result = matchEntity('CAFE NERO', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Café Nero', entityId: 'cafe-nero', matchType: 'exact' });
+  });
+
+  it('matches an accented alias against a folded (plain-ASCII) description', () => {
+    const entityLookup = lookup([['nero group', { id: 'nero', name: 'Nero Group' }]]);
+    const aliasMap = aliases([['café nero', 'Nero Group']]);
+
+    const result = matchEntity('CAFE NERO SYDNEY', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Nero Group', entityId: 'nero', matchType: 'alias' });
+  });
+
+  it('matches a plain-ASCII alias against an accented description', () => {
+    const entityLookup = lookup([['nero group', { id: 'nero', name: 'Nero Group' }]]);
+    const aliasMap = aliases([['cafe nero', 'Nero Group']]);
+
+    const result = matchEntity('Café Nero Sydney', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Nero Group', entityId: 'nero', matchType: 'alias' });
+  });
+
+  it('matches a hyphenated description against a space-separated entity name via the punctuation-retry stage', () => {
+    const entityLookup = lookup([['ww metro', { id: 'ww', name: 'WW Metro' }]]);
+
+    const result = matchEntity('WW-METRO 1234', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'WW Metro', entityId: 'ww', matchType: 'prefix' });
+  });
+
+  it('matches a bank description that dropped the ampersand against an entity name that kept it', () => {
+    const entityLookup = lookup([['m&s food', { id: 'ms', name: 'M&S Food' }]]);
+
+    const result = matchEntity('MS FOOD LONDON', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'M&S Food', entityId: 'ms', matchType: 'prefix' });
+  });
+
+  it('matches a bank description that dropped the period against an entity name that kept it', () => {
+    const entityLookup = lookup([['j.crew', { id: 'jc', name: 'J.Crew' }]]);
+
+    const result = matchEntity('JCREW STORE 42', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'J.Crew', entityId: 'jc', matchType: 'prefix' });
+  });
+});

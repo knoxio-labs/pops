@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import { Button } from '@pops/ui';
 
@@ -11,7 +11,7 @@ import {
   renderProposalBodyState,
 } from './WorkflowPanels';
 
-import type { LocalOp, PreviewChangeSetOutput } from '../types';
+import type { PreviewChangeSetOutput } from '../types';
 import type { CorrectionProposalWorkflowProps, useWorkflowHooks } from './useWorkflowHooks';
 
 interface FooterProps {
@@ -48,44 +48,6 @@ export function ProposalFooter(props: FooterProps) {
         Apply ChangeSet
       </Button>
     </>
-  );
-}
-
-interface ResetArgs {
-  setLocalOps: React.Dispatch<React.SetStateAction<LocalOp[]>>;
-  setSelectedClientId: (v: string | null) => void;
-  setPreviewView: (v: PreviewView) => void;
-  resetPreviewState: () => void;
-  resetMutationState: () => void;
-  setRationale: (v: string | null) => void;
-  seededForSignalRef: React.MutableRefObject<string | null>;
-  onOpenChange: (v: boolean) => void;
-}
-
-export function useResetOnClose(args: ResetArgs) {
-  return useCallback(
-    (nextOpen: boolean) => {
-      args.onOpenChange(nextOpen);
-      if (nextOpen) return;
-      args.setLocalOps([]);
-      args.setSelectedClientId(null);
-      args.setPreviewView('selected');
-      args.resetPreviewState();
-      args.resetMutationState();
-      args.setRationale(null);
-      args.seededForSignalRef.current = null;
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      args.onOpenChange,
-      args.resetPreviewState,
-      args.resetMutationState,
-      args.seededForSignalRef,
-      args.setLocalOps,
-      args.setRationale,
-      args.setSelectedClientId,
-      args.setPreviewView,
-    ]
   );
 }
 

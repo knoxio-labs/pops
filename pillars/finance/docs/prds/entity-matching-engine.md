@@ -4,7 +4,7 @@
 
 Given a raw transaction description, decide which entity (merchant/payee) it belongs to and what tags to suggest. A deterministic ladder resolves the vast majority of rows; an optional, env-gated AI fallback handles the long tail. Reference data (entity names, aliases, default tags) is fetched live from the `contacts` pillar once per import run — finance keeps no local entity mirror.
 
-This engine is internal pipeline logic invoked during import processing and re-evaluation. It exposes no entity-matching REST endpoints of its own; the only contract surface it owns is the AI-cache maintenance router (see below).
+This engine is internal pipeline logic invoked during import processing and re-evaluation. It exposes no REST endpoints of its own.
 
 ## Classification Ladder (priority order)
 
@@ -50,14 +50,6 @@ Runs after entity matching. Builds a deduplicated, source-attributed tag list in
 
 Output shape: `{ tag, source: 'rule' | 'ai' | 'entity', pattern?, isNew? }[]`, each tag appearing once regardless of how many sources propose it.
 
-## AI-cache maintenance contract
-
-The categorizer no longer reads/writes a per-row disk cache, but the legacy `ai_entity_cache.json` store and its maintenance endpoints survive for operational cleanup:
-
-- `GET /ai-usage/cache` → `{ totalEntries, diskSizeBytes }`
-- `POST /ai-usage/cache/prune` (body `{ maxAgeDays }`, default 30) → `{ removed }`
-- `DELETE /ai-usage/cache` → `{ removed }` (purge all)
-
 ## Business rules
 
 - Corrections outrank everything — they encode learned user intent.
@@ -89,7 +81,6 @@ The categorizer no longer reads/writes a per-row disk cache, but the legacy `ai_
 - [x] AI failure (`AiCategorizationError`) is non-fatal: the row becomes uncertain with reason `AI categorization unavailable` (the batch `aiError` flag is set, which drives that reason).
 - [x] Per-batch AI usage/cost is surfaced on the import result and reported to the `ai` pillar via telemetry; no PII in the telemetry context.
 - [x] Tag suggestions are deduplicated and source-attributed in order correction → tag-rule → AI → entity-default; AI tags outside vocabulary flagged `isNew`.
-- [x] AI-cache maintenance endpoints (`GET`/`POST prune`/`DELETE` on `/ai-usage/cache`) return entry/size stats and removal counts.
 
 ## Out of scope
 
