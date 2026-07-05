@@ -48,6 +48,9 @@ function useReevalOnChangeSets(
   const reevaluateMutation = useMutation({
     mutationFn: async (vars: ReevaluateInput) =>
       unwrap(await importsReevaluateWithPendingRules({ body: vars })),
+    // A failing re-evaluation is surfaced once via onError; retrying would
+    // replay the same request (and the same toast) several times over.
+    retry: false,
   });
   useEffect(() => {
     if (prevChangeSetsRef.current === pendingChangeSets) return;

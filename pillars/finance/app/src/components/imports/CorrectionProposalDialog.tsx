@@ -42,6 +42,8 @@ export interface CorrectionProposalDialogProps {
   triggeringTransaction: TriggeringTransactionContext | null;
   previewTransactions: Array<{ checksum?: string; description: string }>;
   minConfidence?: number;
+  /** True while the proposal signal is still being generated (analysis in flight). */
+  generating?: boolean;
   onApproved?: (changeSet: ServerChangeSet) => void;
   mode?: 'proposal' | 'browse';
   onBrowseClose?: (hadChanges: boolean) => void;
@@ -70,6 +72,7 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       triggeringTransaction={props.triggeringTransaction}
       previewTransactions={props.previewTransactions}
       minConfidence={minConfidence}
+      generating={props.generating}
       onApproved={props.onApproved}
     />
   );

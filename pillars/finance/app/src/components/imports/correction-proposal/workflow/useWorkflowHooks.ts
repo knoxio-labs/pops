@@ -24,6 +24,8 @@ export interface CorrectionProposalWorkflowProps {
   triggeringTransaction: TriggeringTransactionContext | null;
   previewTransactions: Array<{ checksum?: string; description: string }>;
   minConfidence: number;
+  /** True while the proposal signal is still being generated (analysis in flight). */
+  generating?: boolean;
   onApproved?: (changeSet: ServerChangeSet) => void;
 }
 

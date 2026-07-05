@@ -37,6 +37,7 @@ export function CorrectionProposalWorkflow(props: CorrectionProposalWorkflowProp
     Boolean(signal) &&
     !proposeQuery.isError &&
     !(proposeQuery.isLoading && localOpsHook.localOps.length === 0);
+  const isGenerating = Boolean(props.generating) && !signal;
 
   return (
     <WorkflowDialog
@@ -49,7 +50,7 @@ export function CorrectionProposalWorkflow(props: CorrectionProposalWorkflowProp
       subpanel={isProposalGridReady ? renderSubpanel(mutationsHook) : undefined}
       footer={renderFooter(mutationsHook, previewHook, localOpsHook, () => handleOpenChange(false))}
     >
-      {renderBody(hooks, view, signal)}
+      {renderBody(hooks, view, signal, isGenerating)}
     </WorkflowDialog>
   );
 }
