@@ -34,6 +34,10 @@ export interface ColumnMap {
   location?: string;
 }
 
+export function isEmptyColumnMap(columnMap: ColumnMap): boolean {
+  return !columnMap.date && !columnMap.description && !columnMap.amount;
+}
+
 export function autoDetectColumns(headers: string[]): ColumnMap {
   const findMatch = (patterns: string[]): string => {
     for (const pattern of patterns) {

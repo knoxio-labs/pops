@@ -235,6 +235,43 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     await expect(page.getByRole('button', { name: /new import/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /view transactions/i })).toBeVisible();
   });
+
+  // Regression test for #3621: a manual column-mapping override used to be
+  // silently wiped when the user clicked Back then Next without reselecting
+  // the file, because UploadStep re-parses the CSV into a fresh array on
+  // every Next click and ColumnMapStep's auto-detect effect re-ran on that
+  // remount, clobbering the override with the auto-detected default.
+  test('keeps a manual column-mapping override after Back then Next without reselecting the file', async ({
+    page,
+  }) => {
+    const ambiguousDateCsv = `Date,Description,Amount,Value Date
+13/02/2026,WOOLWORTHS 1234,125.50,14/02/2026`;
+
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'ambiguous-date.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(ambiguousDateCsv),
+    });
+    await expect(page.getByText('ambiguous-date.csv')).toBeVisible();
+    await page.getByRole('button', { name: /^next$/i }).click();
+
+    await expect(page.getByRole('heading', { name: 'Map Columns' })).toBeVisible();
+    // Auto-detect picks the first date-ish header.
+    await expect(page.locator('select[name="date"]')).toHaveValue('Date');
+
+    // The user overrides it to the other date column.
+    await page.locator('select[name="date"]').selectOption('Value Date');
+    await expect(page.locator('select[name="date"]')).toHaveValue('Value Date');
+
+    // Back to Upload (file stays selected — no reselect) then Next again,
+    // re-parsing the same CSV and remounting Map Columns.
+    await page.getByRole('button', { name: /^back$/i }).click();
+    await expect(page.getByText('ambiguous-date.csv')).toBeVisible();
+    await page.getByRole('button', { name: /^next$/i }).click();
+
+    await expect(page.getByRole('heading', { name: 'Map Columns' })).toBeVisible();
+    await expect(page.locator('select[name="date"]')).toHaveValue('Value Date');
+  });
 });
 
 // ---------------------------------------------------------------------------

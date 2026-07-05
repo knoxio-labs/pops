@@ -95,11 +95,13 @@ function EditActions({
 
 function EntityOrTransferNotice({
   transactionType,
-  transaction,
+  entity,
+  onEntityChange,
   entities,
 }: {
   transactionType: TransactionType;
-  transaction: ProcessedTransaction;
+  entity: ProcessedTransaction['entity'] | undefined;
+  onEntityChange: (entityId: string, entityName: string) => void;
   entities?: Array<{ id: string; name: string }>;
 }) {
   if (transactionType === 'purchase' && entities && entities.length > 0) {
@@ -108,7 +110,8 @@ function EntityOrTransferNotice({
         <Label htmlFor="entity">Entity (Merchant/Payee)</Label>
         <EntitySelect
           entities={entities}
-          value={transaction.entity?.entityId ?? ''}
+          value={entity?.entityId ?? ''}
+          onChange={onEntityChange}
           placeholder="Select entity..."
         />
       </div>
@@ -143,12 +146,15 @@ export function EditableTransactionCard({
     location: transaction.location ?? '',
     account: transaction.account,
     transactionType: transaction.transactionType ?? 'purchase',
+    entity: transaction.entity,
   });
 
   const transactionType = editedFields.transactionType ?? 'purchase';
   const rawData = parseRaw(transaction.rawRow);
 
   const handleSave = (shouldLearn = false) => onSave(transaction, editedFields, shouldLearn);
+  const handleEntityChange = (entityId: string, entityName: string) =>
+    setEditedFields({ ...editedFields, entity: { entityId, entityName, matchType: 'manual' } });
 
   return (
     <EditableFormCard
@@ -163,7 +169,8 @@ export function EditableTransactionCard({
       <EditableFormFields editedFields={editedFields} setEditedFields={setEditedFields} />
       <EntityOrTransferNotice
         transactionType={transactionType}
-        transaction={transaction}
+        entity={editedFields.entity}
+        onEntityChange={handleEntityChange}
         entities={entities}
       />
       <RawDataDisclosure rawData={rawData} />
