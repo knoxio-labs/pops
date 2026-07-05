@@ -2,7 +2,8 @@
  * Unit tests for the pillar-client boot guard (CF087) — which env var wins
  * as the resolved service-account key, that the choice is logged (so an
  * unexpected legacy fallback is visible in production), and that
- * configuration only runs once per process.
+ * configuration only runs once per process — plus base-URL resolution,
+ * which must stay registry-driven with no hardcoded per-pillar defaults.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -78,5 +79,59 @@ describe('getPillar — API key resolution', () => {
 
     expect(configureServerSdk).toHaveBeenCalledTimes(1);
     expect(pillar).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('getPillar — base-URL resolution', () => {
+  const BASE_URL_ENV_KEYS = [
+    'POPS_INVENTORY_API_URL',
+    'POPS_FINANCE_API_URL',
+    'POPS_REGISTRY_API_URL',
+    'POPS_MEDIA_API_URL',
+    'POPS_CEREBRUM_API_URL',
+    'POPS_CONTACTS_API_URL',
+  ] as const;
+
+  beforeEach(() => {
+    process.env[INTERNAL_KEY] = 'sa_internal';
+    for (const key of BASE_URL_ENV_KEYS) delete process.env[key];
+  });
+
+  afterEach(() => {
+    for (const key of BASE_URL_ENV_KEYS) delete process.env[key];
+  });
+
+  it('does not install a hardcoded override map when no POPS_*_API_URL env vars are set', () => {
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.not.objectContaining({ internalBaseUrls: expect.anything() })
+    );
+  });
+
+  it('only overrides a pillar whose POPS_<PILLAR>_API_URL env var is explicitly set', () => {
+    process.env['POPS_INVENTORY_API_URL'] = 'http://localhost:4102';
+
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({ internalBaseUrls: { inventory: 'http://localhost:4102' } })
+    );
+  });
+
+  it('resolves every configured pillar env var into its own override entry', () => {
+    process.env['POPS_INVENTORY_API_URL'] = 'http://localhost:4102';
+    process.env['POPS_MEDIA_API_URL'] = 'http://localhost:4103';
+
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({
+        internalBaseUrls: {
+          inventory: 'http://localhost:4102',
+          media: 'http://localhost:4103',
+        },
+      })
+    );
   });
 });

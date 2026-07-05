@@ -15,22 +15,26 @@
  *     const inventory = getPillar<InventoryAppRouter>('inventory');
  *     await inventory.inventory.locations.list();
  *
- * The `internalBaseUrls` map collapses registry discovery for the
- * Docker-internal hostnames; this lets the canary tool files work even
- * when the registry advertises hostnames that differ from the local
- * Docker network.
+ * Base-URL resolution goes through the registry-driven discovery in
+ * `@pops/pillar-sdk/server` — every pillar self-registers its real
+ * Docker-network `baseUrl` on boot, so that's the source of truth.
+ * `POPS_<PILLAR>_API_URL` env vars remain a supported per-pillar escape
+ * hatch (e.g. pointing a single pillar at `localhost` in dev), but unlike
+ * before, they only apply when explicitly set — there is no hardcoded
+ * default that can drift out of sync with the compose fleet and silently
+ * outrank the registry.
  */
 import { configureServerSdk, pillar } from '@pops/pillar-sdk/server';
 
 import type { PillarHandle } from '@pops/pillar-sdk/server';
 
-const INTERNAL_BASE_URLS: Readonly<Record<string, string>> = {
-  inventory: process.env['POPS_INVENTORY_API_URL'] ?? 'http://inventory-api:3002',
-  finance: process.env['POPS_FINANCE_API_URL'] ?? 'http://finance-api:3004',
-  registry: process.env['POPS_REGISTRY_API_URL'] ?? 'http://registry-api:3001',
-  media: process.env['POPS_MEDIA_API_URL'] ?? 'http://media-api:3003',
-  cerebrum: process.env['POPS_CEREBRUM_API_URL'] ?? 'http://cerebrum-api:3007',
-  contacts: process.env['POPS_CONTACTS_API_URL'] ?? 'http://contacts-api:3010',
+const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
+  inventory: 'POPS_INVENTORY_API_URL',
+  finance: 'POPS_FINANCE_API_URL',
+  registry: 'POPS_REGISTRY_API_URL',
+  media: 'POPS_MEDIA_API_URL',
+  cerebrum: 'POPS_CEREBRUM_API_URL',
+  contacts: 'POPS_CONTACTS_API_URL',
 };
 
 type ApiKeySource = 'POPS_INTERNAL_API_KEY' | 'POPS_API_KEY';
@@ -38,6 +42,15 @@ type ApiKeySource = 'POPS_INTERNAL_API_KEY' | 'POPS_API_KEY';
 interface ResolvedApiKey {
   key: string;
   source: ApiKeySource;
+}
+
+function resolveInternalBaseUrlOverrides(): Record<string, string> | undefined {
+  const overrides: Record<string, string> = {};
+  for (const [pillarId, envVar] of Object.entries(PILLAR_API_URL_ENV_VARS)) {
+    const value = process.env[envVar];
+    if (value !== undefined && value.length > 0) overrides[pillarId] = value;
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 
 function resolveApiKey(): ResolvedApiKey | undefined {
@@ -62,9 +75,10 @@ function ensureConfigured(): void {
   // which env var actually won so an unexpected legacy fallback is visible.
   console.warn(`[pops-mcp] resolved service-account key from ${resolved.source}`);
   const registryUrl = process.env['POPS_REGISTRY_URL'];
+  const internalBaseUrls = resolveInternalBaseUrlOverrides();
   configureServerSdk({
     apiKey: resolved.key,
-    internalBaseUrls: INTERNAL_BASE_URLS,
+    ...(internalBaseUrls !== undefined ? { internalBaseUrls } : {}),
     ...(registryUrl !== undefined ? { registry: { registryUrl } } : {}),
   });
   configured = true;
