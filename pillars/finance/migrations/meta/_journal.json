@@ -71,6 +71,13 @@
       "when": 1781913600003,
       "tag": "0058_ai_usage_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781913600004,
+      "tag": "0059_recompute_canonical_checksum",
+      "breakpoints": true
     }
   ]
 }
