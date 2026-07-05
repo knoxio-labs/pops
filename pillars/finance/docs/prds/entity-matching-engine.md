@@ -34,7 +34,7 @@ No online/in-person field exists on transactions — that distinction is express
 
 - **Env-gated, default OFF.** Runs only when `FINANCE_AI_CATEGORIZER_ENABLED === 'true'`; otherwise returns no result and the row goes to `uncertain` with reason `No entity match found` (AI counters stay zero).
 - Enabled without `ANTHROPIC_API_KEY`/`CLAUDE_API_KEY`, any API failure, or an unparseable model reply throws `AiCategorizationError` (`NO_API_KEY` / `INSUFFICIENT_CREDITS` / `API_ERROR` / `PARSE_ERROR`) — **non-fatal**: the row degrades to `uncertain` with reason `AI categorization unavailable`. A malformed AI reply must never fail the transaction.
-- Model: `claude-haiku-4-5-*` (override via `FINANCE_AI_CATEGORIZER_MODEL`), `max_tokens` 200 (override via `FINANCE_AI_CATEGORIZER_MAX_TOKENS`). Prompt sends only the trimmed merchant description plus the known-tag vocabulary — no account/card numbers, no PII.
+- Model: `claude-haiku-4-5-*` (override via `FINANCE_AI_CATEGORIZER_MODEL`), `max_tokens` 200 (override via `FINANCE_AI_CATEGORIZER_MAX_TOKENS`). The prompt is built from a strict field allowlist (`CategorizerInput`) — the merchant description plus its amount and date — and the known-tag vocabulary. The raw CSV row and any account/card/reference columns are never interpolated into the prompt; the caller projects the parsed transaction through `toCategorizerInput` before the categorizer sees it (CF008 / #3614).
 - Response is JSON `{ entityName, tags: string[] }`. Parsing tolerates markdown code fences **and prose before/after the object** — the first balanced JSON object is extracted via a string-aware brace scan (Haiku sometimes pretty-prints the object then appends an explanation). A reply with no parseable object throws `AiCategorizationError('PARSE_ERROR')` (degrades to `uncertain`, per above). `entityName` is sanitized: placeholder names (`Unknown…`, `Generic…`, etc.) and trailing store/location codes are stripped to `null`. If the sanitized entity exists in the lookup → `matched` (`matchType: 'ai'`); if it is a new name → `uncertain`.
 - Rate limiting: exponential backoff + jitter on HTTP 429, max 5 retries.
 - Usage/cost (input/output tokens, USD) is reported to the `ai` pillar via `@pops/ai-telemetry` (fire-and-forget; telemetry `contextId` is an opaque `import_batch:<id>`, never the description) and accumulated into per-batch counters surfaced on the import result as `aiUsage` (api calls, cache hits, tokens, cost). Finance does not write a local `ai_usage` ledger row per call.
@@ -62,7 +62,7 @@ The categorizer no longer reads/writes a per-row disk cache, but the legacy `ai_
 
 - Corrections outrank everything — they encode learned user intent.
 - AI is best-effort: unavailability never fails an import; the row becomes `uncertain`.
-- Only the merchant description reaches the model; no account/card numbers or personal identifiers.
+- Only the allowlisted fields reach the model — the merchant description plus amount and date; the raw CSV row and any account/card/reference columns are never sent.
 - Reference data is live from `contacts` per run — no persistent finance-side entity/alias/default-tag mirror.
 
 ## Edge cases
@@ -85,7 +85,7 @@ The categorizer no longer reads/writes a per-row disk cache, but the legacy `ai_
 - [x] Type-only transfer/income corrections terminate as `matched` with no entity and count toward affected/affectedCount.
 - [x] Alias / exact / prefix / contains / punctuation-strip stages run in order, return on first hit, and stamp the correct `matchType`; contains enforces the 4-char minimum and longest-name-wins.
 - [x] AI fallback is reached only after all deterministic stages miss, is gated by `FINANCE_AI_CATEGORIZER_ENABLED`, and returns `{ entityName, tags }`; existing entity → matched, new name → uncertain.
-- [x] AI `entityName` is sanitized (placeholders + store codes → null); only the merchant description is sent; 429s retry with backoff up to 5 times.
+- [x] AI `entityName` is sanitized (placeholders + store codes → null); the prompt carries only the allowlisted `CategorizerInput` (merchant description, amount, date), never the raw CSV row or any account/card/reference columns (CF008 / #3614); 429s retry with backoff up to 5 times.
 - [x] AI failure (`AiCategorizationError`) is non-fatal: the row becomes uncertain with reason `AI categorization unavailable` (the batch `aiError` flag is set, which drives that reason).
 - [x] Per-batch AI usage/cost is surfaced on the import result and reported to the `ai` pillar via telemetry; no PII in the telemetry context.
 - [x] Tag suggestions are deduplicated and source-attributed in order correction → tag-rule → AI → entity-default; AI tags outside vocabulary flagged `isNew`.

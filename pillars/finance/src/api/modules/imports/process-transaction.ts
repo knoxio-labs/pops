@@ -11,7 +11,7 @@
  */
 import { type FinanceDb } from '../../../db/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
-import { categorizeWithAi } from './ai-categorizer.js';
+import { categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
 import { applyLearnedCorrection } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
 import {
@@ -71,7 +71,11 @@ async function tryAiCategorization(
 ): Promise<AiCategorizationResult | null> {
   let call: Awaited<ReturnType<typeof categorizeWithAi>>;
   try {
-    call = await categorizeWithAi(transaction.rawRow, context.importBatchId, context.knownTags);
+    call = await categorizeWithAi(
+      toCategorizerInput(transaction),
+      context.importBatchId,
+      context.knownTags
+    );
   } catch (err) {
     if (err instanceof AiCategorizationError) {
       counters.aiError = true;
