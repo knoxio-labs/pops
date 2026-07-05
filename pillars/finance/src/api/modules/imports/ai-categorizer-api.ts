@@ -41,15 +41,34 @@ export interface ApiCallOptions {
   contextId?: string;
 }
 
+const PROMPT_FIELD_MAX_CHARS = 200;
+
+/**
+ * Normalize an allowlisted string before it crosses into the prompt: collapse
+ * every whitespace run (including newlines) to a single space, trim, and cap
+ * length. Without this a description carrying newlines could inject extra prompt
+ * lines (e.g. a forged `Known tags:` directive) and an unbounded one would bloat
+ * token usage/cost. The fields are still allowlisted upstream — this only
+ * hardens their rendering.
+ */
+function sanitizePromptField(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().slice(0, PROMPT_FIELD_MAX_CHARS);
+}
+
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
  * block. Only {@link CategorizerInput} fields are interpolated — never a raw
- * row or arbitrary column values (CF008).
+ * row or arbitrary column values (CF008) — and each is sanitized at the
+ * boundary. Non-finite amounts are dropped rather than rendered as `NaN`/`Infinity`.
  */
 function buildTransactionData(input: CategorizerInput): string {
-  const lines = [`Description: ${input.description}`];
-  if (input.amount !== undefined) lines.push(`Amount: ${input.amount}`);
-  if (input.date !== undefined && input.date !== '') lines.push(`Date: ${input.date}`);
+  const lines = [`Description: ${sanitizePromptField(input.description)}`];
+  if (input.amount !== undefined && Number.isFinite(input.amount)) {
+    lines.push(`Amount: ${input.amount}`);
+  }
+  if (input.date !== undefined && input.date !== '') {
+    lines.push(`Date: ${sanitizePromptField(input.date)}`);
+  }
   return lines.join('\n');
 }
 
