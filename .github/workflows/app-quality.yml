@@ -14,7 +14,7 @@ name: App Quality
 # App units have NO standalone `build` script (they build via the shell), so
 # this lane is typecheck + test only — there is nothing to `pnpm build` on the
 # unit itself. The dependency closure IS built (`^...`) so the app's compiled
-# deps (`@pops/types`, `@pops/db-types`, `@pops/ui`, the owning pillar's
+# deps (`@pops/types`, `@pops/ui`, the owning pillar's
 # generated client, …) resolve before typecheck/test import them. This
 # generalises the former single-app `ai-quality.yml` (now retired — app-ai is
 # just another row in this matrix) to all 7 app units.
@@ -30,7 +30,6 @@ on:
     paths:
       - "pillars/*/app/**"
       - "pillars/*/openapi/**"
-      - "libs/db-types/**"
       - "libs/navigation/**"
       - "libs/sdk/**"
       - "libs/types/**"
@@ -46,7 +45,6 @@ on:
     paths:
       - "pillars/*/app/**"
       - "pillars/*/openapi/**"
-      - "libs/db-types/**"
       - "libs/navigation/**"
       - "libs/sdk/**"
       - "libs/types/**"

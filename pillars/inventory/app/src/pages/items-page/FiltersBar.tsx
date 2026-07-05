@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react';
 
-import { INVENTORY_CONDITIONS } from '@pops/db-types';
+import { INVENTORY_CONDITIONS } from '@pops/inventory';
 import { Button, Select, type SelectOption, TextInput } from '@pops/ui';
 
 const CONDITION_OPTIONS: SelectOption[] = [

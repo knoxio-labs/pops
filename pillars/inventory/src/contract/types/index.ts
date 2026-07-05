@@ -4,6 +4,8 @@
  * schema under `schemas/`. The round-trip test enforces that they agree.
  */
 export type { Connection } from './connection.js';
+export { INVENTORY_CONDITIONS } from './condition.js';
+export type { InventoryCondition } from './condition.js';
 export type { Item } from './item.js';
 export type { Location } from './location.js';
 export type { Warranty } from './warranty.js';
