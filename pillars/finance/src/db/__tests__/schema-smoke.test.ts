@@ -14,7 +14,6 @@ import {
   aiUsage,
   budgets,
   tagVocabulary,
-  tierOverrides,
   transactionCorrections,
   transactionTagRules,
   transactions,
@@ -25,7 +24,6 @@ describe('us-03-relocate-finance-schemas', () => {
   it.each([
     [budgets, 'budgets'],
     [tagVocabulary, 'tag_vocabulary'],
-    [tierOverrides, 'tier_overrides'],
     [transactionCorrections, 'transaction_corrections'],
     [transactionTagRules, 'transaction_tag_rules'],
     [transactions, 'transactions'],
