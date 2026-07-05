@@ -1,9 +1,8 @@
 # ADR-039: Pillar Isolation
 
-- **Status:** Proposed
-- **Date:** 2026-07-06
-- **Deciders:** platform owner
-- **Related:** ADR-026 (pillar architecture), ADR-035 (pillar kinds / bridge pillars), ADR-034 (sinks), ADR-032 (positioning vs self-hosted OS family), ADR-016 (Redis queue/cache)
+## Status
+
+Proposed — 2026-07-06. Deciders: platform owner.
 
 ## Context
 

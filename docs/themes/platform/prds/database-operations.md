@@ -64,7 +64,7 @@ A baseline migration (e.g. finance's `0053_finance_pillar_baseline`, inventory's
 
 > **Not operational yet.** The design below is the target. Today the `infra/litestream/<id>.yml` files are reference stubs with no sidecar running them, and the deployed backup is a separate central job that is itself broken (targets a nonexistent `pops.db`). Wiring per-pillar sidecars, splitting pops-vs-homelab backup scope, and running restore drills are tracked by [ADR-039](../../../architecture/adr-039-pillar-isolation.md) and #3636.
 
-Each pillar streams its SQLite file offsite continuously via Litestream. `infra/litestream/<id>.yml` is the canonical reference the deployer copies into its own Litestream config; the replica target (bucket, region, credentials) comes from the deployer's environment as a `${<ID>_LITESTREAM_REPLICA_URL}` placeholder. Per-pillar configs mean a single-pillar restore never pulls the whole fleet's data. Production provisioning (ansible, secrets, the actual replica credentials) lives in private [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra); day-to-day rollouts are handled by Watchtower.
+Each pillar is designed to stream its SQLite file offsite continuously via Litestream (target — see the not-operational note above). `infra/litestream/<id>.yml` is the canonical reference the deployer copies into its own Litestream config; the replica target (bucket, region, credentials) comes from the deployer's environment as a `${<ID>_LITESTREAM_REPLICA_URL}` placeholder. Per-pillar configs mean a single-pillar restore never pulls the whole fleet's data. Production provisioning (ansible, secrets, the actual replica credentials) lives in private [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra); day-to-day rollouts are handled by Watchtower.
 
 Restore is per-pillar: stop the pillar's container so it isn't writing, then `litestream restore -o /data/sqlite/<id>.db "${<ID>_LITESTREAM_REPLICA_URL}"`.
 
@@ -76,19 +76,19 @@ Restore is per-pillar: stop the pillar's container so it isn't writing, then `li
 - The SQLite path always resolves to a real, predictable location — never a placeholder.
 - Destructive database commands (seed/clear/reset) are dev/test only and must never run in production. There is no global init/seed/clear; any such tooling is pillar-scoped.
 - Schema changes are committed as schema + generated migration together. A schema edit without its generated migration is incomplete.
-- Each pillar backs up independently via its Litestream stream. There is no single database to back up.
+- Each pillar is designed to back up independently via its own Litestream stream (target — not yet wired; see Backup). There is no single shared database to back up.
 
 ## Edge Cases
 
-| Case                                                 | Behaviour                                                                                    |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Fresh database (file absent)                         | Parent dir created, file created, full journal applied from its first entry                  |
-| Database already current                             | `migrate()` short-circuits on the hash check; boot proceeds with no schema writes            |
-| Migration apply throws (corrupt DB / bad SQL)        | Raw handle closed before re-throw; the pillar fails to start rather than leaking the lock    |
-| `SQLITE_PATH` set but no pillar-specific var         | Pillar file resolves to `<dirname(SQLITE_PATH)>/<id>.db` — never collides on the shared file |
-| No env vars set at all                               | Falls back to `./data/<id>.db`                                                               |
-| Seed/reset script invoked with `NODE_ENV=production` | Script refuses to run and exits with an explanatory error (food pillar's dev seeder)         |
-| Single-pillar data loss                              | Restore that pillar alone from its Litestream replica; other pillars are untouched           |
+| Case                                                 | Behaviour                                                                                                                         |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Fresh database (file absent)                         | Parent dir created, file created, full journal applied from its first entry                                                       |
+| Database already current                             | `migrate()` short-circuits on the hash check; boot proceeds with no schema writes                                                 |
+| Migration apply throws (corrupt DB / bad SQL)        | Raw handle closed before re-throw; the pillar fails to start rather than leaking the lock                                         |
+| `SQLITE_PATH` set but no pillar-specific var         | Pillar file resolves to `<dirname(SQLITE_PATH)>/<id>.db` — never collides on the shared file                                      |
+| No env vars set at all                               | Falls back to `./data/<id>.db`                                                                                                    |
+| Seed/reset script invoked with `NODE_ENV=production` | Script refuses to run and exits with an explanatory error (food pillar's dev seeder)                                              |
+| Single-pillar data loss                              | Restore that pillar alone from its Litestream replica; other pillars are untouched (once per-pillar backup is wired — see Backup) |
 
 ## Acceptance Criteria
 
