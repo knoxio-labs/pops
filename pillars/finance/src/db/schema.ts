@@ -11,6 +11,8 @@
  * because it constrains finance wire shapes.
  */
 export { ENTITY_TYPES } from './entity-types.js';
+export { TRANSACTION_MATCH_TYPES } from './match-types.js';
+export type { TransactionMatchType } from './match-types.js';
 
 export { aiUsage } from './schema/ai-usage.js';
 export { budgets } from './schema/budgets.js';
