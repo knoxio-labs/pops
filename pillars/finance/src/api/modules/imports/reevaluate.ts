@@ -98,6 +98,7 @@ function tryEntityMatchStage(
       aiCategory: null,
       knownTags: ctx.knownTags,
       entityDefaultTags: ctx.entityDefaultTags,
+      recordTagRuleUsage: !ctx.rules,
     }),
   };
 

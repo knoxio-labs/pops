@@ -41,6 +41,14 @@ export interface SuggestTagsOptions {
    * caller. Absent/empty ⇒ the entity-default tag stage contributes nothing.
    */
   entityDefaultTags?: ReadonlyMap<string, string[]>;
+  /**
+   * Whether a matching tag rule's `timesApplied`/`lastUsedAt` should be
+   * bumped. Defaults to `true` — callers computing suggestions for a
+   * read-only lookup (the `GET /suggest-tags` endpoint) or an in-memory
+   * preview (`reevaluateWithPendingRules`) must pass `false` so a lookup
+   * never counts as usage of the persisted rule.
+   */
+  recordTagRuleUsage?: boolean;
 }
 
 function parseTags(json: string | null | undefined): string[] {
@@ -58,6 +66,7 @@ interface TagPass {
   description: string;
   entityId: string | null;
   entityDefaultTags: ReadonlyMap<string, string[]>;
+  recordTagRuleUsage: boolean;
   seen: Set<string>;
   result: SuggestedTag[];
 }
@@ -89,9 +98,11 @@ function addCorrectionTags(
 }
 
 function addTagRuleTags(pass: TagPass): void {
-  const { db, description, entityId, seen, result } = pass;
+  const { db, description, entityId, recordTagRuleUsage, seen, result } = pass;
   for (const rule of findMatchingTagRules(db, description, entityId)) {
-    transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
+    if (recordTagRuleUsage) {
+      transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
+    }
     for (const tag of parseTags(rule.tags)) {
       if (seen.has(tag)) continue;
       seen.add(tag);
@@ -146,6 +157,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
     description: opts.description,
     entityId: opts.entityId,
     entityDefaultTags: opts.entityDefaultTags ?? new Map(),
+    recordTagRuleUsage: opts.recordTagRuleUsage ?? true,
     seen: new Set<string>(),
     result: [],
   };

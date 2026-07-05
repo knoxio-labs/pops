@@ -129,12 +129,22 @@ function reinforceExistingTagRule(
  * `tags` is JSON-encoded before insert. Insert defaults: `confidence=0.95`,
  * `isActive=true`, `priority=0`, `timesApplied=0`. The generated `id` is a
  * UUID from drizzle's `$defaultFn`.
+ *
+ * `descriptionPattern` is normalized (uppercased, digit-stripped,
+ * whitespace-collapsed) for `exact`/`contains` patterns, which are matched
+ * against a normalized description and need the same treatment to line up.
+ * A `regex` pattern is stored raw: `normalizeDescription` uppercases every
+ * character including metacharacters (`\d` -> `\D`, `\s` -> `\S`), which
+ * would silently corrupt the pattern.
  */
 export function createTransactionTagRule(
   db: FinanceDb,
   input: CreateTransactionTagRuleInput
 ): TransactionTagRuleRow {
-  const normalized = normalizeDescription(input.descriptionPattern);
+  const normalized =
+    input.matchType === 'regex'
+      ? input.descriptionPattern
+      : normalizeDescription(input.descriptionPattern);
   const entityId = input.entityId ?? null;
 
   const existing = findExistingTagRule(db, input.matchType, normalized, entityId);

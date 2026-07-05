@@ -52,10 +52,11 @@ interface TypeOnlyMatchArgs {
   matchedRules: MatchedRule[];
   knownTags: string[];
   status: CorrectionMatchStatus;
+  recordTagRuleUsage: boolean;
 }
 
 function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
-  const { db, transaction, correction, matchedRules, knownTags, status } = args;
+  const { db, transaction, correction, matchedRules, knownTags, status, recordTagRuleUsage } = args;
   return {
     ...transaction,
     location: correction.location ?? transaction.location,
@@ -77,6 +78,7 @@ function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
       aiCategory: null,
       knownTags,
       correctionPattern: correction.descriptionPattern,
+      recordTagRuleUsage,
     }),
   };
 }
@@ -90,6 +92,7 @@ interface EntityMatchArgs {
   entityId: string;
   knownTags: string[];
   entityDefaultTags: ReadonlyMap<string, string[]>;
+  recordTagRuleUsage: boolean;
 }
 
 function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
@@ -120,6 +123,7 @@ function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
       knownTags,
       correctionPattern: correction.descriptionPattern,
       entityDefaultTags: args.entityDefaultTags,
+      recordTagRuleUsage: args.recordTagRuleUsage,
     }),
   };
 }
@@ -140,6 +144,7 @@ function handleNoEntityCorrection(
       matchedRules,
       knownTags: args.knownTags,
       status,
+      recordTagRuleUsage: !args.rules,
     }),
     bucket: status,
   };
@@ -170,6 +175,7 @@ function resolveApplyResult(
       entityId,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags ?? new Map(),
+      recordTagRuleUsage: !args.rules,
     }),
     bucket: status === 'matched' ? 'matched' : 'uncertain',
   };
@@ -183,7 +189,9 @@ function resolveApplyResult(
  * is against the real persisted rule set (`args.rules` absent) AND the rule
  * actually produced an outcome — a caller-supplied `rules` array is always an
  * in-memory preview (merged with un-persisted pending ChangeSets) and must
- * never count as real usage of the persisted row.
+ * never count as real usage of the persisted row. The same `!rules` gate is
+ * threaded into the suggested-tags computation so a matching tag rule's own
+ * usage counter is bumped under the identical condition.
  */
 export function applyLearnedCorrection(
   db: FinanceDb,

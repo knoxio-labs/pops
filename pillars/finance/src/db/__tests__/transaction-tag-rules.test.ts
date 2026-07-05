@@ -471,6 +471,16 @@ describe('createTransactionTagRule — normalization + upsert (CF022, #3628)', (
     expect(contains.id).not.toBe(exact.id);
     expect(listTransactionTagRules(harness.db)).toHaveLength(2);
   });
+
+  it('leaves a regex pattern raw — normalizing would corrupt its metacharacters', () => {
+    const created = createTransactionTagRule(harness.db, {
+      descriptionPattern: '^WOOLWORTHS\\s+\\d{2,4}$',
+      matchType: 'regex',
+      tags: ['Groceries'],
+    });
+
+    expect(created.descriptionPattern).toBe('^WOOLWORTHS\\s+\\d{2,4}$');
+  });
 });
 
 describe('incrementTransactionTagRuleUsage (#3626)', () => {
