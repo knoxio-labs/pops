@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildEntryFromText } from '../ai-categorizer-api.js';
+import { buildEntryFromText, buildPrompt, sanitizeEntityName } from '../ai-categorizer-api.js';
 import { AiCategorizationError } from '../ai-categorizer-error.js';
 
 describe('buildEntryFromText — parsing robustness', () => {
@@ -79,5 +79,85 @@ describe('buildEntryFromText — parsing robustness', () => {
       expect(err).toBeInstanceOf(AiCategorizationError);
       expect((err as AiCategorizationError).code).toBe('PARSE_ERROR');
     }
+  });
+
+  it('runs sanitizeEntityName over the parsed name (title-cases + strips suffix)', () => {
+    const entry = buildEntryFromText('{"entityName":"THE REDFERN PTY LTD","tags":["Dining"]}');
+    expect(entry.entityName).toBe('The Redfern');
+  });
+});
+
+describe('sanitizeEntityName — legal-suffix + casing backstop', () => {
+  it('returns null for empty / whitespace / null input', () => {
+    expect(sanitizeEntityName(null)).toBeNull();
+    expect(sanitizeEntityName('')).toBeNull();
+    expect(sanitizeEntityName('   ')).toBeNull();
+  });
+
+  it('still nulls placeholder names and strips trailing store codes', () => {
+    expect(sanitizeEntityName('Unknown Vendor')).toBeNull();
+    expect(sanitizeEntityName('WOOLWORTHS 1234')).toBe('Woolworths');
+  });
+
+  it('strips a trailing run of legal-entity suffix tokens', () => {
+    const cases: Array<[string, string]> = [
+      ['THE REDFERN PTY LTD', 'The Redfern'],
+      ['Redfern Pty. Ltd.', 'Redfern'],
+      ['ACME CORP', 'Acme'],
+      ['Widgets LLC', 'Widgets'],
+      ['Globex Incorporated', 'Globex'],
+      ['Initech Inc', 'Initech'],
+      ['Umbrella Limited', 'Umbrella'],
+      ['Example Co', 'Example'],
+      ['WOOLWORTHS PTY LTD 4055', 'Woolworths'],
+    ];
+    for (const [input, expected] of cases) {
+      expect(sanitizeEntityName(input)).toBe(expected);
+    }
+  });
+
+  it('title-cases verbatim ALL-CAPS names with particle / punctuation handling', () => {
+    const cases: Array<[string, string]> = [
+      ['WOOLWORTHS', 'Woolworths'],
+      ['BANK OF QUEENSLAND', 'Bank of Queensland'],
+      ['COCA-COLA', 'Coca-Cola'],
+      ["MCDONALD'S", "Mcdonald's"],
+    ];
+    for (const [input, expected] of cases) {
+      expect(sanitizeEntityName(input)).toBe(expected);
+    }
+  });
+
+  it('preserves known all-caps brands verbatim', () => {
+    for (const brand of ['IKEA', 'KFC', 'BP', 'IGA', 'HSBC', 'H&M']) {
+      expect(sanitizeEntityName(brand)).toBe(brand);
+    }
+  });
+
+  it('never mangles a genuinely mixed-case brand', () => {
+    for (const brand of ['eBay', 'iiNet', 'The Redfern', 'Woolworths', 'Metro Petroleum']) {
+      expect(sanitizeEntityName(brand)).toBe(brand);
+    }
+  });
+
+  it('does not strip a legal-suffix token that is part of a longer word', () => {
+    expect(sanitizeEntityName('Costco')).toBe('Costco');
+    expect(sanitizeEntityName('COSTCO')).toBe('Costco');
+    expect(sanitizeEntityName('Incognito')).toBe('Incognito');
+  });
+});
+
+describe('buildPrompt — entityName guidance', () => {
+  const prompt = buildPrompt('THE REDFERN PTY LTD REDFERN', ['Dining']);
+
+  it('instructs the model to strip legal-entity suffixes', () => {
+    expect(prompt).toContain('Pty Ltd');
+    expect(prompt).toMatch(/legal-entity suffixes/i);
+  });
+
+  it('instructs the model to use natural casing except for all-caps brands', () => {
+    expect(prompt).toMatch(/ALL-CAPS/);
+    expect(prompt).toContain('IKEA');
+    expect(prompt).toContain('eBay');
   });
 });

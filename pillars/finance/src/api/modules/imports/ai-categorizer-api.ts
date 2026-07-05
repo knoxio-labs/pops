@@ -13,6 +13,9 @@ import { callWithLogging } from '@pops/ai-telemetry';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 import { withRateLimitRetry } from './ai-retry.js';
+import { sanitizeEntityName } from './entity-name.js';
+
+export { sanitizeEntityName } from './entity-name.js';
 
 import type Anthropic from '@anthropic-ai/sdk';
 
@@ -54,6 +57,8 @@ entityName rules:
 - Return the brand or chain name only (e.g. "Woolworths", "Metro Petroleum", "Transport for NSW").
 - Do NOT include store numbers, location codes, or postcode segments — strip them.
 - Do NOT include trailing suburb / city names that are duplicated in the source row's location field.
+- Strip company/legal-entity suffixes from the name — "Pty", "Pty Ltd", "Ltd", "Limited", "Inc", "Incorporated", "LLC", "PLC", "GmbH", "Co", "Corp", including punctuation variants like "Pty. Ltd.". e.g. "THE REDFERN PTY LTD" -> "The Redfern".
+- Return the brand's natural / title casing, NOT the verbatim ALL-CAPS from the bank description — UNLESS the brand is conventionally written in all caps (e.g. IKEA, KFC, BP, IGA, HSBC, H&M). Preserve genuinely mixed-case brands exactly (e.g. eBay, iiNet).
 - If you cannot identify a real merchant from the description, return entityName as null.
   Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.
 
@@ -62,39 +67,6 @@ tags rules:
 - Prefer tags from the Known tags list when they fit.
 - You MAY suggest new tags not in the list when they better describe this transaction (e.g. "EV", "Homelab", "Gift Card", "Fast Food").
 - Do NOT use vague tags like "Other" or "Spending" unless nothing else fits.`;
-}
-
-const PLACEHOLDER_LEADING_WORDS = [
-  'unknown',
-  'unidentified',
-  'unspecified',
-  'unnamed',
-  'generic',
-  'placeholder',
-  'unrecognized',
-  'unrecognised',
-];
-
-const PLACEHOLDER_REGEX = new RegExp(`^(${PLACEHOLDER_LEADING_WORDS.join('|')})\\b`, 'i');
-
-function stripTrailingStoreCodes(name: string): string {
-  return name.replace(/\s+\d{3,}\b.*$/, '').trim();
-}
-
-/**
- * Sanitize an LLM-suggested entityName: drop placeholders to null, strip
- * leaked store numbers / location codes. Returns null when the cleaned
- * result would not be a usable merchant name.
- */
-export function sanitizeEntityName(name: string | null): string | null {
-  if (!name) return null;
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return null;
-  if (PLACEHOLDER_REGEX.test(trimmed)) return null;
-  const stripped = stripTrailingStoreCodes(trimmed);
-  if (stripped.length === 0) return null;
-  if (PLACEHOLDER_REGEX.test(stripped)) return null;
-  return stripped;
 }
 
 export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
