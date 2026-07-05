@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validManifest } from '../../__tests__/fixtures.js';
 import { bootstrapPillar } from '../bootstrap.js';
-import {
-  PillarManifestInvalidError,
-  PillarRegistrationFailedError,
-  PillarRegistrationRejectedError,
-} from '../errors.js';
+import { PillarManifestInvalidError } from '../errors.js';
 import {
   RegistryNetworkError,
   RegistryTransportError,
@@ -222,7 +218,8 @@ describe('bootstrapPillar', () => {
     }
   });
 
-  it('throws PillarRegistrationRejectedError when registry returns a 4xx', async () => {
+  it('gives up quietly (no crash, no retry) when the registry rejects the manifest (4xx)', async () => {
+    const logger = silentLogger();
     const transport = makeTransport({
       registerImpl: async () => {
         throw new RegistryTransportError('400 Bad Request', {
@@ -240,50 +237,62 @@ describe('bootstrapPillar', () => {
       },
     });
 
-    await expect(
-      bootstrapPillar({
-        manifest: validManifest(),
-        baseUrl: TEST_BASE_URL,
-        transport,
-        logger: silentLogger(),
-      })
-    ).rejects.toBeInstanceOf(PillarRegistrationRejectedError);
+    const handle = await bootstrapPillar({
+      manifest: validManifest(),
+      baseUrl: TEST_BASE_URL,
+      transport,
+      logger,
+    });
 
+    expect(handle.pillarId).toBe('finance');
+    // Flush the microtask that logs the permanent rejection.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(logger.error).toHaveBeenCalled();
+
+    // A non-retriable rejection can't be fixed by retrying — assert it never
+    // tries again, however long the process stays up.
+    await vi.advanceTimersByTimeAsync(100_000);
     expect(transport.registerCalls).toBe(1);
+
+    await handle.stop();
+    expect(transport.unregisterCalls).toBe(0);
   });
 
-  it('retries on network failure with exponential backoff and eventually fails', async () => {
+  it('boots and keeps serving while the registry is unavailable, retrying forever with capped backoff', async () => {
+    // The core regression case: a registry that never comes back at boot must
+    // never make bootstrapPillar hang or throw — the pillar keeps serving and
+    // keeps trying in the background, indefinitely.
+    const logger = silentLogger();
     const transport = makeTransport({
       registerImpl: async () => {
         throw new RegistryNetworkError('connect ECONNREFUSED', new Error('boom'));
       },
     });
 
-    const promise = bootstrapPillar({
+    const handle = await bootstrapPillar({
       manifest: validManifest(),
       baseUrl: TEST_BASE_URL,
       transport,
-      logger: silentLogger(),
-      maxRegisterAttempts: 3,
+      logger,
       registerInitialBackoffMs: 10,
       registerMaxBackoffMs: 40,
     });
-    const settled = promise.then(
-      () => ({ ok: true as const }),
-      (err: unknown) => ({ ok: false as const, err })
-    );
 
-    await vi.advanceTimersByTimeAsync(10);
-    await vi.advanceTimersByTimeAsync(20);
-    const result = await settled;
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.err).toBeInstanceOf(PillarRegistrationFailedError);
-    }
-    expect(transport.registerCalls).toBe(3);
+    expect(handle.pillarId).toBe('finance');
+    expect(transport.registerCalls).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(10); // attempt 2 (backoff doubles: 20)
+    await vi.advanceTimersByTimeAsync(20); // attempt 3 (backoff doubles: 40)
+    await vi.advanceTimersByTimeAsync(40); // attempt 4 (backoff capped: 40)
+    await vi.advanceTimersByTimeAsync(40); // attempt 5 — still retrying, still no crash
+    expect(transport.registerCalls).toBe(5);
+    expect(logger.warn).toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+
+    await handle.stop();
   });
 
-  it('retries on network failure and succeeds when a later attempt is ok', async () => {
+  it('recovers and starts heartbeating once a later registration attempt succeeds', async () => {
     let attempt = 0;
     const transport = makeTransport({
       registerImpl: async () => {
@@ -295,22 +304,27 @@ describe('bootstrapPillar', () => {
       },
     });
 
-    const promise = bootstrapPillar({
+    const handle = await bootstrapPillar({
       manifest: validManifest(),
       baseUrl: TEST_BASE_URL,
       transport,
       logger: silentLogger(),
-      heartbeatMs: 1_000_000,
-      maxRegisterAttempts: 5,
+      heartbeatMs: 1_000,
       registerInitialBackoffMs: 10,
       registerMaxBackoffMs: 40,
     });
 
-    await vi.advanceTimersByTimeAsync(10);
-    await vi.advanceTimersByTimeAsync(20);
-    const handle = await promise;
+    expect(transport.registerCalls).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(10); // attempt 2 (fails)
+    await vi.advanceTimersByTimeAsync(20); // attempt 3 (succeeds)
     expect(transport.registerCalls).toBe(3);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(transport.heartbeatCalls).toBe(1);
+
     await handle.stop();
+    expect(transport.unregisterCalls).toBe(1);
   });
 
   it('retries on 5xx and treats it as transient', async () => {
@@ -328,19 +342,17 @@ describe('bootstrapPillar', () => {
       },
     });
 
-    const promise = bootstrapPillar({
+    const handle = await bootstrapPillar({
       manifest: validManifest(),
       baseUrl: TEST_BASE_URL,
       transport,
       logger: silentLogger(),
       heartbeatMs: 1_000_000,
-      maxRegisterAttempts: 3,
       registerInitialBackoffMs: 5,
       registerMaxBackoffMs: 10,
     });
 
     await vi.advanceTimersByTimeAsync(5);
-    const handle = await promise;
     expect(transport.registerCalls).toBe(2);
     await handle.stop();
   });
@@ -481,6 +493,67 @@ describe('bootstrapPillar', () => {
       pillar: 'finance',
       version: '1.2.3',
     });
+
+    await handle.stop();
+  });
+
+  it('serves /health immediately even when the registry is unavailable at boot', async () => {
+    // Regression test for the registry-boot SPOF: bootstrapPillar must mount
+    // the health route and return a handle synchronously, never blocking on
+    // (or crashing from) a registry that is down when the pillar boots.
+    type HealthHandler = (
+      req: unknown,
+      res: { json: (body: unknown) => unknown; status: (code: number) => unknown }
+    ) => void;
+    const routes: Record<string, HealthHandler> = {};
+    const app = {
+      get(path: string, handler: HealthHandler): unknown {
+        routes[path] = handler;
+        return undefined;
+      },
+    };
+
+    const logger = silentLogger();
+    const transport = makeTransport({
+      registerImpl: async () => {
+        throw new RegistryNetworkError('connect ECONNREFUSED', new Error('registry down'));
+      },
+    });
+
+    const handle = await bootstrapPillar({
+      manifest: validManifest(),
+      baseUrl: TEST_BASE_URL,
+      app,
+      transport,
+      logger,
+      registerInitialBackoffMs: 10,
+      registerMaxBackoffMs: 40,
+    });
+
+    expect(handle.pillarId).toBe('finance');
+
+    const handler = routes['/healthz'];
+    expect(handler).toBeDefined();
+
+    const body: { json: unknown }[] = [];
+    const res = {
+      json(b: unknown): unknown {
+        body.push({ json: b });
+        return undefined;
+      },
+      status(): unknown {
+        return res;
+      },
+    };
+    handler?.({}, res);
+
+    expect(body[0]?.json).toMatchObject({ ok: true, pillar: 'finance', version: '1.2.3' });
+
+    // The registry is still down; registration keeps retrying in the
+    // background but never surfaces as a crash or an unhandled rejection.
+    await vi.advanceTimersByTimeAsync(10);
+    expect(transport.registerCalls).toBeGreaterThan(1);
+    expect(transport.heartbeatCalls).toBe(0);
 
     await handle.stop();
   });

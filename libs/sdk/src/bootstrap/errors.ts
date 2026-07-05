@@ -29,16 +29,16 @@ export class PillarRegistrationRejectedError extends Error {
   }
 }
 
-export class PillarRegistrationFailedError extends Error {
-  readonly attempts: number;
-  readonly lastCause: unknown;
-
-  constructor(attempts: number, lastCause: unknown) {
-    const causeMessage = lastCause instanceof Error ? lastCause.message : String(lastCause);
-    super(`Registration failed after ${attempts} attempt(s): ${causeMessage}`);
-    this.name = 'PillarRegistrationFailedError';
-    this.attempts = attempts;
-    this.lastCause = lastCause;
+/**
+ * Thrown internally to unwind {@link registerWithRetry}'s infinite retry loop
+ * when `stop()` fires mid-backoff. Never escapes `bootstrapPillar` — it is
+ * caught and swallowed, since a cancelled registration during shutdown is
+ * expected, not a failure.
+ */
+export class PillarRegistrationCancelledError extends Error {
+  constructor() {
+    super('Registration cancelled (pillar is shutting down)');
+    this.name = 'PillarRegistrationCancelledError';
   }
 }
 

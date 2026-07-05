@@ -6,7 +6,10 @@ import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bo
  * The process opens its OWN `food.db` connection via `openFoodDb`.
  *
  * When `POPS_REGISTRY_ENABLED=true`, `bootstrapPillar` registers the
- * pillar with the central registry on boot. SIGTERM triggers
+ * pillar with the central registry on boot. Registration happens AFTER
+ * `app.listen` and never blocks or crashes boot — a registry that is
+ * briefly unavailable just means the pillar keeps retrying in the
+ * background while already serving traffic. SIGTERM triggers
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister.
  */
@@ -56,6 +59,10 @@ const selfBaseUrl = resolveSelfBaseUrl();
 const foodDb = openFoodDb(resolveFoodSqlitePath());
 const app = createFoodApiApp({ foodDb, version, selfBaseUrl });
 
+const server = app.listen(port, () => {
+  console.warn(`[food-api] Listening on port ${port}`);
+});
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -63,10 +70,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     baseUrl: selfBaseUrl,
   });
 }
-
-const server = app.listen(port, () => {
-  console.warn(`[food-api] Listening on port ${port}`);
-});
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {

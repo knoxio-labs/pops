@@ -6,6 +6,9 @@
  *
  * When `POPS_REGISTRY_ENABLED=true`, the process registers a finance
  * manifest with the central registry on boot via `bootstrapPillar`.
+ * Registration happens AFTER `app.listen` and never blocks or crashes
+ * boot — a registry that is briefly unavailable just means the pillar
+ * keeps retrying in the background while already serving traffic.
  * SIGTERM triggers `pillarHandle.stop()` so the heartbeat clears and the
  * registry sees an explicit deregister.
  */
@@ -68,6 +71,10 @@ const reconcileHandle = startReconcileCrossPillarWorker({
   },
 });
 
+const server = app.listen(port, () => {
+  console.warn(`[finance-api] Listening on port ${port}`);
+});
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -76,10 +83,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     capabilityReporter: buildFinanceCapabilityReporter(),
   });
 }
-
-const server = app.listen(port, () => {
-  console.warn(`[finance-api] Listening on port ${port}`);
-});
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {

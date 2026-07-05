@@ -6,7 +6,10 @@
  * `openCerebrumDb` (loading sqlite-vec).
  *
  * When `POPS_REGISTRY_ENABLED=true`, the process registers a hand-rolled
- * manifest with the registry pillar on boot; SIGTERM triggers
+ * manifest with the registry pillar on boot. Registration happens AFTER
+ * `app.listen` and never blocks or crashes boot — a registry that is
+ * briefly unavailable just means the pillar keeps retrying in the
+ * background while already serving traffic. SIGTERM triggers
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister.
  */
@@ -91,6 +94,10 @@ const app = createCerebrumApiApp({
 
 startThalamusWatcher({ db: cerebrumDb.db, engramRoot, queueAccessor: getEmbeddingsQueue });
 
+const server = app.listen(port, () => {
+  console.warn(`[cerebrum-api] Listening on port ${port}`);
+});
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -104,10 +111,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     capabilityReporter: buildCerebrumCapabilityReporter(cerebrumDb.vecAvailable),
   });
 }
-
-const server = app.listen(port, () => {
-  console.warn(`[cerebrum-api] Listening on port ${port}`);
-});
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {

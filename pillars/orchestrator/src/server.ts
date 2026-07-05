@@ -15,9 +15,12 @@
  *
  * When `POPS_REGISTRY_ENABLED=true`, the process registers an
  * orchestrator manifest with the central registry on boot via
- * `bootstrapPillar` — the same handshake the pillars use. SIGTERM /
- * SIGINT trigger `pillarHandle.stop()` so the heartbeat clears and the
- * registry sees an explicit deregister before the HTTP server shuts down.
+ * `bootstrapPillar` — the same handshake the pillars use. Registration
+ * happens AFTER `app.listen` and never blocks or crashes boot — a registry
+ * that is briefly unavailable just means the orchestrator keeps retrying in
+ * the background while already serving traffic. SIGTERM / SIGINT trigger
+ * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
+ * explicit deregister before the HTTP server shuts down.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 import { setRegistryUrl } from '@pops/pillar-sdk/discovery';
@@ -77,6 +80,10 @@ if (registryUrl !== undefined && registryUrl !== '') {
 
 const app = createOrchestratorApp({ version, selfBaseUrl });
 
+const server = app.listen(port, () => {
+  console.warn(`[orchestrator] Listening on port ${port}`);
+});
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -84,10 +91,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     baseUrl: selfBaseUrl,
   });
 }
-
-const server = app.listen(port, () => {
-  console.warn(`[orchestrator] Listening on port ${port}`);
-});
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {

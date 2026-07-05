@@ -1,6 +1,10 @@
 import { type ManifestPayload } from '../manifest-schema/schema.js';
 import { validateManifestPayload } from '../manifest-schema/validate.js';
-import { errSummary, PillarManifestInvalidError } from './errors.js';
+import {
+  errSummary,
+  PillarManifestInvalidError,
+  PillarRegistrationCancelledError,
+} from './errors.js';
 import { mountHealthRoute, type HealthApp } from './health-route.js';
 import { consoleLogger, type BootstrapLogger } from './logger.js';
 import { registerWithRetry } from './register.js';
@@ -42,7 +46,6 @@ export interface BootstrapPillarOptions {
   app?: HealthApp;
   transport?: RegistryTransport;
   heartbeatMs?: number;
-  maxRegisterAttempts?: number;
   registerInitialBackoffMs?: number;
   registerMaxBackoffMs?: number;
   logger?: BootstrapLogger;
@@ -58,12 +61,27 @@ export interface PillarBootstrapHandle {
 }
 
 const DEFAULT_HEARTBEAT_MS = 10_000;
-const DEFAULT_MAX_REGISTER_ATTEMPTS = 5;
 const DEFAULT_REGISTER_INITIAL_BACKOFF_MS = 1_000;
 const DEFAULT_REGISTER_MAX_BACKOFF_MS = 30_000;
 const DEFAULT_REGISTRY_URL_ENV = 'POPS_REGISTRY_URL';
 const DEFAULT_REGISTRY_URL_FALLBACK = 'http://registry-api:3001';
 
+/**
+ * Mounts the pillar's health route and starts self-registration with the
+ * registry — but never lets the registry's availability gate the pillar's
+ * own boot. Registration runs in the background: retriable failures (the
+ * registry is down, unreachable, or briefly overloaded at boot) are logged
+ * and retried forever with capped exponential backoff, and the returned
+ * handle resolves immediately regardless of whether registration has
+ * succeeded yet. Only a malformed manifest (`PillarManifestInvalidError`, a
+ * local config bug caught before any network call) still throws
+ * synchronously — everything registry-availability-related is a background
+ * concern from here on.
+ *
+ * The heartbeat ticker (and therefore `stop()`'s deregister) only starts
+ * once registration actually succeeds; calling `stop()` before that cancels
+ * the in-flight retry loop instead.
+ */
 export async function bootstrapPillar(
   options: BootstrapPillarOptions
 ): Promise<PillarBootstrapHandle> {
@@ -81,32 +99,55 @@ export async function bootstrapPillar(
   const clearIntervalImpl = options.clearIntervalImpl ?? clearInterval;
   const setTimeoutImpl = options.setTimeoutImpl ?? setTimeout;
   const heartbeatMs = options.heartbeatMs ?? DEFAULT_HEARTBEAT_MS;
+  const capabilityReporter = options.capabilityReporter;
 
   mountHealthRoute(options.app, manifest, logger);
 
-  const capabilityReporter = options.capabilityReporter;
+  let cancelRegistration: (() => void) | undefined;
+  const cancelSignal = new Promise<void>((resolve) => {
+    cancelRegistration = resolve;
+  });
 
-  const registration = await registerWithRetry({
+  let runtimeHandle: PillarBootstrapHandle | undefined;
+
+  const registrationTask = registerWithRetry({
     transport,
     manifest,
     baseUrl: options.baseUrl,
     capabilities: capabilityReporter?.(),
     logger,
-    maxAttempts: options.maxRegisterAttempts ?? DEFAULT_MAX_REGISTER_ATTEMPTS,
     initialBackoffMs: options.registerInitialBackoffMs ?? DEFAULT_REGISTER_INITIAL_BACKOFF_MS,
     maxBackoffMs: options.registerMaxBackoffMs ?? DEFAULT_REGISTER_MAX_BACKOFF_MS,
     setTimeoutImpl,
-  });
+    cancelSignal,
+  })
+    .then((registration) => {
+      runtimeHandle = startRuntime({
+        pillarId: registration.pillarId,
+        transport,
+        logger,
+        heartbeatMs,
+        capabilityReporter,
+        setIntervalImpl,
+        clearIntervalImpl,
+      });
+    })
+    .catch((err: unknown) => {
+      if (err instanceof PillarRegistrationCancelledError) return;
+      logger.error('[pillar-sdk] giving up on registration; pillar keeps serving unregistered', {
+        pillar: manifest.pillar,
+        err: errSummary(err),
+      });
+    });
 
-  return startRuntime({
-    pillarId: registration.pillarId,
-    transport,
-    logger,
-    heartbeatMs,
-    capabilityReporter,
-    setIntervalImpl,
-    clearIntervalImpl,
-  });
+  return {
+    pillarId: manifest.pillar,
+    async stop() {
+      cancelRegistration?.();
+      await registrationTask;
+      if (runtimeHandle) await runtimeHandle.stop();
+    },
+  };
 }
 
 interface StartRuntimeArgs {
