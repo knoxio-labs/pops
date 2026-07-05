@@ -78,6 +78,9 @@ export {
   type UpdateTransactionCorrectionInput,
   type TransactionCorrectionListResult,
   type TransactionCorrectionListQuery,
+  type RuleMatchPreviewInput,
+  type RuleMatchPreviewResult,
+  type RuleMatchPreviewRow,
 } from './services/transaction-corrections.js';
 
 export * as crossPillarService from './services/cross-pillar.js';

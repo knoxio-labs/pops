@@ -4,6 +4,104 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type AiCacheClearAllCacheData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path?: never;
+  query?: never;
+  url: '/ai-usage/cache';
+};
+
+export type AiCacheClearAllCacheResponses = {
+  /**
+   * 200
+   */
+  200: {
+    removed: number;
+  };
+};
+
+export type AiCacheClearAllCacheResponse =
+  AiCacheClearAllCacheResponses[keyof AiCacheClearAllCacheResponses];
+
+export type AiCacheCacheStatsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/ai-usage/cache';
+};
+
+export type AiCacheCacheStatsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    diskSizeBytes: number;
+    totalEntries: number;
+  };
+};
+
+export type AiCacheCacheStatsResponse =
+  AiCacheCacheStatsResponses[keyof AiCacheCacheStatsResponses];
+
+export type AiCacheClearStaleCacheData = {
+  /**
+   * Body
+   */
+  body?: {
+    maxAgeDays: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/ai-usage/cache/prune';
+};
+
+export type AiCacheClearStaleCacheErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AiCacheClearStaleCacheError =
+  AiCacheClearStaleCacheErrors[keyof AiCacheClearStaleCacheErrors];
+
+export type AiCacheClearStaleCacheResponses = {
+  /**
+   * 200
+   */
+  200: {
+    removed: number;
+  };
+};
+
+export type AiCacheClearStaleCacheResponse =
+  AiCacheClearStaleCacheResponses[keyof AiCacheClearStaleCacheResponses];
+
 export type BudgetsListData = {
   body?: never;
   path?: never;
@@ -1563,6 +1661,74 @@ export type CorrectionsReviseChangeSetResponses = {
 
 export type CorrectionsReviseChangeSetResponse =
   CorrectionsReviseChangeSetResponses[keyof CorrectionsReviseChangeSetResponses];
+
+export type CorrectionsRuleMatchPreviewData = {
+  /**
+   * Body
+   */
+  body?: {
+    limit?: number;
+    matchType: 'exact' | 'contains' | 'regex';
+    offset?: number;
+    pattern: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/corrections/rule-match-preview';
+};
+
+export type CorrectionsRuleMatchPreviewErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CorrectionsRuleMatchPreviewError =
+  CorrectionsRuleMatchPreviewErrors[keyof CorrectionsRuleMatchPreviewErrors];
+
+export type CorrectionsRuleMatchPreviewResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      matches: Array<{
+        amount: number;
+        checksum: string | null;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        id: string;
+      }>;
+      totalCount: number;
+    };
+  };
+};
+
+export type CorrectionsRuleMatchPreviewResponse =
+  CorrectionsRuleMatchPreviewResponses[keyof CorrectionsRuleMatchPreviewResponses];
 
 export type CorrectionsDeleteData = {
   /**
@@ -3250,6 +3416,467 @@ export type SearchSearchResponses = {
 };
 
 export type SearchSearchResponse = SearchSearchResponses[keyof SearchSearchResponses];
+
+export type SettingsListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/settings';
+};
+
+export type SettingsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsListError = SettingsListErrors[keyof SettingsListErrors];
+
+export type SettingsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      key: string;
+      value: string;
+    }>;
+  };
+};
+
+export type SettingsListResponse = SettingsListResponses[keyof SettingsListResponses];
+
+export type SettingsGetManyData = {
+  /**
+   * Body
+   */
+  body?: {
+    keys: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/settings/get-many';
+};
+
+export type SettingsGetManyErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsGetManyError = SettingsGetManyErrors[keyof SettingsGetManyErrors];
+
+export type SettingsGetManyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    settings: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type SettingsGetManyResponse = SettingsGetManyResponses[keyof SettingsGetManyResponses];
+
+export type SettingsResetData = {
+  /**
+   * Body
+   */
+  body?: {
+    keys?: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/settings/reset';
+};
+
+export type SettingsResetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsResetError = SettingsResetErrors[keyof SettingsResetErrors];
+
+export type SettingsResetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    reset: Array<string>;
+    settings: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type SettingsResetResponse = SettingsResetResponses[keyof SettingsResetResponses];
+
+export type SettingsSetManyData = {
+  /**
+   * Body
+   */
+  body?: {
+    entries: Array<{
+      key: string;
+      value: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/settings/set-many';
+};
+
+export type SettingsSetManyErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsSetManyError = SettingsSetManyErrors[keyof SettingsSetManyErrors];
+
+export type SettingsSetManyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    settings: {
+      [key: string]: string;
+    };
+  };
+};
+
+export type SettingsSetManyResponse = SettingsSetManyResponses[keyof SettingsSetManyResponses];
+
+export type SettingsGetData = {
+  body?: never;
+  path: {
+    key:
+      | 'finance.aiCategorizer.model'
+      | 'finance.aiCategorizer.maxTokens'
+      | 'finance.ruleGen.model'
+      | 'finance.ruleGen.maxTokens'
+      | 'finance.defaultLimit';
+  };
+  query?: never;
+  url: '/settings/{key}';
+};
+
+export type SettingsGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsGetError = SettingsGetErrors[keyof SettingsGetErrors];
+
+export type SettingsGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    } | null;
+  };
+};
+
+export type SettingsGetResponse = SettingsGetResponses[keyof SettingsGetResponses];
+
+export type SettingsSetData = {
+  /**
+   * Body
+   */
+  body?: {
+    value: string;
+  };
+  path: {
+    key:
+      | 'finance.aiCategorizer.model'
+      | 'finance.aiCategorizer.maxTokens'
+      | 'finance.ruleGen.model'
+      | 'finance.ruleGen.maxTokens'
+      | 'finance.defaultLimit';
+  };
+  query?: never;
+  url: '/settings/{key}';
+};
+
+export type SettingsSetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsSetError = SettingsSetErrors[keyof SettingsSetErrors];
+
+export type SettingsSetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    };
+    message: string;
+  };
+};
+
+export type SettingsSetResponse = SettingsSetResponses[keyof SettingsSetResponses];
+
+export type SettingsEnsureData = {
+  /**
+   * Body
+   */
+  body?: {
+    value: string;
+  };
+  path: {
+    key:
+      | 'finance.aiCategorizer.model'
+      | 'finance.aiCategorizer.maxTokens'
+      | 'finance.ruleGen.model'
+      | 'finance.ruleGen.maxTokens'
+      | 'finance.defaultLimit';
+  };
+  query?: never;
+  url: '/settings/{key}/ensure';
+};
+
+export type SettingsEnsureErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsEnsureError = SettingsEnsureErrors[keyof SettingsEnsureErrors];
+
+export type SettingsEnsureResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    };
+  };
+};
+
+export type SettingsEnsureResponse = SettingsEnsureResponses[keyof SettingsEnsureResponses];
+
+export type SettingsResetKeyData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    key:
+      | 'finance.aiCategorizer.model'
+      | 'finance.aiCategorizer.maxTokens'
+      | 'finance.ruleGen.model'
+      | 'finance.ruleGen.maxTokens'
+      | 'finance.defaultLimit';
+  };
+  query?: never;
+  url: '/settings/{key}/reset';
+};
+
+export type SettingsResetKeyErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SettingsResetKeyError = SettingsResetKeyErrors[keyof SettingsResetKeyErrors];
+
+export type SettingsResetKeyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      key: string;
+      value: string;
+    };
+    message: string;
+  };
+};
+
+export type SettingsResetKeyResponse = SettingsResetKeyResponses[keyof SettingsResetKeyResponses];
 
 export type TagRulesApplyData = {
   /**

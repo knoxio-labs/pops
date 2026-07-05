@@ -4,7 +4,9 @@ import { Button } from '@pops/ui';
 
 import { PREVIEW_CHANGESET_MAX_TRANSACTIONS } from '../lib/preview-scoping';
 import { ImpactContent } from './impact-panel/ImpactContent';
+import { RuleMatchList } from './impact-panel/RuleMatchList';
 
+import type { CorrectionRule } from '../RulePicker';
 import type { PreviewChangeSetOutput, PreviewView } from './types';
 
 function PanelHeader({ onRerun, disabled }: { onRerun: () => void; disabled: boolean }) {
@@ -177,13 +179,20 @@ export function ImpactPanel(props: {
   truncated: boolean;
   onRerun: () => void;
   disabled: boolean;
+  /** When set, list the transactions this rule matches across the whole DB. */
+  selectedRule?: CorrectionRule | null;
 }) {
   return (
     <div className="flex flex-col min-h-0 border-l">
       <PanelHeader onRerun={props.onRerun} disabled={props.disabled} />
       <ViewSwitcher view={props.view} onViewChange={props.onViewChange} />
       <PanelLabel label={props.label} stale={props.stale} truncated={props.truncated} />
-      <div className="flex-1 overflow-auto px-4 pb-4">
+      <div className="flex-1 overflow-auto px-4 pb-4 space-y-3">
+        {props.selectedRule && (
+          <div className="pb-3 border-b">
+            <RuleMatchList rule={props.selectedRule} />
+          </div>
+        )}
         <PanelBody
           previewError={props.previewError}
           isPending={props.isPending}

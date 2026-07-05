@@ -263,6 +263,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/corrections/rule-match-preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** List every DB transaction a candidate (pattern, matchType) rule matches, paged, with the full-DB match total */
+    post: operations['corrections.ruleMatchPreview'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/corrections/{id}': {
     parameters: {
       query?: never;
@@ -2815,6 +2832,89 @@ export interface operations {
                 /** @enum {string|null} */
                 transactionType: 'purchase' | 'transfer' | 'income' | null;
               };
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'corrections.ruleMatchPreview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          limit?: number;
+          /** @enum {string} */
+          matchType: 'exact' | 'contains' | 'regex';
+          offset?: number;
+          pattern: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              matches: {
+                amount: number;
+                checksum: string | null;
+                date: string;
+                description: string;
+                entityId: string | null;
+                entityName: string | null;
+                id: string;
+              }[];
+              totalCount: number;
             };
           };
         };

@@ -21,6 +21,7 @@ import {
   DEFAULT_OFFSET,
   mergedRules,
   previewMatches,
+  ruleMatchPreview,
   toCorrection,
   translateCorrectionError,
 } from './corrections-handlers-support.js';
@@ -75,6 +76,9 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
 
     previewMatches: ({ body }: Req['previewMatches']) =>
       runHttp(() => ({ status: 200 as const, body: { data: previewMatches(db, body) } })),
+
+    ruleMatchPreview: ({ body }: Req['ruleMatchPreview']) =>
+      runHttp(() => ({ status: 200 as const, body: { data: ruleMatchPreview(db, body) } })),
 
     createOrUpdate: ({ body }: Req['createOrUpdate']) =>
       runHttp(() => {

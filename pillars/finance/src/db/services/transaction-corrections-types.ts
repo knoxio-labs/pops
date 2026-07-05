@@ -73,3 +73,35 @@ export interface TransactionCorrectionListQuery {
 export function normalizeDescription(description: string): string {
   return description.toUpperCase().replaceAll(/\d+/g, '').replaceAll(/\s+/g, ' ').trim();
 }
+
+/**
+ * Apply-time match predicate shared by the rule matcher and the rule-match
+ * preview: does `pattern` (interpreted per `matchType`) hit a pre-normalised
+ * description?
+ *
+ * `normalizedDescription` MUST be the output of {@link normalizeDescription}.
+ * The pattern is only uppercased (not fully normalised) and regex runs
+ * case-insensitively — identical to how `findAllMatchingTransactionCorrectionsFromDb`
+ * decides a rule fires at import time, so a preview cannot diverge from reality.
+ */
+export function patternMatchesNormalizedDescription(
+  pattern: string,
+  matchType: TransactionCorrectionMatchType,
+  normalizedDescription: string
+): boolean {
+  switch (matchType) {
+    case 'exact':
+      return pattern.toUpperCase() === normalizedDescription;
+    case 'contains':
+      return pattern.length > 0 && normalizedDescription.includes(pattern.toUpperCase());
+    case 'regex':
+      if (pattern.length === 0) return false;
+      try {
+        return new RegExp(pattern, 'i').test(normalizedDescription);
+      } catch {
+        return false;
+      }
+    default:
+      return false;
+  }
+}

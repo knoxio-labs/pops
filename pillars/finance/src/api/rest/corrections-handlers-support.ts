@@ -10,6 +10,7 @@ import { desc } from 'drizzle-orm';
 
 import {
   type FinanceDb,
+  type RuleMatchPreviewResult,
   type TransactionCorrectionMatchType,
   type TransactionCorrectionRow,
   type TransactionRow,
@@ -35,6 +36,8 @@ export const DEFAULT_LIMIT = 50;
 export const DEFAULT_OFFSET = 0;
 const PREVIEW_DEFAULT_LIMIT = 25;
 const PREVIEW_HARD_LIMIT = 200;
+const RULE_MATCH_PREVIEW_DEFAULT_LIMIT = 100;
+const RULE_MATCH_PREVIEW_HARD_LIMIT = 500;
 const ALL_RULES_LIMIT = 50_000;
 
 export interface Correction {
@@ -147,6 +150,27 @@ export function previewMatches(
     scanned: rows.length,
     truncated,
   };
+}
+
+/**
+ * List every DB transaction the candidate rule matches, paged, with the true
+ * full-DB match count. Applies the request-body defaults / hard cap, then
+ * delegates the faithful scan to the service layer.
+ */
+export function ruleMatchPreview(
+  db: FinanceDb,
+  input: Req['ruleMatchPreview']['body']
+): RuleMatchPreviewResult {
+  const limit = Math.min(
+    input.limit ?? RULE_MATCH_PREVIEW_DEFAULT_LIMIT,
+    RULE_MATCH_PREVIEW_HARD_LIMIT
+  );
+  return transactionCorrectionsService.previewRuleMatchTransactions(db, {
+    pattern: input.pattern,
+    matchType: input.matchType,
+    limit,
+    offset: input.offset ?? DEFAULT_OFFSET,
+  });
 }
 
 /**

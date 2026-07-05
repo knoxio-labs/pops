@@ -109,6 +109,7 @@ export function RuleManagerBody(props: RuleManagerBodyProps) {
         truncated={slot.truncated}
         onRerun={props.onRerunPreview}
         disabled={props.disablePreview}
+        selectedRule={props.selectedRule}
       />
     </>
   );
