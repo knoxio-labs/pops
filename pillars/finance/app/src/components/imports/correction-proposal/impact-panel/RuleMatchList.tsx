@@ -24,15 +24,15 @@ function MatchRow({ row, rule }: { row: RuleMatchPreviewRow; rule: CorrectionRul
       <div className="font-mono truncate" title={row.description}>
         {row.description}
       </div>
-      <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      <div className="text-2xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <span>{formatDate(row.date)}</span>
         <span>{money(row.amount)}</span>
         <CurrentEntity entityName={row.entityName} />
         <Badge
           variant={wouldChange ? 'default' : 'secondary'}
-          className="text-[9px] px-1 py-0 leading-tight normal-case"
+          className="text-2xs px-1 py-0 leading-tight normal-case"
         >
-          {wouldChange ? 'would change' : 'already correct'}
+          {wouldChange ? 'entity changes' : 'entity matches'}
         </Badge>
       </div>
     </div>
@@ -41,7 +41,7 @@ function MatchRow({ row, rule }: { row: RuleMatchPreviewRow; rule: CorrectionRul
 
 function ListHeader({ shown, total }: { shown: number; total: number }) {
   return (
-    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
       <span>Matches across your library</span>
       <span className="tabular-nums text-foreground" data-testid="rule-match-total">
         {total}

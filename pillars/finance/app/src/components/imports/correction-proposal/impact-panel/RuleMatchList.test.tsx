@@ -97,10 +97,11 @@ describe('RuleMatchList', () => {
     expect(screen.getByText('Uncategorised Cafe')).toBeInTheDocument();
     expect(screen.getByTestId('rule-match-total')).toHaveTextContent('2');
 
-    // The row whose current entity differs from the rule's target "would change";
-    // the one that already carries the rule's entity is "already correct".
-    expect(screen.getByText('would change')).toBeInTheDocument();
-    expect(screen.getByText('already correct')).toBeInTheDocument();
+    // The row whose current entity differs from the rule's target reads
+    // "entity changes"; the one that already carries the rule's entity reads
+    // "entity matches". The badge speaks only to the entity, not tags/type.
+    expect(screen.getByText('entity changes')).toBeInTheDocument();
+    expect(screen.getByText('entity matches')).toBeInTheDocument();
 
     // The rule's own pattern/matchType drive the query — faithful to what fires.
     expect(correctionsRuleMatchPreview).toHaveBeenCalledWith(

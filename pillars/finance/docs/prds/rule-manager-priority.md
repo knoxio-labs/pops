@@ -44,19 +44,20 @@ Matching (`findAllMatchingCorrectionFromRules` pure helper, `findAllMatchingTran
 - [x] **Browse-all rule manager** — three-pane dialog (sidebar / detail editor / impact panel). Sidebar lists the merged rule set, search-filterable, drag-reorderable when search is empty and ≥2 rules. Selecting a rule loads it into the detail editor. A separate full-page `RulesBrowserPage` provides the same rule CRUD outside the import flow.
 - [x] **Drag-to-reorder** — each row has a drag handle; a drop renumbers affected rules' `priority` in gaps of 10 via `edit` ops; works across mixed DB + pending rules; reorder-then-Cancel discards the changes.
 - [x] **Impact preview** — "Import transactions" and "Existing transactions" sections with per-section counts; when the existing-transaction set exceeds `PREVIEW_CHANGESET_MAX_TRANSACTIONS` (2000) the preview caps and shows a "preview truncated — first 2000 of N" hint; stale/re-run preview behaves identically to proposal mode.
+- [x] **Selected-rule match list** — selecting a rule renders a scrollable list of the transactions it matches **across the whole finance DB** (via `POST /corrections/rule-match-preview`), sitting above the capped changeset-preview sections. Unlike that preview, its total is the **uncapped** full-DB `totalCount` (not bounded by `PREVIEW_CHANGESET_MAX_TRANSACTIONS`), so a too-broad/malformed pattern is obvious from what it visibly hits. The rows are one page (capped at 100, newest-first) with a "showing first N of M" hint when the match set exceeds the page; each row shows description, date, amount, current entity, and an entity-scoped `entity matches` / `entity changes` badge (the badge speaks only to the entity, since the endpoint does not project tags/type/location). Matching reuses the apply-time predicate, so the list is faithful to what the rule fires on at import.
 - [x] **Override indicators** — `TransactionCard` shows a "Rule matched" badge plus a "+N overridden" popover when more than one rule matched, listing each overridden rule's pattern, match type, priority, confidence, and entity. `ProcessedTransaction.matchedRules` holds all matches (first = winner). NOTE: the import-time `matchedRules` ordering is still the legacy match-type heuristic, not the `priority` column — see the ideas file.
 - [x] **Orphaned entities** — entities with `transactionCount === 0` show a muted "Orphaned" badge on `/finance/entities`; a "Show orphaned only" toggle filters the list (server `orphanedOnly` param) and resets to "show all" on mount. Any transaction association counts — an entity with only "skipped" transactions is not orphaned.
 
 ## Edge Cases
 
-| Case                                    | Behaviour                                                                    |
-| --------------------------------------- | ---------------------------------------------------------------------------- |
-| Zero rules in DB                        | Browse sidebar is empty with just the "Add new rule" button.                 |
-| Reorder then Cancel                     | Pending priority `edit` ops are discarded.                                   |
-| Two rules at equal priority             | Tie-break by `id` (stable sort).                                             |
-| Winning rule disabled (pending op)      | Next-priority active rule becomes the winner; preview and indicators update. |
-| Existing-transaction count > 2000       | Preview capped at 2000, truncation hint shown.                               |
-| Entity with only "skipped" transactions | Not orphaned — any association counts.                                       |
+| Case                                    | Behaviour                                                                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zero rules in DB                        | Browse sidebar is empty with just the "Add new rule" button.                                                                                |
+| Reorder then Cancel                     | Pending priority `edit` ops are discarded.                                                                                                  |
+| Two rules at equal priority             | Tie-break by `id` (stable sort).                                                                                                            |
+| Winning rule disabled (pending op)      | Next-priority active rule becomes the winner; preview and indicators update.                                                                |
+| Existing-transaction count > 2000       | Changeset preview capped at 2000, truncation hint shown; the selected-rule match list still reports the true uncapped full-DB `totalCount`. |
+| Entity with only "skipped" transactions | Not orphaned — any association counts.                                                                                                      |
 
 ## Not Built (see ideas)
 

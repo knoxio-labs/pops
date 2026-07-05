@@ -21,23 +21,26 @@ export type RuleMatchPreviewRow = RuleMatchPreviewData['matches'][number];
  * too broad without streaming the entire library.
  */
 export function useRuleMatchPreview(params: { pattern: string; matchType: RuleMatchType }) {
-  const pattern = params.pattern.trim();
+  const { pattern, matchType } = params;
   return useQuery({
     queryKey: [
       'finance',
       'corrections',
       'rule-match-preview',
       pattern,
-      params.matchType,
+      matchType,
       RULE_MATCH_PREVIEW_LIMIT,
     ],
+    // Send the pattern byte-for-byte so the preview matches exactly what the
+    // rule fires on (rules are persisted without trimming); the trim only gates
+    // whether a whitespace-only pattern is worth a round-trip.
     queryFn: async (): Promise<RuleMatchPreviewData> =>
       unwrap(
         await correctionsRuleMatchPreview({
-          body: { pattern, matchType: params.matchType, limit: RULE_MATCH_PREVIEW_LIMIT },
+          body: { pattern, matchType, limit: RULE_MATCH_PREVIEW_LIMIT },
         })
       ).data,
-    enabled: pattern.length > 0,
+    enabled: pattern.trim().length > 0,
     staleTime: 30_000,
   });
 }
