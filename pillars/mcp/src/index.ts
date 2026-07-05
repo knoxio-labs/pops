@@ -107,7 +107,17 @@ app.get('/ready', (_req, res) => {
 export const DEFAULT_MCP_PORT = 3011;
 
 export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
-  return Number(env['MCP_PORT'] ?? DEFAULT_MCP_PORT);
+  const raw = env['MCP_PORT'];
+  if (raw === undefined) {
+    return DEFAULT_MCP_PORT;
+  }
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(
+      `Invalid MCP_PORT "${raw}": expected an integer TCP port in the range 1–65535.`
+    );
+  }
+  return port;
 }
 
 // Only start listening when run directly (not in tests)
