@@ -1,0 +1,39 @@
+## rclone+age backup reference config — cerebrum engrams file tree.
+##
+## ADR-039 (pillar isolation) Invariant 2: a non-SQLite store brings its own
+## backup mechanism, scoped to itself. Engrams are Markdown files on a host
+## directory (ADR-019), not a SQLite database, so Litestream (see
+## infra/litestream/cerebrum.yml, which streams cerebrum.db only) is the
+## wrong tool. This file is the engrams-only sibling of that config.
+##
+## Production deployment lives in the homelab-infra repo (see AGENTS.md for
+## the deployment model); this file is the canonical reference the deployer
+## copies into its own rclone+age job definitions. Remote name, bucket/prefix,
+## and the age recipient are provided by the deployer's environment — leave
+## them as placeholders here.
+##
+## Restore drill (safe to copy/paste during an incident):
+##   rclone copy "${CEREBRUM_ENGRAMS_BACKUP_REMOTE}:${CEREBRUM_ENGRAMS_BACKUP_PREFIX}" /tmp/cerebrum-engrams-restore --decrypt
+##   pops cerebrum reindex   # rebuild the SQLite index from the restored files
+## Stop the cerebrum-api container first so it isn't writing concurrently;
+## the drill is exercised in the same rollout phase as the Litestream drill.
+
+jobs:
+  - name: cerebrum-engrams
+    source: /data/cerebrum/engrams
+    exclude:
+      # Regenerable from the Markdown source via `pops cerebrum reindex`
+      # (ADR-019) — excluded so the backup only ever carries the source of
+      # truth, matching how Litestream excludes MEDIA_IMAGES_DIR/FOOD_INGEST_DIR.
+      - .index/
+    destination:
+      remote: ${CEREBRUM_ENGRAMS_BACKUP_REMOTE}
+      prefix: ${CEREBRUM_ENGRAMS_BACKUP_PREFIX}
+      # Own bucket/prefix per ADR-039 Invariant 2 — never shares a
+      # destination with another pillar's backup.
+    encryption:
+      tool: age
+      recipient: ${CEREBRUM_ENGRAMS_AGE_RECIPIENT}
+    schedule:
+      interval: 1h
+      retention: 30d

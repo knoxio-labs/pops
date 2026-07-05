@@ -238,6 +238,7 @@ infra/
 
 - **Per-pillar SQLite (ADR-026):** each pillar's DB streams independently. Reference configs at `infra/litestream/<id>.yml` (one per pillar). The deployer mirrors these into the homelab-infra Litestream config; as pillars extract their own SQLite files, each adds a sibling YAML.
 - **Litestream exclusions:** `MEDIA_IMAGES_DIR` and `FOOD_INGEST_DIR` are regeneratable media trees and **must** be excluded from Litestream replication in homelab-infra. The SQLite rows referencing these paths stay backed up; only the bytes are skipped.
+- **Non-SQLite stores (ADR-039 Invariant 2):** a store that isn't SQLite brings its own backup mechanism, scoped to itself. Cerebrum's engrams file tree (`/data/cerebrum/engrams`, ADR-019) backs up via rclone+age, not Litestream — reference config at `infra/backup/<id>-engrams.yml` (currently `cerebrum-engrams.yml`), replicating to its own bucket/prefix.
 
 ### Architecture stack
 
