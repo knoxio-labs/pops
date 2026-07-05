@@ -13,6 +13,15 @@ import type { CommitPayload } from './types.js';
 
 const TEMP_ENTITY_PREFIX = 'temp:entity:';
 
+/**
+ * Reserved namespace for any commit-time placeholder id. Real contact ids are
+ * v4 UUIDs, so nothing legitimate written to `entity_id` ever starts with
+ * `temp:`. The only well-formed placeholder is a `temp:entity:{uuid}` pending
+ * reference; any other bare `temp:`-prefixed id (a stale scheme, a partially
+ * resolved id) is a bug and must be rejected before it reaches the database.
+ */
+const TEMP_ID_PREFIX = 'temp:';
+
 export const COMMIT_TEMP_ENTITY_PREFIX = TEMP_ENTITY_PREFIX;
 
 function collectTempIdsFromOps(
@@ -20,12 +29,33 @@ function collectTempIdsFromOps(
   out: Set<string>
 ): void {
   for (const op of ops) {
-    if (
-      (op.op === 'add' || op.op === 'edit') &&
-      op.data?.entityId?.startsWith(TEMP_ENTITY_PREFIX)
-    ) {
+    if ((op.op === 'add' || op.op === 'edit') && op.data?.entityId?.startsWith(TEMP_ID_PREFIX)) {
       out.add(op.data.entityId);
     }
+  }
+}
+
+/**
+ * Guard the id about to be written to `transactions.entity_id` /
+ * `*_corrections.entity_id` / `*_tag_rules.entity_id`. After temp-id resolution
+ * the value MUST be a real contact id: a `null`/`undefined` result means a
+ * referenced temp id had no mapping, and a lingering `temp:`-prefixed value
+ * means resolution was skipped — either way persisting it plants a dead
+ * placeholder (the CF016 failure). Throwing here rolls the commit back instead.
+ */
+export function assertPersistableEntityId(
+  originalEntityId: string,
+  resolvedEntityId: string | null | undefined
+): asserts resolvedEntityId is string {
+  if (resolvedEntityId == null) {
+    throw new ValidationError(
+      `Entity id '${originalEntityId}' has no resolved contact; refusing to commit a placeholder`
+    );
+  }
+  if (resolvedEntityId.startsWith(TEMP_ID_PREFIX)) {
+    throw new ValidationError(
+      `Refusing to persist unresolved placeholder entity id '${resolvedEntityId}'`
+    );
   }
 }
 
@@ -49,7 +79,7 @@ export function validateCommitPayload(payload: CommitPayload): void {
   for (const cs of payload.changeSets) collectTempIdsFromOps(cs.ops, referencedTempIds);
   for (const cs of payload.tagRuleChangeSets) collectTempIdsFromOps(cs.ops, referencedTempIds);
   for (const txn of payload.transactions) {
-    if (txn.entityId?.startsWith(TEMP_ENTITY_PREFIX)) referencedTempIds.add(txn.entityId);
+    if (txn.entityId?.startsWith(TEMP_ID_PREFIX)) referencedTempIds.add(txn.entityId);
   }
 
   for (const ref of referencedTempIds) {

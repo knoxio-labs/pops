@@ -687,6 +687,54 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  it('rejects a transaction entity id with a stray temp: prefix and persists no placeholder (CF016)', async () => {
+    const c = client();
+    await expect(
+      c.imports.commitImport({
+        transactions: [
+          confirmed({
+            checksum: 'commit-stray-temp',
+            entityId: 'temp:contact:00000000-0000-0000-0000-000000000abc',
+          }),
+        ],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const placeholderRows = financeDb.raw
+      .prepare("SELECT count(*) as c FROM transactions WHERE entity_id LIKE 'temp:%'")
+      .get() as { c: number };
+    expect(placeholderRows.c).toBe(0);
+  });
+
+  it('rejects a correction ChangeSet op carrying a stray temp: entity id and writes no rule (CF016)', async () => {
+    const c = client();
+    await expect(
+      c.imports.commitImport({
+        changeSets: [
+          {
+            ops: [
+              {
+                op: 'add',
+                data: {
+                  descriptionPattern: 'STRAYTEMP',
+                  matchType: 'exact',
+                  entityId: 'temp:contact:00000000-0000-0000-0000-000000000def',
+                  entityName: 'Stray',
+                },
+              },
+            ],
+          },
+        ],
+        transactions: [confirmed({ checksum: 'commit-stray-cs' })],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const ruleRows = financeDb.raw
+      .prepare("SELECT count(*) as c FROM transaction_corrections WHERE entity_id LIKE 'temp:%'")
+      .get() as { c: number };
+    expect(ruleRows.c).toBe(0);
+  });
+
   it('rejects duplicate temp ids with 400', async () => {
     const c = client();
     const tempId = 'temp:entity:00000000-0000-0000-0000-000000000004';
