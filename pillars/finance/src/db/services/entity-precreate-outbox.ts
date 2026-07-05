@@ -146,7 +146,13 @@ export function markResolved(
   nowIso: string
 ): void {
   db.update(entityPrecreateOutbox)
-    .set({ status: 'resolved', resolvedEntityId, resolvedAt: nowIso, lastAttemptAt: nowIso })
+    .set({
+      status: 'resolved',
+      resolvedEntityId,
+      resolvedAt: nowIso,
+      lastAttemptAt: nowIso,
+      lastError: null,
+    })
     .where(eq(entityPrecreateOutbox.id, id))
     .run();
 }

@@ -18,7 +18,7 @@ export const entityPrecreateOutbox = sqliteTable(
     resolvedEntityId: text('resolved_entity_id'),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     resolvedAt: text('resolved_at'),
   },
   (table) => [index('idx_entity_precreate_outbox_status').on(table.status)]

@@ -16,7 +16,7 @@ CREATE TABLE `entity_precreate_outbox` (
 	`last_attempt_at` text,
 	`last_error` text,
 	`resolved_entity_id` text,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`resolved_at` text
 );
 --> statement-breakpoint
