@@ -15,7 +15,7 @@ This PRD owns the gateway plumbing — transport, request lifecycle, discovery/a
 ## Motivation
 
 - **AI clients need structured access to POPS data.** Without MCP, an agent has to call each pillar's REST contract directly — learning every route, holding a service-account key, and reimplementing discovery. The gateway collapses that into one tool catalogue.
-- **Gated network exposure.** The server listens on `0.0.0.0:3002` inside the container but is not published to the host; MCP clients (iPad, MacBook, Claude Desktop) reach it through the shell proxy / Cloudflare Access and authenticate with `MCP_INBOUND_TOKEN`.
+- **Gated network exposure.** The server listens on `${MCP_BIND_ADDR:-0.0.0.0}:3002`, published on the host and reachable on the local network / optionally via Cloudflare Tunnel. The access control is the `MCP_INBOUND_TOKEN` bearer check, not network placement — clients (iPad, MacBook, Claude Desktop) authenticate with it on every `POST /mcp`. (Moving the gateway behind the shell nginx proxy is a follow-up, gated on that proxy becoming registry-driven.)
 - **Clean separation.** The gateway is an adapter layer: it maps MCP requests to pillar SDK calls and formats results for LLM consumption. All business logic stays in the pillars.
 
 ## Architecture
@@ -33,7 +33,7 @@ pillar APIs:  inventory · finance · contacts · media · cerebrum
 registry pillar (:3001) — discovery fallback when an internal hostname isn't pinned
 ```
 
-The gateway joins the `backend` Docker network only and is `expose:`-d (not host-published), so it is reached through the shell nginx proxy / Cloudflare Tunnel+Access rather than a direct host port. Inbound `POST /mcp` requires the `MCP_INBOUND_TOKEN` bearer secret. The gateway is a pure **consumer** of pillars and the registry: it does not self-register, does not export a `./manifest`, and advertises no contract of its own.
+The gateway joins the `backend` Docker network and publishes port `${MCP_BIND_ADDR:-0.0.0.0}:3002:3002` on the host (reachable on the LAN / optionally via Cloudflare Tunnel). Inbound `POST /mcp` requires the `MCP_INBOUND_TOKEN` bearer secret — that check, not network placement, is the access control. (The port stays published because the shell nginx has no `/mcp` route yet; routing MCP through it is a follow-up gated on the registry-driven proxy.) The gateway is a pure **consumer** of pillars and the registry: it does not self-register, does not export a `./manifest`, and advertises no contract of its own.
 
 ### Pillar access and discovery
 
@@ -193,7 +193,7 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 ### Packaging & CI
 
 - [x] Multi-stage Dockerfile: builder resolves/builds `@pops/pillar-sdk` then `@pops/mcp`; runtime image carries only compiled output + production deps and runs as the non-root `node` user.
-- [x] Prod compose defines `pops-mcp` under `profiles: [mcp]` on the `backend` network with the `pops_api_key` secret, internal-only `expose: 3002` (no host port — reached via the shell proxy / Tunnel+Access), the `MCP_INBOUND_TOKEN` passthrough, `depends_on: registry-api (healthy)`, and a `/health` healthcheck; it pulls from GHCR with the Watchtower label.
+- [x] Prod compose defines `pops-mcp` under `profiles: [mcp]` on the `backend` network with the `pops_api_key` secret, host-published port `${MCP_BIND_ADDR:-0.0.0.0}:3002:3002` gated by the `MCP_INBOUND_TOKEN` bearer check, `depends_on: registry-api (healthy)`, and a `/health` healthcheck; it pulls from GHCR with the Watchtower label.
 - [x] `publish-images.yml` builds + pushes `pops-mcp` with `main`, `sha-<short>`, and semver tags; `docker-build.yml` validates the Dockerfile on every PR.
 
 ## Non-goals

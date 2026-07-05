@@ -766,10 +766,13 @@ services:
         condition: service_completed_successfully
 
   # ── MCP HTTP SERVER ──────────────────────────────────────────────
-  # Exposes pops data as an MCP server over HTTP (port 3002).
-  # Internal-only (backend network, expose:) — reached through the shell
-  # nginx proxy / Cloudflare Tunnel+Access like every other pillar, never
-  # bound to a host port. Inbound callers must present MCP_INBOUND_TOKEN.
+  # Exposes pops data as an MCP server over HTTP (port 3002), reachable on the
+  # local network and (optionally) via Cloudflare Tunnel. The access control is
+  # the MCP_INBOUND_TOKEN bearer check below, NOT network placement — every
+  # POST /mcp must present it. The host port stays published: the shell nginx has
+  # no /mcp route yet (it becomes registry-driven in feat/dynamic-nginx-registry),
+  # so unpublishing here would make the gateway unreachable. Moving MCP behind the
+  # shell proxy is tracked as a follow-up.
   # Requires a service-account API key provisioned in pops-api.
   # Enable with:  docker compose --profile mcp up -d
   pops-mcp:
@@ -796,8 +799,8 @@ services:
       # `Authorization: Bearer <token>`; unset leaves the route open and logs a
       # loud warning. Provision before onboarding clients (see MCP PRD).
       MCP_INBOUND_TOKEN: ${MCP_INBOUND_TOKEN:-}
-    expose:
-      - '3002'
+    ports:
+      - '${MCP_BIND_ADDR:-0.0.0.0}:3002:3002'
     depends_on:
       registry-api:
         condition: service_healthy
