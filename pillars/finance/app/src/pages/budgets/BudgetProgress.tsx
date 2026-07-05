@@ -48,7 +48,7 @@ export function BudgetProgressBar({ spent, amount }: BudgetProgressInput) {
     return <span className="text-muted-foreground">—</span>;
   }
   return (
-    <div className="flex min-w-[120px] items-center gap-2">
+    <div className="flex min-w-30 items-center gap-2">
       <Progress value={visual} className="flex-1" />
       <span
         className={`w-12 text-right font-mono text-xs tabular-nums ${

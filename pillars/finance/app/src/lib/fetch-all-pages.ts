@@ -51,6 +51,6 @@ export async function fetchAllPages<T>(
 
   return {
     data: all,
-    pagination: { total, limit: all.length, offset: 0, hasMore: false },
+    pagination: { total, limit: all.length, offset: 0, hasMore },
   };
 }

@@ -73,5 +73,6 @@ describe('fetchAllPages', () => {
 
     expect(fetchPage.mock.calls.length).toBeLessThanOrEqual(200);
     expect(result.data.length).toBe(fetchPage.mock.calls.length);
+    expect(result.pagination.hasMore).toBe(true);
   });
 });
