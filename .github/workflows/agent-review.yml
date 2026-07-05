@@ -33,12 +33,15 @@ jobs:
           node scripts/ci/check-lib-no-pillar-import.mjs --self-test
           node scripts/ci/check-contract-isolation.mjs --self-test
           node scripts/ci/check-known-pillars-coverage.mjs --self-test
+          node scripts/ci/check-mise-tool-overrides.mjs --self-test
       - name: Isolation litmus — no cross-contract reach-behind
         run: node scripts/ci/check-contract-isolation.mjs --base "origin/${{ github.base_ref }}"
       - name: Lib-never-imports-pillar guard
         run: node scripts/ci/check-lib-no-pillar-import.mjs
       - name: Known-pillars drift guard (PILLARS tuple vs on-disk data pillars)
         run: node scripts/ci/check-known-pillars-coverage.mjs
+      - name: Mise toolchain override guard (root pin intact; only node/rust overridable per unit)
+        run: node scripts/ci/check-mise-tool-overrides.mjs
       - name: LLM review (advisory — federation invariants rubric)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
