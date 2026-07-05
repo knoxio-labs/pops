@@ -8,6 +8,7 @@
  */
 import { z } from 'zod';
 
+import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 import { LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 export const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
@@ -35,12 +36,12 @@ export const UpdateCorrectionSchema = z.object({
   tags: z.array(z.string()).optional(),
   transactionType: TransactionTypeSchema.nullable().optional(),
   isActive: z.boolean().optional(),
-  confidence: z.number().min(0).max(1).optional(),
+  confidence: z.number().min(MIN_MATCH_CONFIDENCE).max(1).optional(),
   priority: z.number().int().nonnegative().optional(),
 });
 
 const CorrectionRuleDataSchema = CreateCorrectionSchema.extend({
-  confidence: z.number().min(0).max(1).optional(),
+  confidence: z.number().min(MIN_MATCH_CONFIDENCE).max(1).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -93,7 +94,7 @@ export const CorrectionListQuery = z.object({
 
 export const FindMatchBody = z.object({
   description: z.string().min(1),
-  minConfidence: z.number().min(0).max(1).default(0.7),
+  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
 });
 
 export const FindMatchResult = z.object({
@@ -165,7 +166,7 @@ const PreviewChangeSetTransactionSchema = z.object({
 export const PreviewChangeSetBody = z.object({
   changeSet: ChangeSetSchema,
   transactions: z.array(PreviewChangeSetTransactionSchema).min(1).max(2000),
-  minConfidence: z.number().min(0).max(1).default(0.7),
+  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
   pendingChangeSets: z.array(PendingChangeSetSchema).max(200).optional(),
 });
 

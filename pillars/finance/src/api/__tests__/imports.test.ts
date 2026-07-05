@@ -304,6 +304,65 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
   });
 });
 
+describe('imports.processImport — correction rule usage telemetry (#3626)', () => {
+  it('bumps timesApplied + lastUsedAt on the winning rule when a live import matches it', async () => {
+    const c = client();
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      transactionType: 'purchase',
+    });
+    await c.corrections.update(created.data.id, { confidence: 0.9 });
+    expect(created.data.timesApplied).toBe(0);
+
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'bunnings-usage-1' }),
+      ],
+      account: 'Amex',
+    });
+    await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    const after = await c.corrections.get(created.data.id);
+    expect(after.data.timesApplied).toBe(1);
+    expect(after.data.lastUsedAt).not.toBeNull();
+  });
+
+  it('does not bump usage from a pending-rules preview (reevaluateWithPendingRules)', async () => {
+    const c = client();
+
+    // No rule exists yet at process time — the transaction lands uncertain.
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'preview-usage-1' }),
+      ],
+      account: 'Amex',
+    });
+    await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    // The rule is created (persisted) AFTER processing, so a live re-evaluation
+    // of the still-uncertain transaction would now match it in-memory.
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      transactionType: 'purchase',
+    });
+    await c.corrections.update(created.data.id, { confidence: 0.9 });
+
+    // `reevaluateWithPendingRules` always merges DB rules with (possibly empty)
+    // pending ChangeSets in-memory — a preview, never a real application.
+    await c.imports.reevaluateWithPendingRules({
+      sessionId,
+      minConfidence: 0.7,
+      pendingChangeSets: [],
+    });
+
+    const after = await c.corrections.get(created.data.id);
+    expect(after.data.timesApplied).toBe(0);
+    expect(after.data.lastUsedAt).toBeNull();
+  });
+});
+
 describe('imports.getImportProgress', () => {
   it('returns null for an unknown session', async () => {
     const c = client();

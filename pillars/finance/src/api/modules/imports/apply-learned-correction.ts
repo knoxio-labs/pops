@@ -145,11 +145,51 @@ function handleNoEntityCorrection(
   };
 }
 
+/**
+ * Resolve the ChangeSet-application outcome for the winning correction, or
+ * `null` when the rule carries neither an entity nor a transaction type (has
+ * nothing to apply).
+ */
+function resolveApplyResult(
+  db: FinanceDb,
+  args: ApplyLearnedCorrectionArgs,
+  correction: CorrectionRow,
+  matchedRules: MatchedRule[]
+): ApplyLearnedCorrectionResult | null {
+  const entityId = correction.entityId;
+  if (!entityId) return handleNoEntityCorrection(db, args, correction, matchedRules);
+
+  const { status } = classifyCorrectionMatch(correction);
+  return {
+    processed: buildEntityMatch({
+      db,
+      transaction: args.transaction,
+      correction,
+      matchedRules,
+      status,
+      entityId,
+      knownTags: args.knownTags,
+      entityDefaultTags: args.entityDefaultTags ?? new Map(),
+    }),
+    bucket: status === 'matched' ? 'matched' : 'uncertain',
+  };
+}
+
+/**
+ * Match `transaction.description` against the live correction rule set and
+ * apply the winning rule.
+ *
+ * Usage telemetry (`timesApplied`/`lastUsedAt`) is bumped only when the match
+ * is against the real persisted rule set (`args.rules` absent) AND the rule
+ * actually produced an outcome — a caller-supplied `rules` array is always an
+ * in-memory preview (merged with un-persisted pending ChangeSets) and must
+ * never count as real usage of the persisted row.
+ */
 export function applyLearnedCorrection(
   db: FinanceDb,
   args: ApplyLearnedCorrectionArgs
 ): ApplyLearnedCorrectionResult | null {
-  const { transaction, minConfidence, knownTags, rules } = args;
+  const { transaction, minConfidence, rules } = args;
 
   const allMatchingRules = rules
     ? findAllMatchingCorrectionFromRules(transaction.description, rules, minConfidence)
@@ -162,23 +202,12 @@ export function applyLearnedCorrection(
   const correction = allMatchingRules[0];
   if (!correction) return null;
 
-  const entityId = correction.entityId;
   const matchedRules = toMatchedRules(allMatchingRules);
+  const result = resolveApplyResult(db, args, correction, matchedRules);
 
-  if (!entityId) return handleNoEntityCorrection(db, args, correction, matchedRules);
+  if (result && !rules) {
+    transactionCorrectionsService.incrementTransactionCorrectionUsage(db, correction.id);
+  }
 
-  const { status } = classifyCorrectionMatch(correction);
-  return {
-    processed: buildEntityMatch({
-      db,
-      transaction,
-      correction,
-      matchedRules,
-      status,
-      entityId,
-      knownTags,
-      entityDefaultTags: args.entityDefaultTags ?? new Map(),
-    }),
-    bucket: status === 'matched' ? 'matched' : 'uncertain',
-  };
+  return result;
 }

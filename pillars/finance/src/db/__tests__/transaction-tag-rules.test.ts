@@ -32,6 +32,7 @@ import {
   deleteTransactionTagRule,
   disableTransactionTagRule,
   getTransactionTagRule,
+  incrementTransactionTagRuleUsage,
   listTransactionTagRules,
   updateTransactionTagRule,
 } from '../services/transaction-tag-rules.js';
@@ -393,6 +394,109 @@ describe('deleteTransactionTagRule', () => {
     expect(() => deleteTransactionTagRule(harness.db, 'ghost')).toThrow(
       TransactionTagRuleNotFoundError
     );
+  });
+});
+
+describe('createTransactionTagRule — normalization + upsert (CF022, #3628)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('normalizes the pattern on insert: uppercases, strips digits, collapses whitespace', () => {
+    const created = createTransactionTagRule(harness.db, {
+      descriptionPattern: '  k  mart 42  store 7 ',
+      matchType: 'exact',
+      tags: ['Shopping'],
+    });
+    expect(created.descriptionPattern).toBe('K MART STORE');
+  });
+
+  it('reinforces the same rule on a case/digit variant instead of forking a duplicate row', () => {
+    const first = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'K Mart',
+      matchType: 'exact',
+      tags: ['Shopping'],
+    });
+    expect(first.confidence).toBe(0.95);
+    expect(first.timesApplied).toBe(0);
+
+    const second = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'k mart 999',
+      matchType: 'exact',
+      tags: ['Shopping', 'Home'],
+    });
+
+    expect(second.id).toBe(first.id);
+    expect(second.timesApplied).toBe(1);
+    expect(second.lastUsedAt).not.toBeNull();
+    expect(second.confidence).toBeCloseTo(1.0, 5);
+    expect(JSON.parse(second.tags)).toEqual(['Shopping', 'Home']);
+    expect(listTransactionTagRules(harness.db)).toHaveLength(1);
+  });
+
+  it('keeps two rules with the same (pattern, matchType) but different entityId scope separate', () => {
+    seedEntity(harness, 'ent-a', 'Alpha');
+    seedEntity(harness, 'ent-b', 'Beta');
+
+    const forAlpha = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'SUBSCRIPTION',
+      matchType: 'contains',
+      entityId: 'ent-a',
+      tags: ['Alpha Sub'],
+    });
+    const forBeta = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'SUBSCRIPTION',
+      matchType: 'contains',
+      entityId: 'ent-b',
+      tags: ['Beta Sub'],
+    });
+
+    expect(forAlpha.id).not.toBe(forBeta.id);
+    expect(listTransactionTagRules(harness.db)).toHaveLength(2);
+  });
+
+  it('treats matchType as part of the upsert key — same pattern, different type, inserts a new row', () => {
+    const exact = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'FOO',
+      matchType: 'exact',
+      tags: ['x'],
+    });
+    const contains = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'FOO',
+      matchType: 'contains',
+      tags: ['x'],
+    });
+
+    expect(contains.id).not.toBe(exact.id);
+    expect(listTransactionTagRules(harness.db)).toHaveLength(2);
+  });
+});
+
+describe('incrementTransactionTagRuleUsage (#3626)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('bumps timesApplied by 1 and stamps lastUsedAt', () => {
+    const created = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'GYM',
+      matchType: 'contains',
+      tags: ['Health'],
+    });
+    expect(created.timesApplied).toBe(0);
+    expect(created.lastUsedAt).toBeNull();
+
+    incrementTransactionTagRuleUsage(harness.db, created.id);
+
+    const after = getTransactionTagRule(harness.db, created.id);
+    expect(after.timesApplied).toBe(1);
+    expect(after.lastUsedAt).not.toBeNull();
+  });
+
+  it('silently no-ops when the id does not exist', () => {
+    expect(() => incrementTransactionTagRuleUsage(harness.db, 'missing')).not.toThrow();
   });
 });
 

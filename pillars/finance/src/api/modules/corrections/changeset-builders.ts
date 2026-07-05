@@ -9,7 +9,8 @@ import type { ChangeSet } from '../../../contract/rest-corrections.js';
 
 /**
  * Confidence assigned to a rule created/refreshed via a user-approved proposal.
- * Stays above the matcher's default minConfidence (0.7) so the rule fires.
+ * Stays above `MIN_MATCH_CONFIDENCE` (see `contract/corrections-pure.ts`) so
+ * the rule fires.
  */
 export const PROPOSAL_APPROVED_CONFIDENCE = 0.95;
 

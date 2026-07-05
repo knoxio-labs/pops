@@ -3,8 +3,18 @@
  * each file under the per-file line cap. Resolves the active
  * `transaction_tag_rules` whose pattern matches a description (exact /
  * contains / regex), scoped to an optional entity.
+ *
+ * Every branch matches against the normalized description (`norm`) — the
+ * regex branch used to test the raw `description` while exact/contains
+ * tested normalized, so a digit-bearing description could match under
+ * exact/contains but silently miss under regex (CF022).
+ *
+ * Ordered `priority ASC, confidence DESC` (ties within a matchType group):
+ * lower `priority` wins first, same convention as the corrections matcher.
+ * When multiple rules contribute the same tag, `addTagRuleTags`'s dedup keeps
+ * whichever rule's attribution came first in this order.
  */
-import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm';
 
 import {
   type FinanceDb,
@@ -13,6 +23,7 @@ import {
 } from '../../../db/index.js';
 
 export interface TagRuleRow {
+  id: string;
   tags: string;
   descriptionPattern: string;
 }
@@ -31,10 +42,12 @@ export function findMatchingTagRules(
   const norm = transactionCorrectionsService.normalizeDescription(description);
   const ef = buildEntityFilter(entityId);
   const cols = {
+    id: transactionTagRules.id,
     tags: transactionTagRules.tags,
     descriptionPattern: transactionTagRules.descriptionPattern,
   };
   const base = and(eq(transactionTagRules.isActive, true), ef);
+  const order = [asc(transactionTagRules.priority), desc(transactionTagRules.confidence)];
 
   const exact = db
     .select(cols)
@@ -46,7 +59,7 @@ export function findMatchingTagRules(
         eq(transactionTagRules.descriptionPattern, norm)
       )
     )
-    .orderBy(desc(transactionTagRules.confidence))
+    .orderBy(...order)
     .all();
 
   const contains = db
@@ -59,19 +72,19 @@ export function findMatchingTagRules(
         sql`${norm} LIKE '%' || upper(${transactionTagRules.descriptionPattern}) || '%'`
       )
     )
-    .orderBy(desc(transactionTagRules.confidence))
+    .orderBy(...order)
     .all();
 
   const regexCandidates = db
     .select(cols)
     .from(transactionTagRules)
     .where(and(base, eq(transactionTagRules.matchType, 'regex')))
-    .orderBy(desc(transactionTagRules.confidence))
+    .orderBy(...order)
     .all();
 
   const regex = regexCandidates.filter((r) => {
     try {
-      return new RegExp(r.descriptionPattern, 'i').test(description);
+      return new RegExp(r.descriptionPattern, 'i').test(norm);
     } catch {
       console.warn(`[tag-rules] invalid regex pattern — skipping rule: ${r.descriptionPattern}`);
       return false;

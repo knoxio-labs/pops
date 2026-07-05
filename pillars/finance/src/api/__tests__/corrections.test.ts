@@ -61,7 +61,7 @@ describe('corrections — createOrUpdate, get & list', () => {
       entityName: 'Woolworths',
       tags: ['groceries'],
       isActive: true,
-      confidence: 0.5,
+      confidence: 0.7,
       timesApplied: 0,
     });
 
@@ -72,7 +72,7 @@ describe('corrections — createOrUpdate, get & list', () => {
       tags: ['groceries'],
     });
     expect(reinforced.data.id).toBe(created.data.id);
-    expect(reinforced.data.confidence).toBeCloseTo(0.6, 5);
+    expect(reinforced.data.confidence).toBeCloseTo(0.8, 5);
     expect(reinforced.data.timesApplied).toBe(1);
 
     const list = await client().corrections.list();
@@ -99,7 +99,7 @@ describe('corrections — createOrUpdate, get & list', () => {
     expect(onlyContains.pagination.total).toBe(2);
     expect(onlyContains.data.every((c) => c.matchType === 'contains')).toBe(true);
 
-    // All three seed at confidence 0.5, so a 0.9 floor excludes everything.
+    // All three seed at confidence 0.7, so a 0.9 floor excludes everything.
     const highConfidence = await client().corrections.list({ minConfidence: 0.9 });
     expect(highConfidence.pagination.total).toBe(0);
 
@@ -146,10 +146,10 @@ describe('corrections — update, delete & adjustConfidence', () => {
 
     const bumped = await client().corrections.adjustConfidence(created.data.id, 0.2);
     expect(bumped.message).toBe('Confidence adjusted');
-    expect((await client().corrections.get(created.data.id)).data.confidence).toBeCloseTo(0.7, 5);
+    expect((await client().corrections.get(created.data.id)).data.confidence).toBeCloseTo(0.9, 5);
 
-    // 0.7 - 0.5 = 0.2 < 0.3 floor → row is deleted by the GC path.
-    await client().corrections.adjustConfidence(created.data.id, -0.5);
+    // 0.9 - 0.7 = 0.2 < 0.3 floor → row is deleted by the GC path.
+    await client().corrections.adjustConfidence(created.data.id, -0.7);
     await expect(client().corrections.get(created.data.id)).rejects.toMatchObject({ status: 404 });
   });
 });
@@ -169,7 +169,7 @@ describe('corrections — 404s on unknown ids', () => {
 
 describe('corrections — findMatch', () => {
   it('classifies a confident match, an uncertain match, and a miss', async () => {
-    // Confidence starts at 0.5 (uncertain); bumped to 0.95 → matched.
+    // Confidence starts at 0.7 (uncertain); bumped to 0.95 → matched.
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'WOOLWORTHS',
       matchType: 'contains',
@@ -182,7 +182,7 @@ describe('corrections — findMatch', () => {
     expect(uncertain.status).toBe('uncertain');
     expect(uncertain.data?.id).toBe(created.data.id);
 
-    await client().corrections.adjustConfidence(created.data.id, 0.45); // 0.5 → 0.95
+    await client().corrections.adjustConfidence(created.data.id, 0.25); // 0.7 → 0.95
     const matched = await client().corrections.findMatch({
       description: 'WOOLWORTHS METRO SYDNEY',
     });
@@ -383,6 +383,31 @@ describe('corrections — applyChangeSet', () => {
       client().corrections.applyChangeSet({ changeSet: { ops: [] } })
     ).rejects.toMatchObject({ status: 400 });
   });
+
+  it('persists priority on add, and re-persists it on a later edit (#3613 — drag-to-reorder)', async () => {
+    const seed = await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'REORDER ME', matchType: 'contains', priority: 3 },
+          },
+        ],
+      },
+    });
+    const created = seed.data[0]!;
+    expect(created.priority).toBe(3);
+
+    // Re-fetch to prove it round-trips through the DB, not just the apply response.
+    expect((await client().corrections.get(created.id)).data.priority).toBe(3);
+
+    // Drag-to-reorder: a later edit changes only priority.
+    const reordered = await client().corrections.applyChangeSet({
+      changeSet: { ops: [{ op: 'edit', id: created.id, data: { priority: 9 } }] },
+    });
+    expect(reordered.data.find((c) => c.id === created.id)?.priority).toBe(9);
+    expect((await client().corrections.get(created.id)).data.priority).toBe(9);
+  });
 });
 
 describe('corrections — previewChangeSet', () => {
@@ -567,5 +592,19 @@ describe('corrections — listMerged', () => {
     const merged = await client().corrections.listMerged();
     expect(merged.pagination.total).toBe(1);
     expect(merged.data[0]?.descriptionPattern).toBe('SOLO');
+  });
+
+  it('reflects a pending priority edit in the optimistic preview (#3613 — drag-to-reorder)', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'DRAGGABLE',
+      matchType: 'exact',
+    });
+
+    const merged = await client().corrections.listMerged({
+      pendingChangeSets: [
+        { changeSet: { ops: [{ op: 'edit', id: created.data.id, data: { priority: 7 } }] } },
+      ],
+    });
+    expect(merged.data.find((c) => c.id === created.data.id)?.priority).toBe(7);
   });
 });

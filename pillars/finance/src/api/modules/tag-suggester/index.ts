@@ -12,7 +12,11 @@
  * `FinanceDb` handle. The entity-default tags come from `entityDefaultTags`, a
  * `contactId → tags` map the caller builds from the contacts pillar.
  */
-import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
+import {
+  type FinanceDb,
+  transactionCorrectionsService,
+  transactionTagRulesService,
+} from '../../../db/index.js';
 import { findMatchingTagRules } from './tag-rule-matching.js';
 
 export type TagSuggestionSource = 'rule' | 'ai' | 'entity';
@@ -87,6 +91,7 @@ function addCorrectionTags(
 function addTagRuleTags(pass: TagPass): void {
   const { db, description, entityId, seen, result } = pass;
   for (const rule of findMatchingTagRules(db, description, entityId)) {
+    transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
     for (const tag of parseTags(rule.tags)) {
       if (seen.has(tag)) continue;
       seen.add(tag);
