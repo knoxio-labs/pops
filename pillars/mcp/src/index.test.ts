@@ -44,7 +44,20 @@ vi.mock('./tools/index.js', () => ({
 // Import schemas and server after mocks are set up
 const { ListToolsRequestSchema, CallToolRequestSchema } =
   await import('@modelcontextprotocol/sdk/types.js');
-const { createMcpServer } = await import('./index.js');
+const { createMcpServer, resolvePort, DEFAULT_MCP_PORT } = await import('./index.js');
+
+const INVENTORY_PORT = 3002;
+
+describe('resolvePort', () => {
+  it('defaults to a port that does not collide with the inventory pillar', () => {
+    expect(resolvePort({})).toBe(DEFAULT_MCP_PORT);
+    expect(resolvePort({})).not.toBe(INVENTORY_PORT);
+  });
+
+  it('honors an explicit MCP_PORT override', () => {
+    expect(resolvePort({ MCP_PORT: '4100' })).toBe(4100);
+  });
+});
 
 describe('createMcpServer — ListTools handler', () => {
   beforeEach(() => {

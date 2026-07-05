@@ -37,8 +37,8 @@ registry** at request time — nothing compiles against a static pillar list.
 
 Supporting pillars: [shell](../pillars/shell/docs/README.md) (the SPA host + nginx
 dispatcher, owns no data), [mcp](../pillars/mcp/docs/README.md) (HTTP MCP gateway —
-binds `3002` via `MCP_PORT`, overlapping inventory's external port; it dispatches
-to pillars over REST and owns no DB), and `moltbot` (Telegram surface).
+binds `3011` via `MCP_PORT`; it dispatches to pillars over REST and owns no DB), and
+`moltbot` (Telegram surface).
 
 ## In progress / partial
 

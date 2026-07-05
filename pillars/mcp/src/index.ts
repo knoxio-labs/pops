@@ -102,9 +102,17 @@ app.get('/ready', (_req, res) => {
   });
 });
 
+// Default kept distinct from every other pillar's port (see AGENTS.md's
+// pillar/port table) — it used to default to 3002, colliding with inventory.
+export const DEFAULT_MCP_PORT = 3011;
+
+export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
+  return Number(env['MCP_PORT'] ?? DEFAULT_MCP_PORT);
+}
+
 // Only start listening when run directly (not in tests)
 if (process.env['NODE_ENV'] !== 'test') {
-  const port = Number(process.env['MCP_PORT'] ?? 3002);
+  const port = resolvePort();
   app.listen(port, '0.0.0.0', () => {
     console.warn(`[pops-mcp] HTTP MCP server on port ${port} (${allTools.length} tools)`);
   });

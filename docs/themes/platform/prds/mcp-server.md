@@ -15,14 +15,14 @@ This PRD owns the gateway plumbing — transport, request lifecycle, discovery/a
 ## Motivation
 
 - **AI clients need structured access to POPS data.** Without MCP, an agent has to call each pillar's REST contract directly — learning every route, holding a service-account key, and reimplementing discovery. The gateway collapses that into one tool catalogue.
-- **Gated network exposure.** The server listens on `${MCP_BIND_ADDR:-0.0.0.0}:3002`, published on the host and reachable on the local network / optionally via Cloudflare Tunnel. The access control is the `MCP_INBOUND_TOKEN` bearer check, not network placement — clients (iPad, MacBook, Claude Desktop) authenticate with it on every `POST /mcp`. (Moving the gateway behind the shell nginx proxy is a follow-up, gated on that proxy becoming registry-driven.)
+- **Gated network exposure.** The server listens on `${MCP_BIND_ADDR:-0.0.0.0}:3011`, published on the host and reachable on the local network / optionally via Cloudflare Tunnel. The access control is the `MCP_INBOUND_TOKEN` bearer check, not network placement — clients (iPad, MacBook, Claude Desktop) authenticate with it on every `POST /mcp`. (Moving the gateway behind the shell nginx proxy is a follow-up, gated on that proxy becoming registry-driven.)
 - **Clean separation.** The gateway is an adapter layer: it maps MCP requests to pillar SDK calls and formats results for LLM consumption. All business logic stays in the pillars.
 
 ## Architecture
 
 ```text
 AI client (Claude Desktop / Claude Code / any MCP client)
-    │  POST /mcp  (MCP Streamable HTTP, port 3002)
+    │  POST /mcp  (MCP Streamable HTTP, port 3011)
     ▼
 @pops/mcp  (gateway — owns no DB)
     │  REST via @pops/pillar-sdk pillar()  (service-account key, per-pillar URLs)
@@ -33,7 +33,7 @@ pillar APIs:  inventory · finance · contacts · media · cerebrum
 registry pillar (:3001) — discovery fallback when an internal hostname isn't pinned
 ```
 
-The gateway joins the `backend` Docker network and publishes port `${MCP_BIND_ADDR:-0.0.0.0}:3002:3002` on the host (reachable on the LAN / optionally via Cloudflare Tunnel). Inbound `POST /mcp` requires the `MCP_INBOUND_TOKEN` bearer secret — that check, not network placement, is the access control. (The port stays published because the shell nginx has no `/mcp` route yet; routing MCP through it is a follow-up gated on the registry-driven proxy.) The gateway is a pure **consumer** of pillars and the registry: it does not self-register, does not export a `./manifest`, and advertises no contract of its own.
+The gateway joins the `backend` Docker network and publishes port `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011` on the host (reachable on the LAN / optionally via Cloudflare Tunnel). Inbound `POST /mcp` requires the `MCP_INBOUND_TOKEN` bearer secret — that check, not network placement, is the access control. (The port stays published because the shell nginx has no `/mcp` route yet; routing MCP through it is a follow-up gated on the registry-driven proxy.) The gateway is a pure **consumer** of pillars and the registry: it does not self-register, does not export a `./manifest`, and advertises no contract of its own.
 
 ### Pillar access and discovery
 
@@ -114,7 +114,7 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 | `POPS_INTERNAL_API_KEY`  | —                           | Service-account key the SDK uses to authenticate to pillars                  |
 | `POPS_API_KEY`           | —                           | Legacy fallback for the service-account key                                  |
 | `POPS_API_KEY_FILE`      | —                           | Path to a key file (Docker-secret pattern); read into the key var at startup |
-| `MCP_PORT`               | `3002`                      | Port the HTTP server listens on (bound `0.0.0.0`)                            |
+| `MCP_PORT`               | `3011`                      | Port the HTTP server listens on (bound `0.0.0.0`)                            |
 | `MCP_BIND_ADDR`          | `0.0.0.0`                   | Host bind address for the published compose port                             |
 | `POPS_REGISTRY_URL`      | —                           | Registry pillar URL for discovery fallback                                   |
 | `POPS_INVENTORY_API_URL` | `http://inventory-api:3003` | Pinned Docker-network base URL for the inventory pillar                      |
@@ -126,8 +126,8 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 
 ## Packaging & deployment
 
-- **Container.** Multi-stage `pillars/mcp/Dockerfile` (pnpm workspace). The builder installs the `@pops/mcp...` filter, builds `@pops/pillar-sdk` then `@pops/mcp`, and produces a standalone `pnpm deploy --prod` tree. The runtime image is `node:22-slim`, runs as the non-root `node` user, exposes `3002`, and ships only compiled output plus production deps.
-- **Compose (opt-in via `mcp` profile).** Both `infra/docker-compose.dev.yml` (builds from source) and `infra/docker-compose.yml` (pulls `ghcr.io/knoxio/pops-mcp`) define `pops-mcp` under `profiles: [mcp]`, on the `backend` network, with the `pops_api_key` secret mounted to `POPS_API_KEY_FILE`, port `${MCP_BIND_ADDR:-0.0.0.0}:3002:3002`, `depends_on: registry-api (healthy)`, and a `/health` Docker healthcheck. The prod entry carries `com.centurylinklabs.watchtower.enable: 'true'` for auto-rollout.
+- **Container.** Multi-stage `pillars/mcp/Dockerfile` (pnpm workspace). The builder installs the `@pops/mcp...` filter, builds `@pops/pillar-sdk` then `@pops/mcp`, and produces a standalone `pnpm deploy --prod` tree. The runtime image is `node:22-slim`, runs as the non-root `node` user, exposes `3011`, and ships only compiled output plus production deps.
+- **Compose (opt-in via `mcp` profile).** Both `infra/docker-compose.dev.yml` (builds from source) and `infra/docker-compose.yml` (pulls `ghcr.io/knoxio/pops-mcp`) define `pops-mcp` under `profiles: [mcp]`, on the `backend` network, with the `pops_api_key` secret mounted to `POPS_API_KEY_FILE`, port `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011`, `depends_on: registry-api (started)`, and a `/health` Docker healthcheck. The prod entry carries `com.centurylinklabs.watchtower.enable: 'true'` for auto-rollout.
 - **Local dev.** `mise dev` (in `pillars/mcp`) runs `tsx watch src/index.ts`; the gateway needs a service-account key and the target pillars reachable.
 
 ## CI publish
@@ -145,7 +145,7 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 
 ### Transport & lifecycle
 
-- [x] Server starts on `MCP_PORT` (default `3002`), bound `0.0.0.0`, and responds to requests.
+- [x] Server starts on `MCP_PORT` (default `3011`), bound `0.0.0.0`, and responds to requests.
 - [x] `POST /mcp` accepts MCP JSON-RPC and returns MCP JSON-RPC responses.
 - [x] Stateless transport (`sessionIdGenerator: undefined`) — a fresh `Server` + transport per request, torn down on response close; no session state retained.
 - [x] Server cleanup on response close routes `server.close()` rejections through `.catch` (sync listener never trips `unhandledRejection`); the path is unit-tested.
@@ -193,7 +193,7 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 ### Packaging & CI
 
 - [x] Multi-stage Dockerfile: builder resolves/builds `@pops/pillar-sdk` then `@pops/mcp`; runtime image carries only compiled output + production deps and runs as the non-root `node` user.
-- [x] Prod compose defines `pops-mcp` under `profiles: [mcp]` on the `backend` network with the `pops_api_key` secret, host-published port `${MCP_BIND_ADDR:-0.0.0.0}:3002:3002` gated by the `MCP_INBOUND_TOKEN` bearer check, `depends_on: registry-api (healthy)`, and a `/health` healthcheck; it pulls from GHCR with the Watchtower label.
+- [x] Prod compose defines `pops-mcp` under `profiles: [mcp]` on the `backend` network with the `pops_api_key` secret, host-published port `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011` gated by the `MCP_INBOUND_TOKEN` bearer check, `depends_on: registry-api (started)`, and a `/health` healthcheck; it pulls from GHCR with the Watchtower label.
 - [x] `publish-images.yml` builds + pushes `pops-mcp` with `main`, `sha-<short>`, and semver tags; `docker-build.yml` validates the Dockerfile on every PR.
 
 ## Non-goals

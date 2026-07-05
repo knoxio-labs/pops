@@ -216,7 +216,7 @@ pillars/                   # One pillar per folder — owns SQLite DB, ts-rest c
 ├── contacts/              # Rust pillar (:3010, axum + OpenAPI)
 ├── orchestrator/          # Federated search + AI-tool registry (GET /ai/tools), owns no DB
 ├── shell/                 # UI pillar: React SPA host (Vite + nginx reverse proxy), lazy-loads each pillar's app/
-├── mcp/                   # MCP gateway (binds :3002 in code via MCP_PORT)
+├── mcp/                   # MCP gateway (binds :3011 in code via MCP_PORT)
 ├── docs/                  # OpenAPI docs browser
 └── moltbot/               # Telegram bot config + skills (no Dockerfile, uses upstream image)
 
