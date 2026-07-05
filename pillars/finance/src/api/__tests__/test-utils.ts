@@ -368,8 +368,6 @@ export function makeClient(app: Express) {
     imports: {
       processImport: (body: Record<string, unknown>) =>
         send<{ sessionId: string }>(r.post('/imports/process').send(body)),
-      executeImport: (body: Record<string, unknown>) =>
-        send<{ sessionId: string }>(r.post('/imports/execute').send(body)),
       getImportProgress: (sessionId: string) =>
         send<ImportProgress | null>(r.get('/imports/progress').query({ sessionId })),
       createEntity: (body: { name: string }) =>

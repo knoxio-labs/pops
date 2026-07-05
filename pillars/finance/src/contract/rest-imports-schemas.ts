@@ -101,26 +101,9 @@ export const ProcessImportOutputSchema = z.object({
   aiUsage: AiUsageStatsSchema.optional(),
 });
 
-export const ImportResultSchema = z.object({
-  transaction: ConfirmedTransactionSchema,
-  success: z.boolean(),
-  error: z.string().optional(),
-  pageId: z.string().optional(),
-});
-
-export const ExecuteImportOutputSchema = z.object({
-  imported: z.number(),
-  failed: z.array(ImportResultSchema),
-  skipped: z.number(),
-});
-
 export const ProcessImportInputSchema = z.object({
   transactions: z.array(ParsedTransactionSchema),
   account: z.string().min(1),
-});
-
-export const ExecuteImportInputSchema = z.object({
-  transactions: z.array(ConfirmedTransactionSchema),
 });
 
 export const CreateEntityInputSchema = z.object({ name: z.string().min(1).max(200) });
@@ -198,7 +181,7 @@ export const ImportProgressSchema = z.object({
   currentBatch: z.array(ProgressBatchItemSchema),
   errors: z.array(z.object({ description: z.string(), error: z.string() })),
   startedAt: z.string(),
-  result: z.union([ProcessImportOutputSchema, ExecuteImportOutputSchema]).optional(),
+  result: ProcessImportOutputSchema.optional(),
 });
 
 export type ParsedTransaction = z.infer<typeof ParsedTransactionSchema>;
@@ -212,8 +195,6 @@ export type ConfirmedTransaction = z.infer<typeof ConfirmedTransactionSchema>;
 export type ImportWarning = z.infer<typeof ImportWarningSchema>;
 export type AiUsageStats = z.infer<typeof AiUsageStatsSchema>;
 export type ProcessImportOutput = z.infer<typeof ProcessImportOutputSchema>;
-export type ImportResult = z.infer<typeof ImportResultSchema>;
-export type ExecuteImportOutput = z.infer<typeof ExecuteImportOutputSchema>;
 export type CreateEntityOutput = z.infer<typeof CreateEntityOutputSchema>;
 export type PendingEntity = z.infer<typeof PendingEntitySchema>;
 export type CommitPayload = z.infer<typeof CommitPayloadSchema>;

@@ -7937,196 +7937,6 @@
         "tags": ["imports"]
       }
     },
-    "/imports/execute": {
-      "post": {
-        "operationId": "imports.executeImport",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "transactions": {
-                    "items": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "account": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
-                        "amount": {
-                          "type": "number"
-                        },
-                        "checksum": {
-                          "type": "string"
-                        },
-                        "date": {
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                          "type": "string"
-                        },
-                        "description": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
-                        "entityId": {
-                          "type": "string"
-                        },
-                        "entityName": {
-                          "type": "string"
-                        },
-                        "location": {
-                          "type": "string"
-                        },
-                        "rawRow": {
-                          "type": "string"
-                        },
-                        "suggestedTags": {
-                          "items": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "isNew": {
-                                "type": "boolean"
-                              },
-                              "pattern": {
-                                "type": "string"
-                              },
-                              "source": {
-                                "enum": ["ai", "rule", "entity"],
-                                "type": "string"
-                              },
-                              "tag": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["tag", "source"],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "tags": {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        },
-                        "transactionType": {
-                          "enum": ["purchase", "transfer", "income"],
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "date",
-                        "description",
-                        "amount",
-                        "account",
-                        "rawRow",
-                        "checksum"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
-                  }
-                },
-                "required": ["transactions"],
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "sessionId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["sessionId"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Write confirmed transactions to SQLite; returns a session id to poll",
-        "tags": ["imports"]
-      }
-    },
     "/imports/process": {
       "post": {
         "operationId": "imports.processImport",
@@ -8349,935 +8159,822 @@
                       "type": "number"
                     },
                     "result": {
-                      "anyOf": [
-                        {
+                      "additionalProperties": false,
+                      "properties": {
+                        "aiUsage": {
                           "additionalProperties": false,
                           "properties": {
-                            "aiUsage": {
-                              "additionalProperties": false,
-                              "properties": {
-                                "apiCalls": {
-                                  "type": "number"
-                                },
-                                "avgCostPerCall": {
-                                  "type": "number"
-                                },
-                                "cacheHits": {
-                                  "type": "number"
-                                },
-                                "totalCostUsd": {
-                                  "type": "number"
-                                },
-                                "totalInputTokens": {
-                                  "type": "number"
-                                },
-                                "totalOutputTokens": {
-                                  "type": "number"
-                                }
-                              },
-                              "required": [
-                                "apiCalls",
-                                "cacheHits",
-                                "totalInputTokens",
-                                "totalOutputTokens",
-                                "totalCostUsd",
-                                "avgCostPerCall"
-                              ],
-                              "type": "object"
+                            "apiCalls": {
+                              "type": "number"
                             },
-                            "failed": {
-                              "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "account": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "amount": {
-                                    "type": "number"
-                                  },
-                                  "checksum": {
-                                    "type": "string"
-                                  },
-                                  "date": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                                    "type": "string"
-                                  },
-                                  "description": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "entity": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "entityId": {
-                                        "type": "string"
-                                      },
-                                      "entityName": {
-                                        "type": "string"
-                                      },
-                                      "matchType": {
-                                        "enum": [
-                                          "alias",
-                                          "exact",
-                                          "prefix",
-                                          "contains",
-                                          "ai",
-                                          "learned",
-                                          "manual",
-                                          "none"
-                                        ],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": ["matchType"],
-                                    "type": "object"
-                                  },
-                                  "error": {
-                                    "type": "string"
-                                  },
-                                  "location": {
-                                    "type": "string"
-                                  },
-                                  "matchedRules": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "confidence": {
-                                          "maximum": 1,
-                                          "minimum": 0,
-                                          "type": "number"
-                                        },
-                                        "entityId": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "entityName": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "matchType": {
-                                          "enum": ["exact", "contains", "regex"],
-                                          "type": "string"
-                                        },
-                                        "pattern": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        },
-                                        "priority": {
-                                          "type": "number"
-                                        },
-                                        "ruleId": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": [
-                                        "ruleId",
-                                        "pattern",
-                                        "matchType",
-                                        "confidence",
-                                        "priority"
-                                      ],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "rawRow": {
-                                    "type": "string"
-                                  },
-                                  "ruleProvenance": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "matchType": {
-                                        "enum": ["exact", "contains", "regex"],
-                                        "type": "string"
-                                      },
-                                      "pattern": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "ruleId": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "source": {
-                                        "enum": ["correction"],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "source",
-                                      "ruleId",
-                                      "pattern",
-                                      "matchType",
-                                      "confidence"
-                                    ],
-                                    "type": "object"
-                                  },
-                                  "skipReason": {
-                                    "type": "string"
-                                  },
-                                  "status": {
-                                    "enum": ["matched", "uncertain", "failed", "skipped"],
-                                    "type": "string"
-                                  },
-                                  "suggestedTags": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "isNew": {
-                                          "type": "boolean"
-                                        },
-                                        "pattern": {
-                                          "type": "string"
-                                        },
-                                        "source": {
-                                          "enum": ["ai", "rule", "entity"],
-                                          "type": "string"
-                                        },
-                                        "tag": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": ["tag", "source"],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "transactionType": {
-                                    "enum": ["purchase", "transfer", "income"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "date",
-                                  "description",
-                                  "amount",
-                                  "account",
-                                  "rawRow",
-                                  "checksum",
-                                  "entity",
-                                  "status"
-                                ],
-                                "type": "object"
-                              },
-                              "type": "array"
+                            "avgCostPerCall": {
+                              "type": "number"
                             },
-                            "matched": {
-                              "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "account": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "amount": {
-                                    "type": "number"
-                                  },
-                                  "checksum": {
-                                    "type": "string"
-                                  },
-                                  "date": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                                    "type": "string"
-                                  },
-                                  "description": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "entity": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "entityId": {
-                                        "type": "string"
-                                      },
-                                      "entityName": {
-                                        "type": "string"
-                                      },
-                                      "matchType": {
-                                        "enum": [
-                                          "alias",
-                                          "exact",
-                                          "prefix",
-                                          "contains",
-                                          "ai",
-                                          "learned",
-                                          "manual",
-                                          "none"
-                                        ],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": ["matchType"],
-                                    "type": "object"
-                                  },
-                                  "error": {
-                                    "type": "string"
-                                  },
-                                  "location": {
-                                    "type": "string"
-                                  },
-                                  "matchedRules": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "confidence": {
-                                          "maximum": 1,
-                                          "minimum": 0,
-                                          "type": "number"
-                                        },
-                                        "entityId": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "entityName": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "matchType": {
-                                          "enum": ["exact", "contains", "regex"],
-                                          "type": "string"
-                                        },
-                                        "pattern": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        },
-                                        "priority": {
-                                          "type": "number"
-                                        },
-                                        "ruleId": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": [
-                                        "ruleId",
-                                        "pattern",
-                                        "matchType",
-                                        "confidence",
-                                        "priority"
-                                      ],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "rawRow": {
-                                    "type": "string"
-                                  },
-                                  "ruleProvenance": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "matchType": {
-                                        "enum": ["exact", "contains", "regex"],
-                                        "type": "string"
-                                      },
-                                      "pattern": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "ruleId": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "source": {
-                                        "enum": ["correction"],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "source",
-                                      "ruleId",
-                                      "pattern",
-                                      "matchType",
-                                      "confidence"
-                                    ],
-                                    "type": "object"
-                                  },
-                                  "skipReason": {
-                                    "type": "string"
-                                  },
-                                  "status": {
-                                    "enum": ["matched", "uncertain", "failed", "skipped"],
-                                    "type": "string"
-                                  },
-                                  "suggestedTags": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "isNew": {
-                                          "type": "boolean"
-                                        },
-                                        "pattern": {
-                                          "type": "string"
-                                        },
-                                        "source": {
-                                          "enum": ["ai", "rule", "entity"],
-                                          "type": "string"
-                                        },
-                                        "tag": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": ["tag", "source"],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "transactionType": {
-                                    "enum": ["purchase", "transfer", "income"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "date",
-                                  "description",
-                                  "amount",
-                                  "account",
-                                  "rawRow",
-                                  "checksum",
-                                  "entity",
-                                  "status"
-                                ],
-                                "type": "object"
-                              },
-                              "type": "array"
+                            "cacheHits": {
+                              "type": "number"
                             },
-                            "skipped": {
-                              "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "account": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "amount": {
-                                    "type": "number"
-                                  },
-                                  "checksum": {
-                                    "type": "string"
-                                  },
-                                  "date": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                                    "type": "string"
-                                  },
-                                  "description": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "entity": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "entityId": {
-                                        "type": "string"
-                                      },
-                                      "entityName": {
-                                        "type": "string"
-                                      },
-                                      "matchType": {
-                                        "enum": [
-                                          "alias",
-                                          "exact",
-                                          "prefix",
-                                          "contains",
-                                          "ai",
-                                          "learned",
-                                          "manual",
-                                          "none"
-                                        ],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": ["matchType"],
-                                    "type": "object"
-                                  },
-                                  "error": {
-                                    "type": "string"
-                                  },
-                                  "location": {
-                                    "type": "string"
-                                  },
-                                  "matchedRules": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "confidence": {
-                                          "maximum": 1,
-                                          "minimum": 0,
-                                          "type": "number"
-                                        },
-                                        "entityId": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "entityName": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "matchType": {
-                                          "enum": ["exact", "contains", "regex"],
-                                          "type": "string"
-                                        },
-                                        "pattern": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        },
-                                        "priority": {
-                                          "type": "number"
-                                        },
-                                        "ruleId": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": [
-                                        "ruleId",
-                                        "pattern",
-                                        "matchType",
-                                        "confidence",
-                                        "priority"
-                                      ],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "rawRow": {
-                                    "type": "string"
-                                  },
-                                  "ruleProvenance": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "matchType": {
-                                        "enum": ["exact", "contains", "regex"],
-                                        "type": "string"
-                                      },
-                                      "pattern": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "ruleId": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "source": {
-                                        "enum": ["correction"],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "source",
-                                      "ruleId",
-                                      "pattern",
-                                      "matchType",
-                                      "confidence"
-                                    ],
-                                    "type": "object"
-                                  },
-                                  "skipReason": {
-                                    "type": "string"
-                                  },
-                                  "status": {
-                                    "enum": ["matched", "uncertain", "failed", "skipped"],
-                                    "type": "string"
-                                  },
-                                  "suggestedTags": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "isNew": {
-                                          "type": "boolean"
-                                        },
-                                        "pattern": {
-                                          "type": "string"
-                                        },
-                                        "source": {
-                                          "enum": ["ai", "rule", "entity"],
-                                          "type": "string"
-                                        },
-                                        "tag": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": ["tag", "source"],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "transactionType": {
-                                    "enum": ["purchase", "transfer", "income"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "date",
-                                  "description",
-                                  "amount",
-                                  "account",
-                                  "rawRow",
-                                  "checksum",
-                                  "entity",
-                                  "status"
-                                ],
-                                "type": "object"
-                              },
-                              "type": "array"
+                            "totalCostUsd": {
+                              "type": "number"
                             },
-                            "uncertain": {
-                              "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "account": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "amount": {
-                                    "type": "number"
-                                  },
-                                  "checksum": {
-                                    "type": "string"
-                                  },
-                                  "date": {
-                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                                    "type": "string"
-                                  },
-                                  "description": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "entity": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "entityId": {
-                                        "type": "string"
-                                      },
-                                      "entityName": {
-                                        "type": "string"
-                                      },
-                                      "matchType": {
-                                        "enum": [
-                                          "alias",
-                                          "exact",
-                                          "prefix",
-                                          "contains",
-                                          "ai",
-                                          "learned",
-                                          "manual",
-                                          "none"
-                                        ],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": ["matchType"],
-                                    "type": "object"
-                                  },
-                                  "error": {
-                                    "type": "string"
-                                  },
-                                  "location": {
-                                    "type": "string"
-                                  },
-                                  "matchedRules": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "confidence": {
-                                          "maximum": 1,
-                                          "minimum": 0,
-                                          "type": "number"
-                                        },
-                                        "entityId": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "entityName": {
-                                          "nullable": true,
-                                          "type": "string"
-                                        },
-                                        "matchType": {
-                                          "enum": ["exact", "contains", "regex"],
-                                          "type": "string"
-                                        },
-                                        "pattern": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        },
-                                        "priority": {
-                                          "type": "number"
-                                        },
-                                        "ruleId": {
-                                          "minLength": 1,
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": [
-                                        "ruleId",
-                                        "pattern",
-                                        "matchType",
-                                        "confidence",
-                                        "priority"
-                                      ],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "rawRow": {
-                                    "type": "string"
-                                  },
-                                  "ruleProvenance": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "confidence": {
-                                        "maximum": 1,
-                                        "minimum": 0,
-                                        "type": "number"
-                                      },
-                                      "matchType": {
-                                        "enum": ["exact", "contains", "regex"],
-                                        "type": "string"
-                                      },
-                                      "pattern": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "ruleId": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "source": {
-                                        "enum": ["correction"],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "source",
-                                      "ruleId",
-                                      "pattern",
-                                      "matchType",
-                                      "confidence"
-                                    ],
-                                    "type": "object"
-                                  },
-                                  "skipReason": {
-                                    "type": "string"
-                                  },
-                                  "status": {
-                                    "enum": ["matched", "uncertain", "failed", "skipped"],
-                                    "type": "string"
-                                  },
-                                  "suggestedTags": {
-                                    "items": {
-                                      "additionalProperties": false,
-                                      "properties": {
-                                        "isNew": {
-                                          "type": "boolean"
-                                        },
-                                        "pattern": {
-                                          "type": "string"
-                                        },
-                                        "source": {
-                                          "enum": ["ai", "rule", "entity"],
-                                          "type": "string"
-                                        },
-                                        "tag": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": ["tag", "source"],
-                                      "type": "object"
-                                    },
-                                    "type": "array"
-                                  },
-                                  "transactionType": {
-                                    "enum": ["purchase", "transfer", "income"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "date",
-                                  "description",
-                                  "amount",
-                                  "account",
-                                  "rawRow",
-                                  "checksum",
-                                  "entity",
-                                  "status"
-                                ],
-                                "type": "object"
-                              },
-                              "type": "array"
+                            "totalInputTokens": {
+                              "type": "number"
                             },
-                            "warnings": {
-                              "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "affectedCount": {
-                                    "type": "number"
-                                  },
-                                  "details": {
-                                    "type": "string"
-                                  },
-                                  "message": {
-                                    "type": "string"
-                                  },
-                                  "type": {
-                                    "enum": ["AI_CATEGORIZATION_UNAVAILABLE", "AI_API_ERROR"],
-                                    "type": "string"
-                                  }
-                                },
-                                "required": ["type", "message"],
-                                "type": "object"
-                              },
-                              "type": "array"
+                            "totalOutputTokens": {
+                              "type": "number"
                             }
                           },
-                          "required": ["matched", "uncertain", "failed", "skipped"],
+                          "required": [
+                            "apiCalls",
+                            "cacheHits",
+                            "totalInputTokens",
+                            "totalOutputTokens",
+                            "totalCostUsd",
+                            "avgCostPerCall"
+                          ],
                           "type": "object"
                         },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "failed": {
-                              "items": {
+                        "failed": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "account": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "checksum": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                              },
+                              "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "entity": {
                                 "additionalProperties": false,
                                 "properties": {
-                                  "error": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "entityId": {
                                     "type": "string"
                                   },
-                                  "pageId": {
+                                  "entityName": {
                                     "type": "string"
                                   },
-                                  "success": {
-                                    "type": "boolean"
-                                  },
-                                  "transaction": {
-                                    "additionalProperties": false,
-                                    "properties": {
-                                      "account": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "amount": {
-                                        "type": "number"
-                                      },
-                                      "checksum": {
-                                        "type": "string"
-                                      },
-                                      "date": {
-                                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                                        "type": "string"
-                                      },
-                                      "description": {
-                                        "minLength": 1,
-                                        "type": "string"
-                                      },
-                                      "entityId": {
-                                        "type": "string"
-                                      },
-                                      "entityName": {
-                                        "type": "string"
-                                      },
-                                      "location": {
-                                        "type": "string"
-                                      },
-                                      "rawRow": {
-                                        "type": "string"
-                                      },
-                                      "suggestedTags": {
-                                        "items": {
-                                          "additionalProperties": false,
-                                          "properties": {
-                                            "isNew": {
-                                              "type": "boolean"
-                                            },
-                                            "pattern": {
-                                              "type": "string"
-                                            },
-                                            "source": {
-                                              "enum": ["ai", "rule", "entity"],
-                                              "type": "string"
-                                            },
-                                            "tag": {
-                                              "type": "string"
-                                            }
-                                          },
-                                          "required": ["tag", "source"],
-                                          "type": "object"
-                                        },
-                                        "type": "array"
-                                      },
-                                      "tags": {
-                                        "items": {
-                                          "type": "string"
-                                        },
-                                        "type": "array"
-                                      },
-                                      "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "date",
-                                      "description",
-                                      "amount",
-                                      "account",
-                                      "rawRow",
-                                      "checksum"
+                                  "matchType": {
+                                    "enum": [
+                                      "alias",
+                                      "exact",
+                                      "prefix",
+                                      "contains",
+                                      "ai",
+                                      "learned",
+                                      "manual",
+                                      "none"
                                     ],
-                                    "type": "object"
+                                    "type": "string"
                                   }
                                 },
-                                "required": ["transaction", "success"],
+                                "required": ["matchType"],
                                 "type": "object"
                               },
-                              "type": "array"
+                              "error": {
+                                "type": "string"
+                              },
+                              "location": {
+                                "type": "string"
+                              },
+                              "matchedRules": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
+                                    "entityId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "entityName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "matchType": {
+                                      "enum": ["exact", "contains", "regex"],
+                                      "type": "string"
+                                    },
+                                    "pattern": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "priority": {
+                                      "type": "number"
+                                    },
+                                    "ruleId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "ruleId",
+                                    "pattern",
+                                    "matchType",
+                                    "confidence",
+                                    "priority"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "rawRow": {
+                                "type": "string"
+                              },
+                              "ruleProvenance": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "matchType": {
+                                    "enum": ["exact", "contains", "regex"],
+                                    "type": "string"
+                                  },
+                                  "pattern": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "ruleId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": ["correction"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "source",
+                                  "ruleId",
+                                  "pattern",
+                                  "matchType",
+                                  "confidence"
+                                ],
+                                "type": "object"
+                              },
+                              "skipReason": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["matched", "uncertain", "failed", "skipped"],
+                                "type": "string"
+                              },
+                              "suggestedTags": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "isNew": {
+                                      "type": "boolean"
+                                    },
+                                    "pattern": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["ai", "rule", "entity"],
+                                      "type": "string"
+                                    },
+                                    "tag": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["tag", "source"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "transactionType": {
+                                "enum": ["purchase", "transfer", "income"],
+                                "type": "string"
+                              }
                             },
-                            "imported": {
-                              "type": "number"
-                            },
-                            "skipped": {
-                              "type": "number"
-                            }
+                            "required": [
+                              "date",
+                              "description",
+                              "amount",
+                              "account",
+                              "rawRow",
+                              "checksum",
+                              "entity",
+                              "status"
+                            ],
+                            "type": "object"
                           },
-                          "required": ["imported", "failed", "skipped"],
-                          "type": "object"
+                          "type": "array"
+                        },
+                        "matched": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "account": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "checksum": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                              },
+                              "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "entity": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "entityId": {
+                                    "type": "string"
+                                  },
+                                  "entityName": {
+                                    "type": "string"
+                                  },
+                                  "matchType": {
+                                    "enum": [
+                                      "alias",
+                                      "exact",
+                                      "prefix",
+                                      "contains",
+                                      "ai",
+                                      "learned",
+                                      "manual",
+                                      "none"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["matchType"],
+                                "type": "object"
+                              },
+                              "error": {
+                                "type": "string"
+                              },
+                              "location": {
+                                "type": "string"
+                              },
+                              "matchedRules": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
+                                    "entityId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "entityName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "matchType": {
+                                      "enum": ["exact", "contains", "regex"],
+                                      "type": "string"
+                                    },
+                                    "pattern": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "priority": {
+                                      "type": "number"
+                                    },
+                                    "ruleId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "ruleId",
+                                    "pattern",
+                                    "matchType",
+                                    "confidence",
+                                    "priority"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "rawRow": {
+                                "type": "string"
+                              },
+                              "ruleProvenance": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "matchType": {
+                                    "enum": ["exact", "contains", "regex"],
+                                    "type": "string"
+                                  },
+                                  "pattern": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "ruleId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": ["correction"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "source",
+                                  "ruleId",
+                                  "pattern",
+                                  "matchType",
+                                  "confidence"
+                                ],
+                                "type": "object"
+                              },
+                              "skipReason": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["matched", "uncertain", "failed", "skipped"],
+                                "type": "string"
+                              },
+                              "suggestedTags": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "isNew": {
+                                      "type": "boolean"
+                                    },
+                                    "pattern": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["ai", "rule", "entity"],
+                                      "type": "string"
+                                    },
+                                    "tag": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["tag", "source"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "transactionType": {
+                                "enum": ["purchase", "transfer", "income"],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "description",
+                              "amount",
+                              "account",
+                              "rawRow",
+                              "checksum",
+                              "entity",
+                              "status"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "skipped": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "account": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "checksum": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                              },
+                              "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "entity": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "entityId": {
+                                    "type": "string"
+                                  },
+                                  "entityName": {
+                                    "type": "string"
+                                  },
+                                  "matchType": {
+                                    "enum": [
+                                      "alias",
+                                      "exact",
+                                      "prefix",
+                                      "contains",
+                                      "ai",
+                                      "learned",
+                                      "manual",
+                                      "none"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["matchType"],
+                                "type": "object"
+                              },
+                              "error": {
+                                "type": "string"
+                              },
+                              "location": {
+                                "type": "string"
+                              },
+                              "matchedRules": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
+                                    "entityId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "entityName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "matchType": {
+                                      "enum": ["exact", "contains", "regex"],
+                                      "type": "string"
+                                    },
+                                    "pattern": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "priority": {
+                                      "type": "number"
+                                    },
+                                    "ruleId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "ruleId",
+                                    "pattern",
+                                    "matchType",
+                                    "confidence",
+                                    "priority"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "rawRow": {
+                                "type": "string"
+                              },
+                              "ruleProvenance": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "matchType": {
+                                    "enum": ["exact", "contains", "regex"],
+                                    "type": "string"
+                                  },
+                                  "pattern": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "ruleId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": ["correction"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "source",
+                                  "ruleId",
+                                  "pattern",
+                                  "matchType",
+                                  "confidence"
+                                ],
+                                "type": "object"
+                              },
+                              "skipReason": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["matched", "uncertain", "failed", "skipped"],
+                                "type": "string"
+                              },
+                              "suggestedTags": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "isNew": {
+                                      "type": "boolean"
+                                    },
+                                    "pattern": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["ai", "rule", "entity"],
+                                      "type": "string"
+                                    },
+                                    "tag": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["tag", "source"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "transactionType": {
+                                "enum": ["purchase", "transfer", "income"],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "description",
+                              "amount",
+                              "account",
+                              "rawRow",
+                              "checksum",
+                              "entity",
+                              "status"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "uncertain": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "account": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "checksum": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                              },
+                              "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "entity": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "entityId": {
+                                    "type": "string"
+                                  },
+                                  "entityName": {
+                                    "type": "string"
+                                  },
+                                  "matchType": {
+                                    "enum": [
+                                      "alias",
+                                      "exact",
+                                      "prefix",
+                                      "contains",
+                                      "ai",
+                                      "learned",
+                                      "manual",
+                                      "none"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["matchType"],
+                                "type": "object"
+                              },
+                              "error": {
+                                "type": "string"
+                              },
+                              "location": {
+                                "type": "string"
+                              },
+                              "matchedRules": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
+                                    "entityId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "entityName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "matchType": {
+                                      "enum": ["exact", "contains", "regex"],
+                                      "type": "string"
+                                    },
+                                    "pattern": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "priority": {
+                                      "type": "number"
+                                    },
+                                    "ruleId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "ruleId",
+                                    "pattern",
+                                    "matchType",
+                                    "confidence",
+                                    "priority"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "rawRow": {
+                                "type": "string"
+                              },
+                              "ruleProvenance": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "matchType": {
+                                    "enum": ["exact", "contains", "regex"],
+                                    "type": "string"
+                                  },
+                                  "pattern": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "ruleId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": ["correction"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "source",
+                                  "ruleId",
+                                  "pattern",
+                                  "matchType",
+                                  "confidence"
+                                ],
+                                "type": "object"
+                              },
+                              "skipReason": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["matched", "uncertain", "failed", "skipped"],
+                                "type": "string"
+                              },
+                              "suggestedTags": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "isNew": {
+                                      "type": "boolean"
+                                    },
+                                    "pattern": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["ai", "rule", "entity"],
+                                      "type": "string"
+                                    },
+                                    "tag": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["tag", "source"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "transactionType": {
+                                "enum": ["purchase", "transfer", "income"],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "description",
+                              "amount",
+                              "account",
+                              "rawRow",
+                              "checksum",
+                              "entity",
+                              "status"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "warnings": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "affectedCount": {
+                                "type": "number"
+                              },
+                              "details": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "enum": ["AI_CATEGORIZATION_UNAVAILABLE", "AI_API_ERROR"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["type", "message"],
+                            "type": "object"
+                          },
+                          "type": "array"
                         }
-                      ]
+                      },
+                      "required": ["matched", "uncertain", "failed", "skipped"],
+                      "type": "object"
                     },
                     "sessionId": {
                       "type": "string"

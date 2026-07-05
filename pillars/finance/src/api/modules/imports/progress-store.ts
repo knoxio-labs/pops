@@ -6,7 +6,7 @@
  * monolith `progress-store.ts` — the single pillar process makes the
  * process-local store correct (no cross-instance sharing needed).
  */
-import type { ExecuteImportOutput, ProcessImportOutput } from './types.js';
+import type { ProcessImportOutput } from './types.js';
 
 export interface ImportProgress {
   sessionId: string;
@@ -21,7 +21,7 @@ export interface ImportProgress {
   }>;
   errors: Array<{ description: string; error: string }>;
   startedAt: string;
-  result?: ProcessImportOutput | ExecuteImportOutput;
+  result?: ProcessImportOutput;
 }
 
 const progressStore = new Map<string, ImportProgress>();

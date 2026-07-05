@@ -88,9 +88,6 @@ import type {
   ImportsCreateEntityData,
   ImportsCreateEntityErrors,
   ImportsCreateEntityResponses,
-  ImportsExecuteImportData,
-  ImportsExecuteImportErrors,
-  ImportsExecuteImportResponses,
   ImportsGetImportProgressData,
   ImportsGetImportProgressErrors,
   ImportsGetImportProgressResponses,
@@ -721,25 +718,6 @@ export const importsCreateEntity = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/imports/entities',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-
-/**
- * Write confirmed transactions to SQLite; returns a session id to poll
- */
-export const importsExecuteImport = <ThrowOnError extends boolean = false>(
-  options?: Options<ImportsExecuteImportData, ThrowOnError>
-): RequestResult<ImportsExecuteImportResponses, ImportsExecuteImportErrors, ThrowOnError> =>
-  (options?.client ?? client).post<
-    ImportsExecuteImportResponses,
-    ImportsExecuteImportErrors,
-    ThrowOnError
-  >({
-    url: '/imports/execute',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -88,11 +88,6 @@ vi.mock('../../store/importStore', () => {
   return { useImportStore: hook };
 });
 
-const mockReevaluateTransactions = vi.fn();
-vi.mock('../../lib/local-re-evaluation', () => ({
-  reevaluateTransactions: (...args: unknown[]) => mockReevaluateTransactions(...args),
-}));
-
 const mockComputeMergedRules = vi.fn();
 const mockComputeMergedEntities = vi.fn();
 vi.mock('../../lib/merged-state', () => ({
@@ -374,13 +369,6 @@ beforeEach(() => {
   // Default: merged-state helpers return the DB data as-is
   mockComputeMergedEntities.mockImplementation((dbEntities: unknown[]) => dbEntities);
   mockComputeMergedRules.mockReturnValue([]);
-  // Default: local re-evaluation returns no matches
-  mockReevaluateTransactions.mockReturnValue({
-    matched: [],
-    uncertain: [],
-    failed: [],
-    affectedCount: 0,
-  });
   mockAddPendingEntity.mockImplementation((input: { name: string; type: string }) => ({
     tempId: `temp:entity:mock-${input.name}`,
     name: input.name,

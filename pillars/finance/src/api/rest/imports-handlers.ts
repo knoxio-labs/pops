@@ -1,9 +1,9 @@
 /**
  * Handlers for the `imports.*` sub-router.
  *
- * processImport / executeImport mint a session id, seed the in-memory progress
- * store, kick off the work (process in the background; execute synchronously),
- * and return `{ sessionId }` immediately — the FE then polls getImportProgress.
+ * processImport mints a session id, seeds the in-memory progress store, kicks
+ * off the work in the background, and returns `{ sessionId }` immediately —
+ * the FE then polls getImportProgress.
  *
  * Error translation:
  *   - unknown session                       → 404 (finance.import.sessionNotFound)
@@ -20,7 +20,6 @@ import { applyChangeSet } from '../modules/corrections/index.js';
 import {
   commitImport,
   createEntity,
-  executeImportWithProgress,
   getProgress,
   processImportWithProgress,
   reevaluateImportSessionResult,
@@ -99,23 +98,6 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
         }).catch((error) => {
           console.error(`[Import] Background processing failed: ${String(error)}`);
         });
-        return { status: 200 as const, body: { sessionId } };
-      }),
-
-    executeImport: ({ body }: Req['executeImport']) =>
-      runHttp(() => {
-        const sessionId = randomUUID();
-        setProgress(sessionId, {
-          sessionId,
-          status: 'processing',
-          currentStep: 'writing',
-          totalTransactions: body.transactions.length,
-          processedCount: 0,
-          currentBatch: [],
-          errors: [],
-          startedAt: new Date().toISOString(),
-        });
-        executeImportWithProgress(db, sessionId, body.transactions);
         return { status: 200 as const, body: { sessionId } };
       }),
 

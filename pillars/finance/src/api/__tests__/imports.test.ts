@@ -3,10 +3,14 @@
  * app, with the contacts pillar provided by an injected fake: the matcher
  * fetches the contact set live and matches in memory; commit pre-creates pending
  * contacts (create-or-fetch-by-name) BEFORE the finance tx; createEntity goes to
- * contacts. Covers the session-poll pattern, dedup, executeImport writes, the
- * re-evaluation endpoints (404/412 mapping), atomic commit (temp-id resolution,
- * changeset application, rollback, retroactive reclassification), 409
- * idempotency on a pre-existing contact name, and contacts-down degradation.
+ * contacts. Covers the session-poll pattern, dedup, the re-evaluation endpoints
+ * (404/412 mapping), atomic commit (temp-id resolution, changeset application,
+ * rollback, retroactive reclassification), 409 idempotency on a pre-existing
+ * contact name, and contacts-down degradation.
+ *
+ * Pre-existing rows (dedup / reclassification fixtures) are seeded directly via
+ * `importsService.insertImportTransaction` — the REST surface has no write path
+ * of its own outside `commitImport`.
  *
  * The AI categorizer is stubbed off, so unmatched rows land in `uncertain` with
  * `'No entity match found'` and the AI counters stay zero.
@@ -17,13 +21,13 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import { importsService, openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake, type ContactsFake, type SeedContact } from './contacts-fake.js';
 import { makeClient, waitForImportCompletion } from './test-utils.js';
 
-import type { ExecuteImportOutput, ProcessImportOutput } from '../modules/imports/types.js';
+import type { ProcessImportOutput } from '../modules/imports/types.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
@@ -77,6 +81,28 @@ function confirmed(overrides: Record<string, unknown> = {}) {
     checksum: `chk-${Math.random().toString(36).slice(2, 12)}`,
     ...overrides,
   };
+}
+
+/** Seed a pre-existing transaction directly (the REST surface has no write path outside `commitImport`). */
+function seedTransaction(overrides: {
+  description: string;
+  checksum: string;
+  entityId?: string | null;
+  entityName?: string | null;
+}) {
+  importsService.insertImportTransaction(financeDb.db, {
+    description: overrides.description,
+    account: 'Amex',
+    amount: -42.5,
+    date: '2026-02-13',
+    type: 'Expense',
+    tags: [],
+    entityId: overrides.entityId ?? null,
+    entityName: overrides.entityName ?? null,
+    location: null,
+    rawRow: '{"line":"x"}',
+    checksum: overrides.checksum,
+  });
 }
 
 function withContacts(seed: SeedContact[]): ContactsFake {
@@ -146,10 +172,7 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
 
   it('skips checksums that already exist in the transactions table (dedup)', async () => {
     const c = client();
-    const { sessionId: execSession } = await c.imports.executeImport({
-      transactions: [confirmed({ description: 'PRIOR ROW', checksum: 'dup-checksum' })],
-    });
-    await waitForImportCompletion<ExecuteImportOutput>(c, execSession);
+    seedTransaction({ description: 'PRIOR ROW', checksum: 'dup-checksum' });
 
     const { sessionId } = await c.imports.processImport({
       transactions: [
@@ -278,51 +301,6 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
     expect(row?.ruleProvenance?.source).toBe('correction');
     expect(row?.transactionType).toBe('transfer');
     expect(row?.entity.matchType).toBe('learned');
-  });
-});
-
-describe('imports.executeImport — writes', () => {
-  it('writes confirmed transactions verifiable through the transactions REST surface', async () => {
-    const c = client();
-    const { sessionId } = await c.imports.executeImport({
-      transactions: [
-        confirmed({
-          description: 'WRITTEN TXN',
-          amount: -125.5,
-          checksum: 'written-1',
-          entityId: 'entity-co-id',
-          entityName: 'Entity Co',
-        }),
-      ],
-    });
-
-    const result = await waitForImportCompletion<ExecuteImportOutput>(c, sessionId);
-    expect(result.imported).toBe(1);
-    expect(result.failed).toEqual([]);
-
-    const list = await c.transactions.list({ search: 'WRITTEN TXN' });
-    expect(list.data).toHaveLength(1);
-    expect(list.data[0]?.amount).toBe(-125.5);
-    // The contacts entity id is stored verbatim — no local FK enforces it.
-    expect(list.data[0]?.entityName).toBe('Entity Co');
-    expect(list.data[0]?.type).toBe('Expense');
-  });
-
-  it('maps transactionType to the stored type column', async () => {
-    const c = client();
-    const { sessionId } = await c.imports.executeImport({
-      transactions: [
-        confirmed({ description: 'A TRANSFER', checksum: 'xfer-w', transactionType: 'transfer' }),
-        confirmed({ description: 'SOME INCOME', checksum: 'income-w', transactionType: 'income' }),
-      ],
-    });
-    const result = await waitForImportCompletion<ExecuteImportOutput>(c, sessionId);
-    expect(result.imported).toBe(2);
-
-    const transfer = await c.transactions.list({ search: 'A TRANSFER' });
-    expect(transfer.data[0]?.type).toBe('Transfer');
-    const income = await c.transactions.list({ search: 'SOME INCOME' });
-    expect(income.data[0]?.type).toBe('Income');
   });
 });
 
@@ -821,13 +799,7 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
 describe('imports.commitImport — retroactive reclassification', () => {
   it('reclassifies existing transactions a new rule now matches', async () => {
     const c = client();
-    await c.imports
-      .executeImport({
-        transactions: [
-          confirmed({ description: 'WOOLWORTHS 9999', checksum: 'pre-existing-chk-1' }),
-        ],
-      })
-      .then((r) => waitForImportCompletion<ExecuteImportOutput>(c, r.sessionId));
+    seedTransaction({ description: 'WOOLWORTHS 9999', checksum: 'pre-existing-chk-1' });
 
     const res = await c.imports.commitImport({
       changeSets: [

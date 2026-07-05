@@ -2604,78 +2604,6 @@ export type ImportsCreateEntityResponses = {
 export type ImportsCreateEntityResponse =
   ImportsCreateEntityResponses[keyof ImportsCreateEntityResponses];
 
-export type ImportsExecuteImportData = {
-  /**
-   * Body
-   */
-  body?: {
-    transactions: Array<{
-      account: string;
-      amount: number;
-      checksum: string;
-      date: string;
-      description: string;
-      entityId?: string;
-      entityName?: string;
-      location?: string;
-      rawRow: string;
-      suggestedTags?: Array<{
-        isNew?: boolean;
-        pattern?: string;
-        source: 'ai' | 'rule' | 'entity';
-        tag: string;
-      }>;
-      tags?: Array<string>;
-      transactionType?: 'purchase' | 'transfer' | 'income';
-    }>;
-  };
-  path?: never;
-  query?: never;
-  url: '/imports/execute';
-};
-
-export type ImportsExecuteImportErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type ImportsExecuteImportError =
-  ImportsExecuteImportErrors[keyof ImportsExecuteImportErrors];
-
-export type ImportsExecuteImportResponses = {
-  /**
-   * 200
-   */
-  200: {
-    sessionId: string;
-  };
-};
-
-export type ImportsExecuteImportResponse =
-  ImportsExecuteImportResponses[keyof ImportsExecuteImportResponses];
-
 export type ImportsProcessImportData = {
   /**
    * Body
@@ -2794,247 +2722,218 @@ export type ImportsGetImportProgressResponses = {
       error: string;
     }>;
     processedCount: number;
-    result?:
-      | {
-          aiUsage?: {
-            apiCalls: number;
-            avgCostPerCall: number;
-            cacheHits: number;
-            totalCostUsd: number;
-            totalInputTokens: number;
-            totalOutputTokens: number;
-          };
-          failed: Array<{
-            account: string;
-            amount: number;
-            checksum: string;
-            date: string;
-            description: string;
-            entity: {
-              confidence?: number;
-              entityId?: string;
-              entityName?: string;
-              matchType:
-                | 'alias'
-                | 'exact'
-                | 'prefix'
-                | 'contains'
-                | 'ai'
-                | 'learned'
-                | 'manual'
-                | 'none';
-            };
-            error?: string;
-            location?: string;
-            matchedRules?: Array<{
-              confidence: number;
-              entityId?: string | null;
-              entityName?: string | null;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              priority: number;
-              ruleId: string;
-            }>;
-            rawRow: string;
-            ruleProvenance?: {
-              confidence: number;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              ruleId: string;
-              source: 'correction';
-            };
-            skipReason?: string;
-            status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-            suggestedTags?: Array<{
-              isNew?: boolean;
-              pattern?: string;
-              source: 'ai' | 'rule' | 'entity';
-              tag: string;
-            }>;
-            transactionType?: 'purchase' | 'transfer' | 'income';
-          }>;
-          matched: Array<{
-            account: string;
-            amount: number;
-            checksum: string;
-            date: string;
-            description: string;
-            entity: {
-              confidence?: number;
-              entityId?: string;
-              entityName?: string;
-              matchType:
-                | 'alias'
-                | 'exact'
-                | 'prefix'
-                | 'contains'
-                | 'ai'
-                | 'learned'
-                | 'manual'
-                | 'none';
-            };
-            error?: string;
-            location?: string;
-            matchedRules?: Array<{
-              confidence: number;
-              entityId?: string | null;
-              entityName?: string | null;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              priority: number;
-              ruleId: string;
-            }>;
-            rawRow: string;
-            ruleProvenance?: {
-              confidence: number;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              ruleId: string;
-              source: 'correction';
-            };
-            skipReason?: string;
-            status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-            suggestedTags?: Array<{
-              isNew?: boolean;
-              pattern?: string;
-              source: 'ai' | 'rule' | 'entity';
-              tag: string;
-            }>;
-            transactionType?: 'purchase' | 'transfer' | 'income';
-          }>;
-          skipped: Array<{
-            account: string;
-            amount: number;
-            checksum: string;
-            date: string;
-            description: string;
-            entity: {
-              confidence?: number;
-              entityId?: string;
-              entityName?: string;
-              matchType:
-                | 'alias'
-                | 'exact'
-                | 'prefix'
-                | 'contains'
-                | 'ai'
-                | 'learned'
-                | 'manual'
-                | 'none';
-            };
-            error?: string;
-            location?: string;
-            matchedRules?: Array<{
-              confidence: number;
-              entityId?: string | null;
-              entityName?: string | null;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              priority: number;
-              ruleId: string;
-            }>;
-            rawRow: string;
-            ruleProvenance?: {
-              confidence: number;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              ruleId: string;
-              source: 'correction';
-            };
-            skipReason?: string;
-            status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-            suggestedTags?: Array<{
-              isNew?: boolean;
-              pattern?: string;
-              source: 'ai' | 'rule' | 'entity';
-              tag: string;
-            }>;
-            transactionType?: 'purchase' | 'transfer' | 'income';
-          }>;
-          uncertain: Array<{
-            account: string;
-            amount: number;
-            checksum: string;
-            date: string;
-            description: string;
-            entity: {
-              confidence?: number;
-              entityId?: string;
-              entityName?: string;
-              matchType:
-                | 'alias'
-                | 'exact'
-                | 'prefix'
-                | 'contains'
-                | 'ai'
-                | 'learned'
-                | 'manual'
-                | 'none';
-            };
-            error?: string;
-            location?: string;
-            matchedRules?: Array<{
-              confidence: number;
-              entityId?: string | null;
-              entityName?: string | null;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              priority: number;
-              ruleId: string;
-            }>;
-            rawRow: string;
-            ruleProvenance?: {
-              confidence: number;
-              matchType: 'exact' | 'contains' | 'regex';
-              pattern: string;
-              ruleId: string;
-              source: 'correction';
-            };
-            skipReason?: string;
-            status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-            suggestedTags?: Array<{
-              isNew?: boolean;
-              pattern?: string;
-              source: 'ai' | 'rule' | 'entity';
-              tag: string;
-            }>;
-            transactionType?: 'purchase' | 'transfer' | 'income';
-          }>;
-          warnings?: Array<{
-            affectedCount?: number;
-            details?: string;
-            message: string;
-            type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
-          }>;
-        }
-      | {
-          failed: Array<{
-            error?: string;
-            pageId?: string;
-            success: boolean;
-            transaction: {
-              account: string;
-              amount: number;
-              checksum: string;
-              date: string;
-              description: string;
-              entityId?: string;
-              entityName?: string;
-              location?: string;
-              rawRow: string;
-              suggestedTags?: Array<{
-                isNew?: boolean;
-                pattern?: string;
-                source: 'ai' | 'rule' | 'entity';
-                tag: string;
-              }>;
-              tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
-            };
-          }>;
-          imported: number;
-          skipped: number;
+    result?: {
+      aiUsage?: {
+        apiCalls: number;
+        avgCostPerCall: number;
+        cacheHits: number;
+        totalCostUsd: number;
+        totalInputTokens: number;
+        totalOutputTokens: number;
+      };
+      failed: Array<{
+        account: string;
+        amount: number;
+        checksum: string;
+        date: string;
+        description: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
         };
+        error?: string;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?: 'purchase' | 'transfer' | 'income';
+      }>;
+      matched: Array<{
+        account: string;
+        amount: number;
+        checksum: string;
+        date: string;
+        description: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?: 'purchase' | 'transfer' | 'income';
+      }>;
+      skipped: Array<{
+        account: string;
+        amount: number;
+        checksum: string;
+        date: string;
+        description: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?: 'purchase' | 'transfer' | 'income';
+      }>;
+      uncertain: Array<{
+        account: string;
+        amount: number;
+        checksum: string;
+        date: string;
+        description: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?: 'purchase' | 'transfer' | 'income';
+      }>;
+      warnings?: Array<{
+        affectedCount?: number;
+        details?: string;
+        message: string;
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+      }>;
+    };
     sessionId: string;
     startedAt: string;
     status: 'processing' | 'completed' | 'failed';
