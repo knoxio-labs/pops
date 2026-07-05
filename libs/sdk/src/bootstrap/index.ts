@@ -6,7 +6,7 @@ export {
 } from './bootstrap.js';
 export {
   PillarManifestInvalidError,
-  PillarRegistrationFailedError,
+  PillarRegistrationCancelledError,
   PillarRegistrationRejectedError,
 } from './errors.js';
 export { type BootstrapLogger } from './logger.js';

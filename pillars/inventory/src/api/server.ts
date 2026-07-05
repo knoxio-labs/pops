@@ -6,9 +6,12 @@
  *
  * Registry handshake is opt-in via `bootstrapPillar`: when
  * `POPS_REGISTRY_ENABLED=true`, the process builds the inventory
- * manifest and registers with the central registry on boot. SIGTERM
- * triggers `pillarHandle.stop()` so the heartbeat clears and the
- * registry sees an explicit deregister.
+ * manifest and registers with the central registry on boot. Registration
+ * happens AFTER `app.listen` and never blocks or crashes boot — a registry
+ * that is briefly unavailable just means the pillar keeps retrying in the
+ * background while already serving traffic. SIGTERM triggers
+ * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
+ * explicit deregister.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 
@@ -55,6 +58,10 @@ const selfBaseUrl = resolveSelfBaseUrl();
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
 const app = createInventoryApiApp({ inventoryDb, version, selfBaseUrl });
 
+const server = app.listen(port, () => {
+  console.warn(`[inventory-api] Listening on port ${port}`);
+});
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -63,10 +70,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     capabilityReporter: buildInventoryCapabilityReporter(),
   });
 }
-
-const server = app.listen(port, () => {
-  console.warn(`[inventory-api] Listening on port ${port}`);
-});
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {

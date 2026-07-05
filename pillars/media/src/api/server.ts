@@ -6,7 +6,10 @@
  * `media.db` connection via `openMediaDb`.
  *
  * When `POPS_REGISTRY_ENABLED=true`, the process registers a media manifest
- * with the central registry on boot via `bootstrapPillar`. SIGTERM triggers
+ * with the central registry on boot via `bootstrapPillar`. Registration
+ * happens AFTER `app.listen` and never blocks or crashes boot — a registry
+ * that is briefly unavailable just means the pillar keeps retrying in the
+ * background while already serving traffic. SIGTERM triggers
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister.
  */
@@ -80,6 +83,10 @@ if (process.env['MEDIA_ROTATION_SCHEDULER_ENABLED'] === 'true') {
   rotationScheduler.resumeIfEnabled(mediaDb.db);
 }
 
+const server = app.listen(port, () => {
+  console.warn(`[media-api] Listening on port ${port}`);
+});
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -88,10 +95,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     capabilityReporter: buildMediaCapabilityReporter(),
   });
 }
-
-const server = app.listen(port, () => {
-  console.warn(`[media-api] Listening on port ${port}`);
-});
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {
