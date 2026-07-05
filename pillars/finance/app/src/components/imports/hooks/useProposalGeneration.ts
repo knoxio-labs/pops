@@ -1,5 +1,5 @@
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../../finance-api-helpers.js';
@@ -129,6 +129,8 @@ export function useProposalGeneration() {
   const [proposalTriggeringTransaction, setProposalTriggeringTransaction] =
     useState<TriggeringTransaction | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
+  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
+  const inFlightRef = useRef(false);
 
   const analyzeCorrectionMutation = useMutation({
     mutationFn: async (vars: AnalyzeCorrectionInput): Promise<AnalyzeCorrectionOutput> =>
@@ -136,13 +138,32 @@ export function useProposalGeneration() {
   });
 
   const generateProposal = useCallback(
-    (args: GenerateArgs) =>
-      runGenerate(args, {
-        analyzeCorrectionMutation,
-        setProposalSignal,
-        setProposalTriggeringTransaction,
-        setProposalOpen,
-      }),
+    async (args: GenerateArgs) => {
+      // Serialize: analysis is a 2-3s round-trip. A second accept/create while
+      // one is in flight would clobber the window that is about to open, so the
+      // ref (read synchronously, unlike state) turns concurrent calls into
+      // no-ops until the pending proposal resolves or errors.
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      setIsGeneratingProposal(true);
+      // Immediate feedback: open the window in a loading state before the
+      // round-trip so the click is never a silent wait. Clearing the prior
+      // signal keeps a stale proposal from flashing under the loader.
+      setProposalSignal(null);
+      setProposalTriggeringTransaction(null);
+      setProposalOpen(true);
+      try {
+        await runGenerate(args, {
+          analyzeCorrectionMutation,
+          setProposalSignal,
+          setProposalTriggeringTransaction,
+          setProposalOpen,
+        });
+      } finally {
+        inFlightRef.current = false;
+        setIsGeneratingProposal(false);
+      }
+    },
     [analyzeCorrectionMutation]
   );
 
@@ -153,13 +174,24 @@ export function useProposalGeneration() {
     [generateProposal]
   );
 
+  const handleProposalOpenChange = useCallback((nextOpen: boolean) => {
+    // Ignore close requests (overlay click / Esc / close button) while the
+    // analysis is in flight: the loading window is the only feedback, and
+    // runGenerate() would re-open it moments later, so a mid-generation close
+    // just flickers the dialog. Opening is always allowed.
+    if (!nextOpen && inFlightRef.current) return;
+    setProposalOpen(nextOpen);
+  }, []);
+
   return {
     proposalOpen,
     setProposalOpen,
+    handleProposalOpenChange,
     proposalSignal,
     proposalTriggeringTransaction,
     browseOpen,
     setBrowseOpen,
+    isGeneratingProposal,
     generateProposal,
     openRuleProposalDialog,
   };

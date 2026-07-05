@@ -91,11 +91,12 @@ export function ReviewDialogs({
     <>
       <CorrectionProposalDialog
         open={proposal.proposalOpen}
-        onOpenChange={proposal.setProposalOpen}
+        onOpenChange={proposal.handleProposalOpenChange}
         sessionId={processSessionId}
         signal={proposal.proposalSignal ? toRestSignal(proposal.proposalSignal) : null}
         triggeringTransaction={proposal.proposalTriggeringTransaction}
         previewTransactions={allPreviewTransactions}
+        generating={proposal.isGeneratingProposal}
         onApproved={() => toast.success('Rules saved locally')}
       />
       <BrowseDialog

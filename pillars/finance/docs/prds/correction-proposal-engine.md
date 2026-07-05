@@ -63,6 +63,7 @@ AI cluster (Anthropic via the finance env key; degrades when unavailable):
 
 Triggered by Save & Learn or editing a rule-matched transaction. A large modal with all regions visible:
 
+- **Generation feedback** — the trigger opens this dialog immediately in a loading state ("Generating proposal…") while the ~2-3s analysis round-trip runs, so the click is never a silent wait. The dialog cannot be dismissed mid-generation (overlay click / Esc / close are ignored), and any further accept/create is blocked until the proposal resolves or falls back — a second trigger can't clobber the window about to open.
 - **Context panel** — the triggering transaction's raw description (prominent), amount, date, account, location, plus a "was → now" diff of the correction intent (entity / type / location); brand-new entity reads "assigned entity: <name>".
 - **Operations list** — every op with kind badge, one-line summary, per-op impact count, staleness marker, and a delete control; an Add-operation control appends a new add, or an edit/disable/remove of an existing rule picked from a searchable list.
 - **Detail editor** — edits `descriptionPattern`, `matchType`, target entity (existing or new), optional `location` / `transactionType` / `tags` for add/edit; rationale for disable/remove.
@@ -97,6 +98,9 @@ On Apply: the ChangeSet is added to the local pending store (no DB write yet), r
 - [x] Reject requires a short feedback message, applies no changes, closes the dialog, and persists the feedback for the next proposal (best-effort).
 - [x] `analyze` validates the returned pattern is a substring of the description (≥ 3 chars), returning null on mismatch so the caller falls back.
 - [x] The dialog renders the triggering transaction (raw description, amount, date, account) and a "was → now" correction diff.
+- [x] Triggering a proposal opens the dialog immediately in a loading state before the analysis round-trip completes (no silent wait).
+- [x] While a proposal is generating, further accept/create actions are blocked (no-op) so a concurrent action can't override the pending window.
+- [x] The loading dialog cannot be dismissed mid-generation (overlay click / Esc / close are ignored until the proposal resolves or falls back).
 - [x] A transfer/income rule with no entity is accepted, classifies matching rows as terminal `matched`, and counts toward the affected count.
 - [ ] A durable, queryable audit trail of all proposal attempts and outcomes (approved + rejected, append-only, per session) — NOT built; only the latest rejection per pattern is persisted. See [idea](../ideas/correction-proposal-audit-trail.md).
 

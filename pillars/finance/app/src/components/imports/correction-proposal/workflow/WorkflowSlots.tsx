@@ -128,12 +128,14 @@ export function useViewSelection(
 export function renderBody(
   hooks: ReturnType<typeof useWorkflowHooks>,
   view: ViewSelection,
-  signal: CorrectionProposalWorkflowProps['signal']
+  signal: CorrectionProposalWorkflowProps['signal'],
+  generating = false
 ): ReactNode {
   const state = renderProposalBodyState({
     signal,
     proposeQuery: hooks.proposeQuery,
     hasOps: hooks.localOpsHook.localOps.length > 0,
+    generating,
   });
   if (state) return state;
   return (

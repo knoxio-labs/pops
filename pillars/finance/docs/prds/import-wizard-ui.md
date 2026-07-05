@@ -91,6 +91,7 @@ fetched once and cached for the review step.
 - [x] Gate: "Continue to Tag Review" is disabled while any uncertain/failed remain and shows the remaining-count reason; enables once all are resolved.
 - [x] Rule-matched transactions are badged as such, with pattern / match type / confidence in the badge tooltip and an "+N overridden" popover for lower-priority rules that also matched.
 - [x] **Save & Learn**: editing or assigning opens a bundled **Correction Proposal** (see `correction-proposal-engine`) — proposed rule ops with pattern/match-type/confidence/rationale and an in-import impact preview. Approve applies the ChangeSet atomically (`/imports/apply-changeset-reevaluate`) and re-evaluates remaining transactions; Reject requires a feedback message and can generate a follow-up proposal. Rules are never changed without explicit approval.
+- [x] Triggering Save & Learn (accept / create / edit) opens the Correction Proposal **immediately in a loading state** before the analysis round-trip resolves; while it generates, accept/create is blocked and the loading dialog can't be dismissed, so a second action can't clobber the window about to open.
 - [x] Editing a rule-matched transaction does **not** silently override the match — it opens a Correction Proposal ChangeSet (add / edit / disable / remove rules) with the same approve/reject-and-reevaluate flow.
 - [x] "Manage Rules" opens the rule manager (browse mode) for full CRUD over DB + pending rules.
 

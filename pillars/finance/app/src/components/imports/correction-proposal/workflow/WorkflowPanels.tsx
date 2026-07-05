@@ -28,17 +28,18 @@ interface RenderBodyArgs {
   signal: CorrectionSignal | null;
   proposeQuery: { isError: boolean; isLoading: boolean; error?: { message: string } | null };
   hasOps: boolean;
+  generating?: boolean;
 }
 
 export function renderProposalBodyState({
   signal,
   proposeQuery,
   hasOps,
+  generating = false,
 }: RenderBodyArgs): ReactNode {
   if (!signal) {
-    return (
-      <div className="px-6 pb-6 text-sm text-muted-foreground">No proposal signal provided.</div>
-    );
+    const message = generating ? 'Generating proposal…' : 'No proposal signal provided.';
+    return <div className="px-6 pb-6 text-sm text-muted-foreground">{message}</div>;
   }
   if (proposeQuery.isError) {
     return <div className="px-6 pb-6 text-sm text-destructive">{proposeQuery.error?.message}</div>;
