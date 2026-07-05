@@ -4,9 +4,9 @@
 
 ## Overview
 
-A single-call helper that takes a validated manifest and a self base URL, registers the pillar with the central `registry` pillar, and runs a heartbeat ticker for the life of the process. It returns a handle whose `stop()` clears the heartbeat and best-effort deregisters. The helper is **registration + heartbeat only** — it does not own the HTTP server, the database, the route table, or signal handling. Each pillar still constructs its own Express app, opens its own SQLite DB, calls `app.listen(port)`, and installs its own `SIGTERM`/`SIGINT` handler that calls `handle.stop()` during shutdown.
+A single-call helper that takes a validated manifest and a self base URL, registers the pillar with the central `registry` pillar in the background, and runs a heartbeat ticker for the life of the process once registration succeeds. It returns a handle whose `stop()` cancels any in-flight registration retry, clears the heartbeat, and best-effort deregisters. The helper is **registration + heartbeat only** — it does not own the HTTP server, the database, the route table, or signal handling. Each pillar still constructs its own Express app, opens its own SQLite DB, calls `app.listen(port)` **before** invoking `bootstrapPillar`, and installs its own `SIGTERM`/`SIGINT` handler that calls `handle.stop()` during shutdown.
 
-Registration is **retry-with-cap**: `register` is attempted up to `maxRegisterAttempts` (default 5) with exponential backoff; on a non-retriable rejection (4xx) it throws immediately, and on exhausting attempts it throws `PillarRegistrationFailedError`. Bootstrap is `await`ed before the pillar starts listening in the pillars that gate it behind `POPS_REGISTRY_ENABLED`, but the SDK itself does not block the HTTP port — the pillar decides ordering.
+Registration **never gates boot**. The registry is not a boot-time single point of failure: pillars call `app.listen(port)` first, then `bootstrapPillar`, which returns a handle immediately and runs `register` as a background task. Retriable failures (network errors, 5xx — the registry is down, unreachable, or briefly overloaded at boot) are logged and retried **forever** with capped exponential backoff; the pillar keeps serving its REST surface unregistered in the meantime. Only a non-retriable rejection (a genuine 4xx — retrying can't fix a bad manifest) ends the loop with `PillarRegistrationRejectedError`, or `stop()` firing mid-backoff, which unwinds the loop with `PillarRegistrationCancelledError` (caught and swallowed as expected shutdown). The heartbeat ticker only starts once registration actually succeeds. The one failure that still throws synchronously from `bootstrapPillar` is a malformed manifest (`PillarManifestInvalidError`), caught before any network call.
 
 The transport speaks plain HTTP-JSON to the registry's three handshake routes, preferring the canonical slash paths (`/registry/{register,heartbeat,deregister}`) and falling back to the legacy dotted paths (`/core.registry.*`) on a 404 during the rolling-deploy window.
 
@@ -36,9 +36,8 @@ export interface BootstrapPillarOptions {
   transport?: RegistryTransport;
 
   heartbeatMs?: number; // default 10_000
-  maxRegisterAttempts?: number; // default 5
   registerInitialBackoffMs?: number; // default 1_000
-  registerMaxBackoffMs?: number; // default 30_000
+  registerMaxBackoffMs?: number; // default 30_000 (retries are infinite; only the per-attempt delay is capped)
   logger?: BootstrapLogger; // default console-backed
   registryUrl?: string; // default POPS_REGISTRY_URL ?? http://registry-api:3001
 
@@ -105,6 +104,8 @@ import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bo
 
 const app = createFinanceApiApp({ financeDb, version, selfBaseUrl, contacts });
 
+const server = app.listen(port);
+
 let pillarHandle: PillarBootstrapHandle | undefined;
 if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   pillarHandle = await bootstrapPillar({
@@ -113,8 +114,6 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
     capabilityReporter: buildFinanceCapabilityReporter(),
   });
 }
-
-const server = app.listen(port);
 
 function shutdown(signal: NodeJS.Signals): void {
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
@@ -125,14 +124,17 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 ```
 
-Registration is opt-in per pillar behind `POPS_REGISTRY_ENABLED=true`. When unset, the pillar serves its REST surface without ever registering.
+The pillar calls `app.listen(port)` **before** `bootstrapPillar`, so the HTTP surface comes up regardless of registry availability; `bootstrapPillar` returns immediately and registers in the background. Registration is opt-in per pillar behind `POPS_REGISTRY_ENABLED=true`. When unset, the pillar serves its REST surface without ever registering.
 
 ## Rules
 
 - **Manifest validation runs first.** `validateManifestPayload` is called before any network I/O; failure throws `PillarManifestInvalidError` carrying the per-field issues. `register` is never attempted (`registerCalls === 0`).
 - **Version coercion.** A non-semver `manifest.version` (e.g. a 40-char git SHA injected as `BUILD_VERSION`) is coerced to `0.0.0-sha.<first7>` — and the same coercion is mirrored onto `contract.version` and `contract.tag` (`contract-<pillar>@v…`) — so a Watchtower deploy never crashes boot on the schema's semver constraint. Already-semver values pass through untouched.
-- **Registration backoff is capped, not infinite.** Delay is `min(initialBackoffMs * 2^(attempt-1), maxBackoffMs)`. After `maxRegisterAttempts` failures it throws `PillarRegistrationFailedError(attempts, lastCause)`. A 4xx (`retriable === false`) short-circuits to `PillarRegistrationRejectedError(status, issues)` without consuming further attempts.
-- **5xx and network errors are retriable.** `RegistryTransportError` with `status >= 500` and `RegistryNetworkError` both retry under backoff until the cap.
+- **Registration runs in the background and never gates boot.** `bootstrapPillar` returns a handle immediately; `register` runs as a background task. A retriable failure is logged and retried forever — the pillar keeps serving unregistered until the registry comes back.
+- **Retries are infinite; only the per-attempt delay is capped.** Delay is `min(initialBackoffMs * 2^(attempt-1), maxBackoffMs)`. A 4xx (`retriable === false`) short-circuits to `PillarRegistrationRejectedError(status, issues)` and ends the loop; there is no attempt cap and no `PillarRegistrationFailedError`.
+- **`stop()` cancels an in-flight retry.** A `cancelSignal` resolved by `stop()` races the backoff sleep; a mid-backoff cancellation unwinds the loop with `PillarRegistrationCancelledError`, which `bootstrapPillar` catches and swallows (expected shutdown, not a failure).
+- **The heartbeat starts only after registration succeeds.** Until the first successful `register`, there is no heartbeat interval; `stop()` before that point simply cancels the retry loop.
+- **5xx and network errors are retriable.** `RegistryTransportError` with `status >= 500` and `RegistryNetworkError` both retry under backoff indefinitely.
 - **Heartbeat ticks at `heartbeatMs` (default 10s).** Each tick posts `{ pillarId, capabilities? }`, re-snapshotting the capability reporter so a flipped capability is seen on the next tick. Failures are caught and logged via `logger.warn`; they never crash the loop and never alter the interval.
 - **The heartbeat interval is `unref()`-ed** so it does not keep the process alive on its own.
 - **`stop()` is idempotent.** First call clears the interval and best-effort `unregister(pillarId)`; a thrown unregister is swallowed and logged. Subsequent calls are no-ops (`unregisterCalls` stays at 1).
@@ -141,21 +143,23 @@ Registration is opt-in per pillar behind `POPS_REGISTRY_ENABLED=true`. When unse
 
 ## Edge Cases
 
-| Case                                                      | Behaviour                                                                                                      |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Manifest malformed (bad pillar id, invalid route names)   | `PillarManifestInvalidError` with `.issues[]`; no register call.                                               |
-| Registry returns 400 at register                          | `PillarRegistrationRejectedError(400, issues)` immediately; one register call, no retry.                       |
-| Registry returns 5xx at register                          | Retried under backoff up to `maxRegisterAttempts`, then `PillarRegistrationFailedError`.                       |
-| Network refused (`ECONNREFUSED`) at register              | Treated as `RegistryNetworkError`, retried under backoff; throws after the cap.                                |
-| Canonical registry path returns 404                       | Transport falls back to the legacy dotted path and pins that leg for later calls.                              |
-| Heartbeat throws                                          | Caught, `logger.warn`, loop continues; next tick fires on schedule.                                            |
-| Heartbeat returns `{ ok:false, reason:'not-registered' }` | Delivered as a normal `200`; the SDK does **not** auto re-register. Re-registration requires a pillar restart. |
-| Request hangs                                             | `AbortController` aborts at `timeoutMs` (default 10s); surfaces as a network error.                            |
-| `unregister` throws at shutdown                           | Swallowed; `stop()` still resolves. Registry evicts the stale entry after missed heartbeats.                   |
-| `stop()` called twice                                     | Second call is a no-op; exactly one `unregister`.                                                              |
-| `app` omitted                                             | No `/health` route mounted; registration + heartbeat proceed normally.                                         |
-| `app.get` throws while mounting `/health`                 | Caught and logged; bootstrap continues (health is best-effort).                                                |
-| Container SIGKILL'd                                       | No `stop()`, no deregister; registry marks the pillar unavailable after missed heartbeats.                     |
+| Case                                                      | Behaviour                                                                                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Manifest malformed (bad pillar id, invalid route names)   | `PillarManifestInvalidError` with `.issues[]`; no register call.                                                                         |
+| Registry returns 400 at register                          | `PillarRegistrationRejectedError(400, issues)` immediately; one register call, no retry.                                                 |
+| Registry returns 5xx at register                          | Retried under capped backoff indefinitely in the background; pillar keeps serving unregistered until it succeeds or `stop()` cancels.    |
+| Network refused (`ECONNREFUSED`) at register              | Treated as `RegistryNetworkError`, retried under capped backoff indefinitely; pillar keeps serving unregistered.                         |
+| Registry down for the whole process lifetime              | Registration retries forever in the background; the pillar serves its full REST surface the entire time, never crashing on the registry. |
+| `stop()` fires while a register retry is mid-backoff      | `cancelSignal` wins the race; loop unwinds with `PillarRegistrationCancelledError` (swallowed). No heartbeat was ever started.           |
+| Canonical registry path returns 404                       | Transport falls back to the legacy dotted path and pins that leg for later calls.                                                        |
+| Heartbeat throws                                          | Caught, `logger.warn`, loop continues; next tick fires on schedule.                                                                      |
+| Heartbeat returns `{ ok:false, reason:'not-registered' }` | Delivered as a normal `200`; the SDK does **not** auto re-register. Re-registration requires a pillar restart.                           |
+| Request hangs                                             | `AbortController` aborts at `timeoutMs` (default 10s); surfaces as a network error.                                                      |
+| `unregister` throws at shutdown                           | Swallowed; `stop()` still resolves. Registry evicts the stale entry after missed heartbeats.                                             |
+| `stop()` called twice                                     | Second call is a no-op; exactly one `unregister`.                                                                                        |
+| `app` omitted                                             | No `/health` route mounted; registration + heartbeat proceed normally.                                                                   |
+| `app.get` throws while mounting `/health`                 | Caught and logged; bootstrap continues (health is best-effort).                                                                          |
+| Container SIGKILL'd                                       | No `stop()`, no deregister; registry marks the pillar unavailable after missed heartbeats.                                               |
 
 ## Acceptance Criteria
 
@@ -163,8 +167,10 @@ Registration is opt-in per pillar behind `POPS_REGISTRY_ENABLED=true`. When unse
 - [x] Happy path registers exactly once and returns a handle with `pillarId === manifest.pillar`.
 - [x] `capabilityReporter` is snapshotted on register and re-snapshotted on every heartbeat; omitting it drops `capabilities` from both wires.
 - [x] Non-semver `version` is coerced to `0.0.0-sha.<7>` across `version`, `contract.version`, and `contract.tag`; valid semver passes through.
-- [x] A 4xx register response throws `PillarRegistrationRejectedError` immediately (one attempt, no retry).
-- [x] 5xx / network failures retry with exponential backoff and throw `PillarRegistrationFailedError` after `maxRegisterAttempts`; a later successful attempt resolves normally.
+- [x] A 4xx register response rejects with `PillarRegistrationRejectedError` immediately (one attempt, no retry) and ends the background loop.
+- [x] 5xx / network failures retry with capped exponential backoff **indefinitely** without crashing the pillar; a later successful attempt starts the heartbeat.
+- [x] `bootstrapPillar` returns a handle immediately and runs registration in the background; the pillar keeps serving while the registry is down.
+- [x] `stop()` called during an in-flight register retry cancels the loop (`PillarRegistrationCancelledError`, swallowed) and never starts a heartbeat.
 - [x] Heartbeat fires at `heartbeatMs`; heartbeat failures log and do not crash the loop.
 - [x] `stop()` clears the interval, best-effort `unregister`s, is idempotent, and resolves even if `unregister` throws.
 - [x] `/health` is mounted on `manifest.healthcheck.path` when `app` is supplied and returns `{ ok, pillar, version, contract, ts }`.
