@@ -169,6 +169,60 @@ describe('useTransactionReview — manual edits survive a ChangeSet reevaluate (
   });
 });
 
+describe('useTransactionReview — server-driven reevaluate does not freeze later reevaluations (#3610)', () => {
+  it('applies a browse-dialog reevaluation result without marking every row resolved-by-hand', async () => {
+    const tx = makeTx('server-1');
+    useImportStore.getState().setProcessedTransactions({
+      matched: [],
+      uncertain: [tx],
+      failed: [],
+      skipped: [],
+    });
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionReview(), { wrapper });
+
+    // A browse-dialog reevaluation (server-driven, NOT a manual resolution) moves
+    // the row to matched. Applying it must not poison resolvedChecksums; otherwise
+    // every subsequent server reevaluation is silently dropped.
+    const serverMatched: ProcessedTransaction = { ...tx, status: 'matched' };
+    act(() => {
+      result.current.applyReevaluatedResult({
+        matched: [serverMatched],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      });
+    });
+
+    expect(result.current.localTransactions.matched).toEqual([serverMatched]);
+
+    // A later ChangeSet reevaluation legitimately reclassifies the row back to
+    // uncertain. Because nothing was resolved by hand, the update must land.
+    const serverUncertain: ProcessedTransaction = { ...tx, status: 'uncertain' };
+    reevaluateMock.mockResolvedValue({
+      data: {
+        result: { matched: [], uncertain: [serverUncertain], failed: [], skipped: [] },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
+
+    act(() => {
+      useImportStore.getState().addPendingChangeSet({
+        changeSet: sampleChangeSet,
+        source: 'correction-proposal',
+      });
+    });
+
+    await waitFor(() => expect(reevaluateMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(result.current.localTransactions.uncertain).toEqual([serverUncertain])
+    );
+    expect(result.current.localTransactions.matched).toEqual([]);
+  });
+});
+
 describe('useTransactionReview — manual edits survive Back-then-Next remounts (#3610)', () => {
   it('persists a local resolution into the store so a remounted hook reads it back', () => {
     const uncertainTx = makeTx('resolved-2');

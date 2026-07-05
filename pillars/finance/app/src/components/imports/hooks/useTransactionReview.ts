@@ -60,7 +60,21 @@ function useSyncedLocalTransactions(processedTransactions: ProcessedTxState) {
     });
   }, []);
 
-  return { localTransactions, setLocalTransactions, setLocalTransactionsRaw, resolvedChecksumsRef };
+  const applyReevaluatedResult = useCallback((result: ProcessedTxState) => {
+    setLocalTransactionsRaw((prevLocal) => {
+      const merged = mergeReevaluatedResult(prevLocal, result, resolvedChecksumsRef.current);
+      useImportStore.getState().setProcessedTransactions(merged);
+      return merged;
+    });
+  }, []);
+
+  return {
+    localTransactions,
+    setLocalTransactions,
+    setLocalTransactionsRaw,
+    applyReevaluatedResult,
+    resolvedChecksumsRef,
+  };
 }
 
 /**
@@ -73,8 +87,7 @@ function useSyncedLocalTransactions(processedTransactions: ProcessedTxState) {
  * against `resolvedChecksumsRef` rather than applied verbatim (#3610).
  */
 function useReevalOnChangeSets(
-  setLocalTransactionsRaw: Dispatch<SetStateAction<ProcessedTxState>>,
-  resolvedChecksumsRef: React.MutableRefObject<Set<string>>,
+  applyReevaluatedResult: (result: ProcessedTxState) => void,
   pendingChangeSets: ReturnType<typeof useImportStore.getState>['pendingChangeSets'],
   sessionId: string | null
 ) {
@@ -100,23 +113,11 @@ function useReevalOnChangeSets(
         })),
       },
       {
-        onSuccess: ({ result }) => {
-          setLocalTransactionsRaw((prevLocal) => {
-            const merged = mergeReevaluatedResult(prevLocal, result, resolvedChecksumsRef.current);
-            useImportStore.getState().setProcessedTransactions(merged);
-            return merged;
-          });
-        },
+        onSuccess: ({ result }) => applyReevaluatedResult(result),
         onError: () => toast.error('Failed to re-evaluate transactions against updated rules'),
       }
     );
-  }, [
-    pendingChangeSets,
-    sessionId,
-    setLocalTransactionsRaw,
-    resolvedChecksumsRef,
-    reevaluateMutation,
-  ]);
+  }, [pendingChangeSets, sessionId, applyReevaluatedResult, reevaluateMutation]);
 }
 
 /**
@@ -127,18 +128,13 @@ export function useTransactionReview() {
   const processedTransactions = useImportStore((s) => s.processedTransactions);
   const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
   const processSessionId = useImportStore((s) => s.processSessionId);
-  const { localTransactions, setLocalTransactions, setLocalTransactionsRaw, resolvedChecksumsRef } =
+  const { localTransactions, setLocalTransactions, applyReevaluatedResult } =
     useSyncedLocalTransactions(processedTransactions);
   const [viewMode, setViewMode] = useState<ViewMode>('grouped');
   const initialTab = localTransactions.uncertain.length > 0 ? 'uncertain' : 'matched';
   const { activeTab, handleTabChange } = useTabWithScrollMemory(initialTab);
 
-  useReevalOnChangeSets(
-    setLocalTransactionsRaw,
-    resolvedChecksumsRef,
-    pendingChangeSets,
-    processSessionId
-  );
+  useReevalOnChangeSets(applyReevaluatedResult, pendingChangeSets, processSessionId);
 
   const unresolvedCount = useMemo(
     () => localTransactions.uncertain.length + localTransactions.failed.length,
@@ -156,6 +152,7 @@ export function useTransactionReview() {
   return {
     localTransactions,
     setLocalTransactions,
+    applyReevaluatedResult,
     viewMode,
     setViewMode,
     activeTab,

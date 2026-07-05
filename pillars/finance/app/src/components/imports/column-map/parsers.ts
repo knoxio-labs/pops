@@ -35,7 +35,7 @@ export interface ColumnMap {
 }
 
 export function isEmptyColumnMap(columnMap: ColumnMap): boolean {
-  return !columnMap.date && !columnMap.description && !columnMap.amount;
+  return !columnMap.date && !columnMap.description && !columnMap.amount && !columnMap.location;
 }
 
 export function autoDetectColumns(headers: string[]): ColumnMap {
