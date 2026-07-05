@@ -8,7 +8,7 @@ Build a finance app that tracks every transaction across multiple bank accounts,
 
 ## Success Criteria
 
-- Bank CSVs (ANZ, Amex, ING) and Up Bank API import with automatic entity matching and deduplication
+- Bank CSVs import through a generic column-mapping flow with automatic entity matching and checksum-based deduplication; per-bank parsers (ANZ/Amex/ING sign + column logic, ANZ PDF) and Up Bank API batch/webhook persistence are not yet built — see `docs/ideas/per-bank-parsers.md` and `docs/ideas/up-bank-api-import.md`
 - Transactions categorised by learned rules and AI fallback — manual tagging decreases over time
 - Budget tracking shows spending against monthly/yearly targets by category
 - Wishlist tracks savings goals with progress
@@ -30,7 +30,7 @@ The multi-step import wizard that ingests bank data into the ledger — wizard U
 
 | PRD                                                          | Summary                                                                                                                                          | Status  |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| [Import Wizard UI](prds/import-wizard-ui.md)                 | 8-step flow: upload, column mapping, processing, review, tags, final review & commit, summary                                                    | Partial |
+| [Import Wizard UI](prds/import-wizard-ui.md)                 | 8-step flow: upload, column mapping, processing, review entities, tag review, create rules, final review & commit, summary                       | Partial |
 | [Entity Matching Engine](prds/entity-matching-engine.md)     | Matching chain: aliases → exact → prefix → contains → AI fallback; per-run reference maps fetched live from `contacts`; Claude Haiku final stage | Done    |
 | [Deduplication & CSV Parsing](prds/import-dedup-csv.md)      | Checksum dedup + generic CSV column-mapping; per-bank parsers (ANZ, Amex, ING) and Up Bank API import                                            | Partial |
 | [Local-First Import State Layer](prds/local-first-import.md) | Pending entity/rule stores in zustand, server-side merged re-evaluation, commit payload builder                                                  | Done    |
@@ -82,23 +82,23 @@ AI-powered live rule creation during import — when a user corrects a transacti
 
 ## Key Decisions
 
-| Decision        | Choice                                            | Rationale                                             |
-| --------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| Entity matching | Aliases > exact > prefix > contains > AI fallback | Layered strategy, ~95-100% hit rate before AI         |
-| AI provider     | Claude Haiku                                      | Cheap, good enough for categorisation                 |
-| AI caching      | Disk cache (`ai_entity_cache.json`)               | Avoid repeat API calls                                |
-| Deduplication   | Date + amount count-based                         | Handles duplicate CSVs without unique transaction IDs |
-| Import format   | Per-bank parsers                                  | Each bank has different CSV formats                   |
+| Decision        | Choice                                                                     | Rationale                                                                           |
+| --------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Entity matching | Corrections > aliases > exact > prefix > contains > AI fallback            | Layered strategy, ~95-100% hit rate before AI                                       |
+| AI provider     | Claude Haiku                                                               | Cheap, good enough for categorisation                                               |
+| AI caching      | None — every uncached-entity import calls the API                          | Simplicity over cost; a disk/DB cache was considered and dropped, see `docs/ideas/` |
+| Deduplication   | SHA-256 checksum of a canonical date+amount+description+bank-reference key | Handles duplicate CSVs without unique transaction IDs                               |
+| Import format   | One generic column-mapping flow; per-bank parsers not yet built            | Each bank has different CSV formats                                                 |
 
 ## Risks
 
-- **Bank format changes** — Banks change CSV exports without notice. Each parser is isolated
-- **AI cost creep** — New merchants trigger API calls. Mitigation: cache, corrections reduce AI dependency
+- **Bank format changes** — Banks change CSV exports without notice; the generic column-mapping flow requires the user to remap by hand
+- **AI cost creep** — New merchants trigger uncached API calls every import. Mitigation: learned corrections reduce AI dependency over time
 - **Dedup false positives** — Same amount, same day, different merchants. Mitigation: entity matching narrows the window
 
 ## Out of Scope
 
-- Real-time bank feeds (except Up Bank API)
+- Real-time bank feeds (Up Bank webhook exists but only logs events; no persistence)
 - Multi-currency support
 - Investment or stock tracking
 - Tax filing or reporting

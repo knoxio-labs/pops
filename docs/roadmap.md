@@ -22,18 +22,18 @@ registry** at request time — nothing compiles against a static pillar list.
 
 ### Data pillars (Done unless noted)
 
-| Pillar                                                 | Port | One-liner                                                                                                                             |
-| ------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [registry](themes/federation/README.md)                | 3001 | Runtime directory — pillars register and heartbeat here; the sole source of truth for fleet membership                                |
-| [inventory](../pillars/inventory/docs/README.md)       | 3002 | Home inventory: connectivity graph over a hierarchical location tree, photos, asset IDs, Paperless-ngx receipts, insurance reports    |
-| [media](../pillars/media/docs/README.md)               | 3003 | Movie/TV tracking + taste learning: 1v1 ELO comparisons, recommendations, Plex / Radarr / Sonarr / TMDB / TheTVDB, library rotation   |
-| [finance](../pillars/finance/docs/README.md)           | 3004 | Personal finance: bank-CSV imports with entity matching, learned-rule + AI categorisation, budgets, wishlist                          |
-| [food](../pillars/food/docs/README.md)                 | 3005 | Recipes, meal planning, batch/pantry FIFO, multimodal ingest (web / Instagram / screenshot / text) — _in progress_                    |
-| [lists](../pillars/lists/docs/README.md)               | 3006 | Generic domain-agnostic lists (shopping / packing / todo / generic); the substrate food and others push items into                    |
-| [cerebrum](../pillars/cerebrum/docs/README.md)         | 3007 | Personal cognitive infrastructure: Markdown engrams, semantic + structured retrieval, autonomous curation, Ego chat agent — _partial_ |
-| [ai](../pillars/ai/docs/README.md)                     | 3008 | AI observability: one inference log across every pillar, cost/latency/quality dashboards, budgets, alerts — _partial_                 |
-| [orchestrator](../pillars/orchestrator/docs/README.md) | 3009 | Stateless cross-pillar aggregator (no DB): federated search fan-out + the live AI-tool registry                                       |
-| [contacts](../pillars/contacts/docs/README.md)         | 3010 | The entities directory (people / companies / places). The one **Rust** pillar — the cross-language federation proof                   |
+| Pillar                                                 | Port | One-liner                                                                                                                                                                                    |
+| ------------------------------------------------------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [registry](themes/federation/README.md)                | 3001 | Runtime directory — pillars register and heartbeat here; the sole source of truth for fleet membership                                                                                       |
+| [inventory](../pillars/inventory/docs/README.md)       | 3002 | Home inventory: connectivity graph over a hierarchical location tree, photos, asset IDs, Paperless-ngx receipts, insurance reports                                                           |
+| [media](../pillars/media/docs/README.md)               | 3003 | Movie/TV tracking + taste learning: 1v1 ELO comparisons, recommendations, Plex / Radarr / Sonarr / TMDB / TheTVDB, library rotation                                                          |
+| [finance](../pillars/finance/docs/README.md)           | 3004 | Personal finance: bank-CSV imports with entity matching, learned-rule + AI categorisation, budgets, wishlist — _partial_ (per-bank parsers, Up Bank API import, and 3 other PRDs unfinished) |
+| [food](../pillars/food/docs/README.md)                 | 3005 | Recipes, meal planning, batch/pantry FIFO, multimodal ingest (web / Instagram / screenshot / text) — _in progress_                                                                           |
+| [lists](../pillars/lists/docs/README.md)               | 3006 | Generic domain-agnostic lists (shopping / packing / todo / generic); the substrate food and others push items into                                                                           |
+| [cerebrum](../pillars/cerebrum/docs/README.md)         | 3007 | Personal cognitive infrastructure: Markdown engrams, semantic + structured retrieval, autonomous curation, Ego chat agent — _partial_                                                        |
+| [ai](../pillars/ai/docs/README.md)                     | 3008 | AI observability: one inference log across every pillar, cost/latency/quality dashboards, budgets, alerts — _partial_                                                                        |
+| [orchestrator](../pillars/orchestrator/docs/README.md) | 3009 | Stateless cross-pillar aggregator (no DB): federated search fan-out + the live AI-tool registry                                                                                              |
+| [contacts](../pillars/contacts/docs/README.md)         | 3010 | The entities directory (people / companies / places). The one **Rust** pillar — the cross-language federation proof                                                                          |
 
 Supporting pillars: [shell](../pillars/shell/docs/README.md) (the SPA host + nginx
 dispatcher, owns no data), [mcp](../pillars/mcp/docs/README.md) (HTTP MCP gateway —
