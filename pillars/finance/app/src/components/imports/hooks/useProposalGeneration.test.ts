@@ -160,6 +160,43 @@ describe('useProposalGeneration — concurrent accept guard', () => {
     await waitFor(() => expect(result.current.proposalSignal?.entityName).toBe('McDonalds'));
   });
 
+  it('ignores a close request while a proposal is generating, then allows it once settled', async () => {
+    const deferred = makeDeferred<AnalyzeEnvelope>();
+    analyzeMock.mockReturnValueOnce(deferred.promise);
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useProposalGeneration(), { wrapper });
+
+    act(() => {
+      void result.current.generateProposal({
+        triggeringTransaction: makeTransaction({ description: 'STARBUCKS STORE 123' }),
+        entityId: 'ent-a',
+        entityName: 'Starbucks',
+      });
+    });
+    expect(result.current.proposalOpen).toBe(true);
+    expect(result.current.isGeneratingProposal).toBe(true);
+
+    // A close attempt (overlay click / Esc / close button) mid-generation is ignored:
+    // the loading window is the only feedback the user has.
+    act(() => {
+      result.current.handleProposalOpenChange(false);
+    });
+    expect(result.current.proposalOpen).toBe(true);
+
+    await act(async () => {
+      deferred.resolve(analyzeEnvelope('STARBUCKS'));
+      await deferred.promise;
+    });
+    await waitFor(() => expect(result.current.isGeneratingProposal).toBe(false));
+
+    // Once the proposal has resolved, the dialog can be dismissed again.
+    act(() => {
+      result.current.handleProposalOpenChange(false);
+    });
+    expect(result.current.proposalOpen).toBe(false);
+  });
+
   it('re-enables generation and surfaces a single fallback when the analysis errors', async () => {
     const deferred = makeDeferred<AnalyzeEnvelope>();
     analyzeMock.mockReturnValueOnce(deferred.promise);

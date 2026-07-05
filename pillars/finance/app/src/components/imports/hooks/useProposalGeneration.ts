@@ -174,9 +174,19 @@ export function useProposalGeneration() {
     [generateProposal]
   );
 
+  const handleProposalOpenChange = useCallback((nextOpen: boolean) => {
+    // Ignore close requests (overlay click / Esc / close button) while the
+    // analysis is in flight: the loading window is the only feedback, and
+    // runGenerate() would re-open it moments later, so a mid-generation close
+    // just flickers the dialog. Opening is always allowed.
+    if (!nextOpen && inFlightRef.current) return;
+    setProposalOpen(nextOpen);
+  }, []);
+
   return {
     proposalOpen,
     setProposalOpen,
+    handleProposalOpenChange,
     proposalSignal,
     proposalTriggeringTransaction,
     browseOpen,
