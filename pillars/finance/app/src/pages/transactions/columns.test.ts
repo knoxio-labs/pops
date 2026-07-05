@@ -16,6 +16,7 @@ void i18n.use(initReactI18next).init({
   defaultNS: 'finance',
   interpolation: { escapeValue: false },
   resources: { 'en-AU': { finance: enAUFinance } },
+  initImmediate: false,
 });
 const t = i18n.getFixedT<'finance'>('en-AU', 'finance');
 

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DashboardPage } from './DashboardPage';
 
@@ -27,6 +27,10 @@ function renderPage() {
 }
 
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('requests only active budgets, limited to 3, from the server', async () => {
     transactionsList.mockResolvedValue({
       data: { data: [], pagination: { total: 0, limit: 10, offset: 0, hasMore: false } },
