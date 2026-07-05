@@ -70,10 +70,17 @@ describe('buildImportDedupKey', () => {
     expect(a).toBe(b);
   });
 
-  it('ignores digits and case in the description', () => {
-    const a = buildImportDedupKey({ ...base, description: 'starbucks store 1234' });
-    const b = buildImportDedupKey({ ...base, description: 'STARBUCKS STORE 9999' });
-    expect(a).toBe(b);
+  it('ignores case and whitespace but PRESERVES digits in the description', () => {
+    // Case + whitespace differences are cosmetic re-export noise → same key.
+    expect(buildImportDedupKey({ ...base, description: '  starbucks   STORE 1234 ' })).toBe(
+      buildImportDedupKey({ ...base, description: 'STARBUCKS STORE 1234' })
+    );
+    // But embedded digits distinguish genuinely different charges (terminal id,
+    // card suffix). Reference-less banks rely on the description alone, so these
+    // must NOT collide, or a real charge is silently dropped as a duplicate.
+    expect(
+      buildImportDedupKey({ ...base, reference: '', description: 'EFTPOS 4821 COLES' })
+    ).not.toBe(buildImportDedupKey({ ...base, reference: '', description: 'EFTPOS 7734 COLES' }));
   });
 
   it('distinguishes different amounts, dates, references, and merchants', () => {
@@ -88,7 +95,7 @@ describe('buildImportDedupKey', () => {
     // Pinned against an independently computed digest; crypto-js in the browser
     // produces the same value (verified in the app-side validation test).
     expect(sha256(buildImportDedupKey(base))).toBe(
-      'a3a175220202738a2284db59c49efb2a7c8b42a9730f6b443166bcf51b19b137'
+      '7d245cd708a1e3d9ca94a1ba704da5451f17d06b357dd718504ff0f615502605'
     );
   });
 

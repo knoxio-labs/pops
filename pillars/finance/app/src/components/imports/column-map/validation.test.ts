@@ -89,7 +89,7 @@ describe('validateAllRows — canonical checksum (#3611)', () => {
     // Pinned digest shared with the backend migration test — proves the browser
     // parser and the re-key migration agree byte-for-byte.
     expect(parsed?.checksum).toBe(
-      'a3a175220202738a2284db59c49efb2a7c8b42a9730f6b443166bcf51b19b137'
+      '7d245cd708a1e3d9ca94a1ba704da5451f17d06b357dd718504ff0f615502605'
     );
   });
 

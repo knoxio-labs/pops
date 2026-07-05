@@ -31,7 +31,7 @@ ParsedTransaction = {
 ```
 
 - `rawRow` = `JSON.stringify(row)` (the full original CSV row, preserved for audit/AI context).
-- `checksum` = `SHA256` (`crypto-js`) of the **canonical dedup key** — `date` + `amount` + `normalizeDescription(description)` + the bank reference/id column (`buildImportDedupKey` / `findReferenceHeader`, `@pops/finance`) — NOT the raw row, so a re-export differing only in a free-text column still dedupes (#3611).
+- `checksum` = `SHA256` (`crypto-js`) of the **canonical dedup key** — `date` + `amount` + `normalizeDedupDescription(description)` + the bank reference/id column (`buildImportDedupKey` / `findReferenceHeader`, `@pops/finance`) — NOT the raw row, so a re-export differing only in a free-text column still dedupes (#3611). The dedup normalizer lowercases and collapses whitespace but **preserves digits** — it is deliberately NOT the fuzzy entity-matching normalizer (see edge cases).
 - `account` = the bank selected in step 1 (`bankType`: ANZ / Amex / ING / Up), threaded through `validateAllRows` and the `/imports/process` body (#3608) — no longer the hardcoded `"Amex"`.
 
 ## Deduplication (backend)
@@ -50,7 +50,9 @@ Migration `0059_recompute_canonical_checksum` re-keys existing rows: it drops th
 
 ### Why the canonical key works
 
-The dedup identity is the stable, bank-agnostic tuple — date, amount, `normalizeDescription(description)` (uppercase, strip digits, collapse whitespace), and the bank's own reference/id — so two exports of the same charge that differ only in a free-text column (e.g. a cardholder Address) hash identically and dedupe. Hashing the whole raw row (the pre-#3611 behaviour) let such exports produce different checksums and double-insert.
+The dedup identity is the stable, bank-agnostic tuple — date, amount, `normalizeDedupDescription(description)` (lowercase + collapse whitespace, **digits preserved**), and the bank's own reference/id — so two exports of the same charge that differ only in a free-text column (e.g. a cardholder Address) hash identically and dedupe. Hashing the whole raw row (the pre-#3611 behaviour) let such exports produce different checksums and double-insert.
+
+**Why digits are preserved (deliberate, for a money path).** The dedup normalizer is intentionally minimal and does NOT reuse `normalizeDescription`, the fuzzy entity-matching normalizer, which strips all digits. Excluding the free-text columns is already what defeats the re-export double-count; digit stripping is unnecessary and unsafe here. For reference-less banks (ANZ/ING typically have no per-transaction reference column) the description is the only distinguishing field, so two genuinely distinct same-day, same-amount charges differing only in embedded numbers (`EFTPOS 4821 COLES` vs `EFTPOS 7734 COLES`) must keep distinct checksums — collapsing them would silently drop a real charge as a duplicate (under-counting spend), the inverse of the bug #3611 fixes. When a reference column exists it is the authoritative signal; digit preservation only matters for the reference-less case.
 
 ## REST surface
 
@@ -66,14 +68,15 @@ The dedup identity is the stable, bank-agnostic tuple — date, amount, `normali
 
 ## Edge cases
 
-| Case                                           | Behaviour                                                                                                |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Bank changes CSV format                        | Auto-detect may miss columns; user remaps manually, or rows fail validation and show as errors in step 2 |
-| Manual CSV edit (amount changed)               | Amount is part of the canonical key → different checksum → treated as a new transaction                  |
-| Same amount + day, different merchant          | Different normalized descriptions → different checksums → no false dedup                                 |
-| Re-export differing only in a free-text column | Canonical key ignores non-key columns → same checksum → deduped (#3611)                                  |
-| Transaction with a null checksum already in DB | Ignored by `findExistingChecksums` (only non-null checksums match)                                       |
-| > 500 transactions in one import               | Checksum probe batches at 500 to stay under the SQLite variable limit                                    |
+| Case                                                               | Behaviour                                                                                                |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Bank changes CSV format                                            | Auto-detect may miss columns; user remaps manually, or rows fail validation and show as errors in step 2 |
+| Manual CSV edit (amount changed)                                   | Amount is part of the canonical key → different checksum → treated as a new transaction                  |
+| Reference-less bank, two charges differing only in embedded digits | Digits are preserved in the dedup key → different checksums → both kept (no silent under-count)          |
+| Same amount + day, different merchant                              | Different normalized descriptions → different checksums → no false dedup                                 |
+| Re-export differing only in a free-text column                     | Canonical key ignores non-key columns → same checksum → deduped (#3611)                                  |
+| Transaction with a null checksum already in DB                     | Ignored by `findExistingChecksums` (only non-null checksums match)                                       |
+| > 500 transactions in one import                                   | Checksum probe batches at 500 to stay under the SQLite variable limit                                    |
 
 ## Acceptance criteria
 

@@ -18,8 +18,26 @@
  * browser-safe; each side applies its own SHA-256 (crypto-js in the browser,
  * `node:crypto` in the migration function), which produce identical digests
  * for identical input strings.
+ *
+ * Dedup normalization is intentionally minimal (case + whitespace only) and
+ * preserves digits and punctuation. It must NOT reuse the fuzzy entity-matching
+ * normalizer, which strips all digits: for reference-less banks (ANZ/ING) the
+ * description is the only distinguishing field, so two genuinely distinct
+ * same-day, same-amount charges that differ only in embedded numbers (terminal
+ * id, card suffix — e.g. `EFTPOS 4821 COLES` vs `EFTPOS 7734 COLES`) must keep
+ * distinct keys, or a real charge is silently dropped as a duplicate. Excluding
+ * the free-text columns (Address) — which is what deriving from canonical
+ * fields already does — is what defeats the re-export double-count; digit
+ * stripping is not needed and is unsafe for a ledger.
  */
-import { normalizeDescription } from './corrections-pure.js';
+
+/**
+ * Minimal, digit-preserving normalization for the dedup key: lowercase and
+ * collapse runs of whitespace. Distinct embedded numbers stay distinct.
+ */
+export function normalizeDedupDescription(description: string): string {
+  return description.toLowerCase().replace(/\s+/g, ' ').trim();
+}
 
 /**
  * Header substrings (lowercased) that identify the bank's own reference/id
@@ -73,7 +91,7 @@ export function buildImportDedupKey(fields: ImportDedupFields): string {
   return [
     fields.date,
     String(fields.amount),
-    normalizeDescription(fields.description),
+    normalizeDedupDescription(fields.description),
     (fields.reference ?? '').trim(),
   ].join(DEDUP_KEY_SEPARATOR);
 }
