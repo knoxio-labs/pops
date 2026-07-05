@@ -76,9 +76,11 @@ describe('GET /health', () => {
       amount: 10,
       date: '2026-01-01',
     });
+    const staleDays = 30;
+    const staleEdit = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000).toISOString();
     financeDb.db
       .update(transactions)
-      .set({ lastEditedTime: '2026-01-01T00:00:00.000Z' })
+      .set({ lastEditedTime: staleEdit })
       .where(eq(transactions.id, stale.id))
       .run();
 
@@ -86,6 +88,27 @@ describe('GET /health', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.import.stale).toBe(true);
-    expect(res.body.import.daysSinceLastImport).toBeGreaterThanOrEqual(14);
+    expect(res.body.import.daysSinceLastImport).toBeGreaterThanOrEqual(staleDays - 1);
+  });
+
+  it('treats a present-but-unparseable lastEditedTime as stale with unknown days', async () => {
+    const row = transactionsService.createTransaction(financeDb.db, {
+      description: 'Corrupt import',
+      account: 'Amex',
+      amount: 10,
+      date: '2026-01-01',
+    });
+    financeDb.db
+      .update(transactions)
+      .set({ lastEditedTime: 'not-a-timestamp' })
+      .where(eq(transactions.id, row.id))
+      .run();
+
+    const res = await supertest(app()).get('/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.import.lastEditedTime).toBe('not-a-timestamp');
+    expect(res.body.import.daysSinceLastImport).toBeNull();
+    expect(res.body.import.stale).toBe(true);
   });
 });

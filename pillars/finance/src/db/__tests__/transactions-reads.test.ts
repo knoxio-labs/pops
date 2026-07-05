@@ -83,4 +83,14 @@ describe('getLastImportInfo', () => {
 
     expect(getLastImportInfo(db, now).daysSinceLastImport).toBe(0);
   });
+
+  it('keeps the raw value but reports null days for an unparseable lastEditedTime', () => {
+    insertTransaction(db, 'a', 'not-a-timestamp');
+    const now = new Date('2026-03-20T12:00:00.000Z');
+
+    expect(getLastImportInfo(db, now)).toEqual({
+      lastEditedTime: 'not-a-timestamp',
+      daysSinceLastImport: null,
+    });
+  });
 });

@@ -76,7 +76,9 @@ export function makeRequestHandler(deps: FinanceApiDeps): {
         import: {
           lastEditedTime,
           daysSinceLastImport,
-          stale: daysSinceLastImport !== null && daysSinceLastImport >= IMPORT_STALE_THRESHOLD_DAYS,
+          stale:
+            lastEditedTime !== null &&
+            (daysSinceLastImport === null || daysSinceLastImport >= IMPORT_STALE_THRESHOLD_DAYS),
         },
       };
     },

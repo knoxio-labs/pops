@@ -14,7 +14,11 @@ import type { FinanceDb } from './internal.js';
 export interface LastImportInfo {
   /** ISO timestamp of the most recently created/edited transaction, or `null` with an empty table. */
   lastEditedTime: string | null;
-  /** Whole days between `lastEditedTime` and `now`, or `null` with an empty table. */
+  /**
+   * Whole days between `lastEditedTime` and `now`. `null` when there is no data
+   * (empty table) or when `lastEditedTime` is present but unparseable, so callers
+   * can distinguish "no imports yet" from "elapsed time unknown".
+   */
   daysSinceLastImport: number | null;
 }
 
@@ -90,7 +94,10 @@ export function getLastImportInfo(db: FinanceDb, now: Date = new Date()): LastIm
   const lastEditedTime = row?.lastEditedTime ?? null;
   if (!lastEditedTime) return { lastEditedTime: null, daysSinceLastImport: null };
 
-  const elapsedMs = now.getTime() - new Date(lastEditedTime).getTime();
+  const lastEditedMs = new Date(lastEditedTime).getTime();
+  if (Number.isNaN(lastEditedMs)) return { lastEditedTime, daysSinceLastImport: null };
+
+  const elapsedMs = now.getTime() - lastEditedMs;
   const daysSinceLastImport = Math.max(0, Math.floor(elapsedMs / (24 * 60 * 60 * 1000)));
   return { lastEditedTime, daysSinceLastImport };
 }
