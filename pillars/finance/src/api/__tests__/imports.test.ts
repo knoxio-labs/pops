@@ -21,6 +21,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { type CallResult } from '@pops/pillar-sdk/client';
+
 import {
   importsService,
   openFinanceDb,
@@ -28,7 +30,12 @@ import {
   type OpenedFinanceDb,
 } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
-import { type ContactsClient } from '../contacts/client.js';
+import { page, stubHandle } from '../contacts/__tests__/stub-handle.js';
+import {
+  createContactsClient,
+  type ContactEntity,
+  type ContactsClient,
+} from '../contacts/client.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake, type ContactsFake, type SeedContact } from './contacts-fake.js';
 import { makeClient, waitForImportCompletion } from './test-utils.js';
@@ -1119,15 +1126,16 @@ describe('imports.commitImport — contacts pre-create outbox during an outage (
     expect(outboxRows.c).toBe(0);
   });
 
-  it('a genuine (non-outage) contacts error still aborts the commit before the tx opens', async () => {
-    const throwing: ContactsClient = {
-      fetchAllEntities: async () => [],
-      fetchEntityDefaultTags: async () => [],
-      createOrFetchByName: async () => {
-        throw new Error('boom: not an outage');
-      },
-    };
-    const c = client(throwing);
+  it('a PERMANENT contacts failure (bad-request) still aborts the commit before the tx opens', async () => {
+    const list = () => Promise.resolve(page([], false));
+    const create = () =>
+      Promise.resolve<CallResult<{ data: ContactEntity; message: string }>>({
+        kind: 'bad-request',
+        pillar: 'contacts',
+        message: 'entity type is not recognised',
+      });
+    const contacts = createContactsClient(() => stubHandle({ list, create }));
+    const c = client(contacts);
     const tempId = 'temp:entity:00000000-0000-0000-0000-00000000ab06';
 
     await expect(

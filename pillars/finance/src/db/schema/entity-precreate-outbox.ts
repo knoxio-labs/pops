@@ -9,7 +9,7 @@ export const entityPrecreateOutbox = sqliteTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     type: text('type', { enum: ENTITY_TYPES }).notNull(),
-    status: text('status', { enum: ['pending', 'resolved'] })
+    status: text('status', { enum: ['pending', 'resolved', 'failed'] })
       .notNull()
       .default('pending'),
     attempts: integer('attempts').notNull().default(0),

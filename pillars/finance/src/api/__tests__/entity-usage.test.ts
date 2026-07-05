@@ -14,7 +14,13 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, transactionsService, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  entityPrecreateOutboxService,
+  openFinanceDb,
+  transactionsService,
+  type OpenedFinanceDb,
+} from '../../db/index.js';
+import { transactionCountsByEntity } from '../../db/services/entity-usage.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake, type ContactsFake, type SeedContact } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
@@ -133,5 +139,15 @@ describe('entityUsage — transactionCount rollup over the live contact set', ()
     const { data, pagination } = await client(down).entityUsage.list();
     expect(data).toEqual([]);
     expect(pagination.total).toBe(0);
+  });
+
+  it('excludes entity_precreate_outbox pending placeholders from the transaction-count rollup', () => {
+    const placeholderId = entityPrecreateOutboxService.buildPendingContactId();
+    seedTxn(placeholderId, 'PENDING CONTACT TXN', '2026-01-04');
+
+    const counts = transactionCountsByEntity(financeDb.db);
+
+    expect(counts.has(placeholderId)).toBe(false);
+    expect(counts.get('ent-alpha')).toBe(2);
   });
 });

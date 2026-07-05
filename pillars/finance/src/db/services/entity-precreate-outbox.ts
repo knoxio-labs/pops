@@ -10,7 +10,9 @@
  * / `transaction_tag_rules.entity_id` instead of aborting, and queues a row
  * here so a background reconciler (`../cron/reconcile-contacts-outbox.ts`) can
  * resolve it against contacts once the outage clears — rewriting the
- * placeholder to the real contact id everywhere it was written.
+ * placeholder to the real contact id everywhere it was written. A row that
+ * fails to resolve `DEFAULT_MAX_RECONCILE_ATTEMPTS` times in a row is
+ * dead-lettered (`status = 'failed'`) rather than retried forever.
  *
  * Standard service pattern: db-arg services (callers control the connection
  * and can pass a transaction), plain functions, typed domain errors, no HTTP
@@ -47,6 +49,14 @@ export function isPendingContactId(entityId: string): boolean {
 /** Raw drizzle row shape. */
 export type EntityPrecreateOutboxRow = typeof entityPrecreateOutbox.$inferSelect;
 
+/**
+ * Default cap on reconciliation attempts before a row is dead-lettered
+ * (`status = 'failed'`) instead of retried forever. A contacts outage that
+ * outlives this many 60s-interval ticks (~50 minutes at the default) is
+ * treated as needing operator attention, not an infinite background retry.
+ */
+export const DEFAULT_MAX_RECONCILE_ATTEMPTS = 50;
+
 /** Queue a pending contact pre-create. `id` is the placeholder written to
  * `entity_id` columns (see {@link buildPendingContactId}) and doubles as this
  * row's primary key. */
@@ -72,23 +82,58 @@ export function listPending(db: FinanceDb): EntityPrecreateOutboxRow[] {
     .all();
 }
 
-/** Record a reconciliation attempt that didn't resolve the row — bumps
- * `attempts`, stamps `lastAttemptAt`, and records `lastError` for ops. The row
- * stays `pending` and is retried next tick. */
+/** Status a row lands in after {@link recordAttemptFailure} — `'pending'`
+ * when it's still under the attempt cap and will be retried next tick,
+ * `'failed'` when this attempt just tipped it over the cap and it has been
+ * dead-lettered. */
+export type AttemptFailureOutcome = 'pending' | 'failed';
+
+/** Input to {@link recordAttemptFailure}. */
+export interface RecordAttemptFailureInput {
+  nowIso: string;
+  error: string;
+  /** Cap on total attempts before the row is dead-lettered (default
+   * {@link DEFAULT_MAX_RECONCILE_ATTEMPTS}). */
+  maxAttempts?: number;
+}
+
+/**
+ * Record a reconciliation attempt that didn't resolve the row `id` — bumps
+ * `attempts` (via an atomic SQL increment against whatever is currently
+ * stored, so two overlapping ticks against the same row can never lose an
+ * attempt to a stale in-memory read), stamps `lastAttemptAt`, and records
+ * `lastError` for ops. Once the bumped count reaches `maxAttempts` the row is
+ * dead-lettered (`status = 'failed'`) instead of staying `pending` forever,
+ * so a contacts outage that never clears can't grow the outbox / retry loop
+ * without bound; `listPending` stops selecting a `'failed'` row.
+ */
 export function recordAttemptFailure(
   db: FinanceDb,
   id: string,
-  nowIso: string,
-  error: string
-): void {
+  input: RecordAttemptFailureInput
+): AttemptFailureOutcome {
+  const maxAttempts = input.maxAttempts ?? DEFAULT_MAX_RECONCILE_ATTEMPTS;
   db.update(entityPrecreateOutbox)
     .set({
       attempts: sql`${entityPrecreateOutbox.attempts} + 1`,
-      lastAttemptAt: nowIso,
-      lastError: error,
+      lastAttemptAt: input.nowIso,
+      lastError: input.error,
     })
     .where(eq(entityPrecreateOutbox.id, id))
     .run();
+
+  const updated = db
+    .select({ attempts: entityPrecreateOutbox.attempts })
+    .from(entityPrecreateOutbox)
+    .where(eq(entityPrecreateOutbox.id, id))
+    .get();
+  if ((updated?.attempts ?? 0) < maxAttempts) return 'pending';
+
+  db.update(entityPrecreateOutbox)
+    .set({ status: 'failed' })
+    .where(eq(entityPrecreateOutbox.id, id))
+    .run();
+  return 'failed';
 }
 
 /** Mark a row resolved once contacts confirms the real entity id. Does NOT

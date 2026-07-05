@@ -229,6 +229,49 @@ describe('startReconcileContactsOutboxWorker', () => {
     expect(getTransactionEntityId('e2e-outbox-1')).toBe(realId);
   });
 
+  it('dead-letters a row once it hits maxAttempts, and stops retrying it', async () => {
+    const placeholderId = seedOutboxRow('DeadLetterCo');
+    const contacts = makeContactsFake({ unavailable: true });
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 2,
+    });
+    // The worker's own immediate on-start pass is attempt 1 (races this
+    // explicit `runOnce`, as in the tests above) — drive enough passes that
+    // the row is guaranteed to cross `maxAttempts` regardless of how that
+    // race lands.
+    await handle.runOnce();
+    await handle.runOnce();
+    handle.stop();
+
+    const row = opened.raw
+      .prepare('SELECT status, attempts FROM entity_precreate_outbox WHERE id = ?')
+      .get(placeholderId) as { status: string; attempts: number };
+    expect(row.status).toBe('failed');
+    expect(row.attempts).toBeGreaterThanOrEqual(2);
+
+    // A dead-lettered row is no longer selected by `listPending` — one more
+    // tick must not touch it (attempts stays put).
+    const attemptsAtDeadLetter = row.attempts;
+    const handle2 = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 2,
+    });
+    await handle2.runOnce();
+    handle2.stop();
+
+    const rowAfter = opened.raw
+      .prepare('SELECT status, attempts FROM entity_precreate_outbox WHERE id = ?')
+      .get(placeholderId) as { status: string; attempts: number };
+    expect(rowAfter.status).toBe('failed');
+    expect(rowAfter.attempts).toBe(attemptsAtDeadLetter);
+  });
+
   it('reschedules on a recursive setTimeout and stops cleanly', async () => {
     seedOutboxRow('Timer Co');
     // Stays unavailable so the row never resolves out of the work set — each

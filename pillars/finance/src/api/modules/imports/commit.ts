@@ -16,13 +16,17 @@
  * transaction opens, a rollback of the finance side does not undo any
  * contacts already created there.
  *
- * When a pre-create fails because contacts is unreachable
- * (`ContactsUnavailableError`), the commit no longer aborts (issue #3683):
- * a `pending:contact:{uuid}` placeholder takes the entity's place in the
- * tempId map and a row is queued in `entity_precreate_outbox` — inside the
- * same finance transaction — so the outage is invisible to the importer.
+ * When a pre-create fails with a TRANSIENT error (`ContactsUnavailableError`
+ * — contacts unreachable or mid-recovery), the commit no longer aborts (issue
+ * #3683): a `pending:contact:{uuid}` placeholder takes the entity's place in
+ * the tempId map and a row is queued in `entity_precreate_outbox` — inside
+ * the same finance transaction — so the outage is invisible to the importer.
  * `reconcile-contacts-outbox.ts` drains the outbox once contacts recovers,
- * rewriting the placeholder to the real contact id everywhere it landed.
+ * rewriting the placeholder to the real contact id everywhere it landed. A
+ * PERMANENT error (`ContactsPermanentError` — bad request, unauthorized,
+ * contract mismatch) is NOT eligible for the outbox: retrying the same input
+ * would fail identically forever, so it propagates and aborts the commit
+ * exactly like any other unexpected error.
  *
  * The outer `db.transaction` handle (`tx`) is threaded into every inner service
  * so the correction/tag-rule ChangeSet applies nest as savepoints rather than
@@ -94,11 +98,13 @@ interface OutboxCandidate {
  * ONLY real inserts — a reused (already-existing) contact must not inflate the
  * commit result's "Entities Created" card.
  *
- * A `ContactsUnavailableError` no longer propagates: the tempId maps to a
- * fresh `pending:contact:{uuid}` placeholder instead, and the entity is
- * collected into `outboxCandidates` for the caller to queue once the finance
- * transaction opens. Any OTHER error (a genuine bug, not an outage) still
- * throws — only the documented unavailable case degrades.
+ * A `ContactsUnavailableError` (TRANSIENT) no longer propagates: the tempId
+ * maps to a fresh `pending:contact:{uuid}` placeholder instead, and the
+ * entity is collected into `outboxCandidates` for the caller to queue once
+ * the finance transaction opens. Any OTHER error — including
+ * `ContactsPermanentError` (PERMANENT: bad request / unauthorized / contract
+ * mismatch) and any genuine bug — still throws; only the documented
+ * transient case degrades.
  */
 async function preCreatePendingContacts(
   contacts: ContactsClient,
