@@ -22,6 +22,8 @@ export {
 } from './preview-impact.js';
 export {
   classifyCorrectionMatch,
+  resolveCorrectionApplyStatus,
+  normalizeEntityId,
   parseCorrectionTags,
   HIGH_CONFIDENCE_THRESHOLD,
   type CorrectionMatchResult,

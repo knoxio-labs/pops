@@ -57,8 +57,9 @@ After the rules are committed, every existing transaction is re-evaluated agains
 
 - Transactions imported in **this** commit are excluded by checksum (`notInArray`) — they were already classified with the new rules.
 - Processed in batches of 500 (offset-paged) to bound memory.
+- Only `matched` results are applied. The pass runs the same `resolveCorrectionApplyStatus` gate as live import: a match is written only when its status is `matched` (confidence ≥ 0.9, and, for entity-less rules, not a `purchase`). An `uncertain` match — sub-threshold, or an entity-less `purchase` rule at any confidence — is skipped, never retroactively applied without review.
 - A row is updated only if its classification actually changed — entity, type, or location. Unchanged matches are not written. `retroactiveReclassifications` counts only the rows that changed.
-- Type-only rules (transfer/income with no entity) reclassify with no entity: such a match sets the new type and clears the entity to `null`, and counts toward the reclassification total — consistent with the corrections engine treating type-only corrections as a terminal `matched` result.
+- An entity is never cleared. `entity_id`/`entity_name` are written only when the winning rule itself supplies an entity. A type-only transfer/income rule updates the type (and location) but leaves an already-assigned entity untouched — it must not null out a correct merchant.
 - If there are zero rules the pass is skipped and the count is 0.
 
 ## Final Review UI
@@ -89,17 +90,19 @@ Reads `CommitResult` from the store:
 
 As a last line of defence, the temp-id resolver itself is fail-loud: when it resolves a referenced `temp:entity:` id and the pre-create map has no entry — or when any id about to be written still carries a `temp:` prefix — it throws (`ValidationError` → 400) and rolls the commit back rather than silently persisting the placeholder string into `entity_id` (the CF016 regression). No commit ever writes a `temp:`-prefixed entity id.
 
-| Case                                                  | Behaviour                                                                                              |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Only transactions, no entities/rules                  | Entity + rule phases skipped; transactions written.                                                    |
-| Temp entity used by both a rule and a transaction     | Resolved once, reused by both writes.                                                                  |
-| Reclassification finds zero affected                  | Commit succeeds; count 0; Summary shows "No existing transactions affected."                           |
-| Single transaction write fails                        | Recorded in `failedDetails`; commit continues for the rest.                                            |
-| Commit throws inside the tx                           | Whole tx rolls back; user sees the error and can retry (contacts already created are reused on retry). |
-| Contacts pillar down                                  | Pre-create throws before the tx opens; nothing written.                                                |
-| Referenced temp id missing from the pre-create map    | Resolver throws (400); whole commit rolls back; no placeholder `entity_id` persisted.                  |
-| Stray `temp:`-prefixed entity id (not `temp:entity:`) | Rejected by validation (400) before any write; resolver would also refuse it.                          |
-| Very large reclassification (10k+)                    | Batched 500/page.                                                                                      |
+| Case                                                                         | Behaviour                                                                                              |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Only transactions, no entities/rules                                         | Entity + rule phases skipped; transactions written.                                                    |
+| Temp entity used by both a rule and a transaction                            | Resolved once, reused by both writes.                                                                  |
+| Reclassification finds zero affected                                         | Commit succeeds; count 0; Summary shows "No existing transactions affected."                           |
+| Entity-less transfer/income rule matches a row that already has an entity    | Type/location updated; the existing entity is preserved (never nulled).                                |
+| Sub-threshold match, or entity-less `purchase` rule, matches an existing row | Skipped — not written and not counted (needs review).                                                  |
+| Single transaction write fails                                               | Recorded in `failedDetails`; commit continues for the rest.                                            |
+| Commit throws inside the tx                                                  | Whole tx rolls back; user sees the error and can retry (contacts already created are reused on retry). |
+| Contacts pillar down                                                         | Pre-create throws before the tx opens; nothing written.                                                |
+| Referenced temp id missing from the pre-create map                           | Resolver throws (400); whole commit rolls back; no placeholder `entity_id` persisted.                  |
+| Stray `temp:`-prefixed entity id (not `temp:entity:`)                        | Rejected by validation (400) before any write; resolver would also refuse it.                          |
+| Very large reclassification (10k+)                                           | Batched 500/page.                                                                                      |
 
 ## Acceptance criteria
 
@@ -112,7 +115,8 @@ As a last line of defence, the temp-id resolver itself is fail-loud: when it res
 - [x] `validateCommitPayload` rejects duplicate temp IDs, duplicate entity names, and dangling/stray `temp:`-prefixed entity-id references with a 400 before any write.
 - [x] The commit never persists a `temp:`-prefixed placeholder into `entity_id`: an unresolved `temp:entity:` reference or any residual `temp:` id throws (400) and rolls the whole commit back, rather than silently writing the placeholder string (CF016).
 - [x] Retroactive reclassification re-evaluates existing rows (excluding this batch by checksum) against the full rule set via `findMatchingCorrectionFromRules`, in 500-row batches.
-- [x] Only rows whose entity/type/location changed are updated; `retroactiveReclassifications` counts only those; type-only rules clear the entity and still count.
+- [x] Retroactive reclassification applies only `matched` results through the shared `resolveCorrectionApplyStatus` gate — an `uncertain` match (sub-threshold, or an entity-less `purchase` rule at any confidence) is skipped, never written unreviewed.
+- [x] Only rows whose entity/type/location changed are updated; `retroactiveReclassifications` counts only those; a type-only transfer/income rule updates the type/location but never clears an already-assigned entity.
 - [x] Reclassification runs inside the commit tx; its failure rolls back the whole commit.
 - [x] Wizard is 8 steps (Final Review = 7, Summary = 8); `nextStep` capped at 8; Tag Review no longer writes anything.
 - [x] Final Review shows a read-only, collapsible summary from the local stores; empty sections hidden.
