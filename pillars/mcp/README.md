@@ -3,8 +3,9 @@
 MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, media, and Cerebrum data — read and write — as tools that AI agents (Claude Desktop, Claude Code, any MCP client) call over the local network. Each tool dispatches to the owning pillar over REST through `@pops/pillar-sdk`; the gateway owns no database and no business logic.
 
 - **Transport:** Streamable HTTP (`POST /mcp`), stateless — a fresh server + transport per request
-- **Port:** 3002 (configurable via `MCP_PORT`), bound `0.0.0.0` for LAN reach
-- **Auth:** Outbound only. Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern). Inbound MCP connections are unauthenticated — LAN-trusted.
+- **Port:** 3002 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; internal-only (`expose:`), reached through the shell proxy / Cloudflare Access rather than a host port
+- **Inbound auth:** `POST /mcp` requires `Authorization: Bearer <MCP_INBOUND_TOKEN>` when `MCP_INBOUND_TOKEN` is set. If it is unset the route stays open and logs a loud warning (fail-open rollout so live access is never locked out before clients are updated). `/health` and `/ready` stay open.
+- **Outbound auth:** Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern).
 
 See the [MCP Server PRD](../../docs/themes/platform/prds/mcp-server.md) for the gateway spec and the [Tool Inventory](docs/prds/tool-inventory.md) for the per-tool surface.
 
@@ -24,6 +25,9 @@ Per-pillar base URLs default to the Docker-network hostnames; override any with 
 ```env
 POPS_INTERNAL_API_KEY=sa_your_service_account_key_here
 MCP_PORT=3002
+# Optional inbound bearer secret. Set it to require `Authorization: Bearer <token>`
+# on POST /mcp; leave unset for an open (loudly-warned) local route.
+MCP_INBOUND_TOKEN=
 ```
 
 ## Running via Docker Compose
@@ -49,13 +53,20 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "pops": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://pops.local:3002/mcp"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://pops.example.com/mcp",
+        "--header",
+        "Authorization: Bearer ${MCP_INBOUND_TOKEN}"
+      ],
+      "env": { "MCP_INBOUND_TOKEN": "sa_your_inbound_token_here" }
     }
   }
 }
 ```
 
-Replace `pops.local` with your server's hostname or IP address.
+Point the URL at the proxied gateway host (the container is not host-published). Drop the `Authorization` header only when the server runs without `MCP_INBOUND_TOKEN`.
 
 ## Health & readiness
 
