@@ -7,16 +7,37 @@
  * GET-only and validated by filename pattern, so they need no DB handle. They
  * are deliberately NOT ts-rest contract routes (mirrors media's `/media/images`)
  * so they add no OpenAPI surface.
+ *
+ * The thumbnail proxy no longer embeds a `PaperlessClient` (ADR-039
+ * workstream 13 moved that to the `documents` bridge pillar). It resolves
+ * `documents`'s `baseUrl` via the pillar SDK's discovery client and streams
+ * the bytes from `documents`'s own `GET /documents/:id/thumbnail` raw route
+ * — a double proxy (browser → inventory → documents → paperless-ngx), so
+ * inventory's frontend keeps hitting its own backend unchanged.
  */
 import { resolve } from 'node:path';
 
-import { type Request, type Response, type Router as ExpressRouter, Router } from 'express';
+import {
+  type Request,
+  type Response as ExpressResponse,
+  type Router as ExpressRouter,
+  Router,
+} from 'express';
+
+import { lookupPillar as defaultLookupPillar } from '@pops/pillar-sdk/discovery';
 
 import { getInventoryDocumentsDir } from '../modules/document-files/paths.js';
-import { getPaperlessClient } from '../modules/paperless/index.js';
-import { PaperlessApiError } from '../modules/paperless/types.js';
 import { getInventoryImagesDir } from '../modules/photos/paths.js';
 import { tryServeFile } from './serve-file.js';
+
+const DOCUMENTS_PILLAR_ID = 'documents';
+
+/**
+ * Bound the proxied thumbnail fetch so a hung `documents` service can't pin an
+ * inventory request (and its worker) indefinitely. Mirrors the 10s budget the
+ * old direct Paperless client used for thumbnail fetches.
+ */
+const THUMBNAIL_FETCH_TIMEOUT_MS = 10_000;
 
 /** Uploaded item bytes can change on re-upload, so cache privately + short. */
 const UPLOAD_CACHE_CONTROL = 'private, max-age=3600';
@@ -36,7 +57,7 @@ interface ServeSpec {
   notFound: string;
 }
 
-async function serveItemFile(req: Request, res: Response, spec: ServeSpec): Promise<void> {
+async function serveItemFile(req: Request, res: ExpressResponse, spec: ServeSpec): Promise<void> {
   const itemId = String(req.params['itemId'] ?? '');
   const filename = String(req.params['filename'] ?? '');
 
@@ -61,8 +82,86 @@ async function serveItemFile(req: Request, res: Response, spec: ServeSpec): Prom
   if (!served) res.status(404).json({ error: spec.notFound });
 }
 
+export interface CreateInventoryFilesRouterOptions {
+  /**
+   * Pillar-discovery lookup used to resolve the `documents` pillar's
+   * `baseUrl` for the thumbnail proxy. Production omits this so it
+   * defaults to the live `@pops/pillar-sdk/discovery` client; tests inject
+   * a stub so the route is exercised without a registry round-trip.
+   */
+  lookupDocumentsPillar?: typeof defaultLookupPillar;
+  /** Fetch implementation for the proxied byte request. Test-only override. */
+  fetchImpl?: typeof fetch;
+}
+
+function createThumbnailProxyHandler(
+  lookupDocumentsPillar: typeof defaultLookupPillar,
+  fetchImpl: typeof fetch
+) {
+  return async (req: Request<{ id: string }>, res: ExpressResponse): Promise<void> => {
+    const { id } = req.params;
+    if (!/^\d+$/.test(id)) {
+      res.status(400).json({ error: `Invalid document id: ${id}` });
+      return;
+    }
+
+    let documentsPillar: Awaited<ReturnType<typeof lookupDocumentsPillar>>;
+    try {
+      documentsPillar = await lookupDocumentsPillar(DOCUMENTS_PILLAR_ID);
+    } catch (err) {
+      // Discovery throws (e.g. RegistryUnreachableError) only when its cache
+      // is empty AND the registry is unreachable — degrade the same way as an
+      // unregistered pillar rather than surfacing an unhandled 500.
+      console.error('[inventory/documents] Thumbnail discovery error:', err);
+      res.status(503).json({ error: 'Documents service is not available' });
+      return;
+    }
+    if (!documentsPillar) {
+      res.status(503).json({ error: 'Documents service is not available' });
+      return;
+    }
+
+    let response: Response;
+    try {
+      response = await fetchImpl(`${documentsPillar.baseUrl}/documents/${id}/thumbnail`, {
+        signal: AbortSignal.timeout(THUMBNAIL_FETCH_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        console.error('[inventory/documents] Thumbnail proxy timed out:', err);
+        res.status(504).json({ error: 'The documents pillar timed out' });
+        return;
+      }
+      console.error('[inventory/documents] Thumbnail proxy error:', err);
+      res.status(502).json({ error: 'Failed to reach the documents pillar' });
+      return;
+    }
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        res.status(404).json({ error: 'Document not found' });
+        return;
+      }
+      if (response.status === 503) {
+        res.status(503).json({ error: 'Paperless-ngx is not configured' });
+        return;
+      }
+      res.status(502).json({ error: 'Failed to fetch thumbnail from the documents pillar' });
+      return;
+    }
+
+    const contentType = response.headers.get('content-type') ?? 'image/png';
+    res.set({ 'Content-Type': contentType, 'Cache-Control': THUMBNAIL_CACHE_CONTROL });
+    res.send(Buffer.from(await response.arrayBuffer()));
+  };
+}
+
 /** Build the inventory pillar's raw file-serving router. */
-export function createInventoryFilesRouter(): ExpressRouter {
+export function createInventoryFilesRouter(
+  options: CreateInventoryFilesRouterOptions = {}
+): ExpressRouter {
+  const lookupDocumentsPillar = options.lookupDocumentsPillar ?? defaultLookupPillar;
+  const fetchImpl = options.fetchImpl ?? fetch;
   const router = Router();
 
   router.get('/api/inventory/photos/items/:itemId/:filename', async (req, res): Promise<void> => {
@@ -84,42 +183,10 @@ export function createInventoryFilesRouter(): ExpressRouter {
     }
   );
 
-  router.get('/inventory/documents/:id/thumbnail', async (req, res): Promise<void> => {
-    const { id } = req.params;
-    if (!/^\d+$/.test(id)) {
-      res.status(400).json({ error: `Invalid document id: ${id}` });
-      return;
-    }
-
-    const client = getPaperlessClient();
-    if (!client) {
-      res.status(503).json({ error: 'Paperless-ngx is not configured' });
-      return;
-    }
-
-    try {
-      const response = await client.fetchThumbnail(Number(id));
-      if (!response.ok) {
-        if (response.status === 404) {
-          res.status(404).json({ error: 'Document not found' });
-          return;
-        }
-        res.status(502).json({ error: 'Failed to fetch thumbnail from Paperless' });
-        return;
-      }
-
-      const contentType = response.headers.get('content-type') ?? 'image/png';
-      res.set({ 'Content-Type': contentType, 'Cache-Control': THUMBNAIL_CACHE_CONTROL });
-      res.send(Buffer.from(await response.arrayBuffer()));
-    } catch (err) {
-      if (err instanceof PaperlessApiError) {
-        res.status(502).json({ error: `Paperless error: ${err.message}` });
-        return;
-      }
-      console.error('[inventory/documents] Thumbnail proxy error:', err);
-      res.status(502).json({ error: 'Failed to fetch thumbnail' });
-    }
-  });
+  router.get(
+    '/inventory/documents/:id/thumbnail',
+    createThumbnailProxyHandler(lookupDocumentsPillar, fetchImpl)
+  );
 
   return router;
 }

@@ -37,20 +37,24 @@ registry** at request time — nothing compiles against a static pillar list.
 
 Supporting pillars: [shell](../pillars/shell/docs/README.md) (the SPA host + nginx
 dispatcher, owns no data), [mcp](../pillars/mcp/docs/README.md) (HTTP MCP gateway —
-binds `3011` via `MCP_PORT`; it dispatches to pillars over REST and owns no DB), and
-`moltbot` (Telegram surface).
+binds `3011` via `MCP_PORT`; it dispatches to pillars over REST and owns no DB),
+[documents](../pillars/documents/docs/README.md) (bridge pillar, port `3012`, owns
+no DB — the paperless-ngx integration moved out of inventory; source-only scaffold,
+prod cutover of the paperless-ngx containers/networks/secrets is a separate later
+step), and `moltbot` (Telegram surface).
 
 ## In progress / partial
 
-| Area                                                            | What's done                                                                         | What's missing                                                                                                   |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| [Food](../pillars/food/docs/README.md)                          | Schema, recipe management, review queue, meal planning, multimodal ingest in flight | End-to-end polish and the long ideas backlog (Instagram acquisition, substitution graph, shopping-list fidelity) |
-| Cerebrum — [Emit](../pillars/cerebrum/docs/README.md#prd-index) | Query engine grounds NL questions in engrams                                        | Document generation and proactive nudges                                                                         |
-| Cerebrum — [Glia](../pillars/cerebrum/docs/README.md#prd-index) | Curation workers (pruner, consolidator, linker, auditor)                            | Trust-graduation review UX and reverts                                                                           |
-| Cerebrum — [Ego](../pillars/cerebrum/docs/README.md#prd-index)  | Ego channels + core chat agent                                                      | SSE streaming, recent-action history summarisation, CLI                                                          |
-| [AI Ops](../pillars/ai/docs/README.md)                          | Inference log, dashboards, budget tracking, alerts                                  | The pre-call budget gate (block / warn / fall back to a local model before an over-budget call)                  |
-| Foundation — UI / responsive / search                           | Shell, settings, feature toggles, module boundaries all shipped                     | `@pops/ui` token/component coverage, responsive adaptations, and search ranking are each Partial                 |
-| Federation — SDK / shell drift                                  | Server proxy, discovery, registry, Rust peer all live                               | Several SDK + shell PRDs sit at `To Review` / `Partial` pending drift-gate and external-bundle wiring            |
+| Area                                                            | What's done                                                                         | What's missing                                                                                                      |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [Food](../pillars/food/docs/README.md)                          | Schema, recipe management, review queue, meal planning, multimodal ingest in flight | End-to-end polish and the long ideas backlog (Instagram acquisition, substitution graph, shopping-list fidelity)    |
+| Cerebrum — [Emit](../pillars/cerebrum/docs/README.md#prd-index) | Query engine grounds NL questions in engrams                                        | Document generation and proactive nudges                                                                            |
+| Cerebrum — [Glia](../pillars/cerebrum/docs/README.md#prd-index) | Curation workers (pruner, consolidator, linker, auditor)                            | Trust-graduation review UX and reverts                                                                              |
+| Cerebrum — [Ego](../pillars/cerebrum/docs/README.md#prd-index)  | Ego channels + core chat agent                                                      | SSE streaming, recent-action history summarisation, CLI                                                             |
+| [AI Ops](../pillars/ai/docs/README.md)                          | Inference log, dashboards, budget tracking, alerts                                  | The pre-call budget gate (block / warn / fall back to a local model before an over-budget call)                     |
+| [Documents](../pillars/documents/docs/README.md)                | Bridge pillar scaffolded; paperless-ngx code + contract moved out of inventory      | Prod cutover — paperless-ngx/paperless-redis containers, networks, volumes, secrets, backup (ADR-039 workstream 22) |
+| Foundation — UI / responsive / search                           | Shell, settings, feature toggles, module boundaries all shipped                     | `@pops/ui` token/component coverage, responsive adaptations, and search ranking are each Partial                    |
+| Federation — SDK / shell drift                                  | Server proxy, discovery, registry, Rust peer all live                               | Several SDK + shell PRDs sit at `To Review` / `Partial` pending drift-gate and external-bundle wiring               |
 
 The roadmap no longer tracks status PRD-by-PRD. Each theme/pillar README's epic
 and PRD tables are the source of truth; the statuses above are the genuinely
@@ -88,15 +92,14 @@ lazy-loading, contract drift CI) close the gap toward that being fully hands-off
 Promoted from the [app-ideas brainstorm](ideas/app-ideas.md) when deliberately
 prioritised — each is a new pillar following the proven shape:
 
-| Domain      | Sketch                                                                                      |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| Documents   | Surface Paperless-ngx across POPS; link receipts/warranties/manuals to items + transactions |
-| Fitness     | Gym/training log — exercises, sets, reps, progress; Apple Health later                      |
-| Travel      | Trip planning; links to finance (budgets), documents (bookings), food (local cuisine)       |
-| Books       | Reading tracker; reuses media's pairwise-comparison taste engine                            |
-| Maintenance | Service schedules, renewals, recurring chores; extends inventory                            |
-| Social      | Contacts/CRM-lite — gift tracking, event planning over the `contacts` directory             |
-| Mobile      | Native iOS daily driver + wall-mounted HomePad dashboard over the existing PWA              |
+| Domain      | Sketch                                                                                |
+| ----------- | ------------------------------------------------------------------------------------- |
+| Fitness     | Gym/training log — exercises, sets, reps, progress; Apple Health later                |
+| Travel      | Trip planning; links to finance (budgets), documents (bookings), food (local cuisine) |
+| Books       | Reading tracker; reuses media's pairwise-comparison taste engine                      |
+| Maintenance | Service schedules, renewals, recurring chores; extends inventory                      |
+| Social      | Contacts/CRM-lite — gift tracking, event planning over the `contacts` directory       |
+| Mobile      | Native iOS daily driver + wall-mounted HomePad dashboard over the existing PWA        |
 
 ### Deeper roadmaps per pillar
 

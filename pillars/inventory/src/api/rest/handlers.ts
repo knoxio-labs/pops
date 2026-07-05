@@ -9,6 +9,7 @@ import { initServer } from '@ts-rest/express';
 
 import { inventoryContract } from '../../contract/rest.js';
 import { type OpenedInventoryDb } from '../../db/index.js';
+import { createDocumentsClient, type DocumentsClient } from '../documents/client.js';
 import { makeConnectionsHandlers } from './connections-handlers.js';
 import { makeDocumentFilesHandlers } from './document-files-handlers.js';
 import { makeDocumentsHandlers } from './documents-handlers.js';
@@ -25,6 +26,13 @@ const server: ReturnType<typeof initServer> = initServer();
 
 export function makeInventoryRestHandlers(deps: {
   inventoryDb: OpenedInventoryDb;
+  /**
+   * The `documents` pillar client backing the `paperless.*` handlers.
+   * Production omits this so it defaults to the live `pillar('documents')`
+   * proxy; tests inject a stub to exercise the graceful-degrade paths
+   * without a network round-trip.
+   */
+  documents?: DocumentsClient;
 }): ReturnType<typeof server.router<typeof inventoryContract>> {
   const db = deps.inventoryDb.db;
   return server.router(inventoryContract, {
@@ -36,7 +44,7 @@ export function makeInventoryRestHandlers(deps: {
     documents: makeDocumentsHandlers(db),
     documentFiles: makeDocumentFilesHandlers(db),
     reports: makeReportsHandlers(db),
-    paperless: makePaperlessHandlers(),
+    paperless: makePaperlessHandlers(deps.documents ?? createDocumentsClient()),
     search: makeSearchHandlers(db),
     settings: makeSettingsHandlers(db),
   });

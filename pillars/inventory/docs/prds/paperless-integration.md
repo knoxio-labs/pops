@@ -1,12 +1,14 @@
 # Paperless Integration
 
 > Status: Done — Paperless-ngx document linking is shipped end-to-end (status/search proxy, link/unlink/list, thumbnail proxy, item-detail UI). Two refinements deferred to ideas: an unlink confirmation step and fully hiding the section when Paperless is down (see `../../ideas/paperless-unlink-confirm.md` and `../../ideas/paperless-graceful-hide.md`).
+>
+> **ADR-039 workstream 13 update:** the paperless-ngx HTTP client, its gating env vars (`PAPERLESS_BASE_URL` / `PAPERLESS_API_TOKEN`), and the thumbnail byte proxy now live in the `documents` bridge pillar (`pillars/documents`, ADR-035). Inventory's REST contract, endpoints, data model (`item_documents`), and frontend below are unchanged — inventory calls `pillar('documents')` over the pillar SDK with graceful degrade instead of embedding the client. See `pillars/documents/docs/README.md`.
 
 Link Paperless-ngx documents (receipts, warranties, manuals, invoices) to inventory items. POPS stores only the link (Paperless document id + type), never document content. Users search Paperless from the item-detail page, link a document with a type, see linked documents grouped by type with thumbnails, and jump out to the Paperless web UI. The integration is opt-in: absent its env config, the whole feature is invisible.
 
 ## Gating & Config
 
-The integration is enabled when **both** `PAPERLESS_BASE_URL` and `PAPERLESS_API_TOKEN` are present in the pillar container's env. The client factory returns `null` otherwise; status reports `configured: false` and the UI section renders nothing. Auth is `Authorization: Token <token>` on every Paperless call. Metadata/search calls time out at 5s, thumbnail fetches at 10s, so a slow Paperless never blocks the pillar.
+The integration is enabled when **both** `PAPERLESS_BASE_URL` and `PAPERLESS_API_TOKEN` are present in the `documents` pillar's env (previously inventory's — moved per the update above). The client factory returns `null` otherwise; status reports `configured: false` and the UI section renders nothing. Auth is `Authorization: Token <token>` on every Paperless call. Metadata/search calls time out at 5s, thumbnail fetches at 10s, so a slow Paperless never blocks the pillar.
 
 - [x] Gating is presence of both env vars; missing either ⇒ feature off, no error.
 - [x] All Paperless requests carry `Authorization: Token <token>`.

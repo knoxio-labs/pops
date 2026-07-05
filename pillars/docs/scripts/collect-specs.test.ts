@@ -23,6 +23,7 @@ const EXPECTED_PILLARS = [
   'ai',
   'cerebrum',
   'contacts',
+  'documents',
   'finance',
   'food',
   'inventory',

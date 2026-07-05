@@ -1,5 +1,4 @@
-import { getPaperlessClient } from '../modules/paperless/index.js';
-import { PaperlessApiError } from '../modules/paperless/types.js';
+import { createDocumentsClient, type DocumentsClient } from '../documents/client.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -7,34 +6,23 @@ import type { inventoryPaperlessContract } from '../../contract/rest-paperless.j
 
 type Req = ServerInferRequest<typeof inventoryPaperlessContract>;
 
-/** Handlers for the `paperless.*` sub-router. No db; `search` returns 412 when Paperless is unconfigured. */
-export function makePaperlessHandlers() {
+/**
+ * Handlers for inventory's `paperless.*` sub-router. The paperless-ngx
+ * integration itself lives in the `documents` bridge pillar (ADR-039
+ * workstream 13) — these handlers proxy to it over `pillar('documents')`
+ * with graceful degrade, so inventory's own wire contract (and therefore
+ * its frontend) is unchanged by the move.
+ */
+export function makePaperlessHandlers(documents: DocumentsClient = createDocumentsClient()) {
   return {
     status: async () => {
-      const client = getPaperlessClient();
-      if (!client) {
-        return {
-          status: 200 as const,
-          body: { data: { configured: false, available: false, baseUrl: null } },
-        };
-      }
-      try {
-        await client.getDocumentTypes();
-        return {
-          status: 200 as const,
-          body: { data: { configured: true, available: true, baseUrl: client.getBaseUrl() } },
-        };
-      } catch {
-        return {
-          status: 200 as const,
-          body: { data: { configured: true, available: false, baseUrl: client.getBaseUrl() } },
-        };
-      }
+      const data = await documents.getPaperlessStatus();
+      return { status: 200 as const, body: { data } };
     },
 
     search: async ({ query }: Req['search']) => {
-      const client = getPaperlessClient();
-      if (!client) {
+      const documentsFound = await documents.searchPaperlessDocuments(query.query);
+      if (documentsFound === null) {
         return {
           status: 412 as const,
           body: {
@@ -43,26 +31,7 @@ export function makePaperlessHandlers() {
           },
         };
       }
-      try {
-        const result = await client.searchDocuments(query.query);
-        return {
-          status: 200 as const,
-          body: {
-            data: result.documents.map((doc) => ({
-              id: doc.id,
-              title: doc.title,
-              created: doc.created,
-              originalFileName: doc.originalFileName,
-              thumbnailUrl: client.getDocumentThumbnailUrl(doc.id),
-            })),
-          },
-        };
-      } catch (err) {
-        if (err instanceof PaperlessApiError) {
-          throw new Error(`Paperless error: ${err.message}`, { cause: err });
-        }
-        throw err;
-      }
+      return { status: 200 as const, body: { data: documentsFound } };
     },
   };
 }
