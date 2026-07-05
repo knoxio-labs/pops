@@ -12,7 +12,10 @@
  * `transactionCorrectionsService` so the normalisation is identical to the
  * DB-side matcher.
  */
-import { applyChangeSetToRules as applyChangeSetToRulesPure } from '../../../contract/corrections-pure.js';
+import {
+  applyChangeSetToRules as applyChangeSetToRulesPure,
+  MIN_MATCH_CONFIDENCE,
+} from '../../../contract/corrections-pure.js';
 import { transactionCorrectionsService } from '../../../db/index.js';
 import { NotFoundError } from '../../shared/errors.js';
 import { classifyCorrectionMatch } from './types.js';
@@ -50,7 +53,7 @@ export function ruleMatchesDescription(rule: CorrectionRow, normalized: string):
 export function findAllMatchingCorrectionFromRules(
   description: string,
   rules: CorrectionRow[],
-  minConfidence: number = 0.7
+  minConfidence: number = MIN_MATCH_CONFIDENCE
 ): CorrectionRow[] {
   const normalized = normalizeDescription(description);
   const eligible = rules
@@ -69,7 +72,7 @@ export function findAllMatchingCorrectionFromRules(
 export function findMatchingCorrectionFromRules(
   description: string,
   rules: CorrectionRow[],
-  minConfidence: number = 0.7
+  minConfidence: number = MIN_MATCH_CONFIDENCE
 ): CorrectionMatchResult | null {
   const first = findAllMatchingCorrectionFromRules(description, rules, minConfidence)[0];
   return first ? classifyCorrectionMatch(first) : null;

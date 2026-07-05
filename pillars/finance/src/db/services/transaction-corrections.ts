@@ -17,6 +17,7 @@
  */
 import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
+import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
@@ -126,6 +127,7 @@ function insertNewCorrection(
       transactionType: input.transactionType ?? null,
       priority: input.priority ?? 0,
       isActive: true,
+      confidence: MIN_MATCH_CONFIDENCE,
     })
     .run();
 
@@ -151,8 +153,9 @@ function insertNewCorrection(
  * omitting `tags` from a reinforcement clears them. Pass the existing tags
  * through explicitly if you want to keep them.
  *
- * On miss, a new row is inserted with confidence + timesApplied left at the
- * schema defaults (0.5 and 0 respectively).
+ * On miss, a new row is inserted at {@link MIN_MATCH_CONFIDENCE} (the matching
+ * floor — never below it, so a freshly created rule is never structurally
+ * inert) with `timesApplied` left at 0.
  */
 export function createOrUpdateTransactionCorrection(
   db: FinanceDb,

@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
+
 export const transactionCorrections = sqliteTable(
   'transaction_corrections',
   {
@@ -19,7 +21,7 @@ export const transactionCorrections = sqliteTable(
       enum: ['purchase', 'transfer', 'income'],
     }),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-    confidence: real('confidence').notNull().default(0.5),
+    confidence: real('confidence').notNull().default(MIN_MATCH_CONFIDENCE),
     priority: integer('priority').notNull().default(0),
     timesApplied: integer('times_applied').notNull().default(0),
     createdAt: text('created_at')

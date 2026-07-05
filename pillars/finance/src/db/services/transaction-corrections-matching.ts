@@ -8,6 +8,7 @@
  */
 import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
 
+import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { transactionCorrections, transactions } from '../schema.js';
 import {
   normalizeDescription,
@@ -36,7 +37,7 @@ function ruleMatchesNormalizedDescription(
 export function findAllMatchingTransactionCorrectionsFromDb(
   db: FinanceDb,
   description: string,
-  minConfidence: number = 0.7
+  minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
   const normalized = normalizeDescription(description);
 

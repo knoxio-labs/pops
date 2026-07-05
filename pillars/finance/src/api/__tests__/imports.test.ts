@@ -21,7 +21,12 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { importsService, openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  importsService,
+  openFinanceDb,
+  transactionTagRulesService,
+  type OpenedFinanceDb,
+} from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake, type ContactsFake, type SeedContact } from './contacts-fake.js';
@@ -301,6 +306,126 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
     expect(row?.ruleProvenance?.source).toBe('correction');
     expect(row?.transactionType).toBe('transfer');
     expect(row?.entity.matchType).toBe('learned');
+  });
+});
+
+describe('imports.processImport — correction rule usage telemetry (#3626)', () => {
+  it('bumps timesApplied + lastUsedAt on the winning rule when a live import matches it', async () => {
+    const c = client();
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      transactionType: 'purchase',
+    });
+    await c.corrections.update(created.data.id, { confidence: 0.9 });
+    expect(created.data.timesApplied).toBe(0);
+
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'bunnings-usage-1' }),
+      ],
+      account: 'Amex',
+    });
+    await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    const after = await c.corrections.get(created.data.id);
+    expect(after.data.timesApplied).toBe(1);
+    expect(after.data.lastUsedAt).not.toBeNull();
+  });
+
+  it('does not bump usage from a pending-rules preview (reevaluateWithPendingRules)', async () => {
+    const c = client();
+
+    // No rule exists yet at process time — the transaction lands uncertain.
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'preview-usage-1' }),
+      ],
+      account: 'Amex',
+    });
+    await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    // The rule is created (persisted) AFTER processing, so a live re-evaluation
+    // of the still-uncertain transaction would now match it in-memory.
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      transactionType: 'purchase',
+    });
+    await c.corrections.update(created.data.id, { confidence: 0.9 });
+
+    // `reevaluateWithPendingRules` always merges DB rules with (possibly empty)
+    // pending ChangeSets in-memory — a preview, never a real application.
+    await c.imports.reevaluateWithPendingRules({
+      sessionId,
+      minConfidence: 0.7,
+      pendingChangeSets: [],
+    });
+
+    const after = await c.corrections.get(created.data.id);
+    expect(after.data.timesApplied).toBe(0);
+    expect(after.data.lastUsedAt).toBeNull();
+  });
+});
+
+describe('tag-rule usage telemetry — read-only lookups never count as usage', () => {
+  it('does not bump a tag rule from the read-only GET /transactions/suggest-tags endpoint', async () => {
+    const c = client();
+    const rule = transactionTagRulesService.createTransactionTagRule(financeDb.db, {
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      tags: ['Hardware'],
+    });
+    expect(rule.timesApplied).toBe(0);
+
+    const result = await c.transactions.suggestTags({
+      description: 'BUNNINGS WAREHOUSE KINGSGROVE',
+    });
+    expect(result.tags).toContain('Hardware');
+
+    const after = transactionTagRulesService.getTransactionTagRule(financeDb.db, rule.id);
+    expect(after.timesApplied).toBe(0);
+    expect(after.lastUsedAt).toBeNull();
+  });
+
+  it('does not bump a tag rule from a pending-rules preview (reevaluateWithPendingRules)', async () => {
+    const c = client();
+
+    // No rule exists yet at process time — the transaction lands uncertain.
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'tag-preview-usage-1' }),
+      ],
+      account: 'Amex',
+    });
+    await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    // Both rules are created (persisted) AFTER processing, so a live
+    // re-evaluation of the still-uncertain transaction would now match them
+    // in-memory.
+    const correction = await c.corrections.createOrUpdate({
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      transactionType: 'purchase',
+    });
+    await c.corrections.update(correction.data.id, { confidence: 0.9 });
+    const tagRule = transactionTagRulesService.createTransactionTagRule(financeDb.db, {
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      tags: ['Hardware'],
+    });
+
+    // `reevaluateWithPendingRules` always merges DB rules with (possibly empty)
+    // pending ChangeSets in-memory — a preview, never a real application.
+    await c.imports.reevaluateWithPendingRules({
+      sessionId,
+      minConfidence: 0.7,
+      pendingChangeSets: [],
+    });
+
+    const after = transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id);
+    expect(after.timesApplied).toBe(0);
+    expect(after.lastUsedAt).toBeNull();
   });
 });
 

@@ -9,7 +9,11 @@
  * re-exports {@link applyChangeSetToRules} (injecting its own `NotFoundError`)
  * rather than re-implementing it.
  */
+import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+
 import type { ChangeSet, ChangeSetOp } from './rest-corrections-schemas.js';
+
+export { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 
 /** Confidence at/above which a learned correction is treated as a confident match. */
 export const HIGH_CONFIDENCE_THRESHOLD = 0.9;
@@ -157,7 +161,7 @@ function makeAddedRow(op: Extract<ChangeSetOp, { op: 'add' }>, tempId: string): 
     tags: JSON.stringify(op.data.tags ?? []),
     transactionType: op.data.transactionType ?? null,
     isActive: op.data.isActive ?? true,
-    confidence: op.data.confidence ?? 0.5,
+    confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
     priority: op.data.priority ?? 0,
     timesApplied: 0,
     createdAt: new Date().toISOString(),
@@ -183,6 +187,7 @@ function applyEditOpInMemory(
     isActive:
       op.data.isActive !== undefined ? Boolean(op.data.isActive) : Boolean(existing.isActive),
     confidence: withDefined(op.data.confidence, existing.confidence),
+    priority: withDefined(op.data.priority, existing.priority),
   };
 }
 

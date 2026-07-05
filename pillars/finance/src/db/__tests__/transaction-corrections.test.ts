@@ -161,7 +161,7 @@ describe('createOrUpdateTransactionCorrection — insert path', () => {
     expect(created.tags).toBe('[]');
     expect(created.transactionType).toBeNull();
     expect(created.isActive).toBe(true);
-    expect(created.confidence).toBe(0.5);
+    expect(created.confidence).toBe(0.7);
     expect(created.priority).toBe(0);
     expect(created.timesApplied).toBe(0);
     expect(created.lastUsedAt).toBeNull();
@@ -208,7 +208,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
       matchType: 'exact',
       entityName: 'Original',
     });
-    expect(first.confidence).toBe(0.5);
+    expect(first.confidence).toBe(0.7);
     expect(first.timesApplied).toBe(0);
     expect(first.lastUsedAt).toBeNull();
 
@@ -219,7 +219,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
     });
 
     expect(second.id).toBe(first.id);
-    expect(second.confidence).toBeCloseTo(0.6, 5);
+    expect(second.confidence).toBeCloseTo(0.8, 5);
     expect(second.timesApplied).toBe(1);
     expect(second.lastUsedAt).not.toBeNull();
     expect(second.entityName).toBe('Updated');

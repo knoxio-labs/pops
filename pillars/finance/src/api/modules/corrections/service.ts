@@ -11,6 +11,7 @@
  */
 import { desc, eq } from 'drizzle-orm';
 
+import { MIN_MATCH_CONFIDENCE } from '../../../contract/corrections-pure.js';
 import {
   type FinanceDb,
   transactionCorrections,
@@ -34,7 +35,8 @@ function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): voi
       tags: JSON.stringify(op.data.tags ?? []),
       transactionType: op.data.transactionType ?? null,
       isActive: op.data.isActive ?? true,
-      confidence: op.data.confidence ?? 0.5,
+      confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+      priority: op.data.priority ?? 0,
     })
     .run();
 }
@@ -50,6 +52,7 @@ function buildEditUpdates(
   if (op.data.transactionType !== undefined) updates.transactionType = op.data.transactionType;
   if (op.data.isActive !== undefined) updates.isActive = op.data.isActive;
   if (op.data.confidence !== undefined) updates.confidence = op.data.confidence;
+  if (op.data.priority !== undefined) updates.priority = op.data.priority;
   return updates;
 }
 

@@ -63,6 +63,12 @@ export interface BuildSuggestedTagsOptions {
   correctionPattern?: string;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity source). */
   entityDefaultTags?: ReadonlyMap<string, string[]>;
+  /**
+   * Forwarded to `suggestTags`'s `recordTagRuleUsage`. Defaults to `true` —
+   * pass `false` when the caller is building suggestions for an in-memory
+   * preview rather than a real classification pass.
+   */
+  recordTagRuleUsage?: boolean;
 }
 
 /**
@@ -79,5 +85,6 @@ export function buildSuggestedTags(db: FinanceDb, opts: BuildSuggestedTagsOption
     correctionTags: opts.correctionTags,
     correctionPattern: opts.correctionPattern,
     entityDefaultTags: opts.entityDefaultTags,
+    recordTagRuleUsage: opts.recordTagRuleUsage,
   });
 }

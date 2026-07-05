@@ -14,6 +14,7 @@
  * but key/API failure) degrades to an uncertain row with reason `'AI
  * categorization unavailable'`.
  */
+import { MIN_MATCH_CONFIDENCE } from '../../../contract/corrections-pure.js';
 import { type EntityLookupEntry, type FinanceDb } from '../../../db/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 import { type AiCacheEntry, categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
@@ -86,7 +87,7 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
 
   const correctionApplied = applyLearnedCorrection(db, {
     transaction,
-    minConfidence: 0.7,
+    minConfidence: MIN_MATCH_CONFIDENCE,
     knownTags: context.knownTags,
     entityDefaultTags: context.entityDefaultTags,
   });

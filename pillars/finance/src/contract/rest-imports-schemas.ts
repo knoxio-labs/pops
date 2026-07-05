@@ -9,6 +9,7 @@
 import { z } from 'zod';
 
 import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
+import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
 
@@ -121,7 +122,7 @@ export const CreateEntityOutputSchema = z.object({
 export const ApplyChangeSetAndReevaluateInputSchema = z.object({
   sessionId: z.string().uuid(),
   changeSet: ChangeSetSchema,
-  minConfidence: z.number().min(0).max(1).default(0.7),
+  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
 });
 
 export const ApplyChangeSetAndReevaluateOutputSchema = z.object({
@@ -166,7 +167,7 @@ export const CommitResultSchema = z.object({
 
 export const ReevaluateWithPendingRulesInputSchema = z.object({
   sessionId: z.string().uuid(),
-  minConfidence: z.number().min(0).max(1).default(0.7),
+  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
   pendingChangeSets: z.array(z.object({ changeSet: ChangeSetSchema })),
 });
 

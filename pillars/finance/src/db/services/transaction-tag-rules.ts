@@ -14,10 +14,11 @@
  * and can pass a transaction), plain functions, typed domain errors, no HTTP
  * concerns.
  */
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { TransactionTagRuleNotFoundError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
+import { normalizeDescription } from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -67,22 +68,94 @@ export function getTransactionTagRule(db: FinanceDb, id: string): TransactionTag
   return row;
 }
 
+function findExistingTagRule(
+  db: FinanceDb,
+  matchType: TagRuleMatchType,
+  normalizedPattern: string,
+  entityId: string | null
+): TransactionTagRuleRow | undefined {
+  return db
+    .select()
+    .from(transactionTagRules)
+    .where(
+      and(
+        eq(transactionTagRules.matchType, matchType),
+        eq(transactionTagRules.descriptionPattern, normalizedPattern),
+        entityId === null
+          ? isNull(transactionTagRules.entityId)
+          : eq(transactionTagRules.entityId, entityId)
+      )
+    )
+    .get();
+}
+
 /**
- * Create a new tag rule. `tags` is JSON-encoded before insert.
+ * Reinforce an existing tag rule hit on the `(normalizedPattern, matchType,
+ * entityId)` key: confidence bumped by 0.1 (capped at 1.0), `timesApplied`
+ * incremented, `lastUsedAt` stamped, `isActive` reset to true, `tags`
+ * overwritten by `input.tags`. `priority` is overlaid only when the input
+ * supplies one — mirrors `reinforceExistingCorrection`.
+ */
+function reinforceExistingTagRule(
+  db: FinanceDb,
+  existing: TransactionTagRuleRow,
+  input: CreateTransactionTagRuleInput
+): TransactionTagRuleRow {
+  return db
+    .update(transactionTagRules)
+    .set({
+      confidence: Math.min(existing.confidence + 0.1, 1.0),
+      timesApplied: existing.timesApplied + 1,
+      lastUsedAt: new Date().toISOString(),
+      tags: JSON.stringify(input.tags),
+      priority: input.priority ?? existing.priority,
+      isActive: true,
+    })
+    .where(eq(transactionTagRules.id, existing.id))
+    .returning()
+    .get();
+}
+
+/**
+ * Create-or-reinforce a tag rule keyed on `(normalized descriptionPattern,
+ * matchType, entityId)` — mirrors `createOrUpdateTransactionCorrection` so a
+ * case/digit variant of an already-known pattern (e.g. `'K Mart'` vs
+ * `'k mart 42'`) reinforces the existing row instead of forking a duplicate
+ * that then never matches under `matchType: 'exact'` (CF022). `entityId` is
+ * part of the key (unlike corrections, which has no entity-scoping concept)
+ * so two rules deliberately scoped to different entities never collapse into
+ * one.
  *
- * Defaults: `confidence=0.95`, `isActive=true`, `priority=0`,
- * `timesApplied=0`. The generated `id` is a UUID from drizzle's `$defaultFn`.
+ * `tags` is JSON-encoded before insert. Insert defaults: `confidence=0.95`,
+ * `isActive=true`, `priority=0`, `timesApplied=0`. The generated `id` is a
+ * UUID from drizzle's `$defaultFn`.
+ *
+ * `descriptionPattern` is normalized (uppercased, digit-stripped,
+ * whitespace-collapsed) for `exact`/`contains` patterns, which are matched
+ * against a normalized description and need the same treatment to line up.
+ * A `regex` pattern is stored raw: `normalizeDescription` uppercases every
+ * character including metacharacters (`\d` -> `\D`, `\s` -> `\S`), which
+ * would silently corrupt the pattern.
  */
 export function createTransactionTagRule(
   db: FinanceDb,
   input: CreateTransactionTagRuleInput
 ): TransactionTagRuleRow {
-  const inserted = db
+  const normalized =
+    input.matchType === 'regex'
+      ? input.descriptionPattern
+      : normalizeDescription(input.descriptionPattern);
+  const entityId = input.entityId ?? null;
+
+  const existing = findExistingTagRule(db, input.matchType, normalized, entityId);
+  if (existing) return reinforceExistingTagRule(db, existing, input);
+
+  return db
     .insert(transactionTagRules)
     .values({
-      descriptionPattern: input.descriptionPattern,
+      descriptionPattern: normalized,
       matchType: input.matchType,
-      entityId: input.entityId ?? null,
+      entityId,
       tags: JSON.stringify(input.tags),
       confidence: input.confidence ?? 0.95,
       isActive: input.isActive ?? true,
@@ -91,7 +164,6 @@ export function createTransactionTagRule(
     })
     .returning()
     .get();
-  return inserted;
 }
 
 function buildTagRuleUpdates(
@@ -141,4 +213,20 @@ export function disableTransactionTagRule(db: FinanceDb, id: string): void {
 export function deleteTransactionTagRule(db: FinanceDb, id: string): void {
   const result = db.delete(transactionTagRules).where(eq(transactionTagRules.id, id)).run();
   if (result.changes === 0) throw new TransactionTagRuleNotFoundError(id);
+}
+
+/**
+ * Bump `timesApplied` and stamp `lastUsedAt` without otherwise touching the
+ * row. Mirrors `incrementTransactionCorrectionUsage`: best-effort telemetry
+ * inside the tag-suggestion pipeline, silently no-ops on an unknown id so a
+ * stale rule reference never fails the surrounding transaction.
+ */
+export function incrementTransactionTagRuleUsage(db: FinanceDb, id: string): void {
+  db.update(transactionTagRules)
+    .set({
+      timesApplied: sql`${transactionTagRules.timesApplied} + 1`,
+      lastUsedAt: new Date().toISOString(),
+    })
+    .where(eq(transactionTagRules.id, id))
+    .run();
 }

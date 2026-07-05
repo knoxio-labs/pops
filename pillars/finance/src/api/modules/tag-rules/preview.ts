@@ -4,8 +4,20 @@
  * Suggestion-only: rules never override user-entered tags, and the
  * computation reads nothing but the supplied transactions plus the user
  * vocabulary.
+ *
+ * Both the transaction description and the (not-yet-persisted) candidate
+ * pattern are run through the shared `normalizeDescription` — the same
+ * normalisation `createTransactionTagRule` applies to a pattern on write and
+ * `findMatchingTagRules` applies to a description on match. A naive
+ * `toUpperCase()`-only preview would diverge from production for any
+ * digit-bearing description (most real bank text), showing a rule as
+ * matching (or not) something it wouldn't once actually applied (CF022).
  */
-import { type FinanceDb, tagVocabularyService } from '../../../db/index.js';
+import {
+  type FinanceDb,
+  tagVocabularyService,
+  transactionCorrectionsService,
+} from '../../../db/index.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
 import type {
@@ -14,6 +26,8 @@ import type {
   TagRuleImpactItem,
   TagSuggestion,
 } from './types.js';
+
+const { normalizeDescription } = transactionCorrectionsService;
 
 interface ProposedRule {
   descriptionPattern: string;
@@ -37,16 +51,12 @@ function materializeProposedRules(changeSet: TagRuleChangeSet): ProposedRule[] {
   return rules;
 }
 
-function ruleMatchesDescription(
-  rule: ProposedRule,
-  description: string,
-  normalized: string
-): boolean {
-  const pattern = rule.descriptionPattern.toUpperCase();
+function ruleMatchesDescription(rule: ProposedRule, normalized: string): boolean {
+  const pattern = normalizeDescription(rule.descriptionPattern);
   if (rule.matchType === 'exact') return normalized === pattern;
   if (rule.matchType === 'contains') return normalized.includes(pattern);
   try {
-    return new RegExp(rule.descriptionPattern, 'i').test(description);
+    return new RegExp(rule.descriptionPattern, 'i').test(normalized);
   } catch {
     return false;
   }
@@ -58,13 +68,13 @@ function suggestFromRules(
   rules: ProposedRule[],
   vocabulary: Set<string>
 ): TagSuggestion[] {
-  const normalized = description.toUpperCase();
+  const normalized = normalizeDescription(description);
   const seen = new Set<string>();
   const out: TagSuggestion[] = [];
 
   for (const rule of rules) {
     if (rule.entityId && rule.entityId !== entityId) continue;
-    if (!ruleMatchesDescription(rule, description, normalized)) continue;
+    if (!ruleMatchesDescription(rule, normalized)) continue;
 
     for (const tag of rule.tags) {
       if (seen.has(tag)) continue;
