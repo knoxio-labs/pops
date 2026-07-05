@@ -10,7 +10,7 @@ The pillar has the same shape as any POPS pillar (`finance`, `media`, ...): a se
 
 ## Scope boundary
 
-Per [ADR-039](../architecture/adr-039-pillar-isolation.md) Invariant 4 (pops-vs-infra boundary): Home Assistant, mosquitto, zigbee2mqtt, and matter are **homelab infrastructure, not pops**. `ha-bridge` is a pops pillar that talks to an upstream HA instance over its WebSocket API — it never runs, composes, or owns HA/mosquitto/zigbee2mqtt/matter as services. This pillar's own SQLite (`ha-bridge.db`) follows the standard per-pillar Litestream convention (Invariant 2); the homelab's HA/MQTT/Zigbee2MQTT/Matter stack is backed up by the homelab-infra repo's own mechanism, on its own schedule and bucket, never the pops backup job.
+Per [ADR-039](../architecture/adr-039-pillar-isolation.md) Invariant 4 (pops-vs-infra boundary): Home Assistant, mosquitto, zigbee2mqtt, and matter are **homelab infrastructure, not pops**. `ha-bridge` is a pops pillar that talks to an upstream HA instance over its WebSocket API — it never runs, composes, or owns HA/mosquitto/zigbee2mqtt/matter as services. This pillar's own SQLite (`ha-bridge.db`) falls under POPS's per-pillar Litestream backup convention (Invariant 2) — the target model, which is specified but not yet operational (see [database-operations](../themes/platform/prds/database-operations.md)). The homelab's HA/MQTT/Zigbee2MQTT/Matter stack is a separate concern entirely: it is backed up by the homelab-infra repo's own mechanism, on its own schedule and bucket, and is never in POPS's backup scope.
 
 ## Data model
 
