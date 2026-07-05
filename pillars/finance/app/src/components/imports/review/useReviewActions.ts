@@ -1,15 +1,13 @@
 import { useCallback } from 'react';
 
+import { replaceByChecksum } from '../hooks/local-tx-reconcile';
+
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
+import type { LocalTxState } from '../hooks/local-tx-reconcile';
 
-export interface LocalTxState {
-  matched: ProcessedTransaction[];
-  uncertain: ProcessedTransaction[];
-  failed: ProcessedTransaction[];
-  skipped: ProcessedTransaction[];
-}
+export type { LocalTxState } from '../hooks/local-tx-reconcile';
 
 type GenerateProposal = (args: {
   triggeringTransaction: ProcessedTransaction;
@@ -30,38 +28,22 @@ export interface MoveArgs {
  * Move a transaction into the `matched` bucket with the chosen entity, removing
  * any prior copy of it from every bucket first.
  *
- * The transaction is identified by `checksum`. Any prior copy is dropped from
- * every bucket — including collapsing duplicate `matched` entries down to a
- * single one — so the result holds exactly one copy per checksum. When it
- * already lives in `matched` (e.g. re-assigning the entity on a rule-matched
- * card) the replacement keeps the original card's position; otherwise it is
- * appended. Failing to drop the existing `matched` entry previously appended a
- * duplicate and left the original card untouched, so picking an entity looked
- * like a no-op.
+ * Thin wrapper around the canonical `replaceByChecksum` identity (#3590/#3620):
+ * any prior copy of the checksum is dropped from every bucket — including
+ * collapsing duplicate `matched` entries down to a single one — so the result
+ * holds exactly one copy per checksum. When it already lives in `matched`
+ * (e.g. re-assigning the entity on a rule-matched card) the replacement keeps
+ * the original card's position; otherwise it is appended.
  *
  * Exported for unit testing the dedupe/replace invariant.
  */
 export function moveOneToMatched(prev: LocalTxState, args: MoveArgs): LocalTxState {
   const { transaction, entityId, entityName, matchType } = args;
-  const matchedTx = {
+  return replaceByChecksum(prev, transaction.checksum, 'matched', () => ({
     ...transaction,
     entity: { entityId, entityName, matchType, confidence: 1 },
     status: 'matched' as const,
-  } as ProcessedTransaction;
-  const withoutTx = (list: ProcessedTransaction[]): ProcessedTransaction[] =>
-    list.filter((t) => t.checksum !== transaction.checksum);
-  const firstMatchedIdx = prev.matched.findIndex((t) => t.checksum === transaction.checksum);
-  return {
-    ...prev,
-    uncertain: withoutTx(prev.uncertain),
-    failed: withoutTx(prev.failed),
-    // Insert at the first prior position (collapsing any duplicates) when the
-    // transaction was already matched, else append.
-    matched:
-      firstMatchedIdx === -1
-        ? [...prev.matched, matchedTx]
-        : withoutTx(prev.matched).toSpliced(firstMatchedIdx, 0, matchedTx),
-  };
+  }));
 }
 
 interface UseReviewActionsArgs {
