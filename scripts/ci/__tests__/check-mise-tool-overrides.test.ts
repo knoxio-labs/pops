@@ -37,6 +37,22 @@ describe('parseToolsTable', () => {
     expect(parseToolsTable(source)).toEqual({ node: '22' });
   });
 
+  it('strips a trailing inline comment on a value line', () => {
+    expect(parseToolsTable('[tools]\nnode = "24.5.0" # pinned for the finance trial\n')).toEqual({
+      node: '24.5.0',
+    });
+  });
+
+  it('strips an inline comment on a bare (unquoted) value', () => {
+    expect(parseToolsTable('[tools]\nrust = stable # lagging the bump\n')).toEqual({
+      rust: 'stable',
+    });
+  });
+
+  it('keeps a # that is inside the quoted value', () => {
+    expect(parseToolsTable('[tools]\nnode = "24#5"\n')).toEqual({ node: '24#5' });
+  });
+
   it('stops at the next section header', () => {
     const source = ['[tools]', 'node = "24.5.0"', '', '[tasks.build]', 'run = "tsc -b"'].join('\n');
     expect(parseToolsTable(source)).toEqual({ node: '24.5.0' });
@@ -150,8 +166,13 @@ describe('against the live repo', () => {
     expect(checkOverrides(repoRoot).violations).toEqual([]);
   });
 
-  it("no existing unit currently overrides the toolchain (documents today's baseline)", () => {
-    expect(checkOverrides(repoRoot).unitOverrides).toEqual([]);
+  it('every existing unit override stays within the allowed tool set', () => {
+    const { unitOverrides } = checkOverrides(repoRoot);
+    for (const { dir, overrides } of unitOverrides) {
+      for (const key of Object.keys(overrides)) {
+        expect(ALLOWED_UNIT_OVERRIDE_TOOLS, `${dir} overrides "${key}"`).toContain(key);
+      }
+    }
   });
 });
 

@@ -39,9 +39,30 @@ export const ALLOWED_UNIT_OVERRIDE_TOOLS = ['node', 'rust'];
 export const REQUIRED_ROOT_TOOLS = ['node', 'pnpm', 'rust'];
 
 /**
+ * Extract a TOML string value from the right-hand side of a `key = value`
+ * line, tolerating a trailing inline comment (`node = "24.5.0" # pin`). A
+ * quoted value returns its contents verbatim (anything after the closing
+ * quote — including a `#` — is ignored); a bare value is truncated at the
+ * first `#` and trimmed.
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+function extractToolValue(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (quote === '"' || quote === "'") {
+    const end = trimmed.indexOf(quote, 1);
+    return end === -1 ? trimmed.slice(1) : trimmed.slice(1, end);
+  }
+  const hash = trimmed.indexOf('#');
+  return (hash === -1 ? trimmed : trimmed.slice(0, hash)).trim();
+}
+
+/**
  * Extract the `[tools]` table from a mise.toml source as a plain key→value
  * map. Stops at the next `[section]` header or EOF. Comment lines and blank
- * lines are ignored; values are unquoted.
+ * lines are ignored; values are unquoted and any inline comment is stripped.
  *
  * @param {string} source
  * @returns {Record<string, string>}
@@ -62,8 +83,7 @@ export function parseToolsTable(source) {
     if (!inTools) continue;
     const kv = /^([A-Za-z0-9_-]+)\s*=\s*(.+)$/u.exec(line);
     if (!kv) continue;
-    const value = kv[2].trim().replace(/^["']|["']$/gu, '');
-    tools[kv[1]] = value;
+    tools[kv[1]] = extractToolValue(kv[2]);
   }
   return tools;
 }
