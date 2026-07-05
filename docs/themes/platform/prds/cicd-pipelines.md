@@ -34,14 +34,14 @@ Convergence rules baked into the gate:
 
 ### Required (named in the branch ruleset)
 
-| Workflow / job                      | Trigger                                   | Steps                                                                   |
-| ----------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| `quality.yml` → `Lint`              | PR / push (code paths)                    | `pnpm lint` (oxlint `--type-aware`)                                     |
-| `quality.yml` → `Format`            | PR / push (code paths)                    | `pnpm format:check` (oxfmt)                                             |
-| `quality.yml` → `Module boundaries` | PR / push (code paths)                    | `pnpm lint:boundaries` (dependency-cruiser over `pillars libs scripts`) |
-| `quality.yml` → `Duplication check` | PR / push (code paths)                    | `jscpd --threshold 5` over authored TS/TSX                              |
-| `ci-gate.yml` → `CI Gate`           | `workflow_run` of the six gated workflows | Aggregate their conclusions at the head SHA                             |
-| `agent-review.yml` → `agent-review` | Non-draft PR                              | Two blocking federation isolation guards + advisory LLM review          |
+| Workflow / job                      | Trigger                                   | Steps                                                                                                                                                                                                                                                                       |
+| ----------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quality.yml` → `Lint`              | PR (scoped) / push (full)                 | PR: `oxlint --type-aware` over `scripts` + the PR's changed unit dirs. Push to `main`: `pnpm lint` (whole tree)                                                                                                                                                             |
+| `quality.yml` → `Format`            | PR (scoped) / push (full)                 | PR: `oxfmt --check` over `scripts` + the changed unit dirs. Push to `main`: `pnpm format:check` (whole tree)                                                                                                                                                                |
+| `quality.yml` → `Module boundaries` | PR (scoped) / push (full)                 | PR: `depcruise` over `scripts` + the changed unit dirs (dependency-cruiser still follows the graph past those roots, so a changed unit reaching into another pillar is still caught). Push to `main`: `pnpm lint:boundaries` (`pillars libs scripts`)                       |
+| `quality.yml` → `Duplication check` | PR / push (code paths)                    | `jscpd --threshold 5` over authored TS/TSX — deliberately whole-tree on every run: duplication is inherently cross-unit (e.g. code copy-pasted from an untouched pillar into the changed one), so scoping it to the changed dirs would blind it to that class of regression |
+| `ci-gate.yml` → `CI Gate`           | `workflow_run` of the six gated workflows | Aggregate their conclusions at the head SHA                                                                                                                                                                                                                                 |
+| `agent-review.yml` → `agent-review` | Non-draft PR                              | Two blocking federation isolation guards + advisory LLM review                                                                                                                                                                                                              |
 
 ### Disk-discovered quality matrices
 
@@ -94,6 +94,7 @@ These live inside the gated workflows but are explicitly **kept out** of the req
 - **Discovery is from disk, never a hand-list.** Adding or removing a pillar, lib, or app needs no workflow edit. The unit display `name` (dir basename) is a path/display key ONLY — selectors always use the manifest `pkg` name (`@pops/pillar-sdk` for `libs/sdk`, `@pops/app-<id>` for apps), because `pnpm --filter` exits 0 on zero matches and would silently run nothing. Every TS lane asserts `--filter` matches exactly one package.
 - **maxdepth-1 unit discovery is deliberate.** The `pillars/*/app` members live at maxdepth 2 and collide on basename `app`, so they are excluded from `unit-quality.yml` and covered by the App Quality (own tests) + FE Quality (shell build) lanes instead. `assert-app-coverage` turns that exclusion into a gate.
 - **Shared-root touch invalidates everything.** A change to the lockfile, base/build tsconfig, formatter/linter config, mise root, or Cargo root rebuilds **all** units, not just the changed subset.
+- **`quality.yml`'s Lint/Format/Module boundaries/Exports discipline scope to the PR's changed units.** They reuse `_discover-units.yml`'s changed matrix (same mechanism as `unit-quality.yml`) so an unrelated pillar's pre-existing violation cannot red out a sibling PR. `push` to `main` runs the original unscoped full-tree sweep as a drift safety net. Duplication stays whole-tree on every run — it is inherently a cross-unit metric.
 - **Codegen and generated artefacts are drift-gated.** `generate:*` scripts, `module-registry/generated.ts`, the `contacts` OpenAPI spec, vendored contract snapshots, and the shell's nginx fallback conf must each match their committed form (`git diff --exit-code`).
 - **Quality gates must pass before image publish.** Publish runs on the same push-to-main trigger; if a gated workflow fails on `main`, the deployer pins `POPS_IMAGE_TAG` rather than upgrading.
 - **No deploy workflow in this repo** — Watchtower on the deploy host pulls new digests automatically.
@@ -112,12 +113,14 @@ These live inside the gated workflows but are explicitly **kept out** of the req
 | Manifest-less dir (`pillars/core`, `pillars/moltbot`, workspace stubs) | No `package.json`/`Cargo.toml [package]` → skipped by discovery                                                                                                                         |
 | `better-sqlite3` native build under mise                               | mise's node bundles `node-gyp` but omits it from PATH; each install lane prepends npm's `node-gyp-bin` dir so the `prebuild-install                                                     |     | node-gyp rebuild` fallback works |
 | oxfmt rules shift / husky bypassed                                     | Untouched files drift silently; the 6-hourly watchdog opens a single tracking issue and closes it once `main` is clean                                                                  |
+| A PR touches nothing under `pillars/*`/`libs/*` (e.g. only `scripts/`) | Lint/Format/Module boundaries/Exports discipline scope to `scripts` alone — no unit is built or scanned                                                                                 |
 
 ## Acceptance Criteria
 
 ### Required gate
 
-- [x] `quality.yml` runs root lint (oxlint `--type-aware`), format check (oxfmt), module boundaries (dependency-cruiser), and duplication (jscpd) as four discrete required jobs
+- [x] `quality.yml` runs lint (oxlint `--type-aware`), format check (oxfmt), module boundaries (dependency-cruiser), and duplication (jscpd) as four discrete required jobs
+- [x] Lint, format, and module boundaries scope to `scripts` + the PR's changed unit dirs (via `_discover-units.yml`'s changed matrix); `push` to `main` keeps the original whole-tree sweep
 - [x] `ci-gate.yml` aggregates the six gated workflows' conclusions at the head SHA via `workflow_run` and reports a single static `CI Gate` context that the ruleset requires
 - [x] CI Gate treats path-filtered-out (absent) siblings as non-failing and only fails on an observed failure/cancelled/timed-out/startup-failure conclusion
 - [x] CI Gate keeps the newest run per gated workflow at a SHA so a re-run supersedes an earlier attempt

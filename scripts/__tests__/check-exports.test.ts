@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkUnit } from '../check-exports.mjs';
+import { checkUnit, parseDirsArg } from '../check-exports.mjs';
 
 type Unit = Parameters<typeof checkUnit>[0];
 
@@ -216,5 +216,37 @@ describe('checkUnit', () => {
     const errors = checkUnit(unit, exists).errors;
     expect(errors).toContainEqual(expect.stringContaining('index.cjs'));
     expect(errors.filter((e) => e.includes('does not exist'))).toHaveLength(1);
+  });
+});
+
+describe('parseDirsArg', () => {
+  it('returns null when --dirs is absent (check every unit)', () => {
+    expect(parseDirsArg([])).toBeNull();
+    expect(parseDirsArg(['--self-test'])).toBeNull();
+  });
+
+  it('splits a comma-separated --dirs= list into unit dirs', () => {
+    expect(parseDirsArg(['--dirs=pillars/finance,libs/types'])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
+  });
+
+  it('trims whitespace around each entry', () => {
+    expect(parseDirsArg(['--dirs= pillars/finance , libs/types '])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
+  });
+
+  it('returns an empty array (not null) for --dirs= with nothing after it', () => {
+    expect(parseDirsArg(['--dirs='])).toEqual([]);
+  });
+
+  it('drops empty entries from a trailing/doubled comma', () => {
+    expect(parseDirsArg(['--dirs=pillars/finance,,libs/types,'])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
   });
 });

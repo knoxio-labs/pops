@@ -488,6 +488,15 @@ function selfTest() {
     'compiled-without-files flagged': compiledNoFiles.errors.some((e) =>
       e.includes('extraction firewall is missing')
     ),
+    '--dirs absent scopes to nothing (null, not [])': parseDirsArg([]) === null,
+    '--dirs=a,b scopes to the given dirs':
+      JSON.stringify(parseDirsArg(['--dirs=pillars/finance,libs/types'])) ===
+      JSON.stringify(['pillars/finance', 'libs/types']),
+    '--dirs= (empty) scopes to zero units, not "all"':
+      JSON.stringify(parseDirsArg(['--dirs='])) === JSON.stringify([]),
+    '--dirs trims whitespace around entries':
+      JSON.stringify(parseDirsArg(['--dirs= pillars/finance , libs/types '])) ===
+      JSON.stringify(['pillars/finance', 'libs/types']),
   };
 
   const ok = Object.values(checks).every(Boolean);
@@ -499,18 +508,41 @@ function selfTest() {
   } else {
     console.log(
       'self-test OK — gate flags missing target / outside-files / wildcard / bad version / bare export, ' +
-        'passes clean + bare-main units.'
+        'passes clean + bare-main units, and --dirs scoping parses correctly.'
     );
   }
   return ok;
+}
+
+/**
+ * Parse a `--dirs=a,b,c` CLI flag into the requested unit dirs, scoping the
+ * check to a PR's changed-unit set (see quality.yml's `exports` job). `null`
+ * means the flag was absent — check every discovered unit, the full-tree
+ * sweep `push`-to-`main` always uses. An empty list (`--dirs=` with nothing
+ * after it, e.g. a PR that only touched `scripts/`) is a valid "no unit
+ * changed" result, not an error.
+ *
+ * @param {string[]} argv
+ * @returns {string[] | null}
+ */
+export function parseDirsArg(argv) {
+  const flag = argv.find((a) => a.startsWith('--dirs='));
+  if (!flag) return null;
+  const raw = flag.slice('--dirs='.length).trim();
+  if (raw.length === 0) return [];
+  return raw
+    .split(',')
+    .map((d) => d.trim())
+    .filter((d) => d.length > 0);
 }
 
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
-      'Usage: node scripts/check-exports.mjs [--self-test]\n' +
-        'Asserts every workspace unit’s exports/main/types targets exist and fall under its files whitelist.'
+      'Usage: node scripts/check-exports.mjs [--self-test] [--dirs=<dir1>,<dir2>,...]\n' +
+        'Asserts every workspace unit’s exports/main/types targets exist and fall under its files whitelist.\n' +
+        '--dirs scopes the check to the given repo-relative unit dirs (e.g. pillars/finance) instead of every unit.'
     );
     process.exit(2);
   }
@@ -518,7 +550,9 @@ function main() {
     process.exit(selfTest() ? 0 : 1);
   }
 
-  const units = discoverUnits();
+  const onlyDirs = parseDirsArg(args);
+  const units =
+    onlyDirs === null ? discoverUnits() : discoverUnits().filter((u) => onlyDirs.includes(u.dir));
   /** @type {UnitReport[]} */
   const failing = [];
   for (const unit of units) {
@@ -526,7 +560,7 @@ function main() {
     if (report.errors.length > 0) failing.push(report);
   }
 
-  console.log(`Checked ${units.length} unit(s).`);
+  console.log(`Checked ${units.length} unit(s)${onlyDirs === null ? '' : ' (scoped)'}.`);
   if (failing.length === 0) {
     console.log('OK — every unit’s exports/files manifest is self-consistent.');
     process.exit(0);
