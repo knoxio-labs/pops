@@ -7,7 +7,8 @@ import { ChangeSetSchema, type ChangeSet } from '../../../contract/rest-correcti
  * Ported from the monolith `core/corrections/handlers/ai-inference.ts`.
  */
 import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
-import { getClaudeCompleter, getFeedbackStore } from './ai-runtime.js';
+import { extractJsonFromReply } from '../ai-json.js';
+import { ClaudeCompletionError, getClaudeCompleter, getFeedbackStore } from './ai-runtime.js';
 import {
   AdaptedSignalSchema,
   ChangeSetImpactSummarySchema,
@@ -112,13 +113,11 @@ feedback: ${JSON.stringify(sanitizedFeedback)}`;
 }
 
 function parseAdaptedSignal(text: string, originalSignal: CorrectionSignal): CorrectionSignal {
-  const cleaned = text
-    .trim()
-    .replaceAll(/^```(?:json)?\s*\n?/gm, '')
-    .replaceAll(/\n?```\s*$/gm, '');
+  const jsonSlice = extractJsonFromReply(text);
+  if (jsonSlice === null) return originalSignal;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(cleaned);
+    parsed = JSON.parse(jsonSlice);
   } catch {
     return originalSignal;
   }
@@ -129,16 +128,33 @@ function parseAdaptedSignal(text: string, originalSignal: CorrectionSignal): Cor
   return adapted.success ? adapted.data : originalSignal;
 }
 
+/**
+ * Adapts the signal from prior rejection feedback — a best-effort refinement
+ * of `proposeChangeSetFromCorrectionSignal`, not its primary output. A
+ * genuine Claude call failure here (rate limit exhausted, API error) degrades
+ * to the original signal rather than failing the whole propose flow, mirroring
+ * the existing "no text back" degrade below.
+ */
 export async function interpretRejectionFeedback(
   originalSignal: CorrectionSignal,
   rejectedChangeSet: ChangeSet,
   feedback: string
 ): Promise<CorrectionSignal> {
-  const text = await getClaudeCompleter()({
-    prompt: buildInterpretPrompt(originalSignal, rejectedChangeSet, feedback.trim().slice(0, 500)),
-    maxTokens: 250,
-    operation: 'rejection-interpret',
-  });
+  let text: string | null;
+  try {
+    text = await getClaudeCompleter()({
+      prompt: buildInterpretPrompt(
+        originalSignal,
+        rejectedChangeSet,
+        feedback.trim().slice(0, 500)
+      ),
+      maxTokens: 250,
+      operation: 'rejection-interpret',
+    });
+  } catch (error) {
+    if (error instanceof ClaudeCompletionError) return originalSignal;
+    throw error;
+  }
   if (!text) return originalSignal;
   return parseAdaptedSignal(text, originalSignal);
 }

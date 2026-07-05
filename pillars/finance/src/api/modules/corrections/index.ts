@@ -42,6 +42,7 @@ export {
 export {
   __setClaudeCompleterForTests,
   __setFeedbackStoreForTests,
+  ClaudeCompletionError,
   type ClaudeCompleter,
   type FeedbackStore,
 } from './ai-runtime.js';

@@ -15,6 +15,7 @@ import { callWithLogging } from '@pops/ai-telemetry';
 import { getBulk, setBulk } from '@pops/pillar-settings/service';
 
 import { type FinanceDb } from '../../../db/index.js';
+import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
@@ -25,7 +26,32 @@ export interface ClaudeRequest {
   operation: string;
 }
 
-/** Returns the model's text, or null on no-key / API failure / empty content. */
+/**
+ * Thrown by the default completer when the Anthropic call fails after
+ * exhausting {@link withRateLimitRetry}'s retries (`RATE_LIMITED`) or fails for
+ * any other reason (`API_ERROR`). Callers that must not silently degrade a
+ * genuine failure into "nothing proposed" (analyzeCorrection, generateRules,
+ * reviseChangeSet) let this propagate so it surfaces as a real error rather
+ * than an empty 200.
+ */
+export class ClaudeCompletionError extends Error {
+  constructor(
+    message: string,
+    public readonly code: 'RATE_LIMITED' | 'API_ERROR'
+  ) {
+    super(message);
+    this.name = 'ClaudeCompletionError';
+  }
+}
+
+/**
+ * Returns the model's text, or null when no API key is configured (an
+ * intentionally soft "AI unavailable" state — most environments run without
+ * the corrections AI key) or the model replied with no text content. Throws
+ * {@link ClaudeCompletionError} on an actual Anthropic API failure — a rate
+ * limit that survives retries, or any other call error — so callers can
+ * distinguish "the AI found nothing" from "the AI call never completed".
+ */
 export type ClaudeCompleter = (req: ClaudeRequest) => Promise<string | null>;
 
 function resolveApiKey(): string {
@@ -49,11 +75,15 @@ const defaultCompleter: ClaudeCompleter = async (req) => {
         operation: req.operation,
         domain: FINANCE_DOMAIN,
         call: async () => {
-          const created = await client.messages.create({
-            model,
-            max_tokens: req.maxTokens,
-            messages: [{ role: 'user', content: req.prompt }],
-          });
+          const created = await withRateLimitRetry(
+            () =>
+              client.messages.create({
+                model,
+                max_tokens: req.maxTokens,
+                messages: [{ role: 'user', content: req.prompt }],
+              }),
+            req.operation
+          );
           return {
             response: created,
             usage: {
@@ -67,8 +97,17 @@ const defaultCompleter: ClaudeCompleter = async (req) => {
     );
     const block = response.content[0];
     return block?.type === 'text' ? block.text : null;
-  } catch {
-    return null;
+  } catch (error) {
+    const isRateLimit =
+      error instanceof Error && 'status' in error && (error as { status: number }).status === 429;
+    throw new ClaudeCompletionError(
+      isRateLimit
+        ? `Claude completion rate-limited after retries (operation: ${req.operation})`
+        : `Claude completion failed (operation: ${req.operation}): ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+      isRateLimit ? 'RATE_LIMITED' : 'API_ERROR'
+    );
   }
 };
 

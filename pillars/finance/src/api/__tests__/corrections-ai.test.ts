@@ -118,6 +118,21 @@ describe('corrections.analyzeCorrection', () => {
     });
     expect(res.data).toBeNull();
   });
+
+  it('tolerates prose the model appended after the JSON object (CF018/#3624)', async () => {
+    __setClaudeCompleterForTests(
+      completerReturning({
+        'analyze-correction':
+          '{"matchType":"contains","pattern":"WOOLWORTHS","confidence":0.95}\n\nThis pattern should reliably match future Woolworths transactions.',
+      })
+    );
+    const res = await client().corrections.analyzeCorrection({
+      description: 'WOOLWORTHS METRO 1234',
+      entityName: 'Woolworths',
+      amount: -12,
+    });
+    expect(res.data).toEqual({ matchType: 'contains', pattern: 'WOOLWORTHS', confidence: 0.95 });
+  });
 });
 
 describe('corrections.generateRules', () => {
@@ -163,6 +178,34 @@ describe('corrections.generateRules', () => {
       ],
     });
     expect(res.proposals).toEqual([]);
+  });
+
+  it('tolerates prose the model appended after the JSON array (CF018/#3624)', async () => {
+    __setClaudeCompleterForTests(
+      completerReturning({
+        'generate-rules':
+          '[{"descriptionPattern":"NETFLIX","matchType":"contains","tags":["Entertainment"],"reasoning":"streaming"}]\n\nLet me know if you would like any adjustments.',
+      })
+    );
+    const res = await client().corrections.generateRules({
+      transactions: [
+        {
+          description: 'NETFLIX.COM',
+          entityName: 'Netflix',
+          amount: -15,
+          account: 'checking',
+          currentTags: [],
+        },
+      ],
+    });
+    expect(res.proposals).toEqual([
+      {
+        descriptionPattern: 'NETFLIX',
+        matchType: 'contains',
+        tags: ['Entertainment'],
+        reasoning: 'streaming',
+      },
+    ]);
   });
 });
 
@@ -259,6 +302,43 @@ describe('corrections.proposeChangeSet', () => {
     const addOp = res.changeSet.ops[0];
     expect(addOp?.op).toBe('add');
   });
+
+  it('tolerates prose the model appended around the adapted-signal JSON (CF018/#3624)', async () => {
+    feedbackMap.set(
+      feedbackKey({ matchType: 'contains', normalizedPattern: 'WOOLWORTHS' }),
+      JSON.stringify({
+        createdAt: '2026-01-01T00:00:00.000Z',
+        userEmail: 'u',
+        feedback: 'too broad — use exact',
+        changeSet: {
+          ops: [{ op: 'add', data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains' } }],
+        },
+        impactSummary: null,
+      })
+    );
+    __setClaudeCompleterForTests(
+      completerReturning({
+        'rejection-interpret':
+          'Sure, here is the adapted signal:\n{"adaptedSignal":{"descriptionPattern":"WOOLWORTHS METRO","matchType":"exact","entityName":"Woolworths","tags":["groceries"]}}',
+      })
+    );
+
+    const res = await client().corrections.proposeChangeSet({
+      signal: {
+        descriptionPattern: 'WOOLWORTHS',
+        matchType: 'contains',
+        entityName: 'Woolworths',
+        tags: ['groceries'],
+      },
+    });
+
+    expect(res.rationale).toContain('Follow-up after rejection feedback');
+    const addOp = res.changeSet.ops[0];
+    expect(addOp?.op).toBe('add');
+    expect(addOp && 'data' in addOp ? addOp.data.descriptionPattern : null).toBe(
+      'WOOLWORTHS METRO'
+    );
+  });
 });
 
 describe('corrections.reviseChangeSet', () => {
@@ -294,6 +374,18 @@ describe('corrections.reviseChangeSet', () => {
     await expect(client().corrections.reviseChangeSet(baseArgs)).rejects.toMatchObject({
       status: 500,
     });
+  });
+
+  it('tolerates prose the model appended after the JSON object (CF018/#3624)', async () => {
+    __setClaudeCompleterForTests(
+      completerReturning({
+        'revise-changeset':
+          '{"changeSet":{"ops":[{"op":"add","data":{"descriptionPattern":"WOOLWORTHS METRO","matchType":"exact"}}]},"rationale":"narrowed to exact"}\n\nHope this helps!',
+      })
+    );
+    const res = await client().corrections.reviseChangeSet(baseArgs);
+    expect(res.rationale).toBe('narrowed to exact');
+    expect(res.changeSet.ops[0]?.op).toBe('add');
   });
 });
 
