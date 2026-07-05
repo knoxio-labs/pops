@@ -2378,6 +2378,9 @@ export type ImportsCommitImportData = {
       entityId?: string;
       entityName?: string;
       location?: string;
+      matchConfidence?: number;
+      matchRuleId?: string;
+      matchType?: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
       rawRow: string;
       suggestedTags?: Array<{
         isNew?: boolean;
@@ -4407,6 +4410,9 @@ export type TransactionsRestoreData = {
     id: string;
     lastEditedTime: string;
     location: string | null;
+    matchConfidence: number | null;
+    matchRuleId: string | null;
+    matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
     notes: string | null;
     notionId: string | null;
     rawRow: string | null;
@@ -4559,6 +4565,9 @@ export type TransactionsDeleteResponses = {
       id: string;
       lastEditedTime: string;
       location: string | null;
+      matchConfidence: number | null;
+      matchRuleId: string | null;
+      matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
       notes: string | null;
       notionId: string | null;
       rawRow: string | null;
