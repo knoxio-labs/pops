@@ -30,7 +30,7 @@ AI client (Claude Desktop / Claude Code / any MCP client)
 pillar APIs:  inventory · finance · contacts · media · cerebrum
     │  (each owns its SQLite DB + ts-rest/zod contract)
     ▼
-registry pillar (:3001) — discovery fallback when an internal hostname isn't pinned
+registry pillar (:3001) — drives base-URL discovery for every pillar
 ```
 
 The gateway joins the `backend` Docker network and publishes port `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011` on the host (reachable on the LAN / optionally via Cloudflare Tunnel). Inbound `POST /mcp` requires the `MCP_INBOUND_TOKEN` bearer secret — that check, not network placement, is the access control. (The port stays published because the shell nginx has no `/mcp` route yet; routing MCP through it is a follow-up gated on the registry-driven proxy.) The gateway is a pure **consumer** of pillars and the registry: it does not self-register, does not export a `./manifest`, and advertises no contract of its own.
@@ -48,8 +48,8 @@ await inventory.inventory.locations.list();
 `configureServerSdk` is seeded with:
 
 - the **service-account key** (`POPS_INTERNAL_API_KEY`, or legacy `POPS_API_KEY`, optionally via the `POPS_API_KEY_FILE` Docker-secret pattern);
-- an **`internalBaseUrls` map** pinning Docker-network hostnames per pillar (`inventory-api:3002`, `finance-api:3004`, `registry-api:3001`, `media-api:3003`, `cerebrum-api:3007`, `contacts-api:3010`), each overridable via `POPS_<PILLAR>_API_URL`;
-- an optional **registry URL** (`POPS_REGISTRY_URL`) so discovery falls back through the registry pillar when an internal hostname is not pinned.
+- **registry-driven base-URL resolution** for every pillar — no hardcoded host:port defaults — with an optional per-pillar override via `POPS_<PILLAR>_API_URL` that outranks discovery when set;
+- the **registry URL** (`POPS_REGISTRY_URL`) the SDK uses to discover each pillar's base URL.
 
 The SDK memoises per-pillar handles, so repeated `getPillar` calls share a discovery cache.
 
@@ -109,20 +109,20 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 
 ## Configuration
 
-| Env var                  | Default                     | Description                                                                  |
-| ------------------------ | --------------------------- | ---------------------------------------------------------------------------- |
-| `POPS_INTERNAL_API_KEY`  | —                           | Service-account key the SDK uses to authenticate to pillars                  |
-| `POPS_API_KEY`           | —                           | Legacy fallback for the service-account key                                  |
-| `POPS_API_KEY_FILE`      | —                           | Path to a key file (Docker-secret pattern); read into the key var at startup |
-| `MCP_PORT`               | `3011`                      | Port the HTTP server listens on (bound `0.0.0.0`)                            |
-| `MCP_BIND_ADDR`          | `0.0.0.0`                   | Host bind address for the published compose port                             |
-| `POPS_REGISTRY_URL`      | —                           | Registry pillar URL for discovery fallback                                   |
-| `POPS_INVENTORY_API_URL` | `http://inventory-api:3002` | Pinned Docker-network base URL for the inventory pillar                      |
-| `POPS_FINANCE_API_URL`   | `http://finance-api:3004`   | Pinned base URL for the finance pillar                                       |
-| `POPS_CONTACTS_API_URL`  | `http://contacts-api:3010`  | Pinned base URL for the contacts pillar (entities)                           |
-| `POPS_MEDIA_API_URL`     | `http://media-api:3003`     | Pinned base URL for the media pillar                                         |
-| `POPS_CEREBRUM_API_URL`  | `http://cerebrum-api:3007`  | Pinned base URL for the cerebrum pillar                                      |
-| `POPS_REGISTRY_API_URL`  | `http://registry-api:3001`  | Pinned base URL for the registry pillar                                      |
+| Env var                  | Default   | Description                                                                     |
+| ------------------------ | --------- | ------------------------------------------------------------------------------- |
+| `POPS_INTERNAL_API_KEY`  | —         | Service-account key the SDK uses to authenticate to pillars                     |
+| `POPS_API_KEY`           | —         | Legacy fallback for the service-account key                                     |
+| `POPS_API_KEY_FILE`      | —         | Path to a key file (Docker-secret pattern); read into the key var at startup    |
+| `MCP_PORT`               | `3011`    | Port the HTTP server listens on (bound `0.0.0.0`)                               |
+| `MCP_BIND_ADDR`          | `0.0.0.0` | Host bind address for the published compose port                                |
+| `POPS_REGISTRY_URL`      | —         | Registry pillar URL for discovery fallback                                      |
+| `POPS_INVENTORY_API_URL` | —         | Optional override of the inventory pillar base URL (unset → registry discovery) |
+| `POPS_FINANCE_API_URL`   | —         | Optional override of the finance pillar base URL (unset → registry discovery)   |
+| `POPS_CONTACTS_API_URL`  | —         | Optional override of the contacts pillar base URL (unset → registry discovery)  |
+| `POPS_MEDIA_API_URL`     | —         | Optional override of the media pillar base URL (unset → registry discovery)     |
+| `POPS_CEREBRUM_API_URL`  | —         | Optional override of the cerebrum pillar base URL (unset → registry discovery)  |
+| `POPS_REGISTRY_API_URL`  | —         | Optional override of the registry pillar base URL (unset → registry discovery)  |
 
 ## Packaging & deployment
 
@@ -158,7 +158,7 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 
 - [x] The server SDK is configured once at module load with the service-account key, the per-pillar `internalBaseUrls` map, and an optional registry URL.
 - [x] The service-account key is resolved from `POPS_INTERNAL_API_KEY`, falling back to legacy `POPS_API_KEY`; `POPS_API_KEY_FILE` is read into the key var at startup (Docker-secret pattern).
-- [x] Each pinned pillar URL is overridable via its `POPS_<PILLAR>_API_URL` env var.
+- [x] Each pillar's base URL resolves via registry discovery (no hardcoded host:port defaults); `POPS_<PILLAR>_API_URL` optionally overrides it when set.
 - [x] `getPillar<TRouter>(id)` returns a memoised, fully-typed per-pillar handle shared across tool calls.
 
 ### Inbound authentication
