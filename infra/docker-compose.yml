@@ -588,6 +588,158 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── LITESTREAM SIDECARS (reference / opt-in — ADR-039 workstream S11) ──
+  # Not part of the running stack: every service below carries `profiles:
+  # [litestream]`, so a plain `docker compose up` never starts them and
+  # nothing that runs in prod today changes because this section exists.
+  # Enable one explicitly with, e.g.:
+  #   docker compose --profile litestream up -d registry-litestream
+  #
+  # Each sidecar replicates its own `pops-<id>-data` volume — a NEW,
+  # per-pillar volume distinct from the `sqlite-data` volume the pillar API
+  # containers above actually write to today. No API container mounts
+  # `pops-<id>-data` yet, so these sidecars have nothing to replicate until
+  # the per-pillar volume split lands; that split is the ADR-039 rollout's
+  # hard-gated prod migration (behind a working restore drill), not this
+  # issue. This section is the in-repo half of that future wiring. The
+  # replication config for each sidecar is the canonical reference file at
+  # `infra/litestream/<id>.yml`; the replica URL comes from the deployer's
+  # environment.
+  registry-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-registry-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-registry-data:/data/sqlite:ro
+      - ./litestream/registry.yml:/etc/litestream.yml:ro
+    environment:
+      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  inventory-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-inventory-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-inventory-data:/data/sqlite:ro
+      - ./litestream/inventory.yml:/etc/litestream.yml:ro
+    environment:
+      INVENTORY_LITESTREAM_REPLICA_URL: ${INVENTORY_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  finance-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-finance-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-finance-data:/data/sqlite:ro
+      - ./litestream/finance.yml:/etc/litestream.yml:ro
+    environment:
+      FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  media-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-media-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-media-data:/data/sqlite:ro
+      - ./litestream/media.yml:/etc/litestream.yml:ro
+    environment:
+      MEDIA_LITESTREAM_REPLICA_URL: ${MEDIA_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  food-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-food-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-food-data:/data/sqlite:ro
+      - ./litestream/food.yml:/etc/litestream.yml:ro
+    environment:
+      FOOD_LITESTREAM_REPLICA_URL: ${FOOD_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  lists-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-lists-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-lists-data:/data/sqlite:ro
+      - ./litestream/lists.yml:/etc/litestream.yml:ro
+    environment:
+      LISTS_LITESTREAM_REPLICA_URL: ${LISTS_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  ai-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-ai-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-ai-data:/data/sqlite:ro
+      - ./litestream/ai.yml:/etc/litestream.yml:ro
+    environment:
+      AI_LITESTREAM_REPLICA_URL: ${AI_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  cerebrum-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-cerebrum-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-cerebrum-data:/data/sqlite:ro
+      - ./litestream/cerebrum.yml:/etc/litestream.yml:ro
+    environment:
+      CEREBRUM_LITESTREAM_REPLICA_URL: ${CEREBRUM_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  contacts-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-contacts-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-contacts-data:/data/sqlite:ro
+      - ./litestream/contacts.yml:/etc/litestream.yml:ro
+    environment:
+      CONTACTS_LITESTREAM_REPLICA_URL: ${CONTACTS_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
   # Cross-pillar orchestrator (ADR-029, epics 06+07). Federates over the
   # pillars via @pops/pillar-sdk (REST); owns no domain DB. nginx routes
   # /orchestrator-api/ here on port 3009. Built from the app Dockerfile;
@@ -889,6 +1041,27 @@ volumes:
     name: pops-cerebrum-engrams-data
   media-images-data:
     name: pops-media-images-data
+  # Per-pillar volumes for the litestream sidecars above (ADR-039 workstream
+  # S11). Reference/opt-in only — nothing mounts these into a pillar API
+  # container yet, see the sidecars' section comment.
+  pops-registry-data:
+    name: pops-registry-data
+  pops-inventory-data:
+    name: pops-inventory-data
+  pops-finance-data:
+    name: pops-finance-data
+  pops-media-data:
+    name: pops-media-data
+  pops-food-data:
+    name: pops-food-data
+  pops-lists-data:
+    name: pops-lists-data
+  pops-ai-data:
+    name: pops-ai-data
+  pops-cerebrum-data:
+    name: pops-cerebrum-data
+  pops-contacts-data:
+    name: pops-contacts-data
 
 secrets:
   notion_api_token:
