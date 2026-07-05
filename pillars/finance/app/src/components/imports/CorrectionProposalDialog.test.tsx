@@ -532,9 +532,19 @@ describe('CorrectionProposalDialog', () => {
     renderDialog();
 
     const input = (await screen.findByDisplayValue('WOOLWORTHS')) as HTMLInputElement;
-    // The editor must stay editable even though a preview is in flight.
-    expect(input).toBeEnabled();
 
+    // Precondition: the live preview must actually be in flight before we type,
+    // otherwise a passing test would not exercise the disable-on-preview path
+    // at all (false green). The seeded ops are clean and the session is set, so
+    // the only thing blocking Apply here is the pending preview — asserting
+    // Apply is disabled is a deterministic proxy for `previewMutationPending`.
+    await waitFor(() => expect(mockPreviewMutateAsync).toHaveBeenCalled());
+    const applyBtn = screen.getByRole('button', { name: /Apply ChangeSet/i });
+    await waitFor(() => expect(applyBtn).toBeDisabled());
+
+    // With that preview in flight, the editor must stay editable (the bug was
+    // that the in-flight flag disabled the focused input, blurring it).
+    expect(input).toBeEnabled();
     input.focus();
     expect(input).toHaveFocus();
 
@@ -542,7 +552,8 @@ describe('CorrectionProposalDialog', () => {
     await user.type(input, ' METRO');
 
     // Same DOM node (no remount / no re-created editor), still focused, and
-    // every character landed — proving onChange fired per keystroke.
+    // every character landed — proving onChange fired per keystroke while the
+    // preview remained pending.
     const after = screen.getByDisplayValue('WOOLWORTHS METRO');
     expect(after).toBe(input);
     expect(after).toHaveFocus();
