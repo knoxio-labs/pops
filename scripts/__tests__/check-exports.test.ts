@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkUnit } from '../check-exports.mjs';
+import { checkUnit, parseDirsArg, selectUnits } from '../check-exports.mjs';
 
 type Unit = Parameters<typeof checkUnit>[0];
 
@@ -216,5 +216,78 @@ describe('checkUnit', () => {
     const errors = checkUnit(unit, exists).errors;
     expect(errors).toContainEqual(expect.stringContaining('index.cjs'));
     expect(errors.filter((e) => e.includes('does not exist'))).toHaveLength(1);
+  });
+});
+
+describe('parseDirsArg', () => {
+  it('returns null when --dirs is absent (check every unit)', () => {
+    expect(parseDirsArg([])).toBeNull();
+    expect(parseDirsArg(['--self-test'])).toBeNull();
+  });
+
+  it('splits a comma-separated --dirs= list into unit dirs', () => {
+    expect(parseDirsArg(['--dirs=pillars/finance,libs/types'])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
+  });
+
+  it('trims whitespace around each entry', () => {
+    expect(parseDirsArg(['--dirs= pillars/finance , libs/types '])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
+  });
+
+  it('returns an empty array (not null) for --dirs= with nothing after it', () => {
+    expect(parseDirsArg(['--dirs='])).toEqual([]);
+  });
+
+  it('drops empty entries from a trailing/doubled comma', () => {
+    expect(parseDirsArg(['--dirs=pillars/finance,,libs/types,'])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
+  });
+});
+
+describe('selectUnits', () => {
+  const units: Unit[] = [
+    { dir: 'pillars/finance', name: '@pops/finance', pkg: {} },
+    { dir: 'pillars/finance/app', name: '@pops/app-finance', pkg: {} },
+    { dir: 'pillars/finance-x', name: '@pops/finance-x', pkg: {} },
+    { dir: 'libs/types', name: '@pops/types', pkg: {} },
+  ];
+
+  it('returns the same list unfiltered when scope is null (full-tree sweep)', () => {
+    expect(selectUnits(units, null)).toBe(units);
+  });
+
+  it('selects a nested app unit when only its parent pillar dir is scoped', () => {
+    expect(selectUnits(units, ['pillars/finance']).map((u) => u.dir)).toEqual([
+      'pillars/finance',
+      'pillars/finance/app',
+    ]);
+  });
+
+  it('does not let a scoped dir match a sibling that shares its prefix', () => {
+    expect(selectUnits(units, ['pillars/finance']).map((u) => u.dir)).not.toContain(
+      'pillars/finance-x'
+    );
+  });
+
+  it('matches a nested app dir passed explicitly', () => {
+    expect(selectUnits(units, ['pillars/finance/app']).map((u) => u.dir)).toEqual([
+      'pillars/finance/app',
+    ]);
+  });
+
+  it('ignores a scoped dir that matches no discovered unit (e.g. scripts) without throwing', () => {
+    expect(selectUnits(units, ['scripts']).map((u) => u.dir)).toEqual([]);
+    expect(selectUnits(units, ['scripts', 'libs/types']).map((u) => u.dir)).toEqual(['libs/types']);
+  });
+
+  it('selects nothing for an empty scope (a PR that touched no unit)', () => {
+    expect(selectUnits(units, [])).toEqual([]);
   });
 });

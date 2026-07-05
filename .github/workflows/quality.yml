@@ -1,6 +1,15 @@
 name: Quality
 
-# Workspace-wide lint / format / module-boundaries / duplication gate.
+# Lint / format / module-boundaries gate, scoped to the units a PR actually
+# touches. On `pull_request` these run over `scripts/` (root-owned tooling,
+# never a unit) plus whatever `pillars/*` + `libs/*` dirs `_discover-units.yml`
+# reports as changed for this head — so an unrelated pillar's pre-existing
+# violation no longer reds out a sibling PR that never touched it (E31). On
+# `push` to `main` (a post-merge commit) they keep the ORIGINAL unscoped
+# full-tree sweep as a safety net: a same-ref diff against `origin/main` is
+# degenerate there (see the `scope` job), and main must never quietly
+# accumulate drift the per-PR scoping missed.
+#
 # Docs-only PRs (paths under `docs/**` or any `*.md`) cannot break code
 # quality, so the whole workflow is excluded from those changes. GitHub
 # rulesets with `strict_required_status_checks_policy: false` treat a
@@ -19,8 +28,35 @@ on:
       - "**/*.md"
 
 jobs:
+  discover:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/_discover-units.yml
+
+  scope:
+    name: Determine changed-unit scope
+    needs: discover
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.compute.outputs.dirs }}
+    steps:
+      - id: compute
+        name: Changed unit dirs (PR), or "." for a full-tree sweep (push to main)
+        env:
+          CHANGED: ${{ needs.discover.outputs.changed }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            dirs=$(echo "$CHANGED" | jq -r '(["scripts"] + [.[].dir]) | join(" ")')
+          else
+            dirs="."
+          fi
+          echo "dirs=$dirs" >> "$GITHUB_OUTPUT"
+          echo "Scope: $dirs"
+
   lint:
     name: Lint
+    needs: scope
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -30,10 +66,19 @@ jobs:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - name: Lint
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm lint
+          else
+            pnpm exec oxlint --type-aware $dirs
+          fi
 
   format:
     name: Format
+    needs: scope
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -43,10 +88,19 @@ jobs:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
+      - name: Format check
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm format:check
+          else
+            pnpm exec oxfmt --check $dirs
+          fi
 
   boundaries:
     name: Module boundaries
+    needs: scope
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -56,7 +110,15 @@ jobs:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint:boundaries
+      - name: Module boundaries
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm lint:boundaries
+          else
+            pnpm exec depcruise --config .dependency-cruiser.cjs --ignore-known --output-type err $dirs
+          fi
 
   scripts-tests:
     name: Scripts tests
@@ -85,7 +147,17 @@ jobs:
     # in `dist/`, so it builds before checking. Intentionally NOT added to the
     # required-checks ruleset; it reports a result without blocking merges while
     # the federation isolation phase lands.
+    #
+    # On a PR this only builds + checks the CHANGED units — each already owns
+    # its own `tsconfig.build.json` sub-graph (referencing just its transitive
+    # lib deps, e.g. `pillars/finance/tsconfig.build.json` -> ai-telemetry/sdk/
+    # settings/types), so `tsc -b` accepts several as separate project roots in
+    # one invocation without touching the other pillars. `push` to `main` keeps
+    # building the full root `tsconfig.build.json` graph + checking every unit,
+    # since exports/files self-consistency is a whole-tree invariant and main
+    # must never silently accumulate a break the per-PR scoping missed.
     # See docs/plans/repo-federation/04-isolation-enforcement.md §3.
+    needs: scope
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -98,9 +170,31 @@ jobs:
       - name: Gate self-test (proves the gate catches broken manifests)
         run: node scripts/check-exports.mjs --self-test
       - name: Build (exports/main/types targets resolve to compiled dist/)
-        run: pnpm build
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm build
+          else
+            projects=""
+            for d in $dirs; do
+              [ -f "$d/tsconfig.build.json" ] && projects="$projects $d/tsconfig.build.json"
+            done
+            if [ -z "$projects" ]; then
+              echo "no changed unit owns a tsconfig.build.json — nothing to build"
+            else
+              pnpm exec tsc -b $projects
+            fi
+          fi
       - name: Exports/files whitelist self-consistency
-        run: pnpm exports:check
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm exports:check
+          else
+            node scripts/check-exports.mjs --dirs="$(echo "$dirs" | tr ' ' ',')"
+          fi
 
   duplication:
     name: Duplication check
