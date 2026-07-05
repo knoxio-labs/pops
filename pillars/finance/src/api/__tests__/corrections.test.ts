@@ -238,6 +238,58 @@ describe('corrections — previewMatches', () => {
   });
 });
 
+describe('corrections — ruleMatchPreview', () => {
+  it('lists the full DB match set with a true total and pages with limit/offset', async () => {
+    const db = financeDb.db;
+    for (let i = 1; i <= 3; i += 1) {
+      transactionsService.createTransaction(db, {
+        description: `WOOLWORTHS ${i}00 SYDNEY`,
+        account: 'checking',
+        amount: -i,
+        date: `2026-01-0${i}`,
+        checksum: `chk-${i}`,
+      });
+    }
+    transactionsService.createTransaction(db, {
+      description: 'COLES EXPRESS',
+      account: 'checking',
+      amount: -8,
+      date: '2026-01-09',
+    });
+
+    const firstPage = await client().corrections.ruleMatchPreview({
+      pattern: 'WOOLWORTHS SYDNEY',
+      matchType: 'contains',
+      limit: 2,
+    });
+    expect(firstPage.data.totalCount).toBe(3);
+    expect(firstPage.data.matches).toHaveLength(2);
+    // Newest date first.
+    expect(firstPage.data.matches.map((m) => m.date)).toEqual(['2026-01-03', '2026-01-02']);
+    expect(firstPage.data.matches[0]).toMatchObject({
+      description: 'WOOLWORTHS 300 SYDNEY',
+      checksum: 'chk-3',
+      entityId: null,
+      entityName: null,
+    });
+
+    const secondPage = await client().corrections.ruleMatchPreview({
+      pattern: 'WOOLWORTHS SYDNEY',
+      matchType: 'contains',
+      limit: 2,
+      offset: 2,
+    });
+    expect(secondPage.data.totalCount).toBe(3);
+    expect(secondPage.data.matches.map((m) => m.date)).toEqual(['2026-01-01']);
+  });
+
+  it('400s a ruleMatchPreview with an invalid matchType', async () => {
+    await expect(
+      client().corrections.ruleMatchPreview({ pattern: 'X', matchType: 'fuzzy' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+});
+
 describe('corrections — request validation', () => {
   it('400s a createOrUpdate with an empty descriptionPattern', async () => {
     await expect(

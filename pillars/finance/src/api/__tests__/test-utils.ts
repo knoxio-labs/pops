@@ -172,6 +172,19 @@ interface PreviewMatchResult {
   truncated: boolean;
 }
 
+interface RuleMatchPreviewResult {
+  matches: {
+    id: string;
+    checksum: string | null;
+    date: string;
+    description: string;
+    amount: number;
+    entityId: string | null;
+    entityName: string | null;
+  }[];
+  totalCount: number;
+}
+
 interface CorrectionMatchSummary {
   matched: boolean;
   status: 'matched' | 'uncertain' | null;
@@ -305,6 +318,10 @@ export function makeClient(app: Express) {
         ),
       previewMatches: (body: Record<string, unknown>) =>
         send<{ data: PreviewMatchResult }>(r.post('/corrections/preview-matches').send(body)),
+      ruleMatchPreview: (body: Record<string, unknown>) =>
+        send<{ data: RuleMatchPreviewResult }>(
+          r.post('/corrections/rule-match-preview').send(body)
+        ),
       listMerged: (body: Record<string, unknown> = {}) =>
         send<{ data: Correction[]; pagination: Pagination }>(
           r.post('/corrections/list-merged').send(body)

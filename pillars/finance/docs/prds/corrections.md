@@ -62,19 +62,20 @@ A second matcher groups all matches by `[exact, contains, regex]` (each group so
 
 ## REST API (`corrections.*`, finance pillar)
 
-| Method & path                             | Purpose                                                                |
-| ----------------------------------------- | ---------------------------------------------------------------------- |
-| `GET /corrections`                        | List, `minConfidence` / `matchType` filters, paginated                 |
-| `GET /corrections/:id`                    | Fetch one (404 if absent)                                              |
-| `POST /corrections`                       | createOrUpdate — upsert keyed on `(normalized pattern, matchType)`     |
-| `PATCH /corrections/:id`                  | Patch fields (empty patch is a no-op re-read)                          |
-| `DELETE /corrections/:id`                 | Delete (404 if absent)                                                 |
-| `POST /corrections/find-match`            | Winning rule + `matched`/`uncertain` status for a description, or null |
-| `POST /corrections/preview-matches`       | Transactions a candidate `(pattern, matchType)` rule would match       |
-| `POST /corrections/:id/adjust-confidence` | Nudge confidence by delta; auto-deletes below 0.3                      |
-| `POST /corrections/list-merged`           | List with caller-supplied pending (un-persisted) ChangeSets folded in  |
-| `POST /corrections/preview-changeset`     | Before/after match diff of a ChangeSet vs caller-supplied transactions |
-| `POST /corrections/apply-changeset`       | Apply a ChangeSet atomically; returns the full rule set                |
+| Method & path                             | Purpose                                                                                                              |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `GET /corrections`                        | List, `minConfidence` / `matchType` filters, paginated                                                               |
+| `GET /corrections/:id`                    | Fetch one (404 if absent)                                                                                            |
+| `POST /corrections`                       | createOrUpdate — upsert keyed on `(normalized pattern, matchType)`                                                   |
+| `PATCH /corrections/:id`                  | Patch fields (empty patch is a no-op re-read)                                                                        |
+| `DELETE /corrections/:id`                 | Delete (404 if absent)                                                                                               |
+| `POST /corrections/find-match`            | Winning rule + `matched`/`uncertain` status for a description, or null                                               |
+| `POST /corrections/preview-matches`       | Transactions a candidate `(pattern, matchType)` rule would match                                                     |
+| `POST /corrections/rule-match-preview`    | DB-wide transactions a `(pattern, matchType)` rule matches, paged (`limit`/`offset`), with the uncapped `totalCount` |
+| `POST /corrections/:id/adjust-confidence` | Nudge confidence by delta; auto-deletes below 0.3                                                                    |
+| `POST /corrections/list-merged`           | List with caller-supplied pending (un-persisted) ChangeSets folded in                                                |
+| `POST /corrections/preview-changeset`     | Before/after match diff of a ChangeSet vs caller-supplied transactions                                               |
+| `POST /corrections/apply-changeset`       | Apply a ChangeSet atomically; returns the full rule set                                                              |
 
 Body-carrying reads are POST because a GET cannot carry the body; static paths keep them clear of `/corrections/:id`. The AI cluster (`analyze`, `generate-rules`, `propose-changeset`, `revise-changeset`, `reject-changeset`) shares this router but is specified under `ai-rule-creation` / `correction-proposal-engine`.
 

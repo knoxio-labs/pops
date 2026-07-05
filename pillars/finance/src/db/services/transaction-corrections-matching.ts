@@ -8,9 +8,11 @@
  */
 import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
 
-import { transactionCorrections } from '../schema.js';
+import { transactionCorrections, transactions } from '../schema.js';
 import {
   normalizeDescription,
+  patternMatchesNormalizedDescription,
+  type TransactionCorrectionMatchType,
   type TransactionCorrectionRow,
 } from './transaction-corrections-types.js';
 
@@ -20,22 +22,7 @@ function ruleMatchesNormalizedDescription(
   rule: TransactionCorrectionRow,
   normalized: string
 ): boolean {
-  const pattern = rule.descriptionPattern;
-  switch (rule.matchType) {
-    case 'exact':
-      return pattern.toUpperCase() === normalized;
-    case 'contains':
-      return pattern.length > 0 && normalized.includes(pattern.toUpperCase());
-    case 'regex':
-      if (pattern.length === 0) return false;
-      try {
-        return new RegExp(pattern, 'i').test(normalized);
-      } catch {
-        return false;
-      }
-    default:
-      return false;
-  }
+  return patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, normalized);
 }
 
 /**
@@ -132,4 +119,76 @@ export function findAllMatchingTransactionCorrections(
   }
 
   return [...exactMatches, ...containsMatches, ...regexMatches];
+}
+
+/** Resolved (defaults already applied) input to {@link previewRuleMatchTransactions}. */
+export interface RuleMatchPreviewInput {
+  pattern: string;
+  matchType: TransactionCorrectionMatchType;
+  limit: number;
+  offset: number;
+}
+
+/** One matched transaction, projected to the fields the rule-impact panel renders. */
+export interface RuleMatchPreviewRow {
+  id: string;
+  checksum: string | null;
+  date: string;
+  description: string;
+  amount: number;
+  entityId: string | null;
+  entityName: string | null;
+}
+
+export interface RuleMatchPreviewResult {
+  /** The requested page of matches (`limit`/`offset` applied), newest first. */
+  matches: RuleMatchPreviewRow[];
+  /** Count of ALL matches across the finance DB — never capped by `limit`. */
+  totalCount: number;
+}
+
+/**
+ * List every transaction a candidate `(pattern, matchType)` rule matches across
+ * the whole finance DB, plus the true total, so the rule-management impact panel
+ * can show what a rule actually hits (not a truncated sample).
+ *
+ * Matching is done in JS via {@link patternMatchesNormalizedDescription} against
+ * each row's normalised description rather than a SQL `LIKE`: the match set is
+ * defined post-{@link normalizeDescription} (digit-stripping + Unicode
+ * whitespace collapse), which SQLite's `LIKE` cannot faithfully reproduce
+ * without a registered function — and none is registered here. A SQL narrowing
+ * could silently under-count, which is exactly the failure this endpoint exists
+ * to avoid. The scan carries no caller input into SQL, so there is no injection
+ * surface. This mirrors the existing `previewMatches` full-scan approach.
+ */
+export function previewRuleMatchTransactions(
+  db: FinanceDb,
+  input: RuleMatchPreviewInput
+): RuleMatchPreviewResult {
+  const rows = db
+    .select({
+      id: transactions.id,
+      checksum: transactions.checksum,
+      date: transactions.date,
+      description: transactions.description,
+      amount: transactions.amount,
+      entityId: transactions.entityId,
+      entityName: transactions.entityName,
+    })
+    .from(transactions)
+    .orderBy(desc(transactions.date))
+    .all();
+
+  const matched = rows.filter((row) =>
+    patternMatchesNormalizedDescription(
+      input.pattern,
+      input.matchType,
+      normalizeDescription(row.description)
+    )
+  );
+
+  return {
+    matches: matched.slice(input.offset, input.offset + input.limit),
+    totalCount: matched.length,
+  };
 }

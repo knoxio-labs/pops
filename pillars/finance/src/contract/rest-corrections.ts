@@ -42,6 +42,8 @@ import {
   PreviewChangeSetBody,
   PreviewMatchesBody,
   PreviewMatchResultSchema,
+  RuleMatchPreviewBody,
+  RuleMatchPreviewResultSchema,
   UpdateCorrectionSchema,
 } from './rest-corrections-schemas.js';
 import { ERR_RESPONSES, MessageSchema, PaginationMetaSchema } from './rest-schemas.js';
@@ -81,6 +83,14 @@ export const financeCorrectionsContract = c.router({
     body: PreviewMatchesBody,
     responses: { 200: z.object({ data: PreviewMatchResultSchema }), ...ERR_RESPONSES },
     summary: 'Preview the transactions a candidate (pattern, matchType) rule would match',
+  },
+  ruleMatchPreview: {
+    method: 'POST',
+    path: '/corrections/rule-match-preview',
+    body: RuleMatchPreviewBody,
+    responses: { 200: z.object({ data: RuleMatchPreviewResultSchema }), ...ERR_RESPONSES },
+    summary:
+      'List every DB transaction a candidate (pattern, matchType) rule matches, paged, with the full-DB match total',
   },
   get: {
     method: 'GET',

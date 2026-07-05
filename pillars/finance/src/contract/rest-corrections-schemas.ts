@@ -125,6 +125,34 @@ export const PreviewMatchResultSchema = z.object({
   truncated: z.boolean(),
 });
 
+/**
+ * Body for the rule-match preview: an arbitrary (possibly unsaved) rule plus a
+ * page window. `limit`/`offset` page the returned rows; the response's
+ * `totalCount` always reflects the full DB match set.
+ */
+export const RuleMatchPreviewBody = z.object({
+  pattern: z.string().min(1),
+  matchType: MatchTypeSchema,
+  limit: z.number().int().positive().max(500).optional(),
+  offset: z.number().int().nonnegative().optional(),
+});
+
+/** A DB transaction the candidate rule matches, projected for the impact panel. */
+const RuleMatchPreviewTransactionSchema = z.object({
+  id: z.string(),
+  checksum: z.string().nullable(),
+  date: z.string(),
+  description: z.string(),
+  amount: z.number(),
+  entityId: z.string().nullable(),
+  entityName: z.string().nullable(),
+});
+
+export const RuleMatchPreviewResultSchema = z.object({
+  matches: z.array(RuleMatchPreviewTransactionSchema),
+  totalCount: z.number(),
+});
+
 /** A pending (un-persisted) ChangeSet folded into the baseline before a preview / merged list. */
 const PendingChangeSetSchema = z.object({ changeSet: ChangeSetSchema });
 

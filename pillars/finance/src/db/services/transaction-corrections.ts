@@ -34,6 +34,10 @@ export * from './transaction-corrections-types.js';
 export {
   findAllMatchingTransactionCorrections,
   findAllMatchingTransactionCorrectionsFromDb,
+  previewRuleMatchTransactions,
+  type RuleMatchPreviewInput,
+  type RuleMatchPreviewResult,
+  type RuleMatchPreviewRow,
 } from './transaction-corrections-matching.js';
 
 /**

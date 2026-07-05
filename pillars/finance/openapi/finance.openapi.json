@@ -4993,6 +4993,184 @@
         "tags": ["corrections"]
       }
     },
+    "/corrections/rule-match-preview": {
+      "post": {
+        "operationId": "corrections.ruleMatchPreview",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "limit": {
+                    "exclusiveMinimum": true,
+                    "maximum": 500,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "matchType": {
+                    "enum": ["exact", "contains", "regex"],
+                    "type": "string"
+                  },
+                  "offset": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "pattern": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["pattern", "matchType"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "matches": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "number"
+                              },
+                              "checksum": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "entityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "checksum",
+                              "date",
+                              "description",
+                              "amount",
+                              "entityId",
+                              "entityName"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "totalCount": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["matches", "totalCount"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "List every DB transaction a candidate (pattern, matchType) rule matches, paged, with the full-DB match total",
+        "tags": ["corrections"]
+      }
+    },
     "/corrections/{id}": {
       "delete": {
         "operationId": "corrections.delete",
