@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSetPageContext } from '@pops/navigation';
@@ -8,7 +8,12 @@ import { Alert, Button, DataTable, PageHeader, Skeleton } from '@pops/ui';
 
 import { unwrap } from '../finance-api-helpers.js';
 import { transactionsSuggestTags, transactionsUpdate } from '../finance-api/index.js';
-import { buildColumns, buildTransactionFilters, type Transaction } from './transactions/columns';
+import {
+  buildColumns,
+  buildTransactionFilters,
+  getDistinctAccounts,
+  type Transaction,
+} from './transactions/columns';
 import { DeleteTransactionDialog } from './transactions/DeleteTransactionDialog';
 import { TransactionFormDialog } from './transactions/TransactionFormDialog';
 import { useTransactionsPage } from './transactions/useTransactionsPage';
@@ -35,11 +40,13 @@ function TableContent({
   isLoading,
   transactions,
   columns,
+  accounts,
   onFilteredCountChange,
 }: {
   isLoading: boolean;
   transactions: Transaction[] | undefined;
   columns: ReturnType<typeof buildColumns>;
+  accounts: string[];
   onFilteredCountChange: (count: number) => void;
 }) {
   const { t } = useTranslation('finance');
@@ -61,7 +68,7 @@ function TableContent({
       searchPlaceholder={t('transactions.searchPlaceholder')}
       paginated
       defaultPageSize={50}
-      filters={buildTransactionFilters(t)}
+      filters={buildTransactionFilters(t, accounts)}
       onFilteredCountChange={onFilteredCountChange}
     />
   );
@@ -127,6 +134,7 @@ export function TransactionsPage() {
   const state = useTransactionsPage();
   const { onTagSave, onTagSuggest } = useTagHandlers();
   const { description, setFilteredCount } = useSubtitle(t, state.query.data?.pagination.total); // prettier-ignore
+  const accounts = useMemo(() => getDistinctAccounts(state.query.data?.data), [state.query.data]);
 
   if (state.query.error) {
     return <ErrorView message={state.query.error.message} onRetry={() => state.query.refetch()} />;
@@ -156,6 +164,7 @@ export function TransactionsPage() {
         isLoading={state.query.isLoading}
         transactions={state.query.data?.data}
         columns={columns}
+        accounts={accounts}
         onFilteredCountChange={setFilteredCount}
       />
       <TransactionFormDialog
