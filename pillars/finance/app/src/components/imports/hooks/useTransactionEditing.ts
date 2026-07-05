@@ -62,6 +62,12 @@ function buildLearnArgs(
  * transaction is a new object, so reference-equality replace silently
  * dropped the edit whenever the bucket array had been rebuilt (e.g. by a
  * server reconciliation) between render and save.
+ *
+ * The inserted transaction's `status` is forced to `targetBucket`: the stale
+ * `transaction` snapshot was captured at edit start, so a server reconciliation
+ * in the meantime can have moved this checksum into a different bucket. Keeping
+ * the snapshot's `status` would insert the card into `targetBucket` while
+ * carrying a mismatched status, breaking the bucket/status invariant.
  */
 function applyEditToBucket(
   prev: LocalTxState,
@@ -73,9 +79,10 @@ function applyEditToBucket(
   const targetBucket = isNoEntityType
     ? 'matched'
     : (bucketOfChecksum(prev, transaction.checksum) ?? 'matched');
-  return replaceByChecksum(prev, transaction.checksum, targetBucket, () =>
-    isNoEntityType ? { ...updatedTx, status: 'matched' as const } : updatedTx
-  );
+  return replaceByChecksum(prev, transaction.checksum, targetBucket, () => ({
+    ...updatedTx,
+    status: targetBucket,
+  }));
 }
 
 function showLearnToast(invokeRetry: () => void): void {
