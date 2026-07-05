@@ -68,6 +68,7 @@ interface ProposalBodyProps {
   >;
   excludeIds: ReadonlySet<string>;
   isBusy: boolean;
+  isEditorLocked: boolean;
   previewView: PreviewView;
   setPreviewView: (v: PreviewView) => void;
   currentPreviewLabel: string;
@@ -98,7 +99,7 @@ export function ProposalBody(props: ProposalBodyProps) {
           if (!selectedOp) return;
           localOpsHook.updateOp(selectedOp.clientId, mutator);
         }}
-        disabled={isBusy}
+        disabled={props.isEditorLocked}
       />
       <ImpactPanel
         view={props.previewView}

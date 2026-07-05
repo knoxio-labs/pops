@@ -36,6 +36,12 @@ export interface UseApplyRejectMutationsReturn {
   setAiMessages: React.Dispatch<React.SetStateAction<AiMessage[]>>;
   aiBusy: boolean;
   isBusy: boolean;
+  /**
+   * True only while a blocking operation is running that invalidates in-progress
+   * edits (proposal refetch, reject, AI revise). Deliberately excludes the live
+   * impact preview, which reruns on every keystroke — see the rule editor usage.
+   */
+  isEditorLocked: boolean;
   canApply: boolean;
   handleApprove: () => void;
   handleConfirmReject: () => void;
