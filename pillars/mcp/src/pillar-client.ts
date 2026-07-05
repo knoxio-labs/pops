@@ -33,11 +33,18 @@ const INTERNAL_BASE_URLS: Readonly<Record<string, string>> = {
   contacts: process.env['POPS_CONTACTS_API_URL'] ?? 'http://contacts-api:3010',
 };
 
-function resolveApiKey(): string | undefined {
+type ApiKeySource = 'POPS_INTERNAL_API_KEY' | 'POPS_API_KEY';
+
+interface ResolvedApiKey {
+  key: string;
+  source: ApiKeySource;
+}
+
+function resolveApiKey(): ResolvedApiKey | undefined {
   const explicit = process.env['POPS_INTERNAL_API_KEY'];
-  if (explicit && explicit.length > 0) return explicit;
+  if (explicit && explicit.length > 0) return { key: explicit, source: 'POPS_INTERNAL_API_KEY' };
   const legacy = process.env['POPS_API_KEY'];
-  if (legacy && legacy.length > 0) return legacy;
+  if (legacy && legacy.length > 0) return { key: legacy, source: 'POPS_API_KEY' };
   return undefined;
 }
 
@@ -45,15 +52,18 @@ let configured = false;
 
 function ensureConfigured(): void {
   if (configured) return;
-  const apiKey = resolveApiKey();
-  if (apiKey === undefined) {
+  const resolved = resolveApiKey();
+  if (resolved === undefined) {
     throw new Error(
       '[pops-mcp] no service-account key in environment: set POPS_INTERNAL_API_KEY (or legacy POPS_API_KEY) before calling pillar tools.'
     );
   }
+  // Silent auth-source misconfig (CF087) is hard to debug in production — log
+  // which env var actually won so an unexpected legacy fallback is visible.
+  console.warn(`[pops-mcp] resolved service-account key from ${resolved.source}`);
   const registryUrl = process.env['POPS_REGISTRY_URL'];
   configureServerSdk({
-    apiKey,
+    apiKey: resolved.key,
     internalBaseUrls: INTERNAL_BASE_URLS,
     ...(registryUrl !== undefined ? { registry: { registryUrl } } : {}),
   });

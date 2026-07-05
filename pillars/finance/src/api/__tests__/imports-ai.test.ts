@@ -4,6 +4,10 @@
  * its suggestion surfaces in the polled result (uncertain bucket, matchType
  * 'ai') with AI usage recorded. Proves the categorizer is wired into the
  * process pipeline end-to-end.
+ *
+ * The pipeline batches every pending row into one call per chunk
+ * (CP025/#3656), so even a single unmatched row goes through the batch reply
+ * shape — a JSON array with one entry per pending row.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -60,7 +64,7 @@ function client() {
 describe('imports — AI categorizer wired (F2)', () => {
   it('routes an unmatched row to the AI fallback and surfaces the suggestion', async () => {
     createMock.mockResolvedValue({
-      content: [{ type: 'text', text: '{"entityName":"Aldi","tags":["groceries"]}' }],
+      content: [{ type: 'text', text: '[{"entityName":"Aldi","tags":["groceries"]}]' }],
       usage: { input_tokens: 80, output_tokens: 12 },
     });
     const c = client();
