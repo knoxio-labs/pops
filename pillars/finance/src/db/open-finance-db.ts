@@ -9,6 +9,7 @@
  * The pillar's API host (`src/api/server.ts`) calls this on boot with the
  * path from `resolveFinanceSqlitePath` (`FINANCE_SQLITE_PATH` env var).
  */
+import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+
+import { buildImportDedupKeyFromStoredRow } from '../contract/import-dedup.js';
 
 import type { FinanceDb } from './services/internal.js';
 
@@ -62,12 +65,39 @@ export interface OpenedFinanceDb {
  * `0025`/`0026`/`0027`/`0052` entries ALTER, so against a fresh
  * finance.db the baseline runs first.
  */
+/**
+ * Register the finance pillar's custom SQLite functions on a raw connection.
+ *
+ * `finance_canonical_checksum(date, amount, description, raw_row)` recomputes a
+ * transaction's canonical dedup checksum (see {@link buildImportDedupKeyFromStoredRow}).
+ * It exists so migration `0059_recompute_canonical_checksum` can re-key every
+ * stored row from SQL — it MUST be registered before {@link migrate} runs, and
+ * derives the identical key the browser parser hashes so an existing row and a
+ * re-import of the same charge collide.
+ */
+export function registerFinanceSqlFunctions(raw: Database.Database): void {
+  raw.function(
+    'finance_canonical_checksum',
+    { deterministic: true },
+    (date: unknown, amount: unknown, description: unknown, rawRow: unknown): string => {
+      const key = buildImportDedupKeyFromStoredRow({
+        date: typeof date === 'string' ? date : String(date ?? ''),
+        amount: typeof amount === 'number' ? amount : Number(amount ?? 0),
+        description: typeof description === 'string' ? description : String(description ?? ''),
+        rawRow: typeof rawRow === 'string' ? rawRow : null,
+      });
+      return createHash('sha256').update(key).digest('hex');
+    }
+  );
+}
+
 export function openFinanceDb(path: string): OpenedFinanceDb {
   mkdirSync(dirname(path), { recursive: true });
   const raw = new Database(path);
   raw.pragma('journal_mode = WAL');
   raw.pragma('foreign_keys = ON');
   raw.pragma('busy_timeout = 5000');
+  registerFinanceSqlFunctions(raw);
   const db = drizzle(raw) as FinanceDb;
   try {
     migrate(db, { migrationsFolder: migrationsDir() });

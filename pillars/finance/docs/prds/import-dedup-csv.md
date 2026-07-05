@@ -6,7 +6,7 @@ Prepare uploaded transactions for the matching engine: parse a CSV into a common
 
 ## CSV parsing (frontend)
 
-The importer is bank-agnostic. The browser parses the CSV (Papa Parse, `header: true`), the user maps columns, and each row is normalised to a `ParsedTransaction`. There are no per-bank backend parsers; the bank selector in the upload step is cosmetic.
+The importer is bank-agnostic in its parsing. The browser parses the CSV (Papa Parse, `header: true`), the user maps columns, and each row is normalised to a `ParsedTransaction`. There are no per-bank backend parsers, but the bank selected in step 1 now sets each row's `account` (#3608); per-bank sign/column logic is still deferred to the ideas file.
 
 Flow: upload step parses the file to `{ headers, rows }` → column-map step auto-detects columns and lets the user override → validation builds `ParsedTransaction[]` → the array is POSTed to `/imports/process`.
 
@@ -31,8 +31,8 @@ ParsedTransaction = {
 ```
 
 - `rawRow` = `JSON.stringify(row)` (the full original CSV row, preserved for audit/AI context).
-- `checksum` = `SHA256(rawRow)` (`crypto-js`).
-- `account` is currently the literal `"Amex"` for every row — a placeholder, not bank-derived (correct per-bank accounts are deferred to the ideas file).
+- `checksum` = `SHA256` (`crypto-js`) of the **canonical dedup key** — `date` + `amount` + `normalizeDescription(description)` + the bank reference/id column (`buildImportDedupKey` / `findReferenceHeader`, `@pops/finance`) — NOT the raw row, so a re-export differing only in a free-text column still dedupes (#3611).
+- `account` = the bank selected in step 1 (`bankType`: ANZ / Amex / ING / Up), threaded through `validateAllRows` and the `/imports/process` body (#3608) — no longer the hardcoded `"Amex"`.
 
 ## Deduplication (backend)
 
@@ -44,11 +44,13 @@ The wire receives already-parsed `ParsedTransaction[]`; the pillar owns no CSV/P
 
 ### Data model
 
-`transactions.checksum text` with `uniqueIndex('idx_transactions_checksum')`. `rawRow` is persisted alongside for audit/AI context. Location lives as a normal value on the transaction — there is no online/in-person field; online-vs-in-person, when wanted, is a tag via `transaction_tag_rules`.
+`transactions.checksum text` with `index('idx_transactions_checksum')` (non-unique). Uniqueness was removed with the canonical re-key (#3611): two exports of one charge now collapse to the same checksum and must coexist until the Phase-D duplicate cleanup, so dedup is enforced in-process by `findExistingChecksums`, never by the index. `rawRow` is persisted alongside for audit/AI context. Location lives as a normal value on the transaction — there is no online/in-person field; online-vs-in-person, when wanted, is a tag via `transaction_tag_rules`.
 
-### Why checksums work
+Migration `0059_recompute_canonical_checksum` re-keys existing rows: it drops the old unique index, recomputes every non-null checksum via the `finance_canonical_checksum` SQLite function (which derives the same key the browser hashes), and re-creates `idx_transactions_checksum` as a plain index. It does NOT delete duplicate rows — that prod cleanup is a separate Phase-D task.
 
-Bank CSV rows are deterministic: the same transaction exports the identical row, so `SHA256(rawRow)` is stable. Re-importing the same file yields the same checksums and every row is skipped. The hash covers all fields, so there is no date/amount ambiguity.
+### Why the canonical key works
+
+The dedup identity is the stable, bank-agnostic tuple — date, amount, `normalizeDescription(description)` (uppercase, strip digits, collapse whitespace), and the bank's own reference/id — so two exports of the same charge that differ only in a free-text column (e.g. a cardholder Address) hash identically and dedupe. Hashing the whole raw row (the pre-#3611 behaviour) let such exports produce different checksums and double-insert.
 
 ## REST surface
 
@@ -57,7 +59,7 @@ Bank CSV rows are deterministic: the same transaction exports the identical row,
 
 ## Business rules
 
-- The `idx_transactions_checksum` unique index enforces dedup at the DB level; the in-process probe avoids round-tripping rows that would be rejected anyway.
+- Dedup is enforced in-process by `findExistingChecksums` (a checksum-`IN` probe); `idx_transactions_checksum` is a non-unique index that only accelerates that probe (the canonical re-key means known duplicates legitimately share a checksum).
 - Re-importing the same CSV skips every row — import is idempotent.
 - Rows that fail to parse (bad date/amount, or unmapped required columns) are reported as validation errors in the column-map step; the first 10 are surfaced.
 - `rawRow` is preserved verbatim for audit and AI context.
@@ -67,23 +69,26 @@ Bank CSV rows are deterministic: the same transaction exports the identical row,
 | Case                                           | Behaviour                                                                                                |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Bank changes CSV format                        | Auto-detect may miss columns; user remaps manually, or rows fail validation and show as errors in step 2 |
-| Manual CSV edit (amount changed)               | Different `rawRow` → different checksum → treated as a new transaction                                   |
-| Same amount + day, different merchant          | Different raw rows → different checksums → no false dedup                                                |
+| Manual CSV edit (amount changed)               | Amount is part of the canonical key → different checksum → treated as a new transaction                  |
+| Same amount + day, different merchant          | Different normalized descriptions → different checksums → no false dedup                                 |
+| Re-export differing only in a free-text column | Canonical key ignores non-key columns → same checksum → deduped (#3611)                                  |
 | Transaction with a null checksum already in DB | Ignored by `findExistingChecksums` (only non-null checksums match)                                       |
 | > 500 transactions in one import               | Checksum probe batches at 500 to stay under the SQLite variable limit                                    |
 
 ## Acceptance criteria
 
-- [x] Each `ParsedTransaction` carries `SHA256(JSON.stringify(row))` as its checksum.
+- [x] Each `ParsedTransaction` carries `SHA256` of the canonical dedup key (`buildImportDedupKey`: date + amount + normalized description + bank reference), NOT the raw row, so a re-export differing only in a free-text column dedupes (#3611).
+- [x] The parsed `account` is the bank selected in step 1 (`bankType`), threaded through `validateAllRows` and the `/imports/process` body — never the hardcoded "Amex" (#3608).
 - [x] `findExistingChecksums` batches the IN-list at 500 and returns only checksums already present; empty input returns an empty set without querying; null-checksum rows are ignored.
 - [x] Duplicate rows land in the `skipped` bucket with reason `"Duplicate transaction (checksum match)"`; new rows continue to entity matching.
-- [x] `transactions.checksum` has a unique index (`idx_transactions_checksum`).
+- [x] `transactions.checksum` has a non-unique index (`idx_transactions_checksum`); migration `0059_recompute_canonical_checksum` drops the old unique index, recomputes every stored checksum to the canonical key via `finance_canonical_checksum`, and re-creates the index non-unique (duplicate rows are re-keyed, not deleted — Phase-D cleanup is separate).
 - [x] CSV is parsed client-side (Papa Parse) into `{ headers, rows }`; columns auto-detect with manual override; required = Date/Description/Amount.
 - [x] `parseDate` converts `DD/MM/YYYY` → `YYYY-MM-DD`; `parseAmount` strips currency symbols and negates; `extractLocation` title-cases the first line.
 - [x] Validation rejects rows with an invalid date or amount and surfaces the first 10 errors.
 - [x] `rawRow` (full original row JSON) is stored for audit/AI context.
 - [x] Tests cover `findExistingChecksums` (existing/missing/null/over-500-batch), plus `buildEntityMaps`, `buildDefaultTagsByEntity`, and `insertImportTransaction` (`src/db/__tests__/imports.test.ts`).
-- [ ] The client-side column-map transforms (`parseDate`/`parseAmount`/`extractLocation`/`autoDetectColumns`/`validateAllRows`) are shipped but have no unit tests yet — open test gap, not a missing feature.
+- [x] The canonical key + re-key migration are tested: `buildImportDedupKey`/`findReferenceHeader`/`buildImportDedupKeyFromStoredRow` (`src/contract/__tests__/import-dedup.test.ts`), the migration re-keys a sample row and collapses a duplicate pair to a non-unique index (`src/db/__tests__/recompute-canonical-checksum.test.ts`), and `validateAllRows` account+checksum behaviour (`app/.../column-map/validation.test.ts`).
+- [ ] The pure column-map transforms `parseDate`/`parseAmount`/`extractLocation`/`autoDetectColumns` are shipped but still have no direct unit tests — open test gap, not a missing feature.
 
 ## Out of scope
 

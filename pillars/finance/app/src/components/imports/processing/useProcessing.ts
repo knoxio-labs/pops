@@ -108,7 +108,7 @@ export function useCompletionHandler(state: ProcessingState): void {
 }
 
 export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolean): void {
-  const { parsedTransactions } = useImportStore();
+  const { parsedTransactions, bankType } = useImportStore();
   const { processImportMutation } = state;
   useEffect(() => {
     if (
@@ -117,8 +117,8 @@ export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolea
       !processImportMutation.isPending &&
       !processImportMutation.isSuccess
     ) {
-      processImportMutation.mutate({ transactions: parsedTransactions, account: 'Amex' });
+      processImportMutation.mutate({ transactions: parsedTransactions, account: bankType });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsedTransactions.length, hasAlreadyProcessed]);
+  }, [parsedTransactions.length, hasAlreadyProcessed, bankType]);
 }

@@ -17,6 +17,13 @@ export {
 } from './corrections-pure.js';
 export { type ChangeSet, type ChangeSetOp } from './rest-corrections-schemas.js';
 export {
+  buildImportDedupKey,
+  buildImportDedupKeyFromStoredRow,
+  extractReferenceValue,
+  findReferenceHeader,
+  type ImportDedupFields,
+} from './import-dedup.js';
+export {
   type ParsedTransaction,
   type ProcessedTransaction,
   type ConfirmedTransaction,
