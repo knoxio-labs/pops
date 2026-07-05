@@ -16,6 +16,8 @@ export interface AiCategorizationResult {
   entityName: string;
   aiTags: string[];
   aiCategory: string | null;
+  /** The model's reported confidence (0.0-1.0) that `entityName` is correct (CF037/#3655). */
+  confidence: number;
 }
 
 export interface MatchedFromEntityArgs {
@@ -24,6 +26,8 @@ export interface MatchedFromEntityArgs {
   matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai';
   aiTags?: string[];
   category?: string | null;
+  /** Model-reported confidence, carried onto the entity for `matchType: 'ai'` only. */
+  confidence?: number;
   knownTags: string[];
   entityDefaultTags: ReadonlyMap<string, string[]>;
 }
@@ -34,7 +38,14 @@ export function buildMatchedFromEntity(
 ): ProcessedTransaction {
   return {
     ...args.transaction,
-    entity: { entityId: args.entry.id, entityName: args.entry.name, matchType: args.matchType },
+    entity: {
+      entityId: args.entry.id,
+      entityName: args.entry.name,
+      matchType: args.matchType,
+      ...(args.matchType === 'ai' && args.confidence !== undefined
+        ? { confidence: args.confidence }
+        : {}),
+    },
     status: 'matched',
     suggestedTags: buildSuggestedTags(db, {
       description: args.transaction.description,
@@ -74,6 +85,8 @@ export interface UncertainFromAiArgs {
   entityName: string;
   aiTags: string[];
   aiCategory: string | null;
+  /** The model's reported confidence (0.0-1.0) that `entityName` is correct (CF037/#3655). */
+  confidence: number;
   knownTags: string[];
 }
 
@@ -83,7 +96,7 @@ export function buildUncertainFromAi(
 ): ProcessedTransaction {
   return {
     ...args.transaction,
-    entity: { entityName: args.entityName, matchType: 'ai', confidence: 0.7 },
+    entity: { entityName: args.entityName, matchType: 'ai', confidence: args.confidence },
     status: 'uncertain',
     suggestedTags: buildSuggestedTags(db, {
       description: args.transaction.description,

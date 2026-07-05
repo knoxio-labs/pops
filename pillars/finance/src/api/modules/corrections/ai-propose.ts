@@ -132,7 +132,7 @@ export interface ReviseResult {
   targetRules: Record<string, Correction>;
 }
 
-function buildRevisePrompt(args: ReviseArgs, sanitizedInstruction: string): string {
+export function buildRevisePrompt(args: ReviseArgs, sanitizedInstruction: string): string {
   const triggeringLines = args.triggeringTransactions
     .slice(0, 100)
     .map((t, i) => `${i + 1}. "${t.description}"`)

@@ -17,6 +17,8 @@ interface AnalyzeCorrectionOutput {
   data: {
     pattern: string;
     matchType: 'exact' | 'contains' | 'regex';
+    /** The AI's reported confidence (0.0-1.0) that this pattern is correct (CF038/#3655). */
+    confidence: number;
   } | null;
 }
 
@@ -77,6 +79,7 @@ interface GenerateDeps {
     React.SetStateAction<TriggeringTransaction | null>
   >;
   setProposalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setProposalConfidence: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 async function runGenerate(args: GenerateArgs, deps: GenerateDeps): Promise<void> {
@@ -105,6 +108,9 @@ async function runGenerate(args: GenerateArgs, deps: GenerateDeps): Promise<void
       ...baseSignal,
     });
     deps.setProposalTriggeringTransaction(triggeringContext);
+    // Only the AI-derived pattern carries a model confidence — the fallback
+    // pattern is a deterministic heuristic with nothing to report (CF038/#3655).
+    deps.setProposalConfidence(useAi ? analysis.confidence : null);
     deps.setProposalOpen(true);
     toast.success('Proposal generated — review and approve to learn');
   } catch {
@@ -114,9 +120,22 @@ async function runGenerate(args: GenerateArgs, deps: GenerateDeps): Promise<void
       ...baseSignal,
     });
     deps.setProposalTriggeringTransaction(triggeringContext);
+    deps.setProposalConfidence(null);
     deps.setProposalOpen(true);
     toast.info('Proposal generated (fallback) — review and approve to learn');
   }
+}
+
+/**
+ * Immediate feedback: open the window in a loading state before the
+ * round-trip so the click is never a silent wait. Clearing the prior signal
+ * (and confidence) keeps a stale proposal from flashing under the loader.
+ */
+function openGeneratingWindow(deps: GenerateDeps): void {
+  deps.setProposalSignal(null);
+  deps.setProposalTriggeringTransaction(null);
+  deps.setProposalConfidence(null);
+  deps.setProposalOpen(true);
 }
 
 /**
@@ -128,6 +147,7 @@ export function useProposalGeneration() {
   const [proposalSignal, setProposalSignal] = useState<ProposalSignal | null>(null);
   const [proposalTriggeringTransaction, setProposalTriggeringTransaction] =
     useState<TriggeringTransaction | null>(null);
+  const [proposalConfidence, setProposalConfidence] = useState<number | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
   const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
   const inFlightRef = useRef(false);
@@ -146,19 +166,16 @@ export function useProposalGeneration() {
       if (inFlightRef.current) return;
       inFlightRef.current = true;
       setIsGeneratingProposal(true);
-      // Immediate feedback: open the window in a loading state before the
-      // round-trip so the click is never a silent wait. Clearing the prior
-      // signal keeps a stale proposal from flashing under the loader.
-      setProposalSignal(null);
-      setProposalTriggeringTransaction(null);
-      setProposalOpen(true);
+      const deps: GenerateDeps = {
+        analyzeCorrectionMutation,
+        setProposalSignal,
+        setProposalTriggeringTransaction,
+        setProposalOpen,
+        setProposalConfidence,
+      };
+      openGeneratingWindow(deps);
       try {
-        await runGenerate(args, {
-          analyzeCorrectionMutation,
-          setProposalSignal,
-          setProposalTriggeringTransaction,
-          setProposalOpen,
-        });
+        await runGenerate(args, deps);
       } finally {
         inFlightRef.current = false;
         setIsGeneratingProposal(false);
@@ -189,6 +206,7 @@ export function useProposalGeneration() {
     handleProposalOpenChange,
     proposalSignal,
     proposalTriggeringTransaction,
+    proposalConfidence,
     browseOpen,
     setBrowseOpen,
     isGeneratingProposal,

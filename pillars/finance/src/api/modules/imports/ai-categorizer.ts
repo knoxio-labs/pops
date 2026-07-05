@@ -30,6 +30,12 @@ export interface AiCacheEntry {
   tags?: string[];
   /** Legacy single-category fallback. */
   category?: string | null;
+  /**
+   * The model's reported confidence (0.0-1.0) that `entityName` is correct
+   * (CF037/#3655). Falls back to {@link DEFAULT_AI_CATEGORIZATION_CONFIDENCE}
+   * when the reply omits or malforms the field.
+   */
+  confidence: number;
 }
 
 /** Per-call token/cost accounting surfaced to the batch counters. */
@@ -74,7 +80,9 @@ export function toCategorizerInput(
   };
 }
 
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+/** Default categorizer model, overridable via `FINANCE_AI_CATEGORIZER_MODEL`. */
+export const CATEGORIZER_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+const DEFAULT_MODEL = CATEGORIZER_DEFAULT_MODEL;
 const DEFAULT_MAX_TOKENS = 200;
 // Claude Haiku pricing (USD per 1M tokens) for the cost estimate.
 const INPUT_COST_PER_M = 1.0;
@@ -109,7 +117,8 @@ function getApiKey(): string {
 export async function categorizeWithAi(
   input: CategorizerInput,
   importBatchId?: string,
-  knownTags: string[] = []
+  knownTags: string[] = [],
+  knownEntityNames: string[] = []
 ): Promise<AiCallResult> {
   if (!isAiCategorizerEnabled()) return { result: null };
 
@@ -126,6 +135,7 @@ export async function categorizeWithAi(
     model: getModel(),
     maxTokens: getMaxTokens(),
     knownTags,
+    knownEntityNames,
     ...(importBatchId !== undefined && importBatchId !== ''
       ? { contextId: `import_batch:${importBatchId}` }
       : {}),

@@ -25,6 +25,9 @@ import type { AiCacheEntry, CategorizerInput } from './ai-categorizer.js';
 
 export const CATEGORIZE_OPERATION = 'imports.categorize';
 
+/** Fallback confidence when the model omits or returns an invalid `confidence` field. */
+export const DEFAULT_AI_CATEGORIZATION_CONFIDENCE = 0.7;
+
 export interface ApiCallResponse {
   text: string | null;
   inputTokens: number;
@@ -38,6 +41,8 @@ export interface ApiCallOptions {
   model: string;
   maxTokens: number;
   knownTags: string[];
+  /** Bounded closed-set hint of existing entity names (CF062/#3661). */
+  knownEntityNames?: string[];
   /** Opaque import-batch key for telemetry correlation (never the description). */
   contextId?: string;
 }
@@ -73,18 +78,27 @@ function buildTransactionData(input: CategorizerInput): string {
   return lines.join('\n');
 }
 
-export function buildPrompt(input: CategorizerInput, knownTags: string[]): string {
+export function buildPrompt(
+  input: CategorizerInput,
+  knownTags: string[],
+  knownEntityNames: string[] = []
+): string {
   const tagList =
     knownTags.length > 0
       ? knownTags.join(', ')
       : 'Groceries, Transport, Dining, Shopping, Utilities, Subscriptions, Entertainment, Health, Insurance';
+  const knownEntitiesSection =
+    knownEntityNames.length > 0
+      ? `\n\nKnown entities: ${knownEntityNames.join(', ')}\nIf the transaction is from one of the known entities, return its name exactly as listed above (same spelling/casing) — do NOT invent a variant spelling. Only return a name outside this list when the merchant genuinely isn't one of them.`
+      : '';
+
   return `Given this bank transaction, identify the merchant/entity name and relevant spending tags.
 
 ${buildTransactionData(input)}
 
-Known tags: ${tagList}
+Known tags: ${tagList}${knownEntitiesSection}
 
-Reply in JSON only: {"entityName": "...", "tags": ["tag1", "tag2"]}
+Reply in JSON only: {"entityName": "...", "tags": ["tag1", "tag2"], "confidence": 0.0-1.0}
 
 entityName rules:
 - Return the brand or chain name only (e.g. "Woolworths", "Metro Petroleum", "Transport for NSW").
@@ -99,11 +113,23 @@ tags rules:
 - Return 1-4 tags that describe this transaction.
 - Prefer tags from the Known tags list when they fit.
 - You MAY suggest new tags not in the list when they better describe this transaction (e.g. "EV", "Homelab", "Gift Card", "Fast Food").
-- Do NOT use vague tags like "Other" or "Spending" unless nothing else fits.`;
+- Do NOT use vague tags like "Other" or "Spending" unless nothing else fits.
+
+confidence rules:
+- Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
 }
 
 export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
-  const { client, input, sanitizedDescription, model, maxTokens, knownTags, contextId } = opts;
+  const {
+    client,
+    input,
+    sanitizedDescription,
+    model,
+    maxTokens,
+    knownTags,
+    knownEntityNames,
+    contextId,
+  } = opts;
   const response = await callWithLogging(
     {
       provider: ANTHROPIC_PROVIDER,
@@ -117,7 +143,9 @@ export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
             client.messages.create({
               model,
               max_tokens: maxTokens,
-              messages: [{ role: 'user', content: buildPrompt(input, knownTags) }],
+              messages: [
+                { role: 'user', content: buildPrompt(input, knownTags, knownEntityNames) },
+              ],
             }),
           sanitizedDescription
         );
@@ -155,7 +183,12 @@ export function buildEntryFromText(text: string): AiCacheEntry {
       'PARSE_ERROR'
     );
   }
-  let parsed: { entityName?: string | null; tags?: unknown; category?: string };
+  let parsed: {
+    entityName?: string | null;
+    tags?: unknown;
+    category?: string;
+    confidence?: unknown;
+  };
   try {
     parsed = JSON.parse(jsonSlice) as typeof parsed;
   } catch (error) {
@@ -169,10 +202,15 @@ export function buildEntryFromText(text: string): AiCacheEntry {
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags.filter((t): t is string => typeof t === 'string')
     : undefined;
+  const confidence =
+    typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1
+      ? parsed.confidence
+      : DEFAULT_AI_CATEGORIZATION_CONFIDENCE;
   return {
     entityName: sanitizeEntityName(parsed.entityName ?? null),
     category: tags?.[0] ?? parsed.category ?? '',
     tags,
+    confidence,
   };
 }
 

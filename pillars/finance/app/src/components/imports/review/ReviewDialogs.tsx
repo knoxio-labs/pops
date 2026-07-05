@@ -97,6 +97,7 @@ export function ReviewDialogs({
         triggeringTransaction={proposal.proposalTriggeringTransaction}
         previewTransactions={allPreviewTransactions}
         generating={proposal.isGeneratingProposal}
+        patternConfidence={proposal.proposalConfidence}
         onApproved={() => toast.success('Rules saved locally')}
       />
       <BrowseDialog

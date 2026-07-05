@@ -4,7 +4,8 @@
   "private": true,
   "files": [
     "dist/contract/**",
-    "openapi/finance.openapi.json"
+    "openapi/finance.openapi.json",
+    "prompt-catalog.json"
   ],
   "type": "module",
   "main": "./dist/contract/index.js",
@@ -23,10 +24,11 @@
       "default": "./dist/contract/api-types.generated.js"
     },
     "./openapi": "./openapi/finance.openapi.json",
+    "./prompt-catalog": "./prompt-catalog.json",
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts && tsx scripts/generate-api-types.ts",
+    "build": "tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts && tsx scripts/generate-api-types.ts && tsx scripts/generate-prompt-catalog.ts",
     "dev": "tsx watch --clear-screen=false src/api/server.ts",
     "start": "node dist/api/server.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
@@ -34,7 +36,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "generate:openapi": "tsx scripts/generate-openapi.ts",
-    "generate:api-types": "tsx scripts/generate-api-types.ts"
+    "generate:api-types": "tsx scripts/generate-api-types.ts",
+    "generate:prompt-catalog": "tsx scripts/generate-prompt-catalog.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

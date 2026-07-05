@@ -26,6 +26,8 @@ export interface CorrectionProposalWorkflowProps {
   minConfidence: number;
   /** True while the proposal signal is still being generated (analysis in flight). */
   generating?: boolean;
+  /** The AI's reported confidence (0.0-1.0) in `signal`'s pattern, when AI-derived (CF038/#3655). */
+  patternConfidence?: number | null;
   onApproved?: (changeSet: ServerChangeSet) => void;
 }
 

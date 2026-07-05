@@ -98,7 +98,7 @@ export async function persistRejectedChangeSetFeedback(
   );
 }
 
-function buildInterpretPrompt(
+export function buildInterpretPrompt(
   originalSignal: CorrectionSignal,
   rejectedChangeSet: ChangeSet,
   sanitizedFeedback: string

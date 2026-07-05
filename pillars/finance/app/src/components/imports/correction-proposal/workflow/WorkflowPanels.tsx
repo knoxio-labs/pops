@@ -123,12 +123,14 @@ export function ContextHeader({
   rationale,
   opCount,
   combinedSummary,
+  patternConfidence,
 }: {
   signal: CorrectionSignal;
   triggeringTransaction: TriggeringTransactionContext | null;
   rationale: string | null;
   opCount: number;
   combinedSummary: PreviewChangeSetOutput['summary'] | null;
+  patternConfidence?: number | null;
 }) {
   return (
     <ContextPanel
@@ -137,6 +139,7 @@ export function ContextHeader({
       rationale={rationale}
       opCount={opCount}
       combinedSummary={combinedSummary}
+      patternConfidence={patternConfidence}
     />
   );
 }

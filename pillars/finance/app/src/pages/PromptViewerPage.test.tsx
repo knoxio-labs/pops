@@ -18,16 +18,19 @@ describe('PromptViewerPage', () => {
     expect(screen.getByText('Prompt Templates')).toBeInTheDocument();
   });
 
-  it('renders both prompt templates', () => {
+  it('renders every prompt in the live catalog (CF028/#3634)', () => {
     renderPage();
     expect(screen.getByText('Transaction Categorisation')).toBeInTheDocument();
+    expect(screen.getByText('Correction Analysis')).toBeInTheDocument();
     expect(screen.getByText('Rule Generation')).toBeInTheDocument();
+    expect(screen.getByText('ChangeSet Revision')).toBeInTheDocument();
+    expect(screen.getByText('Rejection Feedback Interpretation')).toBeInTheDocument();
   });
 
   it('shows model attribution for each prompt', () => {
     renderPage();
     const modelBadges = screen.getAllByText('claude-haiku-4-5-20251001');
-    expect(modelBadges).toHaveLength(2);
+    expect(modelBadges).toHaveLength(5);
   });
 
   it('displays prompt content in code blocks', () => {

@@ -14,6 +14,7 @@ import { AiCategorizationError } from './ai-categorizer-error.js';
 import { categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
 import { applyLearnedCorrection } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
+import { buildKnownEntityHint } from './entity-vocabulary.js';
 import {
   type AiCategorizationResult,
   buildFailure,
@@ -74,7 +75,8 @@ async function tryAiCategorization(
     call = await categorizeWithAi(
       toCategorizerInput(transaction),
       context.importBatchId,
-      context.knownTags
+      context.knownTags,
+      buildKnownEntityHint(context.entityLookup)
     );
   } catch (err) {
     if (err instanceof AiCategorizationError) {
@@ -98,6 +100,7 @@ async function tryAiCategorization(
     entityName: result.entityName,
     aiTags: result.tags ?? [],
     aiCategory: result.tags?.length ? null : (result.category ?? null),
+    confidence: result.confidence,
   };
 }
 
@@ -134,6 +137,7 @@ function resolveAiResult(
       matchType: 'ai',
       aiTags: ai.aiTags,
       category: ai.aiCategory,
+      confidence: ai.confidence,
       knownTags: context.knownTags,
       entityDefaultTags: context.entityDefaultTags,
     });
@@ -143,6 +147,7 @@ function resolveAiResult(
     entityName: ai.entityName,
     aiTags: ai.aiTags,
     aiCategory: ai.aiCategory,
+    confidence: ai.confidence,
     knownTags: context.knownTags,
   });
 }

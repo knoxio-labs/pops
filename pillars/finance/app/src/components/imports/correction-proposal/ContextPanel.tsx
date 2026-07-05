@@ -144,20 +144,42 @@ function SummaryBadges({
   );
 }
 
+/** Below this, the proposal surfaces a "review carefully" warning (CF038/#3655). */
+const LOW_PATTERN_CONFIDENCE_THRESHOLD = 0.6;
+
+function LowConfidenceWarning({ confidence }: { confidence: number }) {
+  return (
+    <div
+      className="rounded-md border border-warning/25 bg-warning/10 px-3 py-2 text-xs text-warning"
+      data-testid="low-confidence-warning"
+    >
+      Low-confidence AI suggestion ({Math.round(confidence * 100)}%) — review this pattern carefully
+      before approving.
+    </div>
+  );
+}
+
 export function ContextPanel(props: {
   signal: CorrectionSignal;
   triggeringTransaction: TriggeringTransactionContext | null;
   rationale: string | null;
   opCount: number;
   combinedSummary: PreviewChangeSetOutput['summary'] | null;
+  patternConfidence?: number | null;
 }) {
-  const { signal, triggeringTransaction, rationale, opCount, combinedSummary } = props;
+  const { signal, triggeringTransaction, rationale, opCount, combinedSummary, patternConfidence } =
+    props;
   const diff = triggeringTransaction ? formatCorrectionDiff(signal, triggeringTransaction) : null;
   return (
     <div className="px-6 py-3 bg-muted/30 border-t space-y-3">
       {triggeringTransaction && (
         <TriggeringSection triggeringTransaction={triggeringTransaction} diff={diff} />
       )}
+      {patternConfidence !== null &&
+        patternConfidence !== undefined &&
+        patternConfidence < LOW_PATTERN_CONFIDENCE_THRESHOLD && (
+          <LowConfidenceWarning confidence={patternConfidence} />
+        )}
       <div className="flex flex-wrap items-start gap-4">
         <div className="flex-1 min-w-0 space-y-1">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Proposed rule</div>

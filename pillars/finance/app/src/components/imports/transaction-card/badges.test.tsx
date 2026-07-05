@@ -27,17 +27,19 @@ function makeTx(
 
 describe('HeaderBadges — Auto-matched badge', () => {
   // Regression: the badge was dead because `matchType === ('auto-matched' as never)`
-  // is always false. These assert the revived semantics: any automatic system match.
-  it.each<MatchType>(['alias', 'exact', 'prefix', 'contains', 'ai'])(
-    'shows "Auto-matched" for an automatic match (%s)',
+  // is always false. These assert the revived semantics: any deterministic
+  // automatic match. `ai` is deliberately excluded (CF037/#3655) — it gets its
+  // own "AI-matched" badge below, not the same trust signal as a deterministic match.
+  it.each<MatchType>(['alias', 'exact', 'prefix', 'contains'])(
+    'shows "Auto-matched" for a deterministic automatic match (%s)',
     (matchType) => {
       render(<HeaderBadges transaction={makeTx(matchType)} />);
       expect(screen.getByText('Auto-matched')).toBeInTheDocument();
     }
   );
 
-  it.each<MatchType>(['manual', 'none', 'learned'])(
-    'does NOT show "Auto-matched" for a non-automatic match (%s)',
+  it.each<MatchType>(['manual', 'none', 'learned', 'ai'])(
+    'does NOT show "Auto-matched" for a non-deterministic match (%s)',
     (matchType) => {
       render(<HeaderBadges transaction={makeTx(matchType)} />);
       expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
@@ -45,7 +47,7 @@ describe('HeaderBadges — Auto-matched badge', () => {
   );
 
   it('does not show "Auto-matched" when there is no matched entity', () => {
-    render(<HeaderBadges transaction={makeTx('ai', { entity: undefined })} />);
+    render(<HeaderBadges transaction={makeTx('exact', { entity: undefined })} />);
     expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
   });
 
@@ -53,6 +55,48 @@ describe('HeaderBadges — Auto-matched badge', () => {
     render(<HeaderBadges transaction={makeTx('learned')} />);
     expect(screen.getByText('Rule matched')).toBeInTheDocument();
     expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
+  });
+});
+
+describe('HeaderBadges — AI-matched badge (CF037/#3655)', () => {
+  it('shows "AI-matched" with a confidence percentage for an ai match', () => {
+    render(
+      <HeaderBadges
+        transaction={makeTx('ai', {
+          entity: { matchType: 'ai', confidence: 0.9, entityId: 'ent_1', entityName: 'Woolworths' },
+        })}
+      />
+    );
+    expect(screen.getByText(/AI-matched/)).toBeInTheDocument();
+    expect(screen.getByText(/90%/)).toBeInTheDocument();
+    expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
+  });
+
+  it('flags low-confidence AI matches distinctly', () => {
+    render(
+      <HeaderBadges
+        transaction={makeTx('ai', {
+          entity: { matchType: 'ai', confidence: 0.4, entityId: 'ent_1', entityName: 'Woolworths' },
+        })}
+      />
+    );
+    const badge = screen.getByText(/AI-matched/);
+    expect(badge.closest('[data-slot="badge"]')).toHaveAttribute('data-variant', 'destructive');
+    expect(badge.closest('[data-slot="badge"]')).toHaveAttribute(
+      'title',
+      expect.stringContaining('low confidence')
+    );
+  });
+
+  it('does not show a percentage when the AI reported no confidence', () => {
+    render(
+      <HeaderBadges
+        transaction={makeTx('ai', {
+          entity: { matchType: 'ai', entityId: 'ent_1', entityName: 'Woolworths' },
+        })}
+      />
+    );
+    expect(screen.getByText('AI-matched')).toBeInTheDocument();
   });
 });
 
