@@ -15,8 +15,10 @@ export const NonEmptyString = z.string().min(1);
 /**
  * `limit` query param. On the wire it arrives as a string; `z.coerce`
  * parses it. Optional — the handler applies the per-domain default.
+ * Capped at 500 so a client (or an agent calling through MCP) can't force
+ * an unbounded scan of the whole table in one request.
  */
-export const LimitQuery = z.coerce.number().int().positive().optional();
+export const LimitQuery = z.coerce.number().int().positive().max(500).optional();
 
 /** `offset` query param. String on the wire; coerced; optional. */
 export const OffsetQuery = z.coerce.number().int().nonnegative().optional();

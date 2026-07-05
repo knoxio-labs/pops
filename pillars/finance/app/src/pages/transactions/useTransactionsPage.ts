@@ -7,6 +7,7 @@ import { unwrap as unwrapContacts } from '../../contacts-api-helpers.js';
 import { entitiesList } from '../../contacts-api/index.js';
 import { unwrap } from '../../finance-api-helpers.js';
 import { transactionsAvailableTags, transactionsList } from '../../finance-api/index.js';
+import { fetchAllPages } from '../../lib/fetch-all-pages';
 import {
   DEFAULT_TRANSACTION_VALUES,
   type Transaction,
@@ -15,7 +16,6 @@ import {
 } from './types';
 import { useTransactionMutations } from './useTransactionMutations';
 
-const TRANSACTIONS_LIST_INPUT = { limit: 100 } as const;
 const ENTITIES_LIST_INPUT = { limit: 500 } as const;
 
 /**
@@ -110,8 +110,9 @@ function useDialogHandlers(deps: DialogHandlersDeps) {
 
 function useTransactionsPageQueries() {
   const query = useQuery({
-    queryKey: ['finance', 'transactions', 'list', TRANSACTIONS_LIST_INPUT],
-    queryFn: async () => unwrap(await transactionsList({ query: TRANSACTIONS_LIST_INPUT })),
+    queryKey: ['finance', 'transactions', 'list', 'all'],
+    queryFn: async () =>
+      fetchAllPages(async (page) => unwrap(await transactionsList({ query: page }))),
   });
   const { data: availableTagsData } = useQuery({
     queryKey: ['finance', 'transactions', 'availableTags'],

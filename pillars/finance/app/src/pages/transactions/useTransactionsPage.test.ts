@@ -235,7 +235,7 @@ describe('buildTransactionPayload', () => {
 });
 
 describe('useTransactionsPage — list query', () => {
-  it('issues a transactions list query with limit 100 and exposes available tags', async () => {
+  it('issues a transactions list query with the page-size limit and exposes available tags', async () => {
     transactionsAvailableTagsMock.mockResolvedValue({
       data: { tags: ['Groceries', 'Fuel'] },
       error: undefined,
@@ -244,9 +244,30 @@ describe('useTransactionsPage — list query', () => {
     const { result } = renderHook(() => useTransactionsPage(), { wrapper });
 
     await waitFor(() =>
-      expect(transactionsListMock).toHaveBeenCalledWith({ query: { limit: 100 } })
+      expect(transactionsListMock).toHaveBeenCalledWith({ query: { limit: 500, offset: 0 } })
     );
     await waitFor(() => expect(result.current.availableTags).toEqual(['Groceries', 'Fuel']));
+  });
+
+  it('follows hasMore to fetch every transaction beyond the first page', async () => {
+    const older = makeTransaction({ id: 'txn-old', description: 'Old Transaction' });
+    const newer = makeTransaction({ id: 'txn-new', description: 'New Transaction' });
+    transactionsListMock
+      .mockResolvedValueOnce({
+        data: { data: [newer], pagination: { total: 2, limit: 1, offset: 0, hasMore: true } },
+        error: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: { data: [older], pagination: { total: 2, limit: 1, offset: 1, hasMore: false } },
+        error: undefined,
+      });
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionsPage(), { wrapper });
+
+    await waitFor(() => expect(result.current.query.data?.data).toEqual([newer, older]));
+    expect(result.current.query.data?.pagination.total).toBe(2);
+    expect(transactionsListMock).toHaveBeenCalledTimes(2);
   });
 });
 

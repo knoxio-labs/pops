@@ -8,6 +8,7 @@ import { unwrap } from '../../contacts-api-helpers.js';
 import { entitiesCreate, entitiesDelete, entitiesUpdate } from '../../contacts-api/index.js';
 import { unwrap as unwrapFinance } from '../../finance-api-helpers.js';
 import { entityUsageList } from '../../finance-api/index.js';
+import { fetchAllPages } from '../../lib/fetch-all-pages';
 import {
   DEFAULT_FORM_VALUES,
   type Entity,
@@ -103,10 +104,13 @@ export function useEntitiesPage() {
 
   // The list (with per-entity transactionCount + the orphaned filter) is the
   // finance-owned usage rollup; contacts' plain entities CRUD carries neither.
-  const listQuery = { limit: 100, orphanedOnly: showOrphanedOnly ? 'true' : undefined } as const;
+  const orphanedOnly = showOrphanedOnly ? ('true' as const) : undefined;
   const query = useQuery({
-    queryKey: [...ENTITIES_KEY, 'list', listQuery],
-    queryFn: async () => unwrapFinance(await entityUsageList({ query: listQuery })),
+    queryKey: [...ENTITIES_KEY, 'list', 'all', { orphanedOnly }],
+    queryFn: async () =>
+      fetchAllPages(async (page) =>
+        unwrapFinance(await entityUsageList({ query: { ...page, orphanedOnly } }))
+      ),
   });
   const { createMutation, updateMutation, deleteMutation } = useEntityMutations({
     setIsDialogOpen,

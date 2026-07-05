@@ -1,6 +1,8 @@
 import { Link } from 'react-router';
 
-import { Badge, Button, Card, SkeletonGrid } from '@pops/ui';
+import { Badge, Button, Card, ErrorAlert, SkeletonGrid } from '@pops/ui';
+
+import { BudgetProgressBar, BudgetSpentBadge } from '../budgets/BudgetProgress';
 
 import type { BudgetsListResponse } from '../../finance-api/types.gen.js';
 
@@ -24,6 +26,10 @@ function BudgetCard({ budget }: { budget: Budget }) {
           </span>
           <span className="text-xs text-muted-foreground">/ {budget.period}</span>
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <BudgetSpentBadge spent={budget.spent} amount={budget.amount} />
+          <BudgetProgressBar spent={budget.spent} amount={budget.amount} />
+        </div>
       </div>
     </Card>
   );
@@ -32,12 +38,23 @@ function BudgetCard({ budget }: { budget: Budget }) {
 export function ActiveBudgets({
   budgets,
   isLoading,
+  error,
 }: {
   budgets: Budget[] | undefined;
   isLoading: boolean;
+  error?: Error | null;
 }) {
   if (isLoading) {
     return <SkeletonGrid count={3} itemHeight="h-32" cols="md:grid-cols-3" />;
+  }
+  if (error) {
+    return (
+      <ErrorAlert
+        title="Couldn't load budgets"
+        message="The budgets list failed to load."
+        details={error.message}
+      />
+    );
   }
   if (!budgets || budgets.length === 0) {
     return (

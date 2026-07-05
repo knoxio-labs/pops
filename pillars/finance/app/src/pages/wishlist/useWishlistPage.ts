@@ -11,6 +11,7 @@ import {
   wishlistList,
   wishlistUpdate,
 } from '../../finance-api/index.js';
+import { fetchAllPages } from '../../lib/fetch-all-pages';
 import {
   DEFAULT_WISHLIST_VALUES,
   WishlistItemSchema,
@@ -19,8 +20,6 @@ import {
 } from './types';
 
 import type { WishlistCreateData } from '../../finance-api/types.gen.js';
-
-const WISHLIST_LIST_INPUT = { limit: 100 } as const;
 
 type CreateWishlistInput = NonNullable<WishlistCreateData['body']>;
 interface UpdateWishlistInput {
@@ -108,8 +107,8 @@ export function useWishlistPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const query = useQuery({
-    queryKey: ['finance', 'wishlist', 'list', WISHLIST_LIST_INPUT],
-    queryFn: async () => unwrap(await wishlistList({ query: WISHLIST_LIST_INPUT })),
+    queryKey: ['finance', 'wishlist', 'list', 'all'],
+    queryFn: async () => fetchAllPages(async (page) => unwrap(await wishlistList({ query: page }))),
   });
   const { createMutation, updateMutation, deleteMutation } = useWishlistMutations({
     setIsDialogOpen,

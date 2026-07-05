@@ -24,10 +24,16 @@ export const BudgetSchema = z.object({
   remaining: z.number().nullable(),
 });
 
+const BudgetAmountBody = z
+  .number()
+  .nonnegative('Amount must not be negative')
+  .nullable()
+  .optional();
+
 const CreateBudgetBody = z.object({
   category: z.string().min(1, 'Category is required'),
   period: BudgetPeriodBody,
-  amount: z.number().nullable().optional(),
+  amount: BudgetAmountBody,
   active: z.boolean().optional().default(false),
   notes: z.string().nullable().optional(),
 });
@@ -35,7 +41,7 @@ const CreateBudgetBody = z.object({
 const UpdateBudgetBody = z.object({
   category: z.string().min(1, 'Category cannot be empty').optional(),
   period: BudgetPeriodBody,
-  amount: z.number().nullable().optional(),
+  amount: BudgetAmountBody,
   active: z.boolean().optional(),
   notes: z.string().nullable().optional(),
 });
