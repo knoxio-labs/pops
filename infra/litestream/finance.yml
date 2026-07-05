@@ -20,8 +20,8 @@
 ## continuation joins the two lines into one command):
 ##   litestream restore -o /data/sqlite/finance.db \
 ##     "${FINANCE_LITESTREAM_REPLICA_URL}"
-## Stop the finance-api container first so it isn't writing concurrently;
-## the drill is exercised in Phase 4 verification.
+## Stop the finance-api container first so it isn't writing concurrently.
+## This drill has NOT been exercised yet — see the STATUS note above.
 
 dbs:
   - path: /data/sqlite/finance.db

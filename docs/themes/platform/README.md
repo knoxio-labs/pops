@@ -6,7 +6,7 @@
 
 Pops is **deployable by anyone with any hardware**. The contract is the public `infra/docker-compose.yml` plus per-pillar images on `ghcr.io/knoxio/pops-*`. CI publishes images on every push to `main`; deployers (whether the knoxio home lab or a stranger) pull and run. Host-level provisioning — networking, secrets storage, backups, ingress — is the deployer's responsibility; pops ships the compose contract, not the server. The knoxio home lab consumes that contract through [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra), one valid deployer among many.
 
-Underneath packaging sits the shared runtime the pillars depend on: a Redis container and durable job queue for background work, each pillar's OpenAPI snapshot as the polyglot wire surface, sqlite-vec for semantic search, a per-pillar SQLite lifecycle that migrates and backs up each database independently, and a standalone MCP gateway that exposes the fleet to AI agents on the LAN.
+Underneath packaging sits the shared runtime the pillars depend on: a Redis container and durable job queue for background work, each pillar's OpenAPI snapshot as the polyglot wire surface, sqlite-vec for semantic search, a per-pillar SQLite lifecycle that migrates each database independently (per-pillar offsite backup is the target — not yet wired, see Database Operations), and a standalone MCP gateway that exposes the fleet to AI agents on the LAN.
 
 ## Success Criteria
 
@@ -14,7 +14,7 @@ Underneath packaging sits the shared runtime the pillars depend on: a Redis cont
 - Every push to `main` publishes the per-pillar images (multi-tag: `main`, `sha-<short>`, `vN` on tag pushes); deployers favouring stability over freshness pin `POPS_IMAGE_TAG` to a specific sha.
 - The compose file ships a Watchtower service so any deployer gets auto-rollout for free, with a documented opt-out (`POPS_IMAGE_TAG=sha-…`).
 - CI quality gates (lint, typecheck, test, format, docker-build, compose config) run on every PR and on every push to `main`, collapsed into one required `CI Gate` aggregator. Image publishing runs in parallel on push to `main`.
-- Each pillar applies its Drizzle migration journal on startup; production guards block destructive ops; each database is backed up independently.
+- Each pillar applies its Drizzle migration journal on startup; production guards block destructive ops; per-pillar independent offsite backup is the target (not yet wired — see Database Operations).
 - The Redis + job-queue runtime, per-pillar OpenAPI contract, and sqlite-vec vector storage are all available to the application layer.
 - The MCP gateway exposes inventory, finance, media, and cerebrum data — read and write — to any MCP client on the local network.
 
@@ -33,7 +33,7 @@ GitHub Actions gates quality on every PR and publishes per-pillar images to GHCR
 
 ### Database lifecycle
 
-Each pillar applies its own Drizzle migration journal at boot, resolves its SQLite path safely, guards production data, and backs up independently, so a pillar's database survives any number of schema changes without data loss.
+Each pillar applies its own Drizzle migration journal at boot, resolves its SQLite path safely, and guards production data, so a pillar's database survives any number of schema changes without data loss. (Per-pillar independent offsite backup is the target — not yet wired; see Database Operations.)
 
 | PRD                                                | Summary                                                                                                        | Status  |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------- |
