@@ -13,6 +13,7 @@ import {
   type CorrectionRow,
   findAllMatchingCorrectionFromRules,
   parseCorrectionTags,
+  resolveCorrectionApplyStatus,
 } from '../corrections/index.js';
 import { buildSuggestedTags } from './tag-management.js';
 
@@ -129,16 +130,8 @@ function handleNoEntityCorrection(
   correction: CorrectionRow,
   matchedRules: MatchedRule[]
 ): ApplyLearnedCorrectionResult | null {
-  if (!correction.transactionType) return null;
-  // The review step resolves a merchant entity for every purchase, so an
-  // entity-less purchase rule is never a finished match — it always needs one
-  // and belongs in `uncertain`, regardless of confidence. Transfers and income
-  // carry no merchant, so they follow the normal confidence-based
-  // classification (matched only at/above the high-confidence threshold).
-  const status: CorrectionMatchStatus =
-    correction.transactionType === 'purchase'
-      ? 'uncertain'
-      : classifyCorrectionMatch(correction).status;
+  const status = resolveCorrectionApplyStatus(correction);
+  if (!status) return null;
   return {
     processed: buildTypeOnlyMatch({
       db,

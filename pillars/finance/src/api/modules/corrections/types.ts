@@ -31,6 +31,31 @@ export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMa
   };
 }
 
+/**
+ * Resolve the status a correction rule yields when applied automatically —
+ * shared by live import and retroactive reclassification so both gate on the
+ * same routing:
+ *
+ * - A rule that carries an entity follows the confidence-based
+ *   {@link classifyCorrectionMatch}.
+ * - An entity-less `purchase` rule is never a finished match: the review step
+ *   still has to resolve a merchant, so it is always `uncertain` regardless of
+ *   confidence.
+ * - An entity-less `transfer`/`income` rule carries no merchant and follows the
+ *   confidence-based classification.
+ * - A rule that provides neither an entity nor a transaction type has nothing to
+ *   apply and yields `null`.
+ */
+export function resolveCorrectionApplyStatus(
+  correction: CorrectionRow
+): CorrectionMatchStatus | null {
+  if (correction.entityId) return classifyCorrectionMatch(correction).status;
+  if (!correction.transactionType) return null;
+  return correction.transactionType === 'purchase'
+    ? 'uncertain'
+    : classifyCorrectionMatch(correction).status;
+}
+
 /** Parse a JSON-encoded tags string from the corrections table into a string array. */
 export function parseCorrectionTags(raw: string): string[] {
   try {
