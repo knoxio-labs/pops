@@ -32,7 +32,7 @@ The store itself owns no endpoints. The import flow it drives uses:
 - `POST /corrections/preview-changeset` — server-side before/after impact preview for a proposed ChangeSet, pending-aware.
 - `POST /imports/commit` — the single write path (entities → correction ChangeSets → tag-rule ChangeSets → transactions, atomic).
 
-`executeImport` (`POST /imports/execute`) and `applyChangeSetAndReevaluate` (`POST /imports/apply-changeset-reevaluate`) still exist on the contract but are NOT used by the buffered wizard write path.
+`applyChangeSetAndReevaluate` (`POST /imports/apply-changeset-reevaluate`) still exists on the contract but is NOT used by the buffered wizard write path.
 
 ## Commit Payload (pure, `app/src/lib/commit-payload.ts`)
 
@@ -74,4 +74,4 @@ The store itself owns no endpoints. The import flow it drives uses:
 - [x] Changing the pending-changeset list triggers `POST /imports/reevaluate-pending` and updates `processedTransactions` from the server result (`useTransactionReview.ts`).
 - [x] ChangeSet impact preview uses the pending-aware `POST /corrections/preview-changeset`, reflecting prior pending ChangeSets in the "before" column.
 - [x] `buildCommitPayload` resolves/validates temp entity refs across both ChangeSet kinds, throws `DanglingEntityRefError` on dangling refs, preserves order, returns a snapshot (`commit-payload.test.ts`).
-- [x] Final Review's `handleCommit` builds the payload and calls `POST /imports/commit` as the only write path; `TagReviewStep` does not call `executeImport`.
+- [x] Final Review's `handleCommit` builds the payload and calls `POST /imports/commit` as the only write path.

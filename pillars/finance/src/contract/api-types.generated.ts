@@ -4116,7 +4116,7 @@ export interface operations {
               status: 'processing' | 'success' | 'failed';
             }[];
             /** @enum {string} */
-            currentStep: 'deduplicating' | 'matching' | 'writing';
+            currentStep: 'deduplicating' | 'matching';
             errors: {
               description: string;
               error: string;

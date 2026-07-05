@@ -2716,7 +2716,7 @@ export type ImportsGetImportProgressResponses = {
       error?: string;
       status: 'processing' | 'success' | 'failed';
     }>;
-    currentStep: 'deduplicating' | 'matching' | 'writing';
+    currentStep: 'deduplicating' | 'matching';
     errors: Array<{
       description: string;
       error: string;

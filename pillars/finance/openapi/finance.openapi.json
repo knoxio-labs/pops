@@ -8136,7 +8136,7 @@
                       "type": "array"
                     },
                     "currentStep": {
-                      "enum": ["deduplicating", "matching", "writing"],
+                      "enum": ["deduplicating", "matching"],
                       "type": "string"
                     },
                     "errors": {
