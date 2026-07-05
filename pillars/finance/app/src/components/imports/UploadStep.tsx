@@ -133,7 +133,7 @@ export function UploadStep() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold mb-2">Upload CSV</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Select your bank and upload a CSV export to import transactions.
         </p>
       </div>

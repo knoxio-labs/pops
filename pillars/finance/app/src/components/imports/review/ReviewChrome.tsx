@@ -15,7 +15,7 @@ export function ReviewHeader({
     <div className="flex items-start justify-between">
       <div>
         <h2 className="text-2xl font-semibold mb-2">Review</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           {unresolvedCount > 0
             ? `${unresolvedCount} transaction(s) need your attention`
             : 'All transactions are ready to import'}
@@ -47,7 +47,7 @@ export function ReviewFooter({
       </Button>
       <div className="flex flex-col items-end gap-1">
         {unresolvedCount > 0 && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Resolve all uncertain/failed transactions to continue
           </p>
         )}

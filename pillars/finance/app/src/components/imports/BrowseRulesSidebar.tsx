@@ -13,6 +13,8 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-ki
 import { GripVertical } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
+import { EmptyState } from '@pops/ui';
+
 import {
   BrowseRuleSidebarRowContent,
   BrowseRuleSidebarRowSortable,
@@ -143,7 +145,7 @@ export function BrowseRulesSidebar(props: BrowseRulesSidebarProps) {
   const dnd = useDndReorder(orderedMerged, onReorderFullList);
 
   if (orderedFiltered.length === 0) {
-    return <div className="p-4 text-sm text-muted-foreground">No rules found.</div>;
+    return <EmptyState size="sm" title="No rules found." />;
   }
 
   if (!canDragReorder) {

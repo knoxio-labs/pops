@@ -34,7 +34,7 @@ function MatchRow({ match }: { match: RulePreviewResult['matches'][number] }) {
         {match.tags.length > 0 && (
           <span className="flex gap-1">
             {match.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-[10px]">
+              <Badge key={tag} variant="outline" className="text-2xs">
                 {tag}
               </Badge>
             ))}

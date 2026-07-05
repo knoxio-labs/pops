@@ -18,7 +18,7 @@ export function SkippedTab({ transactions }: SkippedTabProps) {
     <div className="border rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+          <thead className="bg-muted">
             <tr>
               <th className="px-4 py-2 text-left font-medium">Date</th>
               <th className="px-4 py-2 text-left font-medium">Description</th>
@@ -26,15 +26,13 @@ export function SkippedTab({ transactions }: SkippedTabProps) {
               <th className="px-4 py-2 text-left font-medium">Reason</th>
             </tr>
           </thead>
-          <tbody className="divide-y dark:divide-gray-700">
+          <tbody className="divide-y divide-border">
             {transactions.map((t, idx) => (
-              <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              <tr key={idx} className="hover:bg-muted">
                 <td className="px-4 py-2">{t.date}</td>
                 <td className="px-4 py-2">{t.description}</td>
                 <td className="px-4 py-2">${Math.abs(t.amount).toFixed(2)}</td>
-                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
-                  {t.skipReason}
-                </td>
+                <td className="px-4 py-2 text-sm text-muted-foreground">{t.skipReason}</td>
               </tr>
             ))}
           </tbody>

@@ -12,8 +12,8 @@ export function getCardClasses(variant: 'matched' | 'uncertain' | 'failed') {
   if (variant === 'uncertain') return { border: 'border-warning/20', bg: 'bg-warning/5' };
   if (variant === 'failed') return { border: 'border-destructive/20', bg: 'bg-destructive/5' };
   return {
-    border: 'border-gray-200 dark:border-gray-700',
-    bg: 'bg-white dark:bg-gray-800',
+    border: 'border-border',
+    bg: 'bg-card',
   };
 }
 
@@ -42,7 +42,7 @@ export function CardHeader({
           <span className="font-medium">{transaction.description}</span>
           <HeaderBadges transaction={transaction} />
         </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-sm text-muted-foreground">
           {transaction.date} • ${Math.abs(transaction.amount).toFixed(2)}
         </div>
         {ruleProvenance && (
@@ -82,7 +82,7 @@ export function FieldGrid({ transaction }: { transaction: ProcessedTransaction }
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
       <div className="text-sm">
-        <span className="text-gray-500">Account:</span>{' '}
+        <span className="text-muted-foreground">Account:</span>{' '}
         <span className="font-medium">{transaction.account}</span>
       </div>
       {transaction.location && (
@@ -98,12 +98,12 @@ export function RawDataSection({ rawData }: { rawData: Record<string, string> })
   const [isOpen, setIsOpen] = useState(false);
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+      <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
         <span>Raw CSV data</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
-        <pre className="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded-md overflow-x-auto">
+        <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto">
           {JSON.stringify(rawData, null, 2)}
         </pre>
       </CollapsibleContent>

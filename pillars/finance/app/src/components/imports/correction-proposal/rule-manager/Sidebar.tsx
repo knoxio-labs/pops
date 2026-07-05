@@ -37,13 +37,13 @@ export function Sidebar(props: SidebarProps) {
           />
         </div>
       </div>
-      <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-b space-y-0.5">
+      <div className="px-3 py-1.5 text-2xs text-muted-foreground border-b space-y-0.5">
         <div>
           {props.orderedFiltered.length} rule{props.orderedFiltered.length === 1 ? '' : 's'}
           {props.search && ` matching "${props.search}"`}
         </div>
         {props.search.trim() !== '' && (
-          <div className="text-[10px] text-muted-foreground/90">
+          <div className="text-2xs text-muted-foreground/90">
             Clear search to drag rules into priority order.
           </div>
         )}

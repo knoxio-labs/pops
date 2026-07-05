@@ -50,7 +50,7 @@ function BulkEntitySelector({
   onClose,
 }: BulkEntitySelectorProps) {
   return (
-    <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600">
+    <div className="mt-3 p-3 bg-card rounded-lg border border-border">
       <Label className="block mb-2">
         Select entity to assign to all {group.transactions.length} transactions:
       </Label>
@@ -88,7 +88,7 @@ interface TransactionListProps {
 function TransactionList(props: TransactionListProps) {
   const { group, editingTransaction, onSaveEdit, onCancelEdit, entities, variant } = props;
   return (
-    <div className="p-4 space-y-3 border-t dark:border-gray-700">
+    <div className="p-4 space-y-3 border-t border-border">
       {group.transactions.map((transaction, idx) =>
         editingTransaction === transaction && onSaveEdit && onCancelEdit ? (
           <EditableTransactionCard
@@ -131,11 +131,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
 
   return (
     <div
-      className={`border rounded-lg ${
-        group.aiSuggestion
-          ? 'border-purple-300 dark:border-purple-700'
-          : 'border-gray-200 dark:border-gray-700'
-      }`}
+      className={`border rounded-lg ${group.aiSuggestion ? 'border-app-accent/30' : 'border-border'}`}
       data-testid="transaction-group"
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
