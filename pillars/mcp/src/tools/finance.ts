@@ -5,7 +5,7 @@ import { searchTools } from './finance-search.js';
 import { wishlistTools } from './finance-wishlist.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 const transactionsList: ToolDef = {
   name: 'finance.transactions.list',

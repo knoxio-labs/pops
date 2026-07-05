@@ -1,7 +1,7 @@
 import { MATCH_TYPES, finance, type MatchType } from './finance-client.js';
 import { mapCallResult, optNum } from './utils.js';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 const correctionsList: ToolDef = {
   name: 'finance.corrections.list',

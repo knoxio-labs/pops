@@ -1,7 +1,7 @@
 import { finance } from './finance-client.js';
 import { mapCallResult, optNum, optStr, reqStr, toolError } from './utils.js';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 const wishlistList: ToolDef = {
   name: 'finance.wishlist.list',

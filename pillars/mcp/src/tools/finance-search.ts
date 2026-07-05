@@ -1,7 +1,7 @@
 import { finance, type FinanceSearchInput, type StructuredFilter } from './finance-client.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 function parseFilters(args: Record<string, unknown>): StructuredFilter[] | undefined {
   if (!Array.isArray(args['filters'])) return undefined;
