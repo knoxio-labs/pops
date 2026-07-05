@@ -12,14 +12,21 @@ interface Stats {
   totalExpenses: number;
 }
 
+/**
+ * @param monthTransactions every transaction dated within the current
+ *   calendar month (a date-filtered query, not an arbitrary row slice) —
+ *   income/expenses are summed over exactly this set.
+ * @param totalAllTime the all-time transaction count, independent of the
+ *   month window, for the "Total Transactions" card.
+ */
 export function computeStats(
-  transactions: Transaction[] | undefined,
-  total: number | undefined
+  monthTransactions: Transaction[] | undefined,
+  totalAllTime: number | undefined
 ): Stats | null {
-  if (!transactions) return null;
-  const nonTransfers = transactions.filter((t) => t.type.toLowerCase() !== 'transfer');
+  if (!monthTransactions) return null;
+  const nonTransfers = monthTransactions.filter((t) => t.type.toLowerCase() !== 'transfer');
   return {
-    totalTransactions: total ?? 0,
+    totalTransactions: totalAllTime ?? 0,
     totalIncome: nonTransfers.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
     totalExpenses: nonTransfers
       .filter((t) => t.amount < 0)
@@ -49,21 +56,21 @@ export function StatsGrid({ stats, isLoading }: { stats: Stats | null; isLoading
         color="slate"
       />
       <StatCard
-        title={t('dashboard.recentIncome')}
+        title={t('dashboard.monthIncome')}
         value={`$${stats.totalIncome.toFixed(2)}`}
-        description={t('dashboard.last10')}
+        description={t('dashboard.thisMonth')}
         color={signedColor(stats.totalIncome)}
       />
       <StatCard
-        title={t('dashboard.recentExpenses')}
+        title={t('dashboard.monthExpenses')}
         value={`$${stats.totalExpenses.toFixed(2)}`}
-        description={t('dashboard.last10')}
+        description={t('dashboard.thisMonth')}
         color={signedColor(-stats.totalExpenses)}
       />
       <StatCard
         title={t('dashboard.netBalance')}
         value={`$${netBalance.toFixed(2)}`}
-        description={t('dashboard.last10')}
+        description={t('dashboard.thisMonth')}
         color={signedColor(netBalance)}
       />
     </div>

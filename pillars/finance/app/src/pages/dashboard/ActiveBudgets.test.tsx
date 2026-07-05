@@ -23,10 +23,14 @@ function makeBudget(overrides: Partial<Budget> = {}): Budget {
   };
 }
 
-function renderBudgets(budgets: Budget[] | undefined, isLoading = false) {
+function renderBudgets(
+  budgets: Budget[] | undefined,
+  isLoading = false,
+  error: Error | null = null
+) {
   return render(
     <MemoryRouter>
-      <ActiveBudgets budgets={budgets} isLoading={isLoading} />
+      <ActiveBudgets budgets={budgets} isLoading={isLoading} error={error} />
     </MemoryRouter>
   );
 }
@@ -63,5 +67,27 @@ describe('ActiveBudgets', () => {
 
     expect(screen.queryByText('No active budgets found.')).not.toBeInTheDocument();
     expect(screen.queryByText('Groceries')).not.toBeInTheDocument();
+  });
+
+  it('surfaces a query error instead of a false empty state', () => {
+    renderBudgets(undefined, false, new Error('network unreachable'));
+
+    expect(screen.getByText("Couldn't load budgets")).toBeInTheDocument();
+    expect(screen.getByText('network unreachable')).toBeInTheDocument();
+    expect(screen.queryByText('No active budgets found.')).not.toBeInTheDocument();
+  });
+
+  it('renders spent and progress for each budget card', () => {
+    renderBudgets([makeBudget({ category: 'Groceries', amount: 400, spent: 100 })]);
+
+    expect(screen.getByText('$100.00')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+  });
+
+  it('flags an over-budget card as destructive via the spent badge', () => {
+    renderBudgets([makeBudget({ category: 'Entertainment', amount: 100, spent: 150 })]);
+
+    const badge = screen.getByText('$150.00');
+    expect(badge).toHaveAttribute('data-variant', 'destructive');
   });
 });

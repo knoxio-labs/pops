@@ -224,7 +224,7 @@
             "name": "limit",
             "schema": {
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
+              "maximum": 500,
               "minimum": 0,
               "type": "integer"
             }
@@ -342,6 +342,7 @@
                     "type": "boolean"
                   },
                   "amount": {
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },
@@ -792,6 +793,7 @@
                     "type": "boolean"
                   },
                   "amount": {
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },
@@ -981,7 +983,7 @@
             "name": "limit",
             "schema": {
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
+              "maximum": 500,
               "minimum": 0,
               "type": "integer"
             }
@@ -5852,7 +5854,7 @@
             "name": "limit",
             "schema": {
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
+              "maximum": 500,
               "minimum": 0,
               "type": "integer"
             }
@@ -13168,7 +13170,7 @@
             "name": "limit",
             "schema": {
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
+              "maximum": 500,
               "minimum": 0,
               "type": "integer"
             }
@@ -14565,7 +14567,7 @@
             "name": "limit",
             "schema": {
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
+              "maximum": 500,
               "minimum": 0,
               "type": "integer"
             }
@@ -14694,10 +14696,12 @@
                     "type": "string"
                   },
                   "saved": {
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },
                   "targetAmount": {
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },
@@ -15154,10 +15158,12 @@
                     "type": "string"
                   },
                   "saved": {
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },
                   "targetAmount": {
+                    "minimum": 0,
                     "nullable": true,
                     "type": "number"
                   },

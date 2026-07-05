@@ -7,9 +7,10 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  Progress,
   SortableHeader,
 } from '@pops/ui';
+
+import { BudgetProgressBar, BudgetSpentBadge } from './BudgetProgress';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -76,17 +77,11 @@ const spentColumn: ColumnDef<Budget> = {
       <SortableHeader column={column}>Spent</SortableHeader>
     </div>
   ),
-  cell: ({ row }) => {
-    const { spent, amount } = row.original;
-    const overBudget = amount !== null && spent > amount;
-    return (
-      <div className="flex justify-end">
-        <Badge variant={overBudget ? 'destructive' : 'default'} className="font-mono tabular-nums">
-          ${spent.toFixed(2)}
-        </Badge>
-      </div>
-    );
-  },
+  cell: ({ row }) => (
+    <div className="flex justify-end">
+      <BudgetSpentBadge spent={row.original.spent} amount={row.original.amount} />
+    </div>
+  ),
 };
 
 /**
@@ -98,27 +93,7 @@ const spentColumn: ColumnDef<Budget> = {
 const progressColumn: ColumnDef<Budget> = {
   id: 'progress',
   header: '% Progress',
-  cell: ({ row }) => {
-    const { spent, amount } = row.original;
-    if (amount === null || amount <= 0) {
-      return <span className="text-muted-foreground">—</span>;
-    }
-    const pct = (spent / amount) * 100;
-    const display = Math.round(pct);
-    const visual = Math.min(100, Math.max(0, pct));
-    return (
-      <div className="flex min-w-[120px] items-center gap-2">
-        <Progress value={visual} className="flex-1" />
-        <span
-          className={`w-12 text-right font-mono text-xs tabular-nums ${
-            pct > 100 ? 'text-destructive' : 'text-muted-foreground'
-          }`}
-        >
-          {display}%
-        </span>
-      </div>
-    );
-  },
+  cell: ({ row }) => <BudgetProgressBar spent={row.original.spent} amount={row.original.amount} />,
 };
 
 const statusColumn: ColumnDef<Budget> = {

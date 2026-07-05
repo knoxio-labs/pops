@@ -11,11 +11,10 @@ import {
   budgetsList,
   budgetsUpdate,
 } from '../../finance-api/index.js';
+import { fetchAllPages } from '../../lib/fetch-all-pages';
 import { type Budget, BudgetFormSchema, type BudgetFormValues, DEFAULT_FORM_VALUES } from './types';
 
 import type { BudgetsCreateData } from '../../finance-api/types.gen.js';
-
-const BUDGETS_LIST_INPUT = { limit: 100 } as const;
 
 type CreateBudgetInput = NonNullable<BudgetsCreateData['body']>;
 interface UpdateBudgetInput {
@@ -93,8 +92,8 @@ export function useBudgetsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const query = useQuery({
-    queryKey: ['finance', 'budgets', 'list', BUDGETS_LIST_INPUT],
-    queryFn: async () => unwrap(await budgetsList({ query: BUDGETS_LIST_INPUT })),
+    queryKey: ['finance', 'budgets', 'list', 'all'],
+    queryFn: async () => fetchAllPages(async (page) => unwrap(await budgetsList({ query: page }))),
   });
   const { createMutation, updateMutation, deleteMutation } = useBudgetMutations({
     setIsDialogOpen,

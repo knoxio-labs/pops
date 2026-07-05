@@ -22,10 +22,21 @@ export const WishListItemSchema = z.object({
   lastEditedTime: z.string(),
 });
 
+const WishListTargetAmountBody = z
+  .number()
+  .nonnegative('Target amount must not be negative')
+  .nullable()
+  .optional();
+const WishListSavedBody = z
+  .number()
+  .nonnegative('Saved must not be negative')
+  .nullable()
+  .optional();
+
 const CreateWishListItemBody = z.object({
   item: z.string().min(1, 'Item is required'),
-  targetAmount: z.number().nullable().optional(),
-  saved: z.number().nullable().optional(),
+  targetAmount: WishListTargetAmountBody,
+  saved: WishListSavedBody,
   priority: z.enum(WISH_LIST_PRIORITIES).nullable().optional(),
   url: z.string().url('Invalid URL').nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -33,8 +44,8 @@ const CreateWishListItemBody = z.object({
 
 const UpdateWishListItemBody = z.object({
   item: z.string().min(1, 'Item cannot be empty').optional(),
-  targetAmount: z.number().nullable().optional(),
-  saved: z.number().nullable().optional(),
+  targetAmount: WishListTargetAmountBody,
+  saved: WishListSavedBody,
   priority: z.enum(WISH_LIST_PRIORITIES).nullable().optional(),
   url: z.string().url('Invalid URL').nullable().optional(),
   notes: z.string().nullable().optional(),

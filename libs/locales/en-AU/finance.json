@@ -12,10 +12,10 @@
   "dashboard.activeBudgets": "Active Budgets",
   "dashboard.totalTransactions": "Total Transactions",
   "dashboard.allTimeTransactions": "All-time transactions",
-  "dashboard.recentIncome": "Recent Income",
-  "dashboard.recentExpenses": "Recent Expenses",
+  "dashboard.monthIncome": "Income This Month",
+  "dashboard.monthExpenses": "Expenses This Month",
   "dashboard.netBalance": "Net Balance",
-  "dashboard.last10": "Last 10 transactions",
+  "dashboard.thisMonth": "This calendar month",
   "dashboard.unableToLoad": "Unable to load dashboard",
   "dashboard.apiNotResponding": "The backend API is not responding. Make sure the pops-api server is running.",
 

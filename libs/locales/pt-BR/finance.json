@@ -12,10 +12,10 @@
   "dashboard.activeBudgets": "Orçamentos Ativos",
   "dashboard.totalTransactions": "Total de Transações",
   "dashboard.allTimeTransactions": "Transações totais",
-  "dashboard.recentIncome": "Receita Recente",
-  "dashboard.recentExpenses": "Despesas Recentes",
+  "dashboard.monthIncome": "Receita do Mês",
+  "dashboard.monthExpenses": "Despesas do Mês",
   "dashboard.netBalance": "Saldo Líquido",
-  "dashboard.last10": "Últimas 10 transações",
+  "dashboard.thisMonth": "Neste mês",
   "dashboard.unableToLoad": "Não foi possível carregar o painel",
   "dashboard.apiNotResponding": "A API não está respondendo. Certifique-se de que o servidor pops-api está em execução.",
 

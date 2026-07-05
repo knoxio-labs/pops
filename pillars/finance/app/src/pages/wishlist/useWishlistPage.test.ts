@@ -74,10 +74,12 @@ beforeEach(() => {
 });
 
 describe('useWishlistPage — list query', () => {
-  it('issues a wishlist list query with limit 100', async () => {
+  it('issues a wishlist list query with the page-size limit', async () => {
     const { wrapper } = makeWrapper();
     renderHook(() => useWishlistPage(), { wrapper });
-    await waitFor(() => expect(wishlistListMock).toHaveBeenCalledWith({ query: { limit: 100 } }));
+    await waitFor(() =>
+      expect(wishlistListMock).toHaveBeenCalledWith({ query: { limit: 500, offset: 0 } })
+    );
   });
 
   it('exposes the unwrapped list payload', async () => {
@@ -90,6 +92,24 @@ describe('useWishlistPage — list query', () => {
     const { result } = renderHook(() => useWishlistPage(), { wrapper });
     await waitFor(() => expect(result.current.query.data?.data).toHaveLength(1));
     expect(result.current.query.data?.pagination.total).toBe(1);
+  });
+
+  it('follows hasMore to fetch every wishlist item beyond the first page', async () => {
+    const older = makeItem({ id: 'wish-old' });
+    const newer = makeItem({ id: 'wish-new' });
+    wishlistListMock
+      .mockResolvedValueOnce({
+        data: { data: [newer], pagination: { total: 2, limit: 1, offset: 0, hasMore: true } },
+        error: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: { data: [older], pagination: { total: 2, limit: 1, offset: 1, hasMore: false } },
+        error: undefined,
+      });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useWishlistPage(), { wrapper });
+    await waitFor(() => expect(result.current.query.data?.data).toEqual([newer, older]));
+    expect(result.current.query.data?.pagination.total).toBe(2);
   });
 });
 
