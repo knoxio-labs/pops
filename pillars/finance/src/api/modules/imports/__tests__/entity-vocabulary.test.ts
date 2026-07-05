@@ -6,7 +6,9 @@ import type { EntityLookupMap } from '../entity-matcher.js';
 
 function makeLookup(names: string[]): EntityLookupMap {
   const map = new Map();
-  names.forEach((name, i) => map.set(name.toLowerCase(), { id: `ent_${i}`, name }));
+  names.forEach((name, i) =>
+    map.set(name.toLowerCase(), { id: `ent_${i}`, name, type: 'company' })
+  );
   return map;
 }
 
@@ -22,10 +24,19 @@ describe('buildKnownEntityHint', () => {
 
   it('dedupes entity names that appear under multiple lookup keys', () => {
     const lookup: EntityLookupMap = new Map([
-      ['woolworths', { id: 'ent_1', name: 'Woolworths' }],
-      ['woolworths metro', { id: 'ent_1', name: 'Woolworths' }],
+      ['woolworths', { id: 'ent_1', name: 'Woolworths', type: 'company' }],
+      ['woolworths metro', { id: 'ent_1', name: 'Woolworths', type: 'company' }],
     ]);
     expect(buildKnownEntityHint(lookup)).toEqual(['Woolworths']);
+  });
+
+  it('excludes person-type entities so personal-name PII never reaches the prompt', () => {
+    const lookup: EntityLookupMap = new Map([
+      ['woolworths', { id: 'ent_1', name: 'Woolworths', type: 'company' }],
+      ['jane doe', { id: 'ent_2', name: 'Jane Doe', type: 'person' }],
+      ['ato', { id: 'ent_3', name: 'ATO', type: 'government' }],
+    ]);
+    expect(buildKnownEntityHint(lookup)).toEqual(['ATO', 'Woolworths']);
   });
 
   it('caps the list at 60 entities', () => {

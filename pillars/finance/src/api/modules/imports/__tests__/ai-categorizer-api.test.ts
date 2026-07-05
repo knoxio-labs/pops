@@ -90,6 +90,11 @@ describe('buildEntryFromText — parsing robustness', () => {
     const entry = buildEntryFromText('{"entityName":"Pty Ltd","tags":["Shopping"]}');
     expect(entry.entityName).toBeNull();
   });
+
+  it('returns a null category (not an empty string) when tags and category are both absent', () => {
+    const entry = buildEntryFromText('{"entityName":"Woolworths"}');
+    expect(entry.category).toBeNull();
+  });
 });
 
 describe('buildEntryFromText — confidence parsing (CF037/#3655)', () => {

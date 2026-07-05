@@ -208,7 +208,7 @@ export function buildEntryFromText(text: string): AiCacheEntry {
       : DEFAULT_AI_CATEGORIZATION_CONFIDENCE;
   return {
     entityName: sanitizeEntityName(parsed.entityName ?? null),
-    category: tags?.[0] ?? parsed.category ?? '',
+    category: tags?.[0] ?? parsed.category ?? null,
     tags,
     confidence,
   };
