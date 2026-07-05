@@ -16,12 +16,25 @@
  * transaction opens, a rollback of the finance side does not undo any
  * contacts already created there.
  *
+ * When a pre-create fails because contacts is unreachable
+ * (`ContactsUnavailableError`), the commit no longer aborts (issue #3683):
+ * a `pending:contact:{uuid}` placeholder takes the entity's place in the
+ * tempId map and a row is queued in `entity_precreate_outbox` — inside the
+ * same finance transaction — so the outage is invisible to the importer.
+ * `reconcile-contacts-outbox.ts` drains the outbox once contacts recovers,
+ * rewriting the placeholder to the real contact id everywhere it landed.
+ *
  * The outer `db.transaction` handle (`tx`) is threaded into every inner service
  * so the correction/tag-rule ChangeSet applies nest as savepoints rather than
  * opening independent transactions.
  */
-import { type FinanceDb, importsService, tagVocabularyService } from '../../../db/index.js';
-import { type ContactsClient } from '../../contacts/client.js';
+import {
+  entityPrecreateOutboxService,
+  type FinanceDb,
+  importsService,
+  tagVocabularyService,
+} from '../../../db/index.js';
+import { ContactsUnavailableError, type ContactsClient } from '../../contacts/client.js';
 import { applyChangeSet } from '../corrections/index.js';
 import { applyTagRuleChangeSet } from '../tag-rules/service.js';
 import {
@@ -65,6 +78,14 @@ function sanitizeProvenance(txn: CommitPayload['transactions'][number]): Sanitiz
   return { matchType, matchRuleId, matchConfidence };
 }
 
+/** A pending entity that couldn't be pre-created because contacts was down —
+ * queued into `entity_precreate_outbox` for the background reconciler. */
+interface OutboxCandidate {
+  placeholderId: string;
+  name: CommitPayload['entities'][number]['name'];
+  type: CommitPayload['entities'][number]['type'];
+}
+
 /**
  * Pre-create every pending contact against the contacts pillar BEFORE the
  * finance transaction opens, returning the tempId→contact-id map. Each create
@@ -72,19 +93,49 @@ function sanitizeProvenance(txn: CommitPayload['transactions'][number]): Sanitiz
  * rolled-back finance tx reuses the existing contact. `entitiesCreated` counts
  * ONLY real inserts — a reused (already-existing) contact must not inflate the
  * commit result's "Entities Created" card.
+ *
+ * A `ContactsUnavailableError` no longer propagates: the tempId maps to a
+ * fresh `pending:contact:{uuid}` placeholder instead, and the entity is
+ * collected into `outboxCandidates` for the caller to queue once the finance
+ * transaction opens. Any OTHER error (a genuine bug, not an outage) still
+ * throws — only the documented unavailable case degrades.
  */
 async function preCreatePendingContacts(
   contacts: ContactsClient,
   payload: CommitPayload
-): Promise<{ tempIdMap: Map<string, string>; entitiesCreated: number }> {
+): Promise<{
+  tempIdMap: Map<string, string>;
+  entitiesCreated: number;
+  outboxCandidates: OutboxCandidate[];
+}> {
   const tempIdMap = new Map<string, string>();
+  const outboxCandidates: OutboxCandidate[] = [];
   let entitiesCreated = 0;
   for (const pending of payload.entities) {
-    const { id, created } = await contacts.createOrFetchByName(pending.name, pending.type);
-    tempIdMap.set(pending.tempId, id);
-    if (created) entitiesCreated++;
+    try {
+      const { id, created } = await contacts.createOrFetchByName(pending.name, pending.type);
+      tempIdMap.set(pending.tempId, id);
+      if (created) entitiesCreated++;
+    } catch (error) {
+      if (!(error instanceof ContactsUnavailableError)) throw error;
+      const placeholderId = entityPrecreateOutboxService.buildPendingContactId();
+      tempIdMap.set(pending.tempId, placeholderId);
+      outboxCandidates.push({ placeholderId, name: pending.name, type: pending.type });
+    }
   }
-  return { tempIdMap, entitiesCreated };
+  return { tempIdMap, entitiesCreated, outboxCandidates };
+}
+
+/** Queue every outbox candidate inside the finance transaction, so a rollback
+ * of the rest of the commit rolls the outbox row back too. */
+function enqueueOutboxCandidatesPhase(tx: FinanceDb, candidates: OutboxCandidate[]): void {
+  for (const candidate of candidates) {
+    entityPrecreateOutboxService.enqueue(tx, {
+      id: candidate.placeholderId,
+      name: candidate.name,
+      type: candidate.type,
+    });
+  }
 }
 
 function applyChangeSetsPhase(
@@ -189,10 +240,13 @@ function writeTransactionsPhase(
  * Commit an import. Pending contacts are pre-created against the contacts
  * pillar first (network, outside the tx); the resolved tempId→id map then
  * feeds the synchronous SQLite transaction that applies ChangeSets, writes
- * transactions, and reclassifies. A pre-create failure (contacts down) throws
- * before the SQLite transaction opens, so no finance-side row is written for
- * that attempt — but pre-created contacts themselves are not part of that
- * transaction and are not rolled back if a later phase fails.
+ * transactions, and reclassifies. A pre-create failure that ISN'T a contacts
+ * outage (see `preCreatePendingContacts`) still throws BEFORE the SQLite
+ * transaction opens, so no finance-side row is written for that attempt —
+ * but pre-created contacts themselves are not part of that transaction and
+ * are not rolled back if a later phase fails. An outage instead queues an
+ * outbox row (inside the tx) and the commit proceeds with a pending
+ * placeholder.
  */
 export async function commitImport(
   db: FinanceDb,
@@ -201,9 +255,13 @@ export async function commitImport(
 ): Promise<CommitResult> {
   validateCommitPayload(payload);
 
-  const { tempIdMap, entitiesCreated } = await preCreatePendingContacts(contacts, payload);
+  const { tempIdMap, entitiesCreated, outboxCandidates } = await preCreatePendingContacts(
+    contacts,
+    payload
+  );
 
   return db.transaction((tx) => {
+    enqueueOutboxCandidatesPhase(tx, outboxCandidates);
     const rulesApplied = applyChangeSetsPhase(tx, payload, tempIdMap);
     const tagRulesApplied = applyTagRuleChangeSetsPhase(tx, payload, tempIdMap);
     const writeResult = writeTransactionsPhase(tx, payload, tempIdMap);

@@ -19,6 +19,11 @@ const TEMP_ENTITY_PREFIX = 'temp:entity:';
  * `temp:`. The only well-formed placeholder is a `temp:entity:{uuid}` pending
  * reference; any other bare `temp:`-prefixed id (a stale scheme, a partially
  * resolved id) is a bug and must be rejected before it reaches the database.
+ *
+ * `pending:contact:{uuid}` (see `entity-precreate-outbox.ts`) is a DIFFERENT
+ * namespace and deliberately NOT covered by this guard: it's the one
+ * placeholder that IS meant to be persisted while contacts is unreachable,
+ * tracked by an outbox row until the background reconciler resolves it.
  */
 const TEMP_ID_PREFIX = 'temp:';
 

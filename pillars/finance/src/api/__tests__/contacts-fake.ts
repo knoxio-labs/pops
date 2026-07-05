@@ -32,6 +32,10 @@ export interface ContactsFake extends ContactsClient {
   readonly entities: ContactEntity[];
   /** Names passed to `createOrFetchByName`, in order, for assertions. */
   readonly created: { name: string; type: string }[];
+  /** Flip availability at runtime — lets a test simulate an outage that then
+   * recovers (e.g. a commit during the outage, followed by a reconciler tick
+   * once contacts is back). */
+  setUnavailable(value: boolean): void;
 }
 
 function toEntity(seed: SeedContact): ContactEntity {
@@ -57,7 +61,7 @@ export interface ContactsFakeOptions {
 export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFake {
   const entities = (options.seed ?? []).map(toEntity);
   const created: { name: string; type: string }[] = [];
-  const unavailable = options.unavailable ?? false;
+  let unavailable = options.unavailable ?? false;
 
   function filter(query: { search?: string; type?: string }): ContactEntity[] {
     const search = query.search?.toLowerCase();
@@ -71,6 +75,9 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
   return {
     entities,
     created,
+    setUnavailable(value: boolean): void {
+      unavailable = value;
+    },
     async fetchAllEntities(query = {}): Promise<ContactEntity[]> {
       return unavailable ? [] : filter(query);
     },

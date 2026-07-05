@@ -92,3 +92,14 @@ export type {
   EntityUsageListResult,
   ListEntityUsageOptions,
 } from './services/entity-usage.js';
+
+export * as entityPrecreateOutboxService from './services/entity-precreate-outbox.js';
+
+export {
+  PENDING_CONTACT_ID_PREFIX,
+  buildPendingContactId,
+  isPendingContactId,
+  type EntityPrecreateOutboxRow,
+  type EnqueuePendingContactInput,
+  type ReassignEntityIdCounts,
+} from './services/entity-precreate-outbox.js';

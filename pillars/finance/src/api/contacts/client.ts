@@ -100,8 +100,11 @@ export interface ContactsClient {
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
    * whether THIS call inserted a new contact. Throws only on a genuine failure
-   * (contacts down / contract-mismatch) — the commit path cannot silently
-   * drop a pending entity.
+   * (contacts down / contract-mismatch) — this seam never silently drops a
+   * pending entity. `commitImport` (issue #3683) is the one caller that
+   * catches `ContactsUnavailableError` specifically and degrades to a
+   * `pending:contact:{uuid}` placeholder + an outbox row instead of aborting;
+   * every other caller still lets it propagate.
    */
   createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult>;
 }
