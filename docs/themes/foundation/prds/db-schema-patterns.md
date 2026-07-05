@@ -77,7 +77,7 @@ TS pillars use Drizzle's `text('id').primaryKey().$defaultFn(() => crypto.random
 
 ## Entity types
 
-Entities (contacts) carry a `type` discriminator. The canonical set is **owned by the contacts pillar** (`pillars/contacts/src/entities/model.rs`) and mirrored byte-for-byte as a finance-local enum and in `@pops/db-types` constants for browser-safe consumers:
+Entities (contacts) carry a `type` discriminator. The canonical set is **owned by the contacts pillar** (`pillars/contacts/src/entities/model.rs`) and mirrored byte-for-byte as a finance-local enum and in `@pops/finance` contract constants (`ENTITY_TYPES`) for browser-safe consumers:
 
 ```
 company · person · government · bank · place · brand · organisation
@@ -172,7 +172,7 @@ Created per-pillar by a `NNNN_settings_baseline.sql` migration. The federated Re
 
 ### Schema conventions
 
-- [x] Entity `type` discriminator with values `company, person, government, bank, place, brand, organisation`, default `company`, owned by contacts and mirrored in `@pops/db-types`
+- [x] Entity `type` discriminator with values `company, person, government, bank, place, brand, organisation`, default `company`, owned by contacts and mirrored in `@pops/finance` (`ENTITY_TYPES`)
 - [x] UUID `TEXT` PKs for cross-referenceable pillars; `INTEGER` PKs for media internals
 - [x] snake*case plural table names, `idx*<table>\_<column>`index names,`<target>\_id` within-pillar FK columns
 - [x] Within-pillar FKs use `SET NULL` for optional links and `CASCADE` for owned children
