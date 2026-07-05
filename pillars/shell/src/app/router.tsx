@@ -72,10 +72,9 @@ function withSuspense(routes: readonly RouteObject[]): RouteObject[] {
  * the subtree renders the `PillarUnavailableRoute` placeholder when the
  * owning pillar's health is `'unavailable'` (ADR-026 P3).
  *
- * `pillarIdForModule` currently maps every module to the platform `registry`
- * pillar; the guard is a no-op for healthy/unknown statuses. To route a
- * module's health at its own pillar, special-case its id in
- * `pillarIdForModule`.
+ * `pillarIdForModule` resolves modules with a dedicated in-repo pillar to
+ * that pillar's own id; other modules fall back to the platform `registry`
+ * pillar.
  */
 function appRouteEntries(manifests: readonly FrontendManifest[]): RouteObject[] {
   return filterAppManifests(manifests).map((manifest) => {

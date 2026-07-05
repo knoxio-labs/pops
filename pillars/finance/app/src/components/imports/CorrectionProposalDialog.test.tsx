@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CorrectionProposalDialog,
   type LocalOp,
-  normalizeForMatch,
+  normalizeDescription,
   PREVIEW_CHANGESET_MAX_TRANSACTIONS,
   scopePreviewTransactions,
   serverOpToLocalOp,
@@ -75,21 +75,21 @@ vi.mock('sonner', () => ({
   },
 }));
 
-describe('normalizeForMatch', () => {
+describe('normalizeDescription', () => {
   it('uppercases, strips digits, and collapses whitespace', () => {
-    expect(normalizeForMatch('Woolworths 1234 Sydney')).toBe('WOOLWORTHS SYDNEY');
+    expect(normalizeDescription('Woolworths 1234 Sydney')).toBe('WOOLWORTHS SYDNEY');
   });
 
   it('trims leading and trailing whitespace', () => {
-    expect(normalizeForMatch('  netflix  ')).toBe('NETFLIX');
+    expect(normalizeDescription('  netflix  ')).toBe('NETFLIX');
   });
 
   it('collapses multiple internal spaces to single', () => {
-    expect(normalizeForMatch('FOO    BAR')).toBe('FOO BAR');
+    expect(normalizeDescription('FOO    BAR')).toBe('FOO BAR');
   });
 
   it('strips all digits, not just standalone runs', () => {
-    expect(normalizeForMatch('TXN42ABC99')).toBe('TXNABC');
+    expect(normalizeDescription('TXN42ABC99')).toBe('TXNABC');
   });
 });
 

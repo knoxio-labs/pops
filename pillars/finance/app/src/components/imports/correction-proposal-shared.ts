@@ -24,7 +24,7 @@ export type {
   TriggeringTransactionContext,
 } from './correction-proposal/types';
 
-export { normalizeForMatch, transactionMatchesSignal } from './lib/normalization';
+export { normalizeDescription, transactionMatchesSignal } from './lib/normalization';
 
 export { matchTypeLabel, opKindBadgeVariant, opKindLabel, opSummary } from './lib/correction-utils';
 
