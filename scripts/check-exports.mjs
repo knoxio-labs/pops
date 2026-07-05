@@ -497,6 +497,20 @@ function selfTest() {
     '--dirs trims whitespace around entries':
       JSON.stringify(parseDirsArg(['--dirs= pillars/finance , libs/types '])) ===
       JSON.stringify(['pillars/finance', 'libs/types']),
+    'scoping a pillar dir also selects its nested app unit': (() => {
+      const units = [
+        { dir: 'pillars/finance', name: '@pops/finance', pkg: {} },
+        { dir: 'pillars/finance/app', name: '@pops/app-finance', pkg: {} },
+        { dir: 'pillars/finance-x', name: '@pops/finance-x', pkg: {} },
+        { dir: 'libs/types', name: '@pops/types', pkg: {} },
+      ];
+      const picked = selectUnits(units, ['pillars/finance']).map((u) => u.dir);
+      return JSON.stringify(picked) === JSON.stringify(['pillars/finance', 'pillars/finance/app']);
+    })(),
+    'null scope selects every unit (full-tree sweep)': (() => {
+      const units = [{ dir: 'libs/types', name: '@pops/types', pkg: {} }];
+      return selectUnits(units, null) === units;
+    })(),
   };
 
   const ok = Object.values(checks).every(Boolean);
@@ -536,6 +550,32 @@ export function parseDirsArg(argv) {
     .filter((d) => d.length > 0);
 }
 
+/**
+ * Select the units a run should check for a given `--dirs` scope.
+ *
+ * `onlyDirs === null` (flag absent) is the full-tree sweep — every discovered
+ * unit. Otherwise a unit is in scope when its dir is listed explicitly **or**
+ * nests under a listed dir. The nesting rule is load-bearing: the changed-unit
+ * scope (quality.yml → _discover-units.yml) is computed with `maxdepth 1`, so a
+ * PR that touches `pillars/<id>/app/...` is reported as the parent
+ * `pillars/<id>` — never the nested `app`. But `discoverUnits()` returns the
+ * `pillars/<id>/app` unit separately, so an exact-match filter would validate
+ * the parent pillar and silently skip the app's own exports/main/files manifest
+ * on the very PR that changed it. Selecting nested units under a scoped dir
+ * closes that hole. The `${d}/` boundary keeps `pillars/finance` from matching
+ * a sibling like `pillars/finance-x`.
+ *
+ * @param {Unit[]} units
+ * @param {string[] | null} onlyDirs  Result of {@link parseDirsArg}.
+ * @returns {Unit[]}
+ */
+export function selectUnits(units, onlyDirs) {
+  if (onlyDirs === null) return units;
+  return units.filter(
+    (u) => onlyDirs.includes(u.dir) || onlyDirs.some((d) => u.dir.startsWith(`${d}/`))
+  );
+}
+
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
@@ -551,8 +591,7 @@ function main() {
   }
 
   const onlyDirs = parseDirsArg(args);
-  const units =
-    onlyDirs === null ? discoverUnits() : discoverUnits().filter((u) => onlyDirs.includes(u.dir));
+  const units = selectUnits(discoverUnits(), onlyDirs);
   /** @type {UnitReport[]} */
   const failing = [];
   for (const unit of units) {
