@@ -51,8 +51,6 @@ reference — see import-dedup-csv) }`.
 - `POST /imports/commit` → `CommitResult` — the single write path: create
   entities, apply ChangeSets + tag-rule ChangeSets, write transactions, run
   retroactive reclassification, atomically.
-- `POST /imports/execute` exists in the contract but is not part of the wizard
-  flow (the wizard commits via `/imports/commit`).
 
 Entity list for the dropdowns comes from the entities/contacts read endpoints,
 fetched once and cached for the review step.

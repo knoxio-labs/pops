@@ -10,7 +10,6 @@
 export {
   createEntity,
   commitImport,
-  executeImportWithProgress,
   processImportWithProgress,
   reevaluateImportSessionResult,
   reevaluateImportSessionWithRules,

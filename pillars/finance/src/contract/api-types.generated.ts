@@ -384,23 +384,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/imports/execute': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Write confirmed transactions to SQLite; returns a session id to poll */
-    post: operations['imports.executeImport'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/imports/process': {
     parameters: {
       query?: never;
@@ -4031,94 +4014,6 @@ export interface operations {
       };
     };
   };
-  'imports.executeImport': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': {
-          transactions: {
-            account: string;
-            amount: number;
-            checksum: string;
-            date: string;
-            description: string;
-            entityId?: string;
-            entityName?: string;
-            location?: string;
-            rawRow: string;
-            suggestedTags?: {
-              isNew?: boolean;
-              pattern?: string;
-              /** @enum {string} */
-              source: 'ai' | 'rule' | 'entity';
-              tag: string;
-            }[];
-            tags?: string[];
-            /** @enum {string} */
-            transactionType?: 'purchase' | 'transfer' | 'income';
-          }[];
-        };
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            sessionId: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
   'imports.processImport': {
     parameters: {
       query?: never;
@@ -4221,284 +4116,253 @@ export interface operations {
               status: 'processing' | 'success' | 'failed';
             }[];
             /** @enum {string} */
-            currentStep: 'deduplicating' | 'matching' | 'writing';
+            currentStep: 'deduplicating' | 'matching';
             errors: {
               description: string;
               error: string;
             }[];
             processedCount: number;
-            result?:
-              | {
-                  aiUsage?: {
-                    apiCalls: number;
-                    avgCostPerCall: number;
-                    cacheHits: number;
-                    totalCostUsd: number;
-                    totalInputTokens: number;
-                    totalOutputTokens: number;
-                  };
-                  failed: {
-                    account: string;
-                    amount: number;
-                    checksum: string;
-                    date: string;
-                    description: string;
-                    entity: {
-                      confidence?: number;
-                      entityId?: string;
-                      entityName?: string;
-                      /** @enum {string} */
-                      matchType:
-                        | 'alias'
-                        | 'exact'
-                        | 'prefix'
-                        | 'contains'
-                        | 'ai'
-                        | 'learned'
-                        | 'manual'
-                        | 'none';
-                    };
-                    error?: string;
-                    location?: string;
-                    matchedRules?: {
-                      confidence: number;
-                      entityId?: string | null;
-                      entityName?: string | null;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      priority: number;
-                      ruleId: string;
-                    }[];
-                    rawRow: string;
-                    ruleProvenance?: {
-                      confidence: number;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      ruleId: string;
-                      /** @enum {string} */
-                      source: 'correction';
-                    };
-                    skipReason?: string;
-                    /** @enum {string} */
-                    status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-                    suggestedTags?: {
-                      isNew?: boolean;
-                      pattern?: string;
-                      /** @enum {string} */
-                      source: 'ai' | 'rule' | 'entity';
-                      tag: string;
-                    }[];
-                    /** @enum {string} */
-                    transactionType?: 'purchase' | 'transfer' | 'income';
-                  }[];
-                  matched: {
-                    account: string;
-                    amount: number;
-                    checksum: string;
-                    date: string;
-                    description: string;
-                    entity: {
-                      confidence?: number;
-                      entityId?: string;
-                      entityName?: string;
-                      /** @enum {string} */
-                      matchType:
-                        | 'alias'
-                        | 'exact'
-                        | 'prefix'
-                        | 'contains'
-                        | 'ai'
-                        | 'learned'
-                        | 'manual'
-                        | 'none';
-                    };
-                    error?: string;
-                    location?: string;
-                    matchedRules?: {
-                      confidence: number;
-                      entityId?: string | null;
-                      entityName?: string | null;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      priority: number;
-                      ruleId: string;
-                    }[];
-                    rawRow: string;
-                    ruleProvenance?: {
-                      confidence: number;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      ruleId: string;
-                      /** @enum {string} */
-                      source: 'correction';
-                    };
-                    skipReason?: string;
-                    /** @enum {string} */
-                    status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-                    suggestedTags?: {
-                      isNew?: boolean;
-                      pattern?: string;
-                      /** @enum {string} */
-                      source: 'ai' | 'rule' | 'entity';
-                      tag: string;
-                    }[];
-                    /** @enum {string} */
-                    transactionType?: 'purchase' | 'transfer' | 'income';
-                  }[];
-                  skipped: {
-                    account: string;
-                    amount: number;
-                    checksum: string;
-                    date: string;
-                    description: string;
-                    entity: {
-                      confidence?: number;
-                      entityId?: string;
-                      entityName?: string;
-                      /** @enum {string} */
-                      matchType:
-                        | 'alias'
-                        | 'exact'
-                        | 'prefix'
-                        | 'contains'
-                        | 'ai'
-                        | 'learned'
-                        | 'manual'
-                        | 'none';
-                    };
-                    error?: string;
-                    location?: string;
-                    matchedRules?: {
-                      confidence: number;
-                      entityId?: string | null;
-                      entityName?: string | null;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      priority: number;
-                      ruleId: string;
-                    }[];
-                    rawRow: string;
-                    ruleProvenance?: {
-                      confidence: number;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      ruleId: string;
-                      /** @enum {string} */
-                      source: 'correction';
-                    };
-                    skipReason?: string;
-                    /** @enum {string} */
-                    status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-                    suggestedTags?: {
-                      isNew?: boolean;
-                      pattern?: string;
-                      /** @enum {string} */
-                      source: 'ai' | 'rule' | 'entity';
-                      tag: string;
-                    }[];
-                    /** @enum {string} */
-                    transactionType?: 'purchase' | 'transfer' | 'income';
-                  }[];
-                  uncertain: {
-                    account: string;
-                    amount: number;
-                    checksum: string;
-                    date: string;
-                    description: string;
-                    entity: {
-                      confidence?: number;
-                      entityId?: string;
-                      entityName?: string;
-                      /** @enum {string} */
-                      matchType:
-                        | 'alias'
-                        | 'exact'
-                        | 'prefix'
-                        | 'contains'
-                        | 'ai'
-                        | 'learned'
-                        | 'manual'
-                        | 'none';
-                    };
-                    error?: string;
-                    location?: string;
-                    matchedRules?: {
-                      confidence: number;
-                      entityId?: string | null;
-                      entityName?: string | null;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      priority: number;
-                      ruleId: string;
-                    }[];
-                    rawRow: string;
-                    ruleProvenance?: {
-                      confidence: number;
-                      /** @enum {string} */
-                      matchType: 'exact' | 'contains' | 'regex';
-                      pattern: string;
-                      ruleId: string;
-                      /** @enum {string} */
-                      source: 'correction';
-                    };
-                    skipReason?: string;
-                    /** @enum {string} */
-                    status: 'matched' | 'uncertain' | 'failed' | 'skipped';
-                    suggestedTags?: {
-                      isNew?: boolean;
-                      pattern?: string;
-                      /** @enum {string} */
-                      source: 'ai' | 'rule' | 'entity';
-                      tag: string;
-                    }[];
-                    /** @enum {string} */
-                    transactionType?: 'purchase' | 'transfer' | 'income';
-                  }[];
-                  warnings?: {
-                    affectedCount?: number;
-                    details?: string;
-                    message: string;
-                    /** @enum {string} */
-                    type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
-                  }[];
-                }
-              | {
-                  failed: {
-                    error?: string;
-                    pageId?: string;
-                    success: boolean;
-                    transaction: {
-                      account: string;
-                      amount: number;
-                      checksum: string;
-                      date: string;
-                      description: string;
-                      entityId?: string;
-                      entityName?: string;
-                      location?: string;
-                      rawRow: string;
-                      suggestedTags?: {
-                        isNew?: boolean;
-                        pattern?: string;
-                        /** @enum {string} */
-                        source: 'ai' | 'rule' | 'entity';
-                        tag: string;
-                      }[];
-                      tags?: string[];
-                      /** @enum {string} */
-                      transactionType?: 'purchase' | 'transfer' | 'income';
-                    };
-                  }[];
-                  imported: number;
-                  skipped: number;
+            result?: {
+              aiUsage?: {
+                apiCalls: number;
+                avgCostPerCall: number;
+                cacheHits: number;
+                totalCostUsd: number;
+                totalInputTokens: number;
+                totalOutputTokens: number;
+              };
+              failed: {
+                account: string;
+                amount: number;
+                checksum: string;
+                date: string;
+                description: string;
+                entity: {
+                  confidence?: number;
+                  entityId?: string;
+                  entityName?: string;
+                  /** @enum {string} */
+                  matchType:
+                    | 'alias'
+                    | 'exact'
+                    | 'prefix'
+                    | 'contains'
+                    | 'ai'
+                    | 'learned'
+                    | 'manual'
+                    | 'none';
                 };
+                error?: string;
+                location?: string;
+                matchedRules?: {
+                  confidence: number;
+                  entityId?: string | null;
+                  entityName?: string | null;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  priority: number;
+                  ruleId: string;
+                }[];
+                rawRow: string;
+                ruleProvenance?: {
+                  confidence: number;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  ruleId: string;
+                  /** @enum {string} */
+                  source: 'correction';
+                };
+                skipReason?: string;
+                /** @enum {string} */
+                status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+                suggestedTags?: {
+                  isNew?: boolean;
+                  pattern?: string;
+                  /** @enum {string} */
+                  source: 'ai' | 'rule' | 'entity';
+                  tag: string;
+                }[];
+                /** @enum {string} */
+                transactionType?: 'purchase' | 'transfer' | 'income';
+              }[];
+              matched: {
+                account: string;
+                amount: number;
+                checksum: string;
+                date: string;
+                description: string;
+                entity: {
+                  confidence?: number;
+                  entityId?: string;
+                  entityName?: string;
+                  /** @enum {string} */
+                  matchType:
+                    | 'alias'
+                    | 'exact'
+                    | 'prefix'
+                    | 'contains'
+                    | 'ai'
+                    | 'learned'
+                    | 'manual'
+                    | 'none';
+                };
+                error?: string;
+                location?: string;
+                matchedRules?: {
+                  confidence: number;
+                  entityId?: string | null;
+                  entityName?: string | null;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  priority: number;
+                  ruleId: string;
+                }[];
+                rawRow: string;
+                ruleProvenance?: {
+                  confidence: number;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  ruleId: string;
+                  /** @enum {string} */
+                  source: 'correction';
+                };
+                skipReason?: string;
+                /** @enum {string} */
+                status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+                suggestedTags?: {
+                  isNew?: boolean;
+                  pattern?: string;
+                  /** @enum {string} */
+                  source: 'ai' | 'rule' | 'entity';
+                  tag: string;
+                }[];
+                /** @enum {string} */
+                transactionType?: 'purchase' | 'transfer' | 'income';
+              }[];
+              skipped: {
+                account: string;
+                amount: number;
+                checksum: string;
+                date: string;
+                description: string;
+                entity: {
+                  confidence?: number;
+                  entityId?: string;
+                  entityName?: string;
+                  /** @enum {string} */
+                  matchType:
+                    | 'alias'
+                    | 'exact'
+                    | 'prefix'
+                    | 'contains'
+                    | 'ai'
+                    | 'learned'
+                    | 'manual'
+                    | 'none';
+                };
+                error?: string;
+                location?: string;
+                matchedRules?: {
+                  confidence: number;
+                  entityId?: string | null;
+                  entityName?: string | null;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  priority: number;
+                  ruleId: string;
+                }[];
+                rawRow: string;
+                ruleProvenance?: {
+                  confidence: number;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  ruleId: string;
+                  /** @enum {string} */
+                  source: 'correction';
+                };
+                skipReason?: string;
+                /** @enum {string} */
+                status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+                suggestedTags?: {
+                  isNew?: boolean;
+                  pattern?: string;
+                  /** @enum {string} */
+                  source: 'ai' | 'rule' | 'entity';
+                  tag: string;
+                }[];
+                /** @enum {string} */
+                transactionType?: 'purchase' | 'transfer' | 'income';
+              }[];
+              uncertain: {
+                account: string;
+                amount: number;
+                checksum: string;
+                date: string;
+                description: string;
+                entity: {
+                  confidence?: number;
+                  entityId?: string;
+                  entityName?: string;
+                  /** @enum {string} */
+                  matchType:
+                    | 'alias'
+                    | 'exact'
+                    | 'prefix'
+                    | 'contains'
+                    | 'ai'
+                    | 'learned'
+                    | 'manual'
+                    | 'none';
+                };
+                error?: string;
+                location?: string;
+                matchedRules?: {
+                  confidence: number;
+                  entityId?: string | null;
+                  entityName?: string | null;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  priority: number;
+                  ruleId: string;
+                }[];
+                rawRow: string;
+                ruleProvenance?: {
+                  confidence: number;
+                  /** @enum {string} */
+                  matchType: 'exact' | 'contains' | 'regex';
+                  pattern: string;
+                  ruleId: string;
+                  /** @enum {string} */
+                  source: 'correction';
+                };
+                skipReason?: string;
+                /** @enum {string} */
+                status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+                suggestedTags?: {
+                  isNew?: boolean;
+                  pattern?: string;
+                  /** @enum {string} */
+                  source: 'ai' | 'rule' | 'entity';
+                  tag: string;
+                }[];
+                /** @enum {string} */
+                transactionType?: 'purchase' | 'transfer' | 'income';
+              }[];
+              warnings?: {
+                affectedCount?: number;
+                details?: string;
+                message: string;
+                /** @enum {string} */
+                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+              }[];
+            };
             sessionId: string;
             startedAt: string;
             /** @enum {string} */

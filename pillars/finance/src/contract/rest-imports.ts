@@ -5,10 +5,10 @@
  * the finance db). The CSV/PDF transformers are out of scope for this slice:
  * the wire receives already-parsed transactions (`ParsedTransactionSchema`).
  *
- * processImport / executeImport kick off background work and return a
- * `{ sessionId }` immediately; the FE polls `getImportProgress` until the
- * session reports `completed`. The progress store is process-local in-memory
- * state — fine for the single pillar process.
+ * processImport kicks off background work and returns a `{ sessionId }`
+ * immediately; the FE polls `getImportProgress` until the session reports
+ * `completed`. The progress store is process-local in-memory state — fine for
+ * the single pillar process.
  *
  * The wire shapes live in `rest-imports-schemas.ts`; this file is only the
  * route map + the public type re-exports.
@@ -23,7 +23,6 @@ import {
   CommitResultSchema,
   CreateEntityInputSchema,
   CreateEntityOutputSchema,
-  ExecuteImportInputSchema,
   ImportProgressSchema,
   ProcessImportInputSchema,
   ReevaluateWithPendingRulesInputSchema,
@@ -40,13 +39,6 @@ export const financeImportsContract = c.router({
     body: ProcessImportInputSchema,
     responses: { 200: SessionIdSchema, ...ERR_RESPONSES },
     summary: 'Start an import process (dedup + entity matching); returns a session id to poll',
-  },
-  executeImport: {
-    method: 'POST',
-    path: '/imports/execute',
-    body: ExecuteImportInputSchema,
-    responses: { 200: SessionIdSchema, ...ERR_RESPONSES },
-    summary: 'Write confirmed transactions to SQLite; returns a session id to poll',
   },
   getImportProgress: {
     method: 'GET',
