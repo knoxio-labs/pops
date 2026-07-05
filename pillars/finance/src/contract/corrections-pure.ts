@@ -114,6 +114,27 @@ export function correctionToRow(c: Correction): CorrectionRow {
   };
 }
 
+/** Client-side placeholder id prefix for un-persisted `add` rows folded into a merge. */
+const TEMP_ID_PREFIX = 'temp:';
+
+/**
+ * Highest numeric suffix already present among `temp:<n>` ids in `rules`, or 0.
+ * Seeds the per-call counter so folding one ChangeSet at a time (as both the
+ * server `mergedRules` and the browser `computeMergedRules` do) keeps every
+ * added row's id globally unique across the fold instead of restarting at
+ * `temp:1` each call — which previously made distinct pending rules collide on
+ * a single id, so selecting one in the rule manager highlighted them all.
+ */
+function highestTempIdSuffix(rules: CorrectionRow[]): number {
+  let max = 0;
+  for (const rule of rules) {
+    if (!rule.id.startsWith(TEMP_ID_PREFIX)) continue;
+    const suffix = Number(rule.id.slice(TEMP_ID_PREFIX.length));
+    if (Number.isInteger(suffix) && suffix > max) max = suffix;
+  }
+  return max;
+}
+
 function makeAddedRow(op: Extract<ChangeSetOp, { op: 'add' }>, tempId: string): CorrectionRow {
   return {
     id: tempId,
@@ -207,14 +228,14 @@ export function applyChangeSetToRules(
   const byId = new Map(rules.map((r) => [r.id, r]));
   const next: CorrectionRow[] = [...rules];
 
-  let tempCounter = 0;
+  let tempCounter = highestTempIdSuffix(rules);
   const order: Record<ChangeSetOp['op'], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
   const ops = [...changeSet.ops].toSorted((a, b) => order[a.op] - order[b.op]);
 
   for (const op of ops) {
     if (op.op === 'add') {
       tempCounter += 1;
-      next.push(makeAddedRow(op, `temp:${tempCounter}`));
+      next.push(makeAddedRow(op, `${TEMP_ID_PREFIX}${tempCounter}`));
     } else {
       applyMutatingInMemory(next, byId, op, onMissing);
     }
