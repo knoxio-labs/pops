@@ -58,11 +58,22 @@ export interface CorrectionRow {
 }
 
 /**
- * Canonicalise a transaction description for matching: uppercase, strip digits,
- * collapse whitespace. Identical to the db-side matcher's normaliser.
+ * Canonicalise a transaction description for matching: fold diacritics, treat
+ * hyphens as a space and strip ampersands/periods, uppercase, strip digits,
+ * collapse whitespace. Identical to the db-side matcher's normaliser
+ * (CF056/CP022) — the two must stay in lockstep, and the entity-matcher's
+ * `normalizeKey` folds diacritics and punctuation the same way.
  */
 export function normalizeDescription(description: string): string {
-  return description.toUpperCase().replaceAll(/\d+/g, '').replaceAll(/\s+/g, ' ').trim();
+  return description
+    .normalize('NFKD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .replaceAll(/-/g, ' ')
+    .replaceAll(/[&.]/g, '')
+    .toUpperCase()
+    .replaceAll(/\d+/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 }
 
 function parseJsonStringArray(raw: string): string[] {
