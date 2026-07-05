@@ -206,6 +206,81 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
   });
 });
 
+describe('imports.processImport — entity-less correction rules (#3598)', () => {
+  it('routes an entity-less purchase rule to uncertain so a merchant is still required', async () => {
+    const c = client();
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      transactionType: 'purchase',
+    });
+    await c.corrections.update(created.data.id, { confidence: 0.9 });
+
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'bunnings-1' }),
+      ],
+      account: 'Amex',
+    });
+    const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.uncertain).toHaveLength(1);
+    const row = result.uncertain[0];
+    expect(row?.ruleProvenance?.source).toBe('correction');
+    expect(row?.transactionType).toBe('purchase');
+    expect(row?.entity.matchType).toBe('learned');
+    expect(row?.entity.entityId).toBeUndefined();
+  });
+
+  it('keeps a high-confidence entity-less transfer rule matched (transfers carry no merchant)', async () => {
+    const c = client();
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'LOAN OFFSET SWEEP',
+      matchType: 'contains',
+      transactionType: 'transfer',
+    });
+    await c.corrections.update(created.data.id, { confidence: 0.95 });
+
+    const { sessionId } = await c.imports.processImport({
+      transactions: [parsed({ description: 'LOAN OFFSET SWEEP 8842', checksum: 'sweep-1' })],
+      account: 'Amex',
+    });
+    const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    expect(result.uncertain).toHaveLength(0);
+    expect(result.matched).toHaveLength(1);
+    const row = result.matched[0];
+    expect(row?.ruleProvenance?.source).toBe('correction');
+    expect(row?.transactionType).toBe('transfer');
+    expect(row?.entity.matchType).toBe('learned');
+  });
+
+  it('routes a low-confidence entity-less transfer rule to uncertain (below the matched threshold)', async () => {
+    const c = client();
+    const created = await c.corrections.createOrUpdate({
+      descriptionPattern: 'ROUND UP TO SAVER',
+      matchType: 'contains',
+      transactionType: 'transfer',
+    });
+    // Applies (≥ 0.7 minConfidence) but sits below the 0.9 matched threshold.
+    await c.corrections.update(created.data.id, { confidence: 0.8 });
+
+    const { sessionId } = await c.imports.processImport({
+      transactions: [parsed({ description: 'ROUND UP TO SAVER 22', checksum: 'roundup-1' })],
+      account: 'Amex',
+    });
+    const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.uncertain).toHaveLength(1);
+    const row = result.uncertain[0];
+    expect(row?.ruleProvenance?.source).toBe('correction');
+    expect(row?.transactionType).toBe('transfer');
+    expect(row?.entity.matchType).toBe('learned');
+  });
+});
+
 describe('imports.executeImport — writes', () => {
   it('writes confirmed transactions verifiable through the transactions REST surface', async () => {
     const c = client();
