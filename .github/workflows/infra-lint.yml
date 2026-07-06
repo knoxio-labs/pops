@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "infra/litestream/**"
+      - "infra/backup/**"
       - ".github/workflows/infra-lint.yml"
   pull_request:
     paths:
       - "infra/litestream/**"
+      - "infra/backup/**"
       - ".github/workflows/infra-lint.yml"
 
 jobs:
@@ -26,6 +28,7 @@ jobs:
           filters: |
             relevant:
               - 'infra/litestream/**'
+              - 'infra/backup/**'
               - '.github/workflows/infra-lint.yml'
 
   yaml-lint:
@@ -39,6 +42,6 @@ jobs:
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-      - name: Lint Litestream YAML
+      - name: Lint infra YAML (litestream + backup)
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: npx yaml-lint infra/litestream/*.yml
+        run: npx yaml-lint infra/litestream/*.yml infra/backup/*.yml
