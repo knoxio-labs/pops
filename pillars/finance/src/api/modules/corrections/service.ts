@@ -9,7 +9,7 @@
  * edit/disable/remove op targeting an unknown id throws `NotFoundError` (→ 404),
  * which inside `db.transaction` rolls the whole set back.
  */
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { MIN_MATCH_CONFIDENCE } from '../../../contract/corrections-pure.js';
 import {
@@ -24,20 +24,54 @@ import type { CorrectionRow } from './types.js';
 
 const { normalizeDescription } = transactionCorrectionsService;
 
+function findExistingCorrectionByKey(
+  tx: FinanceDb,
+  matchType: Extract<ChangeSetOp, { op: 'add' }>['data']['matchType'],
+  normalizedPattern: string
+): CorrectionRow | undefined {
+  return tx
+    .select()
+    .from(transactionCorrections)
+    .where(
+      and(
+        eq(transactionCorrections.matchType, matchType),
+        eq(transactionCorrections.descriptionPattern, normalizedPattern)
+      )
+    )
+    .get();
+}
+
+/**
+ * Add a correction rule, upserting on the `(normalized descriptionPattern,
+ * matchType)` key instead of a raw insert (CF035): two `add` ops for the same
+ * pattern in one ChangeSet — or across ChangeSets in the same commit — land
+ * on the same row (the second becomes an update) instead of forking a
+ * duplicate where only one of the two ever matches.
+ */
 function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  const normalized = normalizeDescription(op.data.descriptionPattern);
+  const values = {
+    entityId: op.data.entityId ?? null,
+    entityName: op.data.entityName ?? null,
+    location: op.data.location ?? null,
+    tags: JSON.stringify(op.data.tags ?? []),
+    transactionType: op.data.transactionType ?? null,
+    isActive: op.data.isActive ?? true,
+    confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+    priority: op.data.priority ?? 0,
+  };
+
+  const existing = findExistingCorrectionByKey(tx, op.data.matchType, normalized);
+  if (existing) {
+    tx.update(transactionCorrections)
+      .set(values)
+      .where(eq(transactionCorrections.id, existing.id))
+      .run();
+    return;
+  }
+
   tx.insert(transactionCorrections)
-    .values({
-      descriptionPattern: normalizeDescription(op.data.descriptionPattern),
-      matchType: op.data.matchType,
-      entityId: op.data.entityId ?? null,
-      entityName: op.data.entityName ?? null,
-      location: op.data.location ?? null,
-      tags: JSON.stringify(op.data.tags ?? []),
-      transactionType: op.data.transactionType ?? null,
-      isActive: op.data.isActive ?? true,
-      confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
-      priority: op.data.priority ?? 0,
-    })
+    .values({ descriptionPattern: normalized, matchType: op.data.matchType, ...values })
     .run();
 }
 

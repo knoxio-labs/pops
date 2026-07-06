@@ -103,3 +103,5 @@ export {
   type EnqueuePendingContactInput,
   type ReassignEntityIdCounts,
 } from './services/entity-precreate-outbox.js';
+
+export * as importCommitsService from './services/import-commits.js';

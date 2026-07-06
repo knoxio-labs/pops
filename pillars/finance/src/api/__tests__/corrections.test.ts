@@ -408,6 +408,80 @@ describe('corrections — applyChangeSet', () => {
     expect(reordered.data.find((c) => c.id === created.id)?.priority).toBe(9);
     expect((await client().corrections.get(created.id)).data.priority).toBe(9);
   });
+
+  it('upsert-keys a same-session duplicate add on (descriptionPattern, matchType) instead of forking a dead row (CF035/#3640)', async () => {
+    const seeded = await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'woolworths 1234',
+              matchType: 'exact',
+              entityName: 'First Pass',
+              priority: 1,
+            },
+          },
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'WOOLWORTHS 5678',
+              matchType: 'exact',
+              entityName: 'Second Pass',
+              priority: 2,
+            },
+          },
+        ],
+      },
+    });
+
+    // Both `add` ops normalize to the same (descriptionPattern, matchType)
+    // key — digits are stripped by normalizeDescription — so they must
+    // collapse onto one row, last-write-wins, instead of forking a second
+    // rule that would never fire because the matcher also normalizes.
+    expect(seeded.data).toHaveLength(1);
+    expect(seeded.data[0]).toMatchObject({
+      descriptionPattern: 'WOOLWORTHS',
+      entityName: 'Second Pass',
+      priority: 2,
+    });
+
+    const list = await client().corrections.list();
+    expect(list.pagination.total).toBe(1);
+  });
+
+  it('upsert-keys an add against a rule from an earlier, already-applied ChangeSet', async () => {
+    await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'ACME CORP', matchType: 'contains', priority: 0 },
+          },
+        ],
+      },
+    });
+
+    const retried = await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'ACME CORP',
+              matchType: 'contains',
+              entityName: 'Acme Corp',
+              priority: 5,
+            },
+          },
+        ],
+      },
+    });
+
+    expect(retried.data).toHaveLength(1);
+    expect(retried.data[0]).toMatchObject({ entityName: 'Acme Corp', priority: 5 });
+    expect((await client().corrections.list()).pagination.total).toBe(1);
+  });
 });
 
 describe('corrections — previewChangeSet', () => {

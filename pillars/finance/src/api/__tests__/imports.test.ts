@@ -981,6 +981,86 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
   });
 });
 
+describe('imports.commitImport — commit idempotency (#3640/#3642)', () => {
+  it('a resubmit under the same commitKey is a no-op: identical result, no duplicate writes', async () => {
+    const contacts = makeContactsFake();
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-0000000000c1';
+    const payload = {
+      commitKey: '11111111-1111-4111-8111-111111111111',
+      entities: [{ tempId, name: 'IdempotentCo', type: 'company' as const }],
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add' as const,
+              data: { descriptionPattern: 'IDEMPOTENTCO', matchType: 'exact' as const },
+            },
+          ],
+        },
+      ],
+      transactions: [
+        confirmed({
+          description: 'IDEMPOTENTCO 1',
+          checksum: 'idempotent-1',
+          entityId: tempId,
+          entityName: 'IdempotentCo',
+        }),
+      ],
+    };
+
+    const first = await c.imports.commitImport(payload);
+    const second = await c.imports.commitImport(payload);
+
+    expect(second.data).toEqual(first.data);
+    expect(contacts.created).toHaveLength(1);
+
+    const txnCount = financeDb.raw
+      .prepare('SELECT count(*) as c FROM transactions WHERE checksum = ?')
+      .get('idempotent-1') as { c: number };
+    expect(txnCount.c).toBe(1);
+
+    const ruleCount = financeDb.raw
+      .prepare('SELECT count(*) as c FROM transaction_corrections WHERE description_pattern = ?')
+      .get('IDEMPOTENTCO') as { c: number };
+    expect(ruleCount.c).toBe(1);
+  });
+
+  it('two concurrent commits sharing a commitKey resolve to one applied write and one echoed result', async () => {
+    const c = client();
+    const payload = {
+      commitKey: '22222222-2222-4222-8222-222222222222',
+      transactions: [confirmed({ description: 'RACE MERCHANT', checksum: 'race-1' })],
+    };
+
+    const [a, b] = await Promise.all([
+      c.imports.commitImport(payload),
+      c.imports.commitImport(payload),
+    ]);
+
+    expect(a.data).toEqual(b.data);
+    const txnCount = financeDb.raw
+      .prepare('SELECT count(*) as c FROM transactions WHERE checksum = ?')
+      .get('race-1') as { c: number };
+    expect(txnCount.c).toBe(1);
+  });
+
+  it('omitting commitKey preserves the old best-effort behaviour (no dedup, documents the opt-in nature)', async () => {
+    const c = client();
+    const payload = {
+      transactions: [confirmed({ description: 'NO KEY MERCHANT', checksum: 'no-key-1' })],
+    };
+
+    await c.imports.commitImport(payload);
+    await c.imports.commitImport(payload);
+
+    const txnCount = financeDb.raw
+      .prepare('SELECT count(*) as c FROM transactions WHERE checksum = ?')
+      .get('no-key-1') as { c: number };
+    expect(txnCount.c).toBe(2);
+  });
+});
+
 describe('imports.commitImport — contacts pre-create outbox during an outage (#3683)', () => {
   it('commits with a pending placeholder instead of aborting, and queues one outbox row', async () => {
     const contacts = makeContactsFake({ unavailable: true });
