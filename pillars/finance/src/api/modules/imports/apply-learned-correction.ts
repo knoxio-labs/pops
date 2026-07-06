@@ -28,10 +28,13 @@ export interface ApplyLearnedCorrectionArgs {
    * True when `rules` is an in-memory preview merged with un-persisted pending
    * ChangeSets rather than the real persisted rule set (CF040/#3664) — gates
    * usage telemetry (`timesApplied`/`lastUsedAt`, tag-rule usage) so a preview
-   * never counts as real application. Ignored when `rules` is omitted (that
-   * path always queries the live DB, so it is always real usage). Defaults to
-   * `false`: a caller-supplied `rules` array fetched once per run from the
-   * real table (the perf fix this flag exists for) still counts as usage.
+   * never counts as real application. The telemetry gate is purely `!isPreview`
+   * — it is honoured on every path, `rules` supplied or not. The `rules`-omitted
+   * DB-query path counts as real usage not because the flag is skipped there but
+   * because those one-off callers never set it (a preview only exists as an
+   * in-memory merged `rules` array). Defaults to `false`: a caller-supplied
+   * `rules` array fetched once per run from the real table (the perf fix this
+   * flag exists for) still counts as usage.
    */
   isPreview?: boolean;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */

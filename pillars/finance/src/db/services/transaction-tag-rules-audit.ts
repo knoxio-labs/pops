@@ -25,11 +25,27 @@ import type { FinanceDb } from './internal.js';
  */
 type TransactionTagRuleRow = typeof transactionTagRules.$inferSelect;
 
-/** A group of active rules sharing the same `(descriptionPattern, matchType)` — a duplicate/contradictory cluster. */
+/** A group of active rules sharing the same `(normalized descriptionPattern, matchType)` — a duplicate/contradictory cluster. `descriptionPattern` is the shared normalized key, not any one row's raw stored pattern. */
 export interface TagRuleConflictGroup {
   descriptionPattern: string;
   matchType: TransactionTagRuleRow['matchType'];
   rules: TransactionTagRuleRow[];
+}
+
+/**
+ * Normalize a stored pattern the same way {@link createTransactionTagRule}
+ * does before persisting: non-regex patterns fold through
+ * {@link normalizeDescription} (uppercase, digit-strip, whitespace-collapse),
+ * regex patterns stay raw (normalizing would corrupt metacharacters). Applied
+ * to the grouping key so two rows the create path would treat as the same
+ * pattern collapse into one cluster even when a legacy/un-normalized row stored
+ * a case/digit/whitespace variant of the pattern.
+ */
+function normalizeTagRulePattern(
+  pattern: string,
+  matchType: TransactionTagRuleRow['matchType']
+): string {
+  return matchType === 'regex' ? pattern : normalizeDescription(pattern);
 }
 
 /**
@@ -50,20 +66,21 @@ export function findDuplicateTransactionTagRules(db: FinanceDb): TagRuleConflict
     .where(eq(transactionTagRules.isActive, true))
     .all();
 
-  const groups = new Map<string, TransactionTagRuleRow[]>();
+  const groups = new Map<string, { normalizedPattern: string; rules: TransactionTagRuleRow[] }>();
   for (const rule of rules) {
-    const key = `${rule.matchType} ${rule.descriptionPattern}`;
+    const normalizedPattern = normalizeTagRulePattern(rule.descriptionPattern, rule.matchType);
+    const key = `${rule.matchType} ${normalizedPattern}`;
     const bucket = groups.get(key);
-    if (bucket) bucket.push(rule);
-    else groups.set(key, [rule]);
+    if (bucket) bucket.rules.push(rule);
+    else groups.set(key, { normalizedPattern, rules: [rule] });
   }
 
   return [...groups.values()]
-    .filter((bucket) => bucket.length > 1)
-    .map((bucket) => ({
-      descriptionPattern: bucket[0]?.descriptionPattern ?? '',
-      matchType: bucket[0]?.matchType ?? 'exact',
-      rules: bucket,
+    .filter((group) => group.rules.length > 1)
+    .map((group) => ({
+      descriptionPattern: group.normalizedPattern,
+      matchType: group.rules[0]?.matchType ?? 'exact',
+      rules: group.rules,
     }));
 }
 

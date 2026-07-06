@@ -129,6 +129,26 @@ describe('findDuplicateTransactionTagRules', () => {
     expect(groups[0]?.rules).toHaveLength(2);
   });
 
+  it('groups un-normalized case/digit variants of the same pattern (legacy drift)', () => {
+    seedRule(harness, { descriptionPattern: 'K MART', matchType: 'contains', entityId: 'ent-a' });
+    seedRule(harness, {
+      descriptionPattern: 'k mart 42',
+      matchType: 'contains',
+      entityId: 'ent-b',
+    });
+
+    const groups = findDuplicateTransactionTagRules(harness.db);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.descriptionPattern).toBe('K MART');
+    expect(groups[0]?.rules).toHaveLength(2);
+  });
+
+  it('does not normalize regex patterns when grouping (metacharacters must survive)', () => {
+    seedRule(harness, { descriptionPattern: '\\bcoles\\b', matchType: 'regex', entityId: 'ent-a' });
+    seedRule(harness, { descriptionPattern: '\\bCOLES\\b', matchType: 'regex', entityId: 'ent-b' });
+    expect(findDuplicateTransactionTagRules(harness.db)).toEqual([]);
+  });
+
   it('does not group rules with the same pattern but a different matchType', () => {
     seedRule(harness, { descriptionPattern: 'COLES', matchType: 'contains' });
     seedRule(harness, { descriptionPattern: 'COLES', matchType: 'exact' });
