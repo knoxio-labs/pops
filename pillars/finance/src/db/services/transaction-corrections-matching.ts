@@ -9,6 +9,7 @@
 import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
+import { centsToDollars } from '../../money.js';
 import { transactionCorrections, transactions } from '../schema.js';
 import {
   normalizeDescription,
@@ -172,7 +173,7 @@ export function previewRuleMatchTransactions(
       checksum: transactions.checksum,
       date: transactions.date,
       description: transactions.description,
-      amount: transactions.amount,
+      amountCents: transactions.amountCents,
       entityId: transactions.entityId,
       entityName: transactions.entityName,
     })
@@ -189,7 +190,9 @@ export function previewRuleMatchTransactions(
   );
 
   return {
-    matches: matched.slice(input.offset, input.offset + input.limit),
+    matches: matched
+      .slice(input.offset, input.offset + input.limit)
+      .map(({ amountCents, ...row }) => ({ ...row, amount: centsToDollars(amountCents) })),
     totalCount: matched.length,
   };
 }

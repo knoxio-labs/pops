@@ -14,6 +14,7 @@
 import { and, like, sql } from 'drizzle-orm';
 
 import { budgets, type FinanceDb, transactions, wishList } from '../../db/index.js';
+import { centsToDollars, centsToDollarsNullable } from '../../money.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -71,7 +72,7 @@ function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
     .select({
       id: transactions.id,
       description: transactions.description,
-      amount: transactions.amount,
+      amountCents: transactions.amountCents,
       date: transactions.date,
       entityName: transactions.entityName,
       type: transactions.type,
@@ -92,7 +93,7 @@ function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
       matchType: match.matchType,
       data: {
         description: row.description,
-        amount: row.amount,
+        amount: centsToDollars(row.amountCents),
         date: row.date,
         entityName: row.entityName,
         type: normalizeTransactionType(row.type),
@@ -125,7 +126,7 @@ function searchBudgets(db: FinanceDb, text: string): SearchHit[] {
       data: {
         category: row.category,
         period: row.period,
-        amount: row.amount,
+        amount: centsToDollarsNullable(row.amountCents),
       },
     });
   }
@@ -146,7 +147,7 @@ function searchWishlist(db: FinanceDb, text: string): SearchHit[] {
     .where(
       and(
         like(sql`lower(${wishList.item})`, `%${lowerText}%`),
-        sql`(${wishList.targetAmount} IS NULL OR coalesce(${wishList.saved}, 0) < ${wishList.targetAmount})`
+        sql`(${wishList.targetAmountCents} IS NULL OR coalesce(${wishList.savedCents}, 0) < ${wishList.targetAmountCents})`
       )
     )
     .all();
@@ -164,7 +165,7 @@ function searchWishlist(db: FinanceDb, text: string): SearchHit[] {
       data: {
         item: row.item,
         priority: row.priority,
-        targetAmount: row.targetAmount,
+        targetAmount: centsToDollarsNullable(row.targetAmountCents),
       },
     });
   }

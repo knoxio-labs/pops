@@ -44,6 +44,7 @@ import {
   importsService,
   tagVocabularyService,
 } from '../../../db/index.js';
+import { dollarsToCents } from '../../../money.js';
 import { type ContactsClient } from '../../contacts/client.js';
 import { applyChangeSet, dropTagsOnlyAddOps } from '../corrections/index.js';
 import { applyTagRuleChangeSet } from '../tag-rules/service.js';
@@ -174,7 +175,7 @@ function writeTransactionsPhase(
       importsService.insertImportTransaction(tx, {
         description: txn.description,
         account: txn.account,
-        amount: txn.amount,
+        amountCents: dollarsToCents(txn.amount),
         date: txn.date,
         type: deriveTransactionType(txn.transactionType),
         tags: txn.tags ?? [],

@@ -32,7 +32,7 @@ CREATE TABLE budgets (
   notion_id text,
   category text NOT NULL,
   period text,
-  amount real,
+  amount_cents integer,
   active integer DEFAULT 0 NOT NULL,
   notes text,
   last_edited_time text NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE transactions (
   notion_id text,
   description text NOT NULL,
   account text NOT NULL,
-  amount real NOT NULL,
+  amount_cents integer NOT NULL,
   date text NOT NULL,
   type text NOT NULL,
   tags text DEFAULT '[]' NOT NULL,
@@ -77,7 +77,7 @@ function freshDb(): FinanceDb {
 
 interface SeedTransactionInput {
   description: string;
-  amount: number;
+  amountCents: number;
   date: string;
   type: string;
   tags: string[];
@@ -88,14 +88,14 @@ function seedTransaction(db: FinanceDb, input: SeedTransactionInput): void {
   const raw = db.$client as Database.Database;
   raw
     .prepare(
-      `INSERT INTO transactions (id, description, account, amount, date, type, tags, last_edited_time)
+      `INSERT INTO transactions (id, description, account, amount_cents, date, type, tags, last_edited_time)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       crypto.randomUUID(),
       input.description,
       input.account ?? 'Test Account',
-      input.amount,
+      input.amountCents,
       input.date,
       input.type,
       JSON.stringify(input.tags),
@@ -113,7 +113,7 @@ describe('createBudget', () => {
     const created = createBudget(db, {
       category: 'Groceries',
       period: 'Monthly',
-      amount: 500,
+      amountCents: 50000,
       active: true,
       notes: 'Monthly grocery budget',
     });
@@ -121,7 +121,7 @@ describe('createBudget', () => {
     expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(created.category).toBe('Groceries');
     expect(created.period).toBe('Monthly');
-    expect(created.amount).toBe(500);
+    expect(created.amountCents).toBe(50000);
     expect(created.active).toBe(1);
     expect(created.notes).toBe('Monthly grocery budget');
     expect(created.lastEditedTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -130,7 +130,7 @@ describe('createBudget', () => {
   it('defaults optional fields to null and active to 0', () => {
     const created = createBudget(db, { category: 'Just the category' });
     expect(created.period).toBeNull();
-    expect(created.amount).toBeNull();
+    expect(created.amountCents).toBeNull();
     expect(created.active).toBe(0);
     expect(created.notes).toBeNull();
   });
@@ -247,14 +247,14 @@ describe('listBudgets', () => {
     expect(page2.rows).toHaveLength(1);
   });
 
-  it('enriches each row with `spent` (0 by default) and `remaining`', () => {
+  it('enriches each row with `spentCents` (0 by default) and `remainingCents`', () => {
     const result = listBudgets(db, { limit: 50, offset: 0 });
     for (const row of result.rows) {
-      expect(row.spent).toBe(0);
-      if (row.amount === null) {
-        expect(row.remaining).toBeNull();
+      expect(row.spentCents).toBe(0);
+      if (row.amountCents === null) {
+        expect(row.remainingCents).toBeNull();
       } else {
-        expect(row.remaining).toBe(row.amount);
+        expect(row.remainingCents).toBe(row.amountCents);
       }
     }
   });
@@ -267,14 +267,14 @@ describe('updateBudget', () => {
   });
 
   it('patches only the supplied fields and bumps lastEditedTime', async () => {
-    const created = createBudget(db, { category: 'Tent', amount: 100 });
+    const created = createBudget(db, { category: 'Tent', amountCents: 10000 });
     const original = created.lastEditedTime;
     await new Promise((r) => setTimeout(r, 5));
 
-    const updated = updateBudget(db, created.id, { amount: 250, active: true });
+    const updated = updateBudget(db, created.id, { amountCents: 25000, active: true });
     expect(updated.id).toBe(created.id);
     expect(updated.category).toBe('Tent');
-    expect(updated.amount).toBe(250);
+    expect(updated.amountCents).toBe(25000);
     expect(updated.active).toBe(1);
     expect(updated.lastEditedTime).not.toBe(original);
   });
@@ -303,8 +303,12 @@ describe('updateBudget', () => {
   });
 
   it('throws BudgetConflictError when an update would collide with an existing budget', () => {
-    createBudget(db, { category: 'Food', period: 'Monthly', amount: 100 });
-    const second = createBudget(db, { category: 'Groceries', period: 'Monthly', amount: 50 });
+    createBudget(db, { category: 'Food', period: 'Monthly', amountCents: 10000 });
+    const second = createBudget(db, {
+      category: 'Groceries',
+      period: 'Monthly',
+      amountCents: 5000,
+    });
 
     let thrown: unknown;
     try {
@@ -321,8 +325,12 @@ describe('updateBudget', () => {
   });
 
   it('uses post-patch (category, period) in the conflict error when period also changes', () => {
-    createBudget(db, { category: 'Food', period: 'Yearly', amount: 1000 });
-    const second = createBudget(db, { category: 'Groceries', period: 'Monthly', amount: 50 });
+    createBudget(db, { category: 'Food', period: 'Yearly', amountCents: 100000 });
+    const second = createBudget(db, {
+      category: 'Groceries',
+      period: 'Monthly',
+      amountCents: 5000,
+    });
 
     let thrown: unknown;
     try {
@@ -346,7 +354,7 @@ describe('createBudget — UNIQUE constraint mapping (race-survivor)', () => {
   });
 
   it('maps a UNIQUE violation on INSERT to BudgetConflictError when the pre-check is bypassed', () => {
-    createBudget(db, { category: 'Groceries', period: 'Monthly', amount: 100 });
+    createBudget(db, { category: 'Groceries', period: 'Monthly', amountCents: 10000 });
 
     const raw = db.$client as Database.Database;
     raw.exec(`
@@ -360,7 +368,7 @@ describe('createBudget — UNIQUE constraint mapping (race-survivor)', () => {
 
     let thrown: unknown;
     try {
-      createBudget(db, { category: 'RaceCategory', period: 'Monthly', amount: 200 });
+      createBudget(db, { category: 'RaceCategory', period: 'Monthly', amountCents: 20000 });
     } catch (err) {
       thrown = err;
     }
@@ -397,16 +405,20 @@ describe('withSpend', () => {
   });
 
   it('returns spent=0 and remaining=amount when no transactions match', () => {
-    const created = createBudget(db, { category: 'Groceries', amount: 800, period: 'Monthly' });
+    const created = createBudget(db, {
+      category: 'Groceries',
+      amountCents: 80000,
+      period: 'Monthly',
+    });
     const enriched = withSpend(db, created, new Date('2026-02-15T12:00:00.000Z'));
-    expect(enriched.spent).toBe(0);
-    expect(enriched.remaining).toBe(800);
+    expect(enriched.spentCents).toBe(0);
+    expect(enriched.remainingCents).toBe(80000);
   });
 
   it('returns remaining=null when the budget has no amount', () => {
-    const created = createBudget(db, { category: 'Groceries', amount: null });
+    const created = createBudget(db, { category: 'Groceries', amountCents: null });
     const enriched = withSpend(db, created);
-    expect(enriched.remaining).toBeNull();
+    expect(enriched.remainingCents).toBeNull();
   });
 });
 
@@ -418,133 +430,133 @@ describe('listBudgets — spend aggregation', () => {
     db = freshDb();
   });
 
-  function seedGroceriesBudget(amount: number, period: string | null = 'Monthly'): void {
-    createBudget(db, { category: 'Groceries', period, amount, active: true });
+  function seedGroceriesBudget(amountCents: number, period: string | null = 'Monthly'): void {
+    createBudget(db, { category: 'Groceries', period, amountCents, active: true });
   }
 
   it('reports zero spend when no matching transactions exist', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.spent).toBe(0);
-    expect(rows[0]?.remaining).toBe(800);
+    expect(rows[0]?.spentCents).toBe(0);
+    expect(rows[0]?.remainingCents).toBe(80000);
   });
 
   it('sums month-to-date outflows that match the budget category', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'Woolworths',
-      amount: -100,
+      amountCents: -10000,
       date: '2026-02-03',
       type: 'Expense',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'Coles',
-      amount: -50.5,
+      amountCents: -5050,
       date: '2026-02-10',
       type: 'Expense',
       tags: ['Groceries'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBeCloseTo(150.5, 2);
-    expect(rows[0]?.remaining).toBeCloseTo(649.5, 2);
+    expect(rows[0]?.spentCents).toBe(15050);
+    expect(rows[0]?.remainingCents).toBe(64950);
   });
 
   it('ignores income (positive amounts) when summing spend', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'Refund',
-      amount: 25,
+      amountCents: 2500,
       date: '2026-02-05',
       type: 'Income',
       tags: ['Groceries'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBe(0);
-    expect(rows[0]?.remaining).toBe(800);
+    expect(rows[0]?.spentCents).toBe(0);
+    expect(rows[0]?.remainingCents).toBe(80000);
   });
 
   it('ignores transactions with type=Transfer', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'Transfer to Savings',
-      amount: -500,
+      amountCents: -50000,
       date: '2026-02-05',
       type: 'Transfer',
       tags: ['Groceries', 'Transfer'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBe(0);
-    expect(rows[0]?.remaining).toBe(800);
+    expect(rows[0]?.spentCents).toBe(0);
+    expect(rows[0]?.remainingCents).toBe(80000);
   });
 
   it('ignores transactions tagged with other categories', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'Netflix',
-      amount: -22.99,
+      amountCents: -2299,
       date: '2026-02-05',
       type: 'Expense',
       tags: ['Entertainment'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBe(0);
+    expect(rows[0]?.spentCents).toBe(0);
   });
 
   it('yearly window includes prior months in the same year but excludes prior year', () => {
-    seedGroceriesBudget(5000, 'Yearly');
+    seedGroceriesBudget(500000, 'Yearly');
     seedTransaction(db, {
       description: 'January spend',
-      amount: -200,
+      amountCents: -20000,
       date: '2026-01-15',
       type: 'Expense',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'February spend',
-      amount: -100,
+      amountCents: -10000,
       date: '2026-02-10',
       type: 'Expense',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'Last year December',
-      amount: -999,
+      amountCents: -99900,
       date: '2025-12-28',
       type: 'Expense',
       tags: ['Groceries'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBeCloseTo(300, 2);
-    expect(rows[0]?.remaining).toBeCloseTo(4700, 2);
+    expect(rows[0]?.spentCents).toBe(30000);
+    expect(rows[0]?.remainingCents).toBe(470000);
   });
 
   it('clamps the upper bound of MTD/YTD to today (no future-dated counts)', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'Future outflow',
-      amount: -1000,
+      amountCents: -100000,
       date: '2026-02-28',
       type: 'Expense',
       tags: ['Groceries'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBe(0);
+    expect(rows[0]?.spentCents).toBe(0);
   });
 
   it('honours the custom `now` override for the period window', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'March spend',
-      amount: -120,
+      amountCents: -12000,
       date: '2026-03-04',
       type: 'Expense',
       tags: ['Groceries'],
@@ -556,59 +568,59 @@ describe('listBudgets — spend aggregation', () => {
     const feb = listBudgets(db, { limit: 10, offset: 0, now: febNow });
     const march = listBudgets(db, { limit: 10, offset: 0, now: marchNow });
 
-    expect(feb.rows[0]?.spent).toBe(0);
-    expect(march.rows[0]?.spent).toBeCloseTo(120, 2);
+    expect(feb.rows[0]?.spentCents).toBe(0);
+    expect(march.rows[0]?.spentCents).toBe(12000);
   });
 
   it('counts a multi-tag transaction once when it carries the budget category', () => {
-    seedGroceriesBudget(800);
+    seedGroceriesBudget(80000);
     seedTransaction(db, {
       description: 'Groceries + bonus',
-      amount: -75,
+      amountCents: -7500,
       date: '2026-02-04',
       type: 'Expense',
       tags: ['Groceries', 'Shopping', 'Essentials'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBeCloseTo(75, 2);
+    expect(rows[0]?.spentCents).toBe(7500);
   });
 
   it('produces a negative `remaining` when spend exceeds the budget amount', () => {
-    seedGroceriesBudget(100);
+    seedGroceriesBudget(10000);
     seedTransaction(db, {
       description: 'Big shop',
-      amount: -250,
+      amountCents: -25000,
       date: '2026-02-05',
       type: 'Expense',
       tags: ['Groceries'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBeCloseTo(250, 2);
-    expect(rows[0]?.remaining).toBeCloseTo(-150, 2);
+    expect(rows[0]?.spentCents).toBe(25000);
+    expect(rows[0]?.remainingCents).toBe(-15000);
   });
 
   it('null-period budgets aggregate spend across all time', () => {
-    createBudget(db, { category: 'Groceries', period: null, amount: 1000, active: true });
+    createBudget(db, { category: 'Groceries', period: null, amountCents: 100000, active: true });
     seedTransaction(db, {
       description: 'Last year',
-      amount: -200,
+      amountCents: -20000,
       date: '2024-06-01',
       type: 'Expense',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'This year',
-      amount: -300,
+      amountCents: -30000,
       date: '2026-02-10',
       type: 'Expense',
       tags: ['Groceries'],
     });
 
     const { rows } = listBudgets(db, { limit: 10, offset: 0, now: NOW });
-    expect(rows[0]?.spent).toBeCloseTo(500, 2);
-    expect(rows[0]?.remaining).toBeCloseTo(500, 2);
+    expect(rows[0]?.spentCents).toBe(50000);
+    expect(rows[0]?.remainingCents).toBe(50000);
   });
 });
 
@@ -625,22 +637,22 @@ describe('computeSpent', () => {
   it('aggregates only the targeted category', () => {
     seedTransaction(db, {
       description: 'Groceries',
-      amount: -50,
+      amountCents: -5000,
       date: '2026-02-10',
       type: 'Expense',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'Coffee',
-      amount: -10,
+      amountCents: -1000,
       date: '2026-02-10',
       type: 'Expense',
       tags: ['Coffee'],
     });
 
-    expect(
-      computeSpent(db, 'Groceries', 'Monthly', new Date('2026-02-15T12:00:00.000Z'))
-    ).toBeCloseTo(50, 2);
+    expect(computeSpent(db, 'Groceries', 'Monthly', new Date('2026-02-15T12:00:00.000Z'))).toBe(
+      5000
+    );
   });
 });
 

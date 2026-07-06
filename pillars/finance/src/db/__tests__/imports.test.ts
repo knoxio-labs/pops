@@ -29,7 +29,7 @@ CREATE TABLE transactions (
   notion_id text,
   description text NOT NULL,
   account text NOT NULL,
-  amount real NOT NULL,
+  amount_cents integer NOT NULL,
   date text NOT NULL,
   type text NOT NULL,
   tags text DEFAULT '[]' NOT NULL,
@@ -91,7 +91,7 @@ function seedTransaction(
       id,
       description: input.description ?? 'seed txn',
       account: input.account ?? 'amex',
-      amount: -10,
+      amountCents: -1000,
       date: input.date ?? '2026-01-01',
       type: 'Expense',
       tags: '[]',
@@ -216,7 +216,7 @@ describe('insertImportTransaction', () => {
     const row = insertImportTransaction(harness.db, {
       description: 'Espresso',
       account: 'amex',
-      amount: -4.5,
+      amountCents: -450,
       date: '2026-02-14',
       type: 'Expense',
       tags: ['Coffee', 'Outings'],
@@ -239,7 +239,7 @@ describe('insertImportTransaction', () => {
     const row = insertImportTransaction(harness.db, {
       description: 'No tags',
       account: 'amex',
-      amount: -1,
+      amountCents: -100,
       date: '2026-02-15',
       type: 'Expense',
       tags: [],
@@ -255,7 +255,7 @@ describe('insertImportTransaction', () => {
   it('honours the transactions.checksum unique index', () => {
     const base = {
       account: 'amex',
-      amount: -1,
+      amountCents: -100,
       date: '2026-02-15',
       type: 'Expense',
       tags: [],
@@ -276,7 +276,7 @@ describe('insertImportTransaction', () => {
         insertImportTransaction(harness.db, {
           description: 'rolled back',
           account: 'amex',
-          amount: -1,
+          amountCents: -100,
           date: '2026-02-15',
           type: 'Expense',
           tags: [],

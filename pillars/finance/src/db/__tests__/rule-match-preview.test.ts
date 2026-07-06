@@ -12,6 +12,7 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { dollarsToCents } from '../../money.js';
 import { previewRuleMatchTransactions } from '../services/transaction-corrections-matching.js';
 
 import type { FinanceDb } from '../services/internal.js';
@@ -23,7 +24,7 @@ CREATE TABLE transactions (
   notion_id text,
   description text NOT NULL,
   account text NOT NULL,
-  amount real NOT NULL,
+  amount_cents integer NOT NULL,
   date text NOT NULL,
   type text NOT NULL,
   tags text NOT NULL DEFAULT '[]',
@@ -72,14 +73,14 @@ function seedTransaction(raw: Database.Database, o: SeedOverrides): string {
   raw
     .prepare(
       `INSERT INTO transactions (
-        id, description, account, amount, date, type, checksum, entity_id, entity_name, last_edited_time
+        id, description, account, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
       o.description,
       'Up Savings',
-      o.amount ?? -10,
+      dollarsToCents(o.amount ?? -10),
       o.date ?? '2025-01-01',
       'Purchase',
       o.checksum === undefined ? `sum-${seq}` : o.checksum,

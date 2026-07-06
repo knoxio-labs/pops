@@ -28,7 +28,7 @@ CREATE TABLE transactions (
   notion_id text,
   description text NOT NULL,
   account text NOT NULL,
-  amount real NOT NULL,
+  amount_cents integer NOT NULL,
   date text NOT NULL,
   type text NOT NULL,
   tags text NOT NULL DEFAULT '[]',
@@ -71,7 +71,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Groceries',
       account: 'Up Savings',
-      amount: 50.0,
+      amountCents: 5000,
       date: '2025-06-15',
       type: 'Purchase',
     });
@@ -79,7 +79,7 @@ describe('createTransaction', () => {
     expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(created.description).toBe('Groceries');
     expect(created.account).toBe('Up Savings');
-    expect(created.amount).toBe(50.0);
+    expect(created.amountCents).toBe(5000);
     expect(created.date).toBe('2025-06-15');
     expect(created.type).toBe('Purchase');
     expect(created.tags).toBe('[]');
@@ -90,7 +90,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
     });
     expect(created.type).toBe('');
@@ -100,7 +100,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
       tags: ['Groceries', 'Online'],
     });
@@ -111,7 +111,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
     });
     expect(created.entityId).toBeNull();
@@ -128,7 +128,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Woolworths Groceries',
       account: 'Up Savings',
-      amount: 150.75,
+      amountCents: 15075,
       date: '2025-06-15',
       type: 'Purchase',
       tags: ['Groceries'],
@@ -163,7 +163,7 @@ describe('getTransaction', () => {
     const created = createTransaction(db, {
       description: 'X',
       account: 'Up',
-      amount: 1,
+      amountCents: 100,
       date: '2025-06-15',
     });
     const fetched = getTransaction(db, created.id);
@@ -192,7 +192,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Woolworths Groceries',
       account: 'Up Savings',
-      amount: 50,
+      amountCents: 5000,
       date: '2025-06-15',
       type: 'Purchase',
       tags: ['Groceries', 'Online'],
@@ -201,7 +201,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Coles Groceries',
       account: 'ANZ Visa',
-      amount: 30,
+      amountCents: 3000,
       date: '2025-06-14',
       type: 'Purchase',
       tags: ['Groceries'],
@@ -210,7 +210,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Fuel Station',
       account: 'Up Savings',
-      amount: 60,
+      amountCents: 6000,
       date: '2025-06-13',
       type: 'Purchase',
       tags: ['Transport'],
@@ -218,7 +218,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Salary',
       account: 'Up Savings',
-      amount: 5000,
+      amountCents: 500000,
       date: '2025-05-30',
       type: 'Income',
     });
@@ -331,16 +331,19 @@ describe('updateTransaction', () => {
     const created = createTransaction(db, {
       description: 'Original',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
     });
     const original = created.lastEditedTime;
     await new Promise((r) => setTimeout(r, 5));
 
-    const updated = updateTransaction(db, created.id, { description: 'Updated', amount: 25 });
+    const updated = updateTransaction(db, created.id, {
+      description: 'Updated',
+      amountCents: 2500,
+    });
     expect(updated.id).toBe(created.id);
     expect(updated.description).toBe('Updated');
-    expect(updated.amount).toBe(25);
+    expect(updated.amountCents).toBe(2500);
     expect(updated.account).toBe('Up');
     expect(updated.date).toBe('2025-06-15');
     expect(updated.lastEditedTime).not.toBe(original);
@@ -350,7 +353,7 @@ describe('updateTransaction', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
       tags: ['Old'],
     });
@@ -362,7 +365,7 @@ describe('updateTransaction', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
       notes: 'Some notes',
       entityId: 'ent-1',
@@ -391,7 +394,7 @@ describe('updateTransaction', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, {});
@@ -416,7 +419,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
     const created = createTransaction(db, {
       description: 'Woolworths Groceries',
       account: 'Up',
-      amount: 20,
+      amountCents: 2000,
       date: '2025-06-15',
       entityId: 'ent-wrong',
     });
@@ -434,7 +437,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
       const created = createTransaction(db, {
         description: 'Test',
         account: 'Up',
-        amount: 10,
+        amountCents: 1000,
         date: '2025-06-15',
       });
       const updated = updateTransaction(db, created.id, { [field]: 'new-value' });
@@ -446,10 +449,10 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
     });
-    const updated = updateTransaction(db, created.id, { notes: 'a note', amount: 15 });
+    const updated = updateTransaction(db, created.id, { notes: 'a note', amountCents: 1500 });
     expect(updated.matchType).toBeNull();
   });
 
@@ -457,7 +460,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, {});
@@ -475,7 +478,7 @@ describe('deleteTransaction', () => {
     const created = createTransaction(db, {
       description: 'To Delete',
       account: 'Up',
-      amount: 10,
+      amountCents: 1000,
       date: '2025-06-15',
       tags: ['X'],
       notes: 'Bye',
@@ -489,7 +492,7 @@ describe('deleteTransaction', () => {
     const created = createTransaction(db, {
       description: 'X',
       account: 'Up',
-      amount: 1,
+      amountCents: 100,
       date: '2025-06-15',
     });
     deleteTransaction(db, created.id);
@@ -511,7 +514,7 @@ describe('restoreTransaction', () => {
     const created = createTransaction(db, {
       description: 'Restored',
       account: 'Up',
-      amount: 99,
+      amountCents: 9900,
       date: '2025-06-15',
       tags: ['Z'],
       checksum: 'sum-1',
@@ -532,7 +535,7 @@ describe('restoreTransaction', () => {
     const created = createTransaction(db, {
       description: 'X',
       account: 'Up',
-      amount: 1,
+      amountCents: 100,
       date: '2025-06-15',
     });
     expect(() => restoreTransaction(db, created)).toThrow(TransactionAlreadyExistsError);
@@ -542,7 +545,7 @@ describe('restoreTransaction', () => {
     const created = createTransaction(db, {
       description: 'X',
       account: 'Up',
-      amount: 1,
+      amountCents: 100,
       date: '2025-06-15',
     });
     try {

@@ -53,7 +53,7 @@ function seedTxn(entityId: string, description: string, date: string): void {
   transactionsService.createTransaction(financeDb.db, {
     description,
     account: 'checking',
-    amount: -10,
+    amountCents: -1000,
     date,
     entityId,
   });

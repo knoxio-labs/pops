@@ -18,10 +18,10 @@ export { periodWindowEnd, periodWindowStart } from './period-window.js';
 /** Raw drizzle row shape. */
 export type BudgetRow = typeof budgets.$inferSelect;
 
-/** A budget row plus aggregated spend over its period. */
+/** A budget row plus aggregated spend over its period, both in integer cents. */
 export interface BudgetWithSpend extends BudgetRow {
-  spent: number;
-  remaining: number | null;
+  spentCents: number;
+  remainingCents: number | null;
 }
 
 /** Result of a paginated `list` call. */
@@ -34,7 +34,7 @@ export interface BudgetListResult {
 export interface CreateBudgetInput {
   category: string;
   period?: string | null;
-  amount?: number | null;
+  amountCents?: number | null;
   active?: boolean;
   notes?: string | null;
 }
@@ -43,7 +43,7 @@ export interface CreateBudgetInput {
 export interface UpdateBudgetInput {
   category?: string;
   period?: string | null;
-  amount?: number | null;
+  amountCents?: number | null;
   active?: boolean;
   notes?: string | null;
 }
@@ -84,15 +84,15 @@ export function computeSpent(
  */
 export function withSpend(db: FinanceDb, row: BudgetRow, now: Date = new Date()): BudgetWithSpend {
   const map = bulkComputeSpend(db, [{ category: row.category, period: row.period }], now);
-  const spent = map.get(spendMapKey(row.period, row.category)) ?? 0;
-  const remaining = row.amount === null ? null : row.amount - spent;
-  return { ...row, spent, remaining };
+  const spentCents = map.get(spendMapKey(row.period, row.category)) ?? 0;
+  const remainingCents = row.amountCents === null ? null : row.amountCents - spentCents;
+  return { ...row, spentCents, remainingCents };
 }
 
 /**
- * List budgets with optional filters. Each row is enriched with `spent`
- * (aggregated outflow over the budget's period) and `remaining` (amount −
- * spent, or null when the budget has no target amount).
+ * List budgets with optional filters. Each row is enriched with `spentCents`
+ * (aggregated outflow over the budget's period) and `remainingCents`
+ * (amountCents − spentCents, or null when the budget has no target amount).
  */
 export function listBudgets(db: FinanceDb, opts: ListBudgetsOptions): BudgetListResult {
   const conditions = [];
@@ -119,9 +119,9 @@ export function listBudgets(db: FinanceDb, opts: ListBudgetsOptions): BudgetList
   );
 
   const enriched: BudgetWithSpend[] = rows.map((row) => {
-    const spent = spendMap.get(spendMapKey(row.period, row.category)) ?? 0;
-    const remaining = row.amount === null ? null : row.amount - spent;
-    return { ...row, spent, remaining };
+    const spentCents = spendMap.get(spendMapKey(row.period, row.category)) ?? 0;
+    const remainingCents = row.amountCents === null ? null : row.amountCents - spentCents;
+    return { ...row, spentCents, remainingCents };
   });
 
   const countRow = db.select({ total: count() }).from(budgets).where(where).all()[0];
@@ -168,7 +168,7 @@ export function createBudget(db: FinanceDb, input: CreateBudgetInput): BudgetRow
         id,
         category: input.category,
         period,
-        amount: input.amount ?? null,
+        amountCents: input.amountCents ?? null,
         active: input.active ? 1 : 0,
         notes: input.notes ?? null,
         lastEditedTime: now,
@@ -188,7 +188,7 @@ function buildBudgetUpdates(input: UpdateBudgetInput): Partial<typeof budgets.$i
   const updates: Partial<typeof budgets.$inferInsert> = {};
   if (input.category !== undefined) updates.category = input.category;
   if (input.period !== undefined) updates.period = input.period ?? null;
-  if (input.amount !== undefined) updates.amount = input.amount ?? null;
+  if (input.amountCents !== undefined) updates.amountCents = input.amountCents ?? null;
   if (input.active !== undefined) updates.active = input.active ? 1 : 0;
   if (input.notes !== undefined) updates.notes = input.notes ?? null;
   return updates;

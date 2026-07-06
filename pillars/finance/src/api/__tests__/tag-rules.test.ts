@@ -362,19 +362,19 @@ describe('tagRules — matchPreview', () => {
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS 1234 SYDNEY',
       account: 'checking',
-      amount: -50,
+      amountCents: -5000,
       date: '2026-01-01',
     });
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS METRO CBD',
       account: 'checking',
-      amount: -12,
+      amountCents: -1200,
       date: '2026-01-02',
     });
     transactionsService.createTransaction(db, {
       description: 'COLES 5678',
       account: 'checking',
-      amount: -20,
+      amountCents: -2000,
       date: '2026-01-03',
     });
 
@@ -433,7 +433,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       tags: ['friday'],
     });
@@ -460,7 +460,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       tags: [],
     });
@@ -480,7 +480,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
     });
     const ruleId = await seedRule();
@@ -495,14 +495,14 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const ownEntityTxn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       entityId: 'ent-darlo',
     });
     const otherEntityTxn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       entityId: 'ent-other',
     });
@@ -540,7 +540,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       tags: [],
     });
@@ -565,7 +565,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       tags: [],
     });
@@ -587,7 +587,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
       account: 'amex',
-      amount: -45,
+      amountCents: -4500,
       date: '2026-01-01',
       tags: [],
     });

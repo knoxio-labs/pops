@@ -42,7 +42,7 @@ function seedTransactionWithEntity(checksum: string, entityId: string): void {
   importsService.insertImportTransaction(opened.db, {
     description: `TXN ${checksum}`,
     account: 'Amex',
-    amount: -10,
+    amountCents: -1000,
     date: '2026-02-13',
     type: 'Expense',
     tags: [],

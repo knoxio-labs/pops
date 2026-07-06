@@ -30,7 +30,7 @@ export type TransactionRow = typeof transactions.$inferSelect;
 export interface CreateTransactionInput {
   description: string;
   account: string;
-  amount: number;
+  amountCents: number;
   date: string;
   type?: string | undefined;
   tags?: string[] | undefined;
@@ -50,7 +50,7 @@ export interface CreateTransactionInput {
 export interface UpdateTransactionInput {
   description?: string;
   account?: string;
-  amount?: number;
+  amountCents?: number;
   date?: string;
   type?: string;
   tags?: string[];
@@ -153,7 +153,7 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
       id,
       description: input.description,
       account: input.account,
-      amount: input.amount,
+      amountCents: input.amountCents,
       date: input.date,
       type: input.type ?? '',
       tags: JSON.stringify(input.tags ?? []),
@@ -177,7 +177,7 @@ type TransactionUpdate = Partial<typeof transactions.$inferInsert>;
 function applyCoreFields(input: UpdateTransactionInput, updates: TransactionUpdate): void {
   if (input.description !== undefined) updates.description = input.description;
   if (input.account !== undefined) updates.account = input.account;
-  if (input.amount !== undefined) updates.amount = input.amount;
+  if (input.amountCents !== undefined) updates.amountCents = input.amountCents;
   if (input.date !== undefined) updates.date = input.date;
   if (input.type !== undefined) updates.type = input.type;
   if (input.tags !== undefined) updates.tags = JSON.stringify(input.tags);

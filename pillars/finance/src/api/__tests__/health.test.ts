@@ -57,7 +57,7 @@ describe('GET /health', () => {
     transactionsService.createTransaction(financeDb.db, {
       description: 'Groceries',
       account: 'Up Everyday',
-      amount: 42,
+      amountCents: 4200,
       date: '2026-07-01',
     });
 
@@ -73,7 +73,7 @@ describe('GET /health', () => {
     const stale = transactionsService.createTransaction(financeDb.db, {
       description: 'Old import',
       account: 'Amex',
-      amount: 10,
+      amountCents: 1000,
       date: '2026-01-01',
     });
     const staleDays = 30;
@@ -95,7 +95,7 @@ describe('GET /health', () => {
     const row = transactionsService.createTransaction(financeDb.db, {
       description: 'Corrupt import',
       account: 'Amex',
-      amount: 10,
+      amountCents: 1000,
       date: '2026-01-01',
     });
     financeDb.db

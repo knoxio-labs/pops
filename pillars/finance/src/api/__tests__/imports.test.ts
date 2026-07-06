@@ -106,7 +106,7 @@ function seedTransaction(overrides: {
   importsService.insertImportTransaction(financeDb.db, {
     description: overrides.description,
     account: 'Amex',
-    amount: -42.5,
+    amountCents: -4250,
     date: '2026-02-13',
     type: 'Expense',
     tags: [],

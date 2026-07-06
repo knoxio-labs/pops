@@ -27,11 +27,12 @@ export interface BudgetTarget {
 
 interface SpendRow {
   category: string;
-  spent: number | null;
+  spentCents: number | null;
 }
 
 /**
- * Aggregate per-category spend for a set of budget targets in bulk.
+ * Aggregate per-category spend (in integer cents) for a set of budget
+ * targets in bulk.
  *
  * Returns a `Map` keyed by `spendMapKey(period, category)`. Missing
  * entries mean zero spend.
@@ -79,14 +80,14 @@ export function bulkComputeSpend(
 
     const rows = db.all<SpendRow>(sql`
       SELECT je.value AS category,
-             SUM(CASE WHEN ${transactions.amount} < 0 THEN -${transactions.amount} ELSE 0 END) AS spent
+             SUM(CASE WHEN ${transactions.amountCents} < 0 THEN -${transactions.amountCents} ELSE 0 END) AS spentCents
       FROM ${transactions}, json_each(${transactions.tags}) AS je
       WHERE ${and(...conditions)}
       GROUP BY je.value
     `);
 
     for (const row of rows) {
-      result.set(spendMapKey(period, row.category), row.spent ?? 0);
+      result.set(spendMapKey(period, row.category), row.spentCents ?? 0);
     }
   }
 
