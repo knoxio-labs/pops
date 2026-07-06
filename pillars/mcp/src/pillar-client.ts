@@ -37,6 +37,19 @@ const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
   contacts: 'POPS_CONTACTS_API_URL',
 };
 
+/**
+ * In-cluster registry URL used when `POPS_REGISTRY_URL` is unset. The pillar
+ * SDK's own built-in default still targets the pre-rename `core-api` host,
+ * which no longer resolves on the deployed fleet. Removing the hardcoded
+ * `internalBaseUrls` bypass meant registry discovery — previously skipped for
+ * every known pillar — became the sole resolution path, so that dead default
+ * started surfacing as a blanket `contract-mismatch` on every pillar. Pinning
+ * the current `registry-api` service name keeps discovery pointed at the live
+ * registry (the source of truth for every pillar's baseUrl) without
+ * reintroducing per-pillar URL hardcoding. `POPS_REGISTRY_URL` still overrides.
+ */
+const DEFAULT_REGISTRY_URL = 'http://registry-api:3001';
+
 type ApiKeySource = 'POPS_INTERNAL_API_KEY' | 'POPS_API_KEY';
 
 interface ResolvedApiKey {
@@ -87,12 +100,12 @@ function ensureConfigured(): void {
   // Silent auth-source misconfig (CF087) is hard to debug in production — log
   // which env var actually won so an unexpected legacy fallback is visible.
   console.warn(`[pops-mcp] resolved service-account key from ${resolved.source}`);
-  const registryUrl = readNonBlankEnv('POPS_REGISTRY_URL');
+  const registryUrl = readNonBlankEnv('POPS_REGISTRY_URL') ?? DEFAULT_REGISTRY_URL;
   const internalBaseUrls = resolveInternalBaseUrlOverrides();
   configureServerSdk({
     apiKey: resolved.key,
     ...(internalBaseUrls !== undefined ? { internalBaseUrls } : {}),
-    ...(registryUrl !== undefined ? { registry: { registryUrl } } : {}),
+    registry: { registryUrl },
   });
   configured = true;
 }
