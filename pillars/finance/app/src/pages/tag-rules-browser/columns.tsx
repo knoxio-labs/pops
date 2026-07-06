@@ -1,4 +1,4 @@
-import { Ban, Pencil, Trash2 } from 'lucide-react';
+import { Ban, Pencil, Trash2, Wand2 } from 'lucide-react';
 
 import { Badge, Button, Chip, formatDate, hashToColor, SortableHeader } from '@pops/ui';
 
@@ -11,7 +11,9 @@ type BuildOptions = {
   onEditClick: (rule: TagRule) => void;
   onDisableClick: (id: string) => void;
   onDeleteClick: (id: string) => void;
+  onApplyExistingClick: (id: string) => void;
   isDisablePending: (id: string) => boolean;
+  isApplyExistingPending: (id: string) => boolean;
 };
 
 const patternColumn: ColumnDef<TagRule> = {
@@ -98,51 +100,79 @@ const activeColumn: ColumnDef<TagRule> = {
     ),
 };
 
+function ApplyExistingButton({ row, options }: { row: TagRule; options: BuildOptions }) {
+  if (!row.isActive) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        options.onApplyExistingClick(row.id);
+      }}
+      disabled={options.isApplyExistingPending(row.id)}
+      aria-label={`Apply tag rule ${row.descriptionPattern} to existing transactions`}
+      title="Apply to existing transactions"
+    >
+      <Wand2 className="h-4 w-4" />
+    </Button>
+  );
+}
+
+function DisableButton({ row, options }: { row: TagRule; options: BuildOptions }) {
+  if (!row.isActive) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        options.onDisableClick(row.id);
+      }}
+      disabled={options.isDisablePending(row.id)}
+      aria-label={`Disable tag rule ${row.descriptionPattern}`}
+    >
+      <Ban className="h-4 w-4" />
+    </Button>
+  );
+}
+
+function RowActions({ row, options }: { row: TagRule; options: BuildOptions }) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <ApplyExistingButton row={row} options={options} />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          options.onEditClick(row);
+        }}
+        aria-label={`Edit tag rule ${row.descriptionPattern}`}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <DisableButton row={row} options={options} />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          options.onDeleteClick(row.id);
+        }}
+        aria-label={`Delete tag rule ${row.descriptionPattern}`}
+      >
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
+}
+
 function actionsColumn(options: BuildOptions): ColumnDef<TagRule> {
-  const { onEditClick, onDisableClick, onDeleteClick, isDisablePending } = options;
   return {
     id: 'actions',
     header: '',
-    cell: ({ row }) => (
-      <div className="flex items-center justify-end gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEditClick(row.original);
-          }}
-          aria-label={`Edit tag rule ${row.original.descriptionPattern}`}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        {row.original.isActive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDisableClick(row.original.id);
-            }}
-            disabled={isDisablePending(row.original.id)}
-            aria-label={`Disable tag rule ${row.original.descriptionPattern}`}
-          >
-            <Ban className="h-4 w-4" />
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteClick(row.original.id);
-          }}
-          aria-label={`Delete tag rule ${row.original.descriptionPattern}`}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      </div>
-    ),
+    cell: ({ row }) => <RowActions row={row.original} options={options} />,
   };
 }
 

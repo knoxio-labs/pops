@@ -5,7 +5,12 @@ import { toast } from 'sonner';
 import { unwrap as unwrapContacts } from '../../contacts-api-helpers.js';
 import { entitiesList } from '../../contacts-api/index.js';
 import { unwrap } from '../../finance-api-helpers.js';
-import { tagRulesDelete, tagRulesDisable, tagRulesList } from '../../finance-api/index.js';
+import {
+  tagRulesApplyExisting,
+  tagRulesDelete,
+  tagRulesDisable,
+  tagRulesList,
+} from '../../finance-api/index.js';
 
 import type { MatchType, TagRule } from './types';
 
@@ -126,6 +131,37 @@ function useDisableFlow() {
   return { disableMutation, handleDisable };
 }
 
+/**
+ * Retroactive apply (#3660): merges a rule's tags into every existing
+ * matching transaction it hasn't already tagged. A direct, real (non-dryRun)
+ * apply — the browser doesn't offer a preview step since the operation is
+ * additive-only and skips manual overrides, so there is nothing destructive
+ * to confirm.
+ */
+function useApplyExistingFlow() {
+  const queryClient = useQueryClient();
+  const applyExistingMutation = useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(await tagRulesApplyExisting({ path: { id }, body: {} })),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
+      const { updated } = result.data;
+      toast.success(
+        updated > 0
+          ? `Tagged ${updated} existing transaction${updated === 1 ? '' : 's'}`
+          : 'No existing transactions needed tagging'
+      );
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const handleApplyExisting = useCallback(
+    (id: string) => applyExistingMutation.mutate(id),
+    [applyExistingMutation]
+  );
+  return { applyExistingMutation, handleApplyExisting };
+}
+
 function useEntityNames() {
   const entitiesQuery = useQuery({
     queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
@@ -141,6 +177,7 @@ export function useTagRulesBrowserModel() {
   const filters = useFilterState();
   const del = useDeleteFlow();
   const disable = useDisableFlow();
+  const applyExisting = useApplyExistingFlow();
   const [editingRule, setEditingRule] = useState<TagRule | null>(null);
   const entityNames = useEntityNames();
 
@@ -182,6 +219,8 @@ export function useTagRulesBrowserModel() {
     handleDelete: del.handleDelete,
     disableMutation: disable.disableMutation,
     handleDisable: disable.handleDisable,
+    applyExistingMutation: applyExisting.applyExistingMutation,
+    handleApplyExisting: applyExisting.handleApplyExisting,
     editingRule,
     handleEditRule,
     closeEditDialog,

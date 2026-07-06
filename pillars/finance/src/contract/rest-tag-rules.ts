@@ -22,6 +22,8 @@ import { ERR_RESPONSES, MessageSchema, PaginationMetaSchema } from './rest-schem
 import {
   MaxPreviewItems,
   PreviewInputTransactionSchema,
+  TagRuleApplyExistingBody,
+  TagRuleApplyExistingResultSchema,
   TagRuleChangeSetProposalSchema,
   TagRuleChangeSetSchema,
   TagRuleListQuery,
@@ -100,6 +102,15 @@ export const financeTagRulesContract = c.router({
     body: z.object({}).optional(),
     responses: { 200: MessageSchema, ...ERR_RESPONSES },
     summary: 'Delete a tag rule',
+  },
+  applyExisting: {
+    method: 'POST',
+    path: '/tag-rules/:id/apply-existing',
+    pathParams: z.object({ id: z.string() }),
+    body: TagRuleApplyExistingBody,
+    responses: { 200: z.object({ data: TagRuleApplyExistingResultSchema }), ...ERR_RESPONSES },
+    summary:
+      'Retroactively apply a tag rule to every existing matching transaction (#3660); dryRun previews without writing',
   },
   propose: {
     method: 'POST',

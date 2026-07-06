@@ -29,22 +29,13 @@ export interface TagRule {
   lastUsedAt: string | null;
 }
 
-function parseTags(raw: string): string[] {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
 export function toTagRule(row: TransactionTagRuleRow): TagRule {
   return {
     id: row.id,
     descriptionPattern: row.descriptionPattern,
     matchType: row.matchType,
     entityId: row.entityId,
-    tags: parseTags(row.tags),
+    tags: transactionTagRulesService.parseTagRuleTags(row.tags),
     isActive: row.isActive,
     confidence: row.confidence,
     priority: row.priority,

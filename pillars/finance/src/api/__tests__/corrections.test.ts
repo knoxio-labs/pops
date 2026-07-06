@@ -759,3 +759,133 @@ describe('corrections — listMerged', () => {
     expect(merged.data.find((c) => c.id === created.data.id)?.priority).toBe(7);
   });
 });
+
+describe('corrections — applyExisting (retroactive apply, #3660)', () => {
+  async function seedConfidentRule(): Promise<string> {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'BIG W',
+      matchType: 'exact',
+      entityId: 'ent-bigw',
+      entityName: 'BIG W',
+      tags: ['shopping'],
+    });
+    await client().corrections.update(created.data.id, { confidence: 0.95 });
+    return created.data.id;
+  }
+
+  it('applies a confident rule to a matching non-manual transaction: entity + tags + provenance', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'BIG W',
+      account: 'amex',
+      amount: -30,
+      date: '2026-01-01',
+    });
+    const ruleId = await seedConfidentRule();
+
+    const result = await client().corrections.applyExisting(ruleId);
+    expect(result.data).toMatchObject({
+      dryRun: false,
+      matched: 1,
+      updated: 1,
+      skippedManual: 0,
+      skippedUncertain: 0,
+    });
+
+    const row = transactionsService.getTransaction(db, txn.id);
+    expect(row.entityId).toBe('ent-bigw');
+    expect(row.entityName).toBe('BIG W');
+    expect(JSON.parse(row.tags)).toEqual(['shopping']);
+    expect(row.matchType).toBe('learned');
+    expect(row.matchRuleId).toBe(ruleId);
+    expect(row.matchConfidence).toBeCloseTo(0.95, 5);
+  });
+
+  it('skips a transaction whose matchType is manual (CF017/#3623)', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'BIG W',
+      account: 'amex',
+      amount: -30,
+      date: '2026-01-01',
+      entityId: 'ent-user-picked',
+    });
+    transactionsService.updateTransaction(db, txn.id, { entityId: 'ent-user-picked' });
+    const ruleId = await seedConfidentRule();
+
+    const result = await client().corrections.applyExisting(ruleId);
+    expect(result.data).toMatchObject({ matched: 1, updated: 0, skippedManual: 1 });
+
+    const row = transactionsService.getTransaction(db, txn.id);
+    expect(row.entityId).toBe('ent-user-picked');
+    expect(row.matchType).toBe('manual');
+  });
+
+  it('skips an uncertain (sub-threshold) rule match, applying nothing', async () => {
+    const db = financeDb.db;
+    transactionsService.createTransaction(db, {
+      description: 'BIG W',
+      account: 'amex',
+      amount: -30,
+      date: '2026-01-01',
+    });
+    // Default confidence from createOrUpdate is below the 0.9 matched threshold.
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'BIG W',
+      matchType: 'exact',
+      entityId: 'ent-bigw',
+      entityName: 'BIG W',
+      tags: ['shopping'],
+    });
+
+    const result = await client().corrections.applyExisting(created.data.id);
+    expect(result.data).toMatchObject({ matched: 1, updated: 0, skippedUncertain: 1 });
+  });
+
+  it('dryRun computes the same match set without writing or bumping usage telemetry', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'BIG W',
+      account: 'amex',
+      amount: -30,
+      date: '2026-01-01',
+    });
+    const ruleId = await seedConfidentRule();
+
+    const preview = await client().corrections.applyExisting(ruleId, { dryRun: true });
+    expect(preview.data).toMatchObject({ dryRun: true, matched: 1, updated: 1 });
+
+    const row = transactionsService.getTransaction(db, txn.id);
+    expect(row.entityId).toBeNull();
+    expect(row.matchType).toBeNull();
+
+    const rule = await client().corrections.get(ruleId);
+    expect(rule.data.timesApplied).toBe(0);
+  });
+
+  it('a second real apply against the same rule is a no-op (idempotent)', async () => {
+    const db = financeDb.db;
+    transactionsService.createTransaction(db, {
+      description: 'BIG W',
+      account: 'amex',
+      amount: -30,
+      date: '2026-01-01',
+    });
+    const ruleId = await seedConfidentRule();
+
+    const first = await client().corrections.applyExisting(ruleId);
+    expect(first.data.updated).toBe(1);
+
+    const second = await client().corrections.applyExisting(ruleId);
+    expect(second.data).toMatchObject({ matched: 1, updated: 0 });
+
+    const rule = await client().corrections.get(ruleId);
+    expect(rule.data.timesApplied).toBe(1);
+  });
+
+  it('404s applying an unknown rule id', async () => {
+    await expect(client().corrections.applyExisting('nope')).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});

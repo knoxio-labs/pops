@@ -32,6 +32,8 @@ import {
   ChangeSetPreviewDiffSchema,
   ChangeSetPreviewSummarySchema,
   ChangeSetSchema,
+  CorrectionApplyExistingBody,
+  CorrectionApplyExistingResultSchema,
   CorrectionListQuery,
   CorrectionMutation,
   CorrectionSchema,
@@ -129,6 +131,15 @@ export const financeCorrectionsContract = c.router({
     body: z.object({ delta: z.number().min(-1).max(1) }),
     responses: { 200: MessageSchema, ...ERR_RESPONSES },
     summary: 'Nudge a correction confidence by delta (deletes the row when it drops below 0.3)',
+  },
+  applyExisting: {
+    method: 'POST',
+    path: '/corrections/:id/apply-existing',
+    pathParams: z.object({ id: z.string() }),
+    body: CorrectionApplyExistingBody,
+    responses: { 200: z.object({ data: CorrectionApplyExistingResultSchema }), ...ERR_RESPONSES },
+    summary:
+      'Retroactively apply a correction rule to every existing transaction it currently wins against (#3660); dryRun previews without writing',
   },
   listMerged: {
     method: 'POST',

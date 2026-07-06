@@ -44,6 +44,12 @@ runs all ops in one DB transaction (atomic — no partial ChangeSet lands).
 - `POST /tag-rules/:id/disable` — soft-delete (`isActive=false`); a real, direct
   mutation (not folded into a ChangeSet). Returns `{ message }`; 404 on an unknown id.
 - `DELETE /tag-rules/:id` — hard delete. Returns `{ message }`; 404 on an unknown id.
+- `POST /tag-rules/:id/apply-existing` — body `{ dryRun? }`; retroactively merges
+  the rule's tags into every existing transaction it matches (additive-only, skips
+  `matchType: 'manual'` rows). Returns `{ data: { dryRun, matched, updated, skippedManual } }`,
+  where `matched` counts every pattern-matched row and `updated`/`skippedManual` are
+  sub-counts. `dryRun` computes the same set without writing or bumping usage telemetry.
+  404 on an unknown id (#3660).
 - `POST /tag-rules/match-preview` — body `{ pattern, matchType, limit?, offset? }`;
   returns `{ data: { matches, totalCount } }`: every DB transaction the candidate
   `(pattern, matchType)` currently matches, paged, with the true full-DB total
@@ -119,6 +125,11 @@ tag rules could only be added, never fixed or pruned in-product (#3659 / CF058).
 - **Disable** — one-click, no confirmation (reversible via edit → Active);
   calls `POST /tag-rules/:id/disable`, a real mutation, not a client-only toggle.
 - **Delete** — confirmation dialog, then `DELETE /tag-rules/:id`.
+- **Apply to existing transactions** — a wand row action calls
+  `POST /tag-rules/:id/apply-existing`, retroactively merging the rule's tags into
+  every existing transaction it matches (#3660). No confirm dialog: the operation
+  is additive-only and skips manual overrides, so there is nothing destructive to
+  gate. A success toast reports how many rows were tagged.
 - **Usage/history preview** — the edit dialog's side panel shows `timesApplied` /
   `lastUsedAt` telemetry plus a live `POST /tag-rules/match-preview` scan: every
   transaction in the full finance DB the rule's `(pattern, matchType)` currently

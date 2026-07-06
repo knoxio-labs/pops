@@ -27,6 +27,9 @@ import type {
   CorrectionsApplyChangeSetData,
   CorrectionsApplyChangeSetErrors,
   CorrectionsApplyChangeSetResponses,
+  CorrectionsApplyExistingData,
+  CorrectionsApplyExistingErrors,
+  CorrectionsApplyExistingResponses,
   CorrectionsCreateOrUpdateData,
   CorrectionsCreateOrUpdateErrors,
   CorrectionsCreateOrUpdateResponses,
@@ -118,6 +121,9 @@ import type {
   SettingsSetResponses,
   TagRulesApplyData,
   TagRulesApplyErrors,
+  TagRulesApplyExistingData,
+  TagRulesApplyExistingErrors,
+  TagRulesApplyExistingResponses,
   TagRulesApplyResponses,
   TagRulesDeleteData,
   TagRulesDeleteErrors,
@@ -620,6 +626,25 @@ export const correctionsAdjustConfidence = <ThrowOnError extends boolean = false
   });
 
 /**
+ * Retroactively apply a correction rule to every existing transaction it currently wins against (#3660); dryRun previews without writing
+ */
+export const correctionsApplyExisting = <ThrowOnError extends boolean = false>(
+  options: Options<CorrectionsApplyExistingData, ThrowOnError>
+): RequestResult<CorrectionsApplyExistingResponses, CorrectionsApplyExistingErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    CorrectionsApplyExistingResponses,
+    CorrectionsApplyExistingErrors,
+    ThrowOnError
+  >({
+    url: '/corrections/{id}/apply-existing',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * List entities with per-entity transactionCount; orphanedOnly=true returns count===0
  */
 export const entityUsageList = <ThrowOnError extends boolean = false>(
@@ -1007,6 +1032,25 @@ export const tagRulesUpdate = <ThrowOnError extends boolean = false>(
 ): RequestResult<TagRulesUpdateResponses, TagRulesUpdateErrors, ThrowOnError> =>
   (options.client ?? client).patch<TagRulesUpdateResponses, TagRulesUpdateErrors, ThrowOnError>({
     url: '/tag-rules/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Retroactively apply a tag rule to every existing matching transaction (#3660); dryRun previews without writing
+ */
+export const tagRulesApplyExisting = <ThrowOnError extends boolean = false>(
+  options: Options<TagRulesApplyExistingData, ThrowOnError>
+): RequestResult<TagRulesApplyExistingResponses, TagRulesApplyExistingErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    TagRulesApplyExistingResponses,
+    TagRulesApplyExistingErrors,
+    ThrowOnError
+  >({
+    url: '/tag-rules/{id}/apply-existing',
     ...options,
     headers: {
       'Content-Type': 'application/json',

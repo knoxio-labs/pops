@@ -15,9 +15,15 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, transactionsService, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  openFinanceDb,
+  transactions,
+  transactionsService,
+  type OpenedFinanceDb,
+} from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
@@ -396,5 +402,208 @@ describe('tagRules — reject', () => {
 
     const withoutSignal = await client().tagRules.reject({ changeSet: addOp, feedback: 'no' });
     expect(withoutSignal.followUpProposal).toBeNull();
+  });
+});
+
+describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
+  async function seedRule(): Promise<string> {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        source: 'test',
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'DARLO BAR',
+              matchType: 'contains',
+              tags: ['bar', 'nights out'],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const id = created.rules[0]?.id;
+    if (!id) throw new Error('rule not created');
+    return id;
+  }
+
+  it('applies to a matching non-manual transaction, merging tags additively', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      tags: ['friday'],
+    });
+    const ruleId = await seedRule();
+
+    const result = await client().tagRules.applyExisting(ruleId);
+    expect(result.data).toMatchObject({
+      dryRun: false,
+      matched: 1,
+      updated: 1,
+      skippedManual: 0,
+    });
+
+    const refetched = await client().transactions.get(txn.id);
+    expect(refetched.data.tags.toSorted()).toEqual(['bar', 'friday', 'nights out'].toSorted());
+
+    const rule = await client().tagRules.get(ruleId);
+    expect(rule.data.timesApplied).toBe(1);
+    expect(rule.data.lastUsedAt).not.toBeNull();
+  });
+
+  it('skips a transaction whose matchType is manual (CF017/#3623)', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      tags: [],
+    });
+    // A direct classification-field PATCH stamps matchType: 'manual'.
+    transactionsService.updateTransaction(db, txn.id, { entityId: 'ent-user-picked' });
+    const ruleId = await seedRule();
+
+    const result = await client().tagRules.applyExisting(ruleId);
+    expect(result.data).toMatchObject({ matched: 1, updated: 0, skippedManual: 1 });
+
+    const refetched = await client().transactions.get(txn.id);
+    expect(refetched.data.tags).toEqual([]);
+  });
+
+  it('a disabled tag rule is a no-op', async () => {
+    const db = financeDb.db;
+    transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+    });
+    const ruleId = await seedRule();
+    await client().tagRules.disable(ruleId);
+
+    const result = await client().tagRules.applyExisting(ruleId);
+    expect(result.data).toMatchObject({ dryRun: false, matched: 0, updated: 0, skippedManual: 0 });
+  });
+
+  it('an entity-scoped tag rule only matches its own entity, leaving other entities untouched', async () => {
+    const db = financeDb.db;
+    const ownEntityTxn = transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      entityId: 'ent-darlo',
+    });
+    const otherEntityTxn = transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      entityId: 'ent-other',
+    });
+    const created = await client().tagRules.apply({
+      changeSet: {
+        source: 'test',
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'DARLO BAR',
+              matchType: 'contains',
+              tags: ['bar'],
+              entityId: 'ent-darlo',
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const ruleId = created.rules[0]?.id;
+    if (!ruleId) throw new Error('rule not created');
+
+    const result = await client().tagRules.applyExisting(ruleId);
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
+
+    const ownRow = await client().transactions.get(ownEntityTxn.id);
+    expect(ownRow.data.tags).toEqual(['bar']);
+    const otherRow = await client().transactions.get(otherEntityTxn.id);
+    expect(otherRow.data.tags).toEqual([]);
+  });
+
+  it('leaves matchType untouched — the tag-rule path only merges tags', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      tags: [],
+    });
+    db.update(transactions)
+      .set({ matchType: 'learned', matchRuleId: 'some-correction-rule', matchConfidence: 0.95 })
+      .where(eq(transactions.id, txn.id))
+      .run();
+    const ruleId = await seedRule();
+
+    const result = await client().tagRules.applyExisting(ruleId);
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
+
+    const row = transactionsService.getTransaction(db, txn.id);
+    expect(row.matchType).toBe('learned');
+    expect(row.matchRuleId).toBe('some-correction-rule');
+    expect(row.matchConfidence).toBeCloseTo(0.95, 5);
+    expect(JSON.parse(row.tags).toSorted()).toEqual(['bar', 'nights out'].toSorted());
+  });
+
+  it('dryRun computes the same match set without writing or bumping usage telemetry', async () => {
+    const db = financeDb.db;
+    const txn = transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      tags: [],
+    });
+    const ruleId = await seedRule();
+
+    const preview = await client().tagRules.applyExisting(ruleId, { dryRun: true });
+    expect(preview.data).toMatchObject({ dryRun: true, matched: 1, updated: 1, skippedManual: 0 });
+
+    const refetched = await client().transactions.get(txn.id);
+    expect(refetched.data.tags).toEqual([]);
+
+    const rule = await client().tagRules.get(ruleId);
+    expect(rule.data.timesApplied).toBe(0);
+    expect(rule.data.lastUsedAt).toBeNull();
+  });
+
+  it('a second real apply against the same rule is a no-op (idempotent)', async () => {
+    const db = financeDb.db;
+    transactionsService.createTransaction(db, {
+      description: 'DARLO BAR SYDNEY',
+      account: 'amex',
+      amount: -45,
+      date: '2026-01-01',
+      tags: [],
+    });
+    const ruleId = await seedRule();
+
+    const first = await client().tagRules.applyExisting(ruleId);
+    expect(first.data.updated).toBe(1);
+
+    const second = await client().tagRules.applyExisting(ruleId);
+    expect(second.data).toMatchObject({ matched: 1, updated: 0, skippedManual: 0 });
+
+    const rule = await client().tagRules.get(ruleId);
+    expect(rule.data.timesApplied).toBe(1);
+  });
+
+  it('404s applying an unknown rule id', async () => {
+    await expect(client().tagRules.applyExisting('nope')).rejects.toMatchObject({ status: 404 });
   });
 });

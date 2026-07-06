@@ -185,6 +185,21 @@ interface RuleMatchPreviewResult {
   totalCount: number;
 }
 
+interface TagRuleApplyExistingResult {
+  dryRun: boolean;
+  matched: number;
+  updated: number;
+  skippedManual: number;
+}
+
+interface CorrectionApplyExistingResult {
+  dryRun: boolean;
+  matched: number;
+  updated: number;
+  skippedManual: number;
+  skippedUncertain: number;
+}
+
 interface CorrectionMatchSummary {
   matched: boolean;
   status: 'matched' | 'uncertain' | null;
@@ -304,6 +319,10 @@ export function makeClient(app: Express) {
         send<{ data: TagRule; message: string }>(r.patch(`/tag-rules/${id}`).send(data)),
       disable: (id: string) => send<{ message: string }>(r.post(`/tag-rules/${id}/disable`)),
       delete: (id: string) => send<{ message: string }>(r.delete(`/tag-rules/${id}`)),
+      applyExisting: (id: string, body: { dryRun?: boolean } = {}) =>
+        send<{ data: TagRuleApplyExistingResult }>(
+          r.post(`/tag-rules/${id}/apply-existing`).send(body)
+        ),
       matchPreview: (body: Record<string, unknown>) =>
         send<{ data: RuleMatchPreviewResult }>(r.post('/tag-rules/match-preview').send(body)),
       vocabulary: () => send<{ tags: string[] }>(r.get('/tag-rules/vocabulary')),
@@ -329,6 +348,10 @@ export function makeClient(app: Express) {
       delete: (id: string) => send<{ message: string }>(r.delete(`/corrections/${id}`)),
       adjustConfidence: (id: string, delta: number) =>
         send<{ message: string }>(r.post(`/corrections/${id}/adjust-confidence`).send({ delta })),
+      applyExisting: (id: string, body: { dryRun?: boolean } = {}) =>
+        send<{ data: CorrectionApplyExistingResult }>(
+          r.post(`/corrections/${id}/apply-existing`).send(body)
+        ),
       findMatch: (body: { description: string; minConfidence?: number }) =>
         send<{ data: Correction | null; status: 'matched' | 'uncertain' | null }>(
           r.post('/corrections/find-match').send(body)

@@ -1887,6 +1887,68 @@ export type CorrectionsAdjustConfidenceResponses = {
 export type CorrectionsAdjustConfidenceResponse =
   CorrectionsAdjustConfidenceResponses[keyof CorrectionsAdjustConfidenceResponses];
 
+export type CorrectionsApplyExistingData = {
+  /**
+   * Body
+   */
+  body?: {
+    dryRun?: boolean;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/corrections/{id}/apply-existing';
+};
+
+export type CorrectionsApplyExistingErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CorrectionsApplyExistingError =
+  CorrectionsApplyExistingErrors[keyof CorrectionsApplyExistingErrors];
+
+export type CorrectionsApplyExistingResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      dryRun: boolean;
+      matched: number;
+      skippedManual: number;
+      skippedUncertain: number;
+      updated: number;
+    };
+  };
+};
+
+export type CorrectionsApplyExistingResponse =
+  CorrectionsApplyExistingResponses[keyof CorrectionsApplyExistingResponses];
+
 export type EntityUsageListData = {
   body?: never;
   path?: never;
@@ -4543,6 +4605,67 @@ export type TagRulesUpdateResponses = {
 };
 
 export type TagRulesUpdateResponse = TagRulesUpdateResponses[keyof TagRulesUpdateResponses];
+
+export type TagRulesApplyExistingData = {
+  /**
+   * Body
+   */
+  body?: {
+    dryRun?: boolean;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/tag-rules/{id}/apply-existing';
+};
+
+export type TagRulesApplyExistingErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesApplyExistingError =
+  TagRulesApplyExistingErrors[keyof TagRulesApplyExistingErrors];
+
+export type TagRulesApplyExistingResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      dryRun: boolean;
+      matched: number;
+      skippedManual: number;
+      updated: number;
+    };
+  };
+};
+
+export type TagRulesApplyExistingResponse =
+  TagRulesApplyExistingResponses[keyof TagRulesApplyExistingResponses];
 
 export type TagRulesDisableData = {
   /**

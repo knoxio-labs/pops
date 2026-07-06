@@ -198,3 +198,16 @@ export const ListMergedBody = z.object({
   limit: z.number().int().positive().max(50000).optional(),
   offset: z.number().int().nonnegative().optional(),
 });
+
+/** Body for the retroactive-apply endpoint: `dryRun` computes but never writes. */
+export const CorrectionApplyExistingBody = z.object({
+  dryRun: z.boolean().optional(),
+});
+
+export const CorrectionApplyExistingResultSchema = z.object({
+  dryRun: z.boolean(),
+  matched: z.number(),
+  updated: z.number(),
+  skippedManual: z.number(),
+  skippedUncertain: z.number(),
+});

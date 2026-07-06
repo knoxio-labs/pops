@@ -79,8 +79,12 @@ function TagRulesBrowserBody({ model }: { model: Model }) {
         onEditClick={model.handleEditRule}
         onDisableClick={model.handleDisable}
         onDeleteClick={model.setDeleteId}
+        onApplyExistingClick={model.handleApplyExisting}
         isDisablePending={(id) =>
           model.disableMutation.isPending && model.disableMutation.variables === id
+        }
+        isApplyExistingPending={(id) =>
+          model.applyExistingMutation.isPending && model.applyExistingMutation.variables === id
         }
       />
 

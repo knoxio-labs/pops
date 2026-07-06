@@ -13,7 +13,9 @@ type TagRulesTableProps = {
   onEditClick: (rule: TagRule) => void;
   onDisableClick: (id: string) => void;
   onDeleteClick: (id: string) => void;
+  onApplyExistingClick: (id: string) => void;
   isDisablePending: (id: string) => boolean;
+  isApplyExistingPending: (id: string) => boolean;
 };
 
 export function TagRulesTable({
@@ -22,7 +24,9 @@ export function TagRulesTable({
   onEditClick,
   onDisableClick,
   onDeleteClick,
+  onApplyExistingClick,
   isDisablePending,
+  isApplyExistingPending,
 }: TagRulesTableProps) {
   if (tagRules.length === 0) {
     return (
@@ -39,7 +43,9 @@ export function TagRulesTable({
     onEditClick,
     onDisableClick,
     onDeleteClick,
+    onApplyExistingClick,
     isDisablePending,
+    isApplyExistingPending,
   });
   return <DataTable columns={columns} data={tagRules} paginated defaultPageSize={PAGE_SIZE} />;
 }
