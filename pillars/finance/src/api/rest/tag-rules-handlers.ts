@@ -51,9 +51,14 @@ export function makeTagRulesHandlers(db: FinanceDb) {
       runHttp(() => {
         const limit = query.limit ?? DEFAULT_LIMIT;
         const offset = query.offset ?? DEFAULT_OFFSET;
+
+        let isActiveFilter: boolean | undefined;
+        if (query.isActive === 'true') isActiveFilter = true;
+        else if (query.isActive === 'false') isActiveFilter = false;
+
         const { rows, total } = transactionTagRulesService.listTransactionTagRulesPage(db, {
           matchType: query.matchType,
-          isActive: query.isActive,
+          isActive: isActiveFilter,
           minConfidence: query.minConfidence,
           limit,
           offset,

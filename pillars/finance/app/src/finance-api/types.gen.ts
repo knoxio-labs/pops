@@ -3688,7 +3688,7 @@ export type TagRulesListData = {
   path?: never;
   query?: {
     matchType?: 'exact' | 'contains' | 'regex';
-    isActive?: boolean;
+    isActive?: 'true' | 'false';
     minConfidence?: number;
     limit?: number;
     offset?: number;

@@ -11246,7 +11246,8 @@
             "in": "query",
             "name": "isActive",
             "schema": {
-              "type": "boolean"
+              "enum": ["true", "false"],
+              "type": "string"
             }
           },
           {

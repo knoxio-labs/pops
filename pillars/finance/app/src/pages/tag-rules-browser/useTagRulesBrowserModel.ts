@@ -21,9 +21,8 @@ function parseMatchType(value: string): MatchType | undefined {
   return value === 'exact' || value === 'contains' || value === 'regex' ? value : undefined;
 }
 
-function parseIsActive(value: string): boolean | undefined {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
+function parseIsActive(value: string): 'true' | 'false' | undefined {
+  if (value === 'true' || value === 'false') return value;
   return undefined;
 }
 

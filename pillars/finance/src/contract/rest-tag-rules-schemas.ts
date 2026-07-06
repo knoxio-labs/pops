@@ -111,7 +111,9 @@ export const MaxPreviewItems = z.coerce.number().int().positive().max(500).defau
 
 export const TagRuleListQuery = z.object({
   matchType: MatchTypeSchema.optional(),
-  isActive: z.coerce.boolean().optional(),
+  // Query params arrive as strings; the handler coerces "true" → boolean. A
+  // transform here would break OpenAPI JSON-Schema generation.
+  isActive: z.enum(['true', 'false']).optional(),
   minConfidence: z.coerce.number().min(0).max(1).optional(),
   limit: LimitQuery,
   offset: OffsetQuery,

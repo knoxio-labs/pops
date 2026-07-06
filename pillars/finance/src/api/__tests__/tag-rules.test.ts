@@ -221,6 +221,42 @@ describe('tagRules — list / get / update / disable / delete', () => {
     expect(highConfidence.data[0]?.descriptionPattern).toBe('WOOLWORTHS');
   });
 
+  it('filters by isActive, returning only active or only inactive rules', async () => {
+    const active = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: ['groceries'] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const inactive = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'NETFLIX', matchType: 'exact', tags: ['subscriptions'] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    await client().tagRules.disable(inactive.rules[0]?.id ?? '');
+
+    const inactiveOnly = await client().tagRules.list({ isActive: 'false' });
+    expect(inactiveOnly.data).toHaveLength(1);
+    expect(inactiveOnly.data[0]?.id).toBe(inactive.rules[0]?.id);
+    expect(inactiveOnly.data.every((r) => !r.isActive)).toBe(true);
+
+    const activeOnly = await client().tagRules.list({ isActive: 'true' });
+    expect(activeOnly.data).toHaveLength(1);
+    expect(activeOnly.data[0]?.id).toBe(active.rules[0]?.id);
+    expect(activeOnly.data.every((r) => r.isActive)).toBe(true);
+  });
+
   it('gets a single rule by id and 404s an unknown id', async () => {
     const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
     const id = created.rules[0]?.id ?? '';

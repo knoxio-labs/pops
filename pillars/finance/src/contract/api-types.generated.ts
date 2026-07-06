@@ -5370,7 +5370,7 @@ export interface operations {
     parameters: {
       query?: {
         matchType?: 'exact' | 'contains' | 'regex';
-        isActive?: boolean;
+        isActive?: 'true' | 'false';
         minConfidence?: number;
         limit?: number;
         offset?: number;

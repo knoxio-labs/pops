@@ -218,7 +218,7 @@ export interface CorrectionListQuery {
 
 export interface TagRuleListQuery {
   matchType?: 'exact' | 'contains' | 'regex';
-  isActive?: boolean;
+  isActive?: 'true' | 'false';
   minConfidence?: number;
   limit?: number;
   offset?: number;
