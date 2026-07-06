@@ -10,22 +10,21 @@ name: Quality
 # degenerate there (see the `scope` job), and main must never quietly
 # accumulate drift the per-PR scoping missed.
 #
-# Docs-only PRs (paths under `docs/**` or any `*.md`) cannot break code
-# quality, so the whole workflow is excluded from those changes. GitHub
-# rulesets with `strict_required_status_checks_policy: false` treat a
-# workflow that never triggered as non-blocking, which keeps docs-only
-# PRs to ≤ 4 required checks (Theme 13 PRD-220).
+# NO `paths-ignore`: this workflow must trigger on EVERY PR, including docs-only
+# ones. A required status check that never runs is reported as "Expected —
+# waiting for status" forever and blocks the PR. The ruleset flag
+# `strict_required_status_checks_policy: false` governs only the
+# branch-up-to-date requirement — it does NOT make a never-reported check
+# non-blocking. Excluding docs paths here is exactly
+# what left docs-only PRs (#3672, #3324) permanently unmergeable — the required
+# `Lint`/`Format`/`Module boundaries`/`Duplication check` contexts were never
+# emitted. On a docs-only PR the scoped jobs run over `scripts/` (always clean)
+# and report green, satisfying the ruleset without weakening any code PR.
 
 on:
   pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
   push:
     branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
 
 jobs:
   discover:
