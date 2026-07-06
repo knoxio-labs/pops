@@ -987,7 +987,7 @@ describe('imports.commitImport — commit idempotency (#3640/#3642)', () => {
     const c = client(contacts);
     const tempId = 'temp:entity:00000000-0000-0000-0000-0000000000c1';
     const payload = {
-      commitKey: 'commit-key-1',
+      commitKey: '11111111-1111-4111-8111-111111111111',
       entities: [{ tempId, name: 'IdempotentCo', type: 'company' as const }],
       changeSets: [
         {
@@ -1029,7 +1029,7 @@ describe('imports.commitImport — commit idempotency (#3640/#3642)', () => {
   it('two concurrent commits sharing a commitKey resolve to one applied write and one echoed result', async () => {
     const c = client();
     const payload = {
-      commitKey: 'commit-key-race',
+      commitKey: '22222222-2222-4222-8222-222222222222',
       transactions: [confirmed({ description: 'RACE MERCHANT', checksum: 'race-1' })],
     };
 

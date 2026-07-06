@@ -148,7 +148,7 @@ export const CommitPayloadSchema = z.object({
    * a no-op replay of the first call's result instead of re-applying the
    * whole payload.
    */
-  commitKey: z.string().min(1).optional(),
+  commitKey: z.string().uuid().optional(),
 });
 
 export const RulesAppliedSchema = z.object({
