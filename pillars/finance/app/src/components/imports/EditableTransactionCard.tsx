@@ -3,13 +3,16 @@ import { useState } from 'react';
 
 import { Button, EditableFormCard, Label, Select as UiSelect } from '@pops/ui';
 
+import {
+  requiresEntity,
+  TRANSACTION_TYPE_OPTIONS,
+  type TransactionType,
+} from '../../lib/transaction-type';
 import { EditableFormFields } from './editable-card/EditableFormFields';
 import { RawDataDisclosure } from './editable-card/RawDataDisclosure';
 import { EntitySelect } from './EntitySelect';
 
 import type { ProcessedTransaction } from '@pops/finance';
-
-import type { TransactionType } from '../../lib/transaction-type';
 
 interface EditableTransactionCardProps {
   transaction: ProcessedTransaction;
@@ -47,11 +50,7 @@ function TransactionTypeSelect({
         name="type"
         value={value}
         onChange={(e) => onChange(e.target.value as TransactionType)}
-        options={[
-          { label: 'Expense (requires entity)', value: 'purchase' },
-          { label: 'Transfer (between accounts, no entity)', value: 'transfer' },
-          { label: 'Income (salary, refund, etc.)', value: 'income' },
-        ]}
+        options={TRANSACTION_TYPE_OPTIONS}
       />
       <p className="text-xs mt-1 text-info">
         {value === 'transfer' &&
@@ -104,7 +103,7 @@ function EntityOrTransferNotice({
   onEntityChange: (entityId: string, entityName: string) => void;
   entities?: Array<{ id: string; name: string }>;
 }) {
-  if (transactionType === 'purchase' && entities && entities.length > 0) {
+  if (requiresEntity(transactionType) && entities && entities.length > 0) {
     return (
       <div className="space-y-2 mb-4">
         <Label htmlFor="entity">Entity (Merchant/Payee)</Label>

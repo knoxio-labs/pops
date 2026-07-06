@@ -80,4 +80,21 @@ describe('buildConfirmedTransactions', () => {
 
     expect(result).toHaveLength(0);
   });
+
+  it('keeps an entity-optional credit type (loan) with no entity — not silently dropped (#3607)', () => {
+    const result = buildConfirmedTransactions([
+      matched({ transactionType: 'loan', entity: { matchType: 'none' } }),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ transactionType: 'loan' });
+  });
+
+  it('still drops a refund with no entity (merchant transactions require a payee)', () => {
+    const result = buildConfirmedTransactions([
+      matched({ transactionType: 'refund', entity: { matchType: 'none' } }),
+    ]);
+
+    expect(result).toHaveLength(0);
+  });
 });

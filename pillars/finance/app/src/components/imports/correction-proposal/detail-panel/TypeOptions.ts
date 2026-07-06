@@ -1,11 +1,6 @@
-import type { TransactionType } from '../../../../lib/transaction-type';
+import { TRANSACTION_TYPE_OPTIONS, type TransactionType } from '../../../../lib/transaction-type';
 
-export const TYPE_OPTIONS = [
-  { value: '', label: '— none —' },
-  { value: 'purchase', label: 'Expense' },
-  { value: 'transfer', label: 'Transfer' },
-  { value: 'income', label: 'Income' },
-];
+export const TYPE_OPTIONS = [{ value: '', label: '— none —' }, ...TRANSACTION_TYPE_OPTIONS];
 
 export const MATCH_TYPE_OPTIONS = [
   { value: 'exact', label: 'Exact' },
