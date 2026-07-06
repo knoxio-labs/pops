@@ -44,11 +44,24 @@ interface ResolvedApiKey {
   source: ApiKeySource;
 }
 
+/**
+ * Reads an env var and returns its trimmed value, or `undefined` if unset or
+ * whitespace-only. A blank string (e.g. `POPS_REGISTRY_URL=` left over from
+ * an unset Compose interpolation) must be treated as absent, not as an
+ * explicit override of an empty base URL.
+ */
+function readNonBlankEnv(name: string): string | undefined {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function resolveInternalBaseUrlOverrides(): Record<string, string> | undefined {
   const overrides: Record<string, string> = {};
   for (const [pillarId, envVar] of Object.entries(PILLAR_API_URL_ENV_VARS)) {
-    const value = process.env[envVar];
-    if (value !== undefined && value.length > 0) overrides[pillarId] = value;
+    const value = readNonBlankEnv(envVar);
+    if (value !== undefined) overrides[pillarId] = value;
   }
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
@@ -74,7 +87,7 @@ function ensureConfigured(): void {
   // Silent auth-source misconfig (CF087) is hard to debug in production — log
   // which env var actually won so an unexpected legacy fallback is visible.
   console.warn(`[pops-mcp] resolved service-account key from ${resolved.source}`);
-  const registryUrl = process.env['POPS_REGISTRY_URL'];
+  const registryUrl = readNonBlankEnv('POPS_REGISTRY_URL');
   const internalBaseUrls = resolveInternalBaseUrlOverrides();
   configureServerSdk({
     apiKey: resolved.key,

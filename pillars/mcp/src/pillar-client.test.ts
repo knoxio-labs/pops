@@ -95,10 +95,12 @@ describe('getPillar — base-URL resolution', () => {
   beforeEach(() => {
     process.env[INTERNAL_KEY] = 'sa_internal';
     for (const key of BASE_URL_ENV_KEYS) delete process.env[key];
+    delete process.env['POPS_REGISTRY_URL'];
   });
 
   afterEach(() => {
     for (const key of BASE_URL_ENV_KEYS) delete process.env[key];
+    delete process.env['POPS_REGISTRY_URL'];
   });
 
   it('does not install a hardcoded override map when no POPS_*_API_URL env vars are set', () => {
@@ -132,6 +134,46 @@ describe('getPillar — base-URL resolution', () => {
           media: 'http://localhost:4103',
         },
       })
+    );
+  });
+
+  it('treats a whitespace-only POPS_<PILLAR>_API_URL as unset, not an override', () => {
+    process.env['POPS_INVENTORY_API_URL'] = '   ';
+
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.not.objectContaining({ internalBaseUrls: expect.anything() })
+    );
+  });
+
+  it('trims surrounding whitespace from an explicit POPS_<PILLAR>_API_URL override', () => {
+    process.env['POPS_INVENTORY_API_URL'] = '  http://localhost:4102  ';
+
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({ internalBaseUrls: { inventory: 'http://localhost:4102' } })
+    );
+  });
+
+  it('does not forward an empty or whitespace-only POPS_REGISTRY_URL to the SDK', () => {
+    process.env['POPS_REGISTRY_URL'] = '   ';
+
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.not.objectContaining({ registry: expect.anything() })
+    );
+  });
+
+  it('trims surrounding whitespace from POPS_REGISTRY_URL before forwarding', () => {
+    process.env['POPS_REGISTRY_URL'] = '  http://registry-api:3001  ';
+
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({ registry: { registryUrl: 'http://registry-api:3001' } })
     );
   });
 });
