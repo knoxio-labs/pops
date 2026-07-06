@@ -873,7 +873,16 @@
                             "type": "number"
                           },
                           "transactionType": {
-                            "enum": ["purchase", "transfer", "income"],
+                            "enum": [
+                              "purchase",
+                              "transfer",
+                              "income",
+                              "refund",
+                              "reversal",
+                              "loan",
+                              "rebate",
+                              "tax"
+                            ],
                             "nullable": true,
                             "type": "string"
                           }
@@ -1041,7 +1050,16 @@
                     "type": "array"
                   },
                   "transactionType": {
-                    "enum": ["purchase", "transfer", "income"],
+                    "enum": [
+                      "purchase",
+                      "transfer",
+                      "income",
+                      "refund",
+                      "reversal",
+                      "loan",
+                      "rebate",
+                      "tax"
+                    ],
                     "nullable": true,
                     "type": "string"
                   }
@@ -1111,7 +1129,16 @@
                           "type": "number"
                         },
                         "transactionType": {
-                          "enum": ["purchase", "transfer", "income"],
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "nullable": true,
                           "type": "string"
                         }
@@ -1418,7 +1445,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -1480,7 +1516,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -1611,7 +1656,16 @@
                             "type": "number"
                           },
                           "transactionType": {
-                            "enum": ["purchase", "transfer", "income"],
+                            "enum": [
+                              "purchase",
+                              "transfer",
+                              "income",
+                              "refund",
+                              "reversal",
+                              "loan",
+                              "rebate",
+                              "tax"
+                            ],
                             "nullable": true,
                             "type": "string"
                           }
@@ -1808,7 +1862,16 @@
                           "type": "number"
                         },
                         "transactionType": {
-                          "enum": ["purchase", "transfer", "income"],
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "nullable": true,
                           "type": "string"
                         }
@@ -2162,7 +2225,16 @@
                                             "type": "array"
                                           },
                                           "transactionType": {
-                                            "enum": ["purchase", "transfer", "income"],
+                                            "enum": [
+                                              "purchase",
+                                              "transfer",
+                                              "income",
+                                              "refund",
+                                              "reversal",
+                                              "loan",
+                                              "rebate",
+                                              "tax"
+                                            ],
                                             "nullable": true,
                                             "type": "string"
                                           }
@@ -2224,7 +2296,16 @@
                                             "type": "array"
                                           },
                                           "transactionType": {
-                                            "enum": ["purchase", "transfer", "income"],
+                                            "enum": [
+                                              "purchase",
+                                              "transfer",
+                                              "income",
+                                              "refund",
+                                              "reversal",
+                                              "loan",
+                                              "rebate",
+                                              "tax"
+                                            ],
                                             "nullable": true,
                                             "type": "string"
                                           }
@@ -2361,7 +2442,16 @@
                             "type": "number"
                           },
                           "transactionType": {
-                            "enum": ["purchase", "transfer", "income"],
+                            "enum": [
+                              "purchase",
+                              "transfer",
+                              "income",
+                              "refund",
+                              "reversal",
+                              "loan",
+                              "rebate",
+                              "tax"
+                            ],
                             "nullable": true,
                             "type": "string"
                           }
@@ -2551,7 +2641,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -2613,7 +2712,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -2741,7 +2849,16 @@
                                             "type": "array"
                                           },
                                           "transactionType": {
-                                            "enum": ["purchase", "transfer", "income"],
+                                            "enum": [
+                                              "purchase",
+                                              "transfer",
+                                              "income",
+                                              "refund",
+                                              "reversal",
+                                              "loan",
+                                              "rebate",
+                                              "tax"
+                                            ],
                                             "nullable": true,
                                             "type": "string"
                                           }
@@ -2803,7 +2920,16 @@
                                             "type": "array"
                                           },
                                           "transactionType": {
-                                            "enum": ["purchase", "transfer", "income"],
+                                            "enum": [
+                                              "purchase",
+                                              "transfer",
+                                              "income",
+                                              "refund",
+                                              "reversal",
+                                              "loan",
+                                              "rebate",
+                                              "tax"
+                                            ],
                                             "nullable": true,
                                             "type": "string"
                                           }
@@ -3326,7 +3452,16 @@
                         "type": "array"
                       },
                       "transactionType": {
-                        "enum": ["purchase", "transfer", "income"],
+                        "enum": [
+                          "purchase",
+                          "transfer",
+                          "income",
+                          "refund",
+                          "reversal",
+                          "loan",
+                          "rebate",
+                          "tax"
+                        ],
                         "nullable": true,
                         "type": "string"
                       }
@@ -3403,7 +3538,16 @@
                                         "type": "array"
                                       },
                                       "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
+                                        "enum": [
+                                          "purchase",
+                                          "transfer",
+                                          "income",
+                                          "refund",
+                                          "reversal",
+                                          "loan",
+                                          "rebate",
+                                          "tax"
+                                        ],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -3465,7 +3609,16 @@
                                         "type": "array"
                                       },
                                       "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
+                                        "enum": [
+                                          "purchase",
+                                          "transfer",
+                                          "income",
+                                          "refund",
+                                          "reversal",
+                                          "loan",
+                                          "rebate",
+                                          "tax"
+                                        ],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -3562,7 +3715,16 @@
                                     "type": "array"
                                   },
                                   "transactionType": {
-                                    "enum": ["purchase", "transfer", "income"],
+                                    "enum": [
+                                      "purchase",
+                                      "transfer",
+                                      "income",
+                                      "refund",
+                                      "reversal",
+                                      "loan",
+                                      "rebate",
+                                      "tax"
+                                    ],
                                     "nullable": true,
                                     "type": "string"
                                   }
@@ -3603,7 +3765,16 @@
                                     "type": "array"
                                   },
                                   "transactionType": {
-                                    "enum": ["purchase", "transfer", "income"],
+                                    "enum": [
+                                      "purchase",
+                                      "transfer",
+                                      "income",
+                                      "refund",
+                                      "reversal",
+                                      "loan",
+                                      "rebate",
+                                      "tax"
+                                    ],
                                     "nullable": true,
                                     "type": "string"
                                   }
@@ -3727,7 +3898,16 @@
                             "type": "number"
                           },
                           "transactionType": {
-                            "enum": ["purchase", "transfer", "income"],
+                            "enum": [
+                              "purchase",
+                              "transfer",
+                              "income",
+                              "refund",
+                              "reversal",
+                              "loan",
+                              "rebate",
+                              "tax"
+                            ],
                             "nullable": true,
                             "type": "string"
                           }
@@ -3898,7 +4078,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -3960,7 +4149,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -4096,7 +4294,16 @@
                         "type": "array"
                       },
                       "transactionType": {
-                        "enum": ["purchase", "transfer", "income"],
+                        "enum": [
+                          "purchase",
+                          "transfer",
+                          "income",
+                          "refund",
+                          "reversal",
+                          "loan",
+                          "rebate",
+                          "tax"
+                        ],
                         "nullable": true,
                         "type": "string"
                       }
@@ -4268,7 +4475,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -4330,7 +4546,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -4429,7 +4654,16 @@
                         "type": "array"
                       },
                       "transactionType": {
-                        "enum": ["purchase", "transfer", "income"],
+                        "enum": [
+                          "purchase",
+                          "transfer",
+                          "income",
+                          "refund",
+                          "reversal",
+                          "loan",
+                          "rebate",
+                          "tax"
+                        ],
                         "nullable": true,
                         "type": "string"
                       }
@@ -4523,7 +4757,16 @@
                                         "type": "array"
                                       },
                                       "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
+                                        "enum": [
+                                          "purchase",
+                                          "transfer",
+                                          "income",
+                                          "refund",
+                                          "reversal",
+                                          "loan",
+                                          "rebate",
+                                          "tax"
+                                        ],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -4585,7 +4828,16 @@
                                         "type": "array"
                                       },
                                       "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
+                                        "enum": [
+                                          "purchase",
+                                          "transfer",
+                                          "income",
+                                          "refund",
+                                          "reversal",
+                                          "loan",
+                                          "rebate",
+                                          "tax"
+                                        ],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -4704,7 +4956,16 @@
                             "type": "number"
                           },
                           "transactionType": {
-                            "enum": ["purchase", "transfer", "income"],
+                            "enum": [
+                              "purchase",
+                              "transfer",
+                              "income",
+                              "refund",
+                              "reversal",
+                              "loan",
+                              "rebate",
+                              "tax"
+                            ],
                             "nullable": true,
                             "type": "string"
                           }
@@ -5175,7 +5436,16 @@
                           "type": "number"
                         },
                         "transactionType": {
-                          "enum": ["purchase", "transfer", "income"],
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "nullable": true,
                           "type": "string"
                         }
@@ -5337,7 +5607,16 @@
                     "type": "array"
                   },
                   "transactionType": {
-                    "enum": ["purchase", "transfer", "income"],
+                    "enum": [
+                      "purchase",
+                      "transfer",
+                      "income",
+                      "refund",
+                      "reversal",
+                      "loan",
+                      "rebate",
+                      "tax"
+                    ],
                     "nullable": true,
                     "type": "string"
                   }
@@ -5406,7 +5685,16 @@
                           "type": "number"
                         },
                         "transactionType": {
-                          "enum": ["purchase", "transfer", "income"],
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "nullable": true,
                           "type": "string"
                         }
@@ -6063,7 +6351,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -6125,7 +6422,16 @@
                                       "type": "array"
                                     },
                                     "transactionType": {
-                                      "enum": ["purchase", "transfer", "income"],
+                                      "enum": [
+                                        "purchase",
+                                        "transfer",
+                                        "income",
+                                        "refund",
+                                        "reversal",
+                                        "loan",
+                                        "rebate",
+                                        "tax"
+                                      ],
                                       "nullable": true,
                                       "type": "string"
                                     }
@@ -6426,7 +6732,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -6615,7 +6930,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -6804,7 +7128,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -6993,7 +7326,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -7209,7 +7551,16 @@
                                         "type": "array"
                                       },
                                       "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
+                                        "enum": [
+                                          "purchase",
+                                          "transfer",
+                                          "income",
+                                          "refund",
+                                          "reversal",
+                                          "loan",
+                                          "rebate",
+                                          "tax"
+                                        ],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -7271,7 +7622,16 @@
                                         "type": "array"
                                       },
                                       "transactionType": {
-                                        "enum": ["purchase", "transfer", "income"],
+                                        "enum": [
+                                          "purchase",
+                                          "transfer",
+                                          "income",
+                                          "refund",
+                                          "reversal",
+                                          "loan",
+                                          "rebate",
+                                          "tax"
+                                        ],
                                         "nullable": true,
                                         "type": "string"
                                       }
@@ -7611,7 +7971,16 @@
                           "type": "array"
                         },
                         "transactionType": {
-                          "enum": ["purchase", "transfer", "income"],
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "type": "string"
                         }
                       },
@@ -8356,7 +8725,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -8545,7 +8923,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -8734,7 +9121,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -8923,7 +9319,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -9146,7 +9551,16 @@
                                             "type": "array"
                                           },
                                           "transactionType": {
-                                            "enum": ["purchase", "transfer", "income"],
+                                            "enum": [
+                                              "purchase",
+                                              "transfer",
+                                              "income",
+                                              "refund",
+                                              "reversal",
+                                              "loan",
+                                              "rebate",
+                                              "tax"
+                                            ],
                                             "nullable": true,
                                             "type": "string"
                                           }
@@ -9208,7 +9622,16 @@
                                             "type": "array"
                                           },
                                           "transactionType": {
-                                            "enum": ["purchase", "transfer", "income"],
+                                            "enum": [
+                                              "purchase",
+                                              "transfer",
+                                              "income",
+                                              "refund",
+                                              "reversal",
+                                              "loan",
+                                              "rebate",
+                                              "tax"
+                                            ],
                                             "nullable": true,
                                             "type": "string"
                                           }
@@ -9509,7 +9932,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -9698,7 +10130,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -9887,7 +10328,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -10076,7 +10526,16 @@
                                 "type": "array"
                               },
                               "transactionType": {
-                                "enum": ["purchase", "transfer", "income"],
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax"
+                                ],
                                 "type": "string"
                               }
                             },

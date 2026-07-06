@@ -8,11 +8,16 @@
  */
 import { z } from 'zod';
 
-import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+import { MIN_MATCH_CONFIDENCE, TRANSACTION_TYPES } from './corrections-constants.js';
 import { LimitQuery, OffsetQuery } from './rest-schemas.js';
 
+export type { TransactionType } from './corrections-constants.js';
+
 export const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
-export const TransactionTypeSchema = z.enum(['purchase', 'transfer', 'income']);
+
+/** Canonical transaction-type enum — the single definition (#3607); the imports
+ * contract re-exports this rather than declaring its own. */
+export const TransactionTypeSchema = z.enum(TRANSACTION_TYPES);
 
 /** Body of a correction `add` op (create-shape + ChangeSet-only confidence/isActive). */
 export const CreateCorrectionSchema = z.object({

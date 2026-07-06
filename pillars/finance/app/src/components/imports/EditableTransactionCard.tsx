@@ -9,7 +9,7 @@ import { EntitySelect } from './EntitySelect';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
-type TransactionType = 'purchase' | 'transfer' | 'income';
+import type { TransactionType } from '../../lib/transaction-type';
 
 interface EditableTransactionCardProps {
   transaction: ProcessedTransaction;

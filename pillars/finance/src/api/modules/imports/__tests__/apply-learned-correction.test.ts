@@ -234,6 +234,26 @@ describe('applyLearnedCorrection — entity-less rules', () => {
     expect(result?.processed.transactionType).toBe('transfer');
   });
 
+  it('carries a new (post-#3607) taxonomy value through a high-confidence entity-less rule', () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction({ description: 'AMAZON REFUND' }),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [
+        rule({
+          descriptionPattern: 'AMAZON REFUND',
+          entityId: null,
+          entityName: null,
+          transactionType: 'refund',
+          confidence: 0.95,
+        }),
+      ],
+    });
+
+    expect(result?.bucket).toBe('matched');
+    expect(result?.processed.transactionType).toBe('refund');
+  });
+
   it('routes a low-confidence entity-less transfer rule to "uncertain"', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),

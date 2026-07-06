@@ -353,7 +353,15 @@ export type CorrectionsListResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     }>;
     pagination: {
       hasMore: boolean;
@@ -378,7 +386,15 @@ export type CorrectionsCreateOrUpdateData = {
     matchType: 'exact' | 'contains' | 'regex';
     priority?: number;
     tags: Array<string>;
-    transactionType?: 'purchase' | 'transfer' | 'income';
+    transactionType?:
+      | 'purchase'
+      | 'transfer'
+      | 'income'
+      | 'refund'
+      | 'reversal'
+      | 'loan'
+      | 'rebate'
+      | 'tax';
   };
   path?: never;
   query?: never;
@@ -434,7 +450,15 @@ export type CorrectionsCreateOrUpdateResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     };
     message: string;
   };
@@ -521,7 +545,15 @@ export type CorrectionsApplyChangeSetData = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -536,7 +568,15 @@ export type CorrectionsApplyChangeSetData = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -608,7 +648,15 @@ export type CorrectionsApplyChangeSetResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     }>;
     message: string;
   };
@@ -679,7 +727,15 @@ export type CorrectionsFindMatchResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     } | null;
     status: 'matched' | 'uncertain';
   };
@@ -774,7 +830,15 @@ export type CorrectionsListMergedData = {
                 matchType: 'exact' | 'contains' | 'regex';
                 priority?: number;
                 tags: Array<string>;
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               };
               op: 'add';
             }
@@ -789,7 +853,15 @@ export type CorrectionsListMergedData = {
                 matchType?: 'exact' | 'contains' | 'regex';
                 priority?: number;
                 tags?: Array<string>;
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               };
               id: string;
               op: 'edit';
@@ -862,7 +934,15 @@ export type CorrectionsListMergedResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     }>;
     pagination: {
       hasMore: boolean;
@@ -894,7 +974,15 @@ export type CorrectionsPreviewChangeSetData = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -909,7 +997,15 @@ export type CorrectionsPreviewChangeSetData = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -941,7 +1037,15 @@ export type CorrectionsPreviewChangeSetData = {
                 matchType: 'exact' | 'contains' | 'regex';
                 priority?: number;
                 tags: Array<string>;
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               };
               op: 'add';
             }
@@ -956,7 +1060,15 @@ export type CorrectionsPreviewChangeSetData = {
                 matchType?: 'exact' | 'contains' | 'regex';
                 priority?: number;
                 tags?: Array<string>;
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               };
               id: string;
               op: 'edit';
@@ -1132,7 +1244,15 @@ export type CorrectionsProposeChangeSetData = {
       location?: string | null;
       matchType: 'exact' | 'contains' | 'regex';
       tags?: Array<string>;
-      transactionType?: 'purchase' | 'transfer' | 'income';
+      transactionType?:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     };
   };
   path?: never;
@@ -1188,7 +1308,15 @@ export type CorrectionsProposeChangeSetResponses = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -1203,7 +1331,15 @@ export type CorrectionsProposeChangeSetResponses = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -1228,7 +1364,15 @@ export type CorrectionsProposeChangeSetResponses = {
           location: string | null;
           ruleId: string | null;
           tags: Array<string>;
-          transactionType: 'purchase' | 'transfer' | 'income';
+          transactionType:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax';
         };
         before: {
           entityId: string | null;
@@ -1236,7 +1380,15 @@ export type CorrectionsProposeChangeSetResponses = {
           location: string | null;
           ruleId: string | null;
           tags: Array<string>;
-          transactionType: 'purchase' | 'transfer' | 'income';
+          transactionType:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax';
         };
         description: string;
         transactionId: string;
@@ -1265,7 +1417,15 @@ export type CorrectionsProposeChangeSetResponses = {
         priority: number;
         tags: Array<string>;
         timesApplied: number;
-        transactionType: 'purchase' | 'transfer' | 'income';
+        transactionType:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       };
     };
   };
@@ -1292,7 +1452,15 @@ export type CorrectionsRejectChangeSetData = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -1307,7 +1475,15 @@ export type CorrectionsRejectChangeSetData = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -1339,7 +1515,15 @@ export type CorrectionsRejectChangeSetData = {
       location?: string | null;
       matchType: 'exact' | 'contains' | 'regex';
       tags?: Array<string>;
-      transactionType?: 'purchase' | 'transfer' | 'income';
+      transactionType?:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     };
   };
   path?: never;
@@ -1407,7 +1591,15 @@ export type CorrectionsReviseChangeSetData = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -1422,7 +1614,15 @@ export type CorrectionsReviseChangeSetData = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -1447,7 +1647,15 @@ export type CorrectionsReviseChangeSetData = {
       location?: string | null;
       matchType: 'exact' | 'contains' | 'regex';
       tags?: Array<string>;
-      transactionType?: 'purchase' | 'transfer' | 'income';
+      transactionType?:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     };
     triggeringTransactions: Array<{
       checksum?: string;
@@ -1507,7 +1715,15 @@ export type CorrectionsReviseChangeSetResponses = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -1522,7 +1738,15 @@ export type CorrectionsReviseChangeSetResponses = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -1555,7 +1779,15 @@ export type CorrectionsReviseChangeSetResponses = {
         priority: number;
         tags: Array<string>;
         timesApplied: number;
-        transactionType: 'purchase' | 'transfer' | 'income';
+        transactionType:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       };
     };
   };
@@ -1744,7 +1976,15 @@ export type CorrectionsGetResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     };
   };
 };
@@ -1765,7 +2005,15 @@ export type CorrectionsUpdateData = {
     matchType?: 'exact' | 'contains' | 'regex';
     priority?: number;
     tags?: Array<string>;
-    transactionType?: 'purchase' | 'transfer' | 'income';
+    transactionType?:
+      | 'purchase'
+      | 'transfer'
+      | 'income'
+      | 'refund'
+      | 'reversal'
+      | 'loan'
+      | 'rebate'
+      | 'tax';
   };
   path: {
     id: string;
@@ -1822,7 +2070,15 @@ export type CorrectionsUpdateResponses = {
       priority: number;
       tags: Array<string>;
       timesApplied: number;
-      transactionType: 'purchase' | 'transfer' | 'income';
+      transactionType:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     };
     message: string;
   };
@@ -2037,7 +2293,15 @@ export type ImportsApplyChangeSetAndReevaluateData = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -2052,7 +2316,15 @@ export type ImportsApplyChangeSetAndReevaluateData = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -2177,7 +2449,15 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       matched: Array<{
         account: string;
@@ -2226,7 +2506,15 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       skipped: Array<{
         account: string;
@@ -2275,7 +2563,15 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       uncertain: Array<{
         account: string;
@@ -2324,7 +2620,15 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       warnings?: Array<{
         affectedCount?: number;
@@ -2357,7 +2661,15 @@ export type ImportsCommitImportData = {
               matchType: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             op: 'add';
           }
@@ -2372,7 +2684,15 @@ export type ImportsCommitImportData = {
               matchType?: 'exact' | 'contains' | 'regex';
               priority?: number;
               tags?: Array<string>;
-              transactionType?: 'purchase' | 'transfer' | 'income';
+              transactionType?:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             id: string;
             op: 'edit';
@@ -2452,7 +2772,15 @@ export type ImportsCommitImportData = {
         tag: string;
       }>;
       tags?: Array<string>;
-      transactionType?: 'purchase' | 'transfer' | 'income';
+      transactionType?:
+        | 'purchase'
+        | 'transfer'
+        | 'income'
+        | 'refund'
+        | 'reversal'
+        | 'loan'
+        | 'rebate'
+        | 'tax';
     }>;
   };
   path?: never;
@@ -2746,7 +3074,15 @@ export type ImportsGetImportProgressResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       matched: Array<{
         account: string;
@@ -2795,7 +3131,15 @@ export type ImportsGetImportProgressResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       skipped: Array<{
         account: string;
@@ -2844,7 +3188,15 @@ export type ImportsGetImportProgressResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       uncertain: Array<{
         account: string;
@@ -2893,7 +3245,15 @@ export type ImportsGetImportProgressResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       warnings?: Array<{
         affectedCount?: number;
@@ -2932,7 +3292,15 @@ export type ImportsReevaluateWithPendingRulesData = {
                 matchType: 'exact' | 'contains' | 'regex';
                 priority?: number;
                 tags: Array<string>;
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               };
               op: 'add';
             }
@@ -2947,7 +3315,15 @@ export type ImportsReevaluateWithPendingRulesData = {
                 matchType?: 'exact' | 'contains' | 'regex';
                 priority?: number;
                 tags?: Array<string>;
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               };
               id: string;
               op: 'edit';
@@ -3072,7 +3448,15 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       matched: Array<{
         account: string;
@@ -3121,7 +3505,15 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       skipped: Array<{
         account: string;
@@ -3170,7 +3562,15 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       uncertain: Array<{
         account: string;
@@ -3219,7 +3619,15 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
-        transactionType?: 'purchase' | 'transfer' | 'income';
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
       }>;
       warnings?: Array<{
         affectedCount?: number;

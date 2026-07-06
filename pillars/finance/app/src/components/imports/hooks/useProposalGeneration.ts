@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { unwrap } from '../../../finance-api-helpers.js';
 import { correctionsAnalyzeCorrection } from '../../../finance-api/index.js';
 
+import type { TransactionType } from '../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../store/importStore';
 
 interface AnalyzeCorrectionInput {
@@ -35,7 +36,7 @@ export interface ProposalSignal {
   entityName?: string | null;
   location?: string | null;
   tags?: string[];
-  transactionType?: 'purchase' | 'transfer' | 'income' | null;
+  transactionType?: TransactionType | null;
 }
 
 export interface TriggeringTransaction {
@@ -45,7 +46,7 @@ export interface TriggeringTransaction {
   account: string;
   location?: string | null;
   previousEntityName?: string | null;
-  previousTransactionType?: 'purchase' | 'transfer' | 'income' | null;
+  previousTransactionType?: TransactionType | null;
 }
 
 function computeFallbackPattern(description: string): string {
@@ -69,7 +70,7 @@ interface GenerateArgs {
   entityId: string | null;
   entityName: string | null;
   location?: string | null;
-  transactionType?: 'purchase' | 'transfer' | 'income' | null;
+  transactionType?: TransactionType | null;
 }
 
 interface GenerateDeps {

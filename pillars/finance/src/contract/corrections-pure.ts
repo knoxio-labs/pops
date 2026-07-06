@@ -9,11 +9,12 @@
  * re-exports {@link applyChangeSetToRules} (injecting its own `NotFoundError`)
  * rather than re-implementing it.
  */
-import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+import { MIN_MATCH_CONFIDENCE, type TransactionType } from './corrections-constants.js';
 
 import type { ChangeSet, ChangeSetOp } from './rest-corrections-schemas.js';
 
 export { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+export type { TransactionType } from './corrections-constants.js';
 
 /** Confidence at/above which a learned correction is treated as a confident match. */
 export const HIGH_CONFIDENCE_THRESHOLD = 0.9;
@@ -30,7 +31,7 @@ export interface Correction {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: 'purchase' | 'transfer' | 'income' | null;
+  transactionType: TransactionType | null;
   isActive: boolean;
   priority: number;
   confidence: number;
@@ -52,7 +53,7 @@ export interface CorrectionRow {
   entityName: string | null;
   location: string | null;
   tags: string;
-  transactionType: 'purchase' | 'transfer' | 'income' | null;
+  transactionType: TransactionType | null;
   isActive: boolean;
   confidence: number;
   priority: number;

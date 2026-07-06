@@ -1273,7 +1273,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             }[];
             pagination: {
               hasMore: boolean;
@@ -1349,7 +1358,16 @@ export interface operations {
           /** @default [] */
           tags: string[];
           /** @enum {string|null} */
-          transactionType?: 'purchase' | 'transfer' | 'income' | null;
+          transactionType?:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax'
+            | null;
         };
       };
     };
@@ -1377,7 +1395,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             };
             message: string;
           };
@@ -1529,7 +1556,16 @@ export interface operations {
                     /** @default [] */
                     tags: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   /** @enum {string} */
                   op: 'add';
@@ -1547,7 +1583,16 @@ export interface operations {
                     priority?: number;
                     tags?: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   id: string;
                   /** @enum {string} */
@@ -1594,7 +1639,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             }[];
             message: string;
           };
@@ -1682,7 +1736,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             } | null;
             /** @enum {string|null} */
             status: 'matched' | 'uncertain' | null;
@@ -1844,7 +1907,16 @@ export interface operations {
                       /** @default [] */
                       tags: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     /** @enum {string} */
                     op: 'add';
@@ -1862,7 +1934,16 @@ export interface operations {
                       priority?: number;
                       tags?: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     id: string;
                     /** @enum {string} */
@@ -1910,7 +1991,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             }[];
             pagination: {
               hasMore: boolean;
@@ -1992,7 +2082,16 @@ export interface operations {
                     /** @default [] */
                     tags: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   /** @enum {string} */
                   op: 'add';
@@ -2010,7 +2109,16 @@ export interface operations {
                     priority?: number;
                     tags?: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   id: string;
                   /** @enum {string} */
@@ -2052,7 +2160,16 @@ export interface operations {
                       /** @default [] */
                       tags: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     /** @enum {string} */
                     op: 'add';
@@ -2070,7 +2187,16 @@ export interface operations {
                       priority?: number;
                       tags?: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     id: string;
                     /** @enum {string} */
@@ -2284,7 +2410,16 @@ export interface operations {
             matchType: 'exact' | 'contains' | 'regex';
             tags?: string[];
             /** @enum {string|null} */
-            transactionType?: 'purchase' | 'transfer' | 'income' | null;
+            transactionType?:
+              | 'purchase'
+              | 'transfer'
+              | 'income'
+              | 'refund'
+              | 'reversal'
+              | 'loan'
+              | 'rebate'
+              | 'tax'
+              | null;
           };
         };
       };
@@ -2316,7 +2451,16 @@ export interface operations {
                       /** @default [] */
                       tags: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     /** @enum {string} */
                     op: 'add';
@@ -2334,7 +2478,16 @@ export interface operations {
                       priority?: number;
                       tags?: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     id: string;
                     /** @enum {string} */
@@ -2363,7 +2516,16 @@ export interface operations {
                   ruleId: string | null;
                   tags: string[];
                   /** @enum {string|null} */
-                  transactionType: 'purchase' | 'transfer' | 'income' | null;
+                  transactionType:
+                    | 'purchase'
+                    | 'transfer'
+                    | 'income'
+                    | 'refund'
+                    | 'reversal'
+                    | 'loan'
+                    | 'rebate'
+                    | 'tax'
+                    | null;
                 };
                 before: {
                   entityId: string | null;
@@ -2372,7 +2534,16 @@ export interface operations {
                   ruleId: string | null;
                   tags: string[];
                   /** @enum {string|null} */
-                  transactionType: 'purchase' | 'transfer' | 'income' | null;
+                  transactionType:
+                    | 'purchase'
+                    | 'transfer'
+                    | 'income'
+                    | 'refund'
+                    | 'reversal'
+                    | 'loan'
+                    | 'rebate'
+                    | 'tax'
+                    | null;
                 };
                 description: string;
                 transactionId: string;
@@ -2403,7 +2574,16 @@ export interface operations {
                 tags: string[];
                 timesApplied: number;
                 /** @enum {string|null} */
-                transactionType: 'purchase' | 'transfer' | 'income' | null;
+                transactionType:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | null;
               };
             };
           };
@@ -2480,7 +2660,16 @@ export interface operations {
                     /** @default [] */
                     tags: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   /** @enum {string} */
                   op: 'add';
@@ -2498,7 +2687,16 @@ export interface operations {
                     priority?: number;
                     tags?: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   id: string;
                   /** @enum {string} */
@@ -2535,7 +2733,16 @@ export interface operations {
             matchType: 'exact' | 'contains' | 'regex';
             tags?: string[];
             /** @enum {string|null} */
-            transactionType?: 'purchase' | 'transfer' | 'income' | null;
+            transactionType?:
+              | 'purchase'
+              | 'transfer'
+              | 'income'
+              | 'refund'
+              | 'reversal'
+              | 'loan'
+              | 'rebate'
+              | 'tax'
+              | null;
           };
         };
       };
@@ -2623,7 +2830,16 @@ export interface operations {
                     /** @default [] */
                     tags: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   /** @enum {string} */
                   op: 'add';
@@ -2641,7 +2857,16 @@ export interface operations {
                     priority?: number;
                     tags?: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   id: string;
                   /** @enum {string} */
@@ -2671,7 +2896,16 @@ export interface operations {
             matchType: 'exact' | 'contains' | 'regex';
             tags?: string[];
             /** @enum {string|null} */
-            transactionType?: 'purchase' | 'transfer' | 'income' | null;
+            transactionType?:
+              | 'purchase'
+              | 'transfer'
+              | 'income'
+              | 'refund'
+              | 'reversal'
+              | 'loan'
+              | 'rebate'
+              | 'tax'
+              | null;
           };
           triggeringTransactions: {
             checksum?: string;
@@ -2707,7 +2941,16 @@ export interface operations {
                       /** @default [] */
                       tags: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     /** @enum {string} */
                     op: 'add';
@@ -2725,7 +2968,16 @@ export interface operations {
                       priority?: number;
                       tags?: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     id: string;
                     /** @enum {string} */
@@ -2763,7 +3015,16 @@ export interface operations {
                 tags: string[];
                 timesApplied: number;
                 /** @enum {string|null} */
-                transactionType: 'purchase' | 'transfer' | 'income' | null;
+                transactionType:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | null;
               };
             };
           };
@@ -2927,7 +3188,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             };
           };
         };
@@ -3065,7 +3335,16 @@ export interface operations {
           priority?: number;
           tags?: string[];
           /** @enum {string|null} */
-          transactionType?: 'purchase' | 'transfer' | 'income' | null;
+          transactionType?:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax'
+            | null;
         };
       };
     };
@@ -3093,7 +3372,16 @@ export interface operations {
               tags: string[];
               timesApplied: number;
               /** @enum {string|null} */
-              transactionType: 'purchase' | 'transfer' | 'income' | null;
+              transactionType:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax'
+                | null;
             };
             message: string;
           };
@@ -3400,7 +3688,16 @@ export interface operations {
                     /** @default [] */
                     tags: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   /** @enum {string} */
                   op: 'add';
@@ -3418,7 +3715,16 @@ export interface operations {
                     priority?: number;
                     tags?: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   id: string;
                   /** @enum {string} */
@@ -3517,7 +3823,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               matched: {
                 account: string;
@@ -3573,7 +3887,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               skipped: {
                 account: string;
@@ -3629,7 +3951,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               uncertain: {
                 account: string;
@@ -3685,7 +4015,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               warnings?: {
                 affectedCount?: number;
@@ -3783,7 +4121,16 @@ export interface operations {
                     /** @default [] */
                     tags: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   /** @enum {string} */
                   op: 'add';
@@ -3801,7 +4148,16 @@ export interface operations {
                     priority?: number;
                     tags?: string[];
                     /** @enum {string|null} */
-                    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                    transactionType?:
+                      | 'purchase'
+                      | 'transfer'
+                      | 'income'
+                      | 'refund'
+                      | 'reversal'
+                      | 'loan'
+                      | 'rebate'
+                      | 'tax'
+                      | null;
                   };
                   id: string;
                   /** @enum {string} */
@@ -3910,7 +4266,15 @@ export interface operations {
             }[];
             tags?: string[];
             /** @enum {string} */
-            transactionType?: 'purchase' | 'transfer' | 'income';
+            transactionType?:
+              | 'purchase'
+              | 'transfer'
+              | 'income'
+              | 'refund'
+              | 'reversal'
+              | 'loan'
+              | 'rebate'
+              | 'tax';
           }[];
         };
       };
@@ -4225,7 +4589,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               matched: {
                 account: string;
@@ -4281,7 +4653,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               skipped: {
                 account: string;
@@ -4337,7 +4717,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               uncertain: {
                 account: string;
@@ -4393,7 +4781,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               warnings?: {
                 affectedCount?: number;
@@ -4485,7 +4881,16 @@ export interface operations {
                       /** @default [] */
                       tags: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     /** @enum {string} */
                     op: 'add';
@@ -4503,7 +4908,16 @@ export interface operations {
                       priority?: number;
                       tags?: string[];
                       /** @enum {string|null} */
-                      transactionType?: 'purchase' | 'transfer' | 'income' | null;
+                      transactionType?:
+                        | 'purchase'
+                        | 'transfer'
+                        | 'income'
+                        | 'refund'
+                        | 'reversal'
+                        | 'loan'
+                        | 'rebate'
+                        | 'tax'
+                        | null;
                     };
                     id: string;
                     /** @enum {string} */
@@ -4601,7 +5015,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               matched: {
                 account: string;
@@ -4657,7 +5079,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               skipped: {
                 account: string;
@@ -4713,7 +5143,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               uncertain: {
                 account: string;
@@ -4769,7 +5207,15 @@ export interface operations {
                   tag: string;
                 }[];
                 /** @enum {string} */
-                transactionType?: 'purchase' | 'transfer' | 'income';
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax';
               }[];
               warnings?: {
                 affectedCount?: number;
