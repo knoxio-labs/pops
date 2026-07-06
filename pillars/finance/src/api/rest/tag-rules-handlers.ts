@@ -1,20 +1,30 @@
 /**
- * Handlers for the `tagRules.*` sub-router. The propose/preview paths are
+ * Handlers for the `tagRules.*` sub-router. `list`/`get`/`matchPreview` are
+ * read-only projections (no telemetry side effects — a view must never
+ * mutate `timesApplied`/`lastUsedAt`); `update`/`disable`/`delete` are real
+ * mutations against `transaction_tag_rules`. The propose/preview paths are
  * pure deterministic computations over caller-supplied transactions; apply
  * mutates `transaction_tag_rules` (and upserts accepted vocabulary tags)
  * inside a single db transaction.
  *
- * `TransactionTagRuleNotFoundError` (an edit/disable/remove op on an unknown
- * id) maps to 404 via the shared `HttpError` path.
+ * `TransactionTagRuleNotFoundError` (an edit/disable/remove op, or a direct
+ * get/update/disable/delete, on an unknown id) maps to 404.
  */
 import {
   type FinanceDb,
   tagVocabularyService,
+  transactionCorrectionsService,
+  transactionTagRulesService,
   TransactionTagRuleNotFoundError,
 } from '../../db/index.js';
 import { previewTagRuleChangeSet } from '../modules/tag-rules/preview.js';
-import { applyTagRuleChangeSet, proposeTagRuleChangeSet } from '../modules/tag-rules/service.js';
+import {
+  applyTagRuleChangeSet,
+  proposeTagRuleChangeSet,
+  toTagRule,
+} from '../modules/tag-rules/service.js';
 import { NotFoundError } from '../shared/errors.js';
+import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -23,13 +33,102 @@ import type { financeTagRulesContract } from '../../contract/rest-tag-rules.js';
 
 type Req = ServerInferRequest<typeof financeTagRulesContract>;
 
+const DEFAULT_LIMIT = 50;
+const DEFAULT_OFFSET = 0;
+const MATCH_PREVIEW_DEFAULT_LIMIT = 100;
+const MATCH_PREVIEW_HARD_LIMIT = 500;
+
+function translateTagRuleError(err: unknown, id?: string): never {
+  if (err instanceof TransactionTagRuleNotFoundError) {
+    throw new NotFoundError('TagRule', id ?? err.id);
+  }
+  throw err;
+}
+
 export function makeTagRulesHandlers(db: FinanceDb) {
   return {
+    list: ({ query }: Req['list']) =>
+      runHttp(() => {
+        const limit = query.limit ?? DEFAULT_LIMIT;
+        const offset = query.offset ?? DEFAULT_OFFSET;
+
+        let isActiveFilter: boolean | undefined;
+        if (query.isActive === 'true') isActiveFilter = true;
+        else if (query.isActive === 'false') isActiveFilter = false;
+
+        const { rows, total } = transactionTagRulesService.listTransactionTagRulesPage(db, {
+          matchType: query.matchType,
+          isActive: isActiveFilter,
+          minConfidence: query.minConfidence,
+          limit,
+          offset,
+        });
+        return {
+          status: 200 as const,
+          body: { data: rows.map(toTagRule), pagination: paginationMeta(total, limit, offset) },
+        };
+      }),
+
     vocabulary: () =>
       runHttp(() => ({
         status: 200 as const,
         body: { tags: tagVocabularyService.listVocabularyTags(db) },
       })),
+
+    matchPreview: ({ body }: Req['matchPreview']) =>
+      runHttp(() => {
+        const limit = Math.min(body.limit ?? MATCH_PREVIEW_DEFAULT_LIMIT, MATCH_PREVIEW_HARD_LIMIT);
+        const data = transactionCorrectionsService.previewRuleMatchTransactions(db, {
+          pattern: body.pattern,
+          matchType: body.matchType,
+          limit,
+          offset: body.offset ?? DEFAULT_OFFSET,
+        });
+        return { status: 200 as const, body: { data } };
+      }),
+
+    get: ({ params }: Req['get']) =>
+      runHttp(() => {
+        try {
+          const row = transactionTagRulesService.getTransactionTagRule(db, params.id);
+          return { status: 200 as const, body: { data: toTagRule(row) } };
+        } catch (err) {
+          translateTagRuleError(err, params.id);
+        }
+      }),
+
+    update: ({ params, body }: Req['update']) =>
+      runHttp(() => {
+        try {
+          const row = transactionTagRulesService.updateTransactionTagRule(db, params.id, body);
+          return {
+            status: 200 as const,
+            body: { data: toTagRule(row), message: 'Tag rule updated' },
+          };
+        } catch (err) {
+          translateTagRuleError(err, params.id);
+        }
+      }),
+
+    disable: ({ params }: Req['disable']) =>
+      runHttp(() => {
+        try {
+          transactionTagRulesService.disableTransactionTagRule(db, params.id);
+          return { status: 200 as const, body: { message: 'Tag rule disabled' } };
+        } catch (err) {
+          translateTagRuleError(err, params.id);
+        }
+      }),
+
+    delete: ({ params }: Req['delete']) =>
+      runHttp(() => {
+        try {
+          transactionTagRulesService.deleteTransactionTagRule(db, params.id);
+          return { status: 200 as const, body: { message: 'Tag rule deleted' } };
+        } catch (err) {
+          translateTagRuleError(err, params.id);
+        }
+      }),
 
     propose: ({ body }: Req['propose']) =>
       runHttp(() => ({
@@ -60,10 +159,7 @@ export function makeTagRulesHandlers(db: FinanceDb) {
           const rules = applyTagRuleChangeSet(db, body.changeSet);
           return { status: 200 as const, body: { rules } };
         } catch (err) {
-          if (err instanceof TransactionTagRuleNotFoundError) {
-            throw new NotFoundError('transaction_tag_rules', err.id);
-          }
-          throw err;
+          translateTagRuleError(err);
         }
       }),
 

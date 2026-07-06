@@ -216,6 +216,14 @@ export interface CorrectionListQuery {
   offset?: number;
 }
 
+export interface TagRuleListQuery {
+  matchType?: 'exact' | 'contains' | 'regex';
+  isActive?: 'true' | 'false';
+  minConfidence?: number;
+  limit?: number;
+  offset?: number;
+}
+
 export interface EntityUsage {
   id: string;
   name: string;
@@ -289,6 +297,15 @@ export function makeClient(app: Express) {
       availableTags: () => send<{ tags: string[] }>(r.get('/transactions/available-tags')),
     },
     tagRules: {
+      list: (query: TagRuleListQuery = {}) =>
+        send<{ data: TagRule[]; pagination: Pagination }>(r.get('/tag-rules').query(query)),
+      get: (id: string) => send<{ data: TagRule }>(r.get(`/tag-rules/${id}`)),
+      update: (id: string, data: Record<string, unknown>) =>
+        send<{ data: TagRule; message: string }>(r.patch(`/tag-rules/${id}`).send(data)),
+      disable: (id: string) => send<{ message: string }>(r.post(`/tag-rules/${id}/disable`)),
+      delete: (id: string) => send<{ message: string }>(r.delete(`/tag-rules/${id}`)),
+      matchPreview: (body: Record<string, unknown>) =>
+        send<{ data: RuleMatchPreviewResult }>(r.post('/tag-rules/match-preview').send(body)),
       vocabulary: () => send<{ tags: string[] }>(r.get('/tag-rules/vocabulary')),
       propose: (body: Record<string, unknown>) =>
         send<TagRuleProposal>(r.post('/tag-rules/propose').send(body)),

@@ -1,8 +1,10 @@
 # Tag Rule Proposals
 
 Status: Shipped — the deterministic propose/preview/apply/reject contract, the
-import-wizard UI, and the **seed taxonomy (v1)** that primes a fresh database all
-ship.
+import-wizard UI, the **seed taxonomy (v1)** that primes a fresh database, and
+the **Tag Rules browser** (view/edit/disable/delete + usage-history preview)
+all ship. A full historical ChangeSet before/after diff (CP020 remainder) is
+tracked separately at #3741.
 
 A tag-learning system that proposes reusable **tag rules** from a user's tag edits
 during import. Rules contribute tag _suggestions_ with source attribution; they
@@ -32,6 +34,22 @@ runs all ops in one DB transaction (atomic — no partial ChangeSet lands).
 
 ## REST API surface (`/tag-rules/*`)
 
+- `GET  /tag-rules` → `{ data: TagRule[], pagination }`; optional
+  `matchType` / `isActive` / `minConfidence` filters, `limit`/`offset`
+  pagination. Read-only — never mutates usage telemetry.
+- `GET  /tag-rules/:id` → `{ data: TagRule }`; 404 on an unknown id.
+- `PATCH /tag-rules/:id` — body `{ entityId?, tags?, confidence?, isActive?, priority? }`
+  (mirrors the ChangeSet `edit` op shape); returns `{ data, message }`. `descriptionPattern`
+  and `matchType` are immutable post-create — not accepted here.
+- `POST /tag-rules/:id/disable` — soft-delete (`isActive=false`); a real, direct
+  mutation (not folded into a ChangeSet). Returns `{ message }`; 404 on an unknown id.
+- `DELETE /tag-rules/:id` — hard delete. Returns `{ message }`; 404 on an unknown id.
+- `POST /tag-rules/match-preview` — body `{ pattern, matchType, limit?, offset? }`;
+  returns `{ data: { matches, totalCount } }`: every DB transaction the candidate
+  `(pattern, matchType)` currently matches, paged, with the true full-DB total
+  (mirrors `corrections.ruleMatchPreview`). Backs the Tag Rules browser's
+  usage-history panel — a first full-history preview surface for tag rules
+  (`tagRules.preview` below still only samples caller-supplied transactions).
 - `GET  /tag-rules/vocabulary` → `{ tags: string[] }` (active vocabulary).
 - `POST /tag-rules/propose` — body `{ signal, transactions[], maxPreviewItems }`;
   returns `{ changeSet, rationale, preview }`. Deterministic (no AI): builds a
@@ -85,6 +103,40 @@ runs all ops in one DB transaction (atomic — no partial ChangeSet lands).
   rules only, entity-scoped or global, exact/contains/regex), feeding the
   tag-suggester alongside correction-rule and AI tags.
 
+## Tag Rules browser (`/finance/tag-rules`)
+
+First-class management surface for already-created rules — closes the gap where
+tag rules could only be added, never fixed or pruned in-product (#3659 / CF058).
+
+- Lists every rule (pattern, matchType, entity, tags, confidence, priority,
+  isActive, `timesApplied`/`lastUsedAt`), filterable by matchType / isActive /
+  minConfidence, paginated.
+- **Edit** — `TagRuleEditDialog` patches entity scope, tags, confidence,
+  priority, and the active flag via `PATCH /tag-rules/:id`. `descriptionPattern`
+  and `matchType` are shown read-only: they're the rule's identity key, and
+  changing them means creating a new rule (delete the old one) rather than
+  mutating an existing match set out from under its usage history.
+- **Disable** — one-click, no confirmation (reversible via edit → Active);
+  calls `POST /tag-rules/:id/disable`, a real mutation, not a client-only toggle.
+- **Delete** — confirmation dialog, then `DELETE /tag-rules/:id`.
+- **Usage/history preview** — the edit dialog's side panel shows `timesApplied` /
+  `lastUsedAt` telemetry plus a live `POST /tag-rules/match-preview` scan: every
+  transaction in the full finance DB the rule's `(pattern, matchType)` currently
+  matches, not just the current import batch. This is the tag-rule analogue of
+  corrections' `ruleMatchPreview`.
+- Mirrors `RulesBrowserPage`'s page-shell + sections + hooks structure
+  (`pages/tag-rules-browser/`) and its own nav entry (`Tag Rules`, distinct
+  from the corrections `Rules` page) rather than a tab, so each remains a
+  focused route-level page over its own domain model.
+- **Deferred (CP020 remainder, tracked at #3741):** a full before/after
+  ChangeSet impact diff across all historical transactions (not just a raw
+  match list) for an _edited_ rule. `match-preview` above covers the "what
+  does this rule hit today" question (mirrors `corrections.ruleMatchPreview`,
+  shipped for #3597); the "what would this edit change historically"
+  question — a ChangeSet-level diff, not just current matches, over
+  unlimited history rather than a capped caller-supplied batch — remains
+  open for both tag rules and corrections and is a larger design decision.
+
 ## Acceptance criteria
 
 - [x] Tag rule model matches by exact/contains/regex and proposes one or more tags
@@ -107,3 +159,15 @@ runs all ops in one DB transaction (atomic — no partial ChangeSet lands).
 - [x] Seed taxonomy (v1) primes a fresh database with `source: 'seed'` vocabulary so
       suggestions read against a populated vocabulary before any user tags exist; seeded
       via an idempotent `INSERT OR IGNORE` in the finance migration baseline.
+- [x] `GET /tag-rules` / `GET /tag-rules/:id` list and fetch persisted rules
+      (filterable, paginated) without mutating usage telemetry.
+- [x] `PATCH /tag-rules/:id` edits entity/tags/confidence/priority/isActive;
+      `POST /tag-rules/:id/disable` and `DELETE /tag-rules/:id` are real
+      mutations; all three 404 on an unknown id.
+- [x] `POST /tag-rules/match-preview` returns the full-DB match set (paged,
+      true total) for a candidate `(pattern, matchType)`.
+- [x] The Tag Rules browser (`/finance/tag-rules`) lists, filters, edits,
+      disables, and deletes rules, and surfaces usage telemetry + a
+      match-history preview in the edit dialog.
+- [ ] Full before/after ChangeSet impact diff over unlimited history (CP020
+      remainder) — tracked at #3741, not implemented here.

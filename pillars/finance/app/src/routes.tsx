@@ -33,6 +33,9 @@ const ImportPage = lazy(() =>
 const RulesBrowserPage = lazy(() =>
   import('./pages/RulesBrowserPage').then((m) => ({ default: m.RulesBrowserPage }))
 );
+const TagRulesBrowserPage = lazy(() =>
+  import('./pages/TagRulesBrowserPage').then((m) => ({ default: m.TagRulesBrowserPage }))
+);
 const PromptViewerPage = lazy(() =>
   import('./pages/PromptViewerPage').then((m) => ({ default: m.PromptViewerPage }))
 );
@@ -67,6 +70,7 @@ export const navConfig = {
     { path: '/wishlist', label: 'Wish List', labelKey: 'finance.wishList', icon: 'Star' },
     { path: '/import', label: 'Import', labelKey: 'finance.import', icon: 'Download' },
     { path: '/rules', label: 'Rules', labelKey: 'finance.rules', icon: 'BookOpen' },
+    { path: '/tag-rules', label: 'Tag Rules', labelKey: 'finance.tagRules', icon: 'Tag' },
     {
       path: '/prompts',
       label: 'Prompt Templates',
@@ -84,5 +88,6 @@ export const routes: RouteObject[] = [
   { path: 'wishlist', element: <WishlistPage /> },
   { path: 'import', element: <ImportPage /> },
   { path: 'rules', element: <RulesBrowserPage /> },
+  { path: 'tag-rules', element: <TagRulesBrowserPage /> },
   { path: 'prompts', element: <PromptViewerPage /> },
 ];

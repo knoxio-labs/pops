@@ -3683,6 +3683,77 @@ export type SettingsResetKeyResponses = {
 
 export type SettingsResetKeyResponse = SettingsResetKeyResponses[keyof SettingsResetKeyResponses];
 
+export type TagRulesListData = {
+  body?: never;
+  path?: never;
+  query?: {
+    matchType?: 'exact' | 'contains' | 'regex';
+    isActive?: 'true' | 'false';
+    minConfidence?: number;
+    limit?: number;
+    offset?: number;
+  };
+  url: '/tag-rules';
+};
+
+export type TagRulesListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesListError = TagRulesListErrors[keyof TagRulesListErrors];
+
+export type TagRulesListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      confidence: number;
+      createdAt: string;
+      descriptionPattern: string;
+      entityId: string | null;
+      id: string;
+      isActive: boolean;
+      lastUsedAt: string | null;
+      matchType: 'exact' | 'contains' | 'regex';
+      priority: number;
+      tags: Array<string>;
+      timesApplied: number;
+    }>;
+    pagination: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
+  };
+};
+
+export type TagRulesListResponse = TagRulesListResponses[keyof TagRulesListResponses];
+
 export type TagRulesApplyData = {
   /**
    * Body
@@ -3783,6 +3854,74 @@ export type TagRulesApplyResponses = {
 };
 
 export type TagRulesApplyResponse = TagRulesApplyResponses[keyof TagRulesApplyResponses];
+
+export type TagRulesMatchPreviewData = {
+  /**
+   * Body
+   */
+  body?: {
+    limit?: number;
+    matchType: 'exact' | 'contains' | 'regex';
+    offset?: number;
+    pattern: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/tag-rules/match-preview';
+};
+
+export type TagRulesMatchPreviewErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesMatchPreviewError =
+  TagRulesMatchPreviewErrors[keyof TagRulesMatchPreviewErrors];
+
+export type TagRulesMatchPreviewResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      matches: Array<{
+        amount: number;
+        checksum: string | null;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        id: string;
+      }>;
+      totalCount: number;
+    };
+  };
+};
+
+export type TagRulesMatchPreviewResponse =
+  TagRulesMatchPreviewResponses[keyof TagRulesMatchPreviewResponses];
 
 export type TagRulesPreviewData = {
   /**
@@ -4218,6 +4357,246 @@ export type TagRulesVocabularyResponses = {
 
 export type TagRulesVocabularyResponse =
   TagRulesVocabularyResponses[keyof TagRulesVocabularyResponses];
+
+export type TagRulesDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/tag-rules/{id}';
+};
+
+export type TagRulesDeleteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesDeleteError = TagRulesDeleteErrors[keyof TagRulesDeleteErrors];
+
+export type TagRulesDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type TagRulesDeleteResponse = TagRulesDeleteResponses[keyof TagRulesDeleteResponses];
+
+export type TagRulesGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/tag-rules/{id}';
+};
+
+export type TagRulesGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesGetError = TagRulesGetErrors[keyof TagRulesGetErrors];
+
+export type TagRulesGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      confidence: number;
+      createdAt: string;
+      descriptionPattern: string;
+      entityId: string | null;
+      id: string;
+      isActive: boolean;
+      lastUsedAt: string | null;
+      matchType: 'exact' | 'contains' | 'regex';
+      priority: number;
+      tags: Array<string>;
+      timesApplied: number;
+    };
+  };
+};
+
+export type TagRulesGetResponse = TagRulesGetResponses[keyof TagRulesGetResponses];
+
+export type TagRulesUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    confidence?: number;
+    entityId?: string | null;
+    isActive?: boolean;
+    priority?: number;
+    tags?: Array<string>;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/tag-rules/{id}';
+};
+
+export type TagRulesUpdateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesUpdateError = TagRulesUpdateErrors[keyof TagRulesUpdateErrors];
+
+export type TagRulesUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      confidence: number;
+      createdAt: string;
+      descriptionPattern: string;
+      entityId: string | null;
+      id: string;
+      isActive: boolean;
+      lastUsedAt: string | null;
+      matchType: 'exact' | 'contains' | 'regex';
+      priority: number;
+      tags: Array<string>;
+      timesApplied: number;
+    };
+    message: string;
+  };
+};
+
+export type TagRulesUpdateResponse = TagRulesUpdateResponses[keyof TagRulesUpdateResponses];
+
+export type TagRulesDisableData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/tag-rules/{id}/disable';
+};
+
+export type TagRulesDisableErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesDisableError = TagRulesDisableErrors[keyof TagRulesDisableErrors];
+
+export type TagRulesDisableResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type TagRulesDisableResponse = TagRulesDisableResponses[keyof TagRulesDisableResponses];
 
 export type TransactionsListData = {
   body?: never;

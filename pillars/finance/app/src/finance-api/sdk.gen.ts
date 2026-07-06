@@ -119,6 +119,21 @@ import type {
   TagRulesApplyData,
   TagRulesApplyErrors,
   TagRulesApplyResponses,
+  TagRulesDeleteData,
+  TagRulesDeleteErrors,
+  TagRulesDeleteResponses,
+  TagRulesDisableData,
+  TagRulesDisableErrors,
+  TagRulesDisableResponses,
+  TagRulesGetData,
+  TagRulesGetErrors,
+  TagRulesGetResponses,
+  TagRulesListData,
+  TagRulesListErrors,
+  TagRulesListResponses,
+  TagRulesMatchPreviewData,
+  TagRulesMatchPreviewErrors,
+  TagRulesMatchPreviewResponses,
   TagRulesPreviewData,
   TagRulesPreviewErrors,
   TagRulesPreviewResponses,
@@ -128,6 +143,9 @@ import type {
   TagRulesRejectData,
   TagRulesRejectErrors,
   TagRulesRejectResponses,
+  TagRulesUpdateData,
+  TagRulesUpdateErrors,
+  TagRulesUpdateResponses,
   TagRulesVocabularyData,
   TagRulesVocabularyResponses,
   TransactionsAvailableTagsData,
@@ -855,6 +873,17 @@ export const settingsResetKey = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * List tag rules with optional matchType/isActive/minConfidence filters and pagination
+ */
+export const tagRulesList = <ThrowOnError extends boolean = false>(
+  options?: Options<TagRulesListData, ThrowOnError>
+): RequestResult<TagRulesListResponses, TagRulesListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<TagRulesListResponses, TagRulesListErrors, ThrowOnError>({
+    url: '/tag-rules',
+    ...options,
+  });
+
+/**
  * Apply a tag-rule ChangeSet; upserts accepted new vocabulary tags
  */
 export const tagRulesApply = <ThrowOnError extends boolean = false>(
@@ -862,6 +891,25 @@ export const tagRulesApply = <ThrowOnError extends boolean = false>(
 ): RequestResult<TagRulesApplyResponses, TagRulesApplyErrors, ThrowOnError> =>
   (options?.client ?? client).post<TagRulesApplyResponses, TagRulesApplyErrors, ThrowOnError>({
     url: '/tag-rules/apply',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * List every DB transaction a candidate (pattern, matchType) tag rule matches, paged, with the full-DB match total
+ */
+export const tagRulesMatchPreview = <ThrowOnError extends boolean = false>(
+  options?: Options<TagRulesMatchPreviewData, ThrowOnError>
+): RequestResult<TagRulesMatchPreviewResponses, TagRulesMatchPreviewErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    TagRulesMatchPreviewResponses,
+    TagRulesMatchPreviewErrors,
+    ThrowOnError
+  >({
+    url: '/tag-rules/match-preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -923,6 +971,62 @@ export const tagRulesVocabulary = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<TagRulesVocabularyResponses, unknown, ThrowOnError>({
     url: '/tag-rules/vocabulary',
     ...options,
+  });
+
+/**
+ * Delete a tag rule
+ */
+export const tagRulesDelete = <ThrowOnError extends boolean = false>(
+  options: Options<TagRulesDeleteData, ThrowOnError>
+): RequestResult<TagRulesDeleteResponses, TagRulesDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<TagRulesDeleteResponses, TagRulesDeleteErrors, ThrowOnError>({
+    url: '/tag-rules/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Get a single tag rule by id
+ */
+export const tagRulesGet = <ThrowOnError extends boolean = false>(
+  options: Options<TagRulesGetData, ThrowOnError>
+): RequestResult<TagRulesGetResponses, TagRulesGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<TagRulesGetResponses, TagRulesGetErrors, ThrowOnError>({
+    url: '/tag-rules/{id}',
+    ...options,
+  });
+
+/**
+ * Edit a tag rule (entityId / tags / confidence / priority / isActive)
+ */
+export const tagRulesUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<TagRulesUpdateData, ThrowOnError>
+): RequestResult<TagRulesUpdateResponses, TagRulesUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<TagRulesUpdateResponses, TagRulesUpdateErrors, ThrowOnError>({
+    url: '/tag-rules/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Disable a tag rule (soft-delete: isActive=false)
+ */
+export const tagRulesDisable = <ThrowOnError extends boolean = false>(
+  options: Options<TagRulesDisableData, ThrowOnError>
+): RequestResult<TagRulesDisableResponses, TagRulesDisableErrors, ThrowOnError> =>
+  (options.client ?? client).post<TagRulesDisableResponses, TagRulesDisableErrors, ThrowOnError>({
+    url: '/tag-rules/{id}/disable',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

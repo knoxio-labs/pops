@@ -212,5 +212,8 @@
   "rules.tags": "Tags",
   "rules.tagsPlaceholder": "Type and press Enter...",
   "rules.active": "Active",
-  "rules.inactiveSkipped": "Inactive rules are skipped by the matcher."
+  "rules.inactiveSkipped": "Inactive rules are skipped by the matcher.",
+
+  "tagRules.title": "Tag Rules",
+  "tagRules.description": "Browse and manage tag-suggestion rules"
 }
