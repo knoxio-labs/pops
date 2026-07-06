@@ -157,13 +157,21 @@ describe('getPillar — base-URL resolution', () => {
     );
   });
 
-  it('does not forward an empty or whitespace-only POPS_REGISTRY_URL to the SDK', () => {
+  it('defaults the registry URL to the in-cluster registry-api host when POPS_REGISTRY_URL is unset', () => {
+    getPillar('inventory');
+
+    expect(configureServerSdk).toHaveBeenCalledWith(
+      expect.objectContaining({ registry: { registryUrl: 'http://registry-api:3001' } })
+    );
+  });
+
+  it('falls back to the default registry URL when POPS_REGISTRY_URL is empty/whitespace-only', () => {
     process.env['POPS_REGISTRY_URL'] = '   ';
 
     getPillar('inventory');
 
     expect(configureServerSdk).toHaveBeenCalledWith(
-      expect.not.objectContaining({ registry: expect.anything() })
+      expect.objectContaining({ registry: { registryUrl: 'http://registry-api:3001' } })
     );
   });
 
