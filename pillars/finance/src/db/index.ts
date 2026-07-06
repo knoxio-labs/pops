@@ -106,4 +106,14 @@ export {
   type ReassignEntityIdCounts,
 } from './services/entity-precreate-outbox.js';
 
+export * as entityOrphansService from './services/entity-orphans.js';
+
+export type {
+  LiveEntityRef,
+  DistinctEntityRef,
+  EntityRepairPlan,
+  OrphanRowCounts,
+  EntityRepairResult,
+} from './services/entity-orphans.js';
+
 export * as importCommitsService from './services/import-commits.js';

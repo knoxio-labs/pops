@@ -20,6 +20,7 @@ import { createContactsClient } from './contacts/client.js';
 import { createPillarOwnerUriLookup } from './cron/pillar-lookup.js';
 import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-outbox.js';
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
+import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orphans.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
 import { parseBareOrigin } from './pillars/env.js';
@@ -87,6 +88,16 @@ const reconcileOutboxHandle = startReconcileContactsOutboxWorker({
   logger: reconcileLogger,
 });
 
+// Daily detection sweep for orphaned entity_id references (issue #3615): a
+// contacts reseed silently dangles the contact ids copied onto finance rows.
+// Detection only — the reviewed repair lives in scripts/repair-orphaned-entity-ids.ts.
+const reconcileEntityOrphansHandle = startReconcileEntityOrphansWorker({
+  db: financeDb.db,
+  fetchLiveEntities: async () =>
+    (await contacts.fetchAllEntities()).map((e) => ({ id: e.id, name: e.name })),
+  logger: reconcileLogger,
+});
+
 const server = app.listen(port, () => {
   console.warn(`[finance-api] Listening on port ${port}`);
 });
@@ -107,6 +118,7 @@ function shutdown(signal: NodeJS.Signals): void {
   console.warn(`[finance-api] Shutting down (${signal})`);
   reconcileHandle.stop();
   reconcileOutboxHandle.stop();
+  reconcileEntityOrphansHandle.stop();
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
     server.close(() => {
       financeDb.raw.close();
