@@ -1,3 +1,5 @@
+import type { TransactionType } from '../../lib/transaction-type';
+
 export type MatchType = 'exact' | 'contains' | 'regex';
 
 export interface Correction {
@@ -8,7 +10,7 @@ export interface Correction {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: 'purchase' | 'transfer' | 'income' | null;
+  transactionType: TransactionType | null;
   isActive: boolean;
   priority: number;
   confidence: number;

@@ -2,6 +2,7 @@ import { moveOneToMatched } from '../../review/useReviewActions';
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { TransactionType } from '../../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { LocalTxState } from '../local-tx-reconcile';
 
@@ -24,7 +25,7 @@ export interface UseBulkAssignmentArgs {
     entityId: string | null;
     entityName: string | null;
     location?: string | null;
-    transactionType?: 'purchase' | 'transfer' | 'income' | null;
+    transactionType?: TransactionType | null;
   }) => Promise<void>;
 }
 

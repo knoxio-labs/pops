@@ -6,6 +6,7 @@
  * matchers in `transaction-corrections-matching.ts`, both consume the
  * types declared here.
  */
+import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { transactionCorrections } from '../schema.js';
 
 /** Raw drizzle row shape — matches the persisted `transaction_corrections` record. */
@@ -14,8 +15,9 @@ export type TransactionCorrectionRow = typeof transactionCorrections.$inferSelec
 /** Discriminant for how `descriptionPattern` is interpreted against an incoming description. */
 export type TransactionCorrectionMatchType = 'exact' | 'contains' | 'regex';
 
-/** Optional `transaction_type` tag stamped onto the matched transaction. */
-export type TransactionCorrectionTransactionType = 'purchase' | 'transfer' | 'income';
+/** Optional `transaction_type` tag stamped onto the matched transaction.
+ * Alias of the canonical {@link TransactionType} (#3607). */
+export type TransactionCorrectionTransactionType = TransactionType;
 
 /**
  * Mutable subset accepted on create / upsert.

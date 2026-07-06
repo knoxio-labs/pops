@@ -6,12 +6,15 @@
  */
 import { z } from 'zod';
 
+import {
+  TransactionTypeSchema,
+  type TransactionType,
+} from '../../../contract/rest-corrections-schemas.js';
 import { type ChangeSet } from '../../../contract/rest-corrections.js';
 import { type TransactionCorrectionRow } from '../../../db/index.js';
 import { parseCorrectionTags, type CorrectionRow } from './types.js';
 
 const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
-const TransactionTypeSchema = z.enum(['purchase', 'transfer', 'income']);
 
 /** A user's intended correction rule (the trigger for a proposal). */
 export const CorrectionSignalSchema = z.object({
@@ -60,7 +63,7 @@ export interface CorrectionClassificationOutcome {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: 'purchase' | 'transfer' | 'income' | null;
+  transactionType: TransactionType | null;
 }
 
 export interface ChangeSetImpactCounts {
@@ -87,7 +90,7 @@ export interface Correction {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: 'purchase' | 'transfer' | 'income' | null;
+  transactionType: TransactionType | null;
   isActive: boolean;
   priority: number;
   confidence: number;

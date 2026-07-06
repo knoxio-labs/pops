@@ -33,6 +33,7 @@ import {
   updateTransactionCorrection,
 } from '../services/transaction-corrections.js';
 
+import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb } from '../services/internal.js';
 
 const TRANSACTION_CORRECTIONS_DDL = `
@@ -80,7 +81,7 @@ function seedCorrection(
     entityName: string | null;
     location: string | null;
     tags: string;
-    transactionType: 'purchase' | 'transfer' | 'income' | null;
+    transactionType: TransactionType | null;
     isActive: 0 | 1;
     confidence: number;
     priority: number;
@@ -904,5 +905,40 @@ describe('row type sanity', () => {
       .where(eq(transactionCorrections.id, id))
       .get();
     expect(row?.isActive).toBe(true);
+  });
+});
+
+describe('createOrUpdateTransactionCorrection — expanded taxonomy (#3607)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('persists and round-trips every new (post-#3607) transaction type', () => {
+    const newTypes: TransactionType[] = ['refund', 'reversal', 'loan', 'rebate', 'tax'];
+    for (const type of newTypes) {
+      const created = createOrUpdateTransactionCorrection(harness.db, {
+        descriptionPattern: `RULE ${type}`,
+        matchType: 'exact',
+        entityId: null,
+        transactionType: type,
+      });
+      expect(created.transactionType).toBe(type);
+
+      const fetched = getTransactionCorrection(harness.db, created.id);
+      expect(fetched?.transactionType).toBe(type);
+    }
+  });
+
+  it('still accepts the legacy three types unchanged', () => {
+    for (const type of ['purchase', 'transfer', 'income'] as const) {
+      const created = createOrUpdateTransactionCorrection(harness.db, {
+        descriptionPattern: `LEGACY ${type}`,
+        matchType: 'exact',
+        entityId: 'ent-x',
+        transactionType: type,
+      });
+      expect(created.transactionType).toBe(type);
+    }
   });
 });

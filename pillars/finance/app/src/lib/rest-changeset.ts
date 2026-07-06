@@ -1,6 +1,7 @@
 import type { ChangeSet, ChangeSetOp } from '@pops/finance';
 
 import type { ImportsReevaluateWithPendingRulesData } from '../finance-api/index.js';
+import type { TransactionType } from './transaction-type';
 
 type RestCorrectionChangeSet = NonNullable<
   ImportsReevaluateWithPendingRulesData['body']
@@ -15,9 +16,9 @@ type RestCorrectionOpData = Extract<RestCorrectionOp, { op: 'add' }>['data'];
  * "unset", which the contract expresses by omitting the field. Coerce
  * `null` → omitted so the value satisfies the generated body losslessly.
  */
-function normalizeData<T extends { transactionType?: 'purchase' | 'transfer' | 'income' | null }>(
+function normalizeData<T extends { transactionType?: TransactionType | null }>(
   data: T
-): Omit<T, 'transactionType'> & { transactionType?: 'purchase' | 'transfer' | 'income' } {
+): Omit<T, 'transactionType'> & { transactionType?: TransactionType } {
   const { transactionType, ...rest } = data;
   return transactionType == null ? rest : { ...rest, transactionType };
 }
@@ -54,11 +55,9 @@ export function toRestPendingChangeSets(
  * Coerce a correction signal's nullable `transactionType` to the contract's
  * non-null form (same `null → omitted` rule as the ChangeSet op data).
  */
-export function toRestSignal<
-  T extends { transactionType?: 'purchase' | 'transfer' | 'income' | null },
->(
+export function toRestSignal<T extends { transactionType?: TransactionType | null }>(
   signal: T
-): Omit<T, 'transactionType'> & { transactionType?: 'purchase' | 'transfer' | 'income' } {
+): Omit<T, 'transactionType'> & { transactionType?: TransactionType } {
   return normalizeData(signal);
 }
 

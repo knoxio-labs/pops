@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
 
@@ -31,7 +32,7 @@ export const EntityMatchSchema = z.object({
   confidence: z.number().min(0).max(1).optional(),
 });
 
-export const TransactionTypeSchema = z.enum(['purchase', 'transfer', 'income']);
+export { TransactionTypeSchema };
 
 export const SuggestedTagSchema = z.object({
   tag: z.string(),

@@ -14,6 +14,7 @@ import {
   type RuleMatchPreviewResult,
   type TransactionCorrectionMatchType,
   type TransactionCorrectionRow,
+  type TransactionCorrectionTransactionType,
   type TransactionRow,
   TagsOnlyCorrectionError,
   TransactionCorrectionNotFoundError,
@@ -51,7 +52,7 @@ export interface Correction {
   entityName: string | null;
   location: string | null;
   tags: string[];
-  transactionType: 'purchase' | 'transfer' | 'income' | null;
+  transactionType: TransactionCorrectionTransactionType | null;
   isActive: boolean;
   priority: number;
   confidence: number;

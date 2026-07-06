@@ -4,6 +4,7 @@ import { replaceByChecksum } from '../hooks/local-tx-reconcile';
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { TransactionType } from '../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { LocalTxState } from '../hooks/local-tx-reconcile';
 
@@ -14,7 +15,7 @@ type GenerateProposal = (args: {
   entityId: string | null;
   entityName: string | null;
   location?: string | null;
-  transactionType?: 'purchase' | 'transfer' | 'income' | null;
+  transactionType?: TransactionType | null;
 }) => Promise<void>;
 
 export interface MoveArgs {

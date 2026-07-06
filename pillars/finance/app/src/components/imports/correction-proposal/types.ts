@@ -12,6 +12,7 @@ import type {
   CorrectionsReviseChangeSetData,
   CorrectionsReviseChangeSetResponse,
 } from '../../../finance-api/index.js';
+import type { TransactionType } from '../../../lib/transaction-type';
 import type { CorrectionRule } from '../RulePicker';
 
 export type CorrectionSignal = NonNullable<CorrectionsProposeChangeSetData['body']>['signal'];
@@ -91,5 +92,5 @@ export interface TriggeringTransactionContext {
   account: string;
   location?: string | null;
   previousEntityName?: string | null;
-  previousTransactionType?: 'purchase' | 'transfer' | 'income' | null;
+  previousTransactionType?: TransactionType | null;
 }
