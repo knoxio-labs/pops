@@ -7191,6 +7191,10 @@
                     },
                     "type": "array"
                   },
+                  "commitKey": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
                   "entities": {
                     "default": [],
                     "items": {

@@ -1,6 +1,16 @@
 import { AlertCircle, Loader2 } from 'lucide-react';
 
-import { Button } from '@pops/ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+} from '@pops/ui';
 
 import {
   ClassificationRulesSection,
@@ -42,6 +52,46 @@ function ActionFooter({
         {isCommitting ? 'Committing...' : 'Approve & Commit All'}
       </Button>
     </div>
+  );
+}
+
+function CommitConfirmDialog({
+  open,
+  isCommitting,
+  entityCount,
+  ruleCount,
+  transactionCount,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  isCommitting: boolean;
+  entityCount: number;
+  ruleCount: number;
+  transactionCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => !next && onCancel()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Commit this import?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will create {entityCount} {entityCount === 1 ? 'entity' : 'entities'}, apply{' '}
+            {ruleCount} classification {ruleCount === 1 ? 'rule change' : 'rule changes'}, and
+            import {transactionCount} {transactionCount === 1 ? 'transaction' : 'transactions'}.
+            This cannot be undone from here.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isCommitting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={isCommitting}>
+            {isCommitting ? 'Committing...' : 'Approve & Commit All'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -99,7 +149,16 @@ export function FinalReviewStep() {
       <ActionFooter
         isCommitting={state.isCommitting}
         onBack={state.prevStep}
-        onCommit={state.handleCommit}
+        onCommit={state.openConfirm}
+      />
+      <CommitConfirmDialog
+        open={state.confirmOpen}
+        isCommitting={state.isCommitting}
+        entityCount={state.pendingEntities.length}
+        ruleCount={state.totalOps + state.totalTagRuleOps}
+        transactionCount={state.txnBreakdown.total}
+        onCancel={state.cancelConfirm}
+        onConfirm={state.confirmCommit}
       />
     </div>
   );

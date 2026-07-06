@@ -3641,6 +3641,7 @@ export interface operations {
             reason?: string;
             source?: string;
           }[];
+          commitKey?: string;
           /** @default [] */
           entities: {
             name: string;

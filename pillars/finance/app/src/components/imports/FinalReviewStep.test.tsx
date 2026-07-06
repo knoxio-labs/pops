@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -85,6 +85,13 @@ beforeEach(() => {
     error: undefined,
   });
 });
+
+/** Open the confirmation dialog via the footer button, then confirm inside it. */
+function clickCommitAndConfirm() {
+  fireEvent.click(screen.getByRole('button', { name: 'Approve & Commit All' }));
+  const dialog = screen.getByRole('alertdialog');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Approve & Commit All' }));
+}
 
 // --- Tests ---
 
@@ -203,19 +210,62 @@ describe('FinalReviewStep', () => {
     expect(screen.queryByText('Continue to Import')).toBeNull();
   });
 
-  it('calls importsCommitImport with the built payload on Approve & Commit All click', async () => {
+  it('opens a confirmation dialog summarizing totals instead of committing immediately', () => {
+    storeState = makeStoreState({
+      pendingEntities: [{ tempId: 'temp:entity:1', name: 'Woolworths', type: 'company' }],
+      pendingChangeSets: [{ tempId: 'pcs-1', changeSet: { ops: [{ op: 'add', data: {} }] } }],
+      confirmedTransactions: [
+        { id: 't1', checksum: 'abc' },
+        { id: 't2', checksum: 'def' },
+      ],
+    });
+    render(renderStep());
+    fireEvent.click(screen.getByRole('button', { name: 'Approve & Commit All' }));
+
+    expect(mockCommitImport).not.toHaveBeenCalled();
+    const dialogText = screen.getByRole('alertdialog').textContent ?? '';
+    expect(dialogText).toContain('1 entity');
+    expect(dialogText).toContain('1 classification rule change');
+    expect(dialogText).toContain('2 transactions');
+  });
+
+  it('calls importsCommitImport with the built payload + a commitKey on confirm', async () => {
     storeState = makeStoreState({
       confirmedTransactions: [{ id: 't1', checksum: 'abc' }],
     });
     render(renderStep());
-    fireEvent.click(screen.getByText('Approve & Commit All'));
+    clickCommitAndConfirm();
     await waitFor(() =>
       expect(mockCommitImport).toHaveBeenCalledWith({
         body: expect.objectContaining({
           transactions: [{ id: 't1', checksum: 'abc' }],
+          commitKey: expect.any(String),
         }),
       })
     );
+  });
+
+  it('reuses the same commitKey across a retry (idempotent resubmit)', async () => {
+    storeState = makeStoreState({
+      confirmedTransactions: [{ id: 't1', checksum: 'abc' }],
+    });
+    mockCommitImport.mockResolvedValueOnce({
+      data: undefined,
+      error: { message: 'timeout' },
+      response: { status: 500 } as Response,
+    });
+    render(renderStep());
+    clickCommitAndConfirm();
+    await waitFor(() => expect(mockCommitImport).toHaveBeenCalledTimes(1));
+
+    clickCommitAndConfirm();
+    await waitFor(() => expect(mockCommitImport).toHaveBeenCalledTimes(2));
+
+    const [firstCall, secondCall] = mockCommitImport.mock.calls as [
+      [{ body: { commitKey: string } }],
+      [{ body: { commitKey: string } }],
+    ];
+    expect(secondCall[0].body.commitKey).toBe(firstCall[0].body.commitKey);
   });
 
   it('auto-advances to Summary on successful commit', async () => {
@@ -233,7 +283,7 @@ describe('FinalReviewStep', () => {
       error: undefined,
     });
     render(renderStep());
-    fireEvent.click(screen.getByText('Approve & Commit All'));
+    clickCommitAndConfirm();
 
     await waitFor(() => {
       expect(mockSetCommitResult).toHaveBeenCalledWith(resultData);
@@ -248,7 +298,7 @@ describe('FinalReviewStep', () => {
       response: { status: 409 } as Response,
     });
     render(renderStep());
-    fireEvent.click(screen.getByText('Approve & Commit All'));
+    clickCommitAndConfirm();
 
     await waitFor(() => {
       expect(screen.getByText('Commit failed')).toBeDefined();
@@ -263,7 +313,7 @@ describe('FinalReviewStep', () => {
       response: { status: 500 } as Response,
     });
     render(renderStep());
-    fireEvent.click(screen.getByText('Approve & Commit All'));
+    clickCommitAndConfirm();
 
     await waitFor(() => {
       expect(screen.getByText('Commit failed')).toBeDefined();
@@ -279,7 +329,7 @@ describe('FinalReviewStep', () => {
       })
     );
     render(renderStep());
-    fireEvent.click(screen.getByText('Approve & Commit All'));
+    clickCommitAndConfirm();
     await waitFor(() => expect(screen.getByText('Back').closest('button')?.disabled).toBe(true));
     resolveCommit({ data: { data: {}, message: 'ok' }, error: undefined });
   });

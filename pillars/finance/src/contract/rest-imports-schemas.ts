@@ -141,6 +141,14 @@ export const CommitPayloadSchema = z.object({
   changeSets: z.array(ChangeSetSchema).default([]),
   tagRuleChangeSets: z.array(TagRuleChangeSetSchema).default([]),
   transactions: z.array(ConfirmedTransactionSchema),
+  /**
+   * Client-generated idempotency key scoped to a single "Approve & Commit
+   * All" click (#3640/#3642). Omitting it preserves the old at-most-once-
+   * best-effort behaviour; supplying it makes a resubmit under the same key
+   * a no-op replay of the first call's result instead of re-applying the
+   * whole payload.
+   */
+  commitKey: z.string().min(1).optional(),
 });
 
 export const RulesAppliedSchema = z.object({

@@ -63,10 +63,22 @@ function useDerivedCounts(slice: ReturnType<typeof useStoreSlice>) {
   return { txnBreakdown, tagAssignmentCount, taggedTxnCount, totalOps, totalTagRuleOps };
 }
 
+/**
+ * A commit key is minted once per Final Review visit — a fresh instance of
+ * this hook, i.e. a fresh mount of `FinalReviewStep` (leaving and re-entering
+ * the wizard step unmounts it) — and stays fixed across re-renders and
+ * retries within that visit. It rides along on `commitMutation` as the
+ * server-side idempotency key (#3640/#3642): a resubmit under the same key
+ * (a double-click racing the `isCommitting` guard, or a manual retry after a
+ * network error) replays the first call's result instead of re-applying the
+ * whole commit a second time.
+ */
 export function useFinalReview() {
   const slice = useStoreSlice();
   const counts = useDerivedCounts(slice);
   const [commitError, setCommitError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [commitKey] = useState(() => crypto.randomUUID());
   const queryClient = useQueryClient();
   const commitMutation = useMutation({
     mutationFn: async (vars: CommitBody): Promise<CommitResponse> =>
@@ -74,6 +86,7 @@ export function useFinalReview() {
     onSuccess: (response) => {
       slice.setCommitResult(response.data);
       setCommitError(null);
+      setConfirmOpen(false);
       // SummaryStep owns the post-commit UI; auto-advance there instead of
       // showing an inline panel + manual Continue click.
       slice.nextStep();
@@ -81,8 +94,12 @@ export function useFinalReview() {
     onError: (err: Error) => setCommitError(err.message),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['finance', 'imports'] }),
   });
-  const handleCommit = () => {
+  const openConfirm = () => {
     setCommitError(null);
+    setConfirmOpen(true);
+  };
+  const cancelConfirm = () => setConfirmOpen(false);
+  const confirmCommit = () => {
     const payload = buildCommitPayload(
       slice.pendingEntities,
       slice.pendingChangeSets,
@@ -92,6 +109,7 @@ export function useFinalReview() {
     commitMutation.mutate({
       ...payload,
       changeSets: payload.changeSets.map(toRestCorrectionChangeSet),
+      commitKey,
     });
   };
   return {
@@ -101,7 +119,10 @@ export function useFinalReview() {
     ...counts,
     commitError,
     isCommitting: commitMutation.isPending,
-    handleCommit,
+    confirmOpen,
+    openConfirm,
+    cancelConfirm,
+    confirmCommit,
     prevStep: slice.prevStep,
   };
 }

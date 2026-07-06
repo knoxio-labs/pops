@@ -2327,6 +2327,7 @@ export type ImportsCommitImportData = {
       reason?: string;
       source?: string;
     }>;
+    commitKey?: string;
     entities: Array<{
       name: string;
       tempId: string;
