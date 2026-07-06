@@ -56,7 +56,7 @@ function seedTxn(input: SeedTxn): string {
       id,
       description: input.description,
       account: 'amex',
-      amount: -12.5,
+      amountCents: -1250,
       date: '2026-01-01',
       type: input.type,
       tags: JSON.stringify(input.tags ?? []),

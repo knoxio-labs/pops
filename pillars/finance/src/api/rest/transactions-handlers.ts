@@ -14,7 +14,13 @@ import {
 } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
 import { suggestTags as computeSuggestedTags } from '../modules/tag-suggester/index.js';
-import { toTransaction } from '../modules/transactions-types.js';
+import {
+  fromTransactionSnapshot,
+  toCreateTransactionInput,
+  toTransaction,
+  toTransactionSnapshot,
+  toUpdateTransactionInput,
+} from '../modules/transactions-types.js';
 import { ConflictError, NotFoundError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
@@ -106,7 +112,7 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
     create: ({ body }: Req['create']) =>
       runHttp(() => {
         try {
-          const row = transactionsService.createTransaction(db, body);
+          const row = transactionsService.createTransaction(db, toCreateTransactionInput(body));
           return {
             status: 201 as const,
             body: { data: toTransaction(row), message: 'Transaction created' },
@@ -119,7 +125,11 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
     update: ({ params, body }: Req['update']) =>
       runHttp(() => {
         try {
-          const row = transactionsService.updateTransaction(db, params.id, body);
+          const row = transactionsService.updateTransaction(
+            db,
+            params.id,
+            toUpdateTransactionInput(body)
+          );
           return {
             status: 200 as const,
             body: { data: toTransaction(row), message: 'Transaction updated' },
@@ -132,8 +142,11 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
     delete: ({ params }: Req['delete']) =>
       runHttp(() => {
         try {
-          const snapshot = transactionsService.deleteTransaction(db, params.id);
-          return { status: 200 as const, body: { message: 'Transaction deleted', snapshot } };
+          const row = transactionsService.deleteTransaction(db, params.id);
+          return {
+            status: 200 as const,
+            body: { message: 'Transaction deleted', snapshot: toTransactionSnapshot(row) },
+          };
         } catch (err) {
           translateTransactionError(err, params.id);
         }
@@ -142,7 +155,7 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
     restore: ({ body }: Req['restore']) =>
       runHttp(() => {
         try {
-          const row = transactionsService.restoreTransaction(db, body);
+          const row = transactionsService.restoreTransaction(db, fromTransactionSnapshot(body));
           return {
             status: 201 as const,
             body: { data: toTransaction(row), message: 'Transaction restored' },

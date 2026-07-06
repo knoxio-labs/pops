@@ -13,32 +13,25 @@ export type FixturePatch = {
 };
 
 export type FixturesShape = {
-  inventory: {
-    fixtures: {
-      list: (input: {
-        locationId?: string;
-        type?: string;
-        limit?: number;
-        offset?: number;
-      }) => unknown;
-      get: (input: { id: string }) => unknown;
-      listForItem: (input: { itemId: string; limit?: number; offset?: number }) => unknown;
-      create: (input: {
-        name: string;
-        type: string;
-        locationId?: string;
-        notes?: string;
-      }) => unknown;
-      update: (input: { id: string; data: FixturePatch }) => unknown;
-      delete: (input: { id: string }) => unknown;
-      connect: (input: { itemId: string; fixtureId: string }) => unknown;
-      disconnect: (input: { itemId: string; fixtureId: string }) => unknown;
-    };
+  fixtures: {
+    list: (input: {
+      locationId?: string;
+      type?: string;
+      limit?: number;
+      offset?: number;
+    }) => unknown;
+    get: (input: { id: string }) => unknown;
+    listForItem: (input: { itemId: string; limit?: number; offset?: number }) => unknown;
+    create: (input: { name: string; type: string; locationId?: string; notes?: string }) => unknown;
+    update: (input: { id: string; data: FixturePatch }) => unknown;
+    delete: (input: { id: string }) => unknown;
+    connect: (input: { itemId: string; fixtureId: string }) => unknown;
+    disconnect: (input: { itemId: string; fixtureId: string }) => unknown;
   };
 };
 
-export function fixtures(): PillarHandle<FixturesShape>['inventory']['fixtures'] {
-  return getPillar<FixturesShape>('inventory').inventory.fixtures;
+export function fixtures(): PillarHandle<FixturesShape>['fixtures'] {
+  return getPillar<FixturesShape>('inventory').fixtures;
 }
 
 function buildFixturePatch(args: Record<string, unknown>): FixturePatch {

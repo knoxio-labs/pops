@@ -1,4 +1,4 @@
-import { index, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { TRANSACTION_MATCH_TYPES } from '../match-types.js';
 
@@ -11,7 +11,8 @@ export const transactions = sqliteTable(
     notionId: text('notion_id').unique(),
     description: text('description').notNull(),
     account: text('account').notNull(),
-    amount: real('amount').notNull(),
+    /** Signed amount in integer cents (#3665, CF041) — never a float dollar value. */
+    amountCents: integer('amount_cents').notNull(),
     date: text('date').notNull(),
     type: text('type').notNull(),
     tags: text('tags').notNull().default('[]'),

@@ -13,7 +13,7 @@
  *
  *     import type { AppRouter as InventoryAppRouter } from '@pops/inventory-api/router';
  *     const inventory = getPillar<InventoryAppRouter>('inventory');
- *     await inventory.inventory.locations.list();
+ *     await inventory.locations.list();
  *
  * Base-URL resolution goes through the registry-driven discovery in
  * `@pops/pillar-sdk/server` — every pillar self-registers its real

@@ -20,6 +20,7 @@ import {
   transactionCorrectionsService,
   transactions,
 } from '../../db/index.js';
+import { centsToDollars } from '../../money.js';
 import {
   applyChangeSetToRules,
   parseCorrectionTags,
@@ -125,7 +126,7 @@ function previewMatchTransaction(row: TransactionRow): PreviewMatchTransactionVi
     id: row.id,
     description: row.description,
     account: row.account,
-    amount: row.amount,
+    amount: centsToDollars(row.amountCents),
     date: row.date,
     entityName: row.entityName,
     tags: parseCorrectionTags(row.tags ?? '[]'),

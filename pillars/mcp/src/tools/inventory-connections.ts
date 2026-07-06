@@ -10,18 +10,16 @@ type GraphInput = { itemId: string; maxDepth?: number };
 type PairInput = { itemAId: string; itemBId: string };
 
 type ConnectionsShape = {
-  inventory: {
-    connections: {
-      listForItem: (input: ListForItemInput) => unknown;
-      graph: (input: GraphInput) => unknown;
-      connect: (input: PairInput) => unknown;
-      disconnect: (input: PairInput) => unknown;
-    };
+  connections: {
+    listForItem: (input: ListForItemInput) => unknown;
+    graph: (input: GraphInput) => unknown;
+    connect: (input: PairInput) => unknown;
+    disconnect: (input: PairInput) => unknown;
   };
 };
 
-function connections(): PillarHandle<ConnectionsShape>['inventory']['connections'] {
-  return getPillar<ConnectionsShape>('inventory').inventory.connections;
+function connections(): PillarHandle<ConnectionsShape>['connections'] {
+  return getPillar<ConnectionsShape>('inventory').connections;
 }
 
 const connectionsList: ToolDef = {

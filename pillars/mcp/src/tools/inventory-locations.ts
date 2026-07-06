@@ -33,24 +33,22 @@ type DeleteResponse =
     };
 
 type InventoryShape = {
-  inventory: {
-    locations: {
-      tree: () => { data: LocationTreeNode[] };
-      list: () => { data: Location[]; total: number };
-      create: (input: { name: string; parentId?: string | null; sortOrder?: number }) => {
-        data: Location;
-        message: string;
-      };
-      update: (input: { id: string; data: LocationPatch }) => { data: Location; message: string };
-      delete: (input: { id: string; force: boolean }) => DeleteResponse;
+  locations: {
+    tree: () => { data: LocationTreeNode[] };
+    list: () => { data: Location[]; total: number };
+    create: (input: { name: string; parentId?: string | null; sortOrder?: number }) => {
+      data: Location;
+      message: string;
     };
+    update: (input: { id: string; data: LocationPatch }) => { data: Location; message: string };
+    delete: (input: { id: string; force: boolean }) => DeleteResponse;
   };
 };
 
-type LocationsHandle = PillarHandle<InventoryShape>['inventory']['locations'];
+type LocationsHandle = PillarHandle<InventoryShape>['locations'];
 
 function locations(): LocationsHandle {
-  return getPillar<InventoryShape>('inventory').inventory.locations;
+  return getPillar<InventoryShape>('inventory').locations;
 }
 
 function buildLocationPatch(args: Record<string, unknown>): LocationPatch {

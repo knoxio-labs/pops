@@ -51,7 +51,7 @@ export interface EntityMaps {
 export interface InsertImportTransactionInput {
   description: string;
   account: string;
-  amount: number;
+  amountCents: number;
   date: string;
   type: string;
   tags: string[];
@@ -166,7 +166,7 @@ export function insertImportTransaction(
       id,
       description: input.description,
       account: input.account,
-      amount: input.amount,
+      amountCents: input.amountCents,
       date: input.date,
       type: input.type || '',
       tags: JSON.stringify(input.tags),

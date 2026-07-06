@@ -201,19 +201,19 @@ describe('corrections — previewMatches', () => {
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS 1234 SYDNEY',
       account: 'checking',
-      amount: -50,
+      amountCents: -5000,
       date: '2026-01-01',
     });
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS METRO',
       account: 'checking',
-      amount: -12,
+      amountCents: -1200,
       date: '2026-01-02',
     });
     transactionsService.createTransaction(db, {
       description: 'COLES EXPRESS',
       account: 'checking',
-      amount: -8,
+      amountCents: -800,
       date: '2026-01-03',
     });
 
@@ -247,7 +247,7 @@ describe('corrections — ruleMatchPreview', () => {
       transactionsService.createTransaction(db, {
         description: `WOOLWORTHS ${i}00 SYDNEY`,
         account: 'checking',
-        amount: -i,
+        amountCents: -i * 100,
         date: `2026-01-0${i}`,
         checksum: `chk-${i}`,
       });
@@ -255,7 +255,7 @@ describe('corrections — ruleMatchPreview', () => {
     transactionsService.createTransaction(db, {
       description: 'COLES EXPRESS',
       account: 'checking',
-      amount: -8,
+      amountCents: -800,
       date: '2026-01-09',
     });
 
@@ -778,7 +778,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'BIG W',
       account: 'amex',
-      amount: -30,
+      amountCents: -3000,
       date: '2026-01-01',
     });
     const ruleId = await seedConfidentRule();
@@ -806,7 +806,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'BIG W',
       account: 'amex',
-      amount: -30,
+      amountCents: -3000,
       date: '2026-01-01',
       entityId: 'ent-user-picked',
     });
@@ -826,7 +826,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     transactionsService.createTransaction(db, {
       description: 'BIG W',
       account: 'amex',
-      amount: -30,
+      amountCents: -3000,
       date: '2026-01-01',
     });
     // Default confidence from createOrUpdate is below the 0.9 matched threshold.
@@ -847,7 +847,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     const txn = transactionsService.createTransaction(db, {
       description: 'BIG W',
       account: 'amex',
-      amount: -30,
+      amountCents: -3000,
       date: '2026-01-01',
     });
     const ruleId = await seedConfidentRule();
@@ -868,7 +868,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     transactionsService.createTransaction(db, {
       description: 'BIG W',
       account: 'amex',
-      amount: -30,
+      amountCents: -3000,
       date: '2026-01-01',
     });
     const ruleId = await seedConfidentRule();

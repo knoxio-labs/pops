@@ -9,7 +9,7 @@ import {
   budgetsService,
   type FinanceDb,
 } from '../../db/index.js';
-import { toBudget } from '../modules/budgets-types.js';
+import { toBudget, toCreateBudgetInput, toUpdateBudgetInput } from '../modules/budgets-types.js';
 import { ConflictError, NotFoundError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
@@ -70,7 +70,7 @@ export function makeBudgetsHandlers(db: FinanceDb) {
     create: ({ body }: Req['create']) =>
       runHttp(() => {
         try {
-          const row = budgetsService.createBudget(db, body);
+          const row = budgetsService.createBudget(db, toCreateBudgetInput(body));
           return {
             status: 201 as const,
             body: { data: toBudget(budgetsService.withSpend(db, row)), message: 'Budget created' },
@@ -83,7 +83,7 @@ export function makeBudgetsHandlers(db: FinanceDb) {
     update: ({ params, body }: Req['update']) =>
       runHttp(() => {
         try {
-          const row = budgetsService.updateBudget(db, params.id, body);
+          const row = budgetsService.updateBudget(db, params.id, toUpdateBudgetInput(body));
           return {
             status: 200 as const,
             body: { data: toBudget(budgetsService.withSpend(db, row)), message: 'Budget updated' },

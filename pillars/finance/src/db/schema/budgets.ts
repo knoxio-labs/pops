@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const budgets = sqliteTable(
   'budgets',
@@ -13,7 +13,8 @@ export const budgets = sqliteTable(
     // allow NULL periods. Service code treats period as nullable. Drizzle schema matches
     // runtime behavior, not the stricter schema.ts definition.
     period: text('period'),
-    amount: real('amount'),
+    /** Target spend cap in integer cents, or null (#3665, CF041). */
+    amountCents: integer('amount_cents'),
     active: integer('active').notNull().default(0),
     notes: text('notes'),
     lastEditedTime: text('last_edited_time').notNull(),

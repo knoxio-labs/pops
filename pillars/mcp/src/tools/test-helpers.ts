@@ -160,11 +160,17 @@ const PILLAR_MOCKS = {
   contacts: mockPillarContacts,
 } as const;
 
-/** Used as the `getPillar` mock implementation in tool tests: dispatches by pillarId. */
+/**
+ * Used as the `getPillar` mock implementation in tool tests: dispatches by
+ * pillarId and returns the pillar's collapsed handle. The SDK proxy exposes
+ * `<domain>.<proc>` directly (no `<pillar>` level), so the mock strips the
+ * pillar-name key here, mirroring how the real wrappers now call
+ * `getPillar('<pillar>').<domain>.<proc>`.
+ */
 export function pillarMockGetter<TRouter>(pillarId: string): TRouter {
   const handle = PILLAR_MOCKS[pillarId as keyof typeof PILLAR_MOCKS];
   if (!handle) throw new Error(`No mock pillar handle for '${pillarId}'`);
-  return handle as TRouter;
+  return (handle as Record<string, unknown>)[pillarId] as TRouter;
 }
 
 interface TextResultLike {

@@ -127,14 +127,14 @@ describe('0054_finance_pillar_baseline_extension', () => {
       raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, amount, date, type, last_edited_time)
+             (id, description, account, amount_cents, date, type, last_edited_time)
            VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'txn-1',
           'Test charge',
           'Up Savings',
-          12.5,
+          1250,
           '2026-06-01',
           'Purchase',
           '2026-06-01T00:00:00Z'
@@ -157,13 +157,18 @@ describe('0054_finance_pillar_baseline_extension', () => {
         .run('Custom Tag', 'user', 1);
 
       const txn = raw
-        .prepare('SELECT id, description, account, amount FROM transactions WHERE id = ?')
-        .get('txn-1') as { id: string; description: string; account: string; amount: number };
+        .prepare('SELECT id, description, account, amount_cents FROM transactions WHERE id = ?')
+        .get('txn-1') as {
+        id: string;
+        description: string;
+        account: string;
+        amount_cents: number;
+      };
       expect(txn).toEqual({
         id: 'txn-1',
         description: 'Test charge',
         account: 'Up Savings',
-        amount: 12.5,
+        amount_cents: 1250,
       });
 
       const rule = raw
@@ -202,7 +207,7 @@ describe('0054_finance_pillar_baseline_extension', () => {
       first.raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, amount, date, type, last_edited_time)
+             (id, description, account, amount_cents, date, type, last_edited_time)
            VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
@@ -239,7 +244,7 @@ describe('0054_finance_pillar_baseline_extension', () => {
       first.raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, amount, date, type, last_edited_time)
+             (id, description, account, amount_cents, date, type, last_edited_time)
            VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(

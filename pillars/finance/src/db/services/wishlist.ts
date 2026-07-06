@@ -25,8 +25,8 @@ export type WishListRow = typeof wishList.$inferSelect;
 /** Mutable subset accepted on create. `notionId` stays the import/sync layer's job. */
 export interface CreateWishListItemInput {
   item: string;
-  targetAmount?: number | null;
-  saved?: number | null;
+  targetAmountCents?: number | null;
+  savedCents?: number | null;
   priority?: WishListPriority | null;
   url?: string | null;
   notes?: string | null;
@@ -35,8 +35,8 @@ export interface CreateWishListItemInput {
 /** Same shape as create — all fields optional for PATCH semantics. */
 export interface UpdateWishListItemInput {
   item?: string;
-  targetAmount?: number | null;
-  saved?: number | null;
+  targetAmountCents?: number | null;
+  savedCents?: number | null;
   priority?: WishListPriority | null;
   url?: string | null;
   notes?: string | null;
@@ -94,8 +94,8 @@ export function createWishListItem(db: FinanceDb, input: CreateWishListItemInput
     .values({
       id,
       item: input.item,
-      targetAmount: input.targetAmount ?? null,
-      saved: input.saved ?? null,
+      targetAmountCents: input.targetAmountCents ?? null,
+      savedCents: input.savedCents ?? null,
       priority: input.priority ?? null,
       url: input.url ?? null,
       notes: input.notes ?? null,
@@ -111,8 +111,10 @@ function buildWishListUpdates(
 ): Partial<typeof wishList.$inferInsert> {
   const updates: Partial<typeof wishList.$inferInsert> = {};
   if (input.item !== undefined) updates.item = input.item;
-  if (input.targetAmount !== undefined) updates.targetAmount = input.targetAmount ?? null;
-  if (input.saved !== undefined) updates.saved = input.saved ?? null;
+  if (input.targetAmountCents !== undefined) {
+    updates.targetAmountCents = input.targetAmountCents ?? null;
+  }
+  if (input.savedCents !== undefined) updates.savedCents = input.savedCents ?? null;
   if (input.priority !== undefined) updates.priority = input.priority ?? null;
   if (input.url !== undefined) updates.url = input.url ?? null;
   if (input.notes !== undefined) updates.notes = input.notes ?? null;

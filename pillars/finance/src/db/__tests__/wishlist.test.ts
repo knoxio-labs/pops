@@ -26,8 +26,8 @@ CREATE TABLE wish_list (
   id text PRIMARY KEY NOT NULL,
   notion_id text,
   item text NOT NULL,
-  target_amount real,
-  saved real,
+  target_amount_cents integer,
+  saved_cents integer,
   priority text,
   url text,
   notes text,
@@ -52,8 +52,8 @@ describe('createWishListItem', () => {
   it('inserts a row with the supplied fields and a generated UUID', () => {
     const created = createWishListItem(db, {
       item: 'Espresso machine',
-      targetAmount: 1200,
-      saved: 250,
+      targetAmountCents: 120000,
+      savedCents: 25000,
       priority: 'Soon',
       url: 'https://example.com/machine',
       notes: 'Wait for sale',
@@ -61,8 +61,8 @@ describe('createWishListItem', () => {
 
     expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(created.item).toBe('Espresso machine');
-    expect(created.targetAmount).toBe(1200);
-    expect(created.saved).toBe(250);
+    expect(created.targetAmountCents).toBe(120000);
+    expect(created.savedCents).toBe(25000);
     expect(created.priority).toBe('Soon');
     expect(created.url).toBe('https://example.com/machine');
     expect(created.notes).toBe('Wait for sale');
@@ -71,8 +71,8 @@ describe('createWishListItem', () => {
 
   it('defaults optional numeric and text fields to null', () => {
     const created = createWishListItem(db, { item: 'Just the item' });
-    expect(created.targetAmount).toBeNull();
-    expect(created.saved).toBeNull();
+    expect(created.targetAmountCents).toBeNull();
+    expect(created.savedCents).toBeNull();
     expect(created.priority).toBeNull();
     expect(created.url).toBeNull();
     expect(created.notes).toBeNull();
@@ -140,14 +140,14 @@ describe('updateWishListItem', () => {
   });
 
   it('patches only the supplied fields and bumps lastEditedTime', async () => {
-    const created = createWishListItem(db, { item: 'Tent', saved: 100 });
+    const created = createWishListItem(db, { item: 'Tent', savedCents: 10000 });
     const original = created.lastEditedTime;
     await new Promise((r) => setTimeout(r, 5));
 
-    const updated = updateWishListItem(db, created.id, { saved: 250, priority: 'Soon' });
+    const updated = updateWishListItem(db, created.id, { savedCents: 25000, priority: 'Soon' });
     expect(updated.id).toBe(created.id);
     expect(updated.item).toBe('Tent');
-    expect(updated.saved).toBe(250);
+    expect(updated.savedCents).toBe(25000);
     expect(updated.priority).toBe('Soon');
     expect(updated.lastEditedTime).not.toBe(original);
   });

@@ -215,7 +215,7 @@ describe('corrections.proposeChangeSet', () => {
     transactionsService.createTransaction(financeDb.db, {
       description: 'WOOLWORTHS METRO',
       account: 'checking',
-      amount: -12,
+      amountCents: -1200,
       date: '2026-01-01',
     });
 

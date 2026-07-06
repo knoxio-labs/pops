@@ -14,7 +14,11 @@ import {
   type WishListPriority,
   wishListService,
 } from '../../db/index.js';
-import { toWishListItem } from '../modules/wishlist-types.js';
+import {
+  toCreateWishListItemInput,
+  toUpdateWishListItemInput,
+  toWishListItem,
+} from '../modules/wishlist-types.js';
 import { NotFoundError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
@@ -86,7 +90,7 @@ export function makeWishlistHandlers(db: FinanceDb) {
 
     create: ({ body }: Req['create']) =>
       runHttp(() => {
-        const row = wishListService.createWishListItem(db, body);
+        const row = wishListService.createWishListItem(db, toCreateWishListItemInput(body));
         return {
           status: 201 as const,
           body: { data: toWishListItem(row), message: 'Wish list item created' },
@@ -96,7 +100,11 @@ export function makeWishlistHandlers(db: FinanceDb) {
     update: ({ params, body }: Req['update']) =>
       runHttp(() => {
         try {
-          const row = wishListService.updateWishListItem(db, params.id, body);
+          const row = wishListService.updateWishListItem(
+            db,
+            params.id,
+            toUpdateWishListItemInput(body)
+          );
           return {
             status: 200 as const,
             body: { data: toWishListItem(row), message: 'Wish list item updated' },
