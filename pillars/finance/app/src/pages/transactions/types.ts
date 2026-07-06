@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
+
 /**
  * Form-level types for the transaction form dialog.
  *
@@ -15,7 +17,7 @@ export interface Transaction {
   account: string;
   amount: number;
   date: string;
-  type: string;
+  type: TransactionType;
   tags: string[];
   entityId: string | null;
   entityName: string | null;
@@ -26,11 +28,11 @@ export interface Transaction {
   lastEditedTime?: string;
 }
 
-/** Allowed transaction types. Mirrors the existing TABLE_FILTERS values. */
+/** Allowed transaction types (label → canonical lowercase value, #3607). */
 export const TRANSACTION_TYPE_OPTIONS = [
-  { label: 'Expense', value: 'Expense' },
-  { label: 'Income', value: 'Income' },
-  { label: 'Transfer', value: 'Transfer' },
+  { label: 'Expense', value: 'purchase' },
+  { label: 'Income', value: 'income' },
+  { label: 'Transfer', value: 'transfer' },
 ];
 
 /**
@@ -47,7 +49,7 @@ export const TransactionFormSchema = z.object({
     .refine((v) => Number(v) !== 0, 'Amount must be non-zero'),
   description: z.string().min(1, 'Description is required'),
   account: z.string().min(1, 'Account is required'),
-  type: z.string().min(1, 'Type is required'),
+  type: z.enum(TRANSACTION_TYPES),
   entityId: z.string(),
   tags: z.array(z.string()),
   notes: z.string(),
@@ -60,7 +62,7 @@ export const DEFAULT_TRANSACTION_VALUES: TransactionFormValues = {
   amount: '',
   description: '',
   account: '',
-  type: 'Expense',
+  type: 'purchase',
   entityId: '',
   tags: [],
   notes: '',

@@ -44,7 +44,7 @@ const tx = (over: Record<string, unknown>) => ({
   account: 'Everyday',
   amount: -10,
   date: '2026-01-01',
-  type: 'expense',
+  type: 'purchase',
   ...over,
 });
 

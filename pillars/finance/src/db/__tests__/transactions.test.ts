@@ -86,14 +86,14 @@ describe('createTransaction', () => {
     expect(created.lastEditedTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
-  it('defaults type to empty string when omitted', () => {
+  it('defaults type to purchase when omitted', () => {
     const created = createTransaction(db, {
       description: 'Test',
       account: 'Up',
       amountCents: 1000,
       date: '2025-06-15',
     });
-    expect(created.type).toBe('');
+    expect(created.type).toBe('purchase');
   });
 
   it('serialises tags as a JSON string', () => {

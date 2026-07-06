@@ -46,7 +46,7 @@ function makeValues(overrides: Partial<TransactionFormValues> = {}): Transaction
     amount: '-87.45',
     description: 'Woolworths Metro',
     account: 'Credit Card',
-    type: 'Expense',
+    type: 'purchase',
     entityId: '',
     tags: [],
     notes: '',
@@ -61,7 +61,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     amount: -87.45,
     description: 'Woolworths Metro',
     account: 'Credit Card',
-    type: 'Expense',
+    type: 'purchase',
     entityId: 'ent-1',
     entityName: 'Woolworths',
     location: 'Sydney CBD',
@@ -117,7 +117,7 @@ describe('TransactionFormSchema — amount', () => {
     date: '2026-04-26',
     description: 'Woolworths',
     account: 'Credit Card',
-    type: 'Expense',
+    type: 'purchase',
     entityId: '',
     tags: [],
     notes: '',
@@ -214,7 +214,7 @@ describe('buildTransactionPayload', () => {
         date: '2026-04-26',
         description: 'Coles Local',
         account: 'Debit Card',
-        type: 'Expense',
+        type: 'purchase',
         amount: '-50',
         tags: ['Groceries'],
       }),
@@ -224,7 +224,7 @@ describe('buildTransactionPayload', () => {
       date: '2026-04-26',
       description: 'Coles Local',
       account: 'Debit Card',
-      type: 'Expense',
+      type: 'purchase',
       amount: -50,
       tags: ['Groceries'],
       entityId: null,
@@ -392,7 +392,7 @@ describe('useTransactionsPage — handleEdit prefill', () => {
       amount: '-123.45',
       description: 'Woolworths Metro',
       account: 'Credit Card',
-      type: 'Expense',
+      type: 'purchase',
       entityId: 'ent-1',
       tags: ['Groceries'],
       notes: 'Weekly shop',
@@ -413,7 +413,7 @@ describe('useTransactionsPage — handleEdit prefill', () => {
     expect(values.notes).toBe('');
   });
 
-  it('falls back to "Expense" when transaction.type is empty', () => {
+  it('falls back to "purchase" when transaction.type is empty', () => {
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useTransactionsPage(), { wrapper });
 
@@ -421,7 +421,7 @@ describe('useTransactionsPage — handleEdit prefill', () => {
       result.current.handleEdit(makeTransaction({ id: 'txn-42', type: '' }));
     });
 
-    expect(result.current.form.getValues().type).toBe('Expense');
+    expect(result.current.form.getValues().type).toBe('purchase');
   });
 });
 

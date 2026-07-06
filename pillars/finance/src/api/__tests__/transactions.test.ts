@@ -44,7 +44,7 @@ const base = {
   account: 'Everyday',
   amount: -4.5,
   date: '2026-01-02',
-  type: 'expense',
+  type: 'purchase',
 };
 
 describe('transactions — happy paths', () => {
@@ -99,7 +99,7 @@ describe('transactions — filters & pagination', () => {
     await client().transactions.create({
       ...base,
       account: 'Everyday',
-      type: 'expense',
+      type: 'purchase',
       date: '2026-01-01',
     });
     await client().transactions.create({
@@ -114,7 +114,7 @@ describe('transactions — filters & pagination', () => {
       ...base,
       description: 'Rent',
       account: 'Everyday',
-      type: 'expense',
+      type: 'purchase',
       amount: -1500,
       date: '2026-02-15',
     });

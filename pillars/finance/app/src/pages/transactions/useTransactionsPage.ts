@@ -72,7 +72,7 @@ function transactionToFormValues(t: Transaction): TransactionFormValues {
     amount: String(t.amount),
     description: t.description,
     account: t.account,
-    type: t.type || 'Expense',
+    type: t.type || 'purchase',
     entityId: t.entityId ?? '',
     tags: t.tags,
     notes: t.notes ?? '',

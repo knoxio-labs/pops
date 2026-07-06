@@ -49,9 +49,12 @@ function classify(
 }
 
 /**
- * Normalize raw DB type strings to the canonical lowercase union.
- *  - Capitalised variants ('Expense', 'Income', 'Transfer') come from the import pipeline.
- *  - 'purchase' is a legacy synonym for 'expense' still present in stored rows.
+ * Fold the stored `transactions.type` down to the three display buckets the
+ * search wire shape exposes (`income`/`expense`/`transfer`).
+ *  - `purchase` and the other debit-side types map to `expense`.
+ *  - Capitalised variants ('Expense'/'Income'/'Transfer') are legacy pre-#3607
+ *    values; migration 0065 lowercased them, but `toLowerCase()` keeps this
+ *    tolerant of any that predate a given DB's migration run.
  *  - Anything else (including null/undefined coerced to '') falls back to 'expense'.
  */
 export function normalizeTransactionType(raw: string): 'income' | 'expense' | 'transfer' {
