@@ -287,43 +287,14 @@ describe('reclassifyExistingTransactions — manual-override skip (CF017/#3623)'
   });
 });
 
-describe('reclassifyExistingTransactions — tag merge + provenance (#3660)', () => {
-  it('merges a matched rule’s tags into the transaction additively and stamps match provenance', () => {
-    const txnId = seedTxn({
-      description: 'WOOLWORTHS',
-      type: 'Income',
-      entityId: null,
-      tags: ['friday'],
-    });
-    const ruleId = seedRule({
-      descriptionPattern: 'WOOLWORTHS',
-      entityId: 'ent-woolies',
-      entityName: 'Woolworths',
-      transactionType: 'purchase',
-      tags: ['groceries'],
-      confidence: 0.95,
-    });
-
-    const count = reclassifyExistingTransactions(db, []);
-
-    expect(count).toBe(1);
-    const row = readTxn(txnId);
-    expect((JSON.parse(row.tags) as string[]).toSorted()).toEqual(
-      ['friday', 'groceries'].toSorted()
-    );
-    expect(row.matchType).toBe('learned');
-    expect(row.matchRuleId).toBe(ruleId);
-    expect(row.matchConfidence).toBeCloseTo(0.95, 5);
-  });
-
-  it('is idempotent: a second pass against the same rule set makes no further changes', () => {
+describe('reclassifyExistingTransactions — idempotent on a second pass', () => {
+  it('a second pass against the same rule set makes no further changes', () => {
     seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
     seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
       entityName: 'Woolworths',
       transactionType: 'purchase',
-      tags: ['groceries'],
       confidence: 0.95,
     });
 

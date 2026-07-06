@@ -1,25 +1,32 @@
 /**
- * Retroactively re-classify pre-existing transactions against the updated rule
- * set after a commit (US-04), or against a single just-created/edited rule on
- * demand (#3660). Excludes the just-imported batch by checksum.
+ * Retroactive correction-rule application.
  *
- * Ported from the monolith `lib/reclassify-existing.ts`, db-injected. Matching
- * reuses the corrections module's pure `findMatchingCorrectionFromRules`, and
- * only high-confidence, review-free matches are applied: retroactive changes
- * pass the same `resolveCorrectionApplyStatus` gate as live import, so an
- * `uncertain` (sub-threshold, or entity-less purchase) match is skipped rather
- * than silently written without review.
+ * `reclassifyExistingTransactions` re-classifies pre-existing transactions
+ * against the full active rule set after an import commit (US-04), excluding
+ * the just-imported batch by checksum. Ported from the monolith
+ * `lib/reclassify-existing.ts`, db-injected. Matching reuses the corrections
+ * module's pure `findMatchingCorrectionFromRules`, and only high-confidence,
+ * review-free matches are applied: retroactive changes pass the same
+ * `resolveCorrectionApplyStatus` gate as live import, so an `uncertain`
+ * (sub-threshold, or entity-less purchase) match is skipped rather than
+ * silently written without review.
+ *
+ * `applyCorrectionRuleToExistingTransactions` is the single-rule, explicit-apply
+ * counterpart (#3660), invoked on demand from `POST /corrections/:id/apply-existing`
+ * rather than on every import commit. It shares the same matching/skip rules,
+ * scoped to one target rule, and additionally merges the rule's tags into the
+ * transaction and stamps match provenance (`matchType: 'learned'`,
+ * `matchRuleId`, `matchConfidence`) — mirroring the live-import path
+ * (`apply-learned-correction.ts`, CF057/#3658) so a retroactively-classified
+ * row is indistinguishable from one classified at import time. This is
+ * deliberately not extended to the always-on `reclassifyExistingTransactions`
+ * pass: #3660 asks for a catch-up pass triggered on rule create/edit, not a
+ * change to what every import commit does.
  *
  * A row whose `matchType` is `manual` (a direct PATCH touched a classification
  * field — see `transactions.ts`'s `buildTransactionUpdates`) is skipped
- * entirely: the user's hand-fix must survive a future import's rule set
- * instead of being silently reverted (CF017/#3623).
- *
- * A write also stamps `matchType: 'learned'` + `matchRuleId`/`matchConfidence`
- * on the transaction, mirroring the provenance the live-import path records for
- * a correction match (`apply-learned-correction.ts`, CF057/#3658) — a
- * retroactively-classified row is indistinguishable from one classified at
- * import time.
+ * entirely by both: the user's hand-fix must survive a future import's rule
+ * set instead of being silently reverted (CF017/#3623).
  */
 import { asc, eq, notInArray } from 'drizzle-orm';
 
@@ -47,15 +54,6 @@ interface BatchTxn {
   location: string | null;
   tags: string;
   matchType: string | null;
-}
-
-function parseTransactionTags(raw: string): string[] {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
-  } catch {
-    return [];
-  }
 }
 
 function deriveNewType(ruleType: string | null): 'Transfer' | 'Income' | 'Expense' | null {
@@ -94,28 +92,18 @@ function changedLocation(txn: BatchTxn, rule: CorrectionRow): string | null {
 /**
  * Tags the rule would add to the transaction (additive-only, never removes an
  * existing tag), or `null` when the rule carries no tags or the transaction
- * already has every one of them — this is what makes a second retroactive
- * pass against the same rule a no-op.
+ * already has every one of them.
  */
 function mergedTags(txn: BatchTxn, rule: CorrectionRow): string[] | null {
   const ruleTags = parseCorrectionTags(rule.tags);
   if (ruleTags.length === 0) return null;
-  const existing = parseTransactionTags(txn.tags);
+  const existing = parseCorrectionTags(txn.tags);
   const missing = ruleTags.filter((t) => !existing.includes(t));
   return missing.length > 0 ? [...existing, ...missing] : null;
 }
 
-/**
- * Build the DB update for a matched rule, or `null` when nothing changed. Never
- * clears an existing entity — see {@link providedEntityChange}. Any non-empty
- * update stamps match provenance (`matchType: 'learned'`, `matchRuleId`,
- * `matchConfidence`) so the row records which rule produced it, mirroring the
- * live-import path.
- */
-function buildReclassifyUpdates(
-  txn: BatchTxn,
-  rule: CorrectionRow
-): Record<string, unknown> | null {
+/** Entity/type/location changes a rule makes, shared by both builders below. */
+function buildCoreFieldUpdates(txn: BatchTxn, rule: CorrectionRow): Record<string, unknown> {
   const updates: Record<string, unknown> = {};
 
   const entity = providedEntityChange(txn, rule);
@@ -129,6 +117,35 @@ function buildReclassifyUpdates(
 
   const newLocation = changedLocation(txn, rule);
   if (newLocation !== null) updates.location = newLocation;
+
+  return updates;
+}
+
+/**
+ * Build the DB update for a matched rule, or `null` when nothing changed. Never
+ * clears an existing entity — see {@link providedEntityChange}.
+ */
+function buildReclassifyUpdates(
+  txn: BatchTxn,
+  rule: CorrectionRow
+): Record<string, unknown> | null {
+  const updates = buildCoreFieldUpdates(txn, rule);
+  if (Object.keys(updates).length === 0) return null;
+  updates.lastEditedTime = new Date().toISOString();
+  return updates;
+}
+
+/**
+ * Build the DB update for the single-rule explicit apply, or `null` when
+ * nothing changed. Extends {@link buildCoreFieldUpdates} with tag-merge and
+ * match-provenance stamping — see the file-level doc for why this is scoped
+ * to the single-rule path only.
+ */
+function buildSingleRuleApplyUpdates(
+  txn: BatchTxn,
+  rule: CorrectionRow
+): Record<string, unknown> | null {
+  const updates = buildCoreFieldUpdates(txn, rule);
 
   const newTags = mergedTags(txn, rule);
   if (newTags !== null) updates.tags = JSON.stringify(newTags);
@@ -167,6 +184,7 @@ function loadActiveCorrectionRules(db: FinanceDb): CorrectionRow[] {
   return db
     .select()
     .from(transactionCorrections)
+    .where(eq(transactionCorrections.isActive, true))
     .orderBy(asc(transactionCorrections.priority), asc(transactionCorrections.id))
     .all();
 }
@@ -207,7 +225,7 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
 /** Outcome of a single-rule retroactive apply — see {@link applyCorrectionRuleToExistingTransactions}. */
 export interface CorrectionRuleRetroactiveResult {
   dryRun: boolean;
-  /** Transactions where this rule is the winning match. */
+  /** Transactions where this rule is the winning match, including ones skipped below. */
   matched: number;
   /** Of `matched`, the ones actually written (or that would be, under `dryRun`). */
   updated: number;
@@ -243,7 +261,7 @@ function applySingleRuleToTxn(args: SingleRuleApplyArgs, txn: BatchTxn): void {
     return;
   }
 
-  const updates = buildReclassifyUpdates(txn, match.correction);
+  const updates = buildSingleRuleApplyUpdates(txn, match.correction);
   if (!updates) return;
 
   result.updated++;

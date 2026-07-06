@@ -64,7 +64,15 @@ function ruleMatchesTransaction(rule: RuleScope, txn: BatchTxn, normalized: stri
   return tagRulePatternMatches(rule, normalized);
 }
 
-/** Outcome of a retroactive tag-rule apply — see {@link applyTagRuleToExistingTransactions}. */
+/**
+ * Outcome of a retroactive tag-rule apply — see {@link applyTagRuleToExistingTransactions}.
+ *
+ * `matched` mirrors the correction-rule counterpart's semantics
+ * (`CorrectionRuleRetroactiveResult.matched`): it counts every transaction the
+ * rule's pattern (and entity scope) matches, including ones then skipped as
+ * `skippedManual`. `updated` and `skippedManual` are sub-counts of `matched`,
+ * not a disjoint partition of it.
+ */
 export interface TagRuleRetroactiveResult {
   dryRun: boolean;
   /** Transactions this rule matches (pattern + entity scope), regardless of outcome. */
@@ -109,12 +117,12 @@ export function applyTagRuleToExistingTransactions(
       const normalized = normalizeDescription(txn.description);
       if (!ruleMatchesTransaction(scope, txn, normalized)) continue;
 
+      result.matched++;
+
       if (txn.matchType === 'manual') {
         result.skippedManual++;
         continue;
       }
-
-      result.matched++;
 
       const existingTags = parseTags(txn.tags);
       const missing = ruleTags.filter((t) => !existingTags.includes(t));
