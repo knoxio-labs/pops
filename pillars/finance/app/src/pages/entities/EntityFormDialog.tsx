@@ -16,7 +16,12 @@ import {
   TextInput,
 } from '@pops/ui';
 
-import { ENTITY_TYPES, type Entity, type EntityFormValues, TRANSACTION_TYPES } from './types';
+import {
+  ENTITY_DEFAULT_TYPE_OPTIONS,
+  ENTITY_TYPES,
+  type Entity,
+  type EntityFormValues,
+} from './types';
 
 interface EntityFormDialogProps {
   open: boolean;
@@ -70,7 +75,7 @@ function TagsAndAliases({ form }: { form: UseFormReturn<EntityFormValues> }) {
       </div>
       <Select
         label="Default Transaction Type (Optional)"
-        options={TRANSACTION_TYPES}
+        options={ENTITY_DEFAULT_TYPE_OPTIONS}
         {...form.register('defaultTransactionType')}
       />
       <div className="space-y-2">

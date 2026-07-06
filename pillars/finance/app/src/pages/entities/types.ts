@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { TRANSACTION_TYPE_OPTIONS } from '../../lib/transaction-type';
+
 export { ENTITY_TYPES } from '@pops/finance';
 
 export interface Entity {
@@ -15,11 +17,10 @@ export interface Entity {
   transactionCount?: number;
 }
 
-export const TRANSACTION_TYPES = [
+/** An entity's default transaction type: a leading "None" plus the full taxonomy. */
+export const ENTITY_DEFAULT_TYPE_OPTIONS = [
   { label: 'None', value: '' },
-  { label: 'Purchase', value: 'purchase' },
-  { label: 'Transfer', value: 'transfer' },
-  { label: 'Income', value: 'income' },
+  ...TRANSACTION_TYPE_OPTIONS,
 ];
 
 export const EntityFormSchema = z.object({

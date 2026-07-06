@@ -81,3 +81,20 @@ export function tileForType(type: string): StatTile {
 export function labelForType(type: string): string {
   return LABEL_LOOKUP.get(type.toLowerCase()) ?? type;
 }
+
+/**
+ * Types whose transactions may legitimately have no merchant entity — transfers
+ * (inter-account moves), income (salary/interest), and the credit adjustments
+ * that need not name a payee.
+ */
+const ENTITY_OPTIONAL_TYPES = new Set<string>(['transfer', 'income', 'loan', 'rebate', 'tax']);
+
+/**
+ * Whether a type must carry a resolved merchant entity to be committed from
+ * import review. Optional types are never silently dropped at confirm for want
+ * of an entity; every other value — a purchase, a refund/reversal from a
+ * merchant, or an unset/unknown type — requires one.
+ */
+export function requiresEntity(type: string | undefined): boolean {
+  return !ENTITY_OPTIONAL_TYPES.has((type ?? '').toLowerCase());
+}
