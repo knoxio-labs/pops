@@ -649,6 +649,15 @@ describe('incrementTransactionCorrectionUsage', () => {
     expect(row.timesApplied).toBe(8);
     expect(row.lastUsedAt).not.toBeNull();
   });
+
+  it.each([0, -1, 1.5])('no-ops on a non-positive-integer count (%s)', (count) => {
+    const id = seedCorrection(harness.raw, { timesApplied: 3 });
+    incrementTransactionCorrectionUsage(harness.db, id, count);
+
+    const row = getTransactionCorrection(harness.db, id);
+    expect(row.timesApplied).toBe(3);
+    expect(row.lastUsedAt).toBeNull();
+  });
 });
 
 describe('adjustTransactionCorrectionConfidence', () => {

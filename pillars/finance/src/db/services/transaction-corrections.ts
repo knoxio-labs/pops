@@ -247,11 +247,18 @@ export function deleteTransactionCorrection(db: FinanceDb, id: string): void {
  * its whole batch scan and passes it through here as one update instead of
  * one call per row.
  *
+ * `count` must be a positive integer — this only ever records real
+ * applications, never a decrement — so a non-positive or non-integer value
+ * (a caller bug, not a real usage count) is a no-op rather than corrupting
+ * `timesApplied` or stamping `lastUsedAt` for nothing applied.
+ *
  * Silently no-ops if `id` does not exist — this is a best-effort telemetry
  * update inside the import pipeline and must not fail the surrounding
  * transaction on a stale id.
  */
 export function incrementTransactionCorrectionUsage(db: FinanceDb, id: string, count = 1): void {
+  if (!Number.isInteger(count) || count <= 0) return;
+
   db.update(transactionCorrections)
     .set({
       timesApplied: sql`${transactionCorrections.timesApplied} + ${count}`,

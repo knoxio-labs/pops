@@ -201,11 +201,17 @@ function applyMetadataFields(input: UpdateTransactionInput, updates: Transaction
 }
 
 /**
- * Fields `reclassifyExistingTransactions`/`buildRetroactiveApplyUpdates` may overwrite
- * on a future import's retroactive pass. Touching any of them through a direct
- * PATCH is a manual override (CF017/#3623): it stamps `matchType: 'manual'` and
- * clears the stale rule-match provenance so the next reclassify pass leaves the
- * row alone instead of silently reverting the user's hand-fix.
+ * The classification fields a direct PATCH must touch to count as a manual
+ * override (CF017/#3623): doing so stamps `matchType: 'manual'` and clears
+ * the stale rule-match provenance so a future reclassify pass leaves the row
+ * alone instead of silently reverting the user's hand-fix.
+ *
+ * `buildRetroactiveApplyUpdates` (`reclassifyExistingTransactions`/
+ * `applyCorrectionRuleToExistingTransactions`) also merges `tags` and stamps
+ * match-provenance columns on a reclassify pass, but a `tags`-only PATCH is
+ * deliberately excluded from this list: tag merging is additive-only, so
+ * re-merging a rule's tags onto a row the user only re-tagged (rather than
+ * reclassified) never reverts anything.
  */
 const CLASSIFICATION_PATCH_FIELDS = ['entityId', 'entityName', 'type', 'location'] as const;
 
