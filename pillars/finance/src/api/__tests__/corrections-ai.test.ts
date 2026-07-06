@@ -224,6 +224,7 @@ describe('corrections.proposeChangeSet', () => {
         descriptionPattern: 'WOOLWORTHS',
         matchType: 'contains',
         entityName: 'Woolworths',
+        transactionType: 'purchase',
         tags: ['groceries'],
       },
     });
@@ -233,6 +234,21 @@ describe('corrections.proposeChangeSet', () => {
     expect(res.rationale).toContain('Add new correction rule');
     expect(res.preview.counts.affected).toBe(1);
     expect(res.targetRules).toEqual({});
+  });
+
+  it('rejects a tags-only signal with no entityId/transactionType and no existing rule (CF061/#3650)', async () => {
+    __setClaudeCompleterForTests(completerReturning({}));
+
+    await expect(
+      client().corrections.proposeChangeSet({
+        signal: {
+          descriptionPattern: 'WOOLWORTHS',
+          matchType: 'contains',
+          entityName: 'Woolworths',
+          tags: ['groceries'],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('proposes an edit ChangeSet when a rule already exists for the pattern', async () => {
@@ -283,6 +299,7 @@ describe('corrections.proposeChangeSet', () => {
             descriptionPattern: 'WOOLWORTHS METRO',
             matchType: 'exact',
             entityName: 'Woolworths',
+            transactionType: 'purchase',
             tags: ['groceries'],
           },
         }),
@@ -320,7 +337,7 @@ describe('corrections.proposeChangeSet', () => {
     __setClaudeCompleterForTests(
       completerReturning({
         'rejection-interpret':
-          'Sure, here is the adapted signal:\n{"adaptedSignal":{"descriptionPattern":"WOOLWORTHS METRO","matchType":"exact","entityName":"Woolworths","tags":["groceries"]}}',
+          'Sure, here is the adapted signal:\n{"adaptedSignal":{"descriptionPattern":"WOOLWORTHS METRO","matchType":"exact","entityName":"Woolworths","transactionType":"purchase","tags":["groceries"]}}',
       })
     );
 

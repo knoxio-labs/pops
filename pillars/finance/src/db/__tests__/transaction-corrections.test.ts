@@ -498,7 +498,7 @@ describe('updateTransactionCorrection', () => {
   });
 
   it('serialises tags into JSON on update', () => {
-    const id = seedCorrection(harness.raw);
+    const id = seedCorrection(harness.raw, { entityId: 'ent-1' });
     const updated = updateTransactionCorrection(harness.db, id, { tags: ['x', 'y'] });
     expect(updated.tags).toBe(JSON.stringify(['x', 'y']));
   });
@@ -514,6 +514,70 @@ describe('updateTransactionCorrection', () => {
     expect(() => updateTransactionCorrection(harness.db, 'missing', { confidence: 0.5 })).toThrow(
       TransactionCorrectionNotFoundError
     );
+  });
+});
+
+describe('updateTransactionCorrection — tags-only boundary guard (CF061/#3650)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('throws TagsOnlyCorrectionError when clearing entityId leaves only tags', () => {
+    const id = seedCorrection(harness.raw, {
+      entityId: 'ent-woolies',
+      tags: JSON.stringify(['Groceries']),
+    });
+
+    expect(() => updateTransactionCorrection(harness.db, id, { entityId: null })).toThrow(
+      TagsOnlyCorrectionError
+    );
+  });
+
+  it('throws TagsOnlyCorrectionError when adding tags to a row with neither entityId nor transactionType', () => {
+    const id = seedCorrection(harness.raw);
+
+    expect(() => updateTransactionCorrection(harness.db, id, { tags: ['Groceries'] })).toThrow(
+      TagsOnlyCorrectionError
+    );
+  });
+
+  it('writes nothing when the update is rejected (no partial write)', () => {
+    const id = seedCorrection(harness.raw, {
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      tags: JSON.stringify(['Groceries']),
+    });
+    const before = getTransactionCorrection(harness.db, id);
+
+    expect(() =>
+      updateTransactionCorrection(harness.db, id, { entityId: null, location: 'Sydney' })
+    ).toThrow(TagsOnlyCorrectionError);
+
+    expect(getTransactionCorrection(harness.db, id)).toEqual(before);
+  });
+
+  it('allows clearing entityId when a transactionType still classifies the row', () => {
+    const id = seedCorrection(harness.raw, {
+      entityId: 'ent-woolies',
+      transactionType: 'purchase',
+      tags: JSON.stringify(['Groceries']),
+    });
+
+    const updated = updateTransactionCorrection(harness.db, id, { entityId: null });
+    expect(updated.entityId).toBeNull();
+    expect(updated.transactionType).toBe('purchase');
+  });
+
+  it('allows adding tags when an entityId is supplied in the same update', () => {
+    const id = seedCorrection(harness.raw);
+
+    const updated = updateTransactionCorrection(harness.db, id, {
+      entityId: 'ent-new',
+      tags: ['Groceries'],
+    });
+    expect(updated.entityId).toBe('ent-new');
+    expect(updated.tags).toBe(JSON.stringify(['Groceries']));
   });
 });
 

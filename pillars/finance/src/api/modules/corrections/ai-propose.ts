@@ -2,6 +2,12 @@
  * `proposeChangeSet` (signal → add/edit ChangeSet + DB-scanned impact, adapting
  * to prior rejection feedback) and `reviseChangeSet` (free-text AI revision).
  * Ported from the monolith `core/corrections/handlers/{compute-changeset,ai-revise}.ts`.
+ *
+ * A signal with no `entityId`/`transactionType` and non-empty `tags` never
+ * reaches `buildAddChangeSet` — `proposeChangeSetFromCorrectionSignal` rejects
+ * it with a `ValidationError` first, so a tags-only/entityName-only add op is
+ * never returned for the user to approve (CF061/#3650; the commit path
+ * degrades the same shape instead of rejecting it — see `commit.ts`).
  */
 import { and, eq } from 'drizzle-orm';
 
@@ -11,6 +17,7 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
+import { ValidationError } from '../../shared/errors.js';
 import { extractJsonFromReply } from '../ai-json.js';
 import { interpretRejectionFeedback, loadLatestRejectedFeedback } from './ai-feedback.js';
 import { getClaudeCompleter } from './ai-runtime.js';
@@ -24,7 +31,7 @@ import { buildAddChangeSet, buildEditChangeSet } from './changeset-builders.js';
 import { computeChangeSetImpact } from './changeset-impact.js';
 import { type CorrectionRow } from './types.js';
 
-const { normalizeDescription } = transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, normalizeDescription } = transactionCorrectionsService;
 
 interface FeedbackInfo {
   changeSet: ChangeSet;
@@ -91,6 +98,12 @@ export async function proposeChangeSetFromCorrectionSignal(
   const normalizedPattern = normalizeDescription(effectiveSignal.descriptionPattern);
   const matchType = effectiveSignal.matchType;
   const existing = findExistingRule(db, matchType, normalizedPattern);
+
+  if (!existing && isTagsOnlyCorrectionInput(effectiveSignal)) {
+    throw new ValidationError(
+      'A correction signal needs an entityId or a transactionType — tags-only signals belong in transaction_tag_rules'
+    );
+  }
 
   const builderArgs = {
     effectiveSignal,

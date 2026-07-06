@@ -115,6 +115,7 @@ describe('corrections — update, delete & adjustConfidence', () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'NETFLIX',
       matchType: 'contains',
+      transactionType: 'purchase',
     });
     const updated = await client().corrections.update(created.data.id, {
       tags: ['subscriptions'],
@@ -306,6 +307,24 @@ describe('corrections — request validation', () => {
         tags: ['Groceries'],
       })
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('400s an update that would leave a correction tags-only (CF061/#3650)', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'WOOLWORTHS',
+      matchType: 'contains',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      tags: ['Groceries'],
+    });
+
+    await expect(
+      client().corrections.update(created.data.id, { entityId: null })
+    ).rejects.toMatchObject({ status: 400 });
+
+    // Rejected — the row must be untouched.
+    const unchanged = await client().corrections.get(created.data.id);
+    expect(unchanged.data.entityId).toBe('ent-woolies');
   });
 
   it('400s an applyChangeSet add op carrying tags but no entityId/transactionType (CF061/#3650)', async () => {

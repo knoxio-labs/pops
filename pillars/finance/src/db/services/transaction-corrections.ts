@@ -23,6 +23,7 @@ import { transactionCorrections } from '../schema.js';
 import {
   isTagsOnlyCorrectionInput,
   normalizeDescription,
+  wouldUpdateLeaveTagsOnly,
   type CreateTransactionCorrectionInput,
   type TransactionCorrectionListQuery,
   type TransactionCorrectionListResult,
@@ -205,7 +206,13 @@ function buildCorrectionUpdates(
 
 /**
  * PATCH a correction. Throws `TransactionCorrectionNotFoundError` if missing.
- * Empty input still re-reads the row but skips the UPDATE.
+ * Empty input still re-reads the row but skips the UPDATE. Throws
+ * `TagsOnlyCorrectionError` if the resulting row — the input overlaid on the
+ * existing row, PATCH-style — would carry no `entityId`, no `transactionType`,
+ * and non-empty `tags` (CF061/#3650): the same classification-rule/tag-rule
+ * boundary `insertNewCorrection` and `applyAddOp` enforce, checked here
+ * against the merged result so an update can't sneak a row past it that a
+ * create never could. Nothing is written when this throws.
  */
 export function updateTransactionCorrection(
   db: FinanceDb,
@@ -216,6 +223,8 @@ export function updateTransactionCorrection(
   const updates = buildCorrectionUpdates(input);
 
   if (Object.keys(updates).length === 0) return existing;
+
+  if (wouldUpdateLeaveTagsOnly(existing, input)) throw new TagsOnlyCorrectionError();
 
   db.update(transactionCorrections).set(updates).where(eq(transactionCorrections.id, id)).run();
 

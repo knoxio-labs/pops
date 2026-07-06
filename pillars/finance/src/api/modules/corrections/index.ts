@@ -5,7 +5,7 @@
  * schemas). Exposes the DB-injected `applyChangeSet` plus the pure in-memory
  * matchers and classification helpers.
  */
-export { applyChangeSet } from './service.js';
+export { applyChangeSet, dropTagsOnlyAddOps } from './service.js';
 export {
   applyChangeSetToRules,
   findAllMatchingCorrectionFromRules,
