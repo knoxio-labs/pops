@@ -291,6 +291,18 @@ describe('tagRules — list / get / update / disable / delete', () => {
     });
   });
 
+  it('rejects an update that would clear tags to empty', async () => {
+    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const id = created.rules[0]?.id ?? '';
+
+    await expect(client().tagRules.update(id, { tags: [] })).rejects.toMatchObject({
+      status: 400,
+    });
+
+    const refetched = await client().tagRules.get(id);
+    expect(refetched.data.tags).toEqual([CUSTOM_TAG]);
+  });
+
   it('disables a rule as a real mutation (isActive flips false, persists on refetch)', async () => {
     const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
     const id = created.rules[0]?.id ?? '';

@@ -32,6 +32,15 @@ export function PatternContext({ rule }: { rule: TagRule }) {
   );
 }
 
+/**
+ * Sentinel entity option representing "no entity" (a global rule). Injected
+ * ahead of the real entities so the picker always has a selectable item to
+ * revert an entity-scoped rule back to global — `EntitySelect` has no
+ * built-in clear affordance, and an empty `entities` list can't represent
+ * "unset" once something else has been picked.
+ */
+const GLOBAL_ENTITY_OPTION: EntityOption = { id: '', name: 'Global' };
+
 export function EntityField({
   form,
   entities,
@@ -47,10 +56,10 @@ export function EntityField({
         <div className="flex flex-col gap-1.5 w-full">
           <Label>Entity</Label>
           <EntitySelect
-            entities={entities}
-            value={field.value ?? undefined}
-            onChange={(id) => field.onChange(id)}
-            placeholder="Global (any entity)..."
+            entities={[GLOBAL_ENTITY_OPTION, ...entities]}
+            value={field.value ?? GLOBAL_ENTITY_OPTION.id}
+            onChange={(id) => field.onChange(id === GLOBAL_ENTITY_OPTION.id ? null : id)}
+            placeholder="Choose entity..."
           />
         </div>
       )}

@@ -20,7 +20,7 @@ export const TagRuleDataSchema = z.object({
 
 export const TagRuleUpdateSchema = z.object({
   entityId: z.string().nullable().optional(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string()).min(1).optional(),
   confidence: z.number().min(0).max(1).optional(),
   isActive: z.boolean().optional(),
   priority: z.number().int().nonnegative().optional(),

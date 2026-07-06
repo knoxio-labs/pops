@@ -154,12 +154,10 @@ vi.mock('@pops/ui', async () => {
       entities,
       value,
       onChange,
-      placeholder,
     }: {
       entities: { id: string; name: string }[];
       value?: string;
       onChange?: (id: string, name: string) => void;
-      placeholder?: string;
     }) =>
       React.createElement(
         'select',
@@ -171,12 +169,7 @@ vi.mock('@pops/ui', async () => {
             onChange?.(e.target.value, found?.name ?? '');
           },
         },
-        [
-          React.createElement('option', { key: '', value: '' }, placeholder ?? ''),
-          ...entities.map((en) =>
-            React.createElement('option', { key: en.id, value: en.id }, en.name)
-          ),
-        ]
+        entities.map((en) => React.createElement('option', { key: en.id, value: en.id }, en.name))
       ),
     Dialog: ({
       children,
@@ -442,7 +435,7 @@ describe('TagRulesBrowserPage', () => {
     await user.selectOptions(isActiveSelect!, 'false');
     await waitFor(() => {
       const lastCall = tagRulesList.mock.calls.at(-1);
-      expect(lastCall![0]).toMatchObject({ query: { isActive: false } });
+      expect(lastCall![0]).toMatchObject({ query: { isActive: 'false' } });
     });
     expect(await screen.findByText('Clear filters')).toBeInTheDocument();
   });
@@ -497,6 +490,34 @@ describe('TagRulesBrowserPage', () => {
         path: { id: 'rule-1' },
         body: {
           entityId: 'ent-1',
+          tags: ['groceries'],
+          confidence: 0.95,
+          priority: 0,
+          isActive: true,
+        },
+      })
+    );
+  });
+
+  it('resets an entity-scoped rule back to Global via the edit dialog', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const editButtons = await screen.findAllByRole('button', { name: /edit tag rule/i });
+    await user.click(editButtons[0]!);
+
+    const dialog = screen.getByRole('dialog');
+    const entitySelect = within(dialog).getByLabelText('Entity');
+    expect(entitySelect).toHaveValue('ent-1');
+
+    await user.selectOptions(entitySelect, 'Global');
+    expect(entitySelect).toHaveValue('');
+
+    await user.click(within(dialog).getByText('Save'));
+    await waitFor(() =>
+      expect(tagRulesUpdate).toHaveBeenCalledWith({
+        path: { id: 'rule-1' },
+        body: {
+          entityId: null,
           tags: ['groceries'],
           confidence: 0.95,
           priority: 0,
