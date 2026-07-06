@@ -37,7 +37,7 @@ The gateway joins the `backend` Docker network and publishes port `${MCP_BIND_AD
 
 ### Pillar access and discovery
 
-Tools never call `pillar()` directly. They import `getPillar<TRouter>(id)` from `src/pillar-client.ts`, which configures the server SDK once at module load and returns a memoised, fully-typed per-pillar handle:
+Tools never call `pillar()` directly. They import `getPillar<TRouter>(id)` from `src/pillar-client.ts`, which lazily configures the server SDK once, on the first `getPillar` call, and returns a memoised, fully-typed per-pillar handle:
 
 ```ts
 import type { AppRouter as InventoryAppRouter } from '@pops/inventory-api/router';
@@ -49,7 +49,7 @@ await inventory.inventory.locations.list();
 
 - the **service-account key** (`POPS_INTERNAL_API_KEY`, or legacy `POPS_API_KEY`, optionally via the `POPS_API_KEY_FILE` Docker-secret pattern);
 - **registry-driven base-URL resolution** for every pillar — no hardcoded host:port defaults — with an optional per-pillar override via `POPS_<PILLAR>_API_URL` that outranks discovery when set;
-- the **registry URL** (`POPS_REGISTRY_URL`) the SDK uses to discover each pillar's base URL.
+- an optional **registry URL override** (`POPS_REGISTRY_URL`) — the SDK defaults to the registry pillar's Docker-network hostname (`http://registry-api:3001`) when unset.
 
 The SDK memoises per-pillar handles, so repeated `getPillar` calls share a discovery cache.
 
@@ -109,20 +109,20 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 
 ## Configuration
 
-| Env var                  | Default   | Description                                                                     |
-| ------------------------ | --------- | ------------------------------------------------------------------------------- |
-| `POPS_INTERNAL_API_KEY`  | —         | Service-account key the SDK uses to authenticate to pillars                     |
-| `POPS_API_KEY`           | —         | Legacy fallback for the service-account key                                     |
-| `POPS_API_KEY_FILE`      | —         | Path to a key file (Docker-secret pattern); read into the key var at startup    |
-| `MCP_PORT`               | `3011`    | Port the HTTP server listens on (bound `0.0.0.0`)                               |
-| `MCP_BIND_ADDR`          | `0.0.0.0` | Host bind address for the published compose port                                |
-| `POPS_REGISTRY_URL`      | —         | Registry pillar URL for discovery fallback                                      |
-| `POPS_INVENTORY_API_URL` | —         | Optional override of the inventory pillar base URL (unset → registry discovery) |
-| `POPS_FINANCE_API_URL`   | —         | Optional override of the finance pillar base URL (unset → registry discovery)   |
-| `POPS_CONTACTS_API_URL`  | —         | Optional override of the contacts pillar base URL (unset → registry discovery)  |
-| `POPS_MEDIA_API_URL`     | —         | Optional override of the media pillar base URL (unset → registry discovery)     |
-| `POPS_CEREBRUM_API_URL`  | —         | Optional override of the cerebrum pillar base URL (unset → registry discovery)  |
-| `POPS_REGISTRY_API_URL`  | —         | Optional override of the registry pillar base URL (unset → registry discovery)  |
+| Env var                  | Default                    | Description                                                                     |
+| ------------------------ | -------------------------- | ------------------------------------------------------------------------------- |
+| `POPS_INTERNAL_API_KEY`  | —                          | Service-account key the SDK uses to authenticate to pillars                     |
+| `POPS_API_KEY`           | —                          | Legacy fallback for the service-account key                                     |
+| `POPS_API_KEY_FILE`      | —                          | Path to a key file (Docker-secret pattern); read into the key var at startup    |
+| `MCP_PORT`               | `3011`                     | Port the HTTP server listens on (bound `0.0.0.0`)                               |
+| `MCP_BIND_ADDR`          | `0.0.0.0`                  | Host bind address for the published compose port                                |
+| `POPS_REGISTRY_URL`      | `http://registry-api:3001` | Override for the registry pillar's discovery URL                                |
+| `POPS_INVENTORY_API_URL` | —                          | Optional override of the inventory pillar base URL (unset → registry discovery) |
+| `POPS_FINANCE_API_URL`   | —                          | Optional override of the finance pillar base URL (unset → registry discovery)   |
+| `POPS_CONTACTS_API_URL`  | —                          | Optional override of the contacts pillar base URL (unset → registry discovery)  |
+| `POPS_MEDIA_API_URL`     | —                          | Optional override of the media pillar base URL (unset → registry discovery)     |
+| `POPS_CEREBRUM_API_URL`  | —                          | Optional override of the cerebrum pillar base URL (unset → registry discovery)  |
+| `POPS_REGISTRY_API_URL`  | —                          | Optional override of the registry pillar base URL (unset → registry discovery)  |
 
 ## Packaging & deployment
 
@@ -156,7 +156,7 @@ Flat `allTools` array, namespaced names (`<pillar>.<domain>.op`). Full per-tool 
 
 ### Discovery, auth & config
 
-- [x] The server SDK is configured once at module load with the service-account key, the per-pillar `internalBaseUrls` map, and an optional registry URL.
+- [x] The server SDK is configured once, lazily on the first `getPillar` call, with the service-account key and an optional registry URL override.
 - [x] The service-account key is resolved from `POPS_INTERNAL_API_KEY`, falling back to legacy `POPS_API_KEY`; `POPS_API_KEY_FILE` is read into the key var at startup (Docker-secret pattern).
 - [x] Each pillar's base URL resolves via registry discovery (no hardcoded host:port defaults); `POPS_<PILLAR>_API_URL` optionally overrides it when set.
 - [x] `getPillar<TRouter>(id)` returns a memoised, fully-typed per-pillar handle shared across tool calls.
