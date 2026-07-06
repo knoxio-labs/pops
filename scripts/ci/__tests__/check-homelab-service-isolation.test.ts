@@ -45,9 +45,18 @@ describe('matchImage', () => {
     expect(matchImage('ghcr.io/home-assistant-libs/python-matter-server:6')?.id).toBe('matter');
   });
 
+  it('matches digest-pinned images (name@sha256:…) with no tag', () => {
+    expect(matchImage('eclipse-mosquitto@sha256:cafe')?.id).toBe('mosquitto');
+    expect(matchImage('ghcr.io/home-assistant/home-assistant@sha256:deadbeef')?.id).toBe(
+      'home-assistant'
+    );
+    expect(matchImage('koenkk/zigbee2mqtt@sha256:beef')?.id).toBe('zigbee2mqtt');
+  });
+
   it('does not match a pops-owned image that merely shares a substring', () => {
     expect(matchImage('ghcr.io/knoxio/pops-finance:main')).toBeUndefined();
     expect(matchImage('ghcr.io/knoxio/pops-ha-bridge:main')).toBeUndefined();
+    expect(matchImage('ghcr.io/knoxio/pops-finance@sha256:abc')).toBeUndefined();
   });
 });
 
@@ -84,6 +93,26 @@ describe('scanCompose', () => {
     const services = new Set(scanCompose('c.yml', text).map((x) => x.service));
     expect(services.has('Zigbee2MQTT')).toBe(true);
     expect(services.has('Matter server')).toBe(true);
+  });
+
+  it('flags forbidden services declared with quoted YAML keys', () => {
+    const text = [
+      'services:',
+      '  "home-assistant":',
+      '    image: whatever',
+      "  'mosquitto':",
+      '    image: eclipse-mosquitto@sha256:cafe',
+    ].join('\n');
+    const v = scanCompose('infra/compose.yml', text);
+    expect(v).toContainEqual(
+      expect.objectContaining({ service: 'Home Assistant', kind: 'service-key' })
+    );
+    expect(v).toContainEqual(
+      expect.objectContaining({ service: 'Mosquitto MQTT broker', kind: 'service-key' })
+    );
+    expect(v).toContainEqual(
+      expect.objectContaining({ service: 'Mosquitto MQTT broker', kind: 'image' })
+    );
   });
 
   it('does NOT flag a forbidden name that appears only as a nested mapping key (not a service)', () => {
@@ -204,6 +233,16 @@ describe('discoverManifests + findViolations (filesystem round-trip)', () => {
     mkdirSync(nm, { recursive: true });
     writeFileSync(
       join(nm, 'docker-compose.yml'),
+      ['services:', '  mosquitto:', '    image: eclipse-mosquitto'].join('\n')
+    );
+    expect(discoverManifests(dir)).toEqual([]);
+  });
+
+  it('skips hidden directories (.cache, .venv, …) except .github', () => {
+    const hidden = join(dir, '.cache');
+    mkdirSync(hidden, { recursive: true });
+    writeFileSync(
+      join(hidden, 'docker-compose.yml'),
       ['services:', '  mosquitto:', '    image: eclipse-mosquitto'].join('\n')
     );
     expect(discoverManifests(dir)).toEqual([]);

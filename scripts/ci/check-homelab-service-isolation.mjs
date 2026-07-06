@@ -73,25 +73,25 @@ export const FORBIDDEN_SERVICES = [
     id: 'home-assistant',
     label: 'Home Assistant',
     nameRe: /^(home-?assistant|hass|hassio|hass-io)$/i,
-    imageRe: /(^|\/)(home-?assistant|hass|hassio|homeassistant\/home-assistant)(:|$)/i,
+    imageRe: /(^|\/)(home-?assistant|hass|hassio|homeassistant\/home-assistant)(:|@|$)/i,
   },
   {
     id: 'mosquitto',
     label: 'Mosquitto MQTT broker',
     nameRe: /^(eclipse-)?mosquitto$/i,
-    imageRe: /(^|\/)(eclipse-)?mosquitto(:|$)/i,
+    imageRe: /(^|\/)(eclipse-)?mosquitto(:|@|$)/i,
   },
   {
     id: 'zigbee2mqtt',
     label: 'Zigbee2MQTT',
     nameRe: /^(zigbee2mqtt|z2m)$/i,
-    imageRe: /(^|\/)zigbee2mqtt(:|$)/i,
+    imageRe: /(^|\/)zigbee2mqtt(:|@|$)/i,
   },
   {
     id: 'matter',
     label: 'Matter server',
     nameRe: /^(matter|matter-server|matterbridge)$/i,
-    imageRe: /(^|\/)((python-)?matter-server|matterbridge)(:|$)/i,
+    imageRe: /(^|\/)((python-)?matter-server|matterbridge)(:|@|$)/i,
   },
 ];
 
@@ -172,7 +172,11 @@ export function scanCompose(file, text) {
       } else {
         if (serviceKeyIndent === -1) serviceKeyIndent = indent;
         if (indent === serviceKeyIndent) {
-          const key = code.trim().replace(/:\s*$/, '').replace(/:.*$/, '');
+          const key = code
+            .trim()
+            .replace(/:\s*$/, '')
+            .replace(/:.*$/, '')
+            .replace(/^["']|["']$/g, '');
           const hit = matchName(key);
           if (hit) {
             out.push({
@@ -302,12 +306,12 @@ export function discoverManifests(root) {
       return;
     }
     for (const entry of entries) {
-      if (entry.name.startsWith('.') && entry.name !== '.github') {
-        if (SKIP_DIRS.has(entry.name)) continue;
-      }
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
         if (SKIP_DIRS.has(entry.name)) continue;
+        // Skip every hidden dir (.cache, .venv, .idea, …) except .github, which
+        // can hold workflow-embedded compose fragments.
+        if (entry.name.startsWith('.') && entry.name !== '.github') continue;
         walk(full);
         continue;
       }
@@ -382,20 +386,50 @@ function selfTest() {
     const leakyLitestream = ['dbs:', '  - path: /data/sqlite/mosquitto.db'].join('\n');
     const cleanLitestream = ['dbs:', '  - path: /data/sqlite/finance.db'].join('\n');
 
+    // Quote-wrapped service keys + digest-pinned images (no tag) are the two
+    // evasion shapes plain `key:` / `image: name:tag` matching used to miss.
+    const edgeCompose = [
+      'services:',
+      '  "home-assistant":',
+      '    image: "ghcr.io/home-assistant/home-assistant@sha256:deadbeef"',
+      "  'mosquitto':",
+      '    image: eclipse-mosquitto@sha256:cafe',
+    ].join('\n');
+
     const composeLeaks = scanCompose('leaky-compose.yml', leakyCompose);
     const composeClean = scanCompose('clean-compose.yml', cleanCompose);
+    const edgeLeaks = scanCompose('edge-compose.yml', edgeCompose);
     const litePathLeak = scanLitestream('finance.yml', leakyLitestream);
     const liteFileLeak = scanLitestream('mosquitto.yml', cleanLitestream);
     const liteClean = scanLitestream('finance.yml', cleanLitestream);
 
-    const leakedServices = new Set(composeLeaks.map((v) => v.service));
+    /**
+     * @param {Violation[]} vs
+     * @param {string} service
+     * @param {Violation['kind']} kind
+     */
+    const has = (vs, service, kind) => vs.some((v) => v.service === service && v.kind === kind);
+
     const checks = {
-      'flags HA service key + image': composeLeaks.some(
-        (v) => v.service === 'Home Assistant' && v.kind === 'service-key'
+      // Assert the specific (service, kind) pair, not just that a label appears
+      // somewhere — so a regression that drops one detection shape is caught.
+      'flags HA service key': has(composeLeaks, 'Home Assistant', 'service-key'),
+      'flags HA image': has(composeLeaks, 'Home Assistant', 'image'),
+      'flags mosquitto image': has(composeLeaks, 'Mosquitto MQTT broker', 'image'),
+      'flags mosquitto container_name': has(
+        composeLeaks,
+        'Mosquitto MQTT broker',
+        'container_name'
       ),
-      'flags mosquitto image + container_name': leakedServices.has('Mosquitto MQTT broker'),
-      'flags zigbee2mqtt (z2m alias)': leakedServices.has('Zigbee2MQTT'),
-      'flags matter-server image': leakedServices.has('Matter server'),
+      'flags zigbee2mqtt service key (z2m alias)': has(composeLeaks, 'Zigbee2MQTT', 'service-key'),
+      'flags zigbee2mqtt image': has(composeLeaks, 'Zigbee2MQTT', 'image'),
+      'flags matter service key': has(composeLeaks, 'Matter server', 'service-key'),
+      'flags matter-server image': has(composeLeaks, 'Matter server', 'image'),
+      // The evasion shapes fixes 1 + 2 close.
+      'flags quoted HA service key': has(edgeLeaks, 'Home Assistant', 'service-key'),
+      'flags digest-pinned HA image': has(edgeLeaks, 'Home Assistant', 'image'),
+      'flags quoted mosquitto service key': has(edgeLeaks, 'Mosquitto MQTT broker', 'service-key'),
+      'flags digest-pinned mosquitto image': has(edgeLeaks, 'Mosquitto MQTT broker', 'image'),
       'does not flag pops-finance image': !composeLeaks.some((v) =>
         v.evidence.includes('pops-finance')
       ),
@@ -409,14 +443,20 @@ function selfTest() {
       'clean litestream stays clean': liteClean.length === 0,
     };
 
-    // Round-trip discovery + read through the real filesystem walker too.
+    // Round-trip discovery + read through the real filesystem walker too, and
+    // prove the walker skips hidden dirs — a leak parked in .cache must NOT be
+    // discovered, while a real infra manifest still is.
     const composeDir = join(dir, 'infra');
     mkdirSync(composeDir, { recursive: true });
     writeFileSync(join(composeDir, 'docker-compose.yml'), leakyCompose);
+    const hiddenDir = join(dir, '.cache');
+    mkdirSync(hiddenDir, { recursive: true });
+    writeFileSync(join(hiddenDir, 'docker-compose.yml'), leakyCompose);
     const manifests = discoverManifests(dir);
     const discovered = findViolations(manifests, (p) => readFileSync(p, 'utf8'), dir);
     checks['discovers + scans a compose file on disk'] =
       manifests.some((m) => m.kind === 'compose') && discovered.length > 0;
+    checks['skips hidden directories'] = !manifests.some((m) => m.path.includes('/.cache/'));
 
     const failed = Object.entries(checks).filter(([, ok]) => !ok);
     if (failed.length > 0) {
