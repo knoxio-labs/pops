@@ -8,6 +8,11 @@
  * pass the same `resolveCorrectionApplyStatus` gate as live import, so an
  * `uncertain` (sub-threshold, or entity-less purchase) match is skipped rather
  * than silently written without review.
+ *
+ * A row whose `matchType` is `manual` (a direct PATCH touched a classification
+ * field — see `transactions.ts`'s `buildTransactionUpdates`) is skipped
+ * entirely: the user's hand-fix must survive a future import's rule set
+ * instead of being silently reverted (CF017/#3623).
  */
 import { asc, eq, notInArray } from 'drizzle-orm';
 
@@ -27,6 +32,7 @@ interface BatchTxn {
   entityId: string | null;
   type: string;
   location: string | null;
+  matchType: string | null;
 }
 
 function deriveNewType(ruleType: string | null): 'Transfer' | 'Income' | 'Expense' | null {
@@ -97,6 +103,7 @@ function fetchBatch(db: FinanceDb, importedChecksums: string[], offset: number):
       entityId: transactions.entityId,
       type: transactions.type,
       location: transactions.location,
+      matchType: transactions.matchType,
     })
     .from(transactions)
     .$dynamic();
@@ -130,6 +137,7 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
     if (batch.length === 0) break;
 
     for (const txn of batch) {
+      if (txn.matchType === 'manual') continue;
       const match = findMatchingCorrectionFromRules(txn.description, allRules);
       if (!match) continue;
       if (resolveCorrectionApplyStatus(match.correction) !== 'matched') continue;

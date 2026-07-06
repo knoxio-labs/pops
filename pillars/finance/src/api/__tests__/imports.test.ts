@@ -800,6 +800,58 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(rule.entity_id).toBe(contact?.id);
   });
 
+  it('degrades a bundled tags-only add op instead of rolling back the whole commit (CF061/#3650)', async () => {
+    const contacts = makeContactsFake();
+    const c = client(contacts);
+    const tempId = 'temp:entity:00000000-0000-0000-0000-00000000000d';
+    const res = await c.imports.commitImport({
+      entities: [{ tempId, name: 'DegradeCorp' }],
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'GOOD RULE',
+                matchType: 'contains',
+                transactionType: 'purchase',
+              },
+            },
+            {
+              op: 'add',
+              data: { descriptionPattern: 'BAD RULE', matchType: 'contains', tags: ['X'] },
+            },
+          ],
+        },
+      ],
+      transactions: [
+        confirmed({
+          checksum: 'commit-degrade',
+          entityId: tempId,
+          entityName: 'DegradeCorp',
+        }),
+      ],
+    });
+
+    // The good rule, the entity creation, and the transaction insert all land —
+    // only the tags-only op is dropped.
+    expect(res.data.transactionsImported).toBe(1);
+    expect(res.data.transactionsFailed).toBe(0);
+    expect(res.data.entitiesCreated).toBe(1);
+    expect(res.data.rulesApplied).toEqual({ add: 1, edit: 0, disable: 0, remove: 0 });
+
+    const rules = financeDb.raw
+      .prepare('SELECT description_pattern FROM transaction_corrections')
+      .all() as { description_pattern: string }[];
+    expect(rules.map((r) => r.description_pattern)).toEqual(['GOOD RULE']);
+
+    const contact = contacts.entities.find((e) => e.name === 'DegradeCorp');
+    const txn = financeDb.raw
+      .prepare('SELECT entity_id FROM transactions WHERE checksum = ?')
+      .get('commit-degrade') as { entity_id: string };
+    expect(txn.entity_id).toBe(contact?.id);
+  });
+
   it('applies pending tag-rule ChangeSets during commit', async () => {
     const c = client();
     const res = await c.imports.commitImport({

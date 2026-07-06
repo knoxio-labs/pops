@@ -85,6 +85,56 @@ export function normalizeDescription(description: string): string {
 }
 
 /**
+ * A `transaction_corrections` row is a **classification** rule: it must carry
+ * an `entityId` and/or a `transactionType` to have anything to classify.
+ * `tags` is a suggestion payload riding along an entity/type match, never a
+ * standalone payload — tag-only learning belongs to `transaction_tag_rules`
+ * (see `corrections.md`'s table-boundary note). A row with neither an entity
+ * nor a transaction type but non-empty tags is a tags-only row that violates
+ * that boundary and can never surface as a classification match (CF061/#3650):
+ * it sits at or below the matching floor with nothing for `findMatch` to
+ * apply, existing only as rule-manager clutter.
+ */
+export function isTagsOnlyCorrectionInput(input: {
+  entityId?: string | null;
+  transactionType?: TransactionCorrectionTransactionType | null;
+  tags?: string[];
+}): boolean {
+  return !input.entityId && !input.transactionType && (input.tags?.length ?? 0) > 0;
+}
+
+/** Parse a persisted `tags` column back to a `string[]`, tolerating malformed JSON. */
+function parseStoredTags(tagsJson: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(tagsJson);
+    return Array.isArray(parsed)
+      ? parsed.filter((tag): tag is string => typeof tag === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Would PATCHing `existing` with `input` leave a tags-only row (CF061/#3650)?
+ * Overlays `input`'s explicitly-provided `entityId`/`transactionType`/`tags`
+ * onto `existing`, PATCH-style (an `undefined` field keeps the existing
+ * value), then runs the merged result through {@link isTagsOnlyCorrectionInput}
+ * — so an update can't sneak a row past the boundary a create never could.
+ */
+export function wouldUpdateLeaveTagsOnly(
+  existing: Pick<TransactionCorrectionRow, 'entityId' | 'transactionType' | 'tags'>,
+  input: Pick<UpdateTransactionCorrectionInput, 'entityId' | 'transactionType' | 'tags'>
+): boolean {
+  return isTagsOnlyCorrectionInput({
+    entityId: input.entityId !== undefined ? input.entityId : existing.entityId,
+    transactionType:
+      input.transactionType !== undefined ? input.transactionType : existing.transactionType,
+    tags: input.tags ?? parseStoredTags(existing.tags),
+  });
+}
+
+/**
  * Apply-time match predicate shared by the rule matcher and the rule-match
  * preview: does `pattern` (interpreted per `matchType`) hit a pre-normalised
  * description?

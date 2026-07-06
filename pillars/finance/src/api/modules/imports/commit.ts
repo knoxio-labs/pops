@@ -12,6 +12,18 @@
  * contacts outage degrades to an outbox placeholder instead of aborting
  * (#3683).
  *
+ * `applyChangeSetsPhase` runs every correction ChangeSet through
+ * `dropTagsOnlyAddOps` before applying it: a tags-only/entityName-only add op
+ * (no `entityId`, no `transactionType`, non-empty `tags`) violates the
+ * classification-rule/tag-rule table boundary (CF061/#3650) and would throw
+ * inside `applyAddOp` — inside this commit's single transaction, that throw
+ * would roll back every transaction insert and entity creation over one inert
+ * rule. `proposeChangeSetFromCorrectionSignal` already filters this shape out
+ * before a user can approve it, so this is a second, defense-in-depth layer
+ * for a ChangeSet that reaches commit some other way (a hand-built payload,
+ * the AI revise path, a future caller): the bad op is dropped with a logged
+ * warning and the rest of the commit proceeds.
+ *
  * The outer `db.transaction` handle (`tx`) is threaded into every inner service
  * so the correction/tag-rule ChangeSet applies nest as savepoints rather than
  * opening independent transactions.
@@ -33,7 +45,7 @@ import {
   tagVocabularyService,
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
-import { applyChangeSet } from '../corrections/index.js';
+import { applyChangeSet, dropTagsOnlyAddOps } from '../corrections/index.js';
 import { applyTagRuleChangeSet } from '../tag-rules/service.js';
 import {
   enqueueOutboxCandidatesPhase,
@@ -95,8 +107,10 @@ function applyChangeSetsPhase(
   const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
   for (const cs of payload.changeSets) {
     const resolved = resolveChangeSetTempIds(cs, tempIdMap);
-    applyChangeSet(tx, resolved);
-    for (const op of resolved.ops) counts[op.op]++;
+    const sanitized = dropTagsOnlyAddOps(resolved);
+    if (sanitized.ops.length === 0) continue;
+    applyChangeSet(tx, sanitized);
+    for (const op of sanitized.ops) counts[op.op]++;
   }
   return counts;
 }

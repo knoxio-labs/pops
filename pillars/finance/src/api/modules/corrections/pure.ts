@@ -49,6 +49,12 @@ export function ruleMatchesDescription(rule: CorrectionRow, normalized: string):
  * Return ALL matching correction rules in priority order (priority ASC, id ASC).
  * The first entry is the winner; subsequent entries are overridden alternatives.
  * Inactive rules and rules below `minConfidence` are filtered out first.
+ *
+ * Filtering (active + confidence + pattern match) runs before the sort, so only
+ * the matched subset — usually zero or one row — is sorted, not the full rule
+ * set. That keeps a per-transaction import loop that threads one fetched-once
+ * rule array through every call at O(rules) per row instead of
+ * O(rules·log rules) (CF040/#3664).
  */
 export function findAllMatchingCorrectionFromRules(
   description: string,
@@ -56,16 +62,19 @@ export function findAllMatchingCorrectionFromRules(
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): CorrectionRow[] {
   const normalized = normalizeDescription(description);
-  const eligible = rules
-    .filter((r) => r.isActive && r.confidence >= minConfidence)
+  return rules
+    .filter(
+      (rule) =>
+        rule.isActive &&
+        rule.confidence >= minConfidence &&
+        ruleMatchesDescription(rule, normalized)
+    )
     .toSorted((a, b) => {
       if (a.priority !== b.priority) return a.priority - b.priority;
       if (a.id < b.id) return -1;
       if (a.id > b.id) return 1;
       return 0;
     });
-
-  return eligible.filter((rule) => ruleMatchesDescription(rule, normalized));
 }
 
 /** First matching rule in priority order, classified — or null when none match. */

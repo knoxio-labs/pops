@@ -24,6 +24,19 @@ export interface ApplyLearnedCorrectionArgs {
   minConfidence: number;
   knownTags: string[];
   rules?: CorrectionRow[];
+  /**
+   * True when `rules` is an in-memory preview merged with un-persisted pending
+   * ChangeSets rather than the real persisted rule set (CF040/#3664) — gates
+   * usage telemetry (`timesApplied`/`lastUsedAt`, tag-rule usage) so a preview
+   * never counts as real application. The telemetry gate is purely `!isPreview`
+   * — it is honoured on every path, `rules` supplied or not. The `rules`-omitted
+   * DB-query path counts as real usage not because the flag is skipped there but
+   * because those one-off callers never set it (a preview only exists as an
+   * in-memory merged `rules` array). Defaults to `false`: a caller-supplied
+   * `rules` array fetched once per run from the real table (the perf fix this
+   * flag exists for) still counts as usage.
+   */
+  isPreview?: boolean;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */
   entityDefaultTags?: ReadonlyMap<string, string[]>;
 }
@@ -144,7 +157,7 @@ function handleNoEntityCorrection(
       matchedRules,
       knownTags: args.knownTags,
       status,
-      recordTagRuleUsage: !args.rules,
+      recordTagRuleUsage: !args.isPreview,
     }),
     bucket: status,
   };
@@ -175,23 +188,31 @@ function resolveApplyResult(
       entityId,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags ?? new Map(),
-      recordTagRuleUsage: !args.rules,
+      recordTagRuleUsage: !args.isPreview,
     }),
     bucket: status === 'matched' ? 'matched' : 'uncertain',
   };
 }
 
 /**
- * Match `transaction.description` against the live correction rule set and
- * apply the winning rule.
+ * Match `transaction.description` against the correction rule set and apply
+ * the winning rule.
  *
- * Usage telemetry (`timesApplied`/`lastUsedAt`) is bumped only when the match
- * is against the real persisted rule set (`args.rules` absent) AND the rule
- * actually produced an outcome — a caller-supplied `rules` array is always an
- * in-memory preview (merged with un-persisted pending ChangeSets) and must
- * never count as real usage of the persisted row. The same `!rules` gate is
- * threaded into the suggested-tags computation so a matching tag rule's own
- * usage counter is bumped under the identical condition.
+ * `rules`, when supplied, is matched in-memory (`findAllMatchingCorrectionFromRules`)
+ * instead of re-querying the DB — the fetch-once-per-run path (CF040/#3664):
+ * callers that process many transactions in a loop fetch the active rule set a
+ * single time up front and thread it through every call, instead of issuing a
+ * fresh SELECT+sort per transaction. `rules` omitted falls back to a live DB
+ * query per call, for one-off callers with no run-level rule set to share.
+ *
+ * Usage telemetry (`timesApplied`/`lastUsedAt`) is bumped whenever the match is
+ * against a real (non-preview) rule set AND the rule actually produced an
+ * outcome — gated by `!args.isPreview`, not by whether `rules` was supplied:
+ * a fetch-once `rules` array from the real table is still real usage, while a
+ * `rules` array merged with un-persisted pending ChangeSets (`isPreview: true`)
+ * must never count as usage of the persisted row. The same gate is threaded
+ * into the suggested-tags computation so a matching tag rule's own usage
+ * counter is bumped under the identical condition.
  */
 export function applyLearnedCorrection(
   db: FinanceDb,
@@ -213,7 +234,7 @@ export function applyLearnedCorrection(
   const matchedRules = toMatchedRules(allMatchingRules);
   const result = resolveApplyResult(db, args, correction, matchedRules);
 
-  if (result && !rules) {
+  if (result && !args.isPreview) {
     transactionCorrectionsService.incrementTransactionCorrectionUsage(db, correction.id);
   }
 

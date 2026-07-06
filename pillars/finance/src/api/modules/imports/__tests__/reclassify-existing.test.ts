@@ -28,6 +28,7 @@ interface SeedTxn {
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;
+  matchType?: 'manual' | null;
 }
 
 interface SeedRule {
@@ -57,6 +58,7 @@ function seedTxn(input: SeedTxn): string {
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
       location: input.location ?? null,
+      matchType: input.matchType ?? null,
       checksum: null,
       lastEditedTime: '2026-01-01T00:00:00.000Z',
     })
@@ -225,5 +227,55 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
 
     expect(count).toBe(0);
     expect(readTxn(txnId).type).toBe('Expense');
+  });
+});
+
+describe('reclassifyExistingTransactions — manual-override skip (CF017/#3623)', () => {
+  it('never touches a transaction whose matchType is "manual", even against a confident matching rule', () => {
+    const txnId = seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'Income',
+      entityId: 'ent-user-picked',
+      entityName: 'User Picked Co',
+      matchType: 'manual',
+    });
+    seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.99,
+    });
+
+    const count = reclassifyExistingTransactions(db, []);
+
+    expect(count).toBe(0);
+    const row = readTxn(txnId);
+    expect(row.entityId).toBe('ent-user-picked');
+    expect(row.entityName).toBe('User Picked Co');
+    expect(row.type).toBe('Income');
+  });
+
+  it('still reclassifies a sibling row with the same description that was never manually edited', () => {
+    const manualId = seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'Income',
+      entityId: 'ent-user-picked',
+      matchType: 'manual',
+    });
+    const autoId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.99,
+    });
+
+    const count = reclassifyExistingTransactions(db, []);
+
+    expect(count).toBe(1);
+    expect(readTxn(manualId).entityId).toBe('ent-user-picked');
+    expect(readTxn(autoId).entityId).toBe('ent-woolies');
   });
 });

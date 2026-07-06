@@ -7,7 +7,10 @@
  *
  * `TransactionTagRuleNotFoundError`-style behaviour is preserved: an
  * edit/disable/remove op targeting an unknown id throws `NotFoundError` (→ 404),
- * which inside `db.transaction` rolls the whole set back.
+ * which inside `db.transaction` rolls the whole set back. An `add` op with no
+ * `entityId`, no `transactionType`, and non-empty `tags` throws `ValidationError`
+ * (→ 400, CF061/#3650) before anything is written — a tags-only row belongs in
+ * `transaction_tag_rules`, not here.
  */
 import { and, desc, eq } from 'drizzle-orm';
 
@@ -17,12 +20,26 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
-import { NotFoundError } from '../../shared/errors.js';
+import { NotFoundError, ValidationError } from '../../shared/errors.js';
 
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
 import type { CorrectionRow } from './types.js';
 
-const { normalizeDescription } = transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, normalizeDescription } = transactionCorrectionsService;
+
+/**
+ * Reject a ChangeSet `add` whose data carries no `entityId`, no
+ * `transactionType`, and non-empty `tags` — a tags-only row that violates the
+ * classification-rule/tag-rule table boundary (CF061/#3650). Tag-only intent
+ * belongs in a `transaction_tag_rules` ChangeSet, not here.
+ */
+function assertNotTagsOnly(op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  if (isTagsOnlyCorrectionInput(op.data)) {
+    throw new ValidationError(
+      'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules'
+    );
+  }
+}
 
 function findExistingCorrectionByKey(
   tx: FinanceDb,
@@ -42,6 +59,29 @@ function findExistingCorrectionByKey(
 }
 
 /**
+ * Drop any `add` op whose data is tags-only (CF061/#3650) from a ChangeSet,
+ * logging a warning for each one dropped.
+ *
+ * Used by the import-commit path (`imports/commit.ts`), which bundles the
+ * ChangeSet apply together with entity creation and every transaction insert
+ * in one `db.transaction` — letting `applyAddOp` throw on a single stray
+ * tags-only op would roll back the entire commit over one inert rule. The
+ * standalone `corrections.applyChangeSet` REST endpoint is unaffected: it
+ * still rejects a tags-only add via `assertNotTagsOnly` (nothing else is at
+ * stake there but the rule set itself).
+ */
+export function dropTagsOnlyAddOps(changeSet: ChangeSet): ChangeSet {
+  const ops = changeSet.ops.filter((op) => {
+    if (op.op !== 'add' || !isTagsOnlyCorrectionInput(op.data)) return true;
+    console.warn(
+      `[Corrections] Dropping tags-only add op (descriptionPattern="${op.data.descriptionPattern}") from a commit ChangeSet — tags-only rules belong in transaction_tag_rules (CF061/#3650)`
+    );
+    return false;
+  });
+  return { ...changeSet, ops };
+}
+
+/**
  * Add a correction rule, upserting on the `(normalized descriptionPattern,
  * matchType)` key instead of a raw insert (CF035): two `add` ops for the same
  * pattern in one ChangeSet — or across ChangeSets in the same commit — land
@@ -49,6 +89,8 @@ function findExistingCorrectionByKey(
  * duplicate where only one of the two ever matches.
  */
 function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  assertNotTagsOnly(op);
+
   const normalized = normalizeDescription(op.data.descriptionPattern);
   const values = {
     entityId: op.data.entityId ?? null,

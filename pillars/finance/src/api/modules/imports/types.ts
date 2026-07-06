@@ -7,6 +7,7 @@
  * cross the wire (progress batch items, AI counters, the per-batch context).
  */
 import type { EntityMaps } from '../../../db/index.js';
+import type { CorrectionRow } from '../corrections/index.js';
 
 export type {
   AiUsageStats,
@@ -55,6 +56,12 @@ export interface ProcessContext {
   importBatchId: string;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */
   entityDefaultTags: ReadonlyMap<string, string[]>;
+  /**
+   * The active correction rule set, fetched once per import run (CF040/#3664)
+   * and threaded into every `applyLearnedCorrection` call instead of each
+   * transaction re-querying + re-sorting the whole table.
+   */
+  correctionRules: CorrectionRow[];
 }
 
 export function createAiCounters(): AiCounters {

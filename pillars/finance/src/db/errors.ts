@@ -87,3 +87,19 @@ export class TransactionCorrectionNotFoundError extends Error {
     this.id = id;
   }
 }
+
+/**
+ * A `transaction_corrections` write carried no `entityId`, no
+ * `transactionType`, and non-empty `tags` — a tags-only row that violates the
+ * classification-rule/tag-rule table boundary (CF061/#3650). Tag-only intent
+ * belongs in `transaction_tag_rules`.
+ */
+export class TagsOnlyCorrectionError extends Error {
+  override readonly name = 'TagsOnlyCorrectionError' as const;
+
+  constructor() {
+    super(
+      'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules'
+    );
+  }
+}

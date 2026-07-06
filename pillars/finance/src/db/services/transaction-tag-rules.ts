@@ -22,6 +22,12 @@ import { normalizeDescription } from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
 
+export {
+  findDuplicateTransactionTagRules,
+  findUnreachableTransactionTagRules,
+  type TagRuleConflictGroup,
+} from './transaction-tag-rules-audit.js';
+
 /** Raw drizzle row shape. */
 export type TransactionTagRuleRow = typeof transactionTagRules.$inferSelect;
 

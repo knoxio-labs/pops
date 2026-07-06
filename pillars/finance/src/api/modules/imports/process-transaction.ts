@@ -89,6 +89,7 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
     transaction,
     minConfidence: MIN_MATCH_CONFIDENCE,
     knownTags: context.knownTags,
+    rules: context.correctionRules,
     entityDefaultTags: context.entityDefaultTags,
   });
   if (correctionApplied) {
