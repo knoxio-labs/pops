@@ -52,6 +52,7 @@ import {
   enqueueOutboxCandidatesPhase,
   preCreatePendingContacts,
 } from './commit-contacts-precreate.js';
+import { pairTransfersPhase } from './commit-pair-transfers.js';
 import {
   collectTagsFromTagRuleChangeSet,
   resolveChangeSetTempIds,
@@ -137,6 +138,8 @@ interface WriteTxnsResult {
   imported: number;
   failed: number;
   failedDetails: FailedTransactionDetail[];
+  /** Ids of the rows successfully inserted this batch, for the pairing phase. */
+  insertedIds: string[];
 }
 
 function resolveTxnEntityId(
@@ -159,12 +162,13 @@ function writeTransactionsPhase(
   let imported = 0;
   let failed = 0;
   const failedDetails: FailedTransactionDetail[] = [];
+  const insertedIds: string[] = [];
 
   for (const txn of payload.transactions) {
     const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
     const provenance = sanitizeProvenance(txn);
     try {
-      importsService.insertImportTransaction(tx, {
+      const row = importsService.insertImportTransaction(tx, {
         description: txn.description,
         account: txn.account,
         amountCents: dollarsToCents(txn.amount),
@@ -181,6 +185,7 @@ function writeTransactionsPhase(
         matchConfidence: provenance.matchConfidence,
       });
       imported++;
+      insertedIds.push(row.id);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[CommitImport] Transaction write failed: ${errorMessage}`);
@@ -189,7 +194,7 @@ function writeTransactionsPhase(
     }
   }
 
-  return { imported, failed, failedDetails };
+  return { imported, failed, failedDetails, insertedIds };
 }
 
 /**
@@ -233,6 +238,8 @@ export async function commitImport(
         tx,
         payload.transactions.map((t) => t.checksum).filter((c): c is string => c != null)
       );
+
+      pairTransfersPhase(tx, writeResult.insertedIds);
 
       const result: CommitResult = {
         entitiesCreated,

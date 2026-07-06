@@ -50,6 +50,10 @@ export {
   type UpdateTransactionInput,
 } from './services/transactions.js';
 
+export * as transferPairsService from './services/transfer-pairs.js';
+
+export type { PairTarget } from './services/transfer-pairs.js';
+
 export * as importsService from './services/imports.js';
 
 export type {
