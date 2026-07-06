@@ -1,3 +1,5 @@
+import { requiresEntity } from '../../../lib/transaction-type';
+
 import type { ConfirmedTransaction } from '@pops/finance';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
@@ -6,10 +8,10 @@ export function buildConfirmedTransactions(
   matched: ProcessedTransaction[]
 ): ConfirmedTransaction[] {
   return matched
-    .filter((t) => {
-      const isNoEntityType = t.transactionType === 'transfer' || t.transactionType === 'income';
-      return isNoEntityType || (t.entity?.entityId && t.entity?.entityName);
-    })
+    .filter(
+      (t) =>
+        !requiresEntity(t.transactionType) || Boolean(t.entity?.entityId && t.entity?.entityName)
+    )
     .map((t) => ({
       date: t.date,
       description: t.description,

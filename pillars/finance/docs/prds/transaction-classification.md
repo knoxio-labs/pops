@@ -1,6 +1,6 @@
 # Transaction Classification
 
-> Status: Not started — tracked in [#3607](https://github.com/knoxio/pops/issues/3607) (supersedes #3617, closed as folded in). Full-scope rework: expanded taxonomy, rule-driven classification, and paired-transfer detection ship as one program rather than an incremental cut.
+> Status: In progress — tracked in [#3607](https://github.com/knoxio/pops/issues/3607) (supersedes #3617, closed as folded in). Shipping as a staged program: **Stage 1** canonical taxonomy (#3751), **Stage 2a** type storage + backfill (#3752), **Stage 2b** direction-aware default policy + keyword-heuristic deletion (#3753), **Stage 2c** type-aware dashboard tiles + 8-value dropdowns (#3756) — all merged. **Stage 3** (the paired-transfer engine) remains; its #3608 per-account gate is now cleared. Starter-rule seeding is a deferred follow-up (the new-rule confidence floor is now 0.7, not 0.5, so the seeds' active/inert semantics need their own call).
 
 Every imported transaction gets its `type` today from a 6-line heuristic (`transfer-classifier.ts`): negative amount + one of six hardcoded keywords → `transfer`, everything else falls through to the entity/AI ladder and defaults to an expense. This PRD retires that heuristic entirely and makes the existing correction-rule engine (`transaction_corrections`) the single, auditable, user-fixable classifier for transaction type. It expands the type taxonomy so positive-amount transactions stop collapsing into "income," and adds a paired-transfer detector that identifies inter-account movement structurally — matching amounts across accounts — instead of by keyword guessing.
 
@@ -119,17 +119,17 @@ A flat enum forces every bidirectional concept (a loan drawdown vs. a loan repay
 
 ## Acceptance Criteria
 
-- [ ] `TransactionTypeSchema` is a single canonical definition (in the corrections contract) re-exported by the imports contract — not two independently-declared `z.enum` literals — and covers exactly `purchase | transfer | income | refund | reversal | loan | rebate | tax`.
-- [ ] `transaction_corrections.transaction_type` and `transactions.type` are both sqlite text-enum columns constrained to the same 8 values; `transactions.type` is no longer an unconstrained free string.
-- [ ] `rest-transactions.ts`'s list/get/create/update schemas validate `type` against the canonical enum instead of `z.string()`.
+- [x] `TransactionTypeSchema` is a single canonical definition (in the corrections contract) re-exported by the imports contract — not two independently-declared `z.enum` literals — and covers exactly `purchase | transfer | income | refund | reversal | loan | rebate | tax`.
+- [x] `transaction_corrections.transaction_type` and `transactions.type` are both sqlite text-enum columns constrained to the same 8 values; `transactions.type` is no longer an unconstrained free string.
+- [x] `rest-transactions.ts`'s list/get/create/update schemas validate `type` against the canonical enum instead of `z.string()`.
 - [ ] `direction` (`debit` | `credit`) is derived from `amount` sign at the API boundary and is never persisted as its own column; a `direction` list filter is available and translates to an amount-sign predicate server-side.
-- [ ] Existing `transaction_corrections` rows with `transaction_type` in `{purchase, transfer, income}` remain valid, unchanged, under the expanded enum.
-- [ ] Legacy `transactions.type` values are backfilled (`Transfer→transfer`, `Income→income`, `Expense`/`''→purchase`); no row is left with a value outside the 8-value enum after migration.
-- [ ] `transfer-classifier.ts` and its call site in `process-transaction.ts` are deleted; no code path decides `type` from amount sign or a hardcoded keyword regex.
+- [x] Existing `transaction_corrections` rows with `transaction_type` in `{purchase, transfer, income}` remain valid, unchanged, under the expanded enum.
+- [x] Legacy `transactions.type` values are backfilled (`Transfer→transfer`, `Income→income`, `Expense`/`''→purchase`); no row is left with a value outside the 8-value enum after migration.
+- [x] `transfer-classifier.ts` and its call site in `process-transaction.ts` are deleted; no code path decides `type` from amount sign or a hardcoded keyword regex.
 - [ ] A transaction's `type` is set only by: a matched/reinforced correction rule, the paired-transfer detector, or the `purchase` default applied strictly to a debit row with a resolved merchant entity.
-- [ ] A credit-direction row with no correction match and no paired-transfer match lands in `uncertain` regardless of whether an entity resolves — never silently defaulted to `income` or any other type.
+- [x] A credit-direction row with no correction match and no paired-transfer match lands in `uncertain` regardless of whether an entity resolves — never silently defaulted to `income` or any other type.
 - [ ] The retired keyword list is back-filled as starter correction rules at the standard new-rule confidence (0.5), excluding the bare `payment` token that caused CF011/#3617.
-- [ ] `deriveTransactionType`, `resolveTransactionType`, and `deriveNewType` are removed; the classified `type` is written verbatim at commit and at reclassify.
+- [x] `deriveTransactionType` and `deriveNewType` are removed; the classified `type` is written verbatim at commit and at reclassify.
 - [ ] A pair is detected when two transactions have equal absolute amount, opposite sign, different `account`, and fall within a configurable date window (default 3 days, `FINANCE_TRANSFER_PAIR_WINDOW_DAYS`).
 - [ ] A unique (non-tied) candidate within the window auto-links both sides via `related_transaction_id` (symmetric) and sets both sides' `type` to `transfer`.
 - [ ] Multiple equally-close candidates within the window are never auto-linked; the transaction is left unmatched for manual resolution.
@@ -140,10 +140,10 @@ A flat enum forces every bidirectional concept (a loan drawdown vs. a loan repay
 - [ ] Correction rules take precedence over the paired-transfer detector — a rule-classified transaction is never re-evaluated by the pairing engine.
 - [ ] Every classification a completed import or reclassify pass produces is traceable after commit to either a `ruleId` or a paired counterpart transaction id.
 - [ ] `reclassifyExistingTransactions` and the new pairing reconcile pass both route through the matched/uncertain confidence gate (no force-applying a sub-threshold match, no silent entity null-clearing) — closing #3612 for both mechanisms.
-- [ ] The dashboard's income/expense aggregation uses an explicit type→tile mapping instead of `amount sign` + `type !== 'transfer'`.
+- [x] The dashboard's income/expense aggregation uses an explicit type→tile mapping instead of `amount sign` + `type !== 'transfer'`.
 - [ ] The transactions list type filter, the correction-rule editor's type dropdown, and the AI rule-proposal prompt all offer the full 8-value taxonomy.
-- [ ] The regenerated OpenAPI spec and Hey API FE client reflect the 8-value enum with no manually hand-patched generated file.
-- [ ] This PRD's schema migration lands after #3665's money-representation migration, not concurrently.
+- [x] The regenerated OpenAPI spec and Hey API FE client reflect the 8-value enum with no manually hand-patched generated file.
+- [x] This PRD's schema migration lands after #3665's money-representation migration, not concurrently.
 - [ ] Every new classification path (rule engine, pairing engine, default-purchase fallback, uncertain-credit fallback) has a Vitest test against an in-memory SQLite instance covering at least one case per taxonomy value plus the ambiguous-pair and no-match cases.
 
 ## Out of Scope

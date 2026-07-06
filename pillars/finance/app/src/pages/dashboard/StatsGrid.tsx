@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 import { SkeletonGrid, StatCard, type StatCardColor } from '@pops/ui';
 
+import { tileForType } from '../../lib/transaction-type';
+
 import type { TransactionsListResponse } from '../../finance-api/types.gen.js';
 
 type Transaction = NonNullable<TransactionsListResponse['data']>[number];
@@ -24,14 +26,17 @@ export function computeStats(
   totalAllTime: number | undefined
 ): Stats | null {
   if (!monthTransactions) return null;
-  const nonTransfers = monthTransactions.filter((t) => t.type.toLowerCase() !== 'transfer');
-  return {
-    totalTransactions: totalAllTime ?? 0,
-    totalIncome: nonTransfers.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
-    totalExpenses: nonTransfers
-      .filter((t) => t.amount < 0)
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0),
-  };
+  // Aggregate by the type → tile map, not amount sign: income-tile types add
+  // their signed amount, expense-tile types add the negated amount (so a refund
+  // offsets rather than inflates), and transfers/unknowns feed neither tile.
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  for (const txn of monthTransactions) {
+    const tile = tileForType(txn.type);
+    if (tile === 'income') totalIncome += txn.amount;
+    else if (tile === 'expense') totalExpenses -= txn.amount;
+  }
+  return { totalTransactions: totalAllTime ?? 0, totalIncome, totalExpenses };
 }
 
 export function signedColor(amount: number): StatCardColor {

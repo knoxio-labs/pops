@@ -12,6 +12,7 @@ import {
 } from '@pops/ui';
 
 import { TagEditor } from '../../components/TagEditor';
+import { labelForType, TRANSACTION_TYPES } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -95,7 +96,7 @@ function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
       header: t('column.type'),
       cell: ({ row }) => (
         <Badge variant="outline" className="text-xs">
-          {typeLabels[row.original.type] ?? row.original.type}
+          {typeLabels[row.original.type] ?? labelForType(row.original.type)}
         </Badge>
       ),
     },
@@ -185,9 +186,14 @@ export function buildTransactionFilters(
       label: t('filter.type'),
       options: [
         { label: t('filter.allTypes'), value: '' },
+        // The three types with existing i18n keys keep their translations; every
+        // other taxonomy value is derived, so a new type appears automatically.
         { label: t('filter.income'), value: 'income' },
         { label: t('filter.expense'), value: 'purchase' },
         { label: t('filter.transfer'), value: 'transfer' },
+        ...TRANSACTION_TYPES.filter(
+          (v) => v !== 'income' && v !== 'purchase' && v !== 'transfer'
+        ).map((value) => ({ label: labelForType(value), value })),
       ],
     },
     { id: 'tags', type: 'text', label: t('filter.tag'), placeholder: t('placeholder.filterByTag') },
