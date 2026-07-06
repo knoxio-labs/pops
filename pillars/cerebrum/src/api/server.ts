@@ -1,0 +1,132 @@
+/**
+ * Entry point for the cerebrum pillar HTTP server.
+ *
+ * Boots the process with the `/health` + `/pillars` probes and the REST
+ * surface. The process opens its OWN `cerebrum.db` connection via
+ * `openCerebrumDb` (loading sqlite-vec).
+ *
+ * When `POPS_REGISTRY_ENABLED=true`, the process registers a hand-rolled
+ * manifest with the registry pillar on boot. Registration happens AFTER
+ * `app.listen` and never blocks or crashes boot — a registry that is
+ * briefly unavailable just means the pillar keeps retrying in the
+ * background while already serving traffic. SIGTERM triggers
+ * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
+ * explicit deregister.
+ */
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+
+import { openCerebrumDb } from '../db/index.js';
+import { createCerebrumApiApp } from './app.js';
+import { resolveCerebrumSqlitePath } from './cerebrum-sqlite-path.js';
+import { buildCerebrumCapabilityReporter, buildCerebrumManifest } from './manifest.js';
+import { AnthropicEgoLlm } from './modules/ego/llm.js';
+import { AnthropicGenerationLlm } from './modules/emit/llm.js';
+import { resolveEngramRoot } from './modules/engrams/instance.js';
+import { AnthropicIngestLlm } from './modules/ingest/llm.js';
+import { closeCerebrumIngestQueue, getCurationQueue } from './modules/ingest/queue.js';
+import { AnthropicQueryLlm, AnthropicQueryStreamLlm } from './modules/query/llm.js';
+import { getReflexService } from './modules/reflex/instance.js';
+import { resolveEmbeddingClientFromEnv } from './modules/retrieval/embedding-client.js';
+import { resolvePeerClientsFromEnv } from './modules/retrieval/peer-clients.js';
+import { TemplateRegistry } from './modules/templates/registry.js';
+import { startThalamusWatcher, stopThalamusWatcher } from './modules/thalamus/instance.js';
+import { closeCerebrumEmbeddingsQueue, getEmbeddingsQueue } from './modules/thalamus/queue.js';
+import { AnthropicContradictionDetector } from './modules/workers/llm.js';
+import { parseBareOrigin } from './pillars/env.js';
+
+function resolvePort(): number {
+  const raw = process.env['PORT'];
+  if (raw === undefined || raw === '') return 3007;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
+    throw new Error(`[cerebrum-api] PORT must be a positive integer in 1-65535; got '${raw}'`);
+  }
+  return parsed;
+}
+
+const port = resolvePort();
+const version = process.env['BUILD_VERSION'] ?? 'dev';
+
+function resolveSelfBaseUrl(): string {
+  const raw = process.env['CEREBRUM_SELF_BASE_URL'] ?? `http://localhost:${port}`;
+  try {
+    return parseBareOrigin('CEREBRUM_SELF_BASE_URL', raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[cerebrum-api] CEREBRUM_SELF_BASE_URL ${raw} is invalid — ${message}`, {
+      cause: err,
+    });
+  }
+}
+const selfBaseUrl = resolveSelfBaseUrl();
+
+function resolveTemplatesDir(): string {
+  const envDir = process.env['CEREBRUM_TEMPLATES_DIR'];
+  if (envDir) return envDir;
+  return resolve(dirname(fileURLToPath(import.meta.url)), 'modules', 'templates', 'defaults');
+}
+
+const cerebrumDb = openCerebrumDb(resolveCerebrumSqlitePath());
+const templateRegistry = new TemplateRegistry(resolveTemplatesDir());
+const engramRoot = resolveEngramRoot();
+const reflexService = getReflexService(cerebrumDb.db);
+const app = createCerebrumApiApp({
+  cerebrumDb,
+  templateRegistry,
+  engramRoot,
+  reflexService,
+  ingestLlm: new AnthropicIngestLlm(),
+  egoLlm: new AnthropicEgoLlm(),
+  auditorContradictionDetector: new AnthropicContradictionDetector(),
+  curationQueue: getCurationQueue,
+  embeddingsQueue: getEmbeddingsQueue,
+  version,
+  selfBaseUrl,
+  peerClients: resolvePeerClientsFromEnv(),
+  embeddingClient: resolveEmbeddingClientFromEnv(),
+  emitLlm: new AnthropicGenerationLlm(),
+  queryLlm: new AnthropicQueryLlm(),
+  queryStreamLlm: new AnthropicQueryStreamLlm(),
+});
+
+startThalamusWatcher({ db: cerebrumDb.db, engramRoot, queueAccessor: getEmbeddingsQueue });
+
+const server = app.listen(port, () => {
+  console.warn(`[cerebrum-api] Listening on port ${port}`);
+});
+
+let pillarHandle: PillarBootstrapHandle | undefined;
+if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
+  pillarHandle = await bootstrapPillar({
+    manifest: buildCerebrumManifest(version),
+    baseUrl: selfBaseUrl,
+    // Cerebrum's `vectorSearch` status is whether sqlite-vec loaded on this
+    // connection (probed once at open). The value is stable for the process
+    // lifetime, but reporting it per heartbeat keeps the contract uniform and
+    // lets a future hot-reload surface here. `settings: true` advertises the
+    // federated settings surface.
+    capabilityReporter: buildCerebrumCapabilityReporter(cerebrumDb.vecAvailable),
+  });
+}
+
+let shuttingDown = false;
+function shutdown(signal: NodeJS.Signals): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.warn(`[cerebrum-api] Shutting down (${signal})`);
+  void (pillarHandle?.stop() ?? Promise.resolve())
+    .then(() => stopThalamusWatcher())
+    .then(() => closeCerebrumIngestQueue())
+    .then(() => closeCerebrumEmbeddingsQueue())
+    .finally(() => {
+      server.close(() => {
+        cerebrumDb.raw.close();
+      });
+    });
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

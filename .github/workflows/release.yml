@@ -1,8 +1,9 @@
 name: Release
 
+# Triggers gated to workflow_dispatch only during the pillar-colocation work
+# so capivara doesn't pick up half-renamed paths via the tag → publish chain.
+# Restore `push: branches: [main]` once the colocation series stabilises.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 # Only tag pushes and GitHub Release creates; no commits land on main. The repo
@@ -20,7 +21,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}

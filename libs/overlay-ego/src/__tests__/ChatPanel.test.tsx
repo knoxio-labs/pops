@@ -1,0 +1,416 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { withQueryClient } from '../test-utils';
+
+// ── Streaming chat mock ─────────────────────────────────────────────
+
+const mockStream = vi.fn();
+
+vi.mock('../chat-hooks/useStreamingChat', () => ({
+  useStreamingChat: () => ({
+    stream: mockStream,
+    isStreaming: false,
+    error: null,
+    streamingContent: null,
+    abort: vi.fn(),
+  }),
+}));
+
+// ── ego SDK mock ─────────────────────────────────────────────────────
+
+const sdk = vi.hoisted(() => ({
+  egoListConversations: vi.fn(),
+  egoGetConversation: vi.fn(),
+  egoDeleteConversation: vi.fn(),
+}));
+
+vi.mock('../ego-api', () => sdk);
+
+// ── react-markdown mock ──────────────────────────────────────────────
+
+vi.mock('react-markdown', () => ({
+  default: ({ children }: { children: string }) => children,
+}));
+
+// ── react-router mock ────────────────────────────────────────────────
+
+vi.mock('react-router', async () => {
+  const React = await import('react');
+  return {
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) =>
+      React.createElement('a', { href: to }, children),
+  };
+});
+
+// ── UI mock ──────────────────────────────────────────────────────────
+
+vi.mock('@pops/ui', async () => {
+  const React = await import('react');
+  return {
+    Button: ({ children, onClick, disabled, prefix, ...rest }: Record<string, unknown>) =>
+      React.createElement(
+        'button',
+        {
+          onClick: onClick as () => void,
+          disabled: disabled as boolean,
+          ...rest,
+        },
+        prefix as React.ReactNode,
+        children as React.ReactNode
+      ),
+    Input: ({ value, onChange, placeholder, className, ...rest }: Record<string, unknown>) =>
+      React.createElement('input', {
+        type: 'text',
+        value: value as string,
+        onChange: onChange as () => void,
+        placeholder: placeholder as string,
+        className: className as string,
+        'aria-label': rest['aria-label'] as string,
+      }),
+    Textarea: React.forwardRef(
+      (
+        {
+          value,
+          onChange,
+          placeholder,
+          onKeyDown,
+          rows,
+          className,
+          ...rest
+        }: Record<string, unknown>,
+        ref: React.Ref<HTMLTextAreaElement>
+      ) =>
+        React.createElement('textarea', {
+          ref,
+          value: value as string,
+          onChange: onChange as () => void,
+          onKeyDown: onKeyDown as () => void,
+          placeholder: placeholder as string,
+          rows: rows as number,
+          className: className as string,
+          'aria-label': rest['aria-label'] as string,
+          disabled: rest.disabled as boolean,
+        })
+    ),
+    Skeleton: ({ className }: { className?: string }) =>
+      React.createElement('div', {
+        className: `animate-pulse ${className ?? ''}`,
+        'data-testid': 'skeleton',
+      }),
+    Badge: ({ children, variant }: { children: React.ReactNode; variant?: string }) =>
+      React.createElement('span', { 'data-testid': 'badge', 'data-variant': variant }, children),
+    EmptyState: ({
+      title,
+      description,
+    }: {
+      icon?: unknown;
+      title: React.ReactNode;
+      description?: React.ReactNode;
+      size?: string;
+    }) =>
+      React.createElement(
+        'div',
+        { 'data-testid': 'empty-state' },
+        React.createElement('div', null, title),
+        description && React.createElement('div', null, description)
+      ),
+    AlertDialog: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+    }) =>
+      open
+        ? React.createElement(
+            'div',
+            {
+              role: 'dialog',
+              'aria-modal': 'true',
+              onClick: (e: React.MouseEvent) => {
+                if (e.target === e.currentTarget) onOpenChange(false);
+              },
+            },
+            children
+          )
+        : null,
+    AlertDialogContent: ({ children }: { children: React.ReactNode; size?: string }) =>
+      React.createElement('div', { 'data-testid': 'alert-dialog-content' }, children),
+    AlertDialogHeader: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('div', null, children),
+    AlertDialogTitle: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('h3', null, children),
+    AlertDialogDescription: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('p', null, children),
+    AlertDialogFooter: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('div', null, children),
+    AlertDialogAction: ({
+      children,
+      onClick,
+      disabled,
+    }: {
+      children: React.ReactNode;
+      variant?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+    }) => React.createElement('button', { onClick, disabled }, children),
+    AlertDialogCancel: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('button', null, children),
+    Collapsible: ({
+      children,
+      open,
+      onOpenChange,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+    }) =>
+      React.createElement(
+        'div',
+        { 'data-testid': 'collapsible', 'data-open': open, onClick: () => onOpenChange(!open) },
+        children
+      ),
+    CollapsibleTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
+      asChild ? children : React.createElement('button', null, children),
+    CollapsibleContent: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('div', { 'data-testid': 'collapsible-content' }, children),
+    cn: (...args: unknown[]) =>
+      args
+        .filter((a) => typeof a === 'string')
+        .join(' ')
+        .trim(),
+    formatRelativeTime: (dateStr: string) => {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const minutes = Math.floor(diff / 60_000);
+      if (minutes < 1) return 'just now';
+      if (minutes < 60) return `${minutes}m ago`;
+      return `${Math.floor(minutes / 60)}h ago`;
+    },
+  };
+});
+
+import { ChatPanel } from '../chat-components/ChatPanel';
+import { useChatPageModel } from '../chat-hooks/useChatPageModel';
+
+function ChatHarness() {
+  const model = useChatPageModel();
+  return <ChatPanel model={model} />;
+}
+
+function renderHarness() {
+  return render(withQueryClient(<ChatHarness />));
+}
+
+// ── Mock data ────────────────────────────────────────────────────────
+
+const mockConversations = [
+  {
+    id: 'conv_1',
+    title: 'Budget discussion',
+    activeScopes: ['finance'],
+    appContext: null,
+    model: 'claude-sonnet-4-20250514',
+    createdAt: '2026-04-27T10:00:00Z',
+    updatedAt: '2026-04-27T12:00:00Z',
+  },
+  {
+    id: 'conv_2',
+    title: 'Movie recommendations',
+    activeScopes: ['media'],
+    appContext: null,
+    model: 'claude-sonnet-4-20250514',
+    createdAt: '2026-04-26T08:00:00Z',
+    updatedAt: '2026-04-26T09:00:00Z',
+  },
+];
+
+const mockMessages = [
+  {
+    id: 'msg_1',
+    conversationId: 'conv_1',
+    role: 'user',
+    content: 'What is my budget?',
+    citations: null,
+    toolCalls: null,
+    tokensIn: null,
+    tokensOut: null,
+    createdAt: '2026-04-27T12:00:00Z',
+  },
+  {
+    id: 'msg_2',
+    conversationId: 'conv_1',
+    role: 'assistant',
+    content: 'Your budget is **$500**.',
+    citations: ['eng_finance_001'],
+    toolCalls: null,
+    tokensIn: 100,
+    tokensOut: 50,
+    createdAt: '2026-04-27T12:00:05Z',
+  },
+];
+
+function setupDefaultMocks() {
+  sdk.egoListConversations.mockResolvedValue({
+    data: { conversations: mockConversations, total: 2 },
+  });
+  sdk.egoGetConversation.mockResolvedValue({ data: { conversation: null, messages: [] } });
+  sdk.egoDeleteConversation.mockResolvedValue({ data: { success: true } });
+}
+
+function setupWithSelectedConversation() {
+  sdk.egoListConversations.mockResolvedValue({
+    data: { conversations: mockConversations, total: 2 },
+  });
+  sdk.egoGetConversation.mockImplementation(async ({ path }: { path: { id: string } }) => {
+    if (path.id !== 'conv_1') {
+      return { data: { conversation: null, messages: [] } };
+    }
+    return { data: { conversation: mockConversations[0], messages: mockMessages } };
+  });
+}
+
+// ── Tests ────────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  setupDefaultMocks();
+});
+
+describe('ChatPanel (overlay-ego)', () => {
+  it('renders conversation list with items', async () => {
+    renderHarness();
+    expect(await screen.findByText('Budget discussion')).toBeInTheDocument();
+    expect(screen.getByText('Movie recommendations')).toBeInTheDocument();
+  });
+
+  it('shows empty state when no conversation is selected', () => {
+    renderHarness();
+    expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+    expect(screen.getByText('Start a conversation')).toBeInTheDocument();
+  });
+
+  it('displays messages when a conversation is selected', async () => {
+    setupWithSelectedConversation();
+    const user = userEvent.setup();
+    renderHarness();
+
+    await user.click(await screen.findByText('Budget discussion'));
+    expect(await screen.findByText('What is my budget?')).toBeInTheDocument();
+  });
+
+  it('renders citation links in assistant messages', async () => {
+    setupWithSelectedConversation();
+    const user = userEvent.setup();
+    renderHarness();
+
+    await user.click(await screen.findByText('Budget discussion'));
+    const citationLink = await screen.findByText('eng_finance_001');
+    expect(citationLink.closest('a')).toHaveAttribute('href', '/cerebrum/eng_finance_001');
+  });
+
+  it('sends a message via the chat input', async () => {
+    const user = userEvent.setup();
+    renderHarness();
+
+    const textarea = screen.getByLabelText('Message input');
+    await user.type(textarea, 'Hello Ego');
+
+    const sendButton = screen.getByLabelText('Send message');
+    await user.click(sendButton);
+
+    expect(mockStream).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Hello Ego' }),
+      expect.any(Object)
+    );
+  });
+
+  it('Enter key sends message, Shift+Enter inserts newline', async () => {
+    const user = userEvent.setup();
+    renderHarness();
+
+    const textarea = screen.getByLabelText('Message input');
+    await user.type(textarea, 'Line one');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+    await user.type(textarea, 'Line two');
+
+    expect(mockStream).not.toHaveBeenCalled();
+
+    await user.keyboard('{Enter}');
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('send button is disabled when input is empty', () => {
+    renderHarness();
+    const sendButton = screen.getByLabelText('Send message');
+    expect(sendButton).toBeDisabled();
+  });
+
+  it('new conversation button resets selection', async () => {
+    setupWithSelectedConversation();
+    const user = userEvent.setup();
+    renderHarness();
+
+    await user.click(await screen.findByText('Budget discussion'));
+
+    const newButton = screen.getByLabelText('New conversation');
+    await user.click(newButton);
+
+    expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+  });
+
+  it('shows delete confirmation dialog and calls delete', async () => {
+    const user = userEvent.setup();
+    renderHarness();
+
+    const firstDeleteButton = await screen.findByLabelText(
+      'Delete conversation: Budget discussion'
+    );
+    await user.click(firstDeleteButton);
+
+    expect(screen.getByText('Delete conversation?')).toBeInTheDocument();
+
+    const confirmButton = screen.getByText('Delete');
+    await user.click(confirmButton);
+
+    await waitFor(() =>
+      expect(sdk.egoDeleteConversation).toHaveBeenCalledWith({ path: { id: 'conv_1' } })
+    );
+  });
+
+  it('search input filters conversations', async () => {
+    const user = userEvent.setup();
+    renderHarness();
+
+    const searchInput = screen.getByLabelText('Search conversations');
+    await user.type(searchInput, 'budget');
+
+    await waitFor(() =>
+      expect(sdk.egoListConversations).toHaveBeenCalledWith({
+        body: expect.objectContaining({ search: 'budget' }),
+      })
+    );
+  });
+
+  it('shows loading skeletons when conversations are loading', () => {
+    sdk.egoListConversations.mockReturnValue(new Promise(() => undefined));
+    renderHarness();
+    const skeletons = screen.getAllByTestId('skeleton');
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it('renders the chat panel layout', () => {
+    renderHarness();
+
+    expect(screen.getByLabelText('Message input')).toBeInTheDocument();
+  });
+
+  it('shows empty search message when no conversations match', async () => {
+    sdk.egoListConversations.mockResolvedValue({ data: { conversations: [], total: 0 } });
+    renderHarness();
+    expect(await screen.findByText('No conversations yet')).toBeInTheDocument();
+  });
+});

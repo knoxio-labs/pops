@@ -1,2862 +1,1626 @@
 [
   {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/backfill-cerebrum-from-shared.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/cerebrum-handle.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/jobs/handlers/embeddings-helpers.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/jobs/handlers/embeddings-source.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/ego/persistence.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/ego/types.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/archive-engram.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/change-type.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/create-engram.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/delete-engram.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/fs-helpers.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/link-helpers.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/list-engrams.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/restore-engram.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/handlers/upsert-index.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/reclassify.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/scope-filter.test.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/scope-filter.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/scopes-router.test.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/scopes-router.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/service.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/tags-router.test.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/engrams/tags-router.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/glia/action-service.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/glia/digest-channels.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/ingest/pipeline-helpers.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/nudges/__tests__/nudge-service.test.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/nudges/detectors/citation-flush.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/nudges/nudge-persistence.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/nudges/nudge-service.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/plexus/__tests__/lifecycle.test.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/plexus/lifecycle-db.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/plexus/lifecycle.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/plexus/router.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/reflex/reflex-io.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/reflex/reflex-queries.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/reflex/reflex-service.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/router.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/semantic-search-metadata.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/structured-query-conditions.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/structured-query.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/cross-source.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/instance.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/router.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "dynamic-import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/sync-junctions.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/sync.test.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/sync.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/dispatchers/nudge.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/query-helpers.ts",
-    "to": "packages/cerebrum-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/cerebrum-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-cerebrum"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/backfill-core-from-shared.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/jobs/handlers/embeddings-helpers.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/lib/inference-middleware.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/lib/inference-pricing.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/glia/__tests__/toml-config.test.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/alerts-store.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/evaluator.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/evaluators/budget.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/evaluators/error-spike.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/evaluators/latency.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/mappers.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-alerts/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-budgets/enforcement.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-budgets/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/group-stats.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/history.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/retention-db.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/retention.test.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/retention.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-observability/summary.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-providers/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/ai-usage/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/ai-inference.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/entities/search-adapter.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/entities/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/entities/types.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/features/user-settings.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/settings/service.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/settings/types.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/lib/transaction-persistence.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/router.test.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/service.test.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/types.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/tag-suggester/index.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/__tests__/ai-router.test.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/routers/ai.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-config-router.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/scheduler.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/trpc.ts",
-    "to": "packages/core-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/core-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-core"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/finance-handle.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/semantic-search-metadata.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/cross-source.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/ai-revise.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/apply-corrections.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/changeset-impact.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/compute-changeset.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/pattern-match.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/preview-matches.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/handlers/query-helpers.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/lib/tag-loader.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/corrections/types-base.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/entities/service.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/tag-rules/preview.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/tag-rules/router.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/tag-rules/service.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/core/tag-rules/tag-rules.test.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/budgets/budgets.test.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/budgets/router.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/budgets/search-adapter.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/budgets/types.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/imports.e2e.test.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/lib/deduplication.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/lib/entity-lookup.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/lib/reclassify-existing.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/lib/tag-management.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/lib/transaction-persistence.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/service.test.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/imports/service.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/tag-suggester/index.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/transactions/router.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/transactions/search-adapter.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/transactions/transactions.test.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/transactions/types.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/uri-handler.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/wishlist/router.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/wishlist/search-adapter.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/wishlist/types.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/finance/wishlist/wishlist.test.ts",
-    "to": "packages/finance-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/finance-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-finance"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/backfill-food-from-shared.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/food-handle.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/__tests__/inbox-inspector.test.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/__tests__/inbox-rejected-failed.test.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/conversions/types.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/hero-image/service.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/food/routers/prep-states.ts",
-    "to": "packages/food-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/food-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-food"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/inventory-handle.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/semantic-search-metadata.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/cross-source.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/connections/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/connections/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/document-files/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/document-files/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/documents/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/documents/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/fixtures/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/fixtures/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/items/search-adapter.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/items/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/items/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/locations/router.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/locations/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/photos/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/photos/types.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/reports/insurance-report.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/reports/service.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/inventory/uri-handler.ts",
-    "to": "packages/inventory-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/inventory-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-inventory"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/lists-handle.ts",
-    "to": "packages/lists-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/lists-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-lists"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/lists/routers/error-mapping.ts",
-    "to": "packages/lists-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/lists-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-lists"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/lists/routers/items.ts",
-    "to": "packages/lists-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/lists-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-lists"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/lists/routers/list.ts",
-    "to": "packages/lists-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/lists-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-lists"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/backfill-media-from-shared.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/db/media-db-handle.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/retrieval/semantic-search-metadata.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/cerebrum/thalamus/cross-source.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/arr/download-and-protect.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/dimensions.service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/global-count.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/lib/batch-record.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/lib/comparison-queries.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/lib/dimension-exclusion.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/lib/score-management.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/lib/skip-cooloff.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/lib/submit-tier-list.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/pairs/movie-helpers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/pairs/random-pair.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/pairs/smart-pair-fetch.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/rankings-overall.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/scores.service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/staleness.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/comparisons/types-domain.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/context-picks-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/flags.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/flags.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/plex-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/router-shelf.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/router-tmdb.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/router.assemble-session.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/service-library.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/service-preference-profile.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/service-rewatch.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/because-you-watched.shelf.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/credits-shelves.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/dimension-inspired.shelf.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/local-misc-shelves.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/local-runtime-shelves.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/local-score-shelves.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/local-shelves-helpers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/local-watch-shelves.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/session.service.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/session.service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/tmdb-shelves-helpers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/shelf/top-dimension.shelf.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/discovery/tmdb-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/library/list-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/library/service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/library/tv-show-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/movies/service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/movies/types.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/router-helpers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/router-sync.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/scheduler-sync-logs.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-discover-check.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-discover-episode.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-discover-movie.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-discover-show.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-discover-watches.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-helpers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-tv.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/plex/sync-watchlist.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/addition-gating.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/candidate-queue.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/download-candidate.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/exclusion-list.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/leaving-lifecycle.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/removal-selection.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-candidates-router.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-exclusions-router.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-log.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-log.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-scheduler-router.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/rotation-sources-router.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/selection-policy.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/selection-policy.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/source-crud.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/sync-all-sources.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/sync-source.test.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/rotation/sync-source.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/search/movies-adapter.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/search/tv-shows-adapter.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/thetvdb/refresh-episodes.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/thetvdb/service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/thetvdb/types-inserts.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/tv-shows/episodes-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/tv-shows/seasons-service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/tv-shows/tv-shows-base.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/tv-shows/types-domain.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/tv-shows/types-mappers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/auto-remove-show.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/batch-operations.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/list-recent.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/log-watch-event.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/progress.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/handlers/query-helpers.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watch-history/types.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watchlist/plex-push.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watchlist/service.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "apps/pops-api/src/modules/media/watchlist/types.ts",
-    "to": "packages/media-db/dist/index.d.ts",
-    "unresolvedTo": "@pops/media-db",
-    "dependencyTypes": ["undetermined", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-cross-pillar-runtime-import-media"
+    "type": "cycle",
+    "from": "libs/module-registry/scripts/lib.ts",
+    "to": "libs/module-registry/scripts/render.ts",
+    "unresolvedTo": "./render.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/module-registry/scripts/render.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "libs/module-registry/scripts/lib.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/navigation/src/search-results/SectionView.tsx",
+    "to": "libs/navigation/src/SearchResultsPanel.tsx",
+    "unresolvedTo": "../SearchResultsPanel",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/navigation/src/SearchResultsPanel.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/navigation/src/search-results/SectionView.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/overlay-ego/src/ego-api-runtime-config.ts",
+    "to": "libs/overlay-ego/src/ego-api/client.gen.ts",
+    "unresolvedTo": "./ego-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/overlay-ego/src/ego-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/overlay-ego/src/ego-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/overlay-ego/src/ego-api/client/types.gen.ts",
+    "to": "libs/overlay-ego/src/ego-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/overlay-ego/src/ego-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/overlay-ego/src/ego-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/types/src/manifest-assertions.ts",
+    "to": "libs/types/src/manifest-frontend-assertions.ts",
+    "unresolvedTo": "./manifest-frontend-assertions.js",
+    "dependencyTypes": ["local", "export"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/types/src/manifest-frontend-assertions.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "libs/types/src/module-manifest.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/types/src/manifest-assertions.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/types/src/manifest-assertions.ts",
+    "to": "libs/types/src/module-manifest.ts",
+    "unresolvedTo": "./module-manifest.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/types/src/module-manifest.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/types/src/manifest-assertions.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/ui/src/components/ComboboxSelect.popover.tsx",
+    "to": "libs/ui/src/components/ComboboxSelect.tsx",
+    "unresolvedTo": "./ComboboxSelect",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/ui/src/components/ComboboxSelect.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ComboboxSelect.popover.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/ui/src/components/ForceGraph.hooks.ts",
+    "to": "libs/ui/src/components/ForceGraph.pointer.ts",
+    "unresolvedTo": "./ForceGraph.pointer",
+    "dependencyTypes": ["local", "export"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/ui/src/components/ForceGraph.pointer.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "libs/ui/src/components/ForceGraph.utils.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ForceGraph.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ForceGraph.hooks.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/ui/src/components/ForceGraph.hooks.ts",
+    "to": "libs/ui/src/components/ForceGraph.tsx",
+    "unresolvedTo": "./ForceGraph",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/ui/src/components/ForceGraph.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ForceGraph.hooks.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/ui/src/components/ForceGraph.hooks.ts",
+    "to": "libs/ui/src/components/ForceGraph.utils.ts",
+    "unresolvedTo": "./ForceGraph.utils",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/ui/src/components/ForceGraph.utils.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ForceGraph.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ForceGraph.hooks.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "libs/ui/src/components/ScrollShelf.lazy.tsx",
+    "to": "libs/ui/src/components/ScrollShelf.tsx",
+    "unresolvedTo": "./ScrollShelf",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "libs/ui/src/components/ScrollShelf.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "libs/ui/src/components/ScrollShelf.lazy.tsx",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/ai/app/src/ai-api-runtime-config.ts",
+    "to": "pillars/ai/app/src/ai-api/client.gen.ts",
+    "unresolvedTo": "./ai-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/ai/app/src/ai-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/ai/app/src/ai-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/ai/app/src/ai-api/client/types.gen.ts",
+    "to": "pillars/ai/app/src/ai-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/ai/app/src/ai-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/ai/app/src/ai-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/ai/src/api/modules/ai-budgets/enforcement.ts",
+    "to": "pillars/ai/src/api/modules/ai-budgets/service.ts",
+    "unresolvedTo": "./service.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/ai/src/api/modules/ai-budgets/service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/ai/src/api/modules/ai-budgets/enforcement.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/cerebrum/app/src/cerebrum-api-runtime-config.ts",
+    "to": "pillars/cerebrum/app/src/cerebrum-api/client.gen.ts",
+    "unresolvedTo": "./cerebrum-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/cerebrum/app/src/cerebrum-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/cerebrum/app/src/cerebrum-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/cerebrum/app/src/cerebrum-api/client/types.gen.ts",
+    "to": "pillars/cerebrum/app/src/cerebrum-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/cerebrum/app/src/cerebrum-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/cerebrum/app/src/cerebrum-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/cerebrum/src/api/modules/ego/llm.ts",
+    "to": "pillars/cerebrum/src/api/modules/ego/stream-events.ts",
+    "unresolvedTo": "./stream-events.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/cerebrum/src/api/modules/ego/stream-events.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/cerebrum/src/api/modules/ego/llm.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/cerebrum/src/api/modules/reflex/reflex-parser.ts",
+    "to": "pillars/cerebrum/src/api/modules/reflex/reflex-validators.ts",
+    "unresolvedTo": "./reflex-validators.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/cerebrum/src/api/modules/reflex/reflex-validators.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/cerebrum/src/api/modules/reflex/reflex-parser.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/finance/app/src/components/imports/hooks/preview-effect-hooks.ts",
+    "to": "pillars/finance/app/src/components/imports/hooks/preview-effects-runner.ts",
+    "unresolvedTo": "./preview-effects-runner",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/finance/app/src/components/imports/hooks/preview-effects-runner.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/finance/app/src/components/imports/hooks/preview-effect-hooks.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/finance/app/src/contacts-api-runtime-config.ts",
+    "to": "pillars/finance/app/src/contacts-api/client.gen.ts",
+    "unresolvedTo": "./contacts-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/finance/app/src/contacts-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/finance/app/src/contacts-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/finance/app/src/contacts-api/client/types.gen.ts",
+    "to": "pillars/finance/app/src/contacts-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/finance/app/src/contacts-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/finance/app/src/contacts-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/finance/app/src/finance-api-runtime-config.ts",
+    "to": "pillars/finance/app/src/finance-api/client.gen.ts",
+    "unresolvedTo": "./finance-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/finance/app/src/finance-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/finance/app/src/finance-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/finance/app/src/finance-api/client/types.gen.ts",
+    "to": "pillars/finance/app/src/finance-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/finance/app/src/finance-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/finance/app/src/finance-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/app/src/components/cook/CookModal.tsx",
+    "to": "pillars/food/app/src/components/cook/CookModalShell.tsx",
+    "unresolvedTo": "./CookModalShell.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/app/src/components/cook/CookModalShell.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/food/app/src/components/cook/CookModal.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/app/src/components/cook/CookModal.tsx",
+    "to": "pillars/food/app/src/components/cook/useMarkCookedMutation.ts",
+    "unresolvedTo": "./useMarkCookedMutation.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/app/src/components/cook/useMarkCookedMutation.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/food/app/src/components/cook/CookModal.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/app/src/food-api-runtime-config.ts",
+    "to": "pillars/food/app/src/food-api/client.gen.ts",
+    "unresolvedTo": "./food-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/app/src/food-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/food/app/src/food-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/app/src/food-api/client/types.gen.ts",
+    "to": "pillars/food/app/src/food-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/app/src/food-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/food/app/src/food-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/app/src/lists-api-runtime-config.ts",
+    "to": "pillars/food/app/src/lists-api/client.gen.ts",
+    "unresolvedTo": "./lists-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/app/src/lists-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/food/app/src/lists-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/app/src/lists-api/client/types.gen.ts",
+    "to": "pillars/food/app/src/lists-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/app/src/lists-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/food/app/src/lists-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/src/api/modules/cook/mark-cooked-helpers.ts",
+    "to": "pillars/food/src/api/modules/cook/mark-cooked.ts",
+    "unresolvedTo": "./mark-cooked.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/src/api/modules/cook/mark-cooked.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/food/src/api/modules/cook/mark-cooked-helpers.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/src/db/row-types.ts",
+    "to": "pillars/food/src/db/schema.ts",
+    "unresolvedTo": "./schema.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/src/db/schema.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/food/src/db/row-types.ts",
+        "dependencyTypes": ["local", "type-only", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/food/src/db/services/aliases-queries.ts",
+    "to": "pillars/food/src/db/services/aliases.ts",
+    "unresolvedTo": "./aliases.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/food/src/db/services/aliases.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/food/src/db/services/aliases-queries.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/components/document-upload/PendingDocumentRow.tsx",
+    "to": "pillars/inventory/app/src/components/DocumentUpload.tsx",
+    "unresolvedTo": "../DocumentUpload",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/components/DocumentUpload.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/components/document-upload/PendingDocumentRow.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/components/inventory-card/HorizontalCard.tsx",
+    "to": "pillars/inventory/app/src/components/InventoryCard.tsx",
+    "unresolvedTo": "../InventoryCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/components/InventoryCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/components/inventory-card/HorizontalCard.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/components/inventory-card/VerticalCard.tsx",
+    "to": "pillars/inventory/app/src/components/InventoryCard.tsx",
+    "unresolvedTo": "../InventoryCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/components/InventoryCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/components/inventory-card/VerticalCard.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/components/photo-gallery/Lightbox.tsx",
+    "to": "pillars/inventory/app/src/components/PhotoGallery.tsx",
+    "unresolvedTo": "../PhotoGallery",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/components/PhotoGallery.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/components/photo-gallery/Lightbox.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/components/photo-gallery/ThumbnailStrip.tsx",
+    "to": "pillars/inventory/app/src/components/PhotoGallery.tsx",
+    "unresolvedTo": "../PhotoGallery",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/components/PhotoGallery.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/components/photo-gallery/ThumbnailStrip.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/components/photo-upload/UploadedFileRow.tsx",
+    "to": "pillars/inventory/app/src/components/PhotoUpload.tsx",
+    "unresolvedTo": "../PhotoUpload",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/components/PhotoUpload.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/components/photo-upload/UploadedFileRow.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/inventory-api-runtime-config.ts",
+    "to": "pillars/inventory/app/src/inventory-api/client.gen.ts",
+    "unresolvedTo": "./inventory-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/inventory-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/inventory-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/inventory/app/src/inventory-api/client/types.gen.ts",
+    "to": "pillars/inventory/app/src/inventory-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/inventory/app/src/inventory-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/inventory/app/src/inventory-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/lists/app/src/lists-api-runtime-config.ts",
+    "to": "pillars/lists/app/src/lists-api/client.gen.ts",
+    "unresolvedTo": "./lists-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/lists/app/src/lists-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/lists/app/src/lists-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/lists/app/src/lists-api/client/types.gen.ts",
+    "to": "pillars/lists/app/src/lists-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/lists/app/src/lists-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/lists/app/src/lists-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/lists/app/src/pages/components/shopping/ShoppingDetailContent.tsx",
+    "to": "pillars/lists/app/src/pages/components/shopping/useShoppingBulkMutations.ts",
+    "unresolvedTo": "./useShoppingBulkMutations.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/lists/app/src/pages/components/shopping/useShoppingBulkMutations.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/lists/app/src/pages/ListDetailPage.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/lists/app/src/pages/components/shopping/ShoppingDetailContent.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/cerebrum.ts",
+    "to": "pillars/mcp/src/tools/index.ts",
+    "unresolvedTo": "./index.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/cerebrum.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/index.ts",
+    "to": "pillars/mcp/src/tools/inventory-fixtures.ts",
+    "unresolvedTo": "./inventory-fixtures.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/inventory-fixtures.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/index.ts",
+    "to": "pillars/mcp/src/tools/inventory.ts",
+    "unresolvedTo": "./inventory.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/inventory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/index.ts",
+    "to": "pillars/mcp/src/tools/media.ts",
+    "unresolvedTo": "./media.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/media.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/inventory-connections.ts",
+    "to": "pillars/mcp/src/tools/index.ts",
+    "unresolvedTo": "./index.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory-connections.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/inventory-fixtures-write.ts",
+    "to": "pillars/mcp/src/tools/index.ts",
+    "unresolvedTo": "./index.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory-fixtures.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory-fixtures-write.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/inventory-items.ts",
+    "to": "pillars/mcp/src/tools/index.ts",
+    "unresolvedTo": "./index.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory-items.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/inventory-items.ts",
+    "to": "pillars/mcp/src/tools/inventory-items-write.ts",
+    "unresolvedTo": "./inventory-items-write.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/inventory-items-write.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory-items.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/mcp/src/tools/inventory-locations.ts",
+    "to": "pillars/mcp/src/tools/index.ts",
+    "unresolvedTo": "./index.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/mcp/src/tools/index.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/mcp/src/tools/inventory-locations.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/ComparisonMovieCard.tsx",
+    "to": "pillars/media/app/src/components/ComparisonMovieCardActions.tsx",
+    "unresolvedTo": "./ComparisonMovieCardActions",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/ComparisonMovieCardActions.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/ComparisonMovieCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/discover-card/DiscoverCardOverlay.tsx",
+    "to": "pillars/media/app/src/components/DiscoverCard.tsx",
+    "unresolvedTo": "../DiscoverCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/DiscoverCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/discover-card/DiscoverCardOverlay.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/request-series/RequestSeriesForm.tsx",
+    "to": "pillars/media/app/src/components/request-series/SeasonMonitoringList.tsx",
+    "unresolvedTo": "./SeasonMonitoringList",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/request-series/SeasonMonitoringList.tsx",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/RequestSeriesModal.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/request-series/RequestSeriesForm.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/request-series/RequestSeriesForm.tsx",
+    "to": "pillars/media/app/src/components/RequestSeriesModal.tsx",
+    "unresolvedTo": "../RequestSeriesModal",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/RequestSeriesModal.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/request-series/RequestSeriesForm.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/request-series/useRequestSeriesModel.ts",
+    "to": "pillars/media/app/src/components/request-series/useRequestSeriesQueries.ts",
+    "unresolvedTo": "./useRequestSeriesQueries",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/request-series/useRequestSeriesQueries.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/RequestSeriesModal.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/request-series/useRequestSeriesModel.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/request-series/useRequestSeriesModel.ts",
+    "to": "pillars/media/app/src/components/RequestSeriesModal.tsx",
+    "unresolvedTo": "../RequestSeriesModal",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/RequestSeriesModal.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/request-series/useRequestSeriesModel.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/search-result-card/SearchResultActionButtons.tsx",
+    "to": "pillars/media/app/src/components/SearchResultCard.tsx",
+    "unresolvedTo": "../SearchResultCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/SearchResultCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/search-result-card/SearchResultActionButtons.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/search-result-card/SearchResultMeta.tsx",
+    "to": "pillars/media/app/src/components/SearchResultCard.tsx",
+    "unresolvedTo": "../SearchResultCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/SearchResultCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/search-result-card/SearchResultMeta.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/components/search-result-card/SearchResultPoster.tsx",
+    "to": "pillars/media/app/src/components/SearchResultCard.tsx",
+    "unresolvedTo": "../SearchResultCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/components/SearchResultCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/components/search-result-card/SearchResultPoster.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/hooks/discover-actions/handlers.ts",
+    "to": "pillars/media/app/src/hooks/useDiscoverCardActions.ts",
+    "unresolvedTo": "../useDiscoverCardActions",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/hooks/useDiscoverCardActions.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/hooks/discover-actions/handlers.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/media-api-runtime-config.ts",
+    "to": "pillars/media/app/src/media-api/client.gen.ts",
+    "unresolvedTo": "./media-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/media-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/media-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/media-api/client/types.gen.ts",
+    "to": "pillars/media/app/src/media-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/media-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/media-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/pages/candidate-queue/CandidateActions.tsx",
+    "to": "pillars/media/app/src/pages/candidate-queue/CandidateCard.tsx",
+    "unresolvedTo": "./CandidateCard",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/CandidateCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/CandidateActions.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/pages/candidate-queue/CandidateActions.tsx",
+    "to": "pillars/media/app/src/pages/candidate-queue/useCardMutations.ts",
+    "unresolvedTo": "./useCardMutations",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/useCardMutations.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/CandidateCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/CandidateActions.tsx",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/app/src/pages/candidate-queue/CandidateCard.tsx",
+    "to": "pillars/media/app/src/pages/candidate-queue/useCardMutations.ts",
+    "unresolvedTo": "./useCardMutations",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/useCardMutations.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/media/app/src/pages/candidate-queue/CandidateCard.tsx",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/media/src/db/services/movies-rotation.ts",
+    "to": "pillars/media/src/db/services/movies.ts",
+    "unresolvedTo": "./movies.js",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/media/src/db/services/movies.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "pillars/media/src/db/services/movies-rotation.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/registry/src/db/services/pillar-registry-status.ts",
+    "to": "pillars/registry/src/db/services/pillar-registry.ts",
+    "unresolvedTo": "./pillar-registry.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/registry/src/db/services/pillar-registry.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/registry/src/db/services/pillar-registry-status.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/shell/src/registry-api-runtime-config.ts",
+    "to": "pillars/shell/src/registry-api/client.gen.ts",
+    "unresolvedTo": "./registry-api/client.gen.js",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/shell/src/registry-api/client.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/shell/src/registry-api-runtime-config.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "pillars/shell/src/registry-api/client/types.gen.ts",
+    "to": "pillars/shell/src/registry-api/client/utils.gen.ts",
+    "unresolvedTo": "./utils.gen",
+    "dependencyTypes": ["local", "type-only", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "pillars/shell/src/registry-api/client/utils.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "pillars/shell/src/registry-api/client/types.gen.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/ai/app/src/index.ts",
+    "unresolvedTo": "@pops/app-ai",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/cerebrum/app/src/index.ts",
+    "unresolvedTo": "@pops/app-cerebrum",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/finance/app/src/index.ts",
+    "unresolvedTo": "@pops/app-finance",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/food/app/src/index.ts",
+    "unresolvedTo": "@pops/app-food",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/inventory/app/src/index.ts",
+    "unresolvedTo": "@pops/app-inventory",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/lists/app/src/index.ts",
+    "unresolvedTo": "@pops/app-lists",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/media/app/src/index.ts",
+    "unresolvedTo": "@pops/app-media",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
     }
   }
 ]

@@ -4,37 +4,26 @@ on:
   push:
     branches: [main]
     paths:
-      - "apps/pops-shell/**"
-      - "packages/api-client/**"
-      - "packages/app-*/**"
-      - "packages/cerebrum-db/**"
-      - "packages/*-contract/**"
-      - "packages/db-types/**"
-      - "packages/food-db/**"
-      - "packages/inventory-db/**"
-      - "packages/lists-db/**"
-      - "packages/navigation/**"
-      - "packages/pillar-sdk/**"
-      - "packages/types/**"
-      - "packages/ui/**"
-      - "packages/widgets/**"
+      - "pillars/shell/**"
+      - "pillars/*/app/**"
+      # Every pillar's OpenAPI projection feeds the generated FE client.
+      # Globbed from disk so a new pillar (or `lists`, previously omitted)
+      # is covered without editing this list.
+      - "pillars/*/openapi/**"
+      - "libs/navigation/**"
+      - "libs/sdk/**"
+      - "libs/types/**"
+      - "libs/ui/**"
       - ".github/workflows/fe-quality.yml"
   pull_request:
     paths:
-      - "apps/pops-shell/**"
-      - "packages/api-client/**"
-      - "packages/app-*/**"
-      - "packages/cerebrum-db/**"
-      - "packages/*-contract/**"
-      - "packages/db-types/**"
-      - "packages/food-db/**"
-      - "packages/inventory-db/**"
-      - "packages/lists-db/**"
-      - "packages/navigation/**"
-      - "packages/pillar-sdk/**"
-      - "packages/types/**"
-      - "packages/ui/**"
-      - "packages/widgets/**"
+      - "pillars/shell/**"
+      - "pillars/*/app/**"
+      - "pillars/*/openapi/**"
+      - "libs/navigation/**"
+      - "libs/sdk/**"
+      - "libs/types/**"
+      - "libs/ui/**"
       - ".github/workflows/fe-quality.yml"
 
 jobs:
@@ -45,26 +34,22 @@ jobs:
     outputs:
       relevant: ${{ steps.filter.outputs.shell }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
             shell:
-              - 'apps/pops-shell/**'
-              - 'packages/api-client/**'
-              - 'packages/app-*/**'
-              - 'packages/cerebrum-db/**'
-              - 'packages/*-contract/**'
-              - 'packages/db-types/**'
-              - 'packages/food-db/**'
-              - 'packages/inventory-db/**'
-              - 'packages/lists-db/**'
-              - 'packages/navigation/**'
-              - 'packages/pillar-sdk/**'
-              - 'packages/types/**'
-              - 'packages/ui/**'
-              - 'packages/widgets/**'
+              - 'pillars/shell/**'
+              - 'pillars/*/app/**'
+              # Glob every pillar's OpenAPI projection so the filter can't
+              # drift from the trigger paths (previously omitted inventory
+              # + lists, silently skipping FE quality on those changes).
+              - 'pillars/*/openapi/**'
+              - 'libs/navigation/**'
+              - 'libs/sdk/**'
+              - 'libs/types/**'
+              - 'libs/ui/**'
               - '.github/workflows/fe-quality.yml'
 
   quality:
@@ -77,7 +62,7 @@ jobs:
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "No shell/UI changes detected — skipping quality checks"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
 
       - name: Install pnpm
@@ -96,16 +81,23 @@ jobs:
 
       - name: Build shared packages
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: pnpm --filter "@pops/shell^..." --filter "!./apps/*" build
+        run: pnpm --filter "@pops/shell^..." --filter "!./pillars/*/app" build
 
       - name: Type check
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-shell && pnpm typecheck
+        run: cd pillars/shell && pnpm typecheck
+
+      # The committed nginx.conf is the prod BOOT FALLBACK (PRD-255). Gate it
+      # for drift here, not only via the Vitest snapshot, so a stale fallback
+      # fails the build.
+      - name: nginx fallback conf drift gate
+        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
+        run: cd pillars/shell && pnpm gen:nginx:check
 
       - name: Test
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-shell && pnpm test
+        run: cd pillars/shell && pnpm test
 
       - name: Build
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: cd apps/pops-shell && pnpm build
+        run: cd pillars/shell && pnpm build

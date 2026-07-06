@@ -119,7 +119,7 @@ The migration eliminates these packages:
 
 - **True crash isolation.** A bug in food never affects finance.
 - **Independent deploys.** Update food alone; finance keeps running.
-- **Per-pillar Litestream backups.** Each pillar's DB is a separate stream.
+- **Per-pillar Litestream backups.** Each pillar's DB is a separate stream. (Operational isolation of storage and backup — the physical substrate is still shared today — is specified by [ADR-039](adr-039-pillar-isolation.md).)
 - **Forced discipline.** Cross-pillar coupling becomes structurally impossible. Reviewers don't have to look for it.
 - **CI narrows naturally.** A change inside `food-db` triggers only food's tests. A change inside `food-contract` triggers food + any pillar that imports the contract type-only — which is a tiny set.
 - **External consumers (iOS, MCP, future web clients) consume each pillar's contract independently** and don't need to know about other pillars.
@@ -145,7 +145,7 @@ Inventory of cross-domain refs in the schema today + the planned cross-domain re
 | ----------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ |
 | `food.recipes.source_id → ingest_sources.id`    | within-pillar                                         | within-pillar (food-db owns both)                |
 | `food.batches.location → enum`                  | within-pillar hardcoded enum                          | stays — no plan to FK to inventory locations     |
-| `food → app-lists` (PRD-142 send-to-shopping)   | runtime tRPC call (already designed this way per PRD) | stays — pops-shell calls food-api then lists-api |
+| `food → app-lists` (`recipe-send-to-list`)      | runtime cross-pillar call (already designed this way) | stays — pops-shell calls food-api then lists-api |
 | Cerebrum engrams reference any entity           | URI scheme already                                    | URI scheme                                       |
 | AI Ops `ai_inference_log.context_id`            | string-namespaced reference (already not an FK)       | stays — moves to core-db                         |
 | Finance entities (people) used by other domains | not used today                                        | accessed via URI scheme when used                |

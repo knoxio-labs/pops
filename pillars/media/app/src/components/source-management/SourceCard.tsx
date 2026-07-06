@@ -1,0 +1,133 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Clock, Database, RefreshCw, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Button, Switch } from '@pops/ui';
+
+import { unwrap } from '../../media-api-helpers.js';
+import {
+  rotationDeleteSource,
+  rotationSyncSource,
+  rotationUpdateSource,
+} from '../../media-api/index.js';
+import { formatSyncDate, sourceTypeLabel, type Source } from './types';
+
+interface SyncSourceResult {
+  candidatesInserted: number;
+}
+
+interface SourceCardProps {
+  source: Source;
+  onEdit: () => void;
+}
+
+function useSourceMutations(source: Source) {
+  const queryClient = useQueryClient();
+  const invalidateRotation = () =>
+    void queryClient.invalidateQueries({ queryKey: ['media', 'rotation'] });
+
+  const syncMutation = useMutation({
+    mutationFn: async (input: { sourceId: number }): Promise<SyncSourceResult> =>
+      (await unwrap(await rotationSyncSource({ path: { id: input.sourceId } }))).data,
+    onSuccess: (data) => {
+      toast.success(`Synced "${source.name}": ${data.candidatesInserted} new candidates`);
+      invalidateRotation();
+    },
+    onError: () => toast.error(`Failed to sync "${source.name}"`),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (input: { id: number; enabled: boolean }) =>
+      unwrap(
+        await rotationUpdateSource({ path: { id: input.id }, body: { enabled: input.enabled } })
+      ),
+    onSuccess: invalidateRotation,
+    onError: () => toast.error('Failed to update source'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (input: { id: number }) =>
+      unwrap(await rotationDeleteSource({ path: { id: input.id } })),
+    onSuccess: () => {
+      toast.success(`Deleted "${source.name}"`);
+      invalidateRotation();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to delete source'),
+  });
+
+  return { syncMutation, toggleMutation, deleteMutation };
+}
+
+function SourceCardInfo({ source }: { source: Source }) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <span className="font-medium truncate">{source.name}</span>
+        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          {sourceTypeLabel(source.type)}
+        </span>
+      </div>
+      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+        <span>Priority: {source.priority}/10</span>
+        <span className="flex items-center gap-1">
+          <Database className="h-3 w-3" />
+          {source.candidateCount} candidates
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {formatSyncDate(source.lastSyncedAt)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function SourceCard({ source, onEdit }: SourceCardProps) {
+  const { syncMutation, toggleMutation, deleteMutation } = useSourceMutations(source);
+  const isManual = source.type === 'manual';
+
+  return (
+    <div className="flex items-center gap-4 rounded-md border p-4">
+      <SourceCardInfo source={source} />
+      <div className="flex items-center gap-2 shrink-0">
+        <Switch
+          checked={source.enabled === 1}
+          onCheckedChange={(checked) => {
+            toggleMutation.mutate({ id: source.id, enabled: checked });
+          }}
+          disabled={toggleMutation.isPending}
+          aria-label={`Toggle ${source.name}`}
+        />
+        {!isManual && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              syncMutation.mutate({ sourceId: source.id });
+            }}
+            disabled={syncMutation.isPending || source.enabled !== 1}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          Edit
+        </Button>
+        {!isManual && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(`Delete "${source.name}" and all its candidates?`)) {
+                deleteMutation.mutate({ id: source.id });
+              }
+            }}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

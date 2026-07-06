@@ -1,0 +1,23 @@
+{
+  "title": "AI",
+  "observability": "AI Observability",
+  "observability.description": "Monitor AI usage, costs, latency, and provider health",
+  "observability.failedToLoad": "Failed to load observability data",
+  "observability.breakdowns": "Breakdowns",
+  "observability.provider": "Provider",
+  "observability.model": "Model",
+  "observability.operation": "Operation",
+  "observability.domain": "Domain",
+
+  "kpi.totalCost": "Total Cost",
+  "kpi.totalCalls": "Total Calls",
+  "kpi.cacheHitRate": "Cache Hit Rate",
+  "kpi.errorRate": "Error Rate",
+  "kpi.callsServedFromCache": "Calls served from cache",
+  "kpi.errorsTimeoutsBlocked": "Errors, timeouts, blocked",
+  "kpi.totalCallsDesc": "{{count}} tokens",
+  "kpi.totalCostDesc": "{{count}} total calls",
+
+  "dateFilter.startDate": "Start date",
+  "dateFilter.endDate": "End date"
+}

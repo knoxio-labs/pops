@@ -1,0 +1,283 @@
+/**
+ * Regression tests for CF023 (#3629): the alias stage must not let a
+ * short/generic alias hijack a better match, and when several aliases match
+ * the same description the longest (most specific) alias key must win rather
+ * than whichever came first in `Map` iteration order.
+ */
+import { describe, expect, it } from 'vitest';
+
+import { matchEntity, type AliasMap, type EntityLookupMap } from '../entity-matcher.js';
+
+function lookup(entries: [string, { id: string; name: string }][]): EntityLookupMap {
+  return new Map(entries);
+}
+
+function aliases(entries: [string, string][]): AliasMap {
+  return new Map(entries);
+}
+
+describe('matchEntity — alias stage guards (CF023)', () => {
+  it('skips an alias shorter than the minimum length', () => {
+    const entityLookup = lookup([['woolworths', { id: 'ww', name: 'Woolworths' }]]);
+    const aliasMap = aliases([['ww', 'Woolworths']]);
+
+    const result = matchEntity('WW METRO 1234', entityLookup, aliasMap);
+
+    expect(result).toBeNull();
+  });
+
+  it('matches an alias at or above the minimum length', () => {
+    const entityLookup = lookup([['woolworths', { id: 'ww', name: 'Woolworths' }]]);
+    const aliasMap = aliases([['woolies', 'Woolworths']]);
+
+    const result = matchEntity('WOOLIES METRO 1234', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Woolworths', entityId: 'ww', matchType: 'alias' });
+  });
+
+  it('prefers the longest matching alias over a shorter generic one (longest wins)', () => {
+    const entityLookup = lookup([
+      ['acme fitness', { id: 'gym', name: 'Acme Fitness' }],
+      ['acme', { id: 'generic', name: 'Acme Holdings' }],
+    ]);
+    // "acme" (a short/generic 4-char alias) and "acme fitness gym" (a longer,
+    // more specific alias) both appear as substrings of the description —
+    // the longer, more specific one must win regardless of Map iteration
+    // order.
+    const aliasMap = aliases([
+      ['acme', 'Acme Holdings'],
+      ['acme fitness gym', 'Acme Fitness'],
+    ]);
+
+    const result = matchEntity('ACME FITNESS GYM MEMBERSHIP', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Acme Fitness', entityId: 'gym', matchType: 'alias' });
+  });
+
+  it('longest-wins is independent of Map insertion order', () => {
+    const entityLookup = lookup([
+      ['acme fitness', { id: 'gym', name: 'Acme Fitness' }],
+      ['acme', { id: 'generic', name: 'Acme Holdings' }],
+    ]);
+    const aliasMap = aliases([
+      ['acme fitness gym', 'Acme Fitness'],
+      ['acme', 'Acme Holdings'],
+    ]);
+
+    const result = matchEntity('ACME FITNESS GYM MEMBERSHIP', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Acme Fitness', entityId: 'gym', matchType: 'alias' });
+  });
+
+  it('falls through to the exact/prefix/contains stages when no alias meets the length floor', () => {
+    const entityLookup = lookup([['ikea', { id: 'ikea', name: 'IKEA' }]]);
+    const aliasMap = aliases([['ike', 'IKEA']]);
+
+    const result = matchEntity('IKEA HOMEWARES', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'IKEA', entityId: 'ikea', matchType: 'prefix' });
+  });
+});
+
+describe('matchEntity — diacritic folding + broadened punctuation stripping (CF056)', () => {
+  it('exact-matches an accented description against a plain-ASCII entity name', () => {
+    const entityLookup = lookup([['cafe nero', { id: 'cafe-nero', name: 'Cafe Nero' }]]);
+
+    const result = matchEntity('Café Nero', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Cafe Nero', entityId: 'cafe-nero', matchType: 'exact' });
+  });
+
+  it('exact-matches a plain-ASCII description against an accented entity name', () => {
+    const entityLookup = lookup([['café nero', { id: 'cafe-nero', name: 'Café Nero' }]]);
+
+    const result = matchEntity('CAFE NERO', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Café Nero', entityId: 'cafe-nero', matchType: 'exact' });
+  });
+
+  it('matches an accented alias against a folded (plain-ASCII) description', () => {
+    const entityLookup = lookup([['nero group', { id: 'nero', name: 'Nero Group' }]]);
+    const aliasMap = aliases([['café nero', 'Nero Group']]);
+
+    const result = matchEntity('CAFE NERO SYDNEY', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Nero Group', entityId: 'nero', matchType: 'alias' });
+  });
+
+  it('matches a plain-ASCII alias against an accented description', () => {
+    const entityLookup = lookup([['nero group', { id: 'nero', name: 'Nero Group' }]]);
+    const aliasMap = aliases([['cafe nero', 'Nero Group']]);
+
+    const result = matchEntity('Café Nero Sydney', entityLookup, aliasMap);
+
+    expect(result).toEqual({ entityName: 'Nero Group', entityId: 'nero', matchType: 'alias' });
+  });
+
+  it('matches a hyphenated description against a space-separated entity name via the punctuation-retry stage', () => {
+    const entityLookup = lookup([['ww metro', { id: 'ww', name: 'WW Metro' }]]);
+
+    const result = matchEntity('WW-METRO 1234', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'WW Metro', entityId: 'ww', matchType: 'prefix' });
+  });
+
+  it('matches a bank description that dropped the ampersand against an entity name that kept it', () => {
+    const entityLookup = lookup([['m&s food', { id: 'ms', name: 'M&S Food' }]]);
+
+    const result = matchEntity('MS FOOD LONDON', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'M&S Food', entityId: 'ms', matchType: 'prefix' });
+  });
+
+  it('matches a bank description that dropped the period against an entity name that kept it', () => {
+    const entityLookup = lookup([['j.crew', { id: 'jc', name: 'J.Crew' }]]);
+
+    const result = matchEntity('JCREW STORE 42', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'J.Crew', entityId: 'jc', matchType: 'prefix' });
+  });
+});
+
+describe('matchEntity — base ladder precedence + tie-breaks (CF072/#3649/#3658)', () => {
+  it('exact-matches case-insensitively with no aliases involved', () => {
+    const entityLookup = lookup([['ikea', { id: 'ikea', name: 'IKEA' }]]);
+
+    const result = matchEntity('ikea', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'IKEA', entityId: 'ikea', matchType: 'exact' });
+  });
+
+  it('prefers exact over prefix when both stages could match', () => {
+    const entityLookup = lookup([
+      ['ikea', { id: 'ikea-exact', name: 'IKEA' }],
+      ['ikea homewares', { id: 'ikea-hw', name: 'IKEA Homewares' }],
+    ]);
+
+    const result = matchEntity('IKEA', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'IKEA', entityId: 'ikea-exact', matchType: 'exact' });
+  });
+
+  it('prefers prefix over contains when both stages could match', () => {
+    const entityLookup = lookup([
+      ['ikea', { id: 'ikea-prefix', name: 'IKEA' }],
+      ['homewares', { id: 'hw-contains', name: 'Homewares' }],
+    ]);
+
+    const result = matchEntity('IKEA HOMEWARES SYDNEY', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'IKEA', entityId: 'ikea-prefix', matchType: 'prefix' });
+  });
+
+  it('prefix stage: longest matching entity name wins the tie', () => {
+    const entityLookup = lookup([
+      ['woolworths', { id: 'ww-short', name: 'Woolworths' }],
+      ['woolworths metro', { id: 'ww-long', name: 'Woolworths Metro' }],
+    ]);
+
+    const result = matchEntity('WOOLWORTHS METRO 1234', entityLookup, new Map());
+
+    expect(result).toEqual({
+      entityName: 'Woolworths Metro',
+      entityId: 'ww-long',
+      matchType: 'prefix',
+    });
+  });
+
+  it('contains stage: longest matching entity name wins the tie', () => {
+    const entityLookup = lookup([
+      ['acme', { id: 'acme-short', name: 'Acme' }],
+      ['acme fitness', { id: 'acme-long', name: 'Acme Fitness' }],
+    ]);
+
+    const result = matchEntity('SYD ACME FITNESS GYM', entityLookup, new Map());
+
+    expect(result).toEqual({
+      entityName: 'Acme Fitness',
+      entityId: 'acme-long',
+      matchType: 'contains',
+    });
+  });
+
+  it('contains stage: skips an entity name shorter than the 4-char floor', () => {
+    const entityLookup = lookup([['gym', { id: 'gym', name: 'Gym' }]]);
+
+    const result = matchEntity('SYDNEY GYM MEMBERSHIP', entityLookup, new Map());
+
+    expect(result).toBeNull();
+  });
+
+  it('contains stage: matches an entity name at exactly the 4-char floor', () => {
+    const entityLookup = lookup([['acme', { id: 'acme', name: 'Acme' }]]);
+
+    const result = matchEntity('SYDNEY ACME MEMBERSHIP', entityLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Acme', entityId: 'acme', matchType: 'contains' });
+  });
+
+  it('an alias match wins over an exact match on a different entity (alias-vs-exact precedence)', () => {
+    const entityLookup = lookup([
+      ['ww', { id: 'ww-literal', name: 'WW' }],
+      ['woolworths', { id: 'ww-canonical', name: 'Woolworths' }],
+    ]);
+    const aliasMap = aliases([['ww metro', 'Woolworths']]);
+
+    const result = matchEntity('WW METRO 1234', entityLookup, aliasMap);
+
+    expect(result).toEqual({
+      entityName: 'Woolworths',
+      entityId: 'ww-canonical',
+      matchType: 'alias',
+    });
+  });
+
+  it('returns null when no stage matches at all', () => {
+    const entityLookup = lookup([['ikea', { id: 'ikea', name: 'IKEA' }]]);
+
+    const result = matchEntity('COMPLETELY UNRELATED MERCHANT', entityLookup, new Map());
+
+    expect(result).toBeNull();
+  });
+});
+
+describe('matchEntity — normalized-key cache is scoped per lookup map instance (CF092/#3670)', () => {
+  it('does not leak a match across two different lookup maps with distinct entities', () => {
+    const firstRunLookup = lookup([['cafe deluxe', { id: 'cafe-1', name: 'Cafe Deluxe' }]]);
+    const firstMatch = matchEntity('CAFE DELUXE', firstRunLookup, new Map());
+    expect(firstMatch).toEqual({
+      entityName: 'Cafe Deluxe',
+      entityId: 'cafe-1',
+      matchType: 'exact',
+    });
+
+    // A second, unrelated import run builds a brand-new lookup map (same
+    // shape, different entity) — the precomputed-normalization cache is
+    // keyed by map reference, so it must not resolve against the first run's
+    // (now-stale) entries.
+    const secondRunLookup = lookup([['cafe deluxe', { id: 'cafe-2', name: 'Cafe Deluxe Two' }]]);
+    const secondMatch = matchEntity('CAFE DELUXE', secondRunLookup, new Map());
+    expect(secondMatch).toEqual({
+      entityName: 'Cafe Deluxe Two',
+      entityId: 'cafe-2',
+      matchType: 'exact',
+    });
+
+    // Re-querying the first run's map after the second run still resolves
+    // to the first run's entity, proving neither cache entry overwrote the
+    // other.
+    const firstMatchAgain = matchEntity('CAFE DELUXE', firstRunLookup, new Map());
+    expect(firstMatchAgain?.entityId).toBe('cafe-1');
+  });
+
+  it('reflects an accented entity name added to the lookup after an unrelated map was already queried', () => {
+    // Priming a different map instance first must not poison the cache for
+    // a later map whose entity requires diacritic folding.
+    matchEntity('IKEA STORE', lookup([['ikea', { id: 'ikea', name: 'IKEA' }]]), new Map());
+
+    const cafeLookup = lookup([['café deluxe', { id: 'cafe', name: 'Café Deluxe' }]]);
+    const result = matchEntity('CAFE DELUXE', cafeLookup, new Map());
+
+    expect(result).toEqual({ entityName: 'Café Deluxe', entityId: 'cafe', matchType: 'exact' });
+  });
+});

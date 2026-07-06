@@ -1,0 +1,130 @@
+/**
+ * Entry point for the finance pillar HTTP server.
+ *
+ * Boots the `/health` + `/pillars` probes and the REST surface, opening
+ * its own `finance.db` connection via `openFinanceDb`.
+ *
+ * When `POPS_REGISTRY_ENABLED=true`, the process registers a finance
+ * manifest with the central registry on boot via `bootstrapPillar`.
+ * Registration happens AFTER `app.listen` and never blocks or crashes
+ * boot — a registry that is briefly unavailable just means the pillar
+ * keeps retrying in the background while already serving traffic.
+ * SIGTERM triggers `pillarHandle.stop()` so the heartbeat clears and the
+ * registry sees an explicit deregister.
+ */
+import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+
+import { openFinanceDb } from '../db/index.js';
+import { createFinanceApiApp } from './app.js';
+import { createContactsClient } from './contacts/client.js';
+import { createPillarOwnerUriLookup } from './cron/pillar-lookup.js';
+import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-outbox.js';
+import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
+import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orphans.js';
+import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
+import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
+import { parseBareOrigin } from './pillars/env.js';
+
+function resolvePort(): number {
+  const raw = process.env['PORT'];
+  if (raw === undefined || raw === '') return 3004;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
+    throw new Error(`[finance-api] PORT must be a positive integer in 1-65535; got '${raw}'`);
+  }
+  return parsed;
+}
+
+const port = resolvePort();
+const version = process.env['BUILD_VERSION'] ?? 'dev';
+
+// Normalise FINANCE_SELF_BASE_URL (or the localhost fallback) through the
+// shared bare-origin parser so a misconfigured env crashes boot loudly
+// instead of publishing an invalid PillarRegistryEntry.baseUrl.
+function resolveSelfBaseUrl(): string {
+  const raw = process.env['FINANCE_SELF_BASE_URL'] ?? `http://localhost:${port}`;
+  try {
+    return parseBareOrigin('FINANCE_SELF_BASE_URL', raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[finance-api] FINANCE_SELF_BASE_URL ${raw} is invalid — ${message}`, {
+      cause: err,
+    });
+  }
+}
+const selfBaseUrl = resolveSelfBaseUrl();
+
+const financeDb = openFinanceDb(resolveFinanceSqlitePath());
+const contacts = createContactsClient();
+const app = createFinanceApiApp({
+  financeDb,
+  version,
+  selfBaseUrl,
+  contacts,
+});
+
+const reconcileLogger = {
+  info: (msg: string, meta?: Record<string, unknown>) =>
+    console.warn(`[finance-api] ${msg}`, meta ?? {}),
+  warn: (msg: string, meta?: Record<string, unknown>) =>
+    console.warn(`[finance-api] ${msg}`, meta ?? {}),
+};
+
+// Nightly cross-pillar URI reconciliation. Reads peer pillars over HTTP
+// via the pillar SDK proxy — no compile-time coupling.
+const reconcileHandle = startReconcileCrossPillarWorker({
+  db: financeDb.db,
+  lookupOwnerUri: createPillarOwnerUriLookup(),
+  logger: reconcileLogger,
+});
+
+// Contacts pre-create outbox reconciliation (issue #3683): drains
+// `entity_precreate_outbox` on a short interval so a commit that queued a
+// pending contact during a contacts outage gets resolved to the real
+// contact id as soon as contacts recovers.
+const reconcileOutboxHandle = startReconcileContactsOutboxWorker({
+  db: financeDb.db,
+  contacts,
+  logger: reconcileLogger,
+});
+
+// Daily detection sweep for orphaned entity_id references (issue #3615): a
+// contacts reseed silently dangles the contact ids copied onto finance rows.
+// Detection only — the reviewed repair lives in scripts/repair-orphaned-entity-ids.ts.
+const reconcileEntityOrphansHandle = startReconcileEntityOrphansWorker({
+  db: financeDb.db,
+  fetchLiveEntities: async () =>
+    (await contacts.fetchAllEntities()).map((e) => ({ id: e.id, name: e.name })),
+  logger: reconcileLogger,
+});
+
+const server = app.listen(port, () => {
+  console.warn(`[finance-api] Listening on port ${port}`);
+});
+
+let pillarHandle: PillarBootstrapHandle | undefined;
+if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
+  pillarHandle = await bootstrapPillar({
+    manifest: buildFinanceManifest(version),
+    baseUrl: selfBaseUrl,
+    capabilityReporter: buildFinanceCapabilityReporter(),
+  });
+}
+
+let shuttingDown = false;
+function shutdown(signal: NodeJS.Signals): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.warn(`[finance-api] Shutting down (${signal})`);
+  reconcileHandle.stop();
+  reconcileOutboxHandle.stop();
+  reconcileEntityOrphansHandle.stop();
+  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
+    server.close(() => {
+      financeDb.raw.close();
+    });
+  });
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

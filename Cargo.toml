@@ -1,0 +1,39 @@
+# POPS Cargo workspace root — lives at the repo root.
+#
+# Owned by the `contacts` extraction plan (the first Rust pillar) — see
+# `docs/plans/01-contacts-pillar-rust.md` and the sequencing overview in
+# `docs/plans/00-overview-and-sequencing.md` (both on `main`). Future Rust
+# libraries (`pops-ai`, `pops-settings`) join `[workspace].members` here; they
+# do NOT create a second workspace. One lockfile, one shared dependency set,
+# one Rust CI lane.
+#
+# Members are referenced by repo-relative path: shared libraries under `libs/`
+# and pillar crates under `pillars/` (each pillar crate colocated with its TS
+# frontend, mirroring the PRD-253 pillar layout).
+[workspace]
+resolver = "2"
+members = ["pillars/contacts", "libs/pops-ai", "libs/pops-settings"]
+
+[workspace.package]
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+
+# Shared dependency versions every member crate inherits via
+# `dep = { workspace = true }`. New Rust pillars pin their deps here so the
+# workspace resolves a single coherent set.
+[workspace.dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "migrate"] }
+utoipa = { version = "5", features = ["axum_extras"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4"] }
+async-trait = "0.1"
+thiserror = "2"
+anyhow = "1"
+futures = "0.3"

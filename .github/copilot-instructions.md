@@ -2,20 +2,15 @@
 
 ## What This Repository Is
 
-POPS (Personal Operations System) is a self-hosted personal command center for finance, media, inventory, and AI operations. It is a pnpm/Turborepo monorepo running on Node.js (24 locally via `mise`, 22 in CI/production) with SQLite (Drizzle ORM), tRPC + Express, React 19 + Vite, and Tailwind v4. AI categorization and entity matching use the Claude API; embeddings use an OpenAI-compatible client (configurable via `EMBEDDING_API_URL`, defaulting to `https://api.openai.com/v1`). Jobs run on BullMQ + Redis. The system deploys via Docker Compose + Ansible to a home server behind Cloudflare Tunnel.
+POPS (Personal Operations System) is a self-hosted personal command center for finance, media, inventory, and AI operations. It is a pnpm workspace running on Node.js (24 locally via `mise`, 22 in CI/production) built as a set of independent REST **pillars** — each a standalone service that owns its own SQLite database (Drizzle ORM), serves a zod → [ts-rest](https://ts-rest.com) contract projected to OpenAPI, exports a `./manifest`, and self-registers with the `registry` pillar on boot. There is **no tRPC** and **no `pops-api` monolith** — both were removed. The frontend is one React SPA (`pops-shell`) that lazy-loads per-domain feature apps over generated Hey API REST clients; cross-pillar calls go through the `@pops/pillar-sdk` `pillar()` client. AI categorization and entity matching use the Claude API; embeddings use an OpenAI-compatible client (configurable via `EMBEDDING_API_URL`, defaulting to `https://api.openai.com/v1`). Jobs run on BullMQ + Redis. The system deploys via Docker Compose to a home server behind Cloudflare Tunnel (host provisioning lives in the private `knoxio/homelab-infra` repo).
 
-**Monorepo layout:**
-- `apps/pops-api/` — Express + tRPC backend
-- `apps/pops-shell/` — React PWA shell (React Router 7)
-- `apps/moltbot/` — Telegram bot
-- `packages/app-{finance,media,inventory,ai}/` — Domain UI packages
-- `packages/db-types/` — Drizzle schema + all database types
-- `packages/ui/` — Shared component library (shadcn/Radix primitives + composites)
-- `packages/api-client/` — tRPC client setup
-- `infra/` — Ansible playbooks + Docker Compose
-- `docs/` — PRDs, epics, user stories, ADRs, roadmap
+**Repo layout:**
+- `pillars/<id>/` — one REST pillar per folder (registry, inventory, media, finance, food, lists, cerebrum, ai, contacts, orchestrator, shell, docs, mcp, moltbot). Each owns its SQLite DB (`src/db`), zod → ts-rest contract (`src/contract`), OpenAPI snapshot (`openapi/<id>.openapi.json`), `./manifest`, and Dockerfile.
+- `libs/<name>/` — shared workspace libraries (types, db-types, sdk, settings, ai-telemetry, ui, navigation, module-registry, overlay-ego, locales, pops-ai, pops-settings)
+- `infra/` — Docker Compose (`docker-compose.yml` prod, `docker-compose.dev.yml` dev) + Litestream stream configs
+- `docs/` — cross-cutting PRDs (under `docs/themes/{platform,foundation,federation}/`), ADRs (`docs/architecture/`), templates, runbooks, roadmap, vision. Pillar-scoped PRDs live under `pillars/<id>/docs/prds/`.
 
-**Documentation hierarchy (strictly maintained):** Theme → Epic → PRD → User Story (status flows upward: US done → PRD → Epic → Theme → `docs/roadmap.md`)
+**Documentation model (slug-only, strictly maintained):** hierarchy is **Theme → PRD** — there are no epics and no separate `us-*.md` user-story files (both layers were removed). A PRD's id is its slug; it lives at a single-file path (`pillars/<id>/docs/prds/<slug>.md` for pillar-scoped, `docs/themes/<name>/prds/<slug>.md` for cross-cutting). Acceptance criteria live **inline** in each PRD under `## Acceptance Criteria`. There is no PRD numbering. ADRs keep frozen `adr-NNN` numbers. Status flows upward: PRD criteria → PRD → Theme → `docs/roadmap.md`.
 
 ---
 
@@ -28,18 +23,17 @@ Prefer `mise` for cross-package tasks. Some checks have no `mise` wrapper and mu
 mise lint          # oxlint (type-aware) — zero tolerance for warnings
 mise typecheck     # Full TypeScript strict check across all packages
 mise test          # Vitest unit tests
-mise build         # Turbo build — must produce zero errors
+mise build         # Build all packages — must produce zero errors
 
 # Via pnpm (no mise wrapper — run from repo root or package dir)
 pnpm format:check                                    # oxfmt formatting check
-cd apps/pops-api && pnpm openapi:validate            # Required after any API changes
-cd apps/pops-api && pnpm test:integration            # Integration tests (also run in CI)
-cd apps/pops-shell && pnpm test:e2e                  # Playwright E2E (also run in CI)
+cd pillars/<id> && pnpm test                         # A pillar's unit tests (real in-memory SQLite)
+cd pillars/shell && pnpm test:e2e                    # Playwright E2E (also run in CI)
 ```
 
 Git hooks (enforced via Husky): pre-commit runs `lint-staged` (oxlint + oxfmt on staged files) and `pnpm typecheck`; pre-push checks for merge conflicts with `origin/main`. Recommended to also run `mise lint && mise typecheck && mise test` manually before pushing.
 
-GitHub Actions runs: lint, typecheck, format, unit tests, integration tests, E2E, OpenAPI validation, and Docker build — all must be green.
+GitHub Actions runs: lint, typecheck, format, unit tests, E2E, and Docker build — all must be green.
 
 ---
 
@@ -55,13 +49,12 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 
 **1. Documentation sync (zero drift tolerated)**
 
-- Every code change that touches a feature, API surface, data model, or behavior must have corresponding updates in `docs/`. Check: the relevant user story (`us-NN-*.md`), PRD (`docs/themes/NN-*/prds/NNN-*/README.md`), and epic.
-- Update status fields to reflect the current state: `Done` when all acceptance criteria in the US are met; `Partial` when some criteria are intentionally deferred (with the missing items explicitly documented in the US); `In progress` otherwise. Marking `Partial` without documenting what remains is a blocker.
+- Every code change that touches a feature, API surface, data model, or behavior must have corresponding updates in its PRD — pillar-scoped at `pillars/<id>/docs/prds/<slug>.md` or cross-cutting at `docs/themes/<name>/prds/<slug>.md`. (There are no epics or `us-*.md` files; acceptance criteria are inline in the PRD.)
+- Update status fields to reflect the current state: tick `- [ ]` → `- [x]` inline criteria as work lands; `Done` when every criterion is ticked; `In progress` otherwise. Deferred criteria must be explicitly documented (and a gap issue filed — see "Implementation gaps").
 - `docs/roadmap.md` must reflect the current state of any phase or PRD that changed.
-- API changes must update or maintain the OpenAPI spec. Run `pnpm openapi:validate`.
-- Schema changes must have a Drizzle migration generated via `mise drizzle:generate`.
-- Any behavior documented in `AGENTS.md`, `CONVENTIONS.md`, or `docs/CLAUDE.md` that changes must be updated in those files too.
-- Design system changes must be reflected in `.impeccable.md` if applicable.
+- API changes must update or maintain the pillar's OpenAPI snapshot (`pillars/<id>/openapi/<id>.openapi.json`). Regenerate via `mise openapi:generate`.
+- Schema changes must have a Drizzle migration: edit the pillar's schema, run `drizzle-kit generate` in that pillar, review, and commit the result (each pillar auto-migrates its own SQLite DB on startup; there is no shared/global drizzle step).
+- Any behavior documented in `AGENTS.md` or `docs/CLAUDE.md` that changes must be updated in those files too.
 
 **2. Implementation gaps — no partial work**
 
@@ -71,7 +64,7 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 
 **3. Correctness**
 
-- Verify all acceptance criteria in the referenced user story are fully satisfied.
+- Verify all acceptance criteria in the referenced PRD are fully satisfied.
 - Drizzle queries must use parameterized inputs — never string interpolation.
 - All external inputs (user input, webhook payloads, imported CSV data) must be validated with Zod at the boundary.
 - No secrets, `.env` values, or credentials may be hardcoded or committed.
@@ -80,18 +73,17 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 **4. Type safety**
 
 - TypeScript `strict` mode is always on. No `any`, no `as unknown as X`, no `@ts-ignore` without a comment explaining an upstream library bug.
-- Every tRPC procedure input must have a Zod schema. Every response must be typed.
+- Every ts-rest route input must have a Zod schema. Every response must be typed.
 - No implicit `any` from missing type annotations on function parameters.
 
-**5. Conventions (from `CONVENTIONS.md`)**
+**5. Conventions (from `AGENTS.md` → "Coding Conventions")**
 
-- API modules: `router.ts` + `service.ts` + `types.ts` + `index.ts`. Business logic lives in `service.ts` only.
 - Frontend: one route = one page. Page components use shell + sections + hooks pattern for complex UIs.
 - Styling: Tailwind only. No arbitrary values without a design token reason. Use `app-accent` for domain color. No `style={{}}` except for dynamic runtime values (e.g., progress bar widths computed at runtime); `w-[var(--radix-*)]` bindings are also permitted.
 - Components: all new UI components must have a Storybook story.
 - Icons: Lucide only. No other icon libraries.
 - Database: integer PKs for domain tables, UUID text for cross-domain FKs. Timestamps as ISO 8601 `TEXT`. All schema changes via Drizzle migrations.
-- Tests: alongside source as `*.test.ts`. No test file placed in a separate top-level `tests/` directory.
+- Tests: next to the code they cover (`pillars/<id>/src/**/__tests__/`, `libs/<lib>/src/**`); a pillar runs its own migrations against a real in-memory/temp SQLite DB in its own tests. No shared monolith test path.
 
 **6. Security**
 
@@ -111,8 +103,8 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 Report every issue as a required change. Use direct language:
 
 > "This procedure lacks a Zod input schema. Add one before merging."
-> "The user story us-04-transactions.md acceptance criteria item 3 is not satisfied by this implementation."
-> "There is no migration for the new `tags` column. Run `mise drizzle:generate` and commit the result."
+> "Acceptance criterion 3 in `pillars/finance/docs/prds/import-dedup-csv.md` is not satisfied by this implementation."
+> "There is no migration for the new `tags` column. Run `drizzle-kit generate` in this pillar and commit the result."
 > "This TODO at line 47 has no tracking issue. Either resolve it or open a GitHub issue and reference it here."
 
 Do not batch small issues into a single comment. File a separate review comment per issue so each can be resolved independently and tracked.
@@ -124,14 +116,15 @@ Do not batch small issues into a single comment. File a separate review comment 
 | Purpose | Path |
 |---|---|
 | Agent guidance (primary) | `AGENTS.md` |
-| Coding conventions | `CONVENTIONS.md` |
-| Design system | `.impeccable.md` |
+| Coding conventions | `AGENTS.md` → "Coding Conventions" |
+| Design context | `AGENTS.md` → "Design Context" |
 | Documentation standards | `docs/CLAUDE.md` |
 | Roadmap & phase tracker | `docs/roadmap.md` |
-| DB schema | `packages/db-types/src/schema/` |
-| tRPC routers | `apps/pops-api/src/modules/*/router.ts` |
-| Business logic | `apps/pops-api/src/modules/*/service.ts` |
-| UI components | `packages/ui/src/components/` |
+| Per-pillar DB schema | `pillars/<id>/src/db/schema/` |
+| Shared DB type helpers | `libs/db-types/src/` |
+| Pillar ts-rest contract | `pillars/<id>/src/contract/` |
+| Business logic | `pillars/<id>/src/db/services/` |
+| UI components | `libs/ui/src/components/` |
 | Task runner | `mise.toml` |
 | CI workflows | `.github/workflows/` |
 

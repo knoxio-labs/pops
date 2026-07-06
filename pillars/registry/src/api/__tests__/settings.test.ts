@@ -1,0 +1,284 @@
+/**
+ * Integration tests for the `settings.*` REST surface
+ * (settings-as-manifest-dimension), driven through the real Express app
+ * via supertest.
+ *
+ * Coverage:
+ *   - Every procedure (`list`/`get`/`set`/`ensure`/`getMany`/`setMany`/
+ *     `resetKey`/`reset`) plus the legacy `delete` reset alias.
+ *   - The RU+reset protocol: reset re-applies the manifest default, reset is
+ *     idempotent (never throws), and `list` resolves effective values.
+ *   - Redaction is wired but inert for core (no sensitive manifest keys), so
+ *     the cross-pillar surface still returns real values.
+ *   - `getMany` Record-omitted semantics (missing keys absent, not null).
+ *   - `setMany` transactional mirror.
+ *   - Error mapping: 400 (zod boundary); the legacy `delete` alias is an
+ *     idempotent reset (200, no 404).
+ *   - Auth gating (`protected`): 401 for an anonymous caller and for a
+ *     service account lacking the scope; 200 for a service account WITH the
+ *     scope; the dev-fallback user passes by default.
+ *
+ * The auth-negative cases force the production identity branch (no dev
+ * fallback) so the anonymous path is actually reachable.
+ */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import request from 'supertest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
+import { createCoreApiApp } from '../app.js';
+import { makeClient, type ClientHeaders } from './test-utils.js';
+
+let tmpDir: string;
+let coreDb: OpenedCoreDb;
+
+beforeEach(() => {
+  tmpDir = mkdtempSync(join(tmpdir(), 'core-api-settings-rest-test-'));
+  coreDb = openCoreDb(join(tmpDir, 'core.db'));
+});
+
+afterEach(() => {
+  coreDb.raw.close();
+  rmSync(tmpDir, { recursive: true, force: true });
+});
+
+// Three distinct keys from the registry's own `coreOperationalManifest`,
+// which sources the `:key` enum these procedures validate against.
+const RETRIES_KEY = 'core.aiRetry.maxRetries';
+const DELAY_KEY = 'core.aiRetry.baseDelayMs';
+const CONCURRENCY_KEY = 'core.queue.syncConcurrency';
+
+function app(): ReturnType<typeof createCoreApiApp> {
+  return createCoreApiApp({ coreDb, version: '0.0.1-test', selfBaseUrl: 'http://localhost:3001' });
+}
+
+function client(headers?: ClientHeaders) {
+  return makeClient(app(), headers);
+}
+
+/**
+ * Run `fn` with the env forced into the production identity branch — no dev
+ * fallback, Cloudflare team configured but no JWT presented — so the
+ * anonymous (401) path is actually reachable. Restores the prior env after.
+ */
+async function withProdIdentity(fn: () => Promise<void>): Promise<void> {
+  const prevNodeEnv = process.env['NODE_ENV'];
+  const prevTeam = process.env['CLOUDFLARE_ACCESS_TEAM_NAME'];
+  process.env['NODE_ENV'] = 'production';
+  process.env['CLOUDFLARE_ACCESS_TEAM_NAME'] = 'pops-test-team';
+  try {
+    await fn();
+  } finally {
+    if (prevNodeEnv === undefined) delete process.env['NODE_ENV'];
+    else process.env['NODE_ENV'] = prevNodeEnv;
+    if (prevTeam === undefined) delete process.env['CLOUDFLARE_ACCESS_TEAM_NAME'];
+    else process.env['CLOUDFLARE_ACCESS_TEAM_NAME'] = prevTeam;
+  }
+}
+
+describe('settings REST — happy paths (dev-fallback user)', () => {
+  it('set then get round-trips a single setting', async () => {
+    const setRes = await client().settings.set(RETRIES_KEY, 'tok-1');
+    expect(setRes.data).toEqual({ key: RETRIES_KEY, value: 'tok-1' });
+    expect(setRes.message).toBe('Setting saved');
+
+    const got = await client().settings.get(RETRIES_KEY);
+    expect(got.data).toEqual({ key: RETRIES_KEY, value: 'tok-1' });
+  });
+
+  it('get returns { data: null } for a missing key', async () => {
+    const got = await client().settings.get(RETRIES_KEY);
+    expect(got.data).toBeNull();
+  });
+
+  it('set overwrites an existing value', async () => {
+    await client().settings.set(RETRIES_KEY, 'tok-1');
+    const res = await client().settings.set(RETRIES_KEY, 'tok-2');
+    expect(res.data.value).toBe('tok-2');
+    const got = await client().settings.get(RETRIES_KEY);
+    expect(got.data?.value).toBe('tok-2');
+  });
+
+  it('ensure is write-once — second call returns the persisted row unchanged', async () => {
+    const first = await client().settings.ensure(RETRIES_KEY, 'seed-1');
+    expect(first.data).toEqual({ key: RETRIES_KEY, value: 'seed-1' });
+    const second = await client().settings.ensure(RETRIES_KEY, 'would-overwrite');
+    expect(second.data.value).toBe('seed-1');
+  });
+
+  it('delete (legacy alias) resets an existing key to its default', async () => {
+    await client().settings.set(RETRIES_KEY, 'tok-1');
+    const res = await client().settings.delete(RETRIES_KEY);
+    expect(res.message).toBe('Setting reset to default');
+    // Reset deletes the stored override; a single `get` reads only the
+    // override (not the resolved default), so it now returns null.
+    const after = await client().settings.get(RETRIES_KEY);
+    expect(after.data).toBeNull();
+  });
+});
+
+describe('settings REST — RU+reset protocol', () => {
+  const CORE_DEFAULT_LIMIT = 'core.defaultLimit';
+
+  it('resetKey re-applies the manifest default for a declared key', async () => {
+    await client().settings.set(CORE_DEFAULT_LIMIT, '999');
+    const res = await client().settings.resetKey(CORE_DEFAULT_LIMIT);
+    expect(res.data).toEqual({ key: CORE_DEFAULT_LIMIT, value: '50' });
+    expect(res.message).toBe('Setting reset to default');
+
+    const after = await client().settings.get(CORE_DEFAULT_LIMIT);
+    // The override is gone; list-effective resolves the default, single get is null.
+    expect(after.data).toBeNull();
+  });
+
+  it('resetKey is idempotent — resetting an unset key never throws', async () => {
+    const res = await client().settings.resetKey(CORE_DEFAULT_LIMIT);
+    expect(res.data.value).toBe('50');
+  });
+
+  it('reset with explicit keys clears their overrides and returns the defaults', async () => {
+    await client().settings.set(CORE_DEFAULT_LIMIT, '7');
+    const res = await client().settings.reset([CORE_DEFAULT_LIMIT]);
+    expect(res.reset).toEqual([CORE_DEFAULT_LIMIT]);
+    expect(res.settings[CORE_DEFAULT_LIMIT]).toBe('50');
+  });
+
+  it('list returns the effective value (override or manifest default) for declared keys', async () => {
+    await client().settings.set(CORE_DEFAULT_LIMIT, '12');
+    const res = await client().settings.list();
+    const row = res.data.find((entry) => entry.key === CORE_DEFAULT_LIMIT);
+    expect(row?.value).toBe('12');
+
+    await client().settings.resetKey(CORE_DEFAULT_LIMIT);
+    const after = await client().settings.list();
+    const reset = after.data.find((entry) => entry.key === CORE_DEFAULT_LIMIT);
+    expect(reset?.value).toBe('50');
+  });
+});
+
+describe('settings REST — redaction is wired but inert for core (no sensitive keys)', () => {
+  it('returns the real stored value on read for a non-sensitive key (no false redaction)', async () => {
+    // The registry declares no sensitive manifest keys, so its federated
+    // surface must return real values on read, not the redaction sentinel.
+    await client().settings.set(RETRIES_KEY, 'tok-real');
+    const got = await client().settings.get(RETRIES_KEY);
+    expect(got.data).toEqual({ key: RETRIES_KEY, value: 'tok-real' });
+
+    const many = await client().settings.getMany([RETRIES_KEY]);
+    expect(many.settings[RETRIES_KEY]).toBe('tok-real');
+  });
+});
+
+describe('settings REST — getMany Record-omitted semantics', () => {
+  it('returns every present key and OMITS missing ones (not null-filled)', async () => {
+    await client().settings.set(RETRIES_KEY, 'tok-1');
+    await client().settings.set(DELAY_KEY, 'alice');
+
+    const res = await client().settings.getMany([RETRIES_KEY, DELAY_KEY, CONCURRENCY_KEY]);
+    expect(res.settings).toEqual({ [RETRIES_KEY]: 'tok-1', [DELAY_KEY]: 'alice' });
+    expect(CONCURRENCY_KEY in res.settings).toBe(false);
+  });
+
+  it('returns {} for an empty keys array', async () => {
+    const res = await client().settings.getMany([]);
+    expect(res.settings).toEqual({});
+  });
+
+  it('returns {} when no requested key exists', async () => {
+    const res = await client().settings.getMany([RETRIES_KEY, DELAY_KEY]);
+    expect(res.settings).toEqual({});
+  });
+});
+
+describe('settings REST — setMany transactional batch write', () => {
+  it('writes every entry and returns the mirror; readable via getMany', async () => {
+    const res = await client().settings.setMany([
+      { key: RETRIES_KEY, value: 'tok-1' },
+      { key: DELAY_KEY, value: 'alice' },
+    ]);
+    expect(res.settings).toEqual({ [RETRIES_KEY]: 'tok-1', [DELAY_KEY]: 'alice' });
+
+    const read = await client().settings.getMany([RETRIES_KEY, DELAY_KEY]);
+    expect(read.settings).toEqual({ [RETRIES_KEY]: 'tok-1', [DELAY_KEY]: 'alice' });
+  });
+
+  it('returns {} for an empty entries array', async () => {
+    const res = await client().settings.setMany([]);
+    expect(res.settings).toEqual({});
+  });
+
+  it('overwrites pre-existing keys inside the batch', async () => {
+    await client().settings.set(RETRIES_KEY, 'old');
+    const res = await client().settings.setMany([
+      { key: RETRIES_KEY, value: 'new' },
+      { key: DELAY_KEY, value: 'alice' },
+    ]);
+    expect(res.settings[RETRIES_KEY]).toBe('new');
+    expect(res.settings[DELAY_KEY]).toBe('alice');
+  });
+});
+
+describe('settings REST — error mapping', () => {
+  it('delete (legacy alias) is idempotent — resetting a missing key returns 200', async () => {
+    const res = await client().settings.delete(RETRIES_KEY);
+    expect(res.message).toBe('Setting reset to default');
+  });
+
+  it('400s an unknown key at the contract boundary (single-key route)', async () => {
+    await expect(client().settings.get('not-a-real-key')).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('400s a malformed getMany payload (keys not an array)', async () => {
+    // Bypass the typed client to send an off-contract body shape.
+    const res = await request(app()).post('/settings/get-many').send({ keys: 'not-an-array' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('settings REST — auth gating (protected)', () => {
+  it('401s an anonymous caller (production identity, no principal) on read and write', async () => {
+    await withProdIdentity(async () => {
+      await expect(client().settings.get(RETRIES_KEY)).rejects.toMatchObject({ status: 401 });
+      await expect(client().settings.set(RETRIES_KEY, 'x')).rejects.toMatchObject({
+        status: 401,
+      });
+      await expect(client().settings.getMany([RETRIES_KEY])).rejects.toMatchObject({
+        status: 401,
+      });
+      await expect(
+        client().settings.setMany([{ key: RETRIES_KEY, value: 'x' }])
+      ).rejects.toMatchObject({ status: 401 });
+    });
+  });
+
+  it('401s a service account whose scopes do not cover core.settings', async () => {
+    // Mint a real service account with an unrelated scope, then present its key.
+    // In non-prod the x-api-key branch resolves a genuine service-account
+    // principal (it runs BEFORE the dev fallback), so the scope gate is the
+    // only thing standing between the caller and the data.
+    const created = await client().serviceAccounts.create({
+      name: 'scopeless-bot',
+      scopes: ['cerebrum.query'],
+    });
+    const scoped = client({ 'x-api-key': created.plaintextKey });
+    await expect(scoped.settings.get(RETRIES_KEY)).rejects.toMatchObject({ status: 401 });
+    await expect(scoped.settings.set(RETRIES_KEY, 'x')).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('lets a service account WITH the core.settings scope read and write', async () => {
+    const created = await client().serviceAccounts.create({
+      name: 'settings-bot',
+      scopes: ['core.settings'],
+    });
+    const scoped = client({ 'x-api-key': created.plaintextKey });
+
+    const setRes = await scoped.settings.set(RETRIES_KEY, 'sa-tok');
+    expect(setRes.data.value).toBe('sa-tok');
+
+    const got = await scoped.settings.get(RETRIES_KEY);
+    expect(got.data?.value).toBe('sa-tok');
+  });
+});

@@ -18,34 +18,59 @@ services:
 
   # ── BACKEND ──────────────────────────────────────────────────────
 
-  # Core pillar API (ADR-026, Phase 3 PR 3). Sibling pillars treat the
-  # core container as the authoritative pillar registry: `GET /pillars`
-  # returns a snapshot derived from the `POPS_PILLARS` env plus a
-  # synthetic `core` entry — there is no dynamic register-on-boot step.
-  # Startup ordering is enforced by `depends_on: core-api` (below) so
-  # consumers can rely on the snapshot being available when they boot.
-  # Today the container only exposes /health + /pillars; subsequent
-  # pillar splits move settings, AI Ops, and URI dispatch behind it.
-  core-api:
-    image: ghcr.io/knoxio/pops-core-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-core-api
+  # Registry pillar API (ADR-026, Phase 3 PR 3; the pillar formerly named
+  # `core`). Sibling pillars treat the registry container as the authoritative
+  # pillar registry: `GET /pillars` returns a snapshot derived from the
+  # `POPS_PILLARS` env plus a synthetic `registry` entry.
+  # `depends_on: registry-api (started)` (below) only orders container start —
+  # it no longer gates on the registry healthcheck. Every sibling pillar
+  # listens before it registers and retries registration in the background
+  # (ADR-039 E08), so a slow or unhealthy registry delays self-registration,
+  # never fleet cold-start.
+  #
+  # DUAL-ALIAS RENAME WINDOW: the service is named `registry-api` but carries
+  # the legacy `core-api` network alias on BOTH networks so a not-yet-rebuilt
+  # pillar image (whose baked-in SDK default still dials `http://core-api:3001`)
+  # keeps resolving to this same container. The `core-api` alias is removed
+  # only after every pillar (in-tree + external) has rolled over to the
+  # `registry-api` default — observed, not scheduled.
+  registry-api:
+    build:
+      context: ..
+      dockerfile: pillars/registry/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-registry:${POPS_IMAGE_TAG:-main}
+    container_name: pops-registry
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
     networks:
-      - frontend
-      - backend
+      frontend:
+        aliases:
+          - core-api
+          - registry-api
+      backend:
+        aliases:
+          - core-api
+          - registry-api
     volumes:
       - sqlite-data:/data/sqlite
     environment:
       NODE_ENV: production
       PORT: '3001'
-      CORE_SQLITE_PATH: /data/sqlite/core.db
-      CORE_SELF_BASE_URL: http://core-api:3001
-      # Cross-pillar registry — core-api hosts the authoritative
-      # `/pillars` snapshot that the shell's nginx proxy fans out to,
-      # so it MUST default to the full sibling list rather than empty.
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      # S5 rename complete: the registry's SQLite is registry.db (live file
+      # renamed out of band on capivara). This dev reference matches.
+      REGISTRY_SQLITE_PATH: /data/sqlite/registry.db
+      REGISTRY_SELF_BASE_URL: http://registry-api:3001
+      # Cross-pillar registry — registry-api hosts the authoritative
+      # `/pillars` snapshot that the shell's nginx proxy fans out to. The
+      # seed defaults to EMPTY: every pillar self-registers over the SDK
+      # transport (POPS_REGISTRY_ENABLED), so the snapshot is built from live
+      # registrations, not a static list. POPS_PILLARS stays an operator
+      # escape hatch for air-gapped/seed boots (the env.ts parser is retained).
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3001'
     healthcheck:
@@ -66,8 +91,13 @@ services:
   # item_uploaded_files, and item_fixture_connections. Subsequent PRs
   # move the tRPC routers + URI dispatcher behind it.
   inventory-api:
-    image: ghcr.io/knoxio/pops-inventory-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-inventory-api
+    build:
+      context: ..
+      dockerfile: pillars/inventory/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-inventory:${POPS_IMAGE_TAG:-main}
+    container_name: pops-inventory
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
@@ -81,12 +111,13 @@ services:
       PORT: '3002'
       INVENTORY_SQLITE_PATH: /data/sqlite/inventory.db
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3002'
     depends_on:
-      core-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -104,8 +135,13 @@ services:
   # subsequent slices (budgets, transactions, imports, tag rules, tag
   # vocabulary, URI dispatcher) move their tRPC routers behind it.
   finance-api:
-    image: ghcr.io/knoxio/pops-finance-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-finance-api
+    build:
+      context: ..
+      dockerfile: pillars/finance/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-finance:${POPS_IMAGE_TAG:-main}
+    container_name: pops-finance
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
@@ -119,12 +155,18 @@ services:
       PORT: '3004'
       FINANCE_SQLITE_PATH: /data/sqlite/finance.db
       FINANCE_SELF_BASE_URL: http://finance-api:3004
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      # AI telemetry sink — the @pops/ai-telemetry wrapper POSTs usage to
+      # `${AI_API_URL}/ai-usage/record` (internal-token gated). Read FIRST so
+      # it never collides with a self-pointing POPS_API_URL.
+      AI_API_URL: http://ai-api:3008
+      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3004'
     depends_on:
-      core-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -142,7 +184,12 @@ services:
   # subsequent slices (watchlist, watch_history, comparisons, rotation,
   # debrief, …) move their tRPC routers + URI dispatcher behind it.
   media-api:
-    image: ghcr.io/knoxio/pops-media-api:${POPS_IMAGE_TAG:-main}
+    build:
+      context: ..
+      dockerfile: pillars/media/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-media:${POPS_IMAGE_TAG:-main}
     container_name: pops-media-api
     restart: unless-stopped
     labels:
@@ -152,17 +199,22 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Local cache of downloaded poster/backdrop art (regeneratable —
+      # excluded from Litestream, see AGENTS.md's exclusion list).
+      - media-images-data:/data/media/images
     environment:
       NODE_ENV: production
       PORT: '3003'
       MEDIA_SQLITE_PATH: /data/sqlite/media.db
       MEDIA_SELF_BASE_URL: http://media-api:3003
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
+      MEDIA_IMAGES_DIR: /data/media/images
     expose:
       - '3003'
     depends_on:
-      core-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -180,8 +232,13 @@ services:
   # subsequent slices (recipes, ingredients, ingest, meal planning,
   # review queue, URI dispatcher) move their tRPC routers behind it.
   food-api:
-    image: ghcr.io/knoxio/pops-food-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-food-api
+    build:
+      context: ..
+      dockerfile: pillars/food/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-food:${POPS_IMAGE_TAG:-main}
+    container_name: pops-food
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
@@ -190,17 +247,27 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Shares the ingest media root with pops-worker-food — the worker
+      # writes downloaded media here and the API serves it back; both must
+      # resolve the SAME path or reads/writes silently miss each other.
+      - food-ingest-data:/data/food/ingest
     environment:
       NODE_ENV: production
       PORT: '3005'
       FOOD_SQLITE_PATH: /data/sqlite/food.db
       FOOD_SELF_BASE_URL: http://food-api:3005
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      # AI telemetry sink — read FIRST so it never collides with a
+      # self-pointing POPS_API_URL (see @pops/ai-telemetry report-sink).
+      AI_API_URL: http://ai-api:3008
+      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
+      FOOD_INGEST_DIR: /data/food/ingest
     expose:
       - '3005'
     depends_on:
-      core-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -218,8 +285,13 @@ services:
   # subsequent slices (list CRUD, item CRUD, bulk-add, reorder,
   # URI dispatcher) move their tRPC routers behind it.
   lists-api:
-    image: ghcr.io/knoxio/pops-lists-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-lists-api
+    build:
+      context: ..
+      dockerfile: pillars/lists/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-lists:${POPS_IMAGE_TAG:-main}
+    container_name: pops-lists
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
@@ -233,12 +305,13 @@ services:
       PORT: '3006'
       LISTS_SQLITE_PATH: /data/sqlite/lists.db
       LISTS_SELF_BASE_URL: http://lists-api:3006
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3006'
     depends_on:
-      core-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -251,13 +324,20 @@ services:
       timeout: 5s
       retries: 3
 
-  # Cerebrum pillar API (ADR-026, Phase 3 PR 2 of the cerebrum track).
-  # Hosts cerebrum.db reads/writes for the nudge_log slice today;
-  # subsequent slices (engrams, embeddings, conversations, glia,
-  # plexus, URI dispatcher) move their tRPC routers behind it.
-  cerebrum-api:
-    image: ghcr.io/knoxio/pops-cerebrum-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-cerebrum-api
+  # AI Ops pillar API (PRD-055). Hosts ai.db reads/writes for the AI-ops
+  # telemetry slice — observability, providers, model pricing, budgets,
+  # alerts — and the cross-pillar ingest `POST /ai-usage/record`
+  # (internal-token gated; the first production writer to
+  # `ai_inference_log`). nginx routes /ai-api/ here on port 3008. Built
+  # from the hand-written pillar Dockerfile.
+  ai-api:
+    build:
+      context: ..
+      dockerfile: pillars/ai/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-ai:${POPS_IMAGE_TAG:-main}
+    container_name: pops-ai
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
@@ -268,139 +348,30 @@ services:
       - sqlite-data:/data/sqlite
     environment:
       NODE_ENV: production
-      PORT: '3007'
-      CEREBRUM_SQLITE_PATH: /data/sqlite/cerebrum.db
-      CEREBRUM_SELF_BASE_URL: http://cerebrum-api:3007
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
+      PORT: '3008'
+      AI_SQLITE_PATH: /data/sqlite/ai.db
+      AI_SELF_BASE_URL: http://ai-api:3008
+      # Validates `x-pops-internal-token` on `POST /ai-usage/record`. The
+      # reporting pillars (finance/food/cerebrum) carry the same token.
+      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
-      - '3007'
+      - '3008'
     depends_on:
-      core-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3007/health').then(r=>{if(!r.ok)process.exit(1)})",
+          "fetch('http://localhost:3008/health').then(r=>{if(!r.ok)process.exit(1)})",
         ]
       interval: 30s
       timeout: 5s
       retries: 3
-
-  pops-api:
-    image: ghcr.io/knoxio/pops-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-api
-    restart: unless-stopped
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
-    networks:
-      - frontend
-      - backend
-    volumes:
-      - sqlite-data:/data/sqlite
-    secrets:
-      - notion_api_token
-      - up_bank_token
-      - up_webhook_secret
-      - finance_api_key
-      - claude_api_key
-      - tmdb_api_key
-      - thetvdb_api_key
-    environment:
-      NODE_ENV: production
-      SQLITE_PATH: /data/sqlite/pops.db
-      PORT: '3000'
-      REDIS_HOST: pops-redis
-      REDIS_PORT: '6379'
-      # Paperless-ngx integration (optional — leave unset to disable)
-      PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL:-}
-      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
-      # PRD-100 module runtime — leave empty to install everything (default behaviour).
-      # Valid apps: finance,media,inventory,cerebrum. Valid overlays: ego.
-      # (ai surfaces are mounted under /cerebrum/admin/*, not as a separate app.)
-      POPS_APPS: ${POPS_APPS:-}
-      POPS_OVERLAYS: ${POPS_OVERLAYS:-}
-      # Cross-pillar registry (ADR-026 Phase 3 PR 3). pops-api routes
-      # outbound `pops:core/...` traffic to the core-api container.
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
-    expose:
-      - '3000'
-    depends_on:
-      pops-redis:
-        condition: service_healthy
-      core-api:
-        condition: service_healthy
-      inventory-api:
-        condition: service_healthy
-      media-api:
-        condition: service_healthy
-      finance-api:
-        condition: service_healthy
-      food-api:
-        condition: service_healthy
-      lists-api:
-        condition: service_healthy
-      cerebrum-api:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)})",
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  pops-worker:
-    image: ghcr.io/knoxio/pops-api:${POPS_IMAGE_TAG:-main}
-    container_name: pops-worker
-    restart: unless-stopped
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
-    command: ['node', 'dist/worker.js']
-    networks:
-      - backend
-    volumes:
-      - sqlite-data:/data/sqlite
-    secrets:
-      - notion_api_token
-      - up_bank_token
-      - up_webhook_secret
-      - finance_api_key
-      - claude_api_key
-      - tmdb_api_key
-      - thetvdb_api_key
-    environment:
-      NODE_ENV: production
-      SQLITE_PATH: /data/sqlite/pops.db
-      REDIS_HOST: pops-redis
-      REDIS_PORT: '6379'
-      # PRD-100 — same module set as the api so worker jobs scope correctly.
-      POPS_APPS: ${POPS_APPS:-}
-      POPS_OVERLAYS: ${POPS_OVERLAYS:-}
-      POPS_PILLARS: ${POPS_PILLARS:-core:http://core-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006,cerebrum:http://cerebrum-api:3007}
-    depends_on:
-      pops-redis:
-        condition: service_healthy
-      core-api:
-        condition: service_healthy
-      inventory-api:
-        condition: service_healthy
-      media-api:
-        condition: service_healthy
-      finance-api:
-        condition: service_healthy
-      food-api:
-        condition: service_healthy
-      lists-api:
-        condition: service_healthy
-      cerebrum-api:
-        condition: service_healthy
 
   # ── FOOD INGEST WORKER ───────────────────────────────────────────
   # PRD-126 — consumes the `food.ingest` BullMQ queue produced by
@@ -409,9 +380,15 @@ services:
   # gated `food.ingest.workerComplete` mutation. Stateless with respect
   # to SQLite — all DB writes happen server-side.
   pops-worker-food:
-    image: ghcr.io/knoxio/pops-worker-food:${POPS_IMAGE_TAG:-main}
+    build:
+      context: ..
+      dockerfile: pillars/food/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-food:${POPS_IMAGE_TAG:-main}
     container_name: pops-worker-food
     restart: unless-stopped
+    command: ['node', 'dist/worker/worker.js']
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
     networks:
@@ -430,9 +407,16 @@ services:
     environment:
       NODE_ENV: production
       REDIS_URL: redis://pops-redis:6379
-      POPS_API_URL: http://pops-api:3000
+      # Results post back to the food pillar's `POST /ingest/worker-complete`
+      # (internal-token gated). The worker image's client must speak REST, not
+      # tRPC — tracked as a follow-up gap (worker source lives out-of-repo).
+      POPS_API_URL: http://food-api:3005
+      # AI telemetry sink — the worker's @pops/ai-telemetry wrapper POSTs usage
+      # to `${AI_API_URL}/ai-usage/record`. Read FIRST so it never collides with
+      # the self-pointing POPS_API_URL above.
+      AI_API_URL: http://ai-api:3008
       # POPS_API_INTERNAL_TOKEN + ANTHROPIC_API_KEY come from
-      # /run/secrets/<lowercased-name> via pops-api's env.ts convention.
+      # /run/secrets/<lowercased-name> via the internal-token convention.
       # Worker pool & rate limiting (PRD-125 contract).
       FOOD_WORKER_CONCURRENCY: ${FOOD_WORKER_CONCURRENCY:-2}
       FOOD_INGEST_TIMEOUT_SEC: ${FOOD_INGEST_TIMEOUT_SEC:-300}
@@ -451,10 +435,346 @@ services:
     depends_on:
       pops-redis:
         condition: service_healthy
-      pops-api:
+      food-api:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:9090/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Cerebrum pillar API (ADR-026). Hosts the cerebrum REST surface
+  # (/health, /pillars, nudges, query, ingest, …) on port 3007. nginx
+  # routes /cerebrum-api/ here. Built from the pillar Dockerfile (its
+  # default CMD is the API server) — shares the image the cerebrum-worker
+  # ships. No published image yet.
+  cerebrum-api:
+    build:
+      context: ..
+      dockerfile: pillars/cerebrum/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-cerebrum:${POPS_IMAGE_TAG:-main}
+    container_name: pops-cerebrum-api
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - sqlite-data:/data/sqlite
+      - cerebrum-engrams-data:/data/cerebrum/engrams
+    environment:
+      NODE_ENV: production
+      PORT: '3007'
+      REDIS_HOST: pops-redis
+      REDIS_PORT: '6379'
+      CEREBRUM_SQLITE_PATH: /data/sqlite/cerebrum.db
+      CEREBRUM_ENGRAMS_DIR: /data/cerebrum/engrams
+      CEREBRUM_SELF_BASE_URL: http://cerebrum-api:3007
+      POPS_REGISTRY_ENABLED: 'true'
+      # AI telemetry sink — read FIRST so it never collides with the
+      # self-pointing POPS_API_URL cerebrum sets elsewhere.
+      AI_API_URL: http://ai-api:3008
+      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-}
+      POPS_PILLARS: ${POPS_PILLARS:-}
+    expose:
+      - '3007'
+    depends_on:
+      pops-redis:
+        condition: service_healthy
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3007/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Cerebrum pillar worker (ADR-026). Consumes the `pops-embeddings`
+  # (dense-vector index) + `pops-curation` (engram enrichment) queues the
+  # cerebrum pillar produces into. Runs the SAME image the cerebrum-api
+  # ships, swapping the command to the worker entrypoint. Built from the
+  # pillar Dockerfile because cerebrum has no published image yet.
+  cerebrum-worker:
+    build:
+      context: ..
+      dockerfile: pillars/cerebrum/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-cerebrum:${POPS_IMAGE_TAG:-main}
+    container_name: pops-cerebrum-worker
+    restart: unless-stopped
+    command: ['node', 'dist/worker/index.js']
+    networks:
+      - backend
+    volumes:
+      - sqlite-data:/data/sqlite
+      - cerebrum-engrams-data:/data/cerebrum/engrams
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: pops-redis
+      REDIS_PORT: '6379'
+      CEREBRUM_SQLITE_PATH: /data/sqlite/cerebrum.db
+      CEREBRUM_ENGRAMS_DIR: /data/cerebrum/engrams
+      # AI telemetry sink — the worker's @pops/ai-telemetry wrapper POSTs usage
+      # to `${AI_API_URL}/ai-usage/record` (internal-token gated).
+      AI_API_URL: http://ai-api:3008
+      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      # The pillar LLM + embedding clients read these straight from the
+      # process env (no /run/secrets convention), so surface them here.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-}
+      POPS_PILLARS: ${POPS_PILLARS:-}
+    depends_on:
+      pops-redis:
+        condition: service_healthy
+
+  # Contacts pillar API — the first Rust pillar (axum + sqlx + utoipa).
+  # Authoritative entities store; nginx routes /contacts-api/ here on port
+  # 3010. The `image:` pin + the hand-written pillars/contacts/Dockerfile
+  # auto-enroll it in publish-images.yml discovery (no workflow edit). Unlike
+  # the TS pillars it self-registers via POPS_REGISTRY_ENABLED=true: its Rust
+  # registry transport POSTs the register/heartbeat/deregister envelopes to
+  # core, trying the canonical /registry/* path then the legacy
+  # /core.registry.* path on a 404.
+  contacts-api:
+    build:
+      context: ..
+      dockerfile: pillars/contacts/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-contacts:${POPS_IMAGE_TAG:-main}
+    container_name: pops-contacts
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - sqlite-data:/data/sqlite
+    environment:
+      PORT: '3010'
+      CONTACTS_SQLITE_PATH: /data/sqlite/contacts.db
+      CONTACTS_SELF_BASE_URL: http://contacts-api:3010
+      # Opt in to registry self-registration (the Rust lifecycle is gated on
+      # this, mirroring the TS SDK's POPS_REGISTRY_ENABLED).
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
+      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      POPS_PILLARS: ${POPS_PILLARS:-}
+    expose:
+      - '3010'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3010/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── LITESTREAM SIDECARS (reference / opt-in — ADR-039 workstream S11) ──
+  # Not part of the running stack: every service below carries `profiles:
+  # [litestream]`, so a plain `docker compose up` never starts them and
+  # nothing that runs in prod today changes because this section exists.
+  # Enable one explicitly with, e.g.:
+  #   docker compose --profile litestream up -d registry-litestream
+  #
+  # Each sidecar replicates its own `pops-<id>-data` volume — a NEW,
+  # per-pillar volume distinct from the `sqlite-data` volume the pillar API
+  # containers above actually write to today. No API container mounts
+  # `pops-<id>-data` yet, so these sidecars have nothing to replicate until
+  # the per-pillar volume split lands; that split is the ADR-039 rollout's
+  # hard-gated prod migration (behind a working restore drill), not this
+  # issue. This section is the in-repo half of that future wiring. The
+  # replication config for each sidecar is the canonical reference file at
+  # `infra/litestream/<id>.yml`; the replica URL comes from the deployer's
+  # environment.
+  registry-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-registry-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-registry-data:/data/sqlite:ro
+      - ./litestream/registry.yml:/etc/litestream.yml:ro
+    environment:
+      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  inventory-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-inventory-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-inventory-data:/data/sqlite:ro
+      - ./litestream/inventory.yml:/etc/litestream.yml:ro
+    environment:
+      INVENTORY_LITESTREAM_REPLICA_URL: ${INVENTORY_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  finance-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-finance-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-finance-data:/data/sqlite:ro
+      - ./litestream/finance.yml:/etc/litestream.yml:ro
+    environment:
+      FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  media-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-media-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-media-data:/data/sqlite:ro
+      - ./litestream/media.yml:/etc/litestream.yml:ro
+    environment:
+      MEDIA_LITESTREAM_REPLICA_URL: ${MEDIA_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  food-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-food-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-food-data:/data/sqlite:ro
+      - ./litestream/food.yml:/etc/litestream.yml:ro
+    environment:
+      FOOD_LITESTREAM_REPLICA_URL: ${FOOD_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  lists-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-lists-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-lists-data:/data/sqlite:ro
+      - ./litestream/lists.yml:/etc/litestream.yml:ro
+    environment:
+      LISTS_LITESTREAM_REPLICA_URL: ${LISTS_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  ai-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-ai-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-ai-data:/data/sqlite:ro
+      - ./litestream/ai.yml:/etc/litestream.yml:ro
+    environment:
+      AI_LITESTREAM_REPLICA_URL: ${AI_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  cerebrum-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-cerebrum-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-cerebrum-data:/data/sqlite:ro
+      - ./litestream/cerebrum.yml:/etc/litestream.yml:ro
+    environment:
+      CEREBRUM_LITESTREAM_REPLICA_URL: ${CEREBRUM_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  contacts-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-contacts-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-contacts-data:/data/sqlite:ro
+      - ./litestream/contacts.yml:/etc/litestream.yml:ro
+    environment:
+      CONTACTS_LITESTREAM_REPLICA_URL: ${CONTACTS_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  # Cross-pillar orchestrator (ADR-029, epics 06+07). Federates over the
+  # pillars via @pops/pillar-sdk (REST); owns no domain DB. nginx routes
+  # /orchestrator-api/ here on port 3009. Built from the app Dockerfile;
+  # no published image yet.
+  pops-orchestrator:
+    build:
+      context: ..
+      dockerfile: pillars/orchestrator/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-orchestrator:${POPS_IMAGE_TAG:-main}
+    container_name: pops-orchestrator
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: '3009'
+      ORCHESTRATOR_SELF_BASE_URL: http://pops-orchestrator:3009
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_PILLARS: ${POPS_PILLARS:-}
+    expose:
+      - '3009'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3009/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -468,6 +788,15 @@ services:
       com.centurylinklabs.watchtower.enable: 'true'
     networks:
       - frontend
+    environment:
+      # Registry-driven nginx (PRD-255). The entrypoint boot-renders the
+      # conf from this URL and the watcher subscribes to its SSE feed; on a
+      # registry outage the image falls back to the committed static conf.
+      # registry-api shares the frontend network, so the in-cluster host wins.
+      POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
+      # Surfaces the watcher's `nginx_generator_last_error_at` health state
+      # (degraded on a failed re-render). Internal-only; not in `expose`.
+      POPS_NGINX_HEALTH_PORT: '9090'
     expose:
       - '80'
     healthcheck:
@@ -554,15 +883,15 @@ services:
   # Enable with:  docker compose --profile moltbot up -d
   # Required secrets under /opt/pops/secrets/ (or wherever the secrets
   # volume points): telegram_bot_token, claude_api_key, pops_api_key.
-  # See apps/moltbot/README.md for the first-run runbook.
+  # See pillars/moltbot/README.md for the first-run runbook.
   moltbot-validator:
     image: alpine:3.20
     container_name: pops-moltbot-validator
     profiles:
       - moltbot
     volumes:
-      - ../apps/moltbot/config/config.yml:/config/config.yml:ro
-      - ../apps/moltbot/scripts/validate-config.sh:/validate.sh:ro
+      - ../pillars/moltbot/config/config.yml:/config/config.yml:ro
+      - ../pillars/moltbot/scripts/validate-config.sh:/validate.sh:ro
     secrets:
       - telegram_bot_token
       - claude_api_key
@@ -579,26 +908,35 @@ services:
     networks:
       - backend
     volumes:
-      - ../apps/moltbot/config/config.yml:/home/node/.moltbot/config.yml:ro
-      - ../apps/moltbot/skills:/home/node/.moltbot/workspace/skills:ro
+      - ../pillars/moltbot/config/config.yml:/home/node/.moltbot/config.yml:ro
+      - ../pillars/moltbot/skills:/home/node/.moltbot/workspace/skills:ro
     secrets:
       - telegram_bot_token
       - claude_api_key
       - pops_api_key
     environment:
       TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
-      POPS_API_URL: http://pops-api:3000
+      # NOTE: the moltbot skill prompts still describe the monolith's REST/tRPC
+      # paths. Repointing the hosts is necessary but not sufficient — the finance
+      # skill must drop /budgets/summary + move entities to registry-api, and the
+      # cerebrum skill must switch to the pillar REST paths. Tracked as a gap.
+      POPS_API_URL: http://cerebrum-api:3007
       POPS_API_KEY_FILE: /run/secrets/pops_api_key
       # Legacy aliases — the finance skill template still references these.
-      FINANCE_API_URL: http://pops-api:3000
+      FINANCE_API_URL: http://finance-api:3004
       FINANCE_API_KEY_FILE: /run/secrets/pops_api_key
     depends_on:
       moltbot-validator:
         condition: service_completed_successfully
 
   # ── MCP HTTP SERVER ──────────────────────────────────────────────
-  # Exposes pops data as an MCP server over HTTP (port 3002).
-  # Accessible on the local network and optionally via Cloudflare Tunnel.
+  # Exposes pops data as an MCP server over HTTP (port 3011), reachable on the
+  # local network and (optionally) via Cloudflare Tunnel. The access control is
+  # the MCP_INBOUND_TOKEN bearer check below, NOT network placement — every
+  # POST /mcp must present it. The host port stays published: the shell nginx has
+  # no /mcp route yet (it becomes registry-driven in feat/dynamic-nginx-registry),
+  # so unpublishing here would make the gateway unreachable. Moving MCP behind the
+  # shell proxy is tracked as a follow-up.
   # Requires a service-account API key provisioned in pops-api.
   # Enable with:  docker compose --profile mcp up -d
   pops-mcp:
@@ -616,21 +954,27 @@ services:
         mode: 0444
     environment:
       NODE_ENV: production
-      POPS_API_URL: http://pops-api:3000
+      # pops-mcp now reaches every pillar through the REST pillar SDK
+      # (per-pillar POPS_*_API_URL with built-in docker-network defaults); the
+      # legacy single POPS_API_URL tRPC client was removed in the 02 decommission.
       POPS_API_KEY_FILE: /run/secrets/pops_api_key
-      MCP_PORT: '3002'
+      MCP_PORT: '3011'
+      # Inbound shared secret. When set, every POST /mcp must send
+      # `Authorization: Bearer <token>`; unset leaves the route open and logs a
+      # loud warning. Provision before onboarding clients (see MCP PRD).
+      MCP_INBOUND_TOKEN: ${MCP_INBOUND_TOKEN:-}
     ports:
-      - '${MCP_BIND_ADDR:-0.0.0.0}:3002:3002'
+      - '${MCP_BIND_ADDR:-0.0.0.0}:3011:3011'
     depends_on:
-      pops-api:
-        condition: service_healthy
+      registry-api:
+        condition: service_started
     healthcheck:
       test:
         [
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3002/health').then(r=>{if(!r.ok)process.exit(1)})",
+          "fetch('http://localhost:3011/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
@@ -693,6 +1037,31 @@ volumes:
     name: pops-paperless-redis
   food-ingest-data:
     name: pops-food-ingest-data
+  cerebrum-engrams-data:
+    name: pops-cerebrum-engrams-data
+  media-images-data:
+    name: pops-media-images-data
+  # Per-pillar volumes for the litestream sidecars above (ADR-039 workstream
+  # S11). Reference/opt-in only — nothing mounts these into a pillar API
+  # container yet, see the sidecars' section comment.
+  pops-registry-data:
+    name: pops-registry-data
+  pops-inventory-data:
+    name: pops-inventory-data
+  pops-finance-data:
+    name: pops-finance-data
+  pops-media-data:
+    name: pops-media-data
+  pops-food-data:
+    name: pops-food-data
+  pops-lists-data:
+    name: pops-lists-data
+  pops-ai-data:
+    name: pops-ai-data
+  pops-cerebrum-data:
+    name: pops-cerebrum-data
+  pops-contacts-data:
+    name: pops-contacts-data
 
 secrets:
   notion_api_token:

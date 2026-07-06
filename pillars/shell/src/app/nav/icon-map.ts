@@ -1,0 +1,97 @@
+import {
+  Activity,
+  ArrowLeftRight,
+  BarChart3,
+  Bell,
+  Bookmark,
+  BookOpen,
+  Bot,
+  Building2,
+  Clock,
+  Compass,
+  CreditCard,
+  Database,
+  DollarSign,
+  Download,
+  FileText,
+  Film,
+  GitPullRequest,
+  History,
+  Layers,
+  LayoutDashboard,
+  Library,
+  ListChecks,
+  type LucideIcon,
+  MapPin,
+  MessageSquare,
+  Network,
+  Package,
+  PiggyBank,
+  Plug,
+  Search,
+  Settings,
+  ShieldCheck,
+  Shuffle,
+  Star,
+  Tag,
+  Trophy,
+  Utensils,
+  Zap,
+} from 'lucide-react';
+
+/**
+ * Shared icon map — maps Lucide icon name strings to components.
+ *
+ * Used by AppRail, PageNav, and Sidebar to resolve icon names
+ * from navConfig to actual Lucide React components.
+ *
+ * Add new icons here AND add the name to IconName in
+ * @pops/navigation/src/types.ts.
+ */
+import type { IconName } from '@pops/navigation';
+
+/**
+ * Maps every IconName to its Lucide component. The `satisfies` clause
+ * ensures that every member of the IconName union has a corresponding entry
+ * and that all values are LucideIcon components — without widening the key
+ * type to `string`.
+ */
+export const iconMap = {
+  Activity,
+  ArrowLeftRight,
+  BarChart3,
+  Bell,
+  Bookmark,
+  BookOpen,
+  Bot,
+  Building2,
+  Clock,
+  Compass,
+  CreditCard,
+  Database,
+  DollarSign,
+  Download,
+  FileText,
+  Film,
+  GitPullRequest,
+  History,
+  Layers,
+  LayoutDashboard,
+  Library,
+  ListChecks,
+  MapPin,
+  MessageSquare,
+  Network,
+  Package,
+  PiggyBank,
+  Plug,
+  Search,
+  Settings,
+  ShieldCheck,
+  Shuffle,
+  Star,
+  Tag,
+  Trophy,
+  Utensils,
+  Zap,
+} satisfies Record<IconName, LucideIcon>;

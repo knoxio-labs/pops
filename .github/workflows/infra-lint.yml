@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "infra/litestream/**"
+      - "infra/backup/**"
       - ".github/workflows/infra-lint.yml"
   pull_request:
     paths:
       - "infra/litestream/**"
+      - "infra/backup/**"
       - ".github/workflows/infra-lint.yml"
 
 jobs:
@@ -19,13 +21,14 @@ jobs:
     outputs:
       relevant: ${{ steps.filter.outputs.relevant }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
             relevant:
               - 'infra/litestream/**'
+              - 'infra/backup/**'
               - '.github/workflows/infra-lint.yml'
 
   yaml-lint:
@@ -37,8 +40,8 @@ jobs:
       - name: "Skip — no relevant changes"
         if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
         run: echo "Skipping — no infra changes"
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-      - name: Lint Litestream YAML
+      - name: Lint infra YAML (litestream + backup)
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        run: npx yaml-lint infra/litestream/*.yml
+        run: npx yaml-lint infra/litestream/*.yml infra/backup/*.yml

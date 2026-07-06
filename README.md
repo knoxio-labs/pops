@@ -1,10 +1,12 @@
 # POPS — Personal Operations System
 
-Self-hosted personal operations platform. Finance, media tracking, home inventory, and AI operations — all in one monorepo, deployed to a home server behind Cloudflare Tunnel.
+Self-hosted personal operations platform. Finance, media tracking, home inventory, food, lists, memory/retrieval, and AI operations — a monorepo of independent REST **pillars**, deployed to a home server behind Cloudflare Tunnel.
 
-SQLite is the source of truth. Claude API handles categorization and entity matching. Pops ships as Docker images on GHCR with a public `infra/docker-compose.yml`; deployers run them however they like (the knoxio home lab uses ansible + Watchtower in [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra)).
+Each pillar owns its own SQLite database (there is no shared store). Claude API handles categorization, entity matching, and retrieval. Pops ships one Docker image per pillar on GHCR with a public `infra/docker-compose.yml`; deployers run them however they like (the knoxio home lab uses ansible + Watchtower in [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra)).
 
 ## Architecture
+
+POPS is a set of independent **REST pillars**. Each pillar is a standalone service that owns its own SQLite database, serves a [ts-rest](https://ts-rest.com) contract built from zod, projects an OpenAPI document, exports a `./manifest`, and self-registers with the `registry` pillar on boot. The frontend is one SPA (the `shell` pillar) that lazy-loads per-domain feature apps, each talking to its pillar over a generated REST client. Cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar()` client.
 
 ```
 Interfaces
@@ -12,51 +14,77 @@ Interfaces
        │
   Cloudflare Tunnel + Zero Trust
        │
-Server (Docker Compose)
-  pops-shell ──── React PWA (Vite + nginx)
-  pops-api ────── tRPC API (Express + Drizzle ORM + SQLite)
-  metabase ────── Dashboards & analytics
-  moltbot ─────── Telegram AI assistant
-  paperless-ngx ─ Document archive + OCR
+pops-shell (UI pillar) ── React SPA, Vite + nginx reverse proxy (fronts every service)
        │
-Data Layer
-  SQLite ─── All domains (finance, media, inventory, AI)
-  Claude API ─ Categorization, entity matching, NL queries
+REST pillars (one SQLite DB each, ts-rest + OpenAPI, self-registering)
+  registry  :3001  registry / settings / users / service-accounts / entities / features
+  inventory :3002  items, locations, warranties, insurance
+  media     :3003  movies & TV, watchlist, watch history, Plex/Radarr/Sonarr sync
+  finance   :3004  transactions, budgets, wishlists, entities, CSV import
+  food      :3005  food domain (+ ingest worker)
+  lists     :3006  lists
+  cerebrum  :3007  memory / retrieval / ego (+ worker)
+       │
+Standalone services
+  orchestrator :3009  federated search + AI-tool registry (GET /ai/tools), owns no DB
+  mcp                 MCP gateway
+  moltbot             Telegram AI assistant
+  metabase            dashboards & analytics
+  paperless-ngx       document archive + OCR
        │
 External APIs
   Finance: Up Bank (webhooks) | ANZ/Amex/ING (CSV import)
   Media:   Plex (local + Discover) | TMDB | TheTVDB | Radarr | Sonarr
 ```
 
+### Pillars
+
+A pillar is any service registered with the `registry` pillar that exposes `/manifest.json` (ADR-035). Three kinds:
+
+- **Data pillars** — the seven services above. Each owns a SQLite DB under `pillars/<id>/src/db`, streamed to backup via `infra/litestream/<id>.yml`.
+- **Bridge pillars** — adapters that mirror an external system into the platform (e.g. the Home Assistant bridge).
+- **UI pillars** — the `shell` pillar registers as `id: 'shell'` and hosts the SPA.
+
+`registry` is the registry/platform pillar; every other pillar registers itself against it at startup.
+
+### Adding a pillar
+
+A new data pillar needs: a `pillars/<id>/` package with its own SQLite DB and zod-backed ts-rest contract, an OpenAPI snapshot under `pillars/<id>/openapi/`, a `./manifest` export that self-registers with the `registry` pillar, a unique port, a `pillars/<id>/Dockerfile`, an `infra/litestream/<id>.yml` backup config, and a compose service in `infra/docker-compose.yml` + `infra/docker-compose.dev.yml`. On the frontend, add a `pillars/<id>/app` feature app that consumes the pillar through its generated Hey API client (`openapi-ts`), and wire it into the `shell` pillar.
+
 ### Wire Format
 
-Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over-HTTP wire format. See [`WIRE-FORMAT.md`](WIRE-FORMAT.md) for the TL;DR and the canonical spec.
+Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over-HTTP wire format. See the [cross-language wire-format spec](docs/themes/federation/prds/cross-language-wire-format-spec.md) for the canonical contract.
 
 ### Docker Networks
 
-| Network          | Services                       | Purpose                      |
-| ---------------- | ------------------------------ | ---------------------------- |
-| `pops-frontend`  | pops-shell, pops-api, metabase | Public-facing                |
-| `pops-backend`   | pops-api, moltbot, tools       | Internal + SQLite access     |
-| `pops-documents` | paperless-ngx, paperless-redis | Isolated document processing |
+| Network          | Services                                                    | Purpose                      |
+| ---------------- | ----------------------------------------------------------- | ---------------------------- |
+| `pops-frontend`  | pops-shell, every pillar, orchestrator, metabase, pops-docs | Public-facing (via nginx)    |
+| `pops-backend`   | every pillar, redis, workers, orchestrator, moltbot, mcp    | Internal pillar-to-pillar    |
+| `pops-documents` | paperless-ngx, paperless-redis                              | Isolated document processing |
+
+`pops-shell` (frontend network only) is the nginx reverse proxy that fronts every public service. Pillars sit on both networks: `frontend` for browser/proxy traffic, `backend` for cross-pillar REST calls and Redis.
 
 ## Domains
 
-| Domain            | Package         | What it does                                                                                                                  |
-| ----------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Finance**       | `app-finance`   | Transactions, budgets, wishlists, entities, CSV import wizard with 6-stage entity matching + AI fallback, learned corrections |
-| **Media**         | `app-media`     | Movies & TV library, watchlist, watch history, ELO comparison arena, discovery, Plex/Radarr/Sonarr sync                       |
-| **Inventory**     | `app-inventory` | Items, hierarchical locations, connections graph, warranties, insurance reports, Paperless-ngx document linking               |
-| **AI Operations** | `app-ai`        | Usage tracking, model config, rules browser, prompt viewer, cache management                                                  |
+| Domain            | Pillar      | Frontend app            | What it does                                                                                                                      |
+| ----------------- | ----------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Finance**       | `finance`   | `pillars/finance/app`   | Transactions, budgets, wishlists, entities, CSV import wizard with multi-stage entity matching + AI fallback, learned corrections |
+| **Media**         | `media`     | `pillars/media/app`     | Movies & TV library, watchlist, watch history, ELO comparison arena, discovery, Plex/Radarr/Sonarr sync                           |
+| **Inventory**     | `inventory` | `pillars/inventory/app` | Items, hierarchical locations, connections graph, warranties, insurance reports, Paperless-ngx document linking                   |
+| **Food**          | `food`      | `pillars/food/app`      | Food domain with an ingest worker                                                                                                 |
+| **Lists**         | `lists`     | `pillars/lists/app`     | Lists                                                                                                                             |
+| **Cerebrum**      | `cerebrum`  | `pillars/cerebrum/app`  | Memory / retrieval / ego — engram storage, semantic retrieval, curation (+ worker)                                                |
+| **AI Operations** | `ai`        | `pillars/ai/app`        | Usage tracking, model config, rules browser, prompt viewer, cache management (served by the `ai` pillar)                          |
 
 ## Tech Stack
 
 | Layer      | Technology                                                                                                                                                                                                                                             |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Runtime    | Node.js 24, pnpm 10 workspaces, Turborepo                                                                                                                                                                                                              |
-| Database   | SQLite via Drizzle ORM                                                                                                                                                                                                                                 |
-| API        | tRPC (type-safe end-to-end)                                                                                                                                                                                                                            |
-| Frontend   | React, Vite, React Router, Tailwind v4, shadcn/ui (47 components)                                                                                                                                                                                      |
+| Runtime    | Node.js 24, pnpm 10 workspaces, mise per-unit tasks, cargo (Rust `contacts` pillar)                                                                                                                                                                    |
+| Database   | One SQLite DB per pillar via Drizzle ORM                                                                                                                                                                                                               |
+| API        | Per-pillar REST: zod → ts-rest contracts → OpenAPI; frontend consumes generated Hey API (`@hey-api/openapi-ts`) clients; cross-pillar via the `@pops/pillar-sdk` `pillar()` client                                                                     |
+| Frontend   | React, Vite, React Router, Tailwind v4, shadcn/ui                                                                                                                                                                                                      |
 | State      | React Query (server), Zustand (client)                                                                                                                                                                                                                 |
 | Validation | Zod                                                                                                                                                                                                                                                    |
 | AI         | Claude API (Haiku for categorization, entity matching)                                                                                                                                                                                                 |
@@ -64,31 +92,26 @@ Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over
 | Infra      | Docker Compose + Watchtower auto-rollout. Deployer-side host setup (ansible, Cloudflare Tunnel) lives in [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra) for the knoxio lab; other deployers run the same compose however they like. |
 | CI         | GitHub Actions (lint, typecheck, format, test, E2E, security)                                                                                                                                                                                          |
 
-## Status
+## Roadmap
 
-See [`docs/roadmap.md`](docs/roadmap.md) for the full implementation tracker.
-
-| Phase                                             | Status      |
-| ------------------------------------------------- | ----------- |
-| 0 — Infrastructure                                | Done        |
-| 1 — Foundation                                    | Done        |
-| 2 — Core Apps (Finance, Media, Inventory, AI Ops) | In progress |
-| 3 — AI Layer                                      | Not started |
-| 4 — Expansion Apps                                | Not started |
-| 5 — Mobile & Hardware                             | Not started |
-| 6 — Long Tail                                     | Not started |
+[`docs/roadmap.md`](docs/roadmap.md) is the current-state snapshot of the platform and the forward view, with links into each pillar's `docs/README.md`.
 
 ## Quick Start
 
+Prerequisites: [mise](https://mise.jdx.dev). Run `mise tasks` to see the current task list — the pillar-based workflow is task-driven and the exact names evolve, so check `mise.toml` rather than memorising them.
+
 ```bash
-# Prerequisites: mise (https://mise.jdx.dev)
 mise setup             # Install dependencies + tools
-mise db:init           # Initialize SQLite database
-mise db:seed           # Seed with test data
-mise dev               # Start API + shell dev servers
+mise tasks             # Discover the available dev/test/db tasks
 ```
 
-The shell runs at `localhost:5568`, the API at `localhost:3000`.
+For local development, the dev Docker Compose stack (`infra/docker-compose.dev.yml`) builds and runs every pillar plus the shell from source. Each pillar applies its own migrations on startup and owns its own SQLite file:
+
+```bash
+docker compose -f infra/docker-compose.dev.yml up -d --build
+```
+
+The shell fronts the stack via its nginx reverse proxy and routes browser traffic to each pillar by port: `registry :3001`, `inventory :3002`, `media :3003`, `finance :3004`, `food :3005`, `lists :3006`, `cerebrum :3007`, `ai :3008`, `contacts :3010`, with the orchestrator on `:3009`. Run a single pillar directly with `cd pillars/<id> && pnpm dev`.
 
 ## Development
 
@@ -96,21 +119,18 @@ See [`AGENTS.md`](AGENTS.md) for the full command reference, repo structure, dat
 
 ### Key Commands
 
+Run `mise tasks` for the authoritative list. The common cross-repo gates:
+
 ```bash
-mise dev               # All dev servers
-mise test              # All tests
 mise typecheck         # Type check all packages
 mise lint              # Lint all packages
+mise test              # All tests
 mise build             # Build all packages
 ```
 
-### Database
+### Per-pillar databases
 
-```bash
-mise db:init           # Initialize empty database
-mise db:seed           # Seed with test data
-mise db:clear          # Clear all data (preserves schema)
-```
+Each pillar owns and migrates its own SQLite database under `pillars/<id>/src/db`. There is no shared database step — a pillar provisions and migrates itself on startup (and in its own tests). Database tasks are scoped per pillar; see that pillar's `package.json` scripts and `mise tasks`.
 
 ### Quality Gate (pre-push)
 
@@ -127,7 +147,7 @@ mise lint && mise typecheck    # Must pass before every push
 Playwright with two modes: **mocked** (fast, no real DB) and **integration** (real SQLite via named env system). Named envs auto-skip external API calls — safe to run in CI without credentials.
 
 ```bash
-cd apps/pops-shell && pnpm test:e2e
+cd pillars/shell && pnpm test:e2e
 ```
 
 ## Deploy
@@ -142,7 +162,8 @@ cp .env.example .env                  # then edit: POPS_DOMAIN, image tag, watch
 # (or leave the file empty if the corresponding integration is unused).
 mkdir -p secrets && cd secrets
 for name in claude_api_key up_bank_token up_webhook_secret notion_api_token \
-            telegram_bot_token finance_api_key tmdb_api_key thetvdb_api_key \
+            telegram_bot_token finance_api_key pops_api_key pops_api_internal_token \
+            instagram_cookies tmdb_api_key thetvdb_api_key \
             paperless_secret_key paperless_admin_password; do
   : > "$name"
   chmod 600 "$name"
@@ -171,9 +192,9 @@ If the packages are public there is no setup needed.
 
 ### Secrets and rollout
 
-The compose file mounts each `secrets/<name>` file into containers via Docker file-based secrets (`/run/secrets/<name>`). All ten secret files must exist for `docker compose up` to succeed; leave a file empty if the corresponding integration is unused.
+The compose file mounts each `secrets/<name>` file into containers via Docker file-based secrets (`/run/secrets/<name>`). All thirteen secret files must exist for `docker compose up` to succeed; leave a file empty if the corresponding integration is unused.
 
-Pushing to `main` builds and publishes `ghcr.io/knoxio/pops-api` and `ghcr.io/knoxio/pops-shell` (see [`.github/workflows/publish-images.yml`](.github/workflows/publish-images.yml)). The compose file ships a Watchtower service that polls GHCR every 60s and rolls out new digests for any container labelled `com.centurylinklabs.watchtower.enable=true`.
+Pushing to `main` builds and publishes one image per pillar — `ghcr.io/knoxio/pops-<id>` (e.g. `pops-registry`, `pops-finance`, `pops-media`, …) plus `ghcr.io/knoxio/pops-shell` and `ghcr.io/knoxio/pops-docs`. The [`publish-images.yml`](.github/workflows/publish-images.yml) workflow discovers each pillar's `pillars/<id>/Dockerfile` and publishes it. The compose file ships a Watchtower service that polls GHCR every 60s and rolls out new digests for any container labelled `com.centurylinklabs.watchtower.enable=true`.
 
 Override `POPS_IMAGE_TAG` in `.env` to pin a release. Track stability over freshness by pinning a semver tag (`POPS_IMAGE_TAG=v0.1.0`, `v0.1`, or `v0`) — see the [release runbook](docs/runbooks/cut-release.md) — or pin to a specific build with `POPS_IMAGE_TAG=sha-abc1234`. Use the dev compose for local builds:
 
@@ -185,31 +206,35 @@ Server provisioning (Docker, secrets, Cloudflare Tunnel, backups, github runner)
 
 ## Repo Structure
 
-```
-apps/
-├── pops-api/              # tRPC API (Express + Drizzle ORM + SQLite)
-├── pops-shell/            # React shell (Vite + nginx)
-└── moltbot/               # Telegram bot config + finance skill
+There are exactly **two unit kinds**: `pillars/` (services) and `libs/` (shared libraries). No `apps/`, no `packages/`, no turbo, no central API monolith.
 
-packages/
-├── app-finance/           # Finance domain UI
-├── app-media/             # Media domain UI
-├── app-inventory/         # Inventory domain UI
-├── app-ai/                # AI operations UI
-├── ui/                    # Shared component library (shadcn-based)
-├── db-types/              # Drizzle schema + TypeScript types
-├── api-client/            # tRPC client setup
-├── auth/                  # Authentication utilities
+```
+pillars/                   # One pillar per folder — owns SQLite DB, ts-rest contract, OpenAPI, manifest, its app/ frontend, Dockerfile
+├── registry/              # Registry / platform: registry, settings, users, service-accounts, features
+├── inventory/  media/  finance/  food/  lists/  cerebrum/   # Domain data pillars (food + cerebrum run workers)
+├── ai/                    # AI-ops pillar (:3008): providers, usage/telemetry, ingest
+├── contacts/              # Rust pillar (:3010, axum + OpenAPI)
+├── orchestrator/          # Federated search + AI-tool registry (GET /ai/tools), owns no DB
+├── shell/                 # UI pillar: React SPA host (Vite + nginx reverse proxy), lazy-loads each pillar's app/
+├── mcp/                   # MCP gateway (binds :3011 in code via MCP_PORT)
+├── docs/                  # OpenAPI docs browser
+└── moltbot/               # Telegram bot config + skills (no Dockerfile, uses upstream image)
+
+libs/                      # Shared libraries (no service, no DB)
+├── sdk/                   # @pops/pillar-sdk — REST cross-pillar SDK (pillar() client) + manifest/registry/discovery helpers
+├── types/                 # ModuleManifest + pillar manifest types
+├── db-types/              # Shared DB type helpers
+├── module-registry/       # Module/pillar registry helpers
+├── ui/                    # @pops/ui component library (shadcn-based)
 ├── navigation/            # App navigation config
-├── widgets/               # Dashboard widgets
-├── types/                 # Cross-package type definitions
-└── test-utils/            # Test helpers
+└── overlay-ego/           # Shared ego overlay
 
 infra/
-├── docker-compose.yml     # Production service definitions (uses ghcr.io images + Watchtower)
-└── docker-compose.dev.yml # Local development with build: contexts
+├── docker-compose.yml     # Production service definitions (ghcr.io/knoxio/pops-<id> images + Watchtower)
+├── docker-compose.dev.yml # Local development with build: contexts
+└── litestream/            # One <id>.yml backup-stream config per pillar SQLite DB
 
 docs/
 ├── roadmap.md             # Implementation tracker
-└── themes/                # PRDs, epics, user stories
+└── themes/                # Cross-cutting themes + PRDs (pillar-scoped docs live under pillars/<id>/docs/)
 ```

@@ -1,0 +1,89 @@
+name: Pillar Image
+
+# Push-to-main full pillar Docker image build.
+#
+# This workflow USED to also run typecheck + test + lint + format + build +
+# codegen drift per pillar. That source-side matrix is now owned end-to-end by
+# `unit-quality.yml` (disk-discovered, maxdepth-1, a strict SUPERSET — it also
+# covers the Rust `contacts` pillar and the libs, which this file never did),
+# so keeping it here duplicated every pillar check on every PR. It has been
+# removed to kill that overlap (one `finance (pillar) — ts` lane, not two).
+#
+# What remains is the ONE thing nothing else does automatically: building the
+# FULL pillar image (not just the builder stage) on push to main. On PRs the
+# builder stage of every `pillars/*/Dockerfile` is already validated by
+# `docker-build.yml`; `publish-images.yml` does full builds but is
+# `workflow_dispatch`-only during the colocation series, so without this job
+# nothing would surface a broken full-image build when main advances. Pillars
+# are discovered from disk so adding/removing one needs no edit here.
+#
+# NOT a pull_request gate — that trigger was the source of the duplication.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pillars/**"
+      - "libs/sdk/**"
+      - "libs/types/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - ".oxfmtrc.json"
+      - ".github/workflows/pillar-quality.yml"
+
+concurrency:
+  group: pillar-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Discover pillars
+    runs-on: ubuntu-latest
+    outputs:
+      pillars: ${{ steps.list.outputs.pillars }}
+      count: ${{ steps.list.outputs.count }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: list
+        name: Enumerate pillars from disk
+        # A pillar is any `pillars/<x>` carrying a package.json. Derived from
+        # disk so adding or removing a pillar needs no workflow edit. Matches
+        # the original discover scope exactly — this de-dup PR only drops the
+        # redundant per-pillar source matrix + the PR trigger, it does not
+        # widen the set of images built on push.
+        run: |
+          set -euo pipefail
+          json=$(find pillars -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
+            | sort \
+            | while read -r dir; do
+                if [ -f "$dir/package.json" ]; then basename "$dir"; fi
+              done \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          count=$(echo "$json" | jq 'length')
+          echo "pillars=$json" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Discovered $count pillar image(s):"
+          echo "$json" | jq .
+
+  docker:
+    name: ${{ matrix.pillar }} pillar — Docker image builds
+    needs: [discover]
+    if: needs.discover.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pillar: ${{ fromJson(needs.discover.outputs.pillars) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build pillar image (full)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: pillars/${{ matrix.pillar }}/Dockerfile
+          push: false
+          tags: pops-${{ matrix.pillar }}:${{ github.sha }}

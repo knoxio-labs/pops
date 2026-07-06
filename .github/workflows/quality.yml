@@ -1,6 +1,15 @@
 name: Quality
 
-# Workspace-wide lint / format / module-boundaries / duplication gate.
+# Lint / format / module-boundaries gate, scoped to the units a PR actually
+# touches. On `pull_request` these run over `scripts/` (root-owned tooling,
+# never a unit) plus whatever `pillars/*` + `libs/*` dirs `_discover-units.yml`
+# reports as changed for this head — so an unrelated pillar's pre-existing
+# violation no longer reds out a sibling PR that never touched it (E31). On
+# `push` to `main` (a post-merge commit) they keep the ORIGINAL unscoped
+# full-tree sweep as a safety net: a same-ref diff against `origin/main` is
+# degenerate there (see the `scope` job), and main must never quietly
+# accumulate drift the per-PR scoping missed.
+#
 # Docs-only PRs (paths under `docs/**` or any `*.md`) cannot break code
 # quality, so the whole workflow is excluded from those changes. GitHub
 # rulesets with `strict_required_status_checks_policy: false` treat a
@@ -19,52 +28,353 @@ on:
       - "**/*.md"
 
 jobs:
+  discover:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/_discover-units.yml
+
+  scope:
+    name: Determine changed-unit scope
+    needs: discover
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.compute.outputs.dirs }}
+    steps:
+      - id: compute
+        name: Changed unit dirs (PR), or "." for a full-tree sweep (push to main)
+        env:
+          CHANGED: ${{ needs.discover.outputs.changed }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            dirs=$(echo "$CHANGED" | jq -r '(["scripts"] + [.[].dir]) | join(" ")')
+          else
+            dirs="."
+          fi
+          echo "dirs=$dirs" >> "$GITHUB_OUTPUT"
+          echo "Scope: $dirs"
+
   lint:
     name: Lint
+    needs: scope
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - name: Lint
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm lint
+          else
+            pnpm exec oxlint --type-aware $dirs
+          fi
 
   format:
     name: Format
+    needs: scope
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
+      - name: Format check
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm format:check
+          else
+            pnpm exec oxfmt --check $dirs
+          fi
 
   boundaries:
     name: Module boundaries
+    needs: scope
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint:boundaries:verify
-      - run: pnpm lint:boundaries
+      - name: Module boundaries
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm lint:boundaries
+          else
+            pnpm exec depcruise --config .dependency-cruiser.cjs --ignore-known --output-type err $dirs
+          fi
+
+  scripts-tests:
+    name: Scripts tests
+    # The root `vitest.config.ts` includes only `scripts/**/*.test.ts` — the
+    # root-owned CI guards / extractability checks under `scripts/`. They have
+    # no per-unit mise.toml and so are invisible to the `run-all` fan-out and to
+    # the Unit/App/FE Quality matrices; without this job they only ran if a human
+    # typed `vitest` locally. This job lands in the Quality workflow, which the
+    # required `CI Gate` aggregator observes, so the scripts suite is gated.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run scripts/
+
+  exports:
+    name: Exports discipline
+    # NON-required gate (P6-T02 / ISO-EXPORTS): proves every unit's
+    # exports/files whitelist is self-consistent — every exports/main/types
+    # target exists and falls under `files`. The compiled units' targets live
+    # in `dist/`, so it builds before checking. Intentionally NOT added to the
+    # required-checks ruleset; it reports a result without blocking merges while
+    # the federation isolation phase lands.
+    #
+    # On a PR this only builds + checks the CHANGED units — each already owns
+    # its own `tsconfig.build.json` sub-graph (referencing just its transitive
+    # lib deps, e.g. `pillars/finance/tsconfig.build.json` -> ai-telemetry/sdk/
+    # settings/types), so `tsc -b` accepts several as separate project roots in
+    # one invocation without touching the other pillars. `push` to `main` keeps
+    # building the full root `tsconfig.build.json` graph + checking every unit,
+    # since exports/files self-consistency is a whole-tree invariant and main
+    # must never silently accumulate a break the per-PR scoping missed.
+    # See docs/plans/repo-federation/04-isolation-enforcement.md §3.
+    needs: scope
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Gate self-test (proves the gate catches broken manifests)
+        run: node scripts/check-exports.mjs --self-test
+      - name: Build (exports/main/types targets resolve to compiled dist/)
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm build
+          else
+            projects=""
+            for d in $dirs; do
+              [ -f "$d/tsconfig.build.json" ] && projects="$projects $d/tsconfig.build.json"
+            done
+            if [ -z "$projects" ]; then
+              echo "no changed unit owns a tsconfig.build.json — nothing to build"
+            else
+              pnpm exec tsc -b $projects
+            fi
+          fi
+      - name: Exports/files whitelist self-consistency
+        run: |
+          set -euo pipefail
+          dirs="${{ needs.scope.outputs.dirs }}"
+          if [ "$dirs" = "." ]; then
+            pnpm exports:check
+          else
+            node scripts/check-exports.mjs --dirs="$(echo "$dirs" | tr ' ' ',')"
+          fi
 
   duplication:
     name: Duplication check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
-      - run: npx jscpd@^4 --threshold 5 --min-lines 8 --min-tokens 70 --ignore "**/*.test.{ts,tsx},**/*.spec.{ts,tsx},**/dist/**,**/node_modules/**,**/*.snap,**/*.d.ts,**/generated.ts,**/db/schema.ts,**/db/seeder.ts" --reporters "console" --exitCode 0 .
+      # The lake-migration deleted the `apps/pops-api` monolith and the
+      # per-pillar `*-db`/`*-contract` packages, so the migration-tombstone
+      # ignore entries that suppressed double-counting of lifted code are
+      # gone. The pillars under `pillars/*` are now the single source of
+      # truth with no surviving duplicate copy to penalise.
+      #
+      # `**/src/*-api/**` excludes the per-app Hey API clients generated by
+      # `openapi-ts` (`client.gen.ts`/`sdk.gen.ts`/`types.gen.ts` plus the
+      # `client/` + `core/` runtime under each `<pillar>-api/` dir). That
+      # boilerplate is identical across every consumer by construction —
+      # counting it as duplication penalises codegen, not authored code,
+      # the same reason `**/generated.ts` is already ignored.
+      # Fails when TOTAL duplication exceeds `--threshold` (jscpd v4 gates on
+      # the aggregate, not per-format). Current tree sits at 2.33% total
+      # (measured 2026-06-23 with these exact flags), so threshold 5 is a real
+      # gate that is green now with headroom. NO `--exitCode 0` override — that
+      # would pin the exit to 0 and make this required check unable to fail.
+      - run: npx jscpd@^4 --threshold 5 --min-lines 8 --min-tokens 70 --ignore "**/*.test.{ts,tsx},**/*.spec.{ts,tsx},**/dist/**,**/node_modules/**,**/*.snap,**/*.d.ts,**/generated.ts,**/src/*-api/**,**/db/schema.ts,**/db/seeder.ts" --reporters "console" .
+
+  # --- Extractability fast gates (EX-1 / EX-3) -------------------------------
+  # NON-REQUIRED by design: these jobs are deliberately kept out of the branch
+  # ruleset's required-checks set during the federation migration. They surface
+  # phantom-dependency and baseline-growth regressions as signal without
+  # blocking merges while units are still being normalised. Promote to required
+  # once the tree is clean. EX-2 (full sandbox) is heavy and runs nightly, not
+  # here.
+  extractability-deps:
+    name: Extractability — declared deps (EX-1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm extractability:deps:self-test
+      - run: pnpm extractability:deps
+
+  extractability-baseline:
+    name: Extractability — baseline monotonicity (EX-3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm extractability:baseline
+
+  bundle-map-coverage:
+    name: Bundle-map coverage (RD-10)
+    # NON-required gate (P7-T08 / RD-10): asserts every in-repo
+    # `pillars/*/app` package is referenced by the shell's static
+    # `bundle-map.tsx`, so adding a pillar app and forgetting its entry fails
+    # loudly here instead of silently shipping no UI. ADR-002 keeps the bundle
+    # map static (one optimized SPA importing the published `@pops/app-*`
+    # contract); this guard keeps it complete. Intentionally NOT in the
+    # required-checks ruleset while the federation phase lands. The guard reads
+    # the source tree directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See docs/plans/repo-federation/06-registry-decoupling.md
+    # RD-10.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Gate self-test (proves the guard catches a missing pillar app)
+        run: node scripts/check-bundle-map-coverage.mjs --self-test
+      - name: Every pillar app is referenced by the shell bundle map
+        run: node scripts/check-bundle-map-coverage.mjs
+
+  tailwind-source-coverage:
+    name: Tailwind @source coverage
+    # NON-required gate: asserts every `@source` glob in the single Tailwind
+    # theme entry (libs/ui/src/theme/globals.css) matches real files, and that
+    # no className-bearing UI file falls outside those globs. Tailwind v4 never
+    # errors on an empty `@source` glob, so the pillars/libs rename silently
+    # voided the old `apps/*`/`packages/*` globs and collapsed the UI with no
+    # build error. This guard makes that class of rot loud. It reads the source
+    # tree directly and pulls in no third-party deps, so it skips `pnpm install`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Gate self-test (proves the guard catches a stale/empty glob)
+        run: node scripts/check-tailwind-source-coverage.mjs --self-test
+      - name: Every @source glob matches files and every UI file is covered
+        run: node scripts/check-tailwind-source-coverage.mjs
+
+  vendored-contracts:
+    name: Vendored contract drift (ADR-033)
+    # A consumer that vendors a producer pillar's OpenAPI snapshot (because the
+    # producer has no npm package to depend on — e.g. the Rust `contacts`
+    # pillar) must keep its copy byte-identical to the canonical source, or the
+    # generated client silently lags the contract. This guard reads the source
+    # tree directly and pulls in no third-party deps, so it skips
+    # `pnpm install`. See scripts/ci/check-vendored-contracts.mjs and ADR-033.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Gate self-test (proves the guard catches drift + orphan)
+        run: node scripts/ci/check-vendored-contracts.mjs --self-test
+      - name: Every vendored contract matches its canonical source
+        run: node scripts/ci/check-vendored-contracts.mjs
+
+  cross-pillar-clients:
+    name: Cross-pillar generated FE clients (ADR-040)
+    # Per-consumer generated FE clients (a consumer app's own Hey API client
+    # for a producer pillar's contract, e.g. food/app <- lists, finance/app
+    # <- contacts) are a sanctioned but easily-forgotten seam: nothing forces
+    # a regenerate when the producer's contract changes, so the committed
+    # client can silently outrun it (see ADR-040 and AGENTS.md "Cross-pillar
+    # generated FE clients"). This regenerates every such client from its
+    # producer's current `./openapi` export and fails on any diff. The
+    # `contacts` leg additionally vendors its OpenAPI snapshot (ADR-033); that
+    # copy's own drift is covered separately by the `vendored-contracts` job
+    # above — this job only re-runs codegen against whatever is committed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Regenerate every per-consumer cross-pillar client
+        run: |
+          pnpm --filter @pops/app-food generate:lists-client
+          pnpm --filter @pops/app-finance generate:contacts-client
+      - name: Verify generated clients are up to date
+        run: |
+          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api; then
+            echo ""
+            echo "::error::A cross-pillar generated FE client is out of date."
+            echo "Run the owning app's generate:*-client script locally and commit the result."
+            exit 1
+          fi
+
+  escape-hatches:
+    name: Escape-hatch ratchet
+    # Type-safety escape hatches (`as any`, `as unknown as`, `as never`,
+    # `eslint-disable`) in hand-written source may only ever shrink against the
+    # committed baseline (.escape-hatch-baseline.json) — a new one fails here.
+    # A `progress as never` once laundered a gutted DTO past tsc and crashed the
+    # finance import wizard at runtime; this gate keeps that class of regression
+    # from landing. It reads the source tree directly and pulls in no
+    # third-party deps, so it skips `pnpm install`. See
+    # scripts/check-escape-hatches.mjs. `@ts-ignore`/`@ts-nocheck` are blocked
+    # separately by the oxlint `ban-ts-comment` rule.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Gate self-test (proves the guard catches a new hatch)
+        run: node scripts/check-escape-hatches.mjs --self-test
+      - name: No new type-safety escape hatches vs baseline
+        run: node scripts/check-escape-hatches.mjs

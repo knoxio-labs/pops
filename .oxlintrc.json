@@ -93,7 +93,7 @@
     "unicorn/prefer-event-target": "off",
     "unicorn/prefer-add-event-listener": "off",
     "unicorn/prefer-native-coercion-functions": "off",
-    "unicorn/no-abusive-eslint-disable": "off",
+    "unicorn/no-abusive-eslint-disable": "error",
     "unicorn/numeric-separators-style": "off",
     "unicorn/error-message": "off",
     "typescript/no-explicit-any": "error",
@@ -176,7 +176,7 @@
     "typescript/no-non-null-asserted-nullish-coalescing": "off",
     "typescript/prefer-literal-enum-member": "off",
     "typescript/consistent-type-assertions": "off",
-    "typescript/ban-ts-comment": "off",
+    "typescript/ban-ts-comment": "error",
     "typescript/no-empty-interface": "off",
     "typescript/no-namespace": "off",
     "typescript/no-useless-default-assignment": "off",
@@ -213,23 +213,12 @@
   },
   "overrides": [
     {
-      "files": ["apps/pops-api/src/**/*.{ts,tsx}"],
-      "rules": {
-        "typescript/explicit-function-return-type": [
-          "error",
-          {
-            "allowExpressions": true,
-            "allowTypedFunctionExpressions": true,
-            "allowHigherOrderFunctions": true
-          }
-        ]
-      }
-    },
-    {
       "files": [
-        "apps/pops-api/src/**/router.ts",
-        "apps/pops-api/src/**/router.tsx",
-        "apps/pops-api/src/trpc.ts"
+        "pillars/shell/src/**/*.{ts,tsx}",
+        "libs/ui/src/**/*.{ts,tsx}",
+        "pillars/*/app/src/**/*.{ts,tsx}",
+        "libs/overlay-*/src/**/*.{ts,tsx}",
+        "libs/navigation/src/**/*.{ts,tsx}"
       ],
       "rules": {
         "typescript/explicit-module-boundary-types": "off"
@@ -237,45 +226,22 @@
     },
     {
       "files": [
-        "apps/pops-shell/src/**/*.{ts,tsx}",
-        "packages/ui/src/**/*.{ts,tsx}",
-        "packages/app-*/src/**/*.{ts,tsx}",
-        "packages/overlay-*/src/**/*.{ts,tsx}",
-        "packages/navigation/src/**/*.{ts,tsx}"
-      ],
-      "rules": {
-        "typescript/explicit-module-boundary-types": "off"
-      }
-    },
-    {
-      "files": [
-        "apps/pops-shell/src/**/*.{ts,tsx}",
-        "packages/ui/src/**/*.{ts,tsx}",
-        "packages/app-*/src/**/*.{ts,tsx}",
-        "packages/overlay-*/src/**/*.{ts,tsx}",
-        "packages/navigation/src/**/*.{ts,tsx}"
+        "pillars/shell/src/**/*.{ts,tsx}",
+        "libs/ui/src/**/*.{ts,tsx}",
+        "pillars/*/app/src/**/*.{ts,tsx}",
+        "libs/overlay-*/src/**/*.{ts,tsx}",
+        "libs/navigation/src/**/*.{ts,tsx}"
       ],
       "rules": {
         "typescript/explicit-function-return-type": "off"
       }
     },
     {
-      "files": ["packages/ui/src/**/*.{ts,tsx}"],
+      "files": ["libs/ui/src/**/*.{ts,tsx}"],
       "rules": {
         "jsx-a11y/alt-text": "warn",
         "jsx-a11y/aria-role": "warn",
         "jsx-a11y/click-events-have-key-events": "warn"
-      }
-    },
-    {
-      "files": ["apps/pops-api/src/db/schema.ts", "apps/pops-api/src/db/seeder.ts"],
-      "rules": {
-        "max-lines": "off",
-        "max-lines-per-function": "off",
-        "complexity": "off",
-        "max-statements": "off",
-        "max-params": "off",
-        "max-depth": "off"
       }
     },
     {
@@ -319,9 +285,8 @@
     },
     {
       "files": [
-        "apps/pops-api/scripts/**/*.ts",
-        "apps/pops-shell/e2e/**/*.ts",
-        "packages/app-*/scripts/**/*.ts",
+        "pillars/shell/e2e/**/*.ts",
+        "pillars/*/app/scripts/**/*.ts",
         "services/*/src/scripts/**/*.ts",
         "scripts/**/*.{ts,mjs}"
       ],
@@ -336,7 +301,52 @@
       }
     },
     {
-      "files": ["packages/module-registry/src/generated.ts"],
+      "files": ["libs/module-registry/src/generated.ts"],
+      "rules": {
+        "max-lines": "off"
+      }
+    },
+    {
+      "files": ["pillars/*/src/contract/*.generated.ts"],
+      "rules": {
+        "max-lines": "off"
+      }
+    },
+    {
+      "files": ["pillars/*/src/api/rest/*-handlers.ts"],
+      "rules": {
+        "max-lines-per-function": "off",
+        "typescript/explicit-module-boundary-types": "off",
+        "typescript/explicit-function-return-type": "off"
+      }
+    },
+    {
+      "files": [
+        "pillars/*/app/src/**/*.gen.ts",
+        "pillars/*/app/src/*-api/**/*.{ts,tsx}",
+        "libs/overlay-*/src/**/*.gen.ts",
+        "libs/overlay-*/src/*-api/**/*.{ts,tsx}",
+        "pillars/shell/src/**/*.gen.ts",
+        "pillars/shell/src/*-api/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off",
+        "max-statements": "off",
+        "complexity": "off",
+        "max-depth": "off",
+        "no-underscore-dangle": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off",
+        "typescript/no-misused-spread": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/explicit-module-boundary-types": "off",
+        "typescript/explicit-function-return-type": "off",
+        "unicorn/no-array-sort": "off"
+      }
+    },
+    {
+      "files": ["libs/module-registry/scripts/known-modules.ts"],
       "rules": {
         "max-lines": "off"
       }
@@ -363,7 +373,6 @@
     "coverage",
     "playwright-report",
     "test-results",
-    ".turbo",
     "storybook-static",
     "**/*.config.js",
     "**/*.config.mjs",

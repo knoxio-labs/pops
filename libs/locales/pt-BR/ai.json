@@ -1,0 +1,23 @@
+{
+  "title": "IA",
+  "observability": "Observabilidade de IA",
+  "observability.description": "Monitorar uso de IA, custos, latência e saúde dos provedores",
+  "observability.failedToLoad": "Falha ao carregar dados de observabilidade",
+  "observability.breakdowns": "Detalhamentos",
+  "observability.provider": "Provedor",
+  "observability.model": "Modelo",
+  "observability.operation": "Operação",
+  "observability.domain": "Domínio",
+
+  "kpi.totalCost": "Custo Total",
+  "kpi.totalCalls": "Total de Chamadas",
+  "kpi.cacheHitRate": "Taxa de Acerto do Cache",
+  "kpi.errorRate": "Taxa de Erro",
+  "kpi.callsServedFromCache": "Chamadas servidas do cache",
+  "kpi.errorsTimeoutsBlocked": "Erros, timeouts, bloqueados",
+  "kpi.totalCallsDesc": "{{count}} tokens",
+  "kpi.totalCostDesc": "{{count}} chamadas totais",
+
+  "dateFilter.startDate": "Data inicial",
+  "dateFilter.endDate": "Data final"
+}

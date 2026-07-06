@@ -1,149 +1,100 @@
 # Documentation Standards
 
-Rules and conventions for all documentation in `docs/`. Every doc must follow these standards.
+Rules and conventions for **all** documentation in `docs/` and in each pillar's `docs/`. Every doc MUST follow these standards.
+
+`AGENTS.md` (repo root) is the single source of truth for repo conventions; the root `CLAUDE.md` points there. This file governs docs only.
+
+## Hard Rules — Do Not Violate
+
+| #   | Rule                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **No ticket, no work.** Every piece of implementation MUST trace back to testable acceptance criteria. No exceptions — not for tooling, not for "quick fixes", not for "obvious" changes. The chain is non-negotiable: **PRD → testable acceptance criteria → Implementation**. |
+| 2   | Acceptance criteria live **INLINE** in each PRD under `## Acceptance Criteria` as testable checkboxes. There is NO separate user-story doc type. This is the unit of completion.                                                                                                |
+| 3   | Every theme has **at least one** PRD. Every PRD has **testable** acceptance criteria. If work has none, write them **before** starting.                                                                                                                                         |
+| 4   | A PRD must include **everything** an agent needs to implement it (including its acceptance criteria). Each file is self-contained enough that an agent works from it + **at most one** parent doc. Keep cross-references minimal — no chasing a chain of docs.                  |
+| 5   | **IDs are slug-only.** A doc's id is its slug + its path. NO PRD numbers, no counter, nothing to insert or renumber. Slugs are **lowercase, hyphen-separated, descriptive**.                                                                                                    |
+| 6   | **ADRs keep `adr-NNN` numbering** — this sequence is FROZEN and append-only. New ADRs get the next number; existing numbers **NEVER** change.                                                                                                                                   |
+| 7   | **Theme folders are slug-only** — NO numeric prefix.                                                                                                                                                                                                                            |
+| 8   | Docs belonging to exactly **ONE** pillar live INSIDE that pillar under `pillars/<id>/docs/`. The central `docs/` tree holds **ONLY** cross-cutting material.                                                                                                                    |
+| 9   | An ADR moves into a pillar **only** when referenced by that pillar alone. If a second pillar references it, promote it back to central `docs/architecture/`.                                                                                                                    |
+| 10  | The **roadmap** (`docs/roadmap.md`) is the single source of truth for status across all pillars.                                                                                                                                                                                |
+| 11  | On completing work, update **all four** status places (see [Status Sync](#keeping-docs-in-sync)). Status flows upward; never leave a place stale.                                                                                                                               |
+| 12  | **Write as if no code exists** — every doc reads "build this", never "we migrated from X" / "this was refactored". No meta-commentary about the doc itself. No filler, no preamble.                                                                                             |
+| 13  | **Keep files small.** A PRD over 3 pages MUST be narrowed in scope or split into multiple PRDs.                                                                                                                                                                                 |
 
 ## Doc Types
 
-POPS documentation uses five doc types arranged in a hierarchy:
+Hierarchy: **Theme → PRD**, with **ADR** cross-cutting (referenced by any level). A theme groups its PRDs directly — there is no intermediate grouping doc.
 
-```
-Theme → Epic → PRD → User Story
-                         ↑
-         ADR (cross-cutting, referenced by any level)
-```
-
-### Theme (`themes/<name>/README.md`)
-
-Strategic overview of a domain. Defines _what_ and _why_ at a high level.
-
-- ~1 page
-- Lists epics with status
-- Key decisions, risks, out of scope
-- No implementation details
-- Template: [\_templates/theme-readme.md](_templates/theme-readme.md)
-
-### Epic (`themes/<name>/epics/NN-slug.md`)
-
-A buildable chunk of work. Defines scope, coordination, and what PRDs fall under it.
-
-- ~1 page
-- Lists PRDs with dependencies and parallelisation notes
-- Scope boundaries (what's in, what's out)
-- No detailed specs — that's the PRD's job
-- Template: [\_templates/epic.md](_templates/epic.md)
-
-### PRD (`themes/<name>/prds/NNN-slug/README.md`)
-
-Detailed spec for a feature or deliverable. Enough detail to build from.
-
-- ~2-3 pages max
-- Data model, API surface, business rules, edge cases
-- General direction on how to build (not step-by-step instructions)
-- Lists user stories with parallelisation notes
-- Template: [\_templates/prd.md](_templates/prd.md)
-
-### User Story (`themes/<name>/prds/NNN-slug/us-NN-slug.md`)
-
-Single implementable unit. An AI agent or developer picks up one file and builds it.
-
-- ~0.5 page
-- One clear deliverable
-- Acceptance criteria (testable)
-- References parent PRD for context
-- Designed to be parallelisable — minimise dependencies between stories
-- Template: [\_templates/us.md](_templates/us.md)
-
-### ADR (`architecture/adr-NNN-slug.md`)
-
-Architecture Decision Record. Documents a technical choice and why it was made.
-
-- ~1 page
-- Context, options considered, decision, consequences
-- Referenced by themes/epics/PRDs where relevant
-- Template: [\_templates/adr.md](_templates/adr.md)
+| Type      | Location                       | Purpose                                                           | Size & contents                                                                                                                                                               | Template                     |
+| --------- | ------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| **Theme** | `themes/<slug>/README.md`      | Strategic overview of a domain — _what_ and _why_ at a high level | ~1 page. Lists its PRDs with status; key decisions, risks, out of scope. **No implementation details.**                                                                       | `_templates/theme-readme.md` |
+| **PRD**   | `themes/<slug>/prds/<slug>.md` | Detailed spec for a feature/deliverable — enough to build from    | ~2-3 pages max. Data model, API surface, business rules, edge cases; general direction on _how_ to build (not step-by-step); `## Acceptance Criteria` as testable checkboxes. | `_templates/prd.md`          |
+| **ADR**   | `architecture/adr-NNN-slug.md` | Architecture Decision Record — a technical choice and why         | ~1 page. Context, options considered, decision, consequences; referenced by themes/PRDs where relevant.                                                                       | `_templates/adr.md`          |
 
 ## Folder Structure
 
 ```
-docs/
+docs/                                ← cross-cutting material ONLY
 ├── README.md                        ← start here
 ├── CLAUDE.md                        ← this file
 ├── vision.md
 ├── roadmap.md
 ├── ideas/
 ├── _templates/
+├── runbooks/                        ← e.g. shared cut-release runbook
 ├── architecture/
-│   └── adr-NNN-slug.md
+│   └── adr-NNN-slug.md              ← ADRs referenced by >1 pillar
 └── themes/
     ├── README.md                    ← theme index
-    └── NN-<name>/
-        ├── README.md                ← theme overview
-        ├── epics/
-        │   └── NN-slug.md
-        └── prds/
-            └── NNN-slug/
-                ├── README.md        ← PRD
-                ├── us-01-slug.md
-                └── us-02-slug.md
+    ├── platform/                    ← the three central themes
+    │   ├── README.md                ← theme overview
+    │   └── prds/<slug>.md           ← PRD (criteria inline)
+    ├── foundation/ …
+    └── federation/ …
 ```
+
+The central themes are **`platform`, `foundation`, `federation`**. The central `docs/` tree holds only cross-cutting material: those three themes, ADRs referenced by more than one pillar, the shared `cut-release` runbook, templates, `vision.md`, and `roadmap.md`.
+
+### Pillar-Scoped Docs
+
+Docs belonging to exactly one pillar mirror the central layout inside the pillar:
+
+```
+pillars/<id>/
+├── README.md                        ← technical package readme (@pops/<id>) — NOT a theme doc
+└── docs/
+    ├── README.md                    ← domain/theme overview
+    ├── prds/<slug>.md               ← PRD (criteria inline)
+    ├── architecture/adr-NNN-slug.md ← ADRs scoped to this pillar only
+    ├── runbooks/
+    └── ideas/                       ← when applicable
+```
+
+- A pillar's `docs/README.md` is the **domain overview**. The package `README.md` (`# @pops/<id>`) is the **technical** readme and stays separate.
+- Cross-pillar references use relative paths between pillar docs (e.g. `../../../<other>/docs/...`). References to central docs reach back into `docs/` (e.g. `../../../../docs/architecture/adr-NNN-slug.md`).
 
 ## Naming Conventions
 
-| Type         | Pattern                       | Example                                               |
-| ------------ | ----------------------------- | ----------------------------------------------------- |
-| Theme folder | `NN-<name>/`                  | `00-platform/`, `01-foundation/`, `03-media/`         |
-| Epic file    | `NN-slug.md`                  | `00-data-model.md`, `03-connections-graph.md`         |
-| PRD folder   | `NNN-slug/`                   | `007-app-theme-colour-propagation/`, `015-plex-sync/` |
-| PRD file     | `README.md` inside PRD folder | `prds/007-app-theme-colour-propagation/README.md`     |
-| User story   | `us-NN-slug.md`               | `us-01-search-movies.md`, `us-03-poster-cache.md`     |
-| ADR          | `adr-NNN-slug.md`             | `adr-006-tailwind-only-styling.md`                    |
+| Type         | Pattern           | Example                                           |
+| ------------ | ----------------- | ------------------------------------------------- |
+| Theme folder | `<slug>/`         | `platform/`, `foundation/`, `federation/`         |
+| PRD file     | `<slug>.md`       | `app-theme-colour-propagation.md`, `plex-sync.md` |
+| ADR          | `adr-NNN-slug.md` | `adr-006-tailwind-only-styling.md`                |
 
-- Epic numbers are sequential within their theme (restart per theme)
-- US numbers are sequential within their PRD (restart per PRD)
-- **PRD numbers are global and append-only** — new PRDs get the next number regardless of which theme they belong to. Never insert, never renumber. The folder path provides theme/epic context, the number is just a unique ID
-- Slugs are lowercase, hyphen-separated, descriptive
-
-## The Ticket Rule
-
-**No ticket, no work.** Every piece of implementation must trace back to testable acceptance criteria. No exceptions — not for tooling, not for "quick fixes", not for "obvious" changes.
-
-The chain is non-negotiable:
-
-```
-Epic → PRD → testable acceptance criteria → Implementation
-```
-
-Acceptance criteria can live in one of two places:
-
-1. **User Story files (`us-NN-slug.md`)** — the original pattern. Suitable when a PRD contains multiple independently-buildable units that benefit from being parallelisable across agents/developers.
-2. **Inline in the PRD under `## Acceptance Criteria`** — suitable when the PRD is narrow enough to be a single buildable unit, and the maintainer prefers more granular PRDs over the PRD/US split.
-
-A theme chooses one pattern and applies it consistently. The choice is recorded in the theme's `## Key Decisions` table as a "Doc protocol" entry.
-
-- Every epic must have at least one PRD
-- Every PRD must have testable acceptance criteria (in a US file OR inline)
-- If work doesn't have acceptance criteria, write them before starting
+Pick a clear, descriptive slug; the folder path supplies theme/pillar context. (ID and numbering hard rules: see [Hard Rules](#hard-rules--do-not-violate) #5–#7.)
 
 ## Writing Rules
 
-### General
+**General** (hard rules #12–#13 apply):
 
-- Write as if no code exists. Every doc should read as "build this", never "we migrated from X" or "this was refactored"
-- No meta-commentary about the document itself ("This document describes...", "These are product descriptions...")
-- No filler, no preamble. Lead with the content
-- Use tables over prose for structured information
-- Keep files small. If a PRD exceeds 3 pages, split into more user stories or break into multiple PRDs
+- Use **tables over prose** for structured information.
 
-### For AI Agent Context
+**For AI agent context** (hard rule #4 applies):
 
-- Each file should be self-contained enough that an agent can work with it + at most one parent doc for context
-- User stories must include everything an agent needs to implement them — don't rely on the agent reading the full PRD
-- Reference parent docs by relative path at the top of each file
-- Keep cross-references minimal — an agent shouldn't need to chase a chain of 4 docs to understand what to build
+- Reference parent docs by relative path at the **top** of each file.
 
-### Statuses
-
-Use these consistently across all doc types:
+**Statuses** — use consistently across all doc types:
 
 | Status      | Meaning                                                     |
 | ----------- | ----------------------------------------------------------- |
@@ -153,54 +104,34 @@ Use these consistently across all doc types:
 | Partial     | Some parts done, some not (specify what's missing)          |
 | Done        | Complete and verified                                       |
 
-### Cross-References
+**Cross-references:**
 
-- Reference ADRs by filename: `See [ADR-004](../../architecture/adr-004-tailwind-only-styling.md)`
-- Reference epics/PRDs by relative path from the current file
-- The roadmap implementation tracker is the single source of truth for overall status
+- Reference ADRs by filename: `See [ADR-004](../../../architecture/adr-004-api-domain-modules.md)` (from a central PRD; a pillar PRD reaches back via `../../../../docs/architecture/`).
+- Reference themes / PRDs by relative path from the current file.
+- The roadmap implementation tracker is the single source of truth for overall status.
 
-## Keeping Docs in Sync With Implementation
+## Keeping Docs in Sync
 
-When implementation work completes (a US is built, a PRD is finished, an epic wraps up), update all places that track status. There are six:
-
-### 1. Acceptance criteria checkboxes
-
-Mark each `- [ ]` criterion as `- [x]` when it passes. When all criteria are checked, the unit (a US, or a PRD that carries its criteria inline) is done.
-
-### 2. PRD — user story table or status
-
-If the PRD uses the US pattern, update each story's status in `## User Stories` from `Not started` → `In progress` → `Done`. If the PRD carries inline acceptance criteria, the PRD's own status moves from `In progress` → `Done` when every checkbox is ticked.
-
-### 3. Epic — PRD table
-
-Update the PRD's status in the epic's `## PRDs` table. A PRD is `Done` when all its user stories are done.
-
-### 4. Theme README — epic table
-
-Update the epic's status in the theme's `## Epics` table. An epic is `Done` when all its PRDs are done.
-
-### 5. Roadmap — implementation tracker
-
-Update the corresponding row in `roadmap.md` under `## Implementation Tracker`. This is the top-level view.
-
-### 6. Docs root README — current state
-
-Update the `## Current State` section in `docs/README.md` if the change affects the high-level summary (e.g., a new app becomes functional, a phase completes).
-
-### Status flows upward
+When work completes (a PRD finishes, a theme wraps up), update **all four** status places. Status flows upward:
 
 ```
-US done → PRD checks its stories → all done? → PRD done
-PRD done → Epic checks its PRDs → all done? → Epic done
-Epic done → Theme checks its epics → all done? → Theme done
+All criteria checked → PRD done
+PRD done → Theme checks its PRDs → all done? → Theme done
 Any status change → update the roadmap tracker
 ```
 
-An agent finishing a US should update levels 1-3 (the US, its parent PRD table, and the epic table if the PRD is now complete). The roadmap tracker (level 5) and root README (level 6) should be updated when an epic's status changes.
+| #   | Place                                           | Action                                                                                                                                                                                                                                                              |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Acceptance criteria checkboxes** (in the PRD) | Mark each `- [ ]` as `- [x]` when it passes. All checked → PRD is done.                                                                                                                                                                                             |
+| 2   | **PRD status**                                  | When every checkbox is ticked, move the PRD's own status `In progress` → `Done`.                                                                                                                                                                                    |
+| 3   | **Theme PRD Index**                             | Update the PRD's status in the theme/pillar README's `## PRD Index`. A theme is `Done` when all its PRDs are done.                                                                                                                                                  |
+| 4   | **Roadmap (current-state tracker)**             | Reflect the change in `docs/roadmap.md` (the top-level view: `## Today` / `## In progress` / `## Forward`). Also update `## Current State` in `docs/README.md` if the change affects the high-level summary (e.g. a new app becomes functional, a phase completes). |
+
+**Division of responsibility:** an agent finishing a PRD updates places 1–3 (criteria, PRD status, theme's PRD table). The roadmap tracker (place 4) and root README are updated when a **theme's** status changes.
 
 ## What Doesn't Belong in Docs
 
-- Implementation details (file paths, function names, import statements) — that's the code's job
-- Framework-specific instructions (how to use React hooks, tRPC patterns) — that's CLAUDE.md in the repo root
-- Anything that duplicates what `git log` or `git blame` already tells you
-- Meeting notes, scratch work, or conversation logs
+- Implementation details (file paths, function names, import statements) — that's the code's job.
+- Framework-specific instructions (how to use React hooks, ts-rest patterns) — that's `CLAUDE.md` / `AGENTS.md` in the repo root.
+- Anything that duplicates what `git log` or `git blame` already tells you.
+- Meeting notes, scratch work, or conversation logs.

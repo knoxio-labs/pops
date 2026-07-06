@@ -1,0 +1,70 @@
+import { useRegisteredApps } from '@/app/BootRegistryProvider';
+import { iconMap } from '@/app/nav/icon-map';
+import { findActiveApp, findActiveItem } from '@/app/nav/path-utils';
+/**
+ * Page navigation panel.
+ *
+ * Renders page links for the currently active app, determined by URL. Sits
+ * alongside the AppRail in the two-level navigation layout
+ * (pillars/shell/docs/prds/app-switcher). Colour is inherited from the
+ * --app-accent CSS variable set on the shell root.
+ */
+import { useTranslation } from 'react-i18next';
+import { Link, useLocation } from 'react-router';
+
+export function PageNav() {
+  const { t } = useTranslation('navigation');
+  const { t: tShell } = useTranslation('shell');
+  const location = useLocation();
+  const registeredApps = useRegisteredApps();
+  const activeApp = findActiveApp(location.pathname, registeredApps);
+
+  if (!activeApp) return null;
+
+  const appLabel = t(activeApp.labelKey);
+  const activeItem = findActiveItem(location.pathname, activeApp.basePath, activeApp.items);
+
+  return (
+    <nav
+      className="w-50 bg-card border-r border-border h-full overflow-y-auto transition-all duration-200"
+      aria-label={tShell('appPages', { app: appLabel })}
+    >
+      <div className="px-4 py-4 border-b border-border">
+        <span className="text-2xs font-bold uppercase tracking-label text-app-accent">
+          {appLabel}
+        </span>
+      </div>
+
+      <div className="p-2 space-y-0.5">
+        {activeApp.items.map((item) => {
+          const fullPath = `${activeApp.basePath}${item.path}`;
+          const active = activeItem === item;
+          const Icon = iconMap[item.icon];
+
+          return (
+            <Link
+              key={fullPath}
+              to={fullPath}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
+                active
+                  ? 'bg-app-accent text-app-accent-foreground shadow-sm'
+                  : 'text-foreground/80 hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {Icon && (
+                <Icon
+                  className={`h-4 w-4 shrink-0 transition-colors ${
+                    active
+                      ? 'text-app-accent-foreground'
+                      : 'text-app-accent/70 group-hover:text-foreground'
+                  }`}
+                />
+              )}
+              <span>{t(item.labelKey)}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

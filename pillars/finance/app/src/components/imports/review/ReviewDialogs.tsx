@@ -1,0 +1,125 @@
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { unwrap } from '../../../finance-api-helpers.js';
+import {
+  importsReevaluateWithPendingRules,
+  type ImportsReevaluateWithPendingRulesData,
+} from '../../../finance-api/index.js';
+import { toRestCorrectionChangeSet, toRestSignal } from '../../../lib/rest-changeset';
+import { useImportStore } from '../../../store/importStore';
+import { CorrectionProposalDialog } from '../CorrectionProposalDialog';
+import { EntityCreateDialog } from '../EntityCreateDialog';
+
+import type { useBulkAssignment } from '../hooks/useBulkAssignment';
+import type { useProposalGeneration } from '../hooks/useProposalGeneration';
+import type { useTransactionReview } from '../hooks/useTransactionReview';
+
+type ReevaluateInput = NonNullable<ImportsReevaluateWithPendingRulesData['body']>;
+
+interface BrowseDialogProps {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  sessionId: string;
+  previewTransactions: Array<{ checksum: string; description: string }>;
+  applyReevaluatedResult: ReturnType<typeof useTransactionReview>['applyReevaluatedResult'];
+}
+
+function BrowseDialog({
+  open,
+  setOpen,
+  sessionId,
+  previewTransactions,
+  applyReevaluatedResult,
+}: BrowseDialogProps) {
+  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
+  const reevaluateMutation = useMutation({
+    mutationFn: async (vars: ReevaluateInput) =>
+      unwrap(await importsReevaluateWithPendingRules({ body: vars })),
+  });
+  const onClose = (hadChanges: boolean) => {
+    if (!hadChanges || !sessionId || pendingChangeSets.length === 0) return;
+    reevaluateMutation.mutate(
+      {
+        sessionId,
+        minConfidence: 0.7,
+        pendingChangeSets: pendingChangeSets.map((pcs) => ({
+          changeSet: toRestCorrectionChangeSet(pcs.changeSet),
+        })),
+      },
+      {
+        onSuccess: ({ result, affectedCount }) => {
+          applyReevaluatedResult(result);
+          toast.success(
+            `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? '' : 's'} re-evaluated`
+          );
+        },
+        onError: () => toast.error('Failed to re-evaluate transactions against updated rules'),
+      }
+    );
+  };
+  return (
+    <CorrectionProposalDialog
+      open={open}
+      onOpenChange={setOpen}
+      mode="browse"
+      sessionId={sessionId}
+      signal={null}
+      triggeringTransaction={null}
+      previewTransactions={previewTransactions}
+      onBrowseClose={onClose}
+    />
+  );
+}
+
+interface DialogsProps {
+  proposal: ReturnType<typeof useProposalGeneration>;
+  bulk: ReturnType<typeof useBulkAssignment>;
+  review: ReturnType<typeof useTransactionReview>;
+  processSessionId: string;
+  allPreviewTransactions: Array<{ checksum: string; description: string }>;
+}
+
+export function ReviewDialogs({
+  proposal,
+  bulk,
+  review,
+  processSessionId,
+  allPreviewTransactions,
+}: DialogsProps) {
+  return (
+    <>
+      <CorrectionProposalDialog
+        open={proposal.proposalOpen}
+        onOpenChange={proposal.handleProposalOpenChange}
+        sessionId={processSessionId}
+        signal={proposal.proposalSignal ? toRestSignal(proposal.proposalSignal) : null}
+        triggeringTransaction={proposal.proposalTriggeringTransaction}
+        previewTransactions={allPreviewTransactions}
+        generating={proposal.isGeneratingProposal}
+        patternConfidence={proposal.proposalConfidence}
+        onApproved={() => toast.success('Rules saved locally')}
+      />
+      <BrowseDialog
+        open={proposal.browseOpen}
+        setOpen={proposal.setBrowseOpen}
+        sessionId={processSessionId}
+        previewTransactions={allPreviewTransactions}
+        applyReevaluatedResult={review.applyReevaluatedResult}
+      />
+      <EntityCreateDialog
+        open={bulk.showCreateDialog}
+        onOpenChange={(open) => {
+          bulk.setShowCreateDialog(open);
+          if (!open) {
+            bulk.setPendingBulkTransactions(null);
+            bulk.setSelectedTransaction(null);
+          }
+        }}
+        onEntityCreated={bulk.handleEntityCreated}
+        suggestedName={bulk.selectedTransaction?.entity?.entityName}
+        dbEntities={bulk.dbEntitiesData?.data}
+      />
+    </>
+  );
+}
