@@ -42,6 +42,6 @@ jobs:
         run: echo "Skipping — no infra changes"
       - uses: actions/checkout@v6
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-      - name: Lint Litestream YAML
+      - name: Lint infra YAML (litestream + backup)
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
         run: npx yaml-lint infra/litestream/*.yml infra/backup/*.yml

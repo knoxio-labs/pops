@@ -12,11 +12,16 @@
 ## and the age recipient are provided by the deployer's environment — leave
 ## them as placeholders here.
 ##
-## Restore drill (safe to copy/paste during an incident):
-##   rclone copy "${CEREBRUM_ENGRAMS_BACKUP_REMOTE}:${CEREBRUM_ENGRAMS_BACKUP_PREFIX}" /tmp/cerebrum-engrams-restore --decrypt
-##   pops cerebrum reindex   # rebuild the SQLite index from the restored files
-## Stop the cerebrum-api container first so it isn't writing concurrently;
-## the drill is exercised in the same rollout phase as the Litestream drill.
+## Restore drill (rclone and age are separate steps — rclone has no decrypt
+## flag; the deployer holds the age identity matching the recipient below,
+## e.g. homelab-infra's backup_age_identity — see that repo's restore.sh):
+##   # 1. Stop the cerebrum-api container so it isn't writing to the tree.
+##   # 2. Pull the age-encrypted objects down (no decryption at this step):
+##   rclone copy "${CEREBRUM_ENGRAMS_BACKUP_REMOTE}:${CEREBRUM_ENGRAMS_BACKUP_PREFIX}" /tmp/cerebrum-engrams-enc
+##   # 3. age --decrypt each object into /data/cerebrum/engrams with that identity.
+##   # 4. Rebuild the SQLite index from the restored Markdown:
+##   pops cerebrum reindex
+## The drill is exercised in the same rollout phase as the Litestream drill.
 
 jobs:
   - name: cerebrum-engrams
