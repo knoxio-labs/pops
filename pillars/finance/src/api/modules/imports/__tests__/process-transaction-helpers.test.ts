@@ -1,9 +1,9 @@
 /**
  * Unit tests for the `ProcessedTransaction` builders (CF068/#3649): each
- * classification outcome (matched-by-entity, matched-transfer,
- * uncertain-from-AI, uncertain-no-match, failed) must carry the right
- * `entity`/`status`/`error` shape, since these are what the review UI and
- * the commit payload key off.
+ * classification outcome (matched/uncertain-by-entity, uncertain-from-AI,
+ * uncertain-no-match, failed) must carry the right `entity`/`status`/`type`/
+ * `error` shape, since these are what the review UI and the commit payload key
+ * off.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,8 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../../db/index.js';
 import {
   buildFailure,
-  buildMatchedFromEntity,
-  buildMatchedTransfer,
+  buildFromEntityMatch,
   buildUncertainFromAi,
   buildUncertainNoMatch,
 } from '../process-transaction-helpers.js';
@@ -52,9 +51,9 @@ function transaction(overrides: Partial<ParsedTransaction> = {}): ParsedTransact
 
 const entry: EntityLookupEntry = { id: 'ent-1', name: 'Woolworths' };
 
-describe('buildMatchedFromEntity', () => {
-  it('builds a matched deterministic-stage row with no confidence', () => {
-    const result = buildMatchedFromEntity(db, {
+describe('buildFromEntityMatch', () => {
+  it('builds a matched purchase for a debit with a resolved entity, no confidence', () => {
+    const result = buildFromEntityMatch(db, {
       transaction: transaction(),
       entry,
       matchType: 'exact',
@@ -63,6 +62,28 @@ describe('buildMatchedFromEntity', () => {
     });
 
     expect(result.status).toBe('matched');
+    expect(result.transactionType).toBe('purchase');
+    expect(result.entity).toEqual({
+      entityId: 'ent-1',
+      entityName: 'Woolworths',
+      matchType: 'exact',
+    });
+  });
+
+  it('leaves a credit uncertain with NO defaulted type, even when the entity resolves', () => {
+    // A positive-amount entity match (e.g. a salary from a matched employer)
+    // must not silently commit as a purchase — the default-type policy (#3607)
+    // surfaces it for review, still carrying the matched entity.
+    const result = buildFromEntityMatch(db, {
+      transaction: transaction({ amount: 1500, description: 'ACME PAYROLL' }),
+      entry,
+      matchType: 'exact',
+      knownTags: [],
+      entityDefaultTags: new Map(),
+    });
+
+    expect(result.status).toBe('uncertain');
+    expect(result.transactionType).toBeUndefined();
     expect(result.entity).toEqual({
       entityId: 'ent-1',
       entityName: 'Woolworths',
@@ -71,7 +92,7 @@ describe('buildMatchedFromEntity', () => {
   });
 
   it('carries confidence only for an AI match', () => {
-    const result = buildMatchedFromEntity(db, {
+    const result = buildFromEntityMatch(db, {
       transaction: transaction(),
       entry,
       matchType: 'ai',
@@ -89,7 +110,7 @@ describe('buildMatchedFromEntity', () => {
   });
 
   it('omits confidence for a non-AI match even when a confidence value is supplied', () => {
-    const result = buildMatchedFromEntity(db, {
+    const result = buildFromEntityMatch(db, {
       transaction: transaction(),
       entry,
       matchType: 'exact',
@@ -103,20 +124,6 @@ describe('buildMatchedFromEntity', () => {
       entityName: 'Woolworths',
       matchType: 'exact',
     });
-  });
-});
-
-describe('buildMatchedTransfer', () => {
-  it('builds a matched transfer row with no entity', () => {
-    const result = buildMatchedTransfer(
-      db,
-      transaction({ description: 'TRANSFER TO SAVINGS' }),
-      []
-    );
-
-    expect(result.status).toBe('matched');
-    expect(result.transactionType).toBe('transfer');
-    expect(result.entity).toEqual({ matchType: 'none' });
   });
 });
 
