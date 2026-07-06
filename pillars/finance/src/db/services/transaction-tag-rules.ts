@@ -14,7 +14,7 @@
  * and can pass a transaction), plain functions, typed domain errors, no HTTP
  * concerns.
  */
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 
 import { TransactionTagRuleNotFoundError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
@@ -65,6 +65,53 @@ export function listTransactionTagRules(db: FinanceDb): TransactionTagRuleRow[] 
     .from(transactionTagRules)
     .orderBy(desc(transactionTagRules.confidence), desc(transactionTagRules.timesApplied))
     .all();
+}
+
+/** Filters + pagination accepted by {@link listTransactionTagRulesPage}. */
+export interface TagRuleListQuery {
+  matchType?: TagRuleMatchType;
+  isActive?: boolean;
+  minConfidence?: number;
+  limit: number;
+  offset: number;
+}
+
+/** Result of a paginated, filtered tag-rule list call. */
+export interface TagRuleListResult {
+  rows: TransactionTagRuleRow[];
+  total: number;
+}
+
+/**
+ * List tag rules with optional `matchType` / `isActive` / `minConfidence`
+ * filters, paginated, ordered by `(confidence DESC, times_applied DESC)`.
+ * Backs the Tag Rules browser — mirrors `listTransactionCorrections`.
+ */
+export function listTransactionTagRulesPage(
+  db: FinanceDb,
+  query: TagRuleListQuery
+): TagRuleListResult {
+  const { matchType, isActive, minConfidence, limit, offset } = query;
+  const conditions = [];
+  if (matchType) conditions.push(eq(transactionTagRules.matchType, matchType));
+  if (isActive !== undefined) conditions.push(eq(transactionTagRules.isActive, isActive));
+  if (minConfidence !== undefined) {
+    conditions.push(gte(transactionTagRules.confidence, minConfidence));
+  }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const countRow = db.select({ total: count() }).from(transactionTagRules).where(where).all()[0];
+
+  const rows = db
+    .select()
+    .from(transactionTagRules)
+    .where(where)
+    .orderBy(desc(transactionTagRules.confidence), desc(transactionTagRules.timesApplied))
+    .limit(limit)
+    .offset(offset)
+    .all();
+
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Get a single rule by id. Throws `TransactionTagRuleNotFoundError` if missing. */

@@ -1,0 +1,190 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+
+import { unwrap as unwrapContacts } from '../../contacts-api-helpers.js';
+import { entitiesList } from '../../contacts-api/index.js';
+import { unwrap } from '../../finance-api-helpers.js';
+import { tagRulesDelete, tagRulesDisable, tagRulesList } from '../../finance-api/index.js';
+
+import type { MatchType, TagRule } from './types';
+
+export const PAGE_SIZE = 50;
+const ENTITIES_LIST_INPUT = { limit: 500 } as const;
+
+interface TagRulesListResult {
+  data: TagRule[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
+function parseMatchType(value: string): MatchType | undefined {
+  return value === 'exact' || value === 'contains' || value === 'regex' ? value : undefined;
+}
+
+function parseIsActive(value: string): boolean | undefined {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return undefined;
+}
+
+interface FilterState {
+  matchType: string;
+  setMatchType: (v: string) => void;
+  isActive: string;
+  setIsActive: (v: string) => void;
+  minConfidence: string;
+  setMinConfidence: (v: string) => void;
+  offset: number;
+  setOffset: (next: number | ((prev: number) => number)) => void;
+}
+
+function useFilterState(): FilterState {
+  const [matchType, setMatchType] = useState('');
+  const [isActive, setIsActive] = useState('');
+  const [minConfidence, setMinConfidence] = useState('');
+  const [offset, setOffsetState] = useState(0);
+  const setOffset = useCallback((next: number | ((prev: number) => number)) => {
+    setOffsetState((prev) => (typeof next === 'function' ? next(prev) : next));
+  }, []);
+  return {
+    matchType,
+    setMatchType,
+    isActive,
+    setIsActive,
+    minConfidence,
+    setMinConfidence,
+    offset,
+    setOffset,
+  };
+}
+
+function useTagRulesListQuery(filters: FilterState) {
+  const query = {
+    matchType: parseMatchType(filters.matchType),
+    isActive: parseIsActive(filters.isActive),
+    minConfidence: filters.minConfidence ? parseFloat(filters.minConfidence) : undefined,
+    limit: PAGE_SIZE,
+    offset: filters.offset,
+  };
+  return useQuery({
+    queryKey: ['finance', 'tagRules', 'list', query],
+    queryFn: async (): Promise<TagRulesListResult> => unwrap(await tagRulesList({ query })),
+  });
+}
+
+/**
+ * A delete/disable (or a filter change that shrinks the result set) can leave
+ * the current offset past the end of the new total. Clamp back to the new
+ * last page instead of rendering a stranded empty page (mirrors the
+ * corrections browser's CF084/#3670 fix).
+ */
+function useOffsetClamp(
+  pagination: TagRulesListResult['pagination'] | undefined,
+  offset: number,
+  setOffset: FilterState['setOffset']
+) {
+  useEffect(() => {
+    if (!pagination) return;
+    if (pagination.total > 0 && pagination.total <= offset) {
+      const lastValidOffset = Math.floor((pagination.total - 1) / PAGE_SIZE) * PAGE_SIZE;
+      setOffset(lastValidOffset);
+    } else if (pagination.total === 0 && offset > 0) {
+      setOffset(0);
+    }
+  }, [pagination, offset, setOffset]);
+}
+
+function useDeleteFlow() {
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => unwrap(await tagRulesDelete({ path: { id } })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
+      toast.success('Tag rule deleted');
+      setDeleteId(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const handleDelete = useCallback(() => {
+    if (!deleteId) return;
+    deleteMutation.mutate(deleteId);
+  }, [deleteId, deleteMutation]);
+  return { deleteId, setDeleteId, deleteMutation, handleDelete };
+}
+
+function useDisableFlow() {
+  const queryClient = useQueryClient();
+  const disableMutation = useMutation({
+    mutationFn: async (id: string) => unwrap(await tagRulesDisable({ path: { id } })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
+      toast.success('Tag rule disabled');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+  const handleDisable = useCallback((id: string) => disableMutation.mutate(id), [disableMutation]);
+  return { disableMutation, handleDisable };
+}
+
+function useEntityNames() {
+  const entitiesQuery = useQuery({
+    queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
+    queryFn: async () => unwrapContacts(await entitiesList({ query: ENTITIES_LIST_INPUT })),
+  });
+  return useMemo(
+    () => new Map((entitiesQuery.data?.data ?? []).map((e) => [e.id, e.name])),
+    [entitiesQuery.data]
+  );
+}
+
+export function useTagRulesBrowserModel() {
+  const filters = useFilterState();
+  const del = useDeleteFlow();
+  const disable = useDisableFlow();
+  const [editingRule, setEditingRule] = useState<TagRule | null>(null);
+  const entityNames = useEntityNames();
+
+  const { data, isLoading, isError, refetch } = useTagRulesListQuery(filters);
+
+  const tagRules: TagRule[] = data?.data ?? [];
+  const pagination = data?.pagination;
+  const totalPages = pagination ? Math.ceil(pagination.total / PAGE_SIZE) : 1;
+  const currentPage = Math.floor(filters.offset / PAGE_SIZE) + 1;
+
+  const resetPage = useCallback(() => filters.setOffset(0), [filters]);
+
+  useOffsetClamp(pagination, filters.offset, filters.setOffset);
+
+  const handleEditRule = useCallback((rule: TagRule) => setEditingRule(rule), []);
+  const closeEditDialog = useCallback(() => setEditingRule(null), []);
+
+  return {
+    matchType: filters.matchType,
+    setMatchType: filters.setMatchType,
+    isActive: filters.isActive,
+    setIsActive: filters.setIsActive,
+    minConfidence: filters.minConfidence,
+    setMinConfidence: filters.setMinConfidence,
+    offset: filters.offset,
+    setOffset: filters.setOffset,
+    resetPage,
+    deleteId: del.deleteId,
+    setDeleteId: del.setDeleteId,
+    isLoading,
+    isError,
+    refetch,
+    tagRules,
+    entityNames,
+    pagination,
+    totalPages,
+    currentPage,
+    deleteMutation: del.deleteMutation,
+    handleDelete: del.handleDelete,
+    disableMutation: disable.disableMutation,
+    handleDisable: disable.handleDisable,
+    editingRule,
+    handleEditRule,
+    closeEditDialog,
+  };
+}

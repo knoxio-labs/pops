@@ -212,5 +212,8 @@
   "rules.tags": "Tags",
   "rules.tagsPlaceholder": "Digite e pressione Enter...",
   "rules.active": "Ativo",
-  "rules.inactiveSkipped": "Regras inativas são ignoradas pelo matcher."
+  "rules.inactiveSkipped": "Regras inativas são ignoradas pelo matcher.",
+
+  "tagRules.title": "Regras de Tags",
+  "tagRules.description": "Navegar e gerenciar regras de sugestão de tags"
 }

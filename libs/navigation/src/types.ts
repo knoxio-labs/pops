@@ -59,6 +59,7 @@ export type IconName =
   | 'ShieldCheck'
   | 'Shuffle'
   | 'Star'
+  | 'Tag'
   | 'Trophy'
   | 'Utensils'
   | 'Zap';
