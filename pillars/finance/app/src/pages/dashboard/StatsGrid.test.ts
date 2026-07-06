@@ -95,3 +95,43 @@ describe('computeStats', () => {
     });
   });
 });
+
+describe('computeStats — type → tile mapping (#3607 stage 2c)', () => {
+  it('routes refund + reversal to the expense tile as an offset, not income', () => {
+    // purchase -100 (+100 exp), refund +30 (-30 exp), reversal -40 (+40 exp) → 110; income untouched
+    const stats = computeStats(
+      [
+        makeTx(-100, { type: 'purchase' }),
+        makeTx(30, { type: 'refund' }),
+        makeTx(-40, { type: 'reversal' }),
+      ],
+      3
+    );
+    expect(stats).toEqual({ totalTransactions: 3, totalIncome: 0, totalExpenses: 110 });
+  });
+
+  it('routes loan, rebate and income to the income tile', () => {
+    const stats = computeStats(
+      [
+        makeTx(1000, { type: 'loan' }),
+        makeTx(25, { type: 'rebate' }),
+        makeTx(200, { type: 'income' }),
+      ],
+      3
+    );
+    expect(stats).toEqual({ totalTransactions: 3, totalIncome: 1225, totalExpenses: 0 });
+  });
+
+  it('feeds tax to the income tile with its sign (a tax debit reduces income)', () => {
+    const stats = computeStats([makeTx(500, { type: 'income' }), makeTx(-80, { type: 'tax' })], 2);
+    expect(stats).toEqual({ totalTransactions: 2, totalIncome: 420, totalExpenses: 0 });
+  });
+
+  it('excludes an unrecognised type from both tiles', () => {
+    const stats = computeStats(
+      [makeTx(100, { type: 'mystery' }), makeTx(-50, { type: 'purchase' })],
+      2
+    );
+    expect(stats).toEqual({ totalTransactions: 2, totalIncome: 0, totalExpenses: 50 });
+  });
+});

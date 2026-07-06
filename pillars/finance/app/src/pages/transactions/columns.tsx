@@ -12,6 +12,7 @@ import {
 } from '@pops/ui';
 
 import { TagEditor } from '../../components/TagEditor';
+import { labelForType } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -95,7 +96,7 @@ function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
       header: t('column.type'),
       cell: ({ row }) => (
         <Badge variant="outline" className="text-xs">
-          {typeLabels[row.original.type] ?? row.original.type}
+          {typeLabels[row.original.type] ?? labelForType(row.original.type)}
         </Badge>
       ),
     },
@@ -188,6 +189,10 @@ export function buildTransactionFilters(
         { label: t('filter.income'), value: 'income' },
         { label: t('filter.expense'), value: 'purchase' },
         { label: t('filter.transfer'), value: 'transfer' },
+        ...['refund', 'reversal', 'loan', 'rebate', 'tax'].map((value) => ({
+          label: labelForType(value),
+          value,
+        })),
       ],
     },
     { id: 'tags', type: 'text', label: t('filter.tag'), placeholder: t('placeholder.filterByTag') },

@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
+import {
+  TRANSACTION_TYPE_LABELS,
+  TRANSACTION_TYPES,
+  type TransactionType,
+} from '../../lib/transaction-type';
 
 /**
  * Form-level types for the transaction form dialog.
@@ -29,11 +33,10 @@ export interface Transaction {
 }
 
 /** Allowed transaction types (label → canonical lowercase value, #3607). */
-export const TRANSACTION_TYPE_OPTIONS = [
-  { label: 'Expense', value: 'purchase' },
-  { label: 'Income', value: 'income' },
-  { label: 'Transfer', value: 'transfer' },
-];
+export const TRANSACTION_TYPE_OPTIONS = TRANSACTION_TYPES.map((value) => ({
+  label: TRANSACTION_TYPE_LABELS[value],
+  value,
+}));
 
 /**
  * Zod schema for the form values. Amount is collected as a free-form numeric
