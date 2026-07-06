@@ -20,7 +20,10 @@ import {
   type FinanceDb,
   type OpenedFinanceDb,
 } from '../../../../db/index.js';
-import { reclassifyExistingTransactions } from '../reclassify-existing.js';
+import {
+  applyCorrectionRuleToExistingTransactions,
+  reclassifyExistingTransactions,
+} from '../reclassify-existing.js';
 
 interface SeedTxn {
   description: string;
@@ -28,6 +31,7 @@ interface SeedTxn {
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;
+  tags?: string[];
   matchType?: 'manual' | null;
 }
 
@@ -37,6 +41,7 @@ interface SeedRule {
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;
+  tags?: string[];
   transactionType?: 'purchase' | 'transfer' | 'income' | null;
 }
 
@@ -54,7 +59,7 @@ function seedTxn(input: SeedTxn): string {
       amount: -12.5,
       date: '2026-01-01',
       type: input.type,
-      tags: '[]',
+      tags: JSON.stringify(input.tags ?? []),
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
       location: input.location ?? null,
@@ -66,22 +71,24 @@ function seedTxn(input: SeedTxn): string {
   return id;
 }
 
-function seedRule(input: SeedRule): void {
+function seedRule(input: SeedRule): string {
+  const id = crypto.randomUUID();
   db.insert(transactionCorrections)
     .values({
-      id: crypto.randomUUID(),
+      id,
       descriptionPattern: input.descriptionPattern,
       matchType: 'exact',
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
       location: input.location ?? null,
       transactionType: input.transactionType ?? null,
-      tags: '[]',
+      tags: JSON.stringify(input.tags ?? []),
       isActive: true,
       confidence: input.confidence,
       priority: 0,
     })
     .run();
+  return id;
 }
 
 function readTxn(id: string) {
@@ -277,5 +284,156 @@ describe('reclassifyExistingTransactions — manual-override skip (CF017/#3623)'
     expect(count).toBe(1);
     expect(readTxn(manualId).entityId).toBe('ent-user-picked');
     expect(readTxn(autoId).entityId).toBe('ent-woolies');
+  });
+});
+
+describe('reclassifyExistingTransactions — tag merge + provenance (#3660)', () => {
+  it('merges a matched rule’s tags into the transaction additively and stamps match provenance', () => {
+    const txnId = seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'Income',
+      entityId: null,
+      tags: ['friday'],
+    });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    const count = reclassifyExistingTransactions(db, []);
+
+    expect(count).toBe(1);
+    const row = readTxn(txnId);
+    expect((JSON.parse(row.tags) as string[]).toSorted()).toEqual(
+      ['friday', 'groceries'].toSorted()
+    );
+    expect(row.matchType).toBe('learned');
+    expect(row.matchRuleId).toBe(ruleId);
+    expect(row.matchConfidence).toBeCloseTo(0.95, 5);
+  });
+
+  it('is idempotent: a second pass against the same rule set makes no further changes', () => {
+    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    expect(reclassifyExistingTransactions(db, [])).toBe(1);
+    expect(reclassifyExistingTransactions(db, [])).toBe(0);
+  });
+});
+
+describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive apply (#3660)', () => {
+  it('applies only the targeted rule, even when a different rule also matches', () => {
+    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const targetRuleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    const result = applyCorrectionRuleToExistingTransactions(db, targetRuleId);
+
+    expect(result).toMatchObject({
+      dryRun: false,
+      matched: 1,
+      updated: 1,
+      skippedManual: 0,
+      skippedUncertain: 0,
+    });
+    const row = readTxn(txnId);
+    expect(row.entityId).toBe('ent-woolies');
+    expect(row.matchRuleId).toBe(targetRuleId);
+  });
+
+  it('reports skippedManual and leaves a manually-overridden transaction untouched', () => {
+    const txnId = seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'Income',
+      entityId: 'ent-user-picked',
+      matchType: 'manual',
+    });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.95,
+    });
+
+    const result = applyCorrectionRuleToExistingTransactions(db, ruleId);
+
+    expect(result).toMatchObject({ matched: 1, updated: 0, skippedManual: 1 });
+    expect(readTxn(txnId).entityId).toBe('ent-user-picked');
+  });
+
+  it('reports skippedUncertain for a sub-threshold match, applying nothing', () => {
+    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.8,
+    });
+
+    const result = applyCorrectionRuleToExistingTransactions(db, ruleId);
+
+    expect(result).toMatchObject({ matched: 1, updated: 0, skippedUncertain: 1 });
+  });
+
+  it('dryRun computes the same result without writing anything or bumping usage', () => {
+    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.95,
+    });
+
+    const result = applyCorrectionRuleToExistingTransactions(db, ruleId, { dryRun: true });
+
+    expect(result).toMatchObject({ dryRun: true, matched: 1, updated: 1 });
+    expect(readTxn(txnId).entityId).toBeNull();
+    const rule = db
+      .select()
+      .from(transactionCorrections)
+      .where(eq(transactionCorrections.id, ruleId))
+      .get();
+    expect(rule?.timesApplied).toBe(0);
+  });
+
+  it('a second real apply is a no-op (idempotent)', () => {
+    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.95,
+    });
+
+    expect(applyCorrectionRuleToExistingTransactions(db, ruleId).updated).toBe(1);
+    expect(applyCorrectionRuleToExistingTransactions(db, ruleId)).toMatchObject({
+      matched: 1,
+      updated: 0,
+    });
+  });
+
+  it('throws TransactionCorrectionNotFoundError for an unknown rule id', () => {
+    expect(() => applyCorrectionRuleToExistingTransactions(db, 'nope')).toThrow();
   });
 });

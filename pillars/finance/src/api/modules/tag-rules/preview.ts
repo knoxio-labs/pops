@@ -18,6 +18,7 @@ import {
   tagVocabularyService,
   transactionCorrectionsService,
 } from '../../../db/index.js';
+import { tagRulePatternMatches } from './pattern-match.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
 import type {
@@ -51,17 +52,6 @@ function materializeProposedRules(changeSet: TagRuleChangeSet): ProposedRule[] {
   return rules;
 }
 
-function ruleMatchesDescription(rule: ProposedRule, normalized: string): boolean {
-  const pattern = normalizeDescription(rule.descriptionPattern);
-  if (rule.matchType === 'exact') return normalized === pattern;
-  if (rule.matchType === 'contains') return normalized.includes(pattern);
-  try {
-    return new RegExp(rule.descriptionPattern, 'i').test(normalized);
-  } catch {
-    return false;
-  }
-}
-
 function suggestFromRules(
   description: string,
   entityId: string | null,
@@ -74,7 +64,7 @@ function suggestFromRules(
 
   for (const rule of rules) {
     if (rule.entityId && rule.entityId !== entityId) continue;
-    if (!ruleMatchesDescription(rule, normalized)) continue;
+    if (!tagRulePatternMatches(rule, normalized)) continue;
 
     for (const tag of rule.tags) {
       if (seen.has(tag)) continue;

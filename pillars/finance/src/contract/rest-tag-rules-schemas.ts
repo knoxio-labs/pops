@@ -144,3 +144,15 @@ export const TagRuleMatchPreviewResultSchema = z.object({
   matches: z.array(TagRuleMatchPreviewTransactionSchema),
   totalCount: z.number(),
 });
+
+/** Body for the retroactive-apply endpoint: `dryRun` computes but never writes. */
+export const TagRuleApplyExistingBody = z.object({
+  dryRun: z.boolean().optional(),
+});
+
+export const TagRuleApplyExistingResultSchema = z.object({
+  dryRun: z.boolean(),
+  matched: z.number(),
+  updated: z.number(),
+  skippedManual: z.number(),
+});

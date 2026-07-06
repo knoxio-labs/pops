@@ -281,6 +281,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/corrections/{id}/apply-existing': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Retroactively apply a correction rule to every existing transaction it currently wins against (#3660); dryRun previews without writing */
+    post: operations['corrections.applyExisting'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/entity-usage': {
     parameters: {
       query?: never;
@@ -673,6 +690,23 @@ export interface paths {
     head?: never;
     /** Edit a tag rule (entityId / tags / confidence / priority / isActive) */
     patch: operations['tagRules.update'];
+    trace?: never;
+  };
+  '/tag-rules/{id}/apply-existing': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Retroactively apply a tag rule to every existing matching transaction (#3660); dryRun previews without writing */
+    post: operations['tagRules.applyExisting'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/tag-rules/{id}/disable': {
@@ -3132,6 +3166,82 @@ export interface operations {
         content: {
           'application/json': {
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'corrections.applyExisting': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          dryRun?: boolean;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              dryRun: boolean;
+              matched: number;
+              skippedManual: number;
+              skippedUncertain: number;
+              updated: number;
+            };
           };
         };
       };
@@ -6380,6 +6490,81 @@ export interface operations {
               timesApplied: number;
             };
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'tagRules.applyExisting': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          dryRun?: boolean;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              dryRun: boolean;
+              matched: number;
+              skippedManual: number;
+              updated: number;
+            };
           };
         };
       };

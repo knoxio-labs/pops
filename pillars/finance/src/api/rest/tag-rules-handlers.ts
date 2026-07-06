@@ -18,6 +18,7 @@ import {
   TransactionTagRuleNotFoundError,
 } from '../../db/index.js';
 import { previewTagRuleChangeSet } from '../modules/tag-rules/preview.js';
+import { applyTagRuleToExistingTransactions } from '../modules/tag-rules/retroactive-apply.js';
 import {
   applyTagRuleChangeSet,
   proposeTagRuleChangeSet,
@@ -125,6 +126,18 @@ export function makeTagRulesHandlers(db: FinanceDb) {
         try {
           transactionTagRulesService.deleteTransactionTagRule(db, params.id);
           return { status: 200 as const, body: { message: 'Tag rule deleted' } };
+        } catch (err) {
+          translateTagRuleError(err, params.id);
+        }
+      }),
+
+    applyExisting: ({ params, body }: Req['applyExisting']) =>
+      runHttp(() => {
+        try {
+          const data = applyTagRuleToExistingTransactions(db, params.id, {
+            dryRun: body.dryRun,
+          });
+          return { status: 200 as const, body: { data } };
         } catch (err) {
           translateTagRuleError(err, params.id);
         }

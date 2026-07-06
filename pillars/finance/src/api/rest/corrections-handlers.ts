@@ -14,6 +14,7 @@ import {
   classifyCorrectionMatch,
   previewChangeSetImpact,
 } from '../modules/corrections/index.js';
+import { applyCorrectionRuleToExistingTransactions } from '../modules/imports/reclassify-existing.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { makeCorrectionsAiHandlers } from './corrections-ai-handlers.js';
 import {
@@ -129,6 +130,18 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
             body.delta
           );
           return { status: 200 as const, body: { message: 'Confidence adjusted' } };
+        } catch (err) {
+          translateCorrectionError(err, params.id);
+        }
+      }),
+
+    applyExisting: ({ params, body }: Req['applyExisting']) =>
+      runHttp(() => {
+        try {
+          const data = applyCorrectionRuleToExistingTransactions(db, params.id, {
+            dryRun: body.dryRun,
+          });
+          return { status: 200 as const, body: { data } };
         } catch (err) {
           translateCorrectionError(err, params.id);
         }

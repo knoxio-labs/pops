@@ -5638,6 +5638,152 @@
         "tags": ["corrections"]
       }
     },
+    "/corrections/{id}/apply-existing": {
+      "post": {
+        "operationId": "corrections.applyExisting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "dryRun": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dryRun": {
+                          "type": "boolean"
+                        },
+                        "matched": {
+                          "type": "number"
+                        },
+                        "skippedManual": {
+                          "type": "number"
+                        },
+                        "skippedUncertain": {
+                          "type": "number"
+                        },
+                        "updated": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "dryRun",
+                        "matched",
+                        "updated",
+                        "skippedManual",
+                        "skippedUncertain"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Retroactively apply a correction rule to every existing transaction it currently wins against (#3660); dryRun previews without writing",
+        "tags": ["corrections"]
+      }
+    },
     "/entity-usage": {
       "get": {
         "operationId": "entityUsage.list",
@@ -13827,6 +13973,143 @@
           }
         },
         "summary": "Edit a tag rule (entityId / tags / confidence / priority / isActive)",
+        "tags": ["tagRules"]
+      }
+    },
+    "/tag-rules/{id}/apply-existing": {
+      "post": {
+        "operationId": "tagRules.applyExisting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "dryRun": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dryRun": {
+                          "type": "boolean"
+                        },
+                        "matched": {
+                          "type": "number"
+                        },
+                        "skippedManual": {
+                          "type": "number"
+                        },
+                        "updated": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["dryRun", "matched", "updated", "skippedManual"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Retroactively apply a tag rule to every existing matching transaction (#3660); dryRun previews without writing",
         "tags": ["tagRules"]
       }
     },
