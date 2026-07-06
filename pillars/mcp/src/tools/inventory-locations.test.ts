@@ -9,7 +9,7 @@ import {
 } from './test-helpers.js';
 
 vi.mock('../pillar-client.js', () => ({
-  getPillar: () => mockPillarInventory,
+  getPillar: () => mockPillarInventory.inventory,
   __resetPillarClientForTests: () => {},
 }));
 

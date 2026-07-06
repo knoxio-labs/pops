@@ -45,36 +45,34 @@ export type FinanceSearchInput = {
 };
 
 export type FinancePillarShape = {
-  finance: {
-    transactions: {
-      list: (input: TransactionListInput) => unknown;
-      get: (input: { id: string }) => unknown;
-    };
-    budgets: {
-      list: (input: BudgetListInput) => unknown;
-      get: (input: { id: string }) => unknown;
-    };
-    corrections: {
-      list: (input: CorrectionListInput) => unknown;
-    };
-    tagRules: {
-      vocabulary: () => unknown;
-    };
-    wishlist: {
-      list: (input: WishlistListInput) => unknown;
-      get: (input: { id: string }) => unknown;
-    };
-    imports: {
-      getImportProgress: (input: { sessionId: string }) => unknown;
-    };
-    search: {
-      search: (input: FinanceSearchInput) => unknown;
-    };
+  transactions: {
+    list: (input: TransactionListInput) => unknown;
+    get: (input: { id: string }) => unknown;
+  };
+  budgets: {
+    list: (input: BudgetListInput) => unknown;
+    get: (input: { id: string }) => unknown;
+  };
+  corrections: {
+    list: (input: CorrectionListInput) => unknown;
+  };
+  tagRules: {
+    vocabulary: () => unknown;
+  };
+  wishlist: {
+    list: (input: WishlistListInput) => unknown;
+    get: (input: { id: string }) => unknown;
+  };
+  imports: {
+    getImportProgress: (input: { sessionId: string }) => unknown;
+  };
+  search: {
+    search: (input: FinanceSearchInput) => unknown;
   };
 };
 
-export function finance(): PillarHandle<FinancePillarShape>['finance'] {
-  return getPillar<FinancePillarShape>('finance').finance;
+export function finance(): PillarHandle<FinancePillarShape> {
+  return getPillar<FinancePillarShape>('finance');
 }
 
 export const ENTITY_TYPES = [
@@ -101,13 +99,11 @@ export type ContactsEntityListInput = {
 // is finance's, but the entity table itself is contacts'. Reached over the same
 // REST pillar SDK as the finance calls above.
 export type ContactsShape = {
-  contacts: {
-    entities: {
-      list: (input: ContactsEntityListInput) => unknown;
-    };
+  entities: {
+    list: (input: ContactsEntityListInput) => unknown;
   };
 };
 
-export function contacts(): PillarHandle<ContactsShape>['contacts'] {
-  return getPillar<ContactsShape>('contacts').contacts;
+export function contacts(): PillarHandle<ContactsShape> {
+  return getPillar<ContactsShape>('contacts');
 }

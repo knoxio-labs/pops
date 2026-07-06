@@ -22,19 +22,17 @@ type SearchInput = {
 };
 
 type CerebrumShape = {
-  cerebrum: {
-    engrams: {
-      list: (input: EngramListInput) => unknown;
-      get: (input: { id: string }) => unknown;
-    };
-    retrieval: {
-      search: (input: SearchInput) => unknown;
-    };
+  engrams: {
+    list: (input: EngramListInput) => unknown;
+    get: (input: { id: string }) => unknown;
+  };
+  retrieval: {
+    search: (input: SearchInput) => unknown;
   };
 };
 
-function cerebrum(): PillarHandle<CerebrumShape>['cerebrum'] {
-  return getPillar<CerebrumShape>('cerebrum').cerebrum;
+function cerebrum(): PillarHandle<CerebrumShape> {
+  return getPillar<CerebrumShape>('cerebrum');
 }
 
 const engramsList: ToolDef = {

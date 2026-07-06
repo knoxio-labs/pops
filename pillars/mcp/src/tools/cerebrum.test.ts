@@ -10,7 +10,7 @@ import {
 } from './test-helpers.js';
 
 vi.mock('../pillar-client.js', () => ({
-  getPillar: () => mockPillarCerebrum,
+  getPillar: () => mockPillarCerebrum.cerebrum,
   __resetPillarClientForTests: () => {},
 }));
 

@@ -37,22 +37,20 @@ export type ItemPatch = {
 type ItemCreateInput = ItemPatch & { itemName: string };
 
 export type ItemsShape = {
-  inventory: {
-    items: {
-      list: (input: {
-        search?: string;
-        locationId?: string;
-        includeChildren?: boolean;
-        type?: string;
-        condition?: string;
-        limit?: number;
-        offset?: number;
-      }) => unknown;
-      get: (input: { id: string }) => unknown;
-      create: (input: ItemCreateInput) => unknown;
-      update: (input: { id: string; data: ItemPatch }) => unknown;
-      delete: (input: { id: string }) => unknown;
-    };
+  items: {
+    list: (input: {
+      search?: string;
+      locationId?: string;
+      includeChildren?: boolean;
+      type?: string;
+      condition?: string;
+      limit?: number;
+      offset?: number;
+    }) => unknown;
+    get: (input: { id: string }) => unknown;
+    create: (input: ItemCreateInput) => unknown;
+    update: (input: { id: string; data: ItemPatch }) => unknown;
+    delete: (input: { id: string }) => unknown;
   };
 };
 
@@ -73,8 +71,8 @@ const NULL_STR_FIELDS = [
 const NULL_NUM_FIELDS = ['replacementValue', 'resaleValue', 'purchasePrice'] as const;
 const OPT_BOOL_FIELDS = ['inUse', 'deductible'] as const;
 
-export function items(): PillarHandle<ItemsShape>['inventory']['items'] {
-  return getPillar<ItemsShape>('inventory').inventory.items;
+export function items(): PillarHandle<ItemsShape>['items'] {
+  return getPillar<ItemsShape>('inventory').items;
 }
 
 function buildItemPatch(args: Record<string, unknown>): ItemPatch {

@@ -20,18 +20,16 @@ type WatchlistListInput = {
 };
 
 type MediaShape = {
-  media: {
-    library: {
-      list: (input: LibraryListInput) => unknown;
-    };
-    watchlist: {
-      list: (input: WatchlistListInput) => unknown;
-    };
+  library: {
+    list: (input: LibraryListInput) => unknown;
+  };
+  watchlist: {
+    list: (input: WatchlistListInput) => unknown;
   };
 };
 
-function media(): PillarHandle<MediaShape>['media'] {
-  return getPillar<MediaShape>('media').media;
+function media(): PillarHandle<MediaShape> {
+  return getPillar<MediaShape>('media');
 }
 
 const libraryList: ToolDef = {
