@@ -2,26 +2,27 @@
  * Retroactive correction-rule application.
  *
  * `reclassifyExistingTransactions` re-classifies pre-existing transactions
- * against the full active rule set after an import commit (US-04), excluding
- * the just-imported batch by checksum. Ported from the monolith
+ * against the full active rule set after every import commit (US-04),
+ * excluding the just-imported batch by checksum. Ported from the monolith
  * `lib/reclassify-existing.ts`, db-injected. Matching reuses the corrections
  * module's pure `findMatchingCorrectionFromRules`, and only high-confidence,
  * review-free matches are applied: retroactive changes pass the same
  * `resolveCorrectionApplyStatus` gate as live import, so an `uncertain`
  * (sub-threshold, or entity-less purchase) match is skipped rather than
- * silently written without review.
+ * silently written without review. A changed row merges the winning rule's
+ * tags in (additive-only) and stamps match provenance (`matchType: 'learned'`,
+ * `matchRuleId`, `matchConfidence`) — mirroring the live-import path
+ * (`apply-learned-correction.ts`, CF057/#3658) so a retroactively-classified
+ * row is indistinguishable from one classified at import time. Every rule
+ * that produces at least one change has its `timesApplied`/`lastUsedAt`
+ * bumped once per pass, by the number of rows it actually changed — see
+ * {@link reclassifyExistingTransactions} for how that count is aggregated.
  *
  * `applyCorrectionRuleToExistingTransactions` is the single-rule, explicit-apply
  * counterpart (#3660), invoked on demand from `POST /corrections/:id/apply-existing`
- * rather than on every import commit. It shares the same matching/skip rules,
- * scoped to one target rule, and additionally merges the rule's tags into the
- * transaction and stamps match provenance (`matchType: 'learned'`,
- * `matchRuleId`, `matchConfidence`) — mirroring the live-import path
- * (`apply-learned-correction.ts`, CF057/#3658) so a retroactively-classified
- * row is indistinguishable from one classified at import time. This is
- * deliberately not extended to the always-on `reclassifyExistingTransactions`
- * pass: #3660 asks for a catch-up pass triggered on rule create/edit, not a
- * change to what every import commit does.
+ * rather than on every import commit. It shares the same matching/skip rules
+ * and the same tag-merge/provenance/usage-bump behaviour, scoped to one
+ * target rule.
  *
  * A row whose `matchType` is `manual` (a direct PATCH touched a classification
  * field — see `transactions.ts`'s `buildTransactionUpdates`) is skipped
@@ -102,7 +103,7 @@ function mergedTags(txn: BatchTxn, rule: CorrectionRow): string[] | null {
   return missing.length > 0 ? [...existing, ...missing] : null;
 }
 
-/** Entity/type/location changes a rule makes, shared by both builders below. */
+/** Entity/type/location changes a rule makes, shared by every retroactive builder. */
 function buildCoreFieldUpdates(txn: BatchTxn, rule: CorrectionRow): Record<string, unknown> {
   const updates: Record<string, unknown> = {};
 
@@ -122,26 +123,14 @@ function buildCoreFieldUpdates(txn: BatchTxn, rule: CorrectionRow): Record<strin
 }
 
 /**
- * Build the DB update for a matched rule, or `null` when nothing changed. Never
- * clears an existing entity — see {@link providedEntityChange}.
+ * Build the DB update for a matched rule, or `null` when nothing changed.
+ * Never clears an existing entity — see {@link providedEntityChange}. Extends
+ * {@link buildCoreFieldUpdates} with tag-merge (additive-only) and
+ * match-provenance stamping, shared by both the always-on catch-up
+ * (`reclassifyExistingTransactions`) and the single-rule explicit apply
+ * (`applyCorrectionRuleToExistingTransactions`).
  */
-function buildReclassifyUpdates(
-  txn: BatchTxn,
-  rule: CorrectionRow
-): Record<string, unknown> | null {
-  const updates = buildCoreFieldUpdates(txn, rule);
-  if (Object.keys(updates).length === 0) return null;
-  updates.lastEditedTime = new Date().toISOString();
-  return updates;
-}
-
-/**
- * Build the DB update for the single-rule explicit apply, or `null` when
- * nothing changed. Extends {@link buildCoreFieldUpdates} with tag-merge and
- * match-provenance stamping — see the file-level doc for why this is scoped
- * to the single-rule path only.
- */
-function buildSingleRuleApplyUpdates(
+function buildRetroactiveApplyUpdates(
   txn: BatchTxn,
   rule: CorrectionRow
 ): Record<string, unknown> | null {
@@ -193,6 +182,14 @@ function loadActiveCorrectionRules(db: FinanceDb): CorrectionRow[] {
  * Re-evaluate every existing transaction (excluding the current import batch)
  * against the current rule set; apply and count the ones whose classification
  * changed.
+ *
+ * Each changed row's winning rule is tallied in `appliedCounts` instead of
+ * bumping `timesApplied` inline — after the full batch scan finishes, each
+ * rule that produced at least one change gets exactly one
+ * `incrementTransactionCorrectionUsage` call carrying its total, rather than
+ * one call per row. Since usage is only tallied for rows a rule actually
+ * changed, a second pass with nothing left to change writes nothing and
+ * bumps no rule's usage.
  */
 export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums: string[]): number {
   const allRules = loadActiveCorrectionRules(db);
@@ -200,6 +197,7 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
 
   let reclassified = 0;
   let offset = 0;
+  const appliedCounts = new Map<string, number>();
 
   while (true) {
     const batch = fetchBatch(db, importedChecksums, offset);
@@ -210,13 +208,18 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
       const match = findMatchingCorrectionFromRules(txn.description, allRules);
       if (!match) continue;
       if (resolveCorrectionApplyStatus(match.correction) !== 'matched') continue;
-      const updates = buildReclassifyUpdates(txn, match.correction);
+      const updates = buildRetroactiveApplyUpdates(txn, match.correction);
       if (!updates) continue;
       db.update(transactions).set(updates).where(eq(transactions.id, txn.id)).run();
       reclassified++;
+      appliedCounts.set(match.correction.id, (appliedCounts.get(match.correction.id) ?? 0) + 1);
     }
 
     offset += RECLASSIFY_BATCH_SIZE;
+  }
+
+  for (const [ruleId, count] of appliedCounts) {
+    transactionCorrectionsService.incrementTransactionCorrectionUsage(db, ruleId, count);
   }
 
   return reclassified;
@@ -261,7 +264,7 @@ function applySingleRuleToTxn(args: SingleRuleApplyArgs, txn: BatchTxn): void {
     return;
   }
 
-  const updates = buildSingleRuleApplyUpdates(txn, match.correction);
+  const updates = buildRetroactiveApplyUpdates(txn, match.correction);
   if (!updates) return;
 
   result.updated++;

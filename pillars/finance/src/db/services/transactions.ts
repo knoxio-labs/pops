@@ -201,7 +201,7 @@ function applyMetadataFields(input: UpdateTransactionInput, updates: Transaction
 }
 
 /**
- * Fields `reclassifyExistingTransactions`/`buildReclassifyUpdates` may overwrite
+ * Fields `reclassifyExistingTransactions`/`buildRetroactiveApplyUpdates` may overwrite
  * on a future import's retroactive pass. Touching any of them through a direct
  * PATCH is a manual override (CF017/#3623): it stamps `matchType: 'manual'` and
  * clears the stale rule-match provenance so the next reclassify pass leaves the

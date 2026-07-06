@@ -303,6 +303,112 @@ describe('reclassifyExistingTransactions — idempotent on a second pass', () =>
   });
 });
 
+describe('reclassifyExistingTransactions — tag-merge + provenance + usage telemetry (#3660 follow-up)', () => {
+  function readRule(id: string) {
+    const row = db
+      .select()
+      .from(transactionCorrections)
+      .where(eq(transactionCorrections.id, id))
+      .get();
+    if (!row) throw new Error(`correction ${id} vanished`);
+    return row;
+  }
+
+  it('merges the winning rule tags into the transaction and stamps match provenance', () => {
+    const txnId = seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'Income',
+      entityId: null,
+      tags: ['existing-tag'],
+    });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    const count = reclassifyExistingTransactions(db, []);
+
+    expect(count).toBe(1);
+    const row = readTxn(txnId);
+    expect(JSON.parse(row.tags).toSorted()).toEqual(['existing-tag', 'groceries'].toSorted());
+    expect(row.matchType).toBe('learned');
+    expect(row.matchRuleId).toBe(ruleId);
+    expect(row.matchConfidence).toBe(0.95);
+  });
+
+  it('bumps the matched rule timesApplied/lastUsedAt by the number of rows it changed in this pass', () => {
+    seedTxn({ description: 'WOOLWORTHS 1', type: 'Income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS 2', type: 'Income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.95,
+    });
+
+    const before = readRule(ruleId);
+    expect(before.timesApplied).toBe(0);
+    expect(before.lastUsedAt).toBeNull();
+
+    const count = reclassifyExistingTransactions(db, []);
+
+    expect(count).toBe(2);
+    const after = readRule(ruleId);
+    expect(after.timesApplied).toBe(2);
+    expect(after.lastUsedAt).not.toBeNull();
+  });
+
+  it('never bumps usage or stamps provenance on a manually-overridden row', () => {
+    const txnId = seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'Income',
+      entityId: 'ent-user-picked',
+      matchType: 'manual',
+      tags: ['kept-as-is'],
+    });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.99,
+    });
+
+    const count = reclassifyExistingTransactions(db, []);
+
+    expect(count).toBe(0);
+    const row = readTxn(txnId);
+    expect(row.matchType).toBe('manual');
+    expect(row.matchRuleId).toBeNull();
+    expect(JSON.parse(row.tags)).toEqual(['kept-as-is']);
+    expect(readRule(ruleId).timesApplied).toBe(0);
+  });
+
+  it('a second pass with nothing left to change writes nothing and bumps no rule usage', () => {
+    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    expect(reclassifyExistingTransactions(db, [])).toBe(1);
+    expect(readRule(ruleId).timesApplied).toBe(1);
+
+    expect(reclassifyExistingTransactions(db, [])).toBe(0);
+    expect(readRule(ruleId).timesApplied).toBe(1);
+  });
+});
+
 describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive apply (#3660)', () => {
   it('applies only the targeted rule, even when a different rule also matches', () => {
     const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });

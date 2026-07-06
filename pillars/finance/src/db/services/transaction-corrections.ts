@@ -238,16 +238,23 @@ export function deleteTransactionCorrection(db: FinanceDb, id: string): void {
 }
 
 /**
- * Bump `timesApplied` and stamp `lastUsedAt` without otherwise touching the row.
+ * Bump `timesApplied` by `count` and stamp `lastUsedAt` without otherwise
+ * touching the row.
+ *
+ * `count` defaults to 1 for the per-row call sites (live import, single-rule
+ * retroactive apply); the always-on import-commit catch-up
+ * (`reclassifyExistingTransactions`) aggregates a rule's applied count across
+ * its whole batch scan and passes it through here as one update instead of
+ * one call per row.
  *
  * Silently no-ops if `id` does not exist — this is a best-effort telemetry
  * update inside the import pipeline and must not fail the surrounding
  * transaction on a stale id.
  */
-export function incrementTransactionCorrectionUsage(db: FinanceDb, id: string): void {
+export function incrementTransactionCorrectionUsage(db: FinanceDb, id: string, count = 1): void {
   db.update(transactionCorrections)
     .set({
-      timesApplied: sql`${transactionCorrections.timesApplied} + 1`,
+      timesApplied: sql`${transactionCorrections.timesApplied} + ${count}`,
       lastUsedAt: new Date().toISOString(),
     })
     .where(eq(transactionCorrections.id, id))
