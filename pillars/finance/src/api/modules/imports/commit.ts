@@ -133,14 +133,6 @@ function applyTagRuleChangeSetsPhase(
   return tagRulesApplied;
 }
 
-function deriveTransactionType(
-  txnType: string | null | undefined
-): 'Transfer' | 'Income' | 'Expense' {
-  if (txnType === 'transfer') return 'Transfer';
-  if (txnType === 'income') return 'Income';
-  return 'Expense';
-}
-
 interface WriteTxnsResult {
   imported: number;
   failed: number;
@@ -177,7 +169,7 @@ function writeTransactionsPhase(
         account: txn.account,
         amountCents: dollarsToCents(txn.amount),
         date: txn.date,
-        type: deriveTransactionType(txn.transactionType),
+        type: txn.transactionType ?? 'purchase',
         tags: txn.tags ?? [],
         entityId: entityId ?? null,
         entityName: txn.entityName ?? null,

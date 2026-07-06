@@ -7132,7 +7132,15 @@ export interface operations {
         endDate?: string;
         tag?: string;
         entityId?: string;
-        type?: string;
+        type?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax';
         limit?: number;
         offset?: number;
       };
@@ -7163,7 +7171,16 @@ export interface operations {
               notes: string | null;
               relatedTransactionId: string | null;
               tags: string[];
-              type: string;
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             }[];
             pagination: {
               hasMore: boolean;
@@ -7201,7 +7218,16 @@ export interface operations {
           relatedTransactionId?: string | null;
           /** @default [] */
           tags: string[];
-          type: string;
+          /** @enum {string} */
+          type:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax';
         };
       };
     };
@@ -7227,7 +7253,16 @@ export interface operations {
               notes: string | null;
               relatedTransactionId: string | null;
               tags: string[];
-              type: string;
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             message: string;
           };
@@ -7365,7 +7400,16 @@ export interface operations {
           rawRow: string | null;
           relatedTransactionId: string | null;
           tags: string;
-          type: string;
+          /** @enum {string} */
+          type:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax';
         };
       };
     };
@@ -7391,7 +7435,16 @@ export interface operations {
               notes: string | null;
               relatedTransactionId: string | null;
               tags: string[];
-              type: string;
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             message: string;
           };
@@ -7495,7 +7548,16 @@ export interface operations {
               notes: string | null;
               relatedTransactionId: string | null;
               tags: string[];
-              type: string;
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
           };
         };
@@ -7595,7 +7657,16 @@ export interface operations {
               rawRow: string | null;
               relatedTransactionId: string | null;
               tags: string;
-              type: string;
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
           };
         };
@@ -7665,7 +7736,16 @@ export interface operations {
           notes?: string | null;
           relatedTransactionId?: string | null;
           tags?: string[];
-          type?: string;
+          /** @enum {string} */
+          type?:
+            | 'purchase'
+            | 'transfer'
+            | 'income'
+            | 'refund'
+            | 'reversal'
+            | 'loan'
+            | 'rebate'
+            | 'tax';
         };
       };
     };
@@ -7691,7 +7771,16 @@ export interface operations {
               notes: string | null;
               relatedTransactionId: string | null;
               tags: string[];
-              type: string;
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
             };
             message: string;
           };

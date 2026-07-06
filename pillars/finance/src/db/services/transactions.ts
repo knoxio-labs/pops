@@ -21,6 +21,7 @@ import { and, count, desc, eq, gte, like, lte, type SQL, sql } from 'drizzle-orm
 import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
 import { transactions } from '../schema.js';
 
+import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb } from './internal.js';
 
 /** Raw drizzle row shape — exposed so callers can reuse the inferred select type. */
@@ -32,7 +33,7 @@ export interface CreateTransactionInput {
   account: string;
   amountCents: number;
   date: string;
-  type?: string | undefined;
+  type?: TransactionType | undefined;
   tags?: string[] | undefined;
   entityId?: string | null | undefined;
   entityName?: string | null | undefined;
@@ -52,7 +53,7 @@ export interface UpdateTransactionInput {
   account?: string;
   amountCents?: number;
   date?: string;
-  type?: string;
+  type?: TransactionType;
   tags?: string[];
   entityId?: string | null;
   entityName?: string | null;
@@ -70,7 +71,7 @@ export interface TransactionFilters {
   endDate?: string | undefined;
   tag?: string | undefined;
   entityId?: string | undefined;
-  type?: string | undefined;
+  type?: TransactionType | undefined;
 }
 
 /** Count + rows for a paginated list. */
@@ -140,9 +141,9 @@ export function getTransaction(db: FinanceDb, id: string): TransactionRow {
 /**
  * Create a new transaction. Generates a UUID, persists, and returns the row.
  *
- * `type` defaults to '' — the column is `NOT NULL` and historic rows carry
- * empty-string defaults rather than a real categorisation. `tags` defaults to
- * `[]` serialised.
+ * `type` defaults to `'purchase'` (the default debit type since #3607) when the
+ * caller supplies none — the column is `NOT NULL`. `tags` defaults to `[]`
+ * serialised.
  */
 export function createTransaction(db: FinanceDb, input: CreateTransactionInput): TransactionRow {
   const id = crypto.randomUUID();
@@ -155,7 +156,7 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
       account: input.account,
       amountCents: input.amountCents,
       date: input.date,
-      type: input.type ?? '',
+      type: input.type ?? 'purchase',
       tags: JSON.stringify(input.tags ?? []),
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,

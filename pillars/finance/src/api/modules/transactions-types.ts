@@ -12,6 +12,7 @@
  */
 import { centsToDollars, dollarsToCents } from '../../money.js';
 
+import type { TransactionType } from '../../contract/corrections-constants.js';
 import type {
   CreateTransactionInput,
   TransactionRow,
@@ -25,7 +26,7 @@ export interface Transaction {
   account: string;
   amount: number;
   date: string;
-  type: string;
+  type: TransactionType;
   tags: string[];
   entityId: string | null;
   entityName: string | null;
@@ -48,7 +49,7 @@ export interface TransactionSnapshot {
   account: string;
   amount: number;
   date: string;
-  type: string;
+  type: TransactionType;
   tags: string;
   entityId: string | null;
   entityName: string | null;
@@ -70,7 +71,7 @@ export interface CreateTransactionBody {
   account: string;
   amount: number;
   date: string;
-  type: string;
+  type: TransactionType;
   tags?: string[] | undefined;
   entityId?: string | null | undefined;
   entityName?: string | null | undefined;
@@ -88,7 +89,7 @@ export interface UpdateTransactionBody {
   account?: string;
   amount?: number;
   date?: string;
-  type?: string;
+  type?: TransactionType;
   tags?: string[];
   entityId?: string | null;
   entityName?: string | null;

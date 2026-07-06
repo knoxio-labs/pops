@@ -50,9 +50,9 @@ function tagsFilterFn(
 
 function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
   const typeLabels: Record<string, string> = {
-    Expense: t('filter.expense'),
-    Income: t('filter.income'),
-    Transfer: t('filter.transfer'),
+    purchase: t('filter.expense'),
+    income: t('filter.income'),
+    transfer: t('filter.transfer'),
   };
   return [
     {
@@ -185,9 +185,9 @@ export function buildTransactionFilters(
       label: t('filter.type'),
       options: [
         { label: t('filter.allTypes'), value: '' },
-        { label: t('filter.income'), value: 'Income' },
-        { label: t('filter.expense'), value: 'Expense' },
-        { label: t('filter.transfer'), value: 'Transfer' },
+        { label: t('filter.income'), value: 'income' },
+        { label: t('filter.expense'), value: 'purchase' },
+        { label: t('filter.transfer'), value: 'transfer' },
       ],
     },
     { id: 'tags', type: 'text', label: t('filter.tag'), placeholder: t('placeholder.filterByTag') },

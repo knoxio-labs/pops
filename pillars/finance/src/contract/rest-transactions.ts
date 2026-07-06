@@ -9,6 +9,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { TRANSACTION_MATCH_TYPES } from '../db/index.js';
+import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ERR_RESPONSES, LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 const c = initContract();
@@ -20,7 +21,7 @@ export const TransactionSchema = z.object({
   account: z.string(),
   amount: z.number(),
   date: z.string(),
-  type: z.string(),
+  type: TransactionTypeSchema,
   tags: z.array(z.string()),
   entityId: z.string().nullable(),
   entityName: z.string().nullable(),
@@ -44,7 +45,7 @@ export const TransactionSnapshotSchema = z.object({
   account: z.string(),
   amount: z.number(),
   date: z.string(),
-  type: z.string(),
+  type: TransactionTypeSchema,
   tags: z.string(),
   entityId: z.string().nullable(),
   entityName: z.string().nullable(),
@@ -65,7 +66,7 @@ const CreateTransactionBody = z.object({
   account: z.string().min(1, 'Account is required'),
   amount: z.number(),
   date: z.string().min(1, 'Date is required'),
-  type: z.string().min(1, 'Type is required'),
+  type: TransactionTypeSchema,
   tags: z.array(z.string()).optional().default([]),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
@@ -82,7 +83,7 @@ const UpdateTransactionBody = z.object({
   account: z.string().min(1, 'Account cannot be empty').optional(),
   amount: z.number().optional(),
   date: z.string().min(1, 'Date cannot be empty').optional(),
-  type: z.string().optional(),
+  type: TransactionTypeSchema.optional(),
   tags: z.array(z.string()).optional(),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
@@ -99,7 +100,7 @@ const TransactionQuery = z.object({
   endDate: z.string().optional(),
   tag: z.string().optional(),
   entityId: z.string().optional(),
-  type: z.string().optional(),
+  type: TransactionTypeSchema.optional(),
   limit: LimitQuery,
   offset: OffsetQuery,
 });

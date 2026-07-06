@@ -57,13 +57,6 @@ interface BatchTxn {
   matchType: string | null;
 }
 
-function deriveNewType(ruleType: string | null): 'Transfer' | 'Income' | 'Expense' | null {
-  if (!ruleType) return null;
-  if (ruleType === 'transfer') return 'Transfer';
-  if (ruleType === 'income') return 'Income';
-  return 'Expense';
-}
-
 /**
  * The entity a rule would newly assign, or `null` when it must be left alone.
  *
@@ -80,9 +73,12 @@ function providedEntityChange(
   return { entityId: ruleEntityId, entityName: rule.entityName ?? null };
 }
 
-function changedType(txn: BatchTxn, rule: CorrectionRow): 'Transfer' | 'Income' | 'Expense' | null {
-  const newType = deriveNewType(rule.transactionType);
-  return newType !== null && newType !== txn.type ? newType : null;
+/** The lowercase canonical `type` the rule would newly assign (written verbatim
+ * to `transactions.type` since #3607 stage 2 — no more capitalized collapse), or
+ * `null` when the rule carries no type or it already matches. */
+function changedType(txn: BatchTxn, rule: CorrectionRow): string | null {
+  const newType = rule.transactionType;
+  return newType != null && newType !== txn.type ? newType : null;
 }
 
 function changedLocation(txn: BatchTxn, rule: CorrectionRow): string | null {

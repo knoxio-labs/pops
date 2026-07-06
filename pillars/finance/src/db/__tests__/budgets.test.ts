@@ -449,14 +449,14 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Woolworths',
       amountCents: -10000,
       date: '2026-02-03',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'Coles',
       amountCents: -5050,
       date: '2026-02-10',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
 
@@ -471,7 +471,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Refund',
       amountCents: 2500,
       date: '2026-02-05',
-      type: 'Income',
+      type: 'income',
       tags: ['Groceries'],
     });
 
@@ -486,7 +486,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Transfer to Savings',
       amountCents: -50000,
       date: '2026-02-05',
-      type: 'Transfer',
+      type: 'transfer',
       tags: ['Groceries', 'Transfer'],
     });
 
@@ -501,7 +501,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Netflix',
       amountCents: -2299,
       date: '2026-02-05',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Entertainment'],
     });
 
@@ -515,21 +515,21 @@ describe('listBudgets — spend aggregation', () => {
       description: 'January spend',
       amountCents: -20000,
       date: '2026-01-15',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'February spend',
       amountCents: -10000,
       date: '2026-02-10',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'Last year December',
       amountCents: -99900,
       date: '2025-12-28',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
 
@@ -544,7 +544,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Future outflow',
       amountCents: -100000,
       date: '2026-02-28',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
 
@@ -558,7 +558,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'March spend',
       amountCents: -12000,
       date: '2026-03-04',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
 
@@ -578,7 +578,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Groceries + bonus',
       amountCents: -7500,
       date: '2026-02-04',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries', 'Shopping', 'Essentials'],
     });
 
@@ -592,7 +592,7 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Big shop',
       amountCents: -25000,
       date: '2026-02-05',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
 
@@ -607,14 +607,14 @@ describe('listBudgets — spend aggregation', () => {
       description: 'Last year',
       amountCents: -20000,
       date: '2024-06-01',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'This year',
       amountCents: -30000,
       date: '2026-02-10',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
 
@@ -639,14 +639,14 @@ describe('computeSpent', () => {
       description: 'Groceries',
       amountCents: -5000,
       date: '2026-02-10',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Groceries'],
     });
     seedTransaction(db, {
       description: 'Coffee',
       amountCents: -1000,
       date: '2026-02-10',
-      type: 'Expense',
+      type: 'purchase',
       tags: ['Coffee'],
     });
 

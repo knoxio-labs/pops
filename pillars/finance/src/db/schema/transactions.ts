@@ -1,5 +1,6 @@
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { TRANSACTION_TYPES } from '../../contract/corrections-constants.js';
 import { TRANSACTION_MATCH_TYPES } from '../match-types.js';
 
 export const transactions = sqliteTable(
@@ -14,7 +15,7 @@ export const transactions = sqliteTable(
     /** Signed amount in integer cents (#3665, CF041) — never a float dollar value. */
     amountCents: integer('amount_cents').notNull(),
     date: text('date').notNull(),
-    type: text('type').notNull(),
+    type: text('type', { enum: TRANSACTION_TYPES }).notNull(),
     tags: text('tags').notNull().default('[]'),
     entityId: text('entity_id'),
     entityName: text('entity_name'),

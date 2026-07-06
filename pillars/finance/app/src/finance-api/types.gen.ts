@@ -5139,7 +5139,7 @@ export type TransactionsListData = {
     endDate?: string;
     tag?: string;
     entityId?: string;
-    type?: string;
+    type?: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     limit?: number;
     offset?: number;
   };
@@ -5165,7 +5165,7 @@ export type TransactionsListResponses = {
       notes: string | null;
       relatedTransactionId: string | null;
       tags: Array<string>;
-      type: string;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     }>;
     pagination: {
       hasMore: boolean;
@@ -5196,7 +5196,7 @@ export type TransactionsCreateData = {
     rawRow?: string;
     relatedTransactionId?: string | null;
     tags: Array<string>;
-    type: string;
+    type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
   };
   path?: never;
   query?: never;
@@ -5251,7 +5251,7 @@ export type TransactionsCreateResponses = {
       notes: string | null;
       relatedTransactionId: string | null;
       tags: Array<string>;
-      type: string;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     };
     message: string;
   };
@@ -5329,7 +5329,7 @@ export type TransactionsRestoreData = {
     rawRow: string | null;
     relatedTransactionId: string | null;
     tags: string;
-    type: string;
+    type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
   };
   path?: never;
   query?: never;
@@ -5384,7 +5384,7 @@ export type TransactionsRestoreResponses = {
       notes: string | null;
       relatedTransactionId: string | null;
       tags: Array<string>;
-      type: string;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     };
     message: string;
   };
@@ -5484,7 +5484,7 @@ export type TransactionsDeleteResponses = {
       rawRow: string | null;
       relatedTransactionId: string | null;
       tags: string;
-      type: string;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     };
   };
 };
@@ -5549,7 +5549,7 @@ export type TransactionsGetResponses = {
       notes: string | null;
       relatedTransactionId: string | null;
       tags: Array<string>;
-      type: string;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     };
   };
 };
@@ -5572,7 +5572,7 @@ export type TransactionsUpdateData = {
     notes?: string | null;
     relatedTransactionId?: string | null;
     tags?: Array<string>;
-    type?: string;
+    type?: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
   };
   path: {
     id: string;
@@ -5629,7 +5629,7 @@ export type TransactionsUpdateResponses = {
       notes: string | null;
       relatedTransactionId: string | null;
       tags: Array<string>;
-      type: string;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     };
     message: string;
   };

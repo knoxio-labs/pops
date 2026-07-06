@@ -9,12 +9,15 @@
  * consolidation removed). Keep in lockstep with
  * `pillars/finance/src/contract/corrections-constants.ts`.
  */
-export type TransactionType =
-  | 'purchase'
-  | 'transfer'
-  | 'income'
-  | 'refund'
-  | 'reversal'
-  | 'loan'
-  | 'rebate'
-  | 'tax';
+export const TRANSACTION_TYPES = [
+  'purchase',
+  'transfer',
+  'income',
+  'refund',
+  'reversal',
+  'loan',
+  'rebate',
+  'tax',
+] as const;
+
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];

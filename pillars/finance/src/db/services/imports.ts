@@ -22,6 +22,7 @@ import { ImportTransactionPersistError } from '../errors.js';
 import { transactions } from '../schema.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
+import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { TransactionMatchType } from '../match-types.js';
 import type { FinanceDb } from './internal.js';
 
@@ -53,7 +54,7 @@ export interface InsertImportTransactionInput {
   account: string;
   amountCents: number;
   date: string;
-  type: string;
+  type: TransactionType;
   tags: string[];
   entityId: string | null;
   entityName: string | null;
@@ -168,7 +169,7 @@ export function insertImportTransaction(
       account: input.account,
       amountCents: input.amountCents,
       date: input.date,
-      type: input.type || '',
+      type: input.type,
       tags: JSON.stringify(input.tags),
       entityId: input.entityId,
       entityName: input.entityName,

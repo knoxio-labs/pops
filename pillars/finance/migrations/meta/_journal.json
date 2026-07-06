@@ -113,6 +113,13 @@
       "when": 1781913600009,
       "tag": "0064_money_integer_cents",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781913600010,
+      "tag": "0065_transaction_type_lowercase",
+      "breakpoints": true
     }
   ]
 }

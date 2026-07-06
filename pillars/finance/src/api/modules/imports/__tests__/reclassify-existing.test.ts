@@ -110,7 +110,7 @@ afterEach(() => {
 
 describe('reclassifyExistingTransactions — classification gate (CF006)', () => {
   it('skips a sub-threshold (<0.9) entity match rather than applying it unreviewed', () => {
-    const txnId = seedTxn({ description: 'COFFEE SHOP', type: 'Expense', entityId: null });
+    const txnId = seedTxn({ description: 'COFFEE SHOP', type: 'purchase', entityId: null });
     seedRule({
       descriptionPattern: 'COFFEE SHOP',
       entityId: 'ent-coffee',
@@ -125,13 +125,13 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
     const row = readTxn(txnId);
     expect(row.entityId).toBeNull();
     expect(row.entityName).toBeNull();
-    expect(row.type).toBe('Expense');
+    expect(row.type).toBe('purchase');
   });
 
   it('never clears an existing entity: an entity-less transfer rule retypes but keeps the merchant', () => {
     const txnId = seedTxn({
       description: 'TRANSFER TO SAVINGS',
-      type: 'Expense',
+      type: 'purchase',
       entityId: 'ent-existing',
       entityName: 'My Bank',
       location: null,
@@ -149,7 +149,7 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
 
     expect(count).toBe(1);
     const row = readTxn(txnId);
-    expect(row.type).toBe('Transfer');
+    expect(row.type).toBe('transfer');
     expect(row.location).toBe('AU');
     expect(row.entityId).toBe('ent-existing');
     expect(row.entityName).toBe('My Bank');
@@ -158,7 +158,7 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
   it('treats a whitespace-only entityId as entity-less: never overwrites a merchant with a blank id', () => {
     const txnId = seedTxn({
       description: 'TRANSFER TO SAVINGS',
-      type: 'Expense',
+      type: 'purchase',
       entityId: 'ent-existing',
       entityName: 'My Bank',
     });
@@ -173,13 +173,13 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
     reclassifyExistingTransactions(db, []);
 
     const row = readTxn(txnId);
-    expect(row.type).toBe('Transfer');
+    expect(row.type).toBe('transfer');
     expect(row.entityId).toBe('ent-existing');
     expect(row.entityName).toBe('My Bank');
   });
 
   it('applies a confident (>=0.9) entity rule: sets entity and type', () => {
-    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -194,13 +194,13 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
     const row = readTxn(txnId);
     expect(row.entityId).toBe('ent-woolies');
     expect(row.entityName).toBe('Woolworths');
-    expect(row.type).toBe('Expense');
+    expect(row.type).toBe('purchase');
   });
 
   it('skips an entity-less purchase rule even at high confidence (needs merchant review)', () => {
     const txnId = seedTxn({
       description: 'UNKNOWN MERCHANT',
-      type: 'Income',
+      type: 'income',
       entityId: null,
       location: null,
     });
@@ -216,13 +216,13 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
 
     expect(count).toBe(0);
     const row = readTxn(txnId);
-    expect(row.type).toBe('Income');
+    expect(row.type).toBe('income');
     expect(row.location).toBeNull();
     expect(row.entityId).toBeNull();
   });
 
   it('skips a sub-threshold entity-less transfer rule (uncertain, not written)', () => {
-    const txnId = seedTxn({ description: 'AMBIGUOUS MOVE', type: 'Expense', entityId: null });
+    const txnId = seedTxn({ description: 'AMBIGUOUS MOVE', type: 'purchase', entityId: null });
     seedRule({
       descriptionPattern: 'AMBIGUOUS MOVE',
       entityId: null,
@@ -233,7 +233,7 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
     const count = reclassifyExistingTransactions(db, []);
 
     expect(count).toBe(0);
-    expect(readTxn(txnId).type).toBe('Expense');
+    expect(readTxn(txnId).type).toBe('purchase');
   });
 });
 
@@ -241,7 +241,7 @@ describe('reclassifyExistingTransactions — manual-override skip (CF017/#3623)'
   it('never touches a transaction whose matchType is "manual", even against a confident matching rule', () => {
     const txnId = seedTxn({
       description: 'WOOLWORTHS',
-      type: 'Income',
+      type: 'income',
       entityId: 'ent-user-picked',
       entityName: 'User Picked Co',
       matchType: 'manual',
@@ -260,17 +260,17 @@ describe('reclassifyExistingTransactions — manual-override skip (CF017/#3623)'
     const row = readTxn(txnId);
     expect(row.entityId).toBe('ent-user-picked');
     expect(row.entityName).toBe('User Picked Co');
-    expect(row.type).toBe('Income');
+    expect(row.type).toBe('income');
   });
 
   it('still reclassifies a sibling row with the same description that was never manually edited', () => {
     const manualId = seedTxn({
       description: 'WOOLWORTHS',
-      type: 'Income',
+      type: 'income',
       entityId: 'ent-user-picked',
       matchType: 'manual',
     });
-    const autoId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const autoId = seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -289,7 +289,7 @@ describe('reclassifyExistingTransactions — manual-override skip (CF017/#3623)'
 
 describe('reclassifyExistingTransactions — idempotent on a second pass', () => {
   it('a second pass against the same rule set makes no further changes', () => {
-    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -317,7 +317,7 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
   it('merges the winning rule tags into the transaction and stamps match provenance', () => {
     const txnId = seedTxn({
       description: 'WOOLWORTHS',
-      type: 'Income',
+      type: 'income',
       entityId: null,
       tags: ['existing-tag'],
     });
@@ -341,8 +341,8 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
   });
 
   it('bumps the matched rule timesApplied/lastUsedAt by the number of rows it changed in this pass', () => {
-    seedTxn({ description: 'WOOLWORTHS 1', type: 'Income', entityId: null });
-    seedTxn({ description: 'WOOLWORTHS 2', type: 'Income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS 1', type: 'income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS 2', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -366,7 +366,7 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
   it('never bumps usage or stamps provenance on a manually-overridden row', () => {
     const txnId = seedTxn({
       description: 'WOOLWORTHS',
-      type: 'Income',
+      type: 'income',
       entityId: 'ent-user-picked',
       matchType: 'manual',
       tags: ['kept-as-is'],
@@ -391,7 +391,7 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
   });
 
   it('a second pass with nothing left to change writes nothing and bumps no rule usage', () => {
-    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -411,7 +411,7 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
 
 describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive apply (#3660)', () => {
   it('applies only the targeted rule, even when a different rule also matches', () => {
-    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     const targetRuleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -438,7 +438,7 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
   it('reports skippedManual and leaves a manually-overridden transaction untouched', () => {
     const txnId = seedTxn({
       description: 'WOOLWORTHS',
-      type: 'Income',
+      type: 'income',
       entityId: 'ent-user-picked',
       matchType: 'manual',
     });
@@ -457,7 +457,7 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
   });
 
   it('reports skippedUncertain for a sub-threshold match, applying nothing', () => {
-    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -472,7 +472,7 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
   });
 
   it('dryRun computes the same result without writing anything or bumping usage', () => {
-    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',
@@ -494,7 +494,7 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
   });
 
   it('a second real apply is a no-op (idempotent)', () => {
-    seedTxn({ description: 'WOOLWORTHS', type: 'Income', entityId: null });
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
       entityId: 'ent-woolies',

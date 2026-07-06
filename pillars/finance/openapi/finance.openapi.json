@@ -14739,6 +14739,16 @@
             "in": "query",
             "name": "type",
             "schema": {
+              "enum": [
+                "purchase",
+                "transfer",
+                "income",
+                "refund",
+                "reversal",
+                "loan",
+                "rebate",
+                "tax"
+              ],
               "type": "string"
             }
           },
@@ -14822,6 +14832,16 @@
                             "type": "array"
                           },
                           "type": {
+                            "enum": [
+                              "purchase",
+                              "transfer",
+                              "income",
+                              "refund",
+                              "reversal",
+                              "loan",
+                              "rebate",
+                              "tax"
+                            ],
                             "type": "string"
                           }
                         },
@@ -14938,7 +14958,16 @@
                     "type": "array"
                   },
                   "type": {
-                    "minLength": 1,
+                    "enum": [
+                      "purchase",
+                      "transfer",
+                      "income",
+                      "refund",
+                      "reversal",
+                      "loan",
+                      "rebate",
+                      "tax"
+                    ],
                     "type": "string"
                   }
                 },
@@ -15008,6 +15037,16 @@
                           "type": "array"
                         },
                         "type": {
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "type": "string"
                         }
                       },
@@ -15295,6 +15334,16 @@
                     "type": "string"
                   },
                   "type": {
+                    "enum": [
+                      "purchase",
+                      "transfer",
+                      "income",
+                      "refund",
+                      "reversal",
+                      "loan",
+                      "rebate",
+                      "tax"
+                    ],
                     "type": "string"
                   }
                 },
@@ -15385,6 +15434,16 @@
                           "type": "array"
                         },
                         "type": {
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "type": "string"
                         }
                       },
@@ -15658,6 +15717,16 @@
                           "type": "string"
                         },
                         "type": {
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "type": "string"
                         }
                       },
@@ -15837,6 +15906,16 @@
                           "type": "array"
                         },
                         "type": {
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "type": "string"
                         }
                       },
@@ -16003,6 +16082,16 @@
                     "type": "array"
                   },
                   "type": {
+                    "enum": [
+                      "purchase",
+                      "transfer",
+                      "income",
+                      "refund",
+                      "reversal",
+                      "loan",
+                      "rebate",
+                      "tax"
+                    ],
                     "type": "string"
                   }
                 },
@@ -16071,6 +16160,16 @@
                           "type": "array"
                         },
                         "type": {
+                          "enum": [
+                            "purchase",
+                            "transfer",
+                            "income",
+                            "refund",
+                            "reversal",
+                            "loan",
+                            "rebate",
+                            "tax"
+                          ],
                           "type": "string"
                         }
                       },

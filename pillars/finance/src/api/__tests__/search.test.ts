@@ -54,7 +54,7 @@ describe('search — transactions adapter', () => {
       account: 'cash',
       amount: -5,
       date: '2026-01-01',
-      type: 'Expense',
+      type: 'purchase',
     });
 
     const { hits } = await client().search.run({ query: { text: 'coffee' } });
@@ -138,7 +138,7 @@ describe('search — aggregation & empty query', () => {
       account: 'a',
       amount: 1,
       date: '2026-01-01',
-      type: 'expense',
+      type: 'purchase',
     });
     await client().budgets.create({ category: 'Travel', period: 'Yearly' });
     await client().wishlist.create({ item: 'Travel backpack' });
@@ -155,7 +155,7 @@ describe('search — aggregation & empty query', () => {
       account: 'a',
       amount: 1,
       date: '2026-01-01',
-      type: 'expense',
+      type: 'purchase',
     });
     expect((await client().search.run({ query: { text: '' } })).hits).toEqual([]);
     expect((await client().search.run({ query: { text: '   ' } })).hits).toEqual([]);

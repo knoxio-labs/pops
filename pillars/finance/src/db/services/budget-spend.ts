@@ -64,7 +64,7 @@ export function bulkComputeSpend(
     const categoryList = Array.from(categories);
 
     const conditions = [
-      sql`${transactions.type} != 'Transfer'`,
+      sql`${transactions.type} != 'transfer'`,
       sql`je.value IN (${sql.join(
         categoryList.map((c) => sql`${c}`),
         sql`, `
