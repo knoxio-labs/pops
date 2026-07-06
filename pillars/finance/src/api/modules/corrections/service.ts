@@ -7,7 +7,10 @@
  *
  * `TransactionTagRuleNotFoundError`-style behaviour is preserved: an
  * edit/disable/remove op targeting an unknown id throws `NotFoundError` (→ 404),
- * which inside `db.transaction` rolls the whole set back.
+ * which inside `db.transaction` rolls the whole set back. An `add` op with no
+ * `entityId`, no `transactionType`, and non-empty `tags` throws `ValidationError`
+ * (→ 400, CF061/#3650) before anything is written — a tags-only row belongs in
+ * `transaction_tag_rules`, not here.
  */
 import { and, desc, eq } from 'drizzle-orm';
 
@@ -17,12 +20,26 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
-import { NotFoundError } from '../../shared/errors.js';
+import { NotFoundError, ValidationError } from '../../shared/errors.js';
 
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
 import type { CorrectionRow } from './types.js';
 
-const { normalizeDescription } = transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, normalizeDescription } = transactionCorrectionsService;
+
+/**
+ * Reject a ChangeSet `add` whose data carries no `entityId`, no
+ * `transactionType`, and non-empty `tags` — a tags-only row that violates the
+ * classification-rule/tag-rule table boundary (CF061/#3650). Tag-only intent
+ * belongs in a `transaction_tag_rules` ChangeSet, not here.
+ */
+function assertNotTagsOnly(op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  if (isTagsOnlyCorrectionInput(op.data)) {
+    throw new ValidationError(
+      'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules'
+    );
+  }
+}
 
 function findExistingCorrectionByKey(
   tx: FinanceDb,
@@ -49,6 +66,8 @@ function findExistingCorrectionByKey(
  * duplicate where only one of the two ever matches.
  */
 function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  assertNotTagsOnly(op);
+
   const normalized = normalizeDescription(op.data.descriptionPattern);
   const values = {
     entityId: op.data.entityId ?? null,

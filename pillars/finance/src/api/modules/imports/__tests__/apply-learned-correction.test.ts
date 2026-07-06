@@ -9,6 +9,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -255,5 +256,54 @@ describe('applyLearnedCorrection — entity-less rules', () => {
     });
 
     expect(result).toBeNull();
+  });
+});
+
+describe('applyLearnedCorrection — usage telemetry gated by isPreview, not by rules (CF040/#3664)', () => {
+  function timesApplied(id: string): number {
+    const row = db
+      .select()
+      .from(transactionCorrections)
+      .where(eq(transactionCorrections.id, id))
+      .get();
+    if (!row) throw new Error(`rule ${id} vanished`);
+    return row.timesApplied;
+  }
+
+  it('bumps timesApplied on a live DB fetch (rules omitted)', () => {
+    seedRule(rule({ id: 'r-1' }));
+
+    applyLearnedCorrection(db, { transaction: transaction(), minConfidence: 0.7, knownTags: [] });
+
+    expect(timesApplied('r-1')).toBe(1);
+  });
+
+  it('bumps timesApplied when a fetch-once-per-run rules array is supplied without isPreview', () => {
+    seedRule(rule({ id: 'r-1' }));
+    const fetchedOnce = [rule({ id: 'r-1' })];
+
+    applyLearnedCorrection(db, {
+      transaction: transaction(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: fetchedOnce,
+    });
+
+    expect(timesApplied('r-1')).toBe(1);
+  });
+
+  it('does NOT bump timesApplied when rules is a pending-ChangeSet preview (isPreview: true)', () => {
+    seedRule(rule({ id: 'r-1' }));
+    const previewRules = [rule({ id: 'r-1' })];
+
+    applyLearnedCorrection(db, {
+      transaction: transaction(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: previewRules,
+      isPreview: true,
+    });
+
+    expect(timesApplied('r-1')).toBe(0);
   });
 });

@@ -24,7 +24,10 @@ import type { ProcessedTransaction, ProcessImportOutput } from './types.js';
 
 interface ReevaluateContext {
   db: FinanceDb;
-  rules?: CorrectionRow[];
+  /** The correction rule set, fetched once per run (CF040/#3664) — never re-queried per transaction. */
+  rules: CorrectionRow[];
+  /** True when `rules` is merged with un-persisted pending ChangeSets — gates usage telemetry, see `applyLearnedCorrection`. */
+  isPreview: boolean;
   minConfidence: number;
   knownTags: string[];
   entityLookup: EntityMaps['entityLookup'];
@@ -58,6 +61,7 @@ function tryApplyCorrectionStage(
     minConfidence: ctx.minConfidence,
     knownTags: ctx.knownTags,
     rules: ctx.rules,
+    isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
   });
   if (!correctionApplied) return { handled: false, changed: false };
@@ -98,7 +102,7 @@ function tryEntityMatchStage(
       aiCategory: null,
       knownTags: ctx.knownTags,
       entityDefaultTags: ctx.entityDefaultTags,
-      recordTagRuleUsage: !ctx.rules,
+      recordTagRuleUsage: !ctx.isPreview,
     }),
   };
 
@@ -158,12 +162,19 @@ export async function reevaluateImportSessionResult(args: {
   result: ProcessImportOutput;
   minConfidence: number;
 }): Promise<{ nextResult: ProcessImportOutput; affectedCount: number }> {
+  const rules = transactionCorrectionsService.listTransactionCorrections(args.db, {
+    limit: 50_000,
+    offset: 0,
+  }).rows;
+
   const contactSet = await args.contacts.fetchAllEntities();
   const { entityLookup, aliasMap: aliases } = importsService.buildEntityMaps(contactSet);
   return runReevaluate(
     args.result,
     {
       db: args.db,
+      rules,
+      isPreview: false,
       minConfidence: args.minConfidence,
       knownTags: loadKnownTags(args.db),
       entityLookup,
@@ -201,6 +212,7 @@ export async function reevaluateImportSessionWithRules(args: {
     {
       db: args.db,
       rules: mergedRules,
+      isPreview: true,
       minConfidence: args.minConfidence,
       knownTags: loadKnownTags(args.db),
       entityLookup,

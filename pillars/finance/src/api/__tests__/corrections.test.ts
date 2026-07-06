@@ -52,6 +52,7 @@ describe('corrections — createOrUpdate, get & list', () => {
       descriptionPattern: 'WOOLWORTHS METRO',
       matchType: 'contains',
       entityName: 'Woolworths',
+      transactionType: 'purchase',
       tags: ['groceries'],
     });
     expect(created.message).toBe('Correction saved');
@@ -297,6 +298,54 @@ describe('corrections — request validation', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  it('400s a createOrUpdate carrying tags but no entityId/transactionType (CF061/#3650)', async () => {
+    await expect(
+      client().corrections.createOrUpdate({
+        descriptionPattern: 'WOOLWORTHS',
+        matchType: 'contains',
+        tags: ['Groceries'],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('400s an applyChangeSet add op carrying tags but no entityId/transactionType (CF061/#3650)', async () => {
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'PAYID PAYMENT RECEIVED',
+                matchType: 'contains',
+                tags: ['Income'],
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('rolls back the whole ChangeSet when a later add op is tags-only (CF061/#3650)', async () => {
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            { op: 'add', data: { descriptionPattern: 'GOOD RULE', matchType: 'contains' } },
+            {
+              op: 'add',
+              data: { descriptionPattern: 'BAD RULE', matchType: 'contains', tags: ['X'] },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const list = await client().corrections.list();
+    expect(list.data.find((c) => c.descriptionPattern === 'GOOD RULE')).toBeUndefined();
+  });
+
   it('400s an adjustConfidence with an out-of-range delta', async () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'DELTA',
@@ -320,7 +369,15 @@ describe('corrections — applyChangeSet', () => {
     const seed = await client().corrections.applyChangeSet({
       changeSet: {
         ops: [
-          { op: 'add', data: { descriptionPattern: 'KEEP', matchType: 'contains', tags: ['a'] } },
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'KEEP',
+              matchType: 'contains',
+              transactionType: 'purchase',
+              tags: ['a'],
+            },
+          },
           { op: 'add', data: { descriptionPattern: 'DROP', matchType: 'exact' } },
         ],
       },
@@ -638,6 +695,7 @@ describe('corrections — listMerged', () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'EDITME',
       matchType: 'exact',
+      transactionType: 'purchase',
       tags: ['old'],
     });
 

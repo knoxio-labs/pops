@@ -3,12 +3,19 @@
  *
  * Dedup routes through the pillar's `importsService`; the entity-match maps are
  * built from the contact set fetched live from the contacts pillar per run (no
- * mirror). Classification runs in two passes (CP025/#3656): the deterministic
- * ladder (`classifyWithoutAi`) resolves each row synchronously, and every row
- * that falls through to the AI stage is deferred to `resolvePendingAi`, which
- * folds them into shared batched Claude calls instead of one round-trip per row.
+ * mirror). The correction rule set is likewise fetched once per run
+ * (CF040/#3664) and threaded through `ProcessContext` so `classifyWithoutAi`
+ * never re-queries it per transaction. Classification runs in two passes
+ * (CP025/#3656): the deterministic ladder (`classifyWithoutAi`) resolves each
+ * row synchronously, and every row that falls through to the AI stage is
+ * deferred to `resolvePendingAi`, which folds them into shared batched Claude
+ * calls instead of one round-trip per row.
  */
-import { type FinanceDb, importsService } from '../../../db/index.js';
+import {
+  type FinanceDb,
+  importsService,
+  transactionCorrectionsService,
+} from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
 import { type PendingAiItem, resolvePendingAi } from './ai-batch-resolver.js';
 import { buildFailure } from './process-transaction-helpers.js';
@@ -166,6 +173,10 @@ export async function processImportCore(args: ProcessCoreInput): Promise<Process
   const { entityLookup, aliasMap: aliases } = importsService.buildEntityMaps(contactSet);
   const entityDefaultTags = importsService.buildDefaultTagsByEntity(contactSet);
   const knownTags = loadKnownTags(db);
+  const correctionRules = transactionCorrectionsService.listTransactionCorrections(db, {
+    limit: 50_000,
+    offset: 0,
+  }).rows;
 
   const buckets = makeBuckets();
   buckets.skipped = buildSkippedBucket(duplicates);
@@ -177,6 +188,7 @@ export async function processImportCore(args: ProcessCoreInput): Promise<Process
     knownTags,
     importBatchId,
     entityDefaultTags,
+    correctionRules,
   };
 
   const { errors } = await runProcessLoop({

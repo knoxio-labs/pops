@@ -85,6 +85,25 @@ export function normalizeDescription(description: string): string {
 }
 
 /**
+ * A `transaction_corrections` row is a **classification** rule: it must carry
+ * an `entityId` and/or a `transactionType` to have anything to classify.
+ * `tags` is a suggestion payload riding along an entity/type match, never a
+ * standalone payload — tag-only learning belongs to `transaction_tag_rules`
+ * (see `corrections.md`'s table-boundary note). A row with neither an entity
+ * nor a transaction type but non-empty tags is a tags-only row that violates
+ * that boundary and can never surface as a classification match (CF061/#3650):
+ * it sits at or below the matching floor with nothing for `findMatch` to
+ * apply, existing only as rule-manager clutter.
+ */
+export function isTagsOnlyCorrectionInput(input: {
+  entityId?: string | null;
+  transactionType?: TransactionCorrectionTransactionType | null;
+  tags?: string[];
+}): boolean {
+  return !input.entityId && !input.transactionType && (input.tags?.length ?? 0) > 0;
+}
+
+/**
  * Apply-time match predicate shared by the rule matcher and the rule-match
  * preview: does `pattern` (interpreted per `matchType`) hit a pre-normalised
  * description?

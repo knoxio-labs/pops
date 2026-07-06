@@ -4,7 +4,8 @@
  * Split out of `corrections-handlers.ts` so the handler factory stays under the
  * line cap. Pure-ish data shaping over the finance-owned `transaction_corrections`
  * / `transactions` tables — no HTTP concerns beyond translating the package's
- * `TransactionCorrectionNotFoundError` to the in-tree `NotFoundError` (→ 404).
+ * `TransactionCorrectionNotFoundError` to the in-tree `NotFoundError` (→ 404)
+ * and `TagsOnlyCorrectionError` to `ValidationError` (→ 400, CF061/#3650).
  */
 import { desc } from 'drizzle-orm';
 
@@ -14,6 +15,7 @@ import {
   type TransactionCorrectionMatchType,
   type TransactionCorrectionRow,
   type TransactionRow,
+  TagsOnlyCorrectionError,
   TransactionCorrectionNotFoundError,
   transactionCorrectionsService,
   transactions,
@@ -23,7 +25,7 @@ import {
   parseCorrectionTags,
   type CorrectionRow,
 } from '../modules/corrections/index.js';
-import { NotFoundError } from '../shared/errors.js';
+import { NotFoundError, ValidationError } from '../shared/errors.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -198,6 +200,9 @@ export function mergedRules(
 export function translateCorrectionError(err: unknown, id?: string): never {
   if (err instanceof TransactionCorrectionNotFoundError) {
     throw new NotFoundError('Correction', id ?? err.id);
+  }
+  if (err instanceof TagsOnlyCorrectionError) {
+    throw new ValidationError(err.message);
   }
   throw err;
 }

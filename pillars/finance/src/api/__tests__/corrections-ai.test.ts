@@ -243,6 +243,7 @@ describe('corrections.proposeChangeSet', () => {
         descriptionPattern: 'WOOLWORTHS',
         matchType: 'contains',
         entityName: 'Woolworths',
+        transactionType: 'purchase',
         tags: ['groceries'],
       }
     );

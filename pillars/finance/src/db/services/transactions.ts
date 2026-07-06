@@ -200,12 +200,30 @@ function applyMetadataFields(input: UpdateTransactionInput, updates: Transaction
   if (input.notes !== undefined) updates.notes = input.notes ?? null;
 }
 
+/**
+ * Fields `reclassifyExistingTransactions`/`buildReclassifyUpdates` may overwrite
+ * on a future import's retroactive pass. Touching any of them through a direct
+ * PATCH is a manual override (CF017/#3623): it stamps `matchType: 'manual'` and
+ * clears the stale rule-match provenance so the next reclassify pass leaves the
+ * row alone instead of silently reverting the user's hand-fix.
+ */
+const CLASSIFICATION_PATCH_FIELDS = ['entityId', 'entityName', 'type', 'location'] as const;
+
+function touchesClassificationFields(input: UpdateTransactionInput): boolean {
+  return CLASSIFICATION_PATCH_FIELDS.some((field) => input[field] !== undefined);
+}
+
 function buildTransactionUpdates(input: UpdateTransactionInput): TransactionUpdate {
   const updates: TransactionUpdate = {};
   applyCoreFields(input, updates);
   applyEntityFields(input, updates);
   applyLocationFields(input, updates);
   applyMetadataFields(input, updates);
+  if (touchesClassificationFields(input)) {
+    updates.matchType = 'manual';
+    updates.matchRuleId = null;
+    updates.matchConfidence = null;
+  }
   return updates;
 }
 

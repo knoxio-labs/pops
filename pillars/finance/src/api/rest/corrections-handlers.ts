@@ -82,11 +82,15 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
 
     createOrUpdate: ({ body }: Req['createOrUpdate']) =>
       runHttp(() => {
-        const row = transactionCorrectionsService.createOrUpdateTransactionCorrection(db, body);
-        return {
-          status: 200 as const,
-          body: { data: toCorrection(row), message: 'Correction saved' },
-        };
+        try {
+          const row = transactionCorrectionsService.createOrUpdateTransactionCorrection(db, body);
+          return {
+            status: 200 as const,
+            body: { data: toCorrection(row), message: 'Correction saved' },
+          };
+        } catch (err) {
+          translateCorrectionError(err);
+        }
       }),
 
     update: ({ params, body }: Req['update']) =>

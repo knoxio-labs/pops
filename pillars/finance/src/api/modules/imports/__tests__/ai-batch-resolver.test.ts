@@ -62,6 +62,7 @@ function makeContext(overrides: Partial<ProcessContext> = {}): ProcessContext {
     knownTags: [],
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
+    correctionRules: [],
     ...overrides,
   };
 }

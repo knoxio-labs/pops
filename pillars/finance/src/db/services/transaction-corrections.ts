@@ -18,9 +18,10 @@
 import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
-import { TransactionCorrectionNotFoundError } from '../errors.js';
+import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
+  isTagsOnlyCorrectionInput,
   normalizeDescription,
   type CreateTransactionCorrectionInput,
   type TransactionCorrectionListQuery,
@@ -115,6 +116,8 @@ function insertNewCorrection(
   input: CreateTransactionCorrectionInput,
   normalized: string
 ): TransactionCorrectionRow {
+  if (isTagsOnlyCorrectionInput(input)) throw new TagsOnlyCorrectionError();
+
   const result = db
     .insert(transactionCorrections)
     .values({
@@ -155,7 +158,10 @@ function insertNewCorrection(
  *
  * On miss, a new row is inserted at {@link MIN_MATCH_CONFIDENCE} (the matching
  * floor — never below it, so a freshly created rule is never structurally
- * inert) with `timesApplied` left at 0.
+ * inert) with `timesApplied` left at 0. Throws `TagsOnlyCorrectionError` on a
+ * miss whose input carries no `entityId`, no `transactionType`, and non-empty
+ * `tags` — a tags-only row belongs in `transaction_tag_rules`, not here
+ * (CF061/#3650).
  */
 export function createOrUpdateTransactionCorrection(
   db: FinanceDb,

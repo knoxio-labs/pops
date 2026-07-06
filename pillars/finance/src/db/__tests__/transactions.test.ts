@@ -406,6 +406,65 @@ describe('updateTransaction', () => {
   });
 });
 
+describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('stamps matchType "manual" and clears rule provenance when entityId is patched', () => {
+    const created = createTransaction(db, {
+      description: 'Woolworths Groceries',
+      account: 'Up',
+      amount: 20,
+      date: '2025-06-15',
+      entityId: 'ent-wrong',
+    });
+
+    const updated = updateTransaction(db, created.id, { entityId: 'ent-correct' });
+    expect(updated.entityId).toBe('ent-correct');
+    expect(updated.matchType).toBe('manual');
+    expect(updated.matchRuleId).toBeNull();
+    expect(updated.matchConfidence).toBeNull();
+  });
+
+  it.each(['entityName', 'type', 'location'] as const)(
+    'stamps matchType "manual" when %s is patched',
+    (field) => {
+      const created = createTransaction(db, {
+        description: 'Test',
+        account: 'Up',
+        amount: 10,
+        date: '2025-06-15',
+      });
+      const updated = updateTransaction(db, created.id, { [field]: 'new-value' });
+      expect(updated.matchType).toBe('manual');
+    }
+  );
+
+  it('does not stamp matchType when only an unrelated field is patched', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amount: 10,
+      date: '2025-06-15',
+    });
+    const updated = updateTransaction(db, created.id, { notes: 'a note', amount: 15 });
+    expect(updated.matchType).toBeNull();
+  });
+
+  it('is a no-op for matchType when the patch is empty', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amount: 10,
+      date: '2025-06-15',
+    });
+    const updated = updateTransaction(db, created.id, {});
+    expect(updated.matchType).toBeNull();
+  });
+});
+
 describe('deleteTransaction', () => {
   let db: FinanceDb;
   beforeEach(() => {

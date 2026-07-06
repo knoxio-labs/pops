@@ -18,7 +18,7 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { TransactionCorrectionNotFoundError } from '../errors.js';
+import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
   adjustTransactionCorrectionConfidence,
@@ -172,6 +172,7 @@ describe('createOrUpdateTransactionCorrection — insert path', () => {
     const created = createOrUpdateTransactionCorrection(harness.db, {
       descriptionPattern: 'Foo',
       matchType: 'exact',
+      transactionType: 'purchase',
       tags: ['groceries', 'fresh'],
     });
     expect(created.tags).toBe(JSON.stringify(['groceries', 'fresh']));
@@ -193,6 +194,51 @@ describe('createOrUpdateTransactionCorrection — insert path', () => {
     expect(created.location).toBe('Sydney');
     expect(created.transactionType).toBe('purchase');
     expect(created.priority).toBe(5);
+  });
+});
+
+describe('createOrUpdateTransactionCorrection — tags-only boundary guard (CF061/#3650)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('throws TagsOnlyCorrectionError on insert with no entityId, no transactionType, and non-empty tags', () => {
+    expect(() =>
+      createOrUpdateTransactionCorrection(harness.db, {
+        descriptionPattern: 'WOOLWORTHS',
+        matchType: 'contains',
+        tags: ['Groceries'],
+      })
+    ).toThrow(TagsOnlyCorrectionError);
+  });
+
+  it('allows an insert with tags when an entityId is present', () => {
+    const created = createOrUpdateTransactionCorrection(harness.db, {
+      descriptionPattern: 'WOOLWORTHS',
+      matchType: 'contains',
+      entityId: 'ent-woolies',
+      tags: ['Groceries'],
+    });
+    expect(created.tags).toBe(JSON.stringify(['Groceries']));
+  });
+
+  it('allows an insert with tags when a transactionType is present', () => {
+    const created = createOrUpdateTransactionCorrection(harness.db, {
+      descriptionPattern: 'PAYID PAYMENT RECEIVED',
+      matchType: 'contains',
+      transactionType: 'transfer',
+      tags: ['Income'],
+    });
+    expect(created.tags).toBe(JSON.stringify(['Income']));
+  });
+
+  it('allows an insert with empty tags and neither an entityId nor a transactionType', () => {
+    const created = createOrUpdateTransactionCorrection(harness.db, {
+      descriptionPattern: 'UNKNOWN',
+      matchType: 'exact',
+    });
+    expect(created.tags).toBe('[]');
   });
 });
 
