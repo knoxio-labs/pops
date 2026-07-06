@@ -1,6 +1,6 @@
 /**
- * Single-transaction classification: correction rules → transfer heuristic →
- * entity matcher → AI fallback → no-match.
+ * Single-transaction classification: correction rules → entity matcher → AI
+ * fallback → no-match.
  *
  * Ported from the monolith `lib/process-transaction.ts`, db-injected. The
  * non-AI stages (`classifyWithoutAi`) and the AI-result finalizer
@@ -23,12 +23,10 @@ import { matchEntity } from './entity-matcher.js';
 import { buildKnownEntityHint } from './entity-vocabulary.js';
 import {
   buildFailure,
-  buildMatchedFromEntity,
-  buildMatchedTransfer,
+  buildFromEntityMatch,
   buildUncertainFromAi,
   buildUncertainNoMatch,
 } from './process-transaction-helpers.js';
-import { isTransferOrIncomeRow } from './transfer-classifier.js';
 
 import type {
   AiCounters,
@@ -66,7 +64,7 @@ function tryEntityMatch(
   if (!match) return null;
   const entry = context.entityLookup.get(match.entityName.toLowerCase());
   if (!entry) throw new Error(`Entity lookup failed for matched entity: ${match.entityName}`);
-  return buildMatchedFromEntity(db, {
+  return buildFromEntityMatch(db, {
     transaction,
     entry,
     matchType: match.matchType,
@@ -76,7 +74,7 @@ function tryEntityMatch(
 }
 
 /**
- * Run the correction/transfer/entity-match ladder for one row, without ever
+ * Run the correction/entity-match ladder for one row, without ever
  * calling the AI. Returns `{kind:'needsAi'}` when none of those stages
  * resolve it, so the caller can route the row to either the single-row AI
  * fallback (`classifyTransaction`) or a shared batched call
@@ -102,19 +100,13 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
     };
   }
 
-  if (isTransferOrIncomeRow(transaction)) {
-    return {
-      kind: 'resolved',
-      result: {
-        matched: buildMatchedTransfer(db, transaction, context.knownTags),
-        batchStatus: 'success',
-      },
-    };
-  }
-
   const entityMatched = tryEntityMatch(db, transaction, context);
   if (entityMatched) {
-    return { kind: 'resolved', result: { matched: entityMatched, batchStatus: 'success' } };
+    const bucket = entityMatched.status === 'matched' ? 'matched' : 'uncertain';
+    return {
+      kind: 'resolved',
+      result: { [bucket]: entityMatched, batchStatus: 'success' } as TransactionProcessResult,
+    };
   }
 
   return { kind: 'needsAi' };
@@ -188,7 +180,7 @@ export function finalizeAiResult(
     const aiCategory = aiEntry.tags?.length ? null : (aiEntry.category ?? null);
     const entry = resolveAiEntity(aiEntry.entityName, context);
     const processed = entry
-      ? buildMatchedFromEntity(db, {
+      ? buildFromEntityMatch(db, {
           transaction,
           entry,
           matchType: 'ai',

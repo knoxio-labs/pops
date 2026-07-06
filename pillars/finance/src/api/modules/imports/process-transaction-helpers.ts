@@ -24,10 +24,24 @@ export interface MatchedFromEntityArgs {
   entityDefaultTags: ReadonlyMap<string, string[]>;
 }
 
-export function buildMatchedFromEntity(
+/**
+ * Build the classification for an entity match (deterministic or AI). The
+ * default-type policy (#3607 stage 2b) is direction-aware:
+ *
+ *  - a **debit** (amount < 0) with a resolved merchant is a `matched`
+ *    `purchase` — the one type a code path may assign without an explicit rule;
+ *  - a **credit** (amount >= 0) is left `uncertain` with NO defaulted type,
+ *    *even though the entity resolved*. A positive-amount entity match (a salary
+ *    from a matched employer, a refund from a matched merchant) is semantically
+ *    ambiguous — it must never silently commit as a purchase. It surfaces for
+ *    review, still carrying the entity, until a correction rule assigns the real
+ *    type (`income`/`refund`/…).
+ */
+export function buildFromEntityMatch(
   db: FinanceDb,
   args: MatchedFromEntityArgs
 ): ProcessedTransaction {
+  const isDebit = args.transaction.amount < 0;
   return {
     ...args.transaction,
     entity: {
@@ -38,7 +52,8 @@ export function buildMatchedFromEntity(
         ? { confidence: args.confidence }
         : {}),
     },
-    status: 'matched',
+    status: isDebit ? 'matched' : 'uncertain',
+    transactionType: isDebit ? 'purchase' : undefined,
     suggestedTags: buildSuggestedTags(db, {
       description: args.transaction.description,
       entityId: args.entry.id,
@@ -47,27 +62,6 @@ export function buildMatchedFromEntity(
       aiCategory: args.category ?? null,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags,
-    }),
-  };
-}
-
-/** Build a `matched` transfer row — no entity (transfers are inter-account moves). */
-export function buildMatchedTransfer(
-  db: FinanceDb,
-  transaction: ParsedTransaction,
-  knownTags: string[]
-): ProcessedTransaction {
-  return {
-    ...transaction,
-    entity: { matchType: 'none' },
-    status: 'matched',
-    transactionType: 'transfer',
-    suggestedTags: buildSuggestedTags(db, {
-      description: transaction.description,
-      entityId: null,
-      correctionTags: [],
-      aiCategory: null,
-      knownTags,
     }),
   };
 }

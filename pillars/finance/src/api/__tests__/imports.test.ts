@@ -206,7 +206,7 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     expect(total).toBe(2);
   });
 
-  it('auto-classifies a negative transfer-keyword row as a transfer (no entity)', async () => {
+  it('leaves a transfer-keyword row with no rule or entity match uncertain (keyword heuristic removed, #3607)', async () => {
     const c = client();
     const { sessionId } = await c.imports.processImport({
       transactions: [
@@ -216,9 +216,10 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
-    expect(result.matched).toHaveLength(1);
-    expect(result.matched[0]?.transactionType).toBe('transfer');
-    expect(result.matched[0]?.entity.matchType).toBe('none');
+    expect(result.matched).toHaveLength(0);
+    expect(result.uncertain).toHaveLength(1);
+    expect(result.uncertain[0]?.entity.matchType).toBe('none');
+    expect(result.uncertain[0]?.error).toBe('No entity match found');
   });
 
   it('returns an empty bucketed result for an empty batch', async () => {
