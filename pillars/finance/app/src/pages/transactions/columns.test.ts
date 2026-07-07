@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
 import enAUFinance from '@pops/locales/en-AU/finance.json';
+import ptBRFinance from '@pops/locales/pt-BR/finance.json';
 
 import { buildTransactionFilters, getDistinctAccounts } from './columns';
 
@@ -15,10 +16,11 @@ void i18n.use(initReactI18next).init({
   ns: ['finance'],
   defaultNS: 'finance',
   interpolation: { escapeValue: false },
-  resources: { 'en-AU': { finance: enAUFinance } },
+  resources: { 'en-AU': { finance: enAUFinance }, 'pt-BR': { finance: ptBRFinance } },
   initImmediate: false,
 });
 const t = i18n.getFixedT<'finance'>('en-AU', 'finance');
+const tPt = i18n.getFixedT<'finance'>('pt-BR', 'finance');
 
 describe('getDistinctAccounts', () => {
   it('returns an empty list when there are no transactions loaded yet', () => {
@@ -66,5 +68,34 @@ describe('buildTransactionFilters', () => {
     const accountFilter = filters.find((f) => f.id === 'account');
 
     expect(accountFilter?.options).toEqual([{ label: 'All Accounts', value: '' }]);
+  });
+
+  it('offers every one of the 8 taxonomy types as a translated option (#3757 nit 1)', () => {
+    const typeFilter = buildTransactionFilters(t, []).find((f) => f.id === 'type');
+
+    // Every option is translated via a real key; a missing key would surface
+    // as the raw 'filter.refund' string and fail this exact-match assertion.
+    expect(typeFilter?.options).toEqual([
+      { label: 'All Types', value: '' },
+      { label: 'Expense', value: 'purchase' },
+      { label: 'Transfer', value: 'transfer' },
+      { label: 'Income', value: 'income' },
+      { label: 'Refund', value: 'refund' },
+      { label: 'Reversal', value: 'reversal' },
+      { label: 'Loan', value: 'loan' },
+      { label: 'Rebate', value: 'rebate' },
+      { label: 'Tax', value: 'tax' },
+    ]);
+  });
+
+  it('translates the new type labels for pt-BR, proving locale routing (#3757 nit 1)', () => {
+    const typeFilter = buildTransactionFilters(tPt, []).find((f) => f.id === 'type');
+    const byValue = new Map(typeFilter?.options.map((o) => [o.value, o.label]));
+
+    expect(byValue.get('refund')).toBe('Reembolso');
+    expect(byValue.get('reversal')).toBe('Estorno');
+    expect(byValue.get('loan')).toBe('Empréstimo');
+    expect(byValue.get('rebate')).toBe('Bonificação');
+    expect(byValue.get('tax')).toBe('Imposto');
   });
 });

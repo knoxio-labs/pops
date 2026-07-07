@@ -48,28 +48,6 @@ function classify(
   return null;
 }
 
-/**
- * Fold the stored `transactions.type` down to the three display buckets the
- * search wire shape exposes (`income`/`expense`/`transfer`).
- *  - `purchase` and the other debit-side types map to `expense`.
- *  - Capitalised variants ('Expense'/'Income'/'Transfer') are legacy pre-#3607
- *    values; migration 0065 lowercased them, but `toLowerCase()` keeps this
- *    tolerant of any that predate a given DB's migration run.
- *  - Anything else (including null/undefined coerced to '') falls back to 'expense'.
- */
-export function normalizeTransactionType(raw: string): 'income' | 'expense' | 'transfer' {
-  switch (raw.toLowerCase()) {
-    case 'income':
-      return 'income';
-    case 'transfer':
-      return 'transfer';
-    case 'expense':
-    case 'purchase':
-    default:
-      return 'expense';
-  }
-}
-
 function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
   const rows = db
     .select({
@@ -99,7 +77,7 @@ function searchTransactions(db: FinanceDb, text: string): SearchHit[] {
         amount: centsToDollars(row.amountCents),
         date: row.date,
         entityName: row.entityName,
-        type: normalizeTransactionType(row.type),
+        type: row.type.toLowerCase(),
       },
     });
   }

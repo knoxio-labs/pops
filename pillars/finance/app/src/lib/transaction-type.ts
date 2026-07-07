@@ -84,16 +84,26 @@ export function labelForType(type: string): string {
 
 /**
  * Types whose transactions may legitimately have no merchant entity — transfers
- * (inter-account moves), income (salary/interest), and the credit adjustments
- * that need not name a payee.
+ * (inter-account moves), income (salary/interest), the credit adjustments that
+ * need not name a payee, and reversals, which are often bank-initiated (a
+ * fee/interest reversal or a chargeback/ATM-dispute credit) and so carry no
+ * merchant (#3757).
  */
-const ENTITY_OPTIONAL_TYPES = new Set<string>(['transfer', 'income', 'loan', 'rebate', 'tax']);
+const ENTITY_OPTIONAL_TYPES = new Set<string>([
+  'transfer',
+  'income',
+  'loan',
+  'rebate',
+  'tax',
+  'reversal',
+]);
 
 /**
  * Whether a type must carry a resolved merchant entity to be committed from
- * import review. Optional types are never silently dropped at confirm for want
- * of an entity; every other value — a purchase, a refund/reversal from a
- * merchant, or an unset/unknown type — requires one.
+ * import review. A required type with no resolved entity is silently dropped at
+ * confirm, so this gate is reserved for values where a missing merchant means
+ * the row is junk: a purchase, a refund (a merchant returning money), or an
+ * unset/unknown type. Optional types are never dropped for want of an entity.
  */
 export function requiresEntity(type: string | undefined): boolean {
   return !ENTITY_OPTIONAL_TYPES.has((type ?? '').toLowerCase());
