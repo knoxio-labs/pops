@@ -274,4 +274,28 @@ describe('unlinkTransferPair', () => {
   it('throws TransactionNotFoundError for a missing id', () => {
     expect(() => unlinkTransferPair(db, 'ghost')).toThrow(TransactionNotFoundError);
   });
+
+  it('reverts only the target when the counterpart is not linked back (asymmetric pointer)', () => {
+    const a = seed(db, { account: 'Amex', amountCents: -5000, type: 'transfer' });
+    const b = seed(db, { account: 'Bendigo', amountCents: 5000, type: 'transfer' });
+    const c = seed(db, { account: 'ING', amountCents: 5000, type: 'transfer' });
+    // A points at B, but B points at C — a corrupt/asymmetric link.
+    db.update(transactions)
+      .set({ relatedTransactionId: b.id })
+      .where(eq(transactions.id, a.id))
+      .run();
+    db.update(transactions)
+      .set({ relatedTransactionId: c.id })
+      .where(eq(transactions.id, b.id))
+      .run();
+
+    unlinkTransferPair(db, a.id);
+
+    expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
+    expect(getTransaction(db, a.id).type).toBe('purchase');
+    // B is not paired back to A, so its (mis)pairing with C is left untouched.
+    const rb = getTransaction(db, b.id);
+    expect(rb.relatedTransactionId).toBe(c.id);
+    expect(rb.type).toBe('transfer');
+  });
 });

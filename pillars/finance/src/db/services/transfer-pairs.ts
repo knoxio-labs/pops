@@ -183,10 +183,16 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
 }
 
 /**
- * Break a transfer pair: symmetrically clear both legs' `related_transaction_id`
- * and revert each leg's `type` to its direction-derived default (the pre-pairing
- * type is unrecoverable). The user-facing escape hatch for a false-positive
- * pairing (PRD risk). Runs in one DB transaction.
+ * Break a transfer pair: clear the target leg's `related_transaction_id`,
+ * revert its `type` to its direction-derived default (the pre-pairing type is
+ * unrecoverable), and do the same for its counterpart. The user-facing escape
+ * hatch for a false-positive pairing (PRD risk). Runs in one DB transaction.
+ *
+ * The counterpart is only reverted when the link is SYMMETRIC — its own
+ * `related_transaction_id` points back at the target. A corrupt or asymmetric
+ * pointer (the target references a row that references someone else, or a plain
+ * transaction) clears only the target's dangling pointer and never rewrites the
+ * type of a row that is not actually paired back.
  *
  * Idempotent: called on a row that is not part of a pair
  * (`related_transaction_id IS NULL`) it returns the row untouched, so a
@@ -221,7 +227,7 @@ export function unlinkTransferPair(db: FinanceDb, id: string): TransactionRow {
       .from(transactions)
       .where(eq(transactions.id, counterpartId))
       .get();
-    if (counterpart) revert(counterpart);
+    if (counterpart && counterpart.relatedTransactionId === id) revert(counterpart);
 
     const updated = tx.select().from(transactions).where(eq(transactions.id, id)).get();
     if (!updated) throw new TransactionNotFoundError(id);

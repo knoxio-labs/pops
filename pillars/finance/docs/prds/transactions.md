@@ -38,17 +38,18 @@ Online-vs-in-person is NOT a column — it is expressed only as a normal tag (on
 
 ts-rest (zod) contract under `pillars/finance/src/contract/rest-transactions.ts`, served by the finance pillar and projected to OpenAPI.
 
-| Method & Path                            | Purpose                                                                                                                                                                       |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /transactions`                      | List; filters `search, account, startDate, endDate, tag, entityId, type`; `limit` (default 50) / `offset` (default 0); ordered by `date` DESC; returns `{ data, pagination }` |
-| `GET /transactions/:id`                  | Single transaction; 404 if missing                                                                                                                                            |
-| `POST /transactions`                     | Create; generates UUID, sets `last_edited_time`; 201                                                                                                                          |
-| `PATCH /transactions/:id`                | Partial update; only provided fields change; bumps `last_edited_time`                                                                                                         |
-| `DELETE /transactions/:id`               | Hard delete; returns `{ message, snapshot }` (full row) for Undo                                                                                                              |
-| `POST /transactions/restore`             | Re-insert a delete snapshot (preserves `id`, `checksum`, `raw_row`, `notion_id`); 409 if id already present                                                                   |
-| `GET /transactions/suggest-tags`         | Rule-based tag suggestions for `description`(+`entityId`); no LLM call                                                                                                        |
-| `GET /transactions/available-tags`       | Distinct, sorted tags across all transactions (autocomplete)                                                                                                                  |
-| `GET /transactions/descriptions-preview` | `{ description, checksum }[]` (+ `total`, `truncated`) for client-side rule preview                                                                                           |
+| Method & Path                            | Purpose                                                                                                                                                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /transactions`                      | List; filters `search, account, startDate, endDate, tag, entityId, type`; `limit` (default 50) / `offset` (default 0); ordered by `date` DESC; returns `{ data, pagination }`                   |
+| `GET /transactions/:id`                  | Single transaction; 404 if missing                                                                                                                                                              |
+| `POST /transactions`                     | Create; generates UUID, sets `last_edited_time`; 201                                                                                                                                            |
+| `PATCH /transactions/:id`                | Partial update; only provided fields change; bumps `last_edited_time`                                                                                                                           |
+| `DELETE /transactions/:id`               | Hard delete; returns `{ message, snapshot }` (full row) for Undo                                                                                                                                |
+| `POST /transactions/restore`             | Re-insert a delete snapshot (preserves `id`, `checksum`, `raw_row`, `notion_id`); 409 if id already present                                                                                     |
+| `POST /transactions/:id/unlink-transfer` | Break a false-positive transfer pair; symmetrically clears both legs' `related_transaction_id` and reverts each `type` to its direction default (debit→purchase, credit→income); 404 if missing |
+| `GET /transactions/suggest-tags`         | Rule-based tag suggestions for `description`(+`entityId`); no LLM call                                                                                                                          |
+| `GET /transactions/available-tags`       | Distinct, sorted tags across all transactions (autocomplete)                                                                                                                                    |
+| `GET /transactions/descriptions-preview` | `{ description, checksum }[]` (+ `total`, `truncated`) for client-side rule preview                                                                                                             |
 
 Literal sub-paths (`suggest-tags`, `available-tags`, `descriptions-preview`, `restore`) are declared before `:id` so the param route never shadows them.
 
@@ -72,11 +73,12 @@ Literal sub-paths (`suggest-tags`, `available-tags`, `descriptions-preview`, `re
 ### Transactions page (`/finance/transactions`)
 
 - Fetches the list once and renders a `DataTable` that does **search, filtering, sorting, and pagination client-side**.
-- Columns: Date (sortable, `en-AU` formatted), Description + entity-name sub-text, Account (mono), Amount (sortable, right-aligned, colour-coded), Type badge, inline Tags editor, row actions (Edit / Delete).
+- Columns: Date (sortable, `en-AU` formatted), Description + entity-name sub-text, Account (mono), Amount (sortable, right-aligned, colour-coded), Type badge (a link icon sits beside it when the row is a paired transfer), inline Tags editor, row actions (Edit / Unlink transfer / Delete).
 - Filters: account (select — ANZ Everyday, ANZ Savings, Amex, ING Savings, Up Everyday), type (Income/Expense/Transfer), tag (text contains), date range. Free-text search matches description.
 - Pagination default page size 50. Loading skeleton while fetching; empty state when no rows match.
 - Add/Edit via a form dialog; the amount field rejects `0` and non-numeric input.
 - Delete shows a confirm dialog, then a toast with an **Undo** action that calls `restore` with the snapshot returned by `delete`.
+- **Unlink transfer** appears in the row menu only when the row is a paired transfer (`related_transaction_id` set); it calls `POST /transactions/:id/unlink-transfer`, which breaks both legs, and a toast confirms.
 
 ### Inline tag editor (`components/tag-editor`)
 
