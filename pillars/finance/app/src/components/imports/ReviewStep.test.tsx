@@ -877,3 +877,36 @@ describe('ReviewStep — AI correction analysis', () => {
     });
   });
 });
+
+describe('ReviewStep — committed count + dropped-rows notice (#3765)', () => {
+  it('counts only committable matched rows and surfaces the ones that will be dropped', () => {
+    const committable = makeTx('WOOLWORTHS OK', { status: 'matched' });
+    // purchase (requires an entity) with no resolved entity → dropped at confirm.
+    const dropped = makeTx('MYSTERY ROW', { status: 'matched', entity: { matchType: 'exact' } });
+    mockProcessedTransactions = {
+      matched: [committable, dropped],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    // Footer promises only the committable count, not matched.length (2).
+    expect(screen.getByText('Continue to Tag Review (1)')).toBeInTheDocument();
+    // The dropped row is surfaced with a fix instruction, not silently gone.
+    expect(screen.getByText(/a merchant entity or a non-merchant type/)).toBeInTheDocument();
+  });
+
+  it('shows the full count and no notice when every matched row is committable', () => {
+    mockProcessedTransactions = {
+      matched: [makeTx('A', { status: 'matched' }), makeTx('B', { status: 'matched' })],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    expect(screen.getByText('Continue to Tag Review (2)')).toBeInTheDocument();
+    expect(screen.queryByText(/a merchant entity or a non-merchant type/)).not.toBeInTheDocument();
+  });
+});

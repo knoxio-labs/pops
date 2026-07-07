@@ -31,12 +31,12 @@ export function ReviewHeader({
 
 export function ReviewFooter({
   unresolvedCount,
-  matchedCount,
+  committedCount,
   onBack,
   onContinue,
 }: {
   unresolvedCount: number;
-  matchedCount: number;
+  committedCount: number;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -52,7 +52,7 @@ export function ReviewFooter({
           </p>
         )}
         <Button onClick={onContinue} disabled={unresolvedCount > 0}>
-          {`Continue to Tag Review (${matchedCount})`}
+          {`Continue to Tag Review (${committedCount})`}
         </Button>
       </div>
     </div>
