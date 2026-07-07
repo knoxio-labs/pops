@@ -5,8 +5,23 @@
  * `client.budgets.list()`) so per-test bodies stay readable — only the
  * transport changed. Non-2xx responses throw `HttpError` with the parsed
  * `{ status, body }` so tests assert on `.rejects.toMatchObject({ status })`.
+ *
+ * Each request runs against a server this helper binds explicitly to
+ * `127.0.0.1`, not the `::` wildcard supertest's own `app.listen(0)` would use
+ * (#3754). A `::`-bound server does not own the IPv4 loopback address, so under
+ * full-suite parallelism the `(127.0.0.1, port)` tuple supertest dials could be
+ * answered by an unrelated IPv4 loopback listener (e.g. a VPN daemon), bleeding
+ * a foreign response into a test. Owning `127.0.0.1:port` exclusively closes
+ * that window. Supertest reads `address().port` synchronously and so requires
+ * the no-host `listen(0)`, so we pre-listen the IPv4 server ourselves and hand
+ * the already-listening server over — supertest then skips its own listen.
  */
+import { once } from 'node:events';
+import http from 'node:http';
+
 import supertest from 'supertest';
+
+import type { AddressInfo } from 'node:net';
 
 import type { Express } from 'express';
 
@@ -40,6 +55,46 @@ async function send<T>(req: supertest.Test): Promise<T> {
   if (res.status >= 200 && res.status < 300) return res.body as T;
   throw new HttpError(res.status, res.body);
 }
+
+type Agent = ReturnType<typeof supertest>;
+
+const closeServer = (server: http.Server): Promise<void> =>
+  new Promise((resolve) => server.close(() => resolve()));
+
+/**
+ * Run `fn` against a fresh server bound explicitly to `127.0.0.1`, then tear it
+ * down. See the file header for why the IPv4 bind matters (#3754). The server is
+ * already listening when handed to supertest, so supertest reuses it rather
+ * than running its own `::`-binding `listen(0)`.
+ */
+async function onServer<R>(app: Express, fn: (agent: Agent) => Promise<R>): Promise<R> {
+  const server = http.createServer(app);
+  await once(server.listen(0, '127.0.0.1'), 'listening');
+  const addr = server.address() as AddressInfo | null;
+  if (addr?.address !== '127.0.0.1') {
+    await closeServer(server);
+    throw new Error(`finance test server must bind 127.0.0.1, got ${addr?.address ?? 'null'}`);
+  }
+  try {
+    return await fn(supertest(server));
+  } finally {
+    await closeServer(server);
+  }
+}
+
+const withServer = <T>(app: Express, build: (agent: Agent) => supertest.Test): Promise<T> =>
+  onServer(app, (agent) => send<T>(build(agent)));
+
+/**
+ * Issue one request against a `127.0.0.1`-bound server and return the raw
+ * supertest response — no 2xx unwrapping — for the handful of tests that assert
+ * on status/headers directly (health, webhook auth). Same IPv4 transport as
+ * {@link makeClient} (#3754).
+ */
+export const requestOn = (
+  app: Express,
+  build: (agent: Agent) => supertest.Test
+): Promise<supertest.Response> => onServer(app, (agent) => build(agent));
 
 interface Pagination {
   total: number;
@@ -261,169 +316,189 @@ export interface EntityUsageQuery {
 }
 
 export function makeClient(app: Express) {
-  const r = supertest(app);
+  const call = <T>(build: (r: Agent) => supertest.Test): Promise<T> => withServer<T>(app, build);
   return {
     search: {
       run: (body: { query: { text: string; filters?: unknown[] }; context?: unknown }) =>
-        send<{ hits: SearchHit[] }>(r.post('/search').send(body)),
+        call<{ hits: SearchHit[] }>((r) => r.post('/search').send(body)),
     },
     wishlist: {
       list: (query: WishListQuery = {}) =>
-        send<{ data: WishListItem[]; pagination: Pagination }>(r.get('/wishlist').query(query)),
-      get: (id: string) => send<{ data: WishListItem }>(r.get(`/wishlist/${id}`)),
+        call<{ data: WishListItem[]; pagination: Pagination }>((r) =>
+          r.get('/wishlist').query(query)
+        ),
+      get: (id: string) => call<{ data: WishListItem }>((r) => r.get(`/wishlist/${id}`)),
       create: (body: Record<string, unknown>) =>
-        send<{ data: WishListItem; message: string }>(r.post('/wishlist').send(body)),
+        call<{ data: WishListItem; message: string }>((r) => r.post('/wishlist').send(body)),
       update: (id: string, data: Record<string, unknown>) =>
-        send<{ data: WishListItem; message: string }>(r.patch(`/wishlist/${id}`).send(data)),
-      delete: (id: string) => send<{ message: string }>(r.delete(`/wishlist/${id}`)),
+        call<{ data: WishListItem; message: string }>((r) => r.patch(`/wishlist/${id}`).send(data)),
+      delete: (id: string) => call<{ message: string }>((r) => r.delete(`/wishlist/${id}`)),
     },
     budgets: {
       list: (query: BudgetQuery = {}) =>
-        send<{ data: Budget[]; pagination: Pagination }>(r.get('/budgets').query(query)),
-      get: (id: string) => send<{ data: Budget }>(r.get(`/budgets/${id}`)),
+        call<{ data: Budget[]; pagination: Pagination }>((r) => r.get('/budgets').query(query)),
+      get: (id: string) => call<{ data: Budget }>((r) => r.get(`/budgets/${id}`)),
       create: (body: Record<string, unknown>) =>
-        send<{ data: Budget; message: string }>(r.post('/budgets').send(body)),
+        call<{ data: Budget; message: string }>((r) => r.post('/budgets').send(body)),
       update: (id: string, data: Record<string, unknown>) =>
-        send<{ data: Budget; message: string }>(r.patch(`/budgets/${id}`).send(data)),
-      delete: (id: string) => send<{ message: string }>(r.delete(`/budgets/${id}`)),
+        call<{ data: Budget; message: string }>((r) => r.patch(`/budgets/${id}`).send(data)),
+      delete: (id: string) => call<{ message: string }>((r) => r.delete(`/budgets/${id}`)),
     },
     transactions: {
       list: (query: TransactionQuery = {}) =>
-        send<{ data: Transaction[]; pagination: Pagination }>(r.get('/transactions').query(query)),
-      get: (id: string) => send<{ data: Transaction }>(r.get(`/transactions/${id}`)),
+        call<{ data: Transaction[]; pagination: Pagination }>((r) =>
+          r.get('/transactions').query(query)
+        ),
+      get: (id: string) => call<{ data: Transaction }>((r) => r.get(`/transactions/${id}`)),
       create: (body: Record<string, unknown>) =>
-        send<{ data: Transaction; message: string }>(r.post('/transactions').send(body)),
+        call<{ data: Transaction; message: string }>((r) => r.post('/transactions').send(body)),
       update: (id: string, data: Record<string, unknown>) =>
-        send<{ data: Transaction; message: string }>(r.patch(`/transactions/${id}`).send(data)),
+        call<{ data: Transaction; message: string }>((r) =>
+          r.patch(`/transactions/${id}`).send(data)
+        ),
       delete: (id: string) =>
-        send<{ message: string; snapshot: TransactionSnapshot }>(r.delete(`/transactions/${id}`)),
+        call<{ message: string; snapshot: TransactionSnapshot }>((r) =>
+          r.delete(`/transactions/${id}`)
+        ),
       unlinkTransfer: (id: string) =>
-        send<{ data: Transaction; message: string }>(
+        call<{ data: Transaction; message: string }>((r) =>
           r.post(`/transactions/${id}/unlink-transfer`).send({})
         ),
       restore: (snapshot: TransactionSnapshot) =>
-        send<{ data: Transaction; message: string }>(
+        call<{ data: Transaction; message: string }>((r) =>
           r.post('/transactions/restore').send(snapshot)
         ),
       suggestTags: (query: { description: string; entityId?: string }) =>
-        send<{ tags: string[] }>(r.get('/transactions/suggest-tags').query(query)),
+        call<{ tags: string[] }>((r) => r.get('/transactions/suggest-tags').query(query)),
       descriptionsForPreview: (query: { limit?: number } = {}) =>
-        send<{
+        call<{
           data: { description: string; checksum: string | null }[];
           total: number;
           truncated: boolean;
-        }>(r.get('/transactions/descriptions-preview').query(query)),
-      availableTags: () => send<{ tags: string[] }>(r.get('/transactions/available-tags')),
+        }>((r) => r.get('/transactions/descriptions-preview').query(query)),
+      availableTags: () => call<{ tags: string[] }>((r) => r.get('/transactions/available-tags')),
     },
     tagRules: {
       list: (query: TagRuleListQuery = {}) =>
-        send<{ data: TagRule[]; pagination: Pagination }>(r.get('/tag-rules').query(query)),
-      get: (id: string) => send<{ data: TagRule }>(r.get(`/tag-rules/${id}`)),
+        call<{ data: TagRule[]; pagination: Pagination }>((r) => r.get('/tag-rules').query(query)),
+      get: (id: string) => call<{ data: TagRule }>((r) => r.get(`/tag-rules/${id}`)),
       update: (id: string, data: Record<string, unknown>) =>
-        send<{ data: TagRule; message: string }>(r.patch(`/tag-rules/${id}`).send(data)),
-      disable: (id: string) => send<{ message: string }>(r.post(`/tag-rules/${id}/disable`)),
-      delete: (id: string) => send<{ message: string }>(r.delete(`/tag-rules/${id}`)),
+        call<{ data: TagRule; message: string }>((r) => r.patch(`/tag-rules/${id}`).send(data)),
+      disable: (id: string) => call<{ message: string }>((r) => r.post(`/tag-rules/${id}/disable`)),
+      delete: (id: string) => call<{ message: string }>((r) => r.delete(`/tag-rules/${id}`)),
       applyExisting: (id: string, body: { dryRun?: boolean } = {}) =>
-        send<{ data: TagRuleApplyExistingResult }>(
+        call<{ data: TagRuleApplyExistingResult }>((r) =>
           r.post(`/tag-rules/${id}/apply-existing`).send(body)
         ),
       matchPreview: (body: Record<string, unknown>) =>
-        send<{ data: RuleMatchPreviewResult }>(r.post('/tag-rules/match-preview').send(body)),
-      vocabulary: () => send<{ tags: string[] }>(r.get('/tag-rules/vocabulary')),
+        call<{ data: RuleMatchPreviewResult }>((r) =>
+          r.post('/tag-rules/match-preview').send(body)
+        ),
+      vocabulary: () => call<{ tags: string[] }>((r) => r.get('/tag-rules/vocabulary')),
       propose: (body: Record<string, unknown>) =>
-        send<TagRuleProposal>(r.post('/tag-rules/propose').send(body)),
+        call<TagRuleProposal>((r) => r.post('/tag-rules/propose').send(body)),
       preview: (body: Record<string, unknown>) =>
-        send<TagRulePreview>(r.post('/tag-rules/preview').send(body)),
+        call<TagRulePreview>((r) => r.post('/tag-rules/preview').send(body)),
       apply: (body: Record<string, unknown>) =>
-        send<{ rules: TagRule[] }>(r.post('/tag-rules/apply').send(body)),
+        call<{ rules: TagRule[] }>((r) => r.post('/tag-rules/apply').send(body)),
       reject: (body: Record<string, unknown>) =>
-        send<{ message: string; followUpProposal: TagRuleProposal | null }>(
+        call<{ message: string; followUpProposal: TagRuleProposal | null }>((r) =>
           r.post('/tag-rules/reject').send(body)
         ),
     },
     corrections: {
       list: (query: CorrectionListQuery = {}) =>
-        send<{ data: Correction[]; pagination: Pagination }>(r.get('/corrections').query(query)),
-      get: (id: string) => send<{ data: Correction }>(r.get(`/corrections/${id}`)),
+        call<{ data: Correction[]; pagination: Pagination }>((r) =>
+          r.get('/corrections').query(query)
+        ),
+      get: (id: string) => call<{ data: Correction }>((r) => r.get(`/corrections/${id}`)),
       createOrUpdate: (body: Record<string, unknown>) =>
-        send<{ data: Correction; message: string }>(r.post('/corrections').send(body)),
+        call<{ data: Correction; message: string }>((r) => r.post('/corrections').send(body)),
       update: (id: string, data: Record<string, unknown>) =>
-        send<{ data: Correction; message: string }>(r.patch(`/corrections/${id}`).send(data)),
-      delete: (id: string) => send<{ message: string }>(r.delete(`/corrections/${id}`)),
+        call<{ data: Correction; message: string }>((r) =>
+          r.patch(`/corrections/${id}`).send(data)
+        ),
+      delete: (id: string) => call<{ message: string }>((r) => r.delete(`/corrections/${id}`)),
       adjustConfidence: (id: string, delta: number) =>
-        send<{ message: string }>(r.post(`/corrections/${id}/adjust-confidence`).send({ delta })),
+        call<{ message: string }>((r) =>
+          r.post(`/corrections/${id}/adjust-confidence`).send({ delta })
+        ),
       applyExisting: (id: string, body: { dryRun?: boolean } = {}) =>
-        send<{ data: CorrectionApplyExistingResult }>(
+        call<{ data: CorrectionApplyExistingResult }>((r) =>
           r.post(`/corrections/${id}/apply-existing`).send(body)
         ),
       findMatch: (body: { description: string; minConfidence?: number }) =>
-        send<{ data: Correction | null; status: 'matched' | 'uncertain' | null }>(
+        call<{ data: Correction | null; status: 'matched' | 'uncertain' | null }>((r) =>
           r.post('/corrections/find-match').send(body)
         ),
       previewMatches: (body: Record<string, unknown>) =>
-        send<{ data: PreviewMatchResult }>(r.post('/corrections/preview-matches').send(body)),
+        call<{ data: PreviewMatchResult }>((r) =>
+          r.post('/corrections/preview-matches').send(body)
+        ),
       ruleMatchPreview: (body: Record<string, unknown>) =>
-        send<{ data: RuleMatchPreviewResult }>(
+        call<{ data: RuleMatchPreviewResult }>((r) =>
           r.post('/corrections/rule-match-preview').send(body)
         ),
       listMerged: (body: Record<string, unknown> = {}) =>
-        send<{ data: Correction[]; pagination: Pagination }>(
+        call<{ data: Correction[]; pagination: Pagination }>((r) =>
           r.post('/corrections/list-merged').send(body)
         ),
       previewChangeSet: (body: Record<string, unknown>) =>
-        send<ChangeSetPreviewResult>(r.post('/corrections/preview-changeset').send(body)),
+        call<ChangeSetPreviewResult>((r) => r.post('/corrections/preview-changeset').send(body)),
       applyChangeSet: (body: Record<string, unknown>) =>
-        send<{ data: Correction[]; message: string }>(
+        call<{ data: Correction[]; message: string }>((r) =>
           r.post('/corrections/apply-changeset').send(body)
         ),
       analyzeCorrection: (body: Record<string, unknown>) =>
-        send<{ data: { matchType: string; pattern: string; confidence: number } | null }>(
+        call<{ data: { matchType: string; pattern: string; confidence: number } | null }>((r) =>
           r.post('/corrections/analyze').send(body)
         ),
       generateRules: (body: Record<string, unknown>) =>
-        send<{
+        call<{
           proposals: {
             descriptionPattern: string;
             matchType: string;
             tags: string[];
             reasoning: string;
           }[];
-        }>(r.post('/corrections/generate-rules').send(body)),
+        }>((r) => r.post('/corrections/generate-rules').send(body)),
       proposeChangeSet: (body: Record<string, unknown>) =>
-        send<{
+        call<{
           changeSet: { source?: string; reason?: string; ops: { op: string; id?: string }[] };
           rationale: string;
           preview: { counts: { affected: number }; affected: unknown[] };
           targetRules: Record<string, Correction>;
-        }>(r.post('/corrections/propose-changeset').send(body)),
+        }>((r) => r.post('/corrections/propose-changeset').send(body)),
       reviseChangeSet: (body: Record<string, unknown>) =>
-        send<{
+        call<{
           changeSet: { ops: { op: string }[] };
           rationale: string;
           targetRules: Record<string, Correction>;
-        }>(r.post('/corrections/revise-changeset').send(body)),
+        }>((r) => r.post('/corrections/revise-changeset').send(body)),
       rejectChangeSet: (body: Record<string, unknown>) =>
-        send<{ message: string }>(r.post('/corrections/reject-changeset').send(body)),
+        call<{ message: string }>((r) => r.post('/corrections/reject-changeset').send(body)),
     },
     entityUsage: {
       list: (query: EntityUsageQuery = {}) =>
-        send<{ data: EntityUsage[]; pagination: Pagination }>(r.get('/entity-usage').query(query)),
+        call<{ data: EntityUsage[]; pagination: Pagination }>((r) =>
+          r.get('/entity-usage').query(query)
+        ),
     },
     imports: {
       processImport: (body: Record<string, unknown>) =>
-        send<{ sessionId: string }>(r.post('/imports/process').send(body)),
+        call<{ sessionId: string }>((r) => r.post('/imports/process').send(body)),
       getImportProgress: (sessionId: string) =>
-        send<ImportProgress | null>(r.get('/imports/progress').query({ sessionId })),
+        call<ImportProgress | null>((r) => r.get('/imports/progress').query({ sessionId })),
       createEntity: (body: { name: string }) =>
-        send<CreateEntityOutput>(r.post('/imports/entities').send(body)),
+        call<CreateEntityOutput>((r) => r.post('/imports/entities').send(body)),
       applyChangeSetAndReevaluate: (body: Record<string, unknown>) =>
-        send<{ result: ProcessImportOutput; affectedCount: number }>(
+        call<{ result: ProcessImportOutput; affectedCount: number }>((r) =>
           r.post('/imports/apply-changeset-reevaluate').send(body)
         ),
       commitImport: (body: Record<string, unknown>) =>
-        send<{ data: CommitResult; message: string }>(r.post('/imports/commit').send(body)),
+        call<{ data: CommitResult; message: string }>((r) => r.post('/imports/commit').send(body)),
       reevaluateWithPendingRules: (body: Record<string, unknown>) =>
-        send<{ result: ProcessImportOutput; affectedCount: number }>(
+        call<{ result: ProcessImportOutput; affectedCount: number }>((r) =>
           r.post('/imports/reevaluate-pending').send(body)
         ),
     },

@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -18,6 +17,7 @@ import {
 } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
+import { requestOn } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
@@ -43,7 +43,7 @@ function app() {
 
 describe('GET /health', () => {
   it('reports no import staleness data against an empty table', async () => {
-    const res = await supertest(app()).get('/health');
+    const res = await requestOn(app(), (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
     expect(res.body.import).toEqual({
@@ -61,7 +61,7 @@ describe('GET /health', () => {
       date: '2026-07-01',
     });
 
-    const res = await supertest(app()).get('/health');
+    const res = await requestOn(app(), (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
     expect(res.body.import.daysSinceLastImport).toBe(0);
@@ -84,7 +84,7 @@ describe('GET /health', () => {
       .where(eq(transactions.id, stale.id))
       .run();
 
-    const res = await supertest(app()).get('/health');
+    const res = await requestOn(app(), (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
     expect(res.body.import.stale).toBe(true);
@@ -104,7 +104,7 @@ describe('GET /health', () => {
       .where(eq(transactions.id, row.id))
       .run();
 
-    const res = await supertest(app()).get('/health');
+    const res = await requestOn(app(), (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
     expect(res.body.import.lastEditedTime).toBe('not-a-timestamp');
