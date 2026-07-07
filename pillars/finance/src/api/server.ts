@@ -21,6 +21,7 @@ import { createPillarOwnerUriLookup } from './cron/pillar-lookup.js';
 import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-outbox.js';
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orphans.js';
+import { startReconcilePairedTransfersWorker } from './cron/reconcile-paired-transfers.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
 import { parseBareOrigin } from './pillars/env.js';
@@ -98,6 +99,15 @@ const reconcileEntityOrphansHandle = startReconcileEntityOrphansWorker({
   logger: reconcileLogger,
 });
 
+// Nightly paired-transfer reconciliation (#3607): links inter-account transfers
+// whose two legs were imported at different times. Self-gated on
+// FINANCE_TRANSFER_PAIR_ENABLED — a no-op tick until the flag is set (and #3608
+// ships real per-account values), so it is safe to arm unconditionally.
+const reconcilePairedTransfersHandle = startReconcilePairedTransfersWorker({
+  db: financeDb.db,
+  logger: reconcileLogger,
+});
+
 const server = app.listen(port, () => {
   console.warn(`[finance-api] Listening on port ${port}`);
 });
@@ -119,6 +129,7 @@ function shutdown(signal: NodeJS.Signals): void {
   reconcileHandle.stop();
   reconcileOutboxHandle.stop();
   reconcileEntityOrphansHandle.stop();
+  reconcilePairedTransfersHandle.stop();
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
     server.close(() => {
       financeDb.raw.close();
