@@ -160,8 +160,10 @@ byte-identical across pillars so the orchestrator merges without reshaping.
   entities-search source.
 - **finance** — aggregates three scans into one response:
   - transactions by `description`; data
-    `{ description, amount, date, entityName, type }` (type normalised to
-    `income`/`expense`/`transfer`); uri `pops:finance/transaction/<id>`.
+    `{ description, amount, date, entityName, type }` (`type` is the canonical
+    transaction taxonomy value — `purchase`, `refund`, `transfer`, … — which the
+    result renderer buckets to a colour/sign via the shared tile map); uri
+    `pops:finance/transaction/<id>`.
   - budgets by `category`; data `{ category, period, amount }`; uri
     `/budgets/<id>`.
   - wishlist by `item` (excludes already-purchased rows where
