@@ -6,6 +6,7 @@ import {
   transactionsCreate,
   transactionsDelete,
   transactionsRestore,
+  transactionsUnlinkTransfer,
   transactionsUpdate,
 } from '../../finance-api/index.js';
 import { type Transaction } from './types';
@@ -83,12 +84,19 @@ function useRestoreDeleteMutations(deps: MutationDeps) {
     onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });
-  return { restoreMutation, deleteMutation };
+  const unlinkMutation = useMutation({
+    mutationFn: async (input: DeleteInput) =>
+      unwrap(await transactionsUnlinkTransfer({ path: { id: input.id } })),
+    onSuccess: () => toast.success('Transfer unlinked'),
+    onError: (err: Error) => toast.error(err.message),
+    onSettled: invalidate,
+  });
+  return { restoreMutation, deleteMutation, unlinkMutation };
 }
 
 export function useTransactionMutations(deps: MutationDeps) {
   const { createMutation, updateMutation } = useCreateUpdateMutations(deps);
-  const { restoreMutation, deleteMutation } = useRestoreDeleteMutations(deps);
+  const { restoreMutation, deleteMutation, unlinkMutation } = useRestoreDeleteMutations(deps);
 
   /**
    * Confirm a delete: hard-delete on the server, capture the full snapshot
@@ -113,5 +121,17 @@ export function useTransactionMutations(deps: MutationDeps) {
     );
   };
 
-  return { createMutation, updateMutation, deleteMutation, confirmDelete };
+  /** Break a false-positive transfer pair; the server unlinks both legs. */
+  const confirmUnlink = (tx: Transaction): void => {
+    unlinkMutation.mutate({ id: tx.id });
+  };
+
+  return {
+    createMutation,
+    updateMutation,
+    deleteMutation,
+    unlinkMutation,
+    confirmDelete,
+    confirmUnlink,
+  };
 }

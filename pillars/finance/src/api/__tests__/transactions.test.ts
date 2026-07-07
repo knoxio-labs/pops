@@ -10,7 +10,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import { openFinanceDb, transferPairsService, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
@@ -69,6 +69,29 @@ describe('transactions — happy paths', () => {
     });
     expect(updated.data.description).toBe('Latte');
     expect(updated.data.tags).toEqual(['coffee']);
+  });
+});
+
+describe('transactions — unlink transfer', () => {
+  it('symmetrically unlinks a paired transfer and reverts both legs by direction', async () => {
+    const debit = await client().transactions.create({ ...base, amount: -50, account: 'Amex' });
+    const credit = await client().transactions.create({ ...base, amount: 50, account: 'Bendigo' });
+    // Pairing is gated in prod, so arrange the linked state directly via the service.
+    transferPairsService.linkTransferPair(financeDb.db, debit.data.id, credit.data.id);
+
+    const result = await client().transactions.unlinkTransfer(debit.data.id);
+    expect(result.data.relatedTransactionId).toBeNull();
+    expect(result.data.type).toBe('purchase');
+
+    const creditAfter = await client().transactions.get(credit.data.id);
+    expect(creditAfter.data.relatedTransactionId).toBeNull();
+    expect(creditAfter.data.type).toBe('income');
+  });
+
+  it('404s for a missing transaction', async () => {
+    await expect(client().transactions.unlinkTransfer('does-not-exist')).rejects.toMatchObject({
+      status: 404,
+    });
   });
 });
 

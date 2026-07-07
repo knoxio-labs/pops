@@ -174,6 +174,9 @@ import type {
   TransactionsRestoreResponses,
   TransactionsSuggestTagsData,
   TransactionsSuggestTagsResponses,
+  TransactionsUnlinkTransferData,
+  TransactionsUnlinkTransferErrors,
+  TransactionsUnlinkTransferResponses,
   TransactionsUpdateData,
   TransactionsUpdateErrors,
   TransactionsUpdateResponses,
@@ -1198,6 +1201,29 @@ export const transactionsUpdate = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/transactions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Break a false-positive transfer pair; symmetrically unlinks both legs
+ */
+export const transactionsUnlinkTransfer = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionsUnlinkTransferData, ThrowOnError>
+): RequestResult<
+  TransactionsUnlinkTransferResponses,
+  TransactionsUnlinkTransferErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    TransactionsUnlinkTransferResponses,
+    TransactionsUnlinkTransferErrors,
+    ThrowOnError
+  >({
+    url: '/transactions/{id}/unlink-transfer',
     ...options,
     headers: {
       'Content-Type': 'application/json',

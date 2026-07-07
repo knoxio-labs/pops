@@ -831,6 +831,23 @@ export interface paths {
     patch: operations['transactions.update'];
     trace?: never;
   };
+  '/transactions/{id}/unlink-transfer': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Break a false-positive transfer pair; symmetrically unlinks both legs */
+    post: operations['transactions.unlinkTransfer'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/wishlist': {
     parameters: {
       query?: never;
@@ -7747,6 +7764,99 @@ export interface operations {
             | 'rebate'
             | 'tax';
         };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              account: string;
+              amount: number;
+              country: string | null;
+              date: string;
+              description: string;
+              entityId: string | null;
+              entityName: string | null;
+              id: string;
+              lastEditedTime: string;
+              location: string | null;
+              notes: string | null;
+              relatedTransactionId: string | null;
+              tags: string[];
+              /** @enum {string} */
+              type:
+                | 'purchase'
+                | 'transfer'
+                | 'income'
+                | 'refund'
+                | 'reversal'
+                | 'loan'
+                | 'rebate'
+                | 'tax';
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'transactions.unlinkTransfer': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
       };
     };
     responses: {

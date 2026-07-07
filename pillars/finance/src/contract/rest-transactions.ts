@@ -180,6 +180,17 @@ export const financeTransactionsContract = c.router({
     },
     summary: 'Update a transaction',
   },
+  unlinkTransfer: {
+    method: 'POST',
+    path: '/transactions/:id/unlink-transfer',
+    pathParams: z.object({ id: z.string() }),
+    body: z.object({}).optional(),
+    responses: {
+      200: z.object({ data: TransactionSchema, message: z.string() }),
+      ...ERR_RESPONSES,
+    },
+    summary: 'Break a false-positive transfer pair; symmetrically unlinks both legs',
+  },
   delete: {
     method: 'DELETE',
     path: '/transactions/:id',

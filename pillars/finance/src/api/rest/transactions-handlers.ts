@@ -11,6 +11,7 @@ import {
   TransactionAlreadyExistsError,
   TransactionNotFoundError,
   transactionsService,
+  transferPairsService,
 } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
 import { suggestTags as computeSuggestedTags } from '../modules/tag-suggester/index.js';
@@ -133,6 +134,19 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           return {
             status: 200 as const,
             body: { data: toTransaction(row), message: 'Transaction updated' },
+          };
+        } catch (err) {
+          translateTransactionError(err, params.id);
+        }
+      }),
+
+    unlinkTransfer: ({ params }: Req['unlinkTransfer']) =>
+      runHttp(() => {
+        try {
+          const row = transferPairsService.unlinkTransferPair(db, params.id);
+          return {
+            status: 200 as const,
+            body: { data: toTransaction(row), message: 'Transfer unlinked' },
           };
         } catch (err) {
           translateTransactionError(err, params.id);

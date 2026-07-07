@@ -297,6 +297,10 @@ export function makeClient(app: Express) {
         send<{ data: Transaction; message: string }>(r.patch(`/transactions/${id}`).send(data)),
       delete: (id: string) =>
         send<{ message: string; snapshot: TransactionSnapshot }>(r.delete(`/transactions/${id}`)),
+      unlinkTransfer: (id: string) =>
+        send<{ data: Transaction; message: string }>(
+          r.post(`/transactions/${id}/unlink-transfer`).send({})
+        ),
       restore: (snapshot: TransactionSnapshot) =>
         send<{ data: Transaction; message: string }>(
           r.post('/transactions/restore').send(snapshot)

@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Link2, Link2Off, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import {
   Badge,
@@ -33,6 +33,7 @@ interface BuildColumnsArgs {
   onTagSuggest: (description: string, entityId: string | null) => () => Promise<string[]>;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
+  onUnlink: (transaction: Transaction) => void;
 }
 
 function tagsFilterFn(
@@ -95,9 +96,14 @@ function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
       accessorKey: 'type',
       header: t('column.type'),
       cell: ({ row }) => (
-        <Badge variant="outline" className="text-xs">
-          {typeLabels[row.original.type] ?? labelForType(row.original.type)}
-        </Badge>
+        <div className="flex items-center gap-1">
+          <Badge variant="outline" className="text-xs">
+            {typeLabels[row.original.type] ?? labelForType(row.original.type)}
+          </Badge>
+          {row.original.relatedTransactionId ? (
+            <Link2 className="h-3 w-3 text-muted-foreground" aria-label="Linked transfer" />
+          ) : null}
+        </div>
       ),
     },
   ];
@@ -137,6 +143,11 @@ function buildInteractiveColumns(args: BuildColumnsArgs): ColumnDef<Transaction>
             <DropdownMenuItem onClick={() => args.onEdit(row.original)}>
               <Pencil /> Edit
             </DropdownMenuItem>
+            {row.original.relatedTransactionId ? (
+              <DropdownMenuItem onClick={() => args.onUnlink(row.original)}>
+                <Link2Off /> Unlink transfer
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

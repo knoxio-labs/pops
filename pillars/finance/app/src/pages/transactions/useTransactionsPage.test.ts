@@ -11,6 +11,7 @@ const transactionsCreateMock = vi.hoisted(() => vi.fn());
 const transactionsUpdateMock = vi.hoisted(() => vi.fn());
 const transactionsDeleteMock = vi.hoisted(() => vi.fn());
 const transactionsRestoreMock = vi.hoisted(() => vi.fn());
+const transactionsUnlinkTransferMock = vi.hoisted(() => vi.fn());
 
 const entitiesListMock = vi.hoisted(() => vi.fn());
 
@@ -21,6 +22,7 @@ vi.mock('../../finance-api/index.js', () => ({
   transactionsUpdate: (...args: unknown[]) => transactionsUpdateMock(...args),
   transactionsDelete: (...args: unknown[]) => transactionsDeleteMock(...args),
   transactionsRestore: (...args: unknown[]) => transactionsRestoreMock(...args),
+  transactionsUnlinkTransfer: (...args: unknown[]) => transactionsUnlinkTransferMock(...args),
 }));
 
 // The entity picker now reads `entities.list` over the generated contacts REST
@@ -98,6 +100,10 @@ beforeEach(() => {
   });
   transactionsRestoreMock.mockResolvedValue({
     data: { data: makeTransaction() },
+    error: undefined,
+  });
+  transactionsUnlinkTransferMock.mockResolvedValue({
+    data: { data: makeTransaction(), message: 'unlinked' },
     error: undefined,
   });
   entitiesListMock.mockResolvedValue({
@@ -450,6 +456,20 @@ describe('useTransactionsPage — delete', () => {
 
     await waitFor(() =>
       expect(transactionsDeleteMock).toHaveBeenCalledWith({ path: { id: 'txn-42' } })
+    );
+  });
+
+  it('confirmUnlink invokes transactionsUnlinkTransfer with the row id', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionsPage(), { wrapper });
+    const tx = makeTransaction({ id: 'txn-99', relatedTransactionId: 'txn-100' });
+
+    act(() => {
+      result.current.confirmUnlink(tx);
+    });
+
+    await waitFor(() =>
+      expect(transactionsUnlinkTransferMock).toHaveBeenCalledWith({ path: { id: 'txn-99' } })
     );
   });
 });
