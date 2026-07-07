@@ -15,9 +15,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import express, { type Express } from 'express';
-import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { requestOn } from '../__tests__/test-utils.js';
 import { __resetWebhookSecretCacheForTests, createUpBankWebhookRouter } from './up-bank.js';
 
 const SECRET = 'test-up-webhook-secret';
@@ -59,21 +59,22 @@ afterEach(() => {
 
 describe('POST /webhooks/up', () => {
   it('rejects a request with no signature header (401)', async () => {
-    const res = await supertest(buildApp())
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .send(EVENT_BODY);
+    const res = await requestOn(buildApp(), (r) =>
+      r.post('/webhooks/up').set('content-type', 'application/json').send(EVENT_BODY)
+    );
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: 'Missing signature header' });
   });
 
   it('rejects a request with an invalid signature (403)', async () => {
-    const res = await supertest(buildApp())
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', 'not-the-real-hmac')
-      .send(EVENT_BODY);
+    const res = await requestOn(buildApp(), (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', 'not-the-real-hmac')
+        .send(EVENT_BODY)
+    );
 
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Invalid signature' });
@@ -85,22 +86,26 @@ describe('POST /webhooks/up', () => {
     const real = sign(EVENT_BODY);
     const tampered = real.slice(0, -1) + (real.at(-1) === '0' ? '1' : '0');
 
-    const res = await supertest(buildApp())
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', tampered)
-      .send(EVENT_BODY);
+    const res = await requestOn(buildApp(), (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', tampered)
+        .send(EVENT_BODY)
+    );
 
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Invalid signature' });
   });
 
   it('accepts a correctly signed webhook (200)', async () => {
-    const res = await supertest(buildApp())
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', sign(EVENT_BODY))
-      .send(EVENT_BODY);
+    const res = await requestOn(buildApp(), (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', sign(EVENT_BODY))
+        .send(EVENT_BODY)
+    );
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ received: true });
@@ -113,11 +118,13 @@ describe('POST /webhooks/up', () => {
     delete process.env['UP_WEBHOOK_SECRET'];
     process.env['UP_WEBHOOK_SECRET_FILE'] = secretPath;
 
-    const res = await supertest(buildApp())
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', sign(EVENT_BODY, fileSecret))
-      .send(EVENT_BODY);
+    const res = await requestOn(buildApp(), (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', sign(EVENT_BODY, fileSecret))
+        .send(EVENT_BODY)
+    );
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ received: true });
@@ -131,11 +138,13 @@ describe('POST /webhooks/up', () => {
     process.env['UP_WEBHOOK_SECRET_FILE'] = secretPath;
 
     const app = buildApp();
-    const first = await supertest(app)
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
-      .send(EVENT_BODY);
+    const first = await requestOn(app, (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
+        .send(EVENT_BODY)
+    );
     expect(first.status).toBe(200);
 
     // Rewrite the secret file after the first request; a request signed with
@@ -143,18 +152,22 @@ describe('POST /webhooks/up', () => {
     // the new on-disk secret should not — proving the file isn't re-read.
     writeFileSync(secretPath, 'rotated-secret\n', 'utf-8');
 
-    const stillUsesCached = await supertest(app)
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
-      .send(EVENT_BODY);
+    const stillUsesCached = await requestOn(app, (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', sign(EVENT_BODY, originalSecret))
+        .send(EVENT_BODY)
+    );
     expect(stillUsesCached.status).toBe(200);
 
-    const rejectsRotated = await supertest(app)
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', sign(EVENT_BODY, 'rotated-secret'))
-      .send(EVENT_BODY);
+    const rejectsRotated = await requestOn(app, (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', sign(EVENT_BODY, 'rotated-secret'))
+        .send(EVENT_BODY)
+    );
     expect(rejectsRotated.status).toBe(403);
   });
 
@@ -162,11 +175,13 @@ describe('POST /webhooks/up', () => {
     delete process.env['UP_WEBHOOK_SECRET'];
     delete process.env['UP_WEBHOOK_SECRET_FILE'];
 
-    const res = await supertest(buildApp())
-      .post('/webhooks/up')
-      .set('content-type', 'application/json')
-      .set('x-up-authenticity-signature', sign(EVENT_BODY))
-      .send(EVENT_BODY);
+    const res = await requestOn(buildApp(), (r) =>
+      r
+        .post('/webhooks/up')
+        .set('content-type', 'application/json')
+        .set('x-up-authenticity-signature', sign(EVENT_BODY))
+        .send(EVENT_BODY)
+    );
 
     expect(res.status).toBe(500);
   });
@@ -174,7 +189,7 @@ describe('POST /webhooks/up', () => {
 
 describe('POST /webhooks/up/ping', () => {
   it('answers the liveness ping (200)', async () => {
-    const res = await supertest(buildApp()).post('/webhooks/up/ping').send();
+    const res = await requestOn(buildApp(), (r) => r.post('/webhooks/up/ping').send());
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
