@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
+import { requiresEntity } from '../../../lib/transaction-type';
 import { bucketOfChecksum, replaceByChecksum } from './local-tx-reconcile';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -75,9 +76,13 @@ function applyEditToBucket(
   transaction: ProcessedTransaction,
   updatedTx: ProcessedTransaction
 ): LocalTxState {
-  const isNoEntityType =
-    updatedTx.transactionType === 'transfer' || updatedTx.transactionType === 'income';
-  const targetBucket = isNoEntityType
+  // Entity-optional types (transfer/income/loan/rebate/tax/reversal) commit
+  // without a merchant, so pull them into `matched` — the only bucket the
+  // confirm step reads. This mirrors the confirm gate's own `requiresEntity`
+  // predicate; a stale `transfer||income` hardcode used to strand a card
+  // reclassified to loan/rebate/tax in its old bucket and silently drop it.
+  const isEntityOptional = !requiresEntity(updatedTx.transactionType);
+  const targetBucket = isEntityOptional
     ? 'matched'
     : (bucketOfChecksum(prev, transaction.checksum) ?? 'matched');
   return replaceByChecksum(prev, transaction.checksum, targetBucket, () => ({

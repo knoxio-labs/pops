@@ -12,7 +12,7 @@ import {
 } from '@pops/ui';
 
 import { TagEditor } from '../../components/TagEditor';
-import { labelForType, TRANSACTION_TYPES } from '../../lib/transaction-type';
+import { labelForType, TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -36,6 +36,23 @@ interface BuildColumnsArgs {
   onUnlink: (transaction: Transaction) => void;
 }
 
+/**
+ * Each taxonomy type → its i18n key. The one place the badge labels and the
+ * type-filter options agree, so a new type can never render as raw English in
+ * one but not the other (`purchase` is surfaced as "Expense"). Typed against
+ * `TransactionType` so adding a 9th type without a key fails the build.
+ */
+const TYPE_LABEL_KEY: Record<TransactionType, string> = {
+  purchase: 'filter.expense',
+  transfer: 'filter.transfer',
+  income: 'filter.income',
+  refund: 'filter.refund',
+  reversal: 'filter.reversal',
+  loan: 'filter.loan',
+  rebate: 'filter.rebate',
+  tax: 'filter.tax',
+};
+
 function tagsFilterFn(
   row: { getValue: <T>(id: string) => T },
   columnId: string,
@@ -51,11 +68,9 @@ function tagsFilterFn(
 }
 
 function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
-  const typeLabels: Record<string, string> = {
-    purchase: t('filter.expense'),
-    income: t('filter.income'),
-    transfer: t('filter.transfer'),
-  };
+  const typeLabels: Record<string, string> = Object.fromEntries(
+    TRANSACTION_TYPES.map((v) => [v, t(TYPE_LABEL_KEY[v])])
+  );
   return [
     {
       accessorKey: 'date',
@@ -197,14 +212,7 @@ export function buildTransactionFilters(
       label: t('filter.type'),
       options: [
         { label: t('filter.allTypes'), value: '' },
-        // The three types with existing i18n keys keep their translations; every
-        // other taxonomy value is derived, so a new type appears automatically.
-        { label: t('filter.income'), value: 'income' },
-        { label: t('filter.expense'), value: 'purchase' },
-        { label: t('filter.transfer'), value: 'transfer' },
-        ...TRANSACTION_TYPES.filter(
-          (v) => v !== 'income' && v !== 'purchase' && v !== 'transfer'
-        ).map((value) => ({ label: labelForType(value), value })),
+        ...TRANSACTION_TYPES.map((value) => ({ label: t(TYPE_LABEL_KEY[value]), value })),
       ],
     },
     { id: 'tags', type: 'text', label: t('filter.tag'), placeholder: t('placeholder.filterByTag') },

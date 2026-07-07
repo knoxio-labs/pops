@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeStats, signedColor } from './StatsGrid';
+import { computeStats, formatTileAmount, signedColor } from './StatsGrid';
 
 import type { TransactionsListResponse } from '../../finance-api/types.gen.js';
 
@@ -39,6 +39,24 @@ describe('signedColor', () => {
   it('maps zero to slate (neutral)', () => {
     expect(signedColor(0)).toBe('slate');
     expect(signedColor(-0)).toBe('slate');
+  });
+});
+
+describe('formatTileAmount', () => {
+  it('puts the sign before the currency symbol for a negative total (#3757 nit 3)', () => {
+    expect(formatTileAmount(-400)).toBe('-$400.00');
+  });
+
+  it('renders a positive total with two decimals and no leading sign', () => {
+    expect(formatTileAmount(400)).toBe('$400.00');
+  });
+
+  it('renders zero as $0.00', () => {
+    expect(formatTileAmount(0)).toBe('$0.00');
+  });
+
+  it('groups thousands', () => {
+    expect(formatTileAmount(1234.5)).toBe('$1,234.50');
   });
 });
 

@@ -90,6 +90,15 @@ describe('buildConfirmedTransactions', () => {
     expect(result[0]).toMatchObject({ transactionType: 'loan' });
   });
 
+  it('keeps a reversal with no entity — bank-initiated reversals have no merchant (#3757)', () => {
+    const result = buildConfirmedTransactions([
+      matched({ transactionType: 'reversal', entity: { matchType: 'none' } }),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ transactionType: 'reversal' });
+  });
+
   it('still drops a refund with no entity (merchant transactions require a payee)', () => {
     const result = buildConfirmedTransactions([
       matched({ transactionType: 'refund', entity: { matchType: 'none' } }),

@@ -9,7 +9,7 @@ function makeData(overrides: Record<string, unknown> = {}) {
     amount: 42.5,
     date: '2026-03-15',
     entityName: 'Woolworths',
-    type: 'expense',
+    type: 'purchase',
     ...overrides,
   };
 }
@@ -21,24 +21,46 @@ describe('TransactionsResultComponent', () => {
     expect(screen.getByText('Woolworths')).toBeInTheDocument();
   });
 
-  it('renders expense amount in red with minus sign', () => {
-    render(<TransactionsResultComponent data={makeData({ type: 'expense', amount: 99.0 })} />);
+  it('renders a purchase in red with a minus sign', () => {
+    render(<TransactionsResultComponent data={makeData({ type: 'purchase', amount: 99.0 })} />);
     const amount = screen.getByText('-$99.00');
     expect(amount).toBeInTheDocument();
     expect(amount.className).toContain('text-destructive');
   });
 
-  it('renders income amount in green with plus sign', () => {
+  it('renders income in green with a plus sign', () => {
     render(<TransactionsResultComponent data={makeData({ type: 'income', amount: 3500 })} />);
     const amount = screen.getByText('+$3,500.00');
     expect(amount).toBeInTheDocument();
     expect(amount.className).toContain('text-success');
   });
 
-  it('renders transfer amount in muted color with no sign', () => {
+  it('renders a transfer in muted colour with no sign', () => {
     render(<TransactionsResultComponent data={makeData({ type: 'transfer', amount: 200 })} />);
     const amount = screen.getByText('$200.00');
     expect(amount).toBeInTheDocument();
+    expect(amount.className).toContain('text-muted-foreground');
+  });
+
+  // #3757 nit 2: the 5 new types no longer collapse to the expense fallback —
+  // they follow the same tile bucketing as the dashboard.
+  it.each([
+    ['refund', 'Refund', 'text-destructive', '-'],
+    ['reversal', 'Reversal', 'text-destructive', '-'],
+    ['loan', 'Loan', 'text-success', '+'],
+    ['rebate', 'Rebate', 'text-success', '+'],
+    ['tax', 'Tax', 'text-success', '+'],
+  ])('renders a %s with the correct label, colour and sign', (type, label, color, sign) => {
+    render(<TransactionsResultComponent data={makeData({ type, amount: 100 })} />);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    const amount = screen.getByText(`${sign}$100.00`);
+    expect(amount.className).toContain(color);
+  });
+
+  it('renders an unknown type as excluded (muted, no sign, raw label) rather than expense', () => {
+    render(<TransactionsResultComponent data={makeData({ type: 'mystery', amount: 100 })} />);
+    expect(screen.getByText('mystery')).toBeInTheDocument();
+    const amount = screen.getByText('$100.00');
     expect(amount.className).toContain('text-muted-foreground');
   });
 
@@ -53,19 +75,19 @@ describe('TransactionsResultComponent', () => {
     expect(screen.queryByText('Woolworths')).not.toBeInTheDocument();
   });
 
-  it('shows type badge for expense', () => {
-    render(<TransactionsResultComponent data={makeData({ type: 'expense' })} />);
-    expect(screen.getByText('expense')).toBeInTheDocument();
+  it('shows the title-case type badge for a purchase', () => {
+    render(<TransactionsResultComponent data={makeData({ type: 'purchase' })} />);
+    expect(screen.getByText('Expense')).toBeInTheDocument();
   });
 
-  it('shows type badge for income', () => {
+  it('shows the title-case type badge for income', () => {
     render(<TransactionsResultComponent data={makeData({ type: 'income' })} />);
-    expect(screen.getByText('income')).toBeInTheDocument();
+    expect(screen.getByText('Income')).toBeInTheDocument();
   });
 
-  it('shows type badge for transfer', () => {
+  it('shows the title-case type badge for a transfer', () => {
     render(<TransactionsResultComponent data={makeData({ type: 'transfer' })} />);
-    expect(screen.getByText('transfer')).toBeInTheDocument();
+    expect(screen.getByText('Transfer')).toBeInTheDocument();
   });
 
   it('highlights matched portion of description', () => {

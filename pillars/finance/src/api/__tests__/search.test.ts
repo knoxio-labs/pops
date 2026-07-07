@@ -5,8 +5,8 @@
  * The suite seeds rows through the pillar's own CRUD endpoints, then asserts
  * each adapter's ranking: exact (1.0) > prefix (0.8) > contains (0.5),
  * per-adapter descending sort, the wishlist not-yet-purchased filter, the `uri`
- * shapes, and the transaction-type normalization. An empty / whitespace query
- * short-circuits to an empty hit list.
+ * shapes, and the canonical transaction-type passthrough. An empty / whitespace
+ * query short-circuits to an empty hit list.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -48,7 +48,7 @@ function withScheme(hits: SearchHit[], scheme: string): SearchHit[] {
 }
 
 describe('search — transactions adapter', () => {
-  it('returns a transaction hit with normalized type and the legacy uri shape', async () => {
+  it('returns a transaction hit carrying the canonical type and the legacy uri shape', async () => {
     const created = await client().transactions.create({
       description: 'Coffee',
       account: 'cash',
@@ -65,7 +65,21 @@ describe('search — transactions adapter', () => {
     expect(hit.score).toBe(1.0);
     expect(hit.matchType).toBe('exact');
     expect(hit.matchField).toBe('description');
-    expect(hit.data).toMatchObject({ description: 'Coffee', type: 'expense', amount: -5 });
+    expect(hit.data).toMatchObject({ description: 'Coffee', type: 'purchase', amount: -5 });
+  });
+
+  it('passes the new types through the wire instead of collapsing them to expense (#3757)', async () => {
+    await client().transactions.create({
+      description: 'Refunded jacket',
+      account: 'cash',
+      amount: 80,
+      date: '2026-01-01',
+      type: 'refund',
+    });
+
+    const { hits } = await client().search.run({ query: { text: 'refunded jacket' } });
+    const [hit] = withScheme(hits, 'pops:finance/transaction/');
+    expect(hit.data).toMatchObject({ type: 'refund', amount: 80 });
   });
 
   it('ranks exact > prefix > contains across transaction descriptions', async () => {

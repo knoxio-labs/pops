@@ -155,3 +155,45 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
     expect(setLocalTransactions).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useTransactionEditing — entity-optional bucket routing (#3757 nit 4)', () => {
+  function runEdit(transactionType: string) {
+    const { result, setLocalTransactions } = setup();
+    const transaction = makeTransaction({
+      ruleProvenance: undefined,
+      entity: undefined,
+      status: 'uncertain',
+    });
+
+    act(() => {
+      result.current.handleSaveEdit(transaction, {
+        transactionType: transactionType as ProcessedTransaction['transactionType'],
+      });
+    });
+
+    const updater = setLocalTransactions.mock.calls[0][0] as (
+      prev: ReturnType<typeof emptyLocalTx>
+    ) => ReturnType<typeof emptyLocalTx>;
+    return updater({ ...emptyLocalTx(), uncertain: [transaction] });
+  }
+
+  // Regression for the stale `transfer||income` hardcode: reclassifying an
+  // uncertain card to an entity-optional type used to strand it in `uncertain`,
+  // where the confirm step never reads it — silently dropping the edit.
+  it.each(['loan', 'rebate', 'tax', 'reversal'])(
+    'force-routes an uncertain card reclassified to %s into matched',
+    (type) => {
+      const next = runEdit(type);
+      expect(next.uncertain).toHaveLength(0);
+      expect(next.matched).toHaveLength(1);
+      expect(next.matched[0]).toMatchObject({ transactionType: type, status: 'matched' });
+    }
+  );
+
+  it('leaves an entity-required reclassification (purchase) in its current bucket', () => {
+    const next = runEdit('purchase');
+    expect(next.matched).toHaveLength(0);
+    expect(next.uncertain).toHaveLength(1);
+    expect(next.uncertain[0]).toMatchObject({ transactionType: 'purchase', status: 'uncertain' });
+  });
+});

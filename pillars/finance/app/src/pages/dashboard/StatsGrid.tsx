@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { SkeletonGrid, StatCard, type StatCardColor } from '@pops/ui';
+import { formatCurrency, SkeletonGrid, StatCard, type StatCardColor } from '@pops/ui';
 
 import { tileForType } from '../../lib/transaction-type';
 
@@ -45,6 +45,11 @@ export function signedColor(amount: number): StatCardColor {
   return 'slate';
 }
 
+/** Money tile: 2 dp with the sign before the currency symbol (e.g. -$400.00). */
+export function formatTileAmount(value: number): string {
+  return formatCurrency(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function StatsGrid({ stats, isLoading }: { stats: Stats | null; isLoading: boolean }) {
   const { t } = useTranslation('finance');
   if (isLoading) {
@@ -62,19 +67,19 @@ export function StatsGrid({ stats, isLoading }: { stats: Stats | null; isLoading
       />
       <StatCard
         title={t('dashboard.monthIncome')}
-        value={`$${stats.totalIncome.toFixed(2)}`}
+        value={formatTileAmount(stats.totalIncome)}
         description={t('dashboard.thisMonth')}
         color={signedColor(stats.totalIncome)}
       />
       <StatCard
         title={t('dashboard.monthExpenses')}
-        value={`$${stats.totalExpenses.toFixed(2)}`}
+        value={formatTileAmount(stats.totalExpenses)}
         description={t('dashboard.thisMonth')}
         color={signedColor(-stats.totalExpenses)}
       />
       <StatCard
         title={t('dashboard.netBalance')}
-        value={`$${netBalance.toFixed(2)}`}
+        value={formatTileAmount(netBalance)}
         description={t('dashboard.thisMonth')}
         color={signedColor(netBalance)}
       />
