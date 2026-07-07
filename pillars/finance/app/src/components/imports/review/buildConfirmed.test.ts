@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildConfirmedTransactions } from './buildConfirmed';
+import { buildConfirmedTransactions, isConfirmable, partitionConfirmable } from './buildConfirmed';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
@@ -105,5 +105,57 @@ describe('buildConfirmedTransactions', () => {
     ]);
 
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)', () => {
+  it('returns a dropped entity-required row instead of silently discarding it', () => {
+    const droppable = matched({ transactionType: 'purchase', entity: { matchType: 'exact' } });
+    const { confirmed, dropped } = partitionConfirmable([droppable]);
+
+    expect(confirmed).toHaveLength(0);
+    expect(dropped).toEqual([droppable]);
+  });
+
+  it('treats an unset transaction type with no entity as droppable (requiresEntity default)', () => {
+    const untyped = matched({ transactionType: undefined, entity: { matchType: 'none' } });
+    const { confirmed, dropped } = partitionConfirmable([untyped]);
+
+    expect(confirmed).toHaveLength(0);
+    expect(dropped).toEqual([untyped]);
+  });
+
+  it('keeps entity-optional and entity-resolved rows confirmed, dropped empty', () => {
+    const withEntity = matched({ checksum: 'a' });
+    const transfer = matched({
+      checksum: 'b',
+      transactionType: 'transfer',
+      entity: { matchType: 'none' },
+    });
+    const reversal = matched({
+      checksum: 'c',
+      transactionType: 'reversal',
+      entity: { matchType: 'none' },
+    });
+    const { confirmed, dropped } = partitionConfirmable([withEntity, transfer, reversal]);
+
+    expect(confirmed).toEqual([withEntity, transfer, reversal]);
+    expect(dropped).toHaveLength(0);
+  });
+
+  it('partition is disjoint and exhaustive over the input, and confirmed matches the commit filter', () => {
+    const rows = [
+      matched({ checksum: 'a' }),
+      matched({ checksum: 'b', transactionType: 'purchase', entity: { matchType: 'exact' } }),
+      matched({ checksum: 'c', transactionType: 'loan', entity: { matchType: 'none' } }),
+      matched({ checksum: 'd', transactionType: 'refund', entity: { matchType: 'none' } }),
+    ];
+    const { confirmed, dropped } = partitionConfirmable(rows);
+
+    expect(confirmed.length + dropped.length).toBe(rows.length);
+    expect(confirmed.every(isConfirmable)).toBe(true);
+    expect(dropped.every((t) => !isConfirmable(t))).toBe(true);
+    // confirmed carries exactly the rows buildConfirmedTransactions would commit.
+    expect(confirmed).toHaveLength(buildConfirmedTransactions(rows).length);
   });
 });
