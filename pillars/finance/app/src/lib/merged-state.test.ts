@@ -344,7 +344,9 @@ describe('computeMergedEntities', () => {
     expect(result[1].name).toBe('New Corp');
     expect(result[0].aliases).toEqual([]);
     expect(result[0].id).toMatch(/^temp:entity:/);
-    expect(typeof result[0].lastEditedTime).toBe('string');
+    // A fixed placeholder, never a wall-clock read — a `new Date()` here would
+    // make computeMergedEntities impure (see the purity test below).
+    expect(result[0].lastEditedTime).toBe('1970-01-01T00:00:00.000Z');
   });
 
   it('is pure — same input refs recompute a fresh but equal output (no internal caching, CF082/#3670)', () => {
