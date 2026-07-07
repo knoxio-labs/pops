@@ -13,10 +13,20 @@ import { and, eq, gte, isNull, lte, ne } from 'drizzle-orm';
 import { TransactionNotFoundError } from '../errors.js';
 import { transactions } from '../schema.js';
 
+import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb } from './internal.js';
 import type { TransactionRow } from './transactions.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The type a leg reverts to when its transfer pair is unlinked. The pre-pairing
+ * type is unrecoverable (linking overwrote it with `transfer`), so we fall back
+ * to the direction-derived default: a debit is a purchase, a credit is income.
+ */
+function defaultTypeForAmount(amountCents: number): TransactionType {
+  return amountCents < 0 ? 'purchase' : 'income';
+}
 
 /** The target fields the candidate query keys on. */
 export interface PairTarget {
@@ -169,5 +179,58 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
       return false;
     }
     return true;
+  });
+}
+
+/**
+ * Break a transfer pair: clear the target leg's `related_transaction_id`,
+ * revert its `type` to its direction-derived default (the pre-pairing type is
+ * unrecoverable), and do the same for its counterpart. The user-facing escape
+ * hatch for a false-positive pairing (PRD risk). Runs in one DB transaction.
+ *
+ * The counterpart is only reverted when the link is SYMMETRIC — its own
+ * `related_transaction_id` points back at the target. A corrupt or asymmetric
+ * pointer (the target references a row that references someone else, or a plain
+ * transaction) clears only the target's dangling pointer and never rewrites the
+ * type of a row that is not actually paired back.
+ *
+ * Idempotent: called on a row that is not part of a pair
+ * (`related_transaction_id IS NULL`) it returns the row untouched, so a
+ * double-unlink is harmless and never rewrites a plain transaction's type.
+ *
+ * @throws TransactionNotFoundError if `id` is missing.
+ * @returns the updated target row.
+ */
+export function unlinkTransferPair(db: FinanceDb, id: string): TransactionRow {
+  return db.transaction((tx) => {
+    const row = tx.select().from(transactions).where(eq(transactions.id, id)).get();
+    if (!row) throw new TransactionNotFoundError(id);
+
+    const counterpartId = row.relatedTransactionId;
+    if (counterpartId === null) return row;
+
+    const now = new Date().toISOString();
+    const revert = (leg: TransactionRow): void => {
+      tx.update(transactions)
+        .set({
+          relatedTransactionId: null,
+          type: defaultTypeForAmount(leg.amountCents),
+          lastEditedTime: now,
+        })
+        .where(eq(transactions.id, leg.id))
+        .run();
+    };
+
+    revert(row);
+    const counterpart = tx
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, counterpartId))
+      .get();
+    if (counterpart && counterpart.relatedTransactionId === id) revert(counterpart);
+
+    const updated = tx.select().from(transactions).where(eq(transactions.id, id)).get();
+    if (!updated) throw new TransactionNotFoundError(id);
+    return updated;
   });
 }

@@ -132,13 +132,12 @@ export function useTransactionsPage() {
 
   const { query, availableTags, entitiesQuery } = useTransactionsPageQueries();
 
-  const { createMutation, updateMutation, deleteMutation, confirmDelete } = useTransactionMutations(
-    {
+  const { createMutation, updateMutation, deleteMutation, confirmDelete, confirmUnlink } =
+    useTransactionMutations({
       setIsDialogOpen,
       setEditingTransaction,
       setDeletingTx,
-    }
-  );
+    });
 
   const form = useForm<TransactionFormValues>({
     resolver: standardSchemaResolver(TransactionFormSchema),
@@ -178,6 +177,7 @@ export function useTransactionsPage() {
     setDeletingTx,
     deleteMutation,
     confirmDelete,
+    confirmUnlink,
     handleAdd,
     handleEdit,
     onSubmit,

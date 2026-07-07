@@ -15,7 +15,7 @@ import {
   type CreateTransactionInput,
   type TransactionRow,
 } from '../transactions.js';
-import { findPairCandidates, linkTransferPair } from '../transfer-pairs.js';
+import { findPairCandidates, linkTransferPair, unlinkTransferPair } from '../transfer-pairs.js';
 
 import type { FinanceDb } from '../internal.js';
 
@@ -230,5 +230,72 @@ describe('linkTransferPair', () => {
     expect(() => linkTransferPair(db, a.id, 'ghost')).toThrow(TransactionNotFoundError);
     expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
     expect(getTransaction(db, a.id).type).not.toBe('transfer');
+  });
+});
+
+describe('unlinkTransferPair', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('symmetrically clears both legs and reverts type by direction (debit->purchase, credit->income)', () => {
+    const debit = seed(db, { account: 'Amex', amountCents: -5000 });
+    const credit = seed(db, { account: 'Bendigo', amountCents: 5000 });
+    expect(linkTransferPair(db, debit.id, credit.id)).toBe(true);
+
+    const updated = unlinkTransferPair(db, debit.id);
+    expect(updated.relatedTransactionId).toBeNull();
+    expect(updated.type).toBe('purchase');
+    const rc = getTransaction(db, credit.id);
+    expect(rc.relatedTransactionId).toBeNull();
+    expect(rc.type).toBe('income');
+  });
+
+  it('unlinks the whole pair when called on the credit leg', () => {
+    const debit = seed(db, { account: 'Amex', amountCents: -5000 });
+    const credit = seed(db, { account: 'Bendigo', amountCents: 5000 });
+    linkTransferPair(db, debit.id, credit.id);
+
+    unlinkTransferPair(db, credit.id);
+    expect(getTransaction(db, debit.id).relatedTransactionId).toBeNull();
+    expect(getTransaction(db, debit.id).type).toBe('purchase');
+    expect(getTransaction(db, credit.id).relatedTransactionId).toBeNull();
+    expect(getTransaction(db, credit.id).type).toBe('income');
+  });
+
+  it('is a no-op that preserves the type of a row that is not part of a pair', () => {
+    const lone = seed(db, { account: 'Amex', amountCents: -5000, type: 'refund' });
+    const result = unlinkTransferPair(db, lone.id);
+    expect(result.relatedTransactionId).toBeNull();
+    expect(result.type).toBe('refund');
+  });
+
+  it('throws TransactionNotFoundError for a missing id', () => {
+    expect(() => unlinkTransferPair(db, 'ghost')).toThrow(TransactionNotFoundError);
+  });
+
+  it('reverts only the target when the counterpart is not linked back (asymmetric pointer)', () => {
+    const a = seed(db, { account: 'Amex', amountCents: -5000, type: 'transfer' });
+    const b = seed(db, { account: 'Bendigo', amountCents: 5000, type: 'transfer' });
+    const c = seed(db, { account: 'ING', amountCents: 5000, type: 'transfer' });
+    // A points at B, but B points at C — a corrupt/asymmetric link.
+    db.update(transactions)
+      .set({ relatedTransactionId: b.id })
+      .where(eq(transactions.id, a.id))
+      .run();
+    db.update(transactions)
+      .set({ relatedTransactionId: c.id })
+      .where(eq(transactions.id, b.id))
+      .run();
+
+    unlinkTransferPair(db, a.id);
+
+    expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
+    expect(getTransaction(db, a.id).type).toBe('purchase');
+    // B is not paired back to A, so its (mis)pairing with C is left untouched.
+    const rb = getTransaction(db, b.id);
+    expect(rb.relatedTransactionId).toBe(c.id);
+    expect(rb.type).toBe('transfer');
   });
 });

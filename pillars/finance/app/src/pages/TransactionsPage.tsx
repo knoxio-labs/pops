@@ -147,6 +147,7 @@ export function TransactionsPage() {
     onTagSuggest,
     onEdit: state.handleEdit,
     onDelete: state.setDeletingTx,
+    onUnlink: state.confirmUnlink,
   });
 
   return (

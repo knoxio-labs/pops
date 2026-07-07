@@ -5638,6 +5638,78 @@ export type TransactionsUpdateResponses = {
 export type TransactionsUpdateResponse =
   TransactionsUpdateResponses[keyof TransactionsUpdateResponses];
 
+export type TransactionsUnlinkTransferData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/unlink-transfer';
+};
+
+export type TransactionsUnlinkTransferErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TransactionsUnlinkTransferError =
+  TransactionsUnlinkTransferErrors[keyof TransactionsUnlinkTransferErrors];
+
+export type TransactionsUnlinkTransferResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      account: string;
+      amount: number;
+      country: string | null;
+      date: string;
+      description: string;
+      entityId: string | null;
+      entityName: string | null;
+      id: string;
+      lastEditedTime: string;
+      location: string | null;
+      notes: string | null;
+      relatedTransactionId: string | null;
+      tags: Array<string>;
+      type: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
+    };
+    message: string;
+  };
+};
+
+export type TransactionsUnlinkTransferResponse =
+  TransactionsUnlinkTransferResponses[keyof TransactionsUnlinkTransferResponses];
+
 export type WishlistListData = {
   body?: never;
   path?: never;
