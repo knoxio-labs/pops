@@ -69,6 +69,23 @@ export function findPairCandidates(
 }
 
 /**
+ * Ids of every transaction eligible for pairing — unlinked
+ * (`related_transaction_id IS NULL`) and not classified by a correction rule
+ * (`match_rule_id IS NULL`, since rules outrank the pairing engine). The
+ * reconcile worker re-reads each row fresh before attempting a pair, so
+ * returning ids that a later row in the same pass links is harmless — the stale
+ * ones simply resolve to `skipped`.
+ */
+export function listUnpairedTransactionIds(db: FinanceDb): string[] {
+  return db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(and(isNull(transactions.relatedTransactionId), isNull(transactions.matchRuleId)))
+    .all()
+    .map((row) => row.id);
+}
+
+/**
  * Symmetrically link two transactions as the opposite legs of a transfer: each
  * row's `related_transaction_id` points at the other and both are typed
  * `transfer`. Runs in one DB transaction so two concurrent passes cannot each
