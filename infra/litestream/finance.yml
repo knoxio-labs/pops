@@ -4,10 +4,9 @@
 ## per-pillar pattern so each pillar's database would stream independently
 ## of the shared pops.db.
 ##
-## STATUS (ADR-039): reference stub only. No Litestream sidecar runs this in
-## production today; the deployed backup is a separate central job (currently
-## broken — #3636). Per-pillar sidecar wiring is workstream S11 (#3690); the
-## restore drill below is not yet exercised.
+## STATUS (ADR-039): a deployed Litestream sidecar streams this pillar in
+## production (the #3694 pilot — finance/contacts/cerebrum). The restore drill
+## below is not yet exercised.
 ##
 ## Production deployment lives in the homelab-infra repo (see AGENTS.md
 ## for the deployment model); this file is the canonical reference the
