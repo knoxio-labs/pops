@@ -14,7 +14,8 @@
 ## Restore drill (single line — safe to copy/paste during an incident):
 ##   litestream restore -o /data/sqlite/contacts.db "${CONTACTS_LITESTREAM_REPLICA_URL}"
 ## Stop the contacts-api container first so it isn't writing
-## concurrently; the drill is exercised in the deploy-readiness verification.
+## concurrently. A deployed sidecar now streams this pillar (#3694 pilot); the
+## restore drill is not yet exercised.
 
 dbs:
   - path: /data/sqlite/contacts.db

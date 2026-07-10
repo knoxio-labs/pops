@@ -14,7 +14,8 @@
 ## Restore drill (single line — safe to copy/paste during an incident):
 ##   litestream restore -o /data/sqlite/food.db "${FOOD_LITESTREAM_REPLICA_URL}"
 ## Stop the food-api container first so it isn't writing
-## concurrently; the drill is exercised in Phase 4 verification.
+## concurrently. Reference stub — no sidecar streams this pillar
+## yet (part of the #3694 fan-out); the drill is not yet exercised.
 
 dbs:
   - path: /data/sqlite/food.db
