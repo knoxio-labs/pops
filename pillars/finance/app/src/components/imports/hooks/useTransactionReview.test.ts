@@ -3,9 +3,15 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const reevaluateMock = vi.hoisted(() => vi.fn());
+const { reevaluateMock, processMock, progressMock } = vi.hoisted(() => ({
+  reevaluateMock: vi.fn(),
+  processMock: vi.fn(),
+  progressMock: vi.fn(),
+}));
 vi.mock('../../../finance-api/index.js', () => ({
   importsReevaluateWithPendingRules: (...args: unknown[]) => reevaluateMock(...args),
+  importsProcessImport: (...args: unknown[]) => processMock(...args),
+  importsGetImportProgress: (...args: unknown[]) => progressMock(...args),
 }));
 
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
@@ -259,5 +265,72 @@ describe('useTransactionReview — manual edits survive Back-then-Next remounts 
 
     expect(second.result.current.localTransactions.matched).toEqual([resolvedTx]);
     expect(second.result.current.localTransactions.uncertain).toEqual([]);
+  });
+});
+
+describe('useTransactionReview — persisted manual resolutions (refresh / dead-session recovery)', () => {
+  it('seeds resolved checksums from the store so a reevaluate cannot revert restored rows', async () => {
+    const uncertainTx = makeTx('persisted-1');
+    const resolvedTx: ProcessedTransaction = {
+      ...uncertainTx,
+      status: 'matched',
+      entity: { entityId: 'ent-9', entityName: 'Restored Co', matchType: 'manual' },
+      manuallyEdited: true,
+    };
+    // Simulates a rehydrated store: the row already sits in matched and its
+    // checksum is in the persisted resolved set — the in-memory ref is empty.
+    useImportStore.getState().setProcessedTransactions({
+      matched: [resolvedTx],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    });
+    useImportStore.getState().markChecksumsResolved(['persisted-1']);
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionReview(), { wrapper });
+
+    // The server re-processes from scratch and reports the row still uncertain.
+    reevaluateMock.mockResolvedValue({
+      data: {
+        result: { matched: [], uncertain: [uncertainTx], failed: [], skipped: [] },
+        affectedCount: 0,
+      },
+      error: undefined,
+    });
+
+    act(() => {
+      useImportStore.getState().addPendingChangeSet({
+        changeSet: sampleChangeSet,
+        source: 'correction-proposal',
+      });
+    });
+
+    await waitFor(() => expect(reevaluateMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.localTransactions.matched).toEqual([resolvedTx]));
+    expect(result.current.localTransactions.uncertain).toEqual([]);
+  });
+
+  it('writes locally-resolved checksums into the persisted store field', () => {
+    const uncertainTx = makeTx('persisted-2');
+    useImportStore.getState().setProcessedTransactions({
+      matched: [],
+      uncertain: [uncertainTx],
+      failed: [],
+      skipped: [],
+    });
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionReview(), { wrapper });
+
+    act(() => {
+      result.current.setLocalTransactions((prev) => ({
+        ...prev,
+        uncertain: prev.uncertain.filter((t) => t.checksum !== 'persisted-2'),
+        matched: [...prev.matched, { ...uncertainTx, status: 'matched', manuallyEdited: true }],
+      }));
+    });
+
+    expect(useImportStore.getState().manuallyResolvedChecksums).toContain('persisted-2');
   });
 });

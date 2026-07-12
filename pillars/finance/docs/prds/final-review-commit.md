@@ -9,7 +9,7 @@ This step is the sole writer for an import. The Tag Review step no longer writes
 The import wizard is an 8-step flow: Upload → Map → Process → Review → Tags → Rules → **Commit (Final Review)** → Summary. Final Review is step 7, Summary is step 8. `nextStep` is capped at 8.
 
 - "Back" from Final Review returns to Rules; the user can keep going back to edit any prior step.
-- On a successful commit the wizard auto-advances to Summary (no inline result panel, no manual Continue). The commit result lives in the import store (`commitResult`); Summary reads it.
+- On a successful commit the wizard auto-advances to Summary (no inline result panel, no manual Continue). The commit result lives in the import store (`commitResult`); Summary reads it. A successful commit also clears the persisted wizard copy; the commit path itself reads neither session nor persistence.
 - Direct navigation to Summary without a commit is blocked by a `!commitResult` guard (renders an empty state).
 
 ## Data model

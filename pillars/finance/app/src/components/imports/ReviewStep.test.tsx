@@ -83,6 +83,9 @@ vi.mock('../../store/importStore', () => {
     pendingChangeSets: mockPendingChangeSets,
     pendingEntities: mockPendingEntities,
     setProcessedTransactions: vi.fn(),
+    processSessionId: '11111111-1111-1111-1111-111111111111',
+    manuallyResolvedChecksums: [],
+    markChecksumsResolved: vi.fn(),
   });
 
   return { useImportStore: hook };

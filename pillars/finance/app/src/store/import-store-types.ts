@@ -54,6 +54,7 @@ export interface ProcessedTransaction extends BaseProcessedTransaction {
 export interface ImportStore {
   currentStep: number;
   file: File | null;
+  sourceFileName: string | null;
   bankType: BankType;
   headers: string[];
   rows: Record<string, string>[];
@@ -79,6 +80,7 @@ export interface ImportStore {
   pendingEntities: PendingEntity[];
   pendingChangeSets: PendingChangeSet[];
   pendingTagRuleChangeSets: PendingTagRuleChangeSet[];
+  manuallyResolvedChecksums: string[];
 
   setFile: (file: File | null) => void;
   setBankType: (bankType: BankType) => void;
@@ -114,11 +116,14 @@ export interface ImportStore {
   findSimilar: (transaction: ProcessedTransaction) => ProcessedTransaction[];
 
   updateTransactionTags: (checksum: string, tags: string[]) => void;
+
+  markChecksumsResolved: (checksums: string[]) => void;
 }
 
 export const initialState = {
   currentStep: 1,
   file: null,
+  sourceFileName: null,
   bankType: 'Amex' as BankType,
   headers: [],
   rows: [],
@@ -139,6 +144,7 @@ export const initialState = {
   pendingEntities: [],
   pendingChangeSets: [],
   pendingTagRuleChangeSets: [],
+  manuallyResolvedChecksums: [],
 };
 
 /**
@@ -163,6 +169,7 @@ export const downstreamReset: Pick<
   | 'pendingEntities'
   | 'pendingChangeSets'
   | 'pendingTagRuleChangeSets'
+  | 'manuallyResolvedChecksums'
 > = {
   headers: initialState.headers,
   rows: initialState.rows,
@@ -176,6 +183,7 @@ export const downstreamReset: Pick<
   pendingEntities: initialState.pendingEntities,
   pendingChangeSets: initialState.pendingChangeSets,
   pendingTagRuleChangeSets: initialState.pendingTagRuleChangeSets,
+  manuallyResolvedChecksums: initialState.manuallyResolvedChecksums,
 };
 
 export function isSameFile(a: File | null, b: File | null): boolean {

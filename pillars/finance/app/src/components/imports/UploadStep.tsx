@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button, RadioInput } from '@pops/ui';
 
@@ -77,7 +78,8 @@ const BANK_HELP: Record<BankType, string> = {
 };
 
 function useUploadStep() {
-  const { file, bankType, setFile, setBankType, setHeaders, setRows, nextStep } = useImportStore();
+  const { file, rows, bankType, setFile, setBankType, setHeaders, setRows, nextStep } =
+    useImportStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,6 +100,13 @@ function useUploadStep() {
 
   const handleNext = useCallback(async () => {
     if (!file) {
+      // A resumed run has parsed rows but no re-attached File; advance without
+      // re-parsing instead of demanding a re-upload (which would cascade a
+      // downstream reset over the restored work).
+      if (rows.length > 0) {
+        nextStep();
+        return;
+      }
       setError('Please select a file');
       return;
     }
@@ -112,10 +121,11 @@ function useUploadStep() {
     setHeaders(result.headers ?? []);
     setRows(result.rows ?? []);
     nextStep();
-  }, [file, setHeaders, setRows, nextStep]);
+  }, [file, rows, setHeaders, setRows, nextStep]);
 
   return {
     file,
+    rows,
     bankType,
     isProcessing,
     error,
@@ -126,8 +136,17 @@ function useUploadStep() {
 }
 
 export function UploadStep() {
-  const { file, bankType, isProcessing, error, handleFileSelect, handleBankChange, handleNext } =
-    useUploadStep();
+  const {
+    file,
+    rows,
+    bankType,
+    isProcessing,
+    error,
+    handleFileSelect,
+    handleBankChange,
+    handleNext,
+  } = useUploadStep();
+  const { t } = useTranslation('finance');
 
   return (
     <div className="space-y-6">
@@ -153,6 +172,12 @@ export function UploadStep() {
         initialFile={file}
       />
 
+      {!file && rows.length > 0 && (
+        <div className="bg-info/5 border border-info/20 rounded-lg p-4">
+          <p className="text-xs text-info">{t('import.resumeFileNotice')}</p>
+        </div>
+      )}
+
       <div className="bg-info/5 border border-info/20 rounded-lg p-4">
         <h3 className="text-sm font-medium text-info mb-2">
           How to export from {BANK_OPTIONS.find((b) => b.value === bankType)?.label ?? bankType}
@@ -168,7 +193,7 @@ export function UploadStep() {
 
       <UploadFooter
         onNext={handleNext}
-        disabled={!file || isProcessing}
+        disabled={(!file && rows.length === 0) || isProcessing}
         isProcessing={isProcessing}
       />
     </div>

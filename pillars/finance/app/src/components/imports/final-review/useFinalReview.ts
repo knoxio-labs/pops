@@ -9,6 +9,7 @@ import {
 } from '../../../finance-api/index.js';
 import { buildCommitPayload } from '../../../lib/commit-payload';
 import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
+import { clearPersistedImport } from '../../../store/import-store-lifecycle';
 import { useImportStore } from '../../../store/importStore';
 
 type CommitResponse = ImportsCommitImportResponses[200];
@@ -90,6 +91,10 @@ export function useFinalReview() {
       // SummaryStep owns the post-commit UI; auto-advance there instead of
       // showing an inline panel + manual Continue click.
       slice.nextStep();
+      // Broadcast so a second tab still holding this now-committed import is
+      // reset — commit has no server-side checksum dedup, so a resumed copy
+      // could otherwise be imported twice.
+      clearPersistedImport(true);
     },
     onError: (err: Error) => setCommitError(err.message),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['finance', 'imports'] }),

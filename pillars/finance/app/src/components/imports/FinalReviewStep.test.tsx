@@ -16,6 +16,12 @@ vi.mock('../../store/importStore', () => ({
     selector ? selector(storeState) : storeState,
 }));
 
+const { mockClearPersistedImport } = vi.hoisted(() => ({ mockClearPersistedImport: vi.fn() }));
+
+vi.mock('../../store/import-store-lifecycle', () => ({
+  clearPersistedImport: (...args: unknown[]) => mockClearPersistedImport(...args),
+}));
+
 // --- finance SDK mock ---
 
 const { mockCommitImport } = vi.hoisted(() => ({ mockCommitImport: vi.fn() }));
@@ -289,6 +295,7 @@ describe('FinalReviewStep', () => {
       expect(mockSetCommitResult).toHaveBeenCalledWith(resultData);
       expect(mockNextStep).toHaveBeenCalledOnce();
     });
+    expect(mockClearPersistedImport).toHaveBeenCalledExactlyOnceWith(true);
   });
 
   it('shows error message on commit failure', async () => {
@@ -319,6 +326,7 @@ describe('FinalReviewStep', () => {
       expect(screen.getByText('Commit failed')).toBeDefined();
     });
     expect(mockNextStep).not.toHaveBeenCalled();
+    expect(mockClearPersistedImport).not.toHaveBeenCalled();
   });
 
   it('disables Back button during commit', async () => {

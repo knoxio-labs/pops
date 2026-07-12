@@ -102,6 +102,12 @@
   "import.saveTagRuleTx": "Salvar regra de tag reutilizável para esta transação",
   "import.uploadCsv": "Enviar arquivo CSV",
   "import.removeFile": "Remover arquivo",
+  "import.resumeTitle": "Retomar importação?",
+  "import.resumeDescription": "Você tem uma importação inacabada de {{fileName}} ({{count}} transações) na etapa {{step}}. Retome de onde parou, ou descarte e comece de novo.",
+  "import.resumeConfirm": "Retomar",
+  "import.resumeDiscard": "Descartar",
+  "import.resumeClearedElsewhere": "Esta importação foi concluída ou descartada em outra aba.",
+  "import.resumeFileNotice": "Seu arquivo não é reanexado após retomar — as linhas processadas são preservadas. Selecionar um arquivo inicia uma nova importação.",
 
   "field.date": "Data",
   "field.amount": "Valor",

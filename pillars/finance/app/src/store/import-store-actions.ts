@@ -22,7 +22,11 @@ type StoreGet = () => ImportStore;
 export function buildSetters(set: StoreSet) {
   return {
     setFile: (file: File | null) =>
-      set((state) => (isSameFile(state.file, file) ? { file } : { ...downstreamReset, file })),
+      set((state) =>
+        isSameFile(state.file, file)
+          ? { file, sourceFileName: file?.name ?? null }
+          : { ...downstreamReset, file, sourceFileName: file?.name ?? null }
+      ),
     setBankType: (bankType: ImportStore['bankType']) => set({ bankType }),
     setHeaders: (headers: string[]) => set({ headers }),
     setRows: (rows: Record<string, string>[]) => set({ rows }),
@@ -149,5 +153,9 @@ export function buildTransactionActions(set: StoreSet, get: StoreGet) {
         ),
       }));
     },
+    markChecksumsResolved: (checksums: string[]) =>
+      set((state) => ({
+        manuallyResolvedChecksums: [...new Set([...state.manuallyResolvedChecksums, ...checksums])],
+      })),
   };
 }
