@@ -165,6 +165,60 @@ describe('ProcessingStep', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
+  describe('completion warnings', () => {
+    function completedProgress(warnings: unknown[]) {
+      const result = {
+        matched: [],
+        uncertain: [{ description: 'Mystery vendor' }],
+        failed: [],
+        skipped: [],
+        warnings,
+      };
+      mockProcessSessionId = 'sess-1';
+      mockGetImportProgress.mockResolvedValue({
+        data: {
+          sessionId: 'sess-1',
+          status: 'completed',
+          result,
+          errors: [],
+          currentBatch: [],
+          currentStep: 'matching',
+          processedCount: 1,
+          startedAt: '2026-01-01T00:00:00.000Z',
+          totalTransactions: 1,
+        },
+        error: undefined,
+      });
+      return result;
+    }
+
+    it('auto-advances past a non-blocking AI_CATEGORIZATION_UNAVAILABLE warning and stores the result', async () => {
+      const result = completedProgress([
+        {
+          type: 'AI_CATEGORIZATION_UNAVAILABLE',
+          message: 'AI categorization is disabled on this server',
+          affectedCount: 1,
+          details: 'FINANCE_AI_CATEGORIZER_ENABLED != true',
+        },
+      ]);
+      render(renderStep());
+      await waitFor(() => expect(mockNextStep).toHaveBeenCalledTimes(1));
+      expect(mockSetProcessedTransactions).toHaveBeenCalledWith(result);
+      expect(screen.queryByRole('button', { name: 'Continue to Review' })).not.toBeInTheDocument();
+    });
+
+    it('pauses on AI_API_ERROR: banner + manual Continue, no auto-advance', async () => {
+      completedProgress([
+        { type: 'AI_API_ERROR', message: 'AI categorization unavailable', affectedCount: 1 },
+      ]);
+      render(renderStep());
+      expect(await screen.findByText('AI API Error')).toBeInTheDocument();
+      expect(mockNextStep).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Continue to Review' }));
+      expect(mockNextStep).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('when already processed (Back navigation)', () => {
     it('does NOT re-run the AI pipeline and shows Continue instead (fingerprints match)', async () => {
       mockProcessedTransactions = {

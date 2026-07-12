@@ -32,7 +32,7 @@ No online/in-person field exists on transactions — that distinction is express
 
 ### AI fallback (`categorizeWithAi`)
 
-- **Env-gated, default OFF.** Runs only when `FINANCE_AI_CATEGORIZER_ENABLED === 'true'`; otherwise returns no result and the row goes to `uncertain` with reason `No entity match found` (AI counters stay zero).
+- **Env-gated, default OFF.** Runs only when `FINANCE_AI_CATEGORIZER_ENABLED === 'true'`; when disabled, no call is made, the row goes to `uncertain` with reason `No entity match found (AI categorization disabled)`, and the run result carries one `AI_CATEGORIZATION_UNAVAILABLE` warning whose `affectedCount` is the number of rows that reached the AI stage (usage counters stay zero). A disabled categorizer is never silent.
 - Enabled without `ANTHROPIC_API_KEY`/`CLAUDE_API_KEY`, any API failure, or an unparseable model reply throws `AiCategorizationError` (`NO_API_KEY` / `INSUFFICIENT_CREDITS` / `API_ERROR` / `PARSE_ERROR`) — **non-fatal**: the row degrades to `uncertain` with reason `AI categorization unavailable`. A malformed AI reply must never fail the transaction.
 - Model: `claude-haiku-4-5-*` (override via `FINANCE_AI_CATEGORIZER_MODEL`), `max_tokens` 200 (override via `FINANCE_AI_CATEGORIZER_MAX_TOKENS`). The prompt is built from a strict field allowlist (`CategorizerInput`) — the merchant description plus its amount and date — and the known-tag vocabulary. The raw CSV row and any account/card/reference columns are never interpolated into the prompt; the caller projects the parsed transaction through `toCategorizerInput` before the categorizer sees it (CF008 / #3614).
 - Response is JSON `{ entityName, tags: string[] }`. Parsing tolerates markdown code fences **and prose before/after the object** — the first balanced JSON object is extracted via a string-aware brace scan (Haiku sometimes pretty-prints the object then appends an explanation). A reply with no parseable object throws `AiCategorizationError('PARSE_ERROR')` (degrades to `uncertain`, per above). `entityName` is sanitized: placeholder names (`Unknown…`, `Generic…`, etc.) and trailing store/location codes are stripped to `null`. If the sanitized entity exists in the lookup → `matched` (`matchType: 'ai'`); if it is a new name → `uncertain`.
@@ -59,15 +59,16 @@ Output shape: `{ tag, source: 'rule' | 'ai' | 'entity', pattern?, isNew? }[]`, e
 
 ## Edge cases
 
-| Case                                                           | Behaviour                                                                                                        |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Entity name < 4 chars                                          | Skipped in contains match (false-positive guard, e.g. `IGA` vs `DIGITAL GATEWAY`)                                |
-| Multiple prefix/contains matches                               | Longest entity name wins                                                                                         |
-| Invalid regex on a correction                                  | That rule silently skipped, others still evaluated                                                               |
-| AI returns a placeholder / store-coded name                    | Sanitized to `null` → row stays uncertain                                                                        |
-| AI returns an entity absent from the lookup                    | `uncertain` — user creates or selects manually                                                                   |
-| AI disabled or unavailable (no key, 429-exhausted, no credits) | Non-fatal; row → `uncertain` with reason `AI categorization unavailable` (the `aiError` flag drives that reason) |
-| Type-only (transfer/income) correction                         | Terminal `matched` with no entity; counts toward affected count                                                  |
+| Case                                               | Behaviour                                                                                                                                                              |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entity name < 4 chars                              | Skipped in contains match (false-positive guard, e.g. `IGA` vs `DIGITAL GATEWAY`)                                                                                      |
+| Multiple prefix/contains matches                   | Longest entity name wins                                                                                                                                               |
+| Invalid regex on a correction                      | That rule silently skipped, others still evaluated                                                                                                                     |
+| AI returns a placeholder / store-coded name        | Sanitized to `null` → row stays uncertain                                                                                                                              |
+| AI returns an entity absent from the lookup        | `uncertain` — user creates or selects manually                                                                                                                         |
+| AI disabled (env gate)                             | Non-fatal; row → `uncertain` with reason `No entity match found (AI categorization disabled)`; the run result carries an `AI_CATEGORIZATION_UNAVAILABLE` batch warning |
+| AI unavailable (no key, 429-exhausted, no credits) | Non-fatal; row → `uncertain` with reason `AI categorization unavailable` (the `aiError` flag drives that reason) + `AI_API_ERROR` batch warning                        |
+| Type-only (transfer/income) correction             | Terminal `matched` with no entity; counts toward affected count                                                                                                        |
 
 ## Acceptance criteria
 
@@ -79,6 +80,7 @@ Output shape: `{ tag, source: 'rule' | 'ai' | 'entity', pattern?, isNew? }[]`, e
 - [x] AI fallback is reached only after all deterministic stages miss, is gated by `FINANCE_AI_CATEGORIZER_ENABLED`, and returns `{ entityName, tags }`; existing entity → matched, new name → uncertain.
 - [x] AI `entityName` is sanitized (placeholders + store codes → null); the prompt carries only the allowlisted `CategorizerInput` (merchant description, amount, date), never the raw CSV row or any account/card/reference columns (CF008 / #3614); 429s retry with backoff up to 5 times.
 - [x] AI failure (`AiCategorizationError`) is non-fatal: the row becomes uncertain with reason `AI categorization unavailable` (the batch `aiError` flag is set, which drives that reason).
+- [x] A run where ≥1 row reaches a disabled AI stage surfaces `AI_CATEGORIZATION_UNAVAILABLE` on the result with an accurate `affectedCount`; a fully-deterministic run emits no warning.
 - [x] Per-batch AI usage/cost is surfaced on the import result and reported to the `ai` pillar via telemetry; no PII in the telemetry context.
 - [x] Tag suggestions are deduplicated and source-attributed in order correction → tag-rule → AI → entity-default; AI tags outside vocabulary flagged `isNew`.
 

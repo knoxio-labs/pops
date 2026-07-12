@@ -18,8 +18,14 @@ import { createAiCounters } from '../types.js';
 
 import type { ParsedTransaction, ProcessContext } from '../types.js';
 
+const { categorizeWithAi, isAiCategorizerEnabled } = vi.hoisted(() => ({
+  categorizeWithAi: vi.fn(),
+  isAiCategorizerEnabled: vi.fn(),
+}));
+
 vi.mock('../ai-categorizer.js', () => ({
-  categorizeWithAi: vi.fn().mockRejectedValue(new AiCategorizationError('boom', 'API_ERROR')),
+  categorizeWithAi,
+  isAiCategorizerEnabled,
   toCategorizerInput: (t: ParsedTransaction) => ({ description: t.description }),
 }));
 
@@ -50,6 +56,8 @@ function makeContext(): ProcessContext {
 }
 
 beforeEach(() => {
+  isAiCategorizerEnabled.mockReturnValue(true);
+  categorizeWithAi.mockRejectedValue(new AiCategorizationError('boom', 'API_ERROR'));
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-process-transaction-test-'));
   opened = openFinanceDb(join(tmpDir, 'finance.db'));
   db = opened.db;
@@ -102,5 +110,34 @@ describe('processTransactionSafely — aiFailureCount (CF012)', () => {
         affectedCount: N,
       },
     ]);
+  });
+});
+
+describe('processTransactionSafely — categorizer disabled', () => {
+  it('buckets each row uncertain with the disabled reason and never calls the AI', async () => {
+    isAiCategorizerEnabled.mockReturnValue(false);
+    const counters = createAiCounters();
+    const context = makeContext();
+
+    const first = await processTransactionSafely({
+      db,
+      transaction: makeTransaction('UNKNOWN MERCHANT ONE'),
+      context,
+      counters,
+    });
+    const second = await processTransactionSafely({
+      db,
+      transaction: makeTransaction('UNKNOWN MERCHANT TWO'),
+      context,
+      counters,
+    });
+
+    expect(categorizeWithAi).not.toHaveBeenCalled();
+    expect(first.uncertain?.error).toBe('No entity match found (AI categorization disabled)');
+    expect(second.uncertain?.error).toBe('No entity match found (AI categorization disabled)');
+    expect(counters.aiDisabled).toBe(true);
+    expect(counters.aiDisabledCount).toBe(2);
+    expect(counters.aiError).toBe(false);
+    expect(counters.aiFailureCount).toBe(0);
   });
 });

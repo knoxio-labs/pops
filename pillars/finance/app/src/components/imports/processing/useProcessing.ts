@@ -9,8 +9,9 @@ import {
   type ImportsProcessImportData,
 } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
+import { isBlockingImportWarning } from '../import-warnings';
 
-import type { ImportWarning, ProcessImportOutput } from '@pops/finance';
+import type { ProcessImportOutput } from '@pops/finance';
 
 type ProcessImportBody = NonNullable<ImportsProcessImportData['body']>;
 type ProgressResponse = NonNullable<ImportsGetImportProgressResponses[200]>;
@@ -94,9 +95,7 @@ export function useCompletionHandler(state: ProcessingState): void {
       setPollingEnabled(false);
       const result = progressQuery.data.result;
       setProcessedTransactions(result);
-      const hasCriticalError = result.warnings?.some(
-        (w: ImportWarning) => w.type === 'AI_API_ERROR'
-      );
+      const hasCriticalError = result.warnings?.some(isBlockingImportWarning);
       if (hasCriticalError) {
         console.error('[Import] Processing completed with critical errors - review warnings');
         return;

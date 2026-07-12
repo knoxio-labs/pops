@@ -73,6 +73,10 @@ function usage(): AiCallUsage {
 
 beforeEach(() => {
   categorizeBatchWithAi.mockReset();
+  // The ai-categorizer mock spreads the actual module, so the real env-gated
+  // isAiCategorizerEnabled runs — without this every test below would silently
+  // take the disabled short-circuit.
+  process.env['FINANCE_AI_CATEGORIZER_ENABLED'] = 'true';
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-batch-resolver-test-'));
   opened = openFinanceDb(join(tmpDir, 'finance.db'));
   db = opened.db;
@@ -85,6 +89,7 @@ afterEach(() => {
     // already closed by the DB-failure test
   }
   rmSync(tmpDir, { recursive: true, force: true });
+  delete process.env['FINANCE_AI_CATEGORIZER_ENABLED'];
   delete process.env['FINANCE_AI_CATEGORIZER_BATCH_SIZE'];
 });
 
@@ -233,6 +238,34 @@ describe('resolvePendingAi — circuit breaker (CP026)', () => {
 
     expect(categorizeBatchWithAi).toHaveBeenCalledTimes(3);
     expect(breaker.isOpen).toBe(false);
+  });
+});
+
+describe('resolvePendingAi — categorizer disabled', () => {
+  it('never calls the AI and buckets every pending row uncertain with the disabled reason', async () => {
+    delete process.env['FINANCE_AI_CATEGORIZER_ENABLED'];
+
+    const pending = makePending(['A', 'B', 'C']);
+    const context = makeContext();
+    const counters = createAiCounters();
+    const results: (TransactionProcessResult | undefined)[] = Array.from({ length: 3 });
+
+    await resolvePendingAi({ db, pending, context, counters, results });
+
+    expect(categorizeBatchWithAi).not.toHaveBeenCalled();
+    for (const result of results) {
+      expect(result?.uncertain?.error).toBe('No entity match found (AI categorization disabled)');
+      expect(result?.uncertain?.entity.matchType).toBe('none');
+    }
+    expect(counters.aiDisabled).toBe(true);
+    expect(counters.aiDisabledCount).toBe(3);
+    expect(counters.aiError).toBe(false);
+    expect(counters.aiFailureCount).toBe(0);
+    expect(counters.aiApiCalls).toBe(0);
+    expect(counters.aiCacheHits).toBe(0);
+    expect(counters.totalInputTokens).toBe(0);
+    expect(counters.totalOutputTokens).toBe(0);
+    expect(counters.totalCostUsd).toBe(0);
   });
 });
 

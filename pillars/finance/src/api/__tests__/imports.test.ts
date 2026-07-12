@@ -12,8 +12,11 @@
  * `importsService.insertImportTransaction` — the REST surface has no write path
  * of its own outside `commitImport`.
  *
- * The AI categorizer is stubbed off, so unmatched rows land in `uncertain` with
- * `'No entity match found'` and the AI counters stay zero.
+ * The AI categorizer is disabled by pinning `FINANCE_AI_CATEGORIZER_ENABLED`
+ * off in `beforeEach`, so unmatched rows land in `uncertain` with
+ * `'No entity match found (AI categorization disabled)'`, the run result
+ * carries an `AI_CATEGORIZATION_UNAVAILABLE` warning, and the AI usage
+ * counters stay zero.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -46,6 +49,10 @@ let tmpDir: string;
 let financeDb: OpenedFinanceDb;
 
 beforeEach(() => {
+  // The suite asserts the disabled-categorizer contract against the real app,
+  // so the flag must be pinned off — an ambient FINANCE_AI_CATEGORIZER_ENABLED
+  // from the shell would route unmatched rows down the live AI path.
+  delete process.env['FINANCE_AI_CATEGORIZER_ENABLED'];
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-imports-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
   clearProgress();
@@ -164,10 +171,10 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(result.matched).toHaveLength(0);
     expect(result.uncertain).toHaveLength(1);
-    expect(result.uncertain[0]?.error).toBe('No entity match found');
+    expect(result.uncertain[0]?.error).toBe('No entity match found (AI categorization disabled)');
   });
 
-  it('with AI disabled, an unmatched row is uncertain with "No entity match found"', async () => {
+  it('with AI disabled, an unmatched row is uncertain with the disabled reason and the run carries one AI_CATEGORIZATION_UNAVAILABLE warning', async () => {
     const c = client();
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'ZZZ UNKNOWN VENDOR 9', checksum: 'nomatch-1' })],
@@ -177,10 +184,18 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(result.matched).toHaveLength(0);
     expect(result.uncertain).toHaveLength(1);
-    expect(result.uncertain[0]?.error).toBe('No entity match found');
+    expect(result.uncertain[0]?.error).toBe('No entity match found (AI categorization disabled)');
     expect(result.uncertain[0]?.entity.matchType).toBe('none');
     expect(result.aiUsage).toBeUndefined();
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toEqual([
+      {
+        type: 'AI_CATEGORIZATION_UNAVAILABLE',
+        message:
+          'AI categorization is disabled on this server — unmatched transactions were not sent to AI',
+        affectedCount: 1,
+        details: 'FINANCE_AI_CATEGORIZER_ENABLED != true',
+      },
+    ]);
   });
 
   it('skips checksums that already exist in the transactions table (dedup)', async () => {
@@ -219,7 +234,7 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     expect(result.matched).toHaveLength(0);
     expect(result.uncertain).toHaveLength(1);
     expect(result.uncertain[0]?.entity.matchType).toBe('none');
-    expect(result.uncertain[0]?.error).toBe('No entity match found');
+    expect(result.uncertain[0]?.error).toBe('No entity match found (AI categorization disabled)');
   });
 
   it('returns an empty bucketed result for an empty batch', async () => {
@@ -1358,7 +1373,7 @@ describe('imports — AI seam', () => {
     });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(result.uncertain[0]?.entity.matchType).toBe('none');
-    expect(result.uncertain[0]?.error).toBe('No entity match found');
+    expect(result.uncertain[0]?.error).toBe('No entity match found (AI categorization disabled)');
     expect(result.aiUsage).toBeUndefined();
   });
 });

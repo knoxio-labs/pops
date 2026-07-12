@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button, LoadingProgressStep } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
+import { isBlockingImportWarning } from './import-warnings';
 import { ProgressDisplay } from './processing/ProgressDisplay';
 import {
   useAutoStart,
@@ -42,11 +43,7 @@ function getCompletedWarnings(progressData: unknown): ImportWarning[] | null {
 function shouldShowContinue(progressData: unknown): boolean {
   const data = progressData as { status?: string; result?: ProcessImportOutput } | null | undefined;
   if (data?.status !== 'completed') return false;
-  return Boolean(
-    data.result?.warnings?.some(
-      (w: ImportWarning) => w.type === 'AI_CATEGORIZATION_UNAVAILABLE' || w.type === 'AI_API_ERROR'
-    )
-  );
+  return Boolean(data.result?.warnings?.some(isBlockingImportWarning));
 }
 
 /**
