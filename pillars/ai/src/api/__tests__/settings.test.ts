@@ -57,7 +57,7 @@ describe('ai pillar settings RU+reset', () => {
   });
 
   it('resets a key back to its manifest default', async () => {
-    await supertest(app).put('/settings/ai.model').send({ value: 'claude-opus-4-7' });
+    await supertest(app).put('/settings/ai.model').send({ value: 'claude-opus-4-8' });
     const reset = await supertest(app).post('/settings/ai.model/reset').send({});
     expect(reset.status).toBe(200);
     expect(reset.body.data).toEqual({ key: 'ai.model', value: 'claude-haiku-4-5' });
