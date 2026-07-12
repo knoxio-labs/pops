@@ -1,35 +1,18 @@
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@pops/ui';
+
+import { ImportWarningBanner } from '../ImportWarningBanner';
 
 import type { ImportWarning } from '@pops/finance';
 
 export function WarningCard({ warning }: { warning: ImportWarning }) {
   return (
-    <div
-      key={warning.type}
-      className="w-full max-w-md p-4 text-sm rounded-lg border text-warning bg-warning/10 border-warning/25"
-    >
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 space-y-1">
-          <p className="font-medium">
-            {warning.type === 'AI_CATEGORIZATION_UNAVAILABLE'
-              ? 'AI Categorization Unavailable'
-              : 'AI API Error'}
-          </p>
-          <p className="text-xs">{warning.message}</p>
-          {warning.details && <p className="text-xs opacity-70 font-mono">{warning.details}</p>}
-          {warning.affectedCount && (
-            <p className="text-xs opacity-80">
-              {warning.affectedCount} transaction
-              {warning.affectedCount !== 1 ? 's' : ''} could not be automatically categorized. You
-              can manually categorize them in the review step.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+    <ImportWarningBanner
+      warning={warning}
+      affectedHint=". You can manually categorize them in the review step."
+      className="w-full max-w-md"
+    />
   );
 }
 

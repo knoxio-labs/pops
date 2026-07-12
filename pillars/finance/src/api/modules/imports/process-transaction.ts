@@ -8,16 +8,22 @@
  * (`ai-batch-resolver.ts`, CP025/#3656) can run the cheap stages per row and
  * defer the AI stage to a shared batched call instead of one round-trip per
  * row; `classifyTransaction`/`processTransactionSafely` compose the same two
- * pieces for a single row. When the categorizer is disabled (the default) it
- * returns `{ result: null }` so the no-match reason is `'No entity match
- * found'` and the AI counters stay zero. An `AiCategorizationError` (enabled
- * but key/API failure) degrades to an uncertain row with reason `'AI
- * categorization unavailable'`.
+ * pieces for a single row. When the categorizer is disabled (the default) the
+ * AI stage short-circuits before any call, the disabled counters are set so
+ * the run carries an `AI_CATEGORIZATION_UNAVAILABLE` warning, and the row's
+ * reason is `'No entity match found (AI categorization disabled)'`. An
+ * `AiCategorizationError` (enabled but key/API failure) degrades to an
+ * uncertain row with reason `'AI categorization unavailable'`.
  */
 import { MIN_MATCH_CONFIDENCE } from '../../../contract/corrections-pure.js';
 import { type EntityLookupEntry, type FinanceDb } from '../../../db/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
-import { type AiCacheEntry, categorizeWithAi, toCategorizerInput } from './ai-categorizer.js';
+import {
+  type AiCacheEntry,
+  categorizeWithAi,
+  isAiCategorizerEnabled,
+  toCategorizerInput,
+} from './ai-categorizer.js';
 import { applyLearnedCorrection } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
 import { buildKnownEntityHint } from './entity-vocabulary.js';
@@ -117,6 +123,11 @@ async function tryAiCategorization(
   context: ProcessContext,
   counters: AiCounters
 ): Promise<AiCacheEntry | null> {
+  if (!isAiCategorizerEnabled()) {
+    counters.aiDisabled = true;
+    counters.aiDisabledCount++;
+    return null;
+  }
   let call: Awaited<ReturnType<typeof categorizeWithAi>>;
   try {
     call = await categorizeWithAi(
@@ -202,11 +213,16 @@ export function finalizeAiResult(
     return { [bucket]: processed, batchStatus: 'success' } as TransactionProcessResult;
   }
 
-  const reason = counters.aiError ? 'AI categorization unavailable' : 'No entity match found';
   return {
-    uncertain: buildUncertainNoMatch(db, transaction, reason, context.knownTags),
+    uncertain: buildUncertainNoMatch(db, transaction, noMatchReason(counters), context.knownTags),
     batchStatus: 'success',
   };
+}
+
+function noMatchReason(counters: AiCounters): string {
+  if (counters.aiError) return 'AI categorization unavailable';
+  if (counters.aiDisabled) return 'No entity match found (AI categorization disabled)';
+  return 'No entity match found';
 }
 
 async function classifyTransaction(

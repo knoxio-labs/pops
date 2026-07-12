@@ -2,8 +2,9 @@
  * Per-batch state helpers — bucket scaffolding, AI usage rollup, warnings.
  *
  * Ported from the monolith `lib/processing-helpers.ts`. The AI warning shape is
- * preserved on the wire (`ImportWarning`); with the categorizer stubbed off the
- * counters stay zero so no warnings are emitted in F1.
+ * preserved on the wire (`ImportWarning`): a disabled categorizer that ≥1 row
+ * reached surfaces as `AI_CATEGORIZATION_UNAVAILABLE`, failed AI calls as
+ * `AI_API_ERROR`.
  */
 import type { AiCounters, AiUsageStats, ImportWarning, ProcessedTransaction } from './types.js';
 
@@ -32,14 +33,24 @@ export function buildAiUsage(counters: AiCounters): AiUsageStats | undefined {
 }
 
 export function buildAiWarnings(counters: AiCounters): ImportWarning[] {
-  if (!counters.aiError || counters.aiFailureCount === 0) return [];
-  return [
-    {
+  const warnings: ImportWarning[] = [];
+  if (counters.aiDisabled && counters.aiDisabledCount > 0) {
+    warnings.push({
+      type: 'AI_CATEGORIZATION_UNAVAILABLE',
+      message:
+        'AI categorization is disabled on this server — unmatched transactions were not sent to AI',
+      affectedCount: counters.aiDisabledCount,
+      details: 'FINANCE_AI_CATEGORIZER_ENABLED != true',
+    });
+  }
+  if (counters.aiError && counters.aiFailureCount > 0) {
+    warnings.push({
       type: 'AI_API_ERROR',
       message: 'AI categorization unavailable',
       affectedCount: counters.aiFailureCount,
-    },
-  ];
+    });
+  }
+  return warnings;
 }
 
 export interface ProcessBuckets {

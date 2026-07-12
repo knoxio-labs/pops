@@ -23,6 +23,7 @@ const categorizeWithAi = vi.fn();
 
 vi.mock('../ai-categorizer.js', () => ({
   categorizeWithAi: (...args: unknown[]) => categorizeWithAi(...args),
+  isAiCategorizerEnabled: () => true,
   toCategorizerInput: (t: ParsedTransaction) => ({ description: t.description }),
 }));
 

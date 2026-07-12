@@ -42,6 +42,9 @@ export interface AiCounters {
   /** True once any AI call has failed in this batch (gates the no-match reason). */
   aiError: boolean;
   aiFailureCount: number;
+  /** True when the categorizer was disabled while ≥1 row reached the AI stage (drives the disabled warning + reason). */
+  aiDisabled: boolean;
+  aiDisabledCount: number;
   aiApiCalls: number;
   aiCacheHits: number;
   totalInputTokens: number;
@@ -68,6 +71,8 @@ export function createAiCounters(): AiCounters {
   return {
     aiError: false,
     aiFailureCount: 0,
+    aiDisabled: false,
+    aiDisabledCount: 0,
     aiApiCalls: 0,
     aiCacheHits: 0,
     totalInputTokens: 0,

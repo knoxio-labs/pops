@@ -78,7 +78,7 @@ fetched once and cached for the review step.
 - [x] Calls `POST /imports/process`, stores the returned `sessionId`; network failure surfaces a retry.
 - [x] Polls `GET /imports/progress` every 1 s; shows current phase (deduplicating / matching), processed/total, and a live batch preview of recent items with status.
 - [x] Stops polling on `completed`, stores `{ matched, uncertain, failed, skipped, warnings }`, advances.
-- [x] If AI categorisation was unavailable, a warning banner is shown and those transactions route to uncertain (not failed). Sessions self-expire (~5 min); a gone session surfaces as expired.
+- [x] If AI categorisation **fails** (API error), the wizard pauses at Processing with a warning banner and a manual Continue; a **disabled** categorizer is non-blocking — the wizard auto-advances and the warning banner persists on Review. In both cases affected transactions route to uncertain (not failed). Sessions self-expire (~5 min); a gone session surfaces as expired.
 
 ### 4. Review entities
 
@@ -135,13 +135,14 @@ fetched once and cached for the review step.
 
 ## Edge cases
 
-| Case                                   | Behaviour                                                            |
-| -------------------------------------- | -------------------------------------------------------------------- |
-| CSV with no header row                 | Upload error, advance blocked                                        |
-| All transactions duplicates            | Only the Skipped tab is populated; nothing to review                 |
-| AI unavailable (no key / rate-limited) | Warning banner; affected transactions route to uncertain, not failed |
-| Create an entity that already exists   | Conflict surfaced; the existing match is suggested                   |
-| Browser closed mid-processing          | Session expires (~5 min); re-import required                         |
+| Case                                   | Behaviour                                                                                                                        |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| CSV with no header row                 | Upload error, advance blocked                                                                                                    |
+| All transactions duplicates            | Only the Skipped tab is populated; nothing to review                                                                             |
+| AI unavailable (no key / rate-limited) | Warning banner; affected transactions route to uncertain, not failed                                                             |
+| AI categorizer disabled (env gate)     | Non-blocking warning banner (Processing + Review); affected rows route to uncertain with a distinct reason; wizard auto-advances |
+| Create an entity that already exists   | Conflict surfaced; the existing match is suggested                                                                               |
+| Browser closed mid-processing          | Session expires (~5 min); re-import required                                                                                     |
 
 ## Out of scope
 

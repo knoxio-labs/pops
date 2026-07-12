@@ -20,6 +20,8 @@ function counters(overrides: Partial<AiCounters> = {}): AiCounters {
   return {
     aiError: false,
     aiFailureCount: 0,
+    aiDisabled: false,
+    aiDisabledCount: 0,
     aiApiCalls: 0,
     aiCacheHits: 0,
     totalInputTokens: 0,
@@ -99,6 +101,31 @@ describe('buildAiWarnings', () => {
     expect(buildAiWarnings(counters({ aiError: true, aiFailureCount: 7 }))).toEqual([
       { type: 'AI_API_ERROR', message: 'AI categorization unavailable', affectedCount: 7 },
     ]);
+  });
+
+  it('emits one AI_CATEGORIZATION_UNAVAILABLE warning with affectedCount and details when rows reached a disabled categorizer', () => {
+    expect(buildAiWarnings(counters({ aiDisabled: true, aiDisabledCount: 4 }))).toEqual([
+      {
+        type: 'AI_CATEGORIZATION_UNAVAILABLE',
+        message:
+          'AI categorization is disabled on this server — unmatched transactions were not sent to AI',
+        affectedCount: 4,
+        details: 'FINANCE_AI_CATEGORIZER_ENABLED != true',
+      },
+    ]);
+  });
+
+  it('returns no warnings when aiDisabled is true but no row reached the AI stage', () => {
+    expect(buildAiWarnings(counters({ aiDisabled: true, aiDisabledCount: 0 }))).toEqual([]);
+  });
+
+  it('emits both warnings, disabled first, when both counter pairs are set (defensive-order contract)', () => {
+    const warnings = buildAiWarnings(
+      counters({ aiDisabled: true, aiDisabledCount: 2, aiError: true, aiFailureCount: 3 })
+    );
+    expect(warnings.map((w) => w.type)).toEqual(['AI_CATEGORIZATION_UNAVAILABLE', 'AI_API_ERROR']);
+    expect(warnings[0]?.affectedCount).toBe(2);
+    expect(warnings[1]?.affectedCount).toBe(3);
   });
 });
 

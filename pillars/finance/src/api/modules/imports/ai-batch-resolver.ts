@@ -13,10 +13,17 @@ import { AiCategorizationError } from './ai-categorizer-error.js';
  * unavailable'`) WITHOUT another network call, instead of each subsequent
  * chunk paying its own 5-retry backoff ladder against a provider that's
  * already rate-limiting us.
+ *
+ * When the categorizer is disabled (`FINANCE_AI_CATEGORIZER_ENABLED !==
+ * 'true'`), the resolver short-circuits before any call: every pending row is
+ * bucketed uncertain with reason `'No entity match found (AI categorization
+ * disabled)'` and the disabled counters drive one
+ * `AI_CATEGORIZATION_UNAVAILABLE` warning on the run result.
  */
 import {
   categorizeBatchWithAi,
   getCategorizerBatchSize,
+  isAiCategorizerEnabled,
   toCategorizerInput,
 } from './ai-categorizer.js';
 import { AiCircuitBreaker } from './ai-circuit-breaker.js';
@@ -64,11 +71,10 @@ function finalizeAiResultSafely(
   }
 }
 
-function bucketUnavailable(env: ResolvePendingAiArgs, items: PendingAiItem[]): void {
+/** Callers must set the relevant counters BEFORE this runs — `finalizeAiResult` reads them to pick the per-row reason. */
+function finalizeNullRows(env: ResolvePendingAiArgs, items: PendingAiItem[]): void {
   const { db, context, counters, results } = env;
   for (const item of items) {
-    counters.aiError = true;
-    counters.aiFailureCount++;
     results[item.index] = finalizeAiResultSafely(
       { db, transaction: item.transaction, context, counters },
       null
@@ -76,9 +82,22 @@ function bucketUnavailable(env: ResolvePendingAiArgs, items: PendingAiItem[]): v
   }
 }
 
+function bucketUnavailable(env: ResolvePendingAiArgs, items: PendingAiItem[]): void {
+  env.counters.aiError = true;
+  env.counters.aiFailureCount += items.length;
+  finalizeNullRows(env, items);
+}
+
 export async function resolvePendingAi(args: ResolvePendingAiArgs): Promise<void> {
   const { db, pending, context, counters, results } = args;
   if (pending.length === 0) return;
+
+  if (!isAiCategorizerEnabled()) {
+    counters.aiDisabled = true;
+    counters.aiDisabledCount += pending.length;
+    finalizeNullRows(args, pending);
+    return;
+  }
 
   const breaker = args.breaker ?? new AiCircuitBreaker();
   const knownEntityNames = buildKnownEntityHint(context.entityLookup);

@@ -92,5 +92,6 @@ describe('imports — AI categorizer wired (F2)', () => {
     expect(result.uncertain[0]?.entity.matchType).toBe('ai');
     expect(result.aiUsage).toBeDefined();
     expect(result.aiUsage?.apiCalls).toBe(1);
+    expect(result.warnings).toBeUndefined();
   });
 });
