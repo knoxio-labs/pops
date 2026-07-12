@@ -6,15 +6,21 @@
  * transport changed. Non-2xx responses throw `HttpError` with the parsed
  * `{ status, body }` so tests assert on `.rejects.toMatchObject({ status })`.
  *
- * Each request runs against a server this helper binds explicitly to
- * `127.0.0.1`, not the `::` wildcard supertest's own `app.listen(0)` would use
- * (#3754). A `::`-bound server does not own the IPv4 loopback address, so under
- * full-suite parallelism the `(127.0.0.1, port)` tuple supertest dials could be
- * answered by an unrelated IPv4 loopback listener (e.g. a VPN daemon), bleeding
- * a foreign response into a test. Owning `127.0.0.1:port` exclusively closes
- * that window. Supertest reads `address().port` synchronously and so requires
- * the no-host `listen(0)`, so we pre-listen the IPv4 server ourselves and hand
- * the already-listening server over — supertest then skips its own listen.
+ * Transport: one shared server per test module, pre-listened and bound
+ * explicitly to `127.0.0.1` — not the `::` wildcard supertest's own
+ * `app.listen(0)` would use (#3754), since a `::`-bound server does not own
+ * the IPv4 loopback tuple supertest dials — plus one keep-alive agent so TCP
+ * connections are pooled across requests (superagent defaults to
+ * `agent: false`, a fresh connection per request). The suite previously
+ * opened a fresh server AND a fresh connection for every API call, burning
+ * two ephemeral ports each; under full-suite parallelism macOS's loopback
+ * port allocator intermittently stalled `connect(2)` for >5s (netstat shows
+ * the client socket stuck in CLOSED with no local port assigned while the
+ * server listens with zero connections), surfacing as random
+ * `Test timed out in 5000ms` failures in whichever file drew the short
+ * straw. The shared server dispatches to the most recently supplied app and
+ * is `unref`ed and never closed: vitest's per-file module isolation scopes
+ * it to the file, and worker teardown reclaims it.
  */
 import { once } from 'node:events';
 import http from 'node:http';
@@ -50,31 +56,45 @@ export class HttpError extends Error {
   }
 }
 
+const keepAliveAgent = new http.Agent({ keepAlive: true });
+
 async function send<T>(req: supertest.Test): Promise<T> {
-  const res = await req;
+  const res = await req.agent(keepAliveAgent);
   if (res.status >= 200 && res.status < 300) return res.body as T;
   throw new HttpError(res.status, res.body);
 }
 
 type Agent = ReturnType<typeof supertest>;
 
-const closeServer = (server: http.Server): Promise<void> =>
-  new Promise((resolve) => server.close(() => resolve()));
-
 /**
- * Run `fn` against a fresh server bound explicitly to `127.0.0.1`, then tear it
- * down. See the file header for why the IPv4 bind matters (#3754). The server is
- * already listening when handed to supertest, so supertest reuses it rather
- * than running its own `::`-binding `listen(0)`.
+ * Node ≥19 pools keep-alive sockets, and `server.close()` alone can wait out
+ * the server's 5s `keepAliveTimeout` for a socket it failed to flag idle.
+ * Every response is fully awaited before teardown, so destroying the
+ * remaining sockets is safe.
  */
-async function onServer<R>(app: Express, fn: (agent: Agent) => Promise<R>): Promise<R> {
-  const server = http.createServer(app);
+const closeServer = (server: http.Server): Promise<void> =>
+  new Promise((resolve) => {
+    server.close(() => resolve());
+    server.closeAllConnections();
+  });
+
+async function listenOnLoopback(handler: http.RequestListener): Promise<http.Server> {
+  const server = http.createServer(handler);
   await once(server.listen(0, '127.0.0.1'), 'listening');
   const addr = server.address() as AddressInfo | null;
   if (addr?.address !== '127.0.0.1') {
     await closeServer(server);
     throw new Error(`finance test server must bind 127.0.0.1, got ${addr?.address ?? 'null'}`);
   }
+  return server;
+}
+
+let sharedServer: Promise<http.Server> | null = null;
+let dispatchApp: Express | null = null;
+let inFlight = 0;
+
+async function onDedicatedServer<R>(app: Express, fn: (agent: Agent) => Promise<R>): Promise<R> {
+  const server = await listenOnLoopback(app);
   try {
     return await fn(supertest(server));
   } finally {
@@ -82,19 +102,52 @@ async function onServer<R>(app: Express, fn: (agent: Agent) => Promise<R>): Prom
   }
 }
 
+/**
+ * Run `fn` against the module's shared `127.0.0.1` server (see the file
+ * header for why it is shared). Requests dispatch to the most recently
+ * supplied app — safe because tests await each call and vitest isolates
+ * modules per file; the suite's one concurrent pattern (commit idempotency)
+ * issues both requests through a single app. Concurrent calls carrying a
+ * *different* app fall back to a dedicated throwaway server so a request can
+ * never be routed to the wrong app.
+ */
+async function onServer<R>(app: Express, fn: (agent: Agent) => Promise<R>): Promise<R> {
+  if (inFlight > 0 && dispatchApp !== app) return onDedicatedServer(app, fn);
+  dispatchApp = app;
+  inFlight++;
+  try {
+    sharedServer ??= listenOnLoopback((req, res) => {
+      if (dispatchApp) {
+        dispatchApp(req, res);
+        return;
+      }
+      res.statusCode = 500;
+      res.end('no app bound to the shared finance test server');
+    }).then((server) => {
+      server.unref();
+      return server;
+    });
+    const server = await sharedServer;
+    return await fn(supertest(server));
+  } finally {
+    inFlight--;
+  }
+}
+
 const withServer = <T>(app: Express, build: (agent: Agent) => supertest.Test): Promise<T> =>
   onServer(app, (agent) => send<T>(build(agent)));
 
 /**
- * Issue one request against a `127.0.0.1`-bound server and return the raw
+ * Issue one request against the shared `127.0.0.1` server and return the raw
  * supertest response — no 2xx unwrapping — for the handful of tests that assert
- * on status/headers directly (health, webhook auth). Same IPv4 transport as
+ * on status/headers directly (health, webhook auth). Same transport as
  * {@link makeClient} (#3754).
  */
 export const requestOn = (
   app: Express,
   build: (agent: Agent) => supertest.Test
-): Promise<supertest.Response> => onServer(app, (agent) => build(agent));
+): Promise<supertest.Response> =>
+  onServer(app, async (agent) => build(agent).agent(keepAliveAgent));
 
 interface Pagination {
   total: number;
