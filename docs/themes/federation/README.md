@@ -75,13 +75,14 @@ how-to companion for writing a cross-pillar call site (async signatures,
 The runtime directory: register, heartbeat, deregister, snapshot, SSE subscribe,
 plus the lifecycle math that keeps liveness honest.
 
-| PRD                                                                | Summary                                                                                                                                                                                | Status    |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| [Dynamic pillar registration](prds/dynamic-pillar-registration.md) | A pillar (in-repo or external) joins by POSTing the registry on boot; heartbeats every 10s; deregisters on clean shutdown; tagged `internal` / `external`                              | Done      |
-| [Registry schema + endpoints](prds/registry-schema-endpoints.md)   | The `pillar_registry` table, the raw HTTP/SSE register/heartbeat/deregister/snapshot/subscribe routes, the in-process event bus, nginx exposure rules                                  | To Review |
-| [Reconciliation on restart](prds/reconciliation-on-restart.md)     | On registry boot, demote rows with stale heartbeats to `unknown` before accepting traffic; ticker + lazy-status resolve from there                                                     | To Review |
-| [Heartbeat lifecycle](prds/heartbeat-lifecycle.md)                 | The runtime status engine: turns heartbeat arrivals into `healthy` / `unavailable` / `unknown` state, hybrid lazy-on-read compute plus a 10s background ticker                         | Done      |
-| [Subscription model](prds/subscription-model.md)                   | Registry state changes streamed over SSE (`GET /registry/subscribe`): full-snapshot first frame, then one incremental frame per `registered` / `deregistered` / `health-changed` event | Done      |
+| PRD                                                                | Summary                                                                                                                                                                                | Status      |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| [Dynamic pillar registration](prds/dynamic-pillar-registration.md) | A pillar (in-repo or external) joins by POSTing the registry on boot; heartbeats every 10s; deregisters on clean shutdown; tagged `internal` / `external`                              | Done        |
+| [Registry schema + endpoints](prds/registry-schema-endpoints.md)   | The `pillar_registry` table, the raw HTTP/SSE register/heartbeat/deregister/snapshot/subscribe routes, the in-process event bus, nginx exposure rules                                  | To Review   |
+| [Reconciliation on restart](prds/reconciliation-on-restart.md)     | On registry boot, demote rows with stale heartbeats to `unknown` before accepting traffic; ticker + lazy-status resolve from there                                                     | To Review   |
+| [Heartbeat lifecycle](prds/heartbeat-lifecycle.md)                 | The runtime status engine: turns heartbeat arrivals into `healthy` / `unavailable` / `unknown` state, hybrid lazy-on-read compute plus a 10s background ticker                         | Done        |
+| [Subscription model](prds/subscription-model.md)                   | Registry state changes streamed over SSE (`GET /registry/subscribe`): full-snapshot first frame, then one incremental frame per `registered` / `deregistered` / `health-changed` event | Done        |
+| [Internal service auth](prds/internal-service-auth.md)             | Per-caller credentials on every internal boundary: retire the shared internal token and split the shared inbound key onto the registry's scoped service accounts (ADR-039 E22/E23)     | Not started |
 
 ### Manifest dimensions (`@pops/pillar-sdk/manifest-schema`)
 
