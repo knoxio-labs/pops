@@ -26,6 +26,7 @@ import {
   CEREBRUM_DOMAIN,
   cerebrumTelemetryDeps,
 } from '../ai-telemetry-deps.js';
+import { resolveAnthropicApiKey } from '../anthropic-key.js';
 import { withRateLimitRetry } from '../ingest/llm.js';
 
 import type { ContradictionEvidence } from './types.js';
@@ -192,8 +193,8 @@ export class AnthropicContradictionAnalyzer implements ContradictionAnalyzer {
     engramB: string,
     bodyB: string
   ): Promise<ContradictionEvidence | null> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn('[cerebrum-nudges] ANTHROPIC_API_KEY not set — skipping contradiction analysis');
       return null;
     }
