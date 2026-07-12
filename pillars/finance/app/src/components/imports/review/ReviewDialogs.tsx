@@ -1,21 +1,14 @@
-import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { unwrap } from '../../../finance-api-helpers.js';
-import {
-  importsReevaluateWithPendingRules,
-  type ImportsReevaluateWithPendingRulesData,
-} from '../../../finance-api/index.js';
-import { toRestCorrectionChangeSet, toRestSignal } from '../../../lib/rest-changeset';
+import { toRestSignal } from '../../../lib/rest-changeset';
 import { useImportStore } from '../../../store/importStore';
 import { CorrectionProposalDialog } from '../CorrectionProposalDialog';
 import { EntityCreateDialog } from '../EntityCreateDialog';
+import { useReevaluatePending } from '../hooks/useReevaluatePending';
 
 import type { useBulkAssignment } from '../hooks/useBulkAssignment';
 import type { useProposalGeneration } from '../hooks/useProposalGeneration';
 import type { useTransactionReview } from '../hooks/useTransactionReview';
-
-type ReevaluateInput = NonNullable<ImportsReevaluateWithPendingRulesData['body']>;
 
 interface BrowseDialogProps {
   open: boolean;
@@ -33,30 +26,16 @@ function BrowseDialog({
   applyReevaluatedResult,
 }: BrowseDialogProps) {
   const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
-  const reevaluateMutation = useMutation({
-    mutationFn: async (vars: ReevaluateInput) =>
-      unwrap(await importsReevaluateWithPendingRules({ body: vars })),
-  });
+  const { runReevaluate } = useReevaluatePending();
   const onClose = (hadChanges: boolean) => {
     if (!hadChanges || !sessionId || pendingChangeSets.length === 0) return;
-    reevaluateMutation.mutate(
-      {
-        sessionId,
-        minConfidence: 0.7,
-        pendingChangeSets: pendingChangeSets.map((pcs) => ({
-          changeSet: toRestCorrectionChangeSet(pcs.changeSet),
-        })),
-      },
-      {
-        onSuccess: ({ result, affectedCount }) => {
-          applyReevaluatedResult(result);
-          toast.success(
-            `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? '' : 's'} re-evaluated`
-          );
-        },
-        onError: () => toast.error('Failed to re-evaluate transactions against updated rules'),
-      }
-    );
+    void runReevaluate().then((outcome) => {
+      if (!outcome) return;
+      applyReevaluatedResult(outcome.result);
+      toast.success(
+        `Rules applied — ${outcome.affectedCount} transaction${outcome.affectedCount === 1 ? '' : 's'} re-evaluated`
+      );
+    });
   };
   return (
     <CorrectionProposalDialog

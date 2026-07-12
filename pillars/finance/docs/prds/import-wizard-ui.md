@@ -19,7 +19,7 @@ in-person" is a normal tag applied via `transaction_tag_rules`, not a field.
 ## Data model (client state — Zustand `importStore`)
 
 - `currentStep: 1..8`, sequential navigation (`nextStep`/`prevStep`/`goToStep`/`reset`).
-- Step 1: `file: File | null`, `bankType: 'ANZ' | 'Amex' | 'ING' | 'Up'`.
+- Step 1: `file: File | null`, `sourceFileName` (display name for the resume prompt), `bankType: 'ANZ' | 'Amex' | 'ING' | 'Up'`.
 - Step 2: `headers`, `rows`, `columnMap { date, description, amount, location? }`,
   `parsedTransactions: ParsedTransaction[]` plus a content fingerprint.
 - Step 3: `processSessionId`, `processedTransactions { matched, uncertain, failed, skipped, warnings? }`,
@@ -31,6 +31,11 @@ in-person" is a normal tag applied via `transaction_tag_rules`, not a field.
 - Changing the file or re-parsing to a different fingerprint cascades a
   `downstreamReset` so stale processed/confirmed/pending state can never leak
   into a new run.
+- `manuallyResolvedChecksums` records rows the user resolved by hand so server
+  re-evaluations never revert them.
+- The whole wizard state (excluding `file`) persists to IndexedDB and restores
+  via a Resume/Discard prompt on the import page; `currentStep` is clamped on
+  resume to the deepest step whose prerequisites still hold.
 
 `ParsedTransaction` = `{ date (YYYY-MM-DD), description, amount, account (the
 selected bankType), location?, rawRow (JSON of the source row), checksum (SHA-256
@@ -63,6 +68,7 @@ fetched once and cached for the review step.
 - [x] CSV file input, max 25 MB; parsed client-side with PapaParse (`header: true`, skip empty lines).
 - [x] Validates file present, CSV non-empty, headers present; invalid files show an error and block advance.
 - [x] On success stores `headers`/`rows` and advances. Bank selection drives the help copy and sets each parsed transaction's `account` (`bankType`, threaded into validation and the `/imports/process` body — #3608).
+- [x] A resumed run where `file` is null but parsed rows exist is tolerated: Next advances without re-parsing and a notice explains the file is not re-attached; selecting a file starts a fresh import.
 
 ### 2. Column mapping
 
@@ -78,7 +84,7 @@ fetched once and cached for the review step.
 - [x] Calls `POST /imports/process`, stores the returned `sessionId`; network failure surfaces a retry.
 - [x] Polls `GET /imports/progress` every 1 s; shows current phase (deduplicating / matching), processed/total, and a live batch preview of recent items with status.
 - [x] Stops polling on `completed`, stores `{ matched, uncertain, failed, skipped, warnings }`, advances.
-- [x] If AI categorisation **fails** (API error), the wizard pauses at Processing with a warning banner and a manual Continue; a **disabled** categorizer is non-blocking — the wizard auto-advances and the warning banner persists on Review. In both cases affected transactions route to uncertain (not failed). Sessions self-expire (~5 min); a gone session surfaces as expired.
+- [x] If AI categorisation **fails** (API error), the wizard pauses at Processing with a warning banner and a manual Continue; a **disabled** categorizer is non-blocking — the wizard auto-advances and the warning banner persists on Review. In both cases affected transactions route to uncertain (not failed). Sessions self-expire (~5 min); a refresh mid-processing resumes at step 3 and restarts processing from persisted parsed transactions; an expired session during review is auto-recovered (re-process + retry), not a dead end.
 
 ### 4. Review entities
 
@@ -95,6 +101,7 @@ fetched once and cached for the review step.
 - [x] Triggering Save & Learn (accept / create / edit) opens the Correction Proposal **immediately in a loading state** before the analysis round-trip resolves; while it generates, accept/create is blocked and the loading dialog can't be dismissed, so a second action can't clobber the window about to open.
 - [x] Editing a rule-matched transaction does **not** silently override the match — it opens a Correction Proposal ChangeSet (add / edit / disable / remove rules) with the same approve/reject-and-reevaluate flow.
 - [x] "Manage Rules" opens the rule manager (browse mode) for full CRUD over DB + pending rules.
+- [x] If the server session has expired, re-evaluation transparently re-processes and retries; manually resolved rows are never reverted.
 
 ### 5. Tag review
 
@@ -113,7 +120,7 @@ fetched once and cached for the review step.
 ### 7. Final review & commit
 
 - [x] Read-only summary of everything pending: new entities, correction ChangeSets (grouped, add/edit/disable/remove), tag-rule ChangeSets, transaction breakdown, tag-assignment count; empty state when nothing is pending.
-- [x] "Approve & Commit All" calls `POST /imports/commit` (the single atomic write: entities, rules, tag rules, transactions, retroactive reclassification), with a committing indicator; on success stores `CommitResult` and advances. "Back" returns to earlier steps for edits.
+- [x] "Approve & Commit All" calls `POST /imports/commit` (the single atomic write: entities, rules, tag rules, transactions, retroactive reclassification), with a committing indicator; on success stores `CommitResult` and advances. "Back" returns to earlier steps for edits. On success the persisted wizard copy is cleared (and other open tabs are reset).
 
 ### 8. Summary
 
@@ -131,7 +138,7 @@ fetched once and cached for the review step.
 - Transfer/income type override makes entity optional.
 - Tag bulk apply is additive (merge), never destructive of individual edits.
 - Nothing is written to SQLite until `/imports/commit` on step 7; all of steps 4–6 mutate only local store state and approved-but-deferred ChangeSets.
-- Backend progress entries auto-clean after ~5 minutes.
+- Backend progress entries auto-clean after ~5 minutes. Client recovery re-creates sessions on demand from persisted parsed transactions.
 
 ## Edge cases
 
@@ -142,7 +149,7 @@ fetched once and cached for the review step.
 | AI unavailable (no key / rate-limited) | Warning banner; affected transactions route to uncertain, not failed                                                             |
 | AI categorizer disabled (env gate)     | Non-blocking warning banner (Processing + Review); affected rows route to uncertain with a distinct reason; wizard auto-advances |
 | Create an entity that already exists   | Conflict surfaced; the existing match is suggested                                                                               |
-| Browser closed mid-processing          | Session expires (~5 min); re-import required                                                                                     |
+| Browser closed mid-processing          | On return, Resume restarts processing from persisted state; no re-upload needed                                                  |
 
 ## Out of scope
 

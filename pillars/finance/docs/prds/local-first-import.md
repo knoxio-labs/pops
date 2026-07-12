@@ -2,7 +2,7 @@
 
 > Status: Done — the live re-evaluation and preview paths run server-side (pending-aware endpoints), not the client-side merge engine the original design imagined. The unwired client-side `computeMergedRules` + `reevaluateTransactions` primitives remain as building blocks; the "zero-round-trip client re-eval/preview" ambition is in [ideas/client-side-import-reeval.md](../ideas/client-side-import-reeval.md).
 
-The import wizard buffers every entity creation, correction rule change, and tag-rule change in a client-side zustand store. Nothing is written to the finance DB during steps 1–5. Step 6 (Final Review) performs one atomic `POST /imports/commit` that creates entities, applies both kinds of ChangeSets, and inserts the confirmed transactions. A browser refresh mid-import discards all buffered state — explicitly accepted.
+The import wizard buffers every entity creation, correction rule change, and tag-rule change in a client-side zustand store. Nothing is written to the finance DB during steps 1–5. Step 6 (Final Review) performs one atomic `POST /imports/commit` that creates entities, applies both kinds of ChangeSets, and inserts the confirmed transactions. All buffered state except the raw `File` handle is persisted to IndexedDB through a versioned zustand `persist` layer (`pops-finance-import-wizard`); a refresh or tab close mid-import is recoverable. Returning to the import page offers Resume (restoring the deepest step whose prerequisites still hold) or Discard. The persisted copy is cleared on successful commit, on Discard, on New Import, and auto-expires after 7 days.
 
 Re-evaluation and impact previews during review are computed server-side against `DB rules + pending ChangeSets` (the server merges), so a pending edit can target a rule outside the client's paginated view without breaking.
 
@@ -15,6 +15,13 @@ Three pending slices, each entry carrying a deterministic temp id:
 | `PendingEntity`           | `tempId`, `name`, `type` (`company`/`person`/`government`/`bank`)           | `temp:entity:{uuid}`    |
 | `PendingChangeSet`        | `tempId`, `changeSet` (correction `ChangeSet`), `appliedAt` (ISO), `source` | `temp:changeset:{uuid}` |
 | `PendingTagRuleChangeSet` | `tempId`, `changeSet` (`TagRuleChangeSet`), `appliedAt` (ISO), `source`     | `temp:tagrules:{uuid}`  |
+
+### Durable persistence
+
+- Persist key `pops-finance-import-wizard`, versioned by `IMPORT_PERSIST_VERSION` (`import-store-persistence.ts`); a version mismatch silently discards the stored copy (no `migrate`).
+- `partializeImportState` is an explicit 17-field pick — the raw `File` and every action are excluded; `sourceFileName` carries the display name for the resume prompt.
+- Backend is a hand-rolled debounced (300 ms, flushed on `pagehide`/hidden) structured-clone IndexedDB adapter (`idb-persist-storage.ts`, db `pops-finance`, store `import-wizard`) with a 7-day TTL enforced at read time; absent `indexedDB` degrades to no persistence.
+- `manuallyResolvedChecksums` persists the set of rows the user resolved by hand; it feeds `mergeReevaluatedResult` so a re-evaluation or dead-session recovery never reverts manual work.
 
 Derived (pure, memoized in `app/src/lib/merged-state.ts`):
 
@@ -54,14 +61,18 @@ The store itself owns no endpoints. The import flow it drives uses:
 
 ## Edge Cases
 
-| Case                                                | Behaviour                                                                    |
-| --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Pending entity name collides with a DB entity       | Pending wins; merged list shows one entry (the pending version)              |
-| Entity created, then a rule references it           | Rule stores the temp id; commit resolves entity first, then patches the rule |
-| Multiple ChangeSets touch the same rule             | Applied in insertion order; later see the cumulative effect                  |
-| All pending ChangeSets removed                      | Server re-eval reverts to DB-only rules                                      |
-| ChangeSet references a temp entity that was removed | `buildCommitPayload` throws `DanglingEntityRefError`; commit is blocked      |
-| Browser refresh mid-import                          | All buffered state lost; user restarts the wizard (accepted)                 |
+| Case                                                | Behaviour                                                                                                                                                                                                         |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pending entity name collides with a DB entity       | Pending wins; merged list shows one entry (the pending version)                                                                                                                                                   |
+| Entity created, then a rule references it           | Rule stores the temp id; commit resolves entity first, then patches the rule                                                                                                                                      |
+| Multiple ChangeSets touch the same rule             | Applied in insertion order; later see the cumulative effect                                                                                                                                                       |
+| All pending ChangeSets removed                      | Server re-eval reverts to DB-only rules                                                                                                                                                                           |
+| ChangeSet references a temp entity that was removed | `buildCommitPayload` throws `DanglingEntityRefError`; commit is blocked                                                                                                                                           |
+| Browser refresh mid-import                          | State rehydrates from IndexedDB; Resume/Discard prompt; step clamped to satisfied prerequisites; the `File` is not re-attached (parsed rows preserved)                                                            |
+| Server session expired/lost (deploy, >5 min idle)   | Next re-evaluation detects 404/412, re-runs `/imports/process` from persisted parsed transactions, replays pending ChangeSets, retries once; hand-resolved rows preserved via the persisted resolved-checksum set |
+| Persisted schema version mismatch                   | Silently discarded; fresh wizard                                                                                                                                                                                  |
+| Persisted import older than 7 days                  | Expired at read; fresh wizard                                                                                                                                                                                     |
+| Import committed/discarded in another tab           | Open tabs reset via broadcast                                                                                                                                                                                     |
 
 ## Acceptance Criteria
 
@@ -75,3 +86,9 @@ The store itself owns no endpoints. The import flow it drives uses:
 - [x] ChangeSet impact preview uses the pending-aware `POST /corrections/preview-changeset`, reflecting prior pending ChangeSets in the "before" column.
 - [x] `buildCommitPayload` resolves/validates temp entity refs across both ChangeSet kinds, throws `DanglingEntityRefError` on dangling refs, preserves order, returns a snapshot (`commit-payload.test.ts`).
 - [x] Final Review's `handleCommit` builds the payload and calls `POST /imports/commit` as the only write path.
+- [x] Wizard state (minus `file`) round-trips through the persistence layer and rehydrates on the import page (`importStore.persist.test.ts`, `idb-persist-storage.test.ts`).
+- [x] A resumable run prompts Resume/Discard with the step clamped to satisfied prerequisites before the wizard renders (`useImportResume.test.tsx`, `ImportPage.test.tsx`).
+- [x] The persisted copy is cleared on commit success, explicit Discard, and New Import, broadcasting a reset to other open tabs (`FinalReviewStep.test.tsx`, `SummaryStep.test.tsx`, `useImportResume.test.tsx`).
+- [x] A dead server session (404/412) during re-evaluation is recovered by re-processing persisted parsed transactions and retrying once, with concurrent failures from any call site coalescing into a single re-process; manually resolved rows survive (`session-recovery.test.ts`, `useReevaluatePending.test.ts`, `useTransactionReview.test.ts`).
+- [x] A persisted-version mismatch discards the snapshot silently (`importStore.persist.test.ts`).
+- [x] A persisted copy older than 7 days expires at read time (`idb-persist-storage.test.ts`).

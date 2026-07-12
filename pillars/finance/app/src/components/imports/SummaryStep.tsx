@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 
 import { Button, EmptyState, SummaryCard } from '@pops/ui';
 
+import { clearPersistedImport } from '../../store/import-store-lifecycle';
 import { useImportStore } from '../../store/importStore';
 
 import type { CommitResult } from '@pops/finance';
@@ -188,6 +189,7 @@ export function SummaryStep() {
       <FooterActions
         onReset={() => {
           reset();
+          clearPersistedImport(true);
           void navigate('/finance/import');
         }}
         onView={() => void navigate('/finance/transactions')}

@@ -1,22 +1,14 @@
-import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 
-import { unwrap } from '../../../finance-api-helpers.js';
-import {
-  importsReevaluateWithPendingRules,
-  type ImportsReevaluateWithPendingRulesData,
-} from '../../../finance-api/index.js';
-import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
 import { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import { useImportStore } from '../../../store/importStore';
 import { collectChangedChecksums, mergeReevaluatedResult } from './local-tx-reconcile';
+import { useReevaluatePending } from './useReevaluatePending';
 
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { LocalTxState } from './local-tx-reconcile';
 
-type ReevaluateInput = NonNullable<ImportsReevaluateWithPendingRulesData['body']>;
 type ProcessedTxState = ReturnType<typeof useImportStore.getState>['processedTransactions'];
 
 export type ViewMode = 'list' | 'grouped';
@@ -44,17 +36,25 @@ function useTabWithScrollMemory(initialTab: string) {
  * immediately, and its checksums are remembered as "resolved by hand". Without
  * this, a Back-navigation remount reseeds `localTransactions` from the stale
  * pre-resolution store snapshot and silently drops the user's work (#3610).
+ * The resolved set is mirrored into the store's persisted
+ * `manuallyResolvedChecksums` (and seeded back from it on mount) so the
+ * protection also survives a refresh and dead-session recovery.
  */
 function useSyncedLocalTransactions(processedTransactions: ProcessedTxState) {
   const [localTransactions, setLocalTransactionsRaw] = useState(processedTransactions);
-  const resolvedChecksumsRef = useRef<Set<string>>(new Set());
+  const [seededResolvedChecksums] = useState(
+    () => new Set(useImportStore.getState().manuallyResolvedChecksums)
+  );
+  const resolvedChecksumsRef = useRef<Set<string>>(seededResolvedChecksums);
 
   const setLocalTransactions = useCallback<Dispatch<SetStateAction<LocalTxState>>>((update) => {
     setLocalTransactionsRaw((prev) => {
       const next = typeof update === 'function' ? update(prev) : update;
-      for (const checksum of collectChangedChecksums(prev, next)) {
+      const changed = collectChangedChecksums(prev, next);
+      for (const checksum of changed) {
         resolvedChecksumsRef.current.add(checksum);
       }
+      if (changed.length > 0) useImportStore.getState().markChecksumsResolved(changed);
       useImportStore.getState().setProcessedTransactions(next);
       return next;
     });
@@ -92,32 +92,16 @@ function useReevalOnChangeSets(
   sessionId: string | null
 ) {
   const prevChangeSetsRef = useRef(pendingChangeSets);
-  const reevaluateMutation = useMutation({
-    mutationFn: async (vars: ReevaluateInput) =>
-      unwrap(await importsReevaluateWithPendingRules({ body: vars })),
-    // A failing re-evaluation is surfaced once via onError; retrying would
-    // replay the same request (and the same toast) several times over.
-    retry: false,
-  });
+  const { runReevaluate } = useReevaluatePending();
   useEffect(() => {
     if (prevChangeSetsRef.current === pendingChangeSets) return;
     prevChangeSetsRef.current = pendingChangeSets;
     if (!sessionId) return;
 
-    reevaluateMutation.mutate(
-      {
-        sessionId,
-        minConfidence: 0.7,
-        pendingChangeSets: pendingChangeSets.map((pcs) => ({
-          changeSet: toRestCorrectionChangeSet(pcs.changeSet),
-        })),
-      },
-      {
-        onSuccess: ({ result }) => applyReevaluatedResult(result),
-        onError: () => toast.error('Failed to re-evaluate transactions against updated rules'),
-      }
-    );
-  }, [pendingChangeSets, sessionId, applyReevaluatedResult, reevaluateMutation]);
+    void runReevaluate().then((outcome) => {
+      if (outcome) applyReevaluatedResult(outcome.result);
+    });
+  }, [pendingChangeSets, sessionId, applyReevaluatedResult, runReevaluate]);
 }
 
 /**
