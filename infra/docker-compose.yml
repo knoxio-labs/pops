@@ -20,8 +20,8 @@ services:
 
   # Registry pillar API (ADR-026, Phase 3 PR 3; the pillar formerly named
   # `core`). Sibling pillars treat the registry container as the authoritative
-  # pillar registry: `GET /pillars` returns a snapshot derived from the
-  # `POPS_PILLARS` env plus a synthetic `registry` entry.
+  # pillar registry: `GET /pillars` returns a snapshot derived from live
+  # pillar self-registrations plus a synthetic `registry` entry.
   # `depends_on: registry-api (started)` (below) only orders container start —
   # it no longer gates on the registry healthcheck. Every sibling pillar
   # listens before it registers and retries registration in the background
@@ -64,13 +64,12 @@ services:
       REGISTRY_SQLITE_PATH: /data/sqlite/registry.db
       REGISTRY_SELF_BASE_URL: http://registry-api:3001
       # Cross-pillar registry — registry-api hosts the authoritative
-      # `/pillars` snapshot that the shell's nginx proxy fans out to. The
-      # seed defaults to EMPTY: every pillar self-registers over the SDK
-      # transport (POPS_REGISTRY_ENABLED), so the snapshot is built from live
-      # registrations, not a static list. POPS_PILLARS stays an operator
-      # escape hatch for air-gapped/seed boots (the env.ts parser is retained).
+      # `/pillars` snapshot that the shell's nginx proxy fans out to. Every
+      # pillar self-registers over the SDK transport (POPS_REGISTRY_ENABLED),
+      # so the snapshot is built from live registrations, not a static list.
+      # The POPS_PILLARS env parser is retained in env.ts as an operator escape
+      # hatch, but is no longer plumbed through compose (ADR-039 E25).
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3001'
     healthcheck:
@@ -112,7 +111,6 @@ services:
       INVENTORY_SQLITE_PATH: /data/sqlite/inventory.db
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3002'
     depends_on:
@@ -161,7 +159,6 @@ services:
       AI_API_URL: http://ai-api:3008
       POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3004'
     depends_on:
@@ -208,7 +205,6 @@ services:
       MEDIA_SQLITE_PATH: /data/sqlite/media.db
       MEDIA_SELF_BASE_URL: http://media-api:3003
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
       MEDIA_IMAGES_DIR: /data/media/images
     expose:
       - '3003'
@@ -261,7 +257,6 @@ services:
       AI_API_URL: http://ai-api:3008
       POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
       FOOD_INGEST_DIR: /data/food/ingest
     expose:
       - '3005'
@@ -306,7 +301,6 @@ services:
       LISTS_SQLITE_PATH: /data/sqlite/lists.db
       LISTS_SELF_BASE_URL: http://lists-api:3006
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3006'
     depends_on:
@@ -355,7 +349,6 @@ services:
       # reporting pillars (finance/food/cerebrum) carry the same token.
       POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3008'
     depends_on:
@@ -481,7 +474,6 @@ services:
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-}
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3007'
     depends_on:
@@ -538,7 +530,6 @@ services:
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-}
-      POPS_PILLARS: ${POPS_PILLARS:-}
     depends_on:
       pops-redis:
         condition: service_healthy
@@ -576,7 +567,6 @@ services:
       POPS_REGISTRY_ENABLED: 'true'
       POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
       POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3010'
     depends_on:
@@ -761,7 +751,6 @@ services:
       PORT: '3009'
       ORCHESTRATOR_SELF_BASE_URL: http://pops-orchestrator:3009
       POPS_REGISTRY_ENABLED: 'true'
-      POPS_PILLARS: ${POPS_PILLARS:-}
     expose:
       - '3009'
     depends_on:
