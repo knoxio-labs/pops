@@ -128,6 +128,50 @@ services:
       timeout: 5s
       retries: 3
 
+  # Paperless bridge pillar (ADR-035 bridge kind, ADR-039 workstream 22).
+  # Owns no SQLite; proxies inventory's document calls onto paperless-ngx.
+  # On `documents` to reach paperless-ngx, on `backend` for inventory + registry.
+  # The paperless API token is operator-provisioned (minted in the paperless
+  # admin UI, set via PAPERLESS_API_TOKEN); until then the pillar self-registers
+  # and returns 412 (unconfigured) rather than failing.
+  documents-api:
+    build:
+      context: ..
+      dockerfile: pillars/documents/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/knoxio/pops-documents:${POPS_IMAGE_TAG:-main}
+    container_name: pops-documents-api
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - backend
+      - documents
+    environment:
+      NODE_ENV: production
+      PORT: '3012'
+      DOCUMENTS_SELF_BASE_URL: http://documents-api:3012
+      PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL:-http://pops-paperless:8000}
+      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
+      POPS_REGISTRY_ENABLED: 'true'
+    expose:
+      - '3012'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3012/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Finance pillar API (ADR-026, Phase 3 PR 2 of the finance track).
   # Hosts finance.db reads/writes for the wish_list slice today;
   # subsequent slices (budgets, transactions, imports, tag rules, tag
