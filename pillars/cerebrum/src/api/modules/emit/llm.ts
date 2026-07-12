@@ -23,6 +23,7 @@ import {
   CEREBRUM_DOMAIN,
   cerebrumTelemetryDeps,
 } from '../ai-telemetry-deps.js';
+import { resolveAnthropicApiKey } from '../anthropic-key.js';
 import { withRateLimitRetry } from '../ingest/llm.js';
 
 export const DEFAULT_EMIT_MODEL = 'claude-sonnet-4-6';
@@ -52,8 +53,8 @@ export interface GenerationLlm {
  */
 export class AnthropicGenerationLlm implements GenerationLlm {
   async generate(systemPrompt: string, userMessage: string): Promise<string> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn('[cerebrum-emit] ANTHROPIC_API_KEY not set — cannot generate document');
       return UNAVAILABLE_MSG;
     }

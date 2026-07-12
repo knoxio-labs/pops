@@ -26,6 +26,7 @@ import {
   CEREBRUM_DOMAIN,
   cerebrumTelemetryDeps,
 } from '../ai-telemetry-deps.js';
+import { resolveAnthropicApiKey } from '../anthropic-key.js';
 import { withRateLimitRetry } from '../ingest/llm.js';
 import { egoStreamEvents } from './stream-events.js';
 
@@ -102,8 +103,8 @@ export class AnthropicEgoLlm implements EgoLlm {
   }
 
   async chat(systemPrompt: string, messages: EgoChatMessage[]): Promise<EgoLlmResponse> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn('[cerebrum-ego] ANTHROPIC_API_KEY not set — returning unavailable message');
       return { content: LLM_UNAVAILABLE_MSG, tokensIn: 0, tokensOut: 0 };
     }
@@ -155,8 +156,8 @@ export class AnthropicEgoLlm implements EgoLlm {
   }
 
   async *stream(systemPrompt: string, messages: EgoChatMessage[]): AsyncGenerator<EgoStreamEvent> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn('[cerebrum-ego] ANTHROPIC_API_KEY not set — returning unavailable message');
       yield* fallbackEvents(LLM_UNAVAILABLE_MSG);
       return;
@@ -199,8 +200,8 @@ export class AnthropicEgoLlm implements EgoLlm {
 
   async summarise(prompt: string, messageCount: number): Promise<string> {
     const fallback = `[Earlier conversation: ${messageCount} messages exchanged]`;
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') return fallback;
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) return fallback;
 
     const client = new Anthropic({ apiKey, maxRetries: 0 });
     const model = this.model();

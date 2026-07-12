@@ -25,6 +25,7 @@ import {
   CEREBRUM_DOMAIN,
   cerebrumTelemetryDeps,
 } from '../ai-telemetry-deps.js';
+import { resolveAnthropicApiKey } from '../anthropic-key.js';
 
 export const DEFAULT_CLASSIFIER_MODEL = 'claude-haiku-4-5-20251001';
 export const DEFAULT_ENTITY_EXTRACTOR_MODEL = 'claude-haiku-4-5-20251001';
@@ -105,8 +106,8 @@ export class AnthropicIngestLlm implements IngestLlm {
   }
 
   async complete(req: IngestLlmRequest): Promise<string | null> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn(`[cerebrum-ingest] ANTHROPIC_API_KEY not set — skipping ${req.operation}`);
       return null;
     }

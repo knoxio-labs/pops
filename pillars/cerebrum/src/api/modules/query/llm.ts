@@ -29,6 +29,7 @@ import {
   CEREBRUM_DOMAIN,
   cerebrumTelemetryDeps,
 } from '../ai-telemetry-deps.js';
+import { resolveAnthropicApiKey } from '../anthropic-key.js';
 import { withRateLimitRetry } from '../ingest/llm.js';
 
 import type { MessageStream } from '@anthropic-ai/sdk/lib/MessageStream';
@@ -88,8 +89,8 @@ export interface QueryStreamLlm {
  */
 export class AnthropicQueryLlm implements QueryLlm {
   async complete(systemPrompt: string, question: string): Promise<string> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn('[cerebrum-query] ANTHROPIC_API_KEY not set — returning fallback answer');
       return LLM_UNAVAILABLE_MSG;
     }
@@ -158,8 +159,8 @@ async function* iterateStream(stream: MessageStream): AsyncGenerator<QueryStream
  */
 export class AnthropicQueryStreamLlm implements QueryStreamLlm {
   async *stream(systemPrompt: string, question: string): AsyncGenerator<QueryStreamChunk> {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (apiKey === undefined || apiKey === '') {
+    const apiKey = resolveAnthropicApiKey();
+    if (apiKey === undefined) {
       console.warn('[cerebrum-query] ANTHROPIC_API_KEY not set — yielding fallback answer');
       yield { kind: 'delta', text: LLM_UNAVAILABLE_MSG };
       yield { kind: 'final', tokensIn: 0, tokensOut: 0 };
