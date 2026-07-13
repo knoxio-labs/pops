@@ -87,4 +87,26 @@ describe('passesInternalToken', () => {
       })
     ).toBe(false);
   });
+
+  it('fails closed when an empty configured token meets an empty presented header', () => {
+    expect(
+      passesInternalToken({
+        path: '/ai-usage/record',
+        internalPaths: INTERNAL_PATHS,
+        presentedToken: '',
+        expectedToken: '',
+      })
+    ).toBe(false);
+  });
+
+  it('rejects an empty presented header against a real configured token', () => {
+    expect(
+      passesInternalToken({
+        path: '/ingest/worker-complete',
+        internalPaths: INTERNAL_PATHS,
+        presentedToken: '',
+        expectedToken: 'secret',
+      })
+    ).toBe(false);
+  });
 });
