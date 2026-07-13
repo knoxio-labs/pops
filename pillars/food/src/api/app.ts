@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
+import { INTERNAL_TOKEN_HEADER, passesInternalToken } from '@pops/pillar-sdk/server';
+
 import { foodContract } from '../contract/rest.js';
 import { type FoodApiDeps, makeRequestHandler } from './handlers.js';
 import { serveHeroImage } from './modules/hero-image/serve.js';
@@ -59,12 +61,13 @@ const openapiDocument: unknown = JSON.parse(
 const INTERNAL_PATHS = new Set(['/ingest/worker-complete']);
 
 function requireInternalToken(req: Request, res: Response, next: NextFunction): void {
-  if (!INTERNAL_PATHS.has(req.path)) {
-    next();
-    return;
-  }
-  const expected = process.env['POPS_API_INTERNAL_TOKEN'];
-  if (expected === undefined || req.headers['x-pops-internal-token'] !== expected) {
+  const allowed = passesInternalToken({
+    path: req.path,
+    internalPaths: INTERNAL_PATHS,
+    presentedToken: req.get(INTERNAL_TOKEN_HEADER),
+    expectedToken: process.env['POPS_API_INTERNAL_TOKEN'],
+  });
+  if (!allowed) {
     res.status(401).json({ message: 'Unauthorized' });
     return;
   }
