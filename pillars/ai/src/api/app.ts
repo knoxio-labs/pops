@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
+import { INTERNAL_TOKEN_HEADER, passesInternalToken } from '@pops/pillar-sdk/server';
+
 import { aiContract } from '../contract/rest.js';
 import { type AiApiDeps, makeRequestHandler } from './handlers.js';
 import { makeAiRestHandlers } from './rest/handlers.js';
@@ -31,16 +33,16 @@ import { makeAiRestHandlers } from './rest/handlers.js';
 const INTERNAL_PATHS = new Set(['/ai-usage/record']);
 
 function requireInternalToken(req: Request, res: Response, next: NextFunction): void {
-  if (!INTERNAL_PATHS.has(req.path)) {
-    next();
-    return;
-  }
-  const expected = process.env['POPS_API_INTERNAL_TOKEN'];
   // `req.get` normalises a possibly-repeated header to a single string so a
   // client sending the token more than once (→ `string[]`) is not spuriously
   // rejected.
-  const presented = req.get('x-pops-internal-token');
-  if (expected === undefined || presented !== expected) {
+  const allowed = passesInternalToken({
+    path: req.path,
+    internalPaths: INTERNAL_PATHS,
+    presentedToken: req.get(INTERNAL_TOKEN_HEADER),
+    expectedToken: process.env['POPS_API_INTERNAL_TOKEN'],
+  });
+  if (!allowed) {
     res.status(403).json({ message: 'Forbidden' });
     return;
   }

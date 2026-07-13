@@ -12,6 +12,8 @@ export { PillarServerSdkError } from './errors.js';
 export { InternalBaseUrlTransport } from './transport.js';
 export { createSinkHandler } from './sinks.js';
 export type { SinkHandler, SinkHandlerOptions, SinkInvocationResult } from './sinks.js';
+export { INTERNAL_TOKEN_HEADER, passesInternalToken } from './internal-token.js';
+export type { InternalTokenCheck } from './internal-token.js';
 
 export type {
   PillarHandle,
