@@ -2,7 +2,7 @@
 
 > Theme: [Federation](../README.md)
 >
-> Status: In progress (E22). Delivers ADR-039 (#3679) workstream #3700 entanglements **E22** and **E23**. Prod-gated: needs per-caller secret minting + vault edits on live capivara. E22 decision settled: **option C** (per-caller static secrets). Stage 1 (shared verifier) + Stage 2 (accept-both, per-caller `name.secret` credential + scope) landed; Stages 3–4 (mint/wire/cutover) and E23 remain.
+> Status: In progress (E23). Delivers ADR-039 (#3679) workstream #3700 entanglements **E22** and **E23**. Prod-gated: needs per-caller secret minting + vault edits on live capivara. **E22 is Done + verified live in prod** via **option C** (per-caller static secrets): Stage 1 (shared verifier), Stage 2 (accept-both `name.secret` credential + scope), Stage 3 (mint/wire), Stage 4 (cutover — shared `POPS_API_INTERNAL_TOKEN` dropped from code, env, compose, and vault). **E23** (split the shared `pops_api_key` via registry service accounts) remains.
 
 ## Purpose
 
@@ -53,13 +53,14 @@ The MCP front-door bearer token is a separate inbound secret and is out of scope
 
 ## Acceptance Criteria
 
-- [x] A single shared verifier helper enforces internal auth; no pillar re-implements the check inline. Its unit tests cover accept, reject, and missing-secret. (`authenticateInternal` / `passesInternalToken` in `@pops/pillar-sdk/server`; ai + food callees delegate to it.)
-- [ ] Every internal caller→callee pair (worker→food-api callback; food-worker / cerebrum / finance → ai-api usage; ops backfill → ai-api) authenticates with a credential unique to that caller; revoking one caller leaves the others working (covered by a test that rejects a revoked caller while a sibling still passes).
-- [ ] Each internal callee gates its internal path on a scope naming that procedure; a caller lacking the scope is rejected with 403.
-- [ ] `moltbot` and `pops-mcp` present distinct credentials; a request is attributable to exactly one of them at the verification point (asserted by a test on the resolved principal name).
-- [ ] Callees that accept a machine key verify it (no path trusts the docker network implicitly for an authenticated route); accept-both is proven by tests passing with either credential during transition.
-- [ ] `POPS_API_INTERNAL_TOKEN` and the shared `pops_api_key` are removed from code, env, compose, and vault once cutover completes; a repo search finds no remaining reader.
-- [ ] Existing internal-auth and service-account tests continue to pass unchanged through each accept-both stage.
+- [x] A single shared verifier helper enforces internal auth; no pillar re-implements the check inline. Its unit tests cover accept, reject, and missing-secret. (`authenticateInternal` in `@pops/pillar-sdk/server`; ai + food callees delegate to it.)
+- [x] Every internal caller→callee pair (worker→food-api callback; food-worker / cerebrum / finance → ai-api usage; ops backfill → ai-api) authenticates with a credential unique to that caller; revoking one caller leaves the others working (a caller whose secret env is blank is dropped by `parseInternalCallers`, covered by a test that rejects it while a sibling still passes).
+- [x] Each internal callee gates its internal path on a scope naming that procedure; a caller lacking the scope is rejected with 403.
+- [ ] `moltbot` and `pops-mcp` present distinct credentials; a request is attributable to exactly one of them at the verification point (asserted by a test on the resolved principal name). (E23)
+- [ ] Callees that accept a machine key verify it (no path trusts the docker network implicitly for an authenticated route); accept-both is proven by tests passing with either credential during transition. (E22 callees verified; the remaining unverified enforcement-gap callees land with E23.)
+- [x] `POPS_API_INTERNAL_TOKEN` is removed from code, env, compose, and vault once the E22 cutover completes; a repo search finds no remaining reader.
+- [ ] The shared `pops_api_key` is removed from code, env, compose, and vault once the E23 cutover completes; a repo search finds no remaining reader.
+- [ ] Existing internal-auth and service-account tests continue to pass unchanged through each accept-both stage. (Held through the E22 stages; re-asserted through E23.)
 
 ## Out of scope
 
