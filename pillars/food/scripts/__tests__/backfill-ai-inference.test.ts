@@ -3,8 +3,8 @@
  * tmpdir-backed SQLite carrying the legacy `ai_inference_log` table (the table
  * was dropped from food's drizzle schema, so the backfill reads it via raw SQL
  * — see #3490) and a fake `fetch` (the network boundary) to assert the script
- * maps rows, POSTs dedupe-keyed records with the internal token, and is safe to
- * re-run.
+ * maps rows, POSTs dedupe-keyed records with the per-caller credential, and is
+ * safe to re-run.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -73,7 +73,6 @@ function seedRows(rows: Partial<AiInferenceLogRow>[]): void {
 
 interface CapturedPost {
   url: string;
-  token: string | null;
   credential: string | null;
   body: unknown;
 }
@@ -83,7 +82,6 @@ function fakeFetch(captured: CapturedPost[], ok = true): typeof fetch {
     const headers = new Headers(init?.headers);
     captured.push({
       url: String(input),
-      token: headers.get('x-pops-internal-token'),
       credential: headers.get('x-pops-internal-credential'),
       body: init?.body == null ? null : JSON.parse(String(init.body)),
     });
@@ -102,14 +100,14 @@ afterEach(() => {
 });
 
 describe('runBackfill', () => {
-  it('posts every row to /ai-usage/record with the internal token + dedupe key', async () => {
+  it('posts every row to /ai-usage/record with the per-caller credential + dedupe key', async () => {
     seedRows([{ contextId: 'ingest_source:11' }, { contextId: 'ingest_source:22' }]);
     const captured: CapturedPost[] = [];
     vi.stubGlobal('fetch', fakeFetch(captured));
 
     const summary = await runBackfill({
       aiApiUrl: 'http://ai-api:3008',
-      token: 'secret-token',
+      credential: 'ops-backfill.caller-secret',
       dryRun: false,
       sqlitePath: dbPath,
     });
@@ -118,8 +116,7 @@ describe('runBackfill', () => {
     expect(captured).toHaveLength(2);
     for (const post of captured) {
       expect(post.url).toBe('http://ai-api:3008/ai-usage/record');
-      expect(post.token).toBe('secret-token');
-      expect(post.credential).toBeNull();
+      expect(post.credential).toBe('ops-backfill.caller-secret');
       const body = post.body as { domain: string; metadata: Record<string, unknown> };
       expect(body.domain).toBe('food');
       expect(body.metadata['backfilled_from']).toBe('food');
@@ -127,34 +124,25 @@ describe('runBackfill', () => {
     }
   });
 
-  it('sends the per-caller credential header when configured (E22)', async () => {
-    seedRows([{ contextId: 'ingest_source:11' }]);
-    const captured: CapturedPost[] = [];
-    vi.stubGlobal('fetch', fakeFetch(captured));
-
-    await runBackfill({
-      aiApiUrl: 'http://ai-api:3008',
-      token: '',
-      credential: 'ops-backfill.caller-secret',
-      dryRun: false,
-      sqlitePath: dbPath,
-    });
-
-    expect(captured).toHaveLength(1);
-    expect(captured[0]?.credential).toBe('ops-backfill.caller-secret');
-    // legacy token omitted when blank — the credential alone authenticates
-    expect(captured[0]?.token).toBeNull();
-  });
-
   it('is idempotent — a second run posts byte-identical dedupe-keyed records', async () => {
     seedRows([{ contextId: 'ingest_source:99' }]);
     const first: CapturedPost[] = [];
     vi.stubGlobal('fetch', fakeFetch(first));
-    await runBackfill({ aiApiUrl: 'http://ai', token: 't', dryRun: false, sqlitePath: dbPath });
+    await runBackfill({
+      aiApiUrl: 'http://ai',
+      credential: 'ops-backfill.t',
+      dryRun: false,
+      sqlitePath: dbPath,
+    });
 
     const second: CapturedPost[] = [];
     vi.stubGlobal('fetch', fakeFetch(second));
-    await runBackfill({ aiApiUrl: 'http://ai', token: 't', dryRun: false, sqlitePath: dbPath });
+    await runBackfill({
+      aiApiUrl: 'http://ai',
+      credential: 'ops-backfill.t',
+      dryRun: false,
+      sqlitePath: dbPath,
+    });
 
     expect(JSON.stringify(first[0]?.body)).toBe(JSON.stringify(second[0]?.body));
   });
@@ -166,7 +154,7 @@ describe('runBackfill', () => {
 
     const summary = await runBackfill({
       aiApiUrl: '',
-      token: '',
+      credential: 'ops-backfill.t',
       dryRun: true,
       sqlitePath: dbPath,
     });
@@ -181,7 +169,7 @@ describe('runBackfill', () => {
 
     const summary = await runBackfill({
       aiApiUrl: 'http://ai',
-      token: 't',
+      credential: 'ops-backfill.t',
       dryRun: false,
       sqlitePath: dbPath,
     });
@@ -193,7 +181,7 @@ describe('runBackfill', () => {
     seedRows([]);
     const summary = await runBackfill({
       aiApiUrl: '',
-      token: '',
+      credential: 'ops-backfill.t',
       dryRun: true,
       sqlitePath: dbPath,
     });
@@ -215,7 +203,7 @@ describe('runBackfill', () => {
 
     const summary = await runBackfill({
       aiApiUrl: 'http://ai',
-      token: 't',
+      credential: 'ops-backfill.t',
       dryRun: false,
       sqlitePath: dbPath,
     });

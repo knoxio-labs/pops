@@ -51,7 +51,7 @@ let override: CallWithLoggingDeps | undefined;
 /**
  * Process-cached telemetry deps for cerebrum callers. The `report` field is
  * left unset so `callWithLogging` falls back to the env-driven sink, which
- * no-ops under vitest/dev when `AI_API_URL`/`POPS_API_INTERNAL_TOKEN` are unset.
+ * no-ops under vitest/dev when `AI_API_URL`/`POPS_INTERNAL_CREDENTIAL` are unset.
  */
 export function cerebrumTelemetryDeps(): CallWithLoggingDeps {
   if (override) return override;

@@ -24,12 +24,8 @@ function readSecret(name: string): string | undefined {
 export interface WorkerConfig {
   redisUrl: string;
   apiUrl: string;
-  internalToken: string;
-  /**
-   * Per-caller credential (`food-worker.secret`, ADR-039 E22). Optional during
-   * the accept-both window; sent alongside {@link internalToken} when present.
-   */
-  internalCredential?: string;
+  /** Per-caller credential (`food-worker.secret`, ADR-039 E22). */
+  internalCredential: string;
   concurrency: number;
   ratePerMin: number;
   jobTimeoutSec: number;
@@ -71,8 +67,7 @@ export function loadConfig(): WorkerConfig {
   return {
     redisUrl: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
     apiUrl: process.env['POPS_API_URL'] ?? 'http://localhost:3000',
-    internalToken: requireSecret('POPS_API_INTERNAL_TOKEN'),
-    internalCredential: readSecret('POPS_INTERNAL_CREDENTIAL'),
+    internalCredential: requireSecret('POPS_INTERNAL_CREDENTIAL'),
     concurrency: readIntEnv('FOOD_WORKER_CONCURRENCY', DEFAULT_CONCURRENCY),
     ratePerMin: readIntEnv('FOOD_INGEST_RATE_PER_MIN', DEFAULT_RATE_PER_MIN),
     jobTimeoutSec: readIntEnv('FOOD_INGEST_TIMEOUT_SEC', DEFAULT_JOB_TIMEOUT_SEC),

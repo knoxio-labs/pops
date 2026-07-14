@@ -5,7 +5,7 @@ import { loadConfig } from '../config.js';
 const KEYS = [
   'REDIS_URL',
   'POPS_API_URL',
-  'POPS_API_INTERNAL_TOKEN',
+  'POPS_INTERNAL_CREDENTIAL',
   'FOOD_WORKER_CONCURRENCY',
   'FOOD_INGEST_RATE_PER_MIN',
   'FOOD_INGEST_TIMEOUT_SEC',
@@ -34,16 +34,16 @@ afterEach(() => {
 
 describe('loadConfig', () => {
   it('fails fast when the internal token is missing', () => {
-    expect(() => loadConfig()).toThrow(/POPS_API_INTERNAL_TOKEN/);
+    expect(() => loadConfig()).toThrow(/POPS_INTERNAL_CREDENTIAL/);
   });
 
   it('returns defaults when only the token is set', () => {
-    process.env['POPS_API_INTERNAL_TOKEN'] = 'tok';
+    process.env['POPS_INTERNAL_CREDENTIAL'] = 'tok';
     const cfg = loadConfig();
     expect(cfg).toEqual({
       redisUrl: 'redis://localhost:6379',
       apiUrl: 'http://localhost:3000',
-      internalToken: 'tok',
+      internalCredential: 'tok',
       concurrency: 2,
       ratePerMin: 30,
       jobTimeoutSec: 300,
@@ -56,7 +56,7 @@ describe('loadConfig', () => {
   });
 
   it('respects env overrides', () => {
-    process.env['POPS_API_INTERNAL_TOKEN'] = 'tok';
+    process.env['POPS_INTERNAL_CREDENTIAL'] = 'tok';
     process.env['REDIS_URL'] = 'redis://redis:6379';
     process.env['POPS_API_URL'] = 'http://api:3000/';
     process.env['FOOD_WORKER_CONCURRENCY'] = '4';
@@ -71,7 +71,7 @@ describe('loadConfig', () => {
     expect(cfg).toEqual({
       redisUrl: 'redis://redis:6379',
       apiUrl: 'http://api:3000/',
-      internalToken: 'tok',
+      internalCredential: 'tok',
       concurrency: 4,
       ratePerMin: 60,
       jobTimeoutSec: 120,
@@ -84,19 +84,19 @@ describe('loadConfig', () => {
   });
 
   it('rejects non-positive concurrency', () => {
-    process.env['POPS_API_INTERNAL_TOKEN'] = 'tok';
+    process.env['POPS_INTERNAL_CREDENTIAL'] = 'tok';
     process.env['FOOD_WORKER_CONCURRENCY'] = '0';
     expect(() => loadConfig()).toThrow(/FOOD_WORKER_CONCURRENCY/);
   });
 
   it('rejects non-numeric rate limits', () => {
-    process.env['POPS_API_INTERNAL_TOKEN'] = 'tok';
+    process.env['POPS_INTERNAL_CREDENTIAL'] = 'tok';
     process.env['FOOD_INGEST_RATE_PER_MIN'] = 'fast';
     expect(() => loadConfig()).toThrow(/FOOD_INGEST_RATE_PER_MIN/);
   });
 
   it('rejects decimal values (silent floor would hide misconfiguration)', () => {
-    process.env['POPS_API_INTERNAL_TOKEN'] = 'tok';
+    process.env['POPS_INTERNAL_CREDENTIAL'] = 'tok';
     process.env['FOOD_WORKER_CONCURRENCY'] = '1.9';
     expect(() => loadConfig()).toThrow(/FOOD_WORKER_CONCURRENCY/);
   });

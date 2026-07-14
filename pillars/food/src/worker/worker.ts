@@ -4,10 +4,11 @@
  * Connects to the `food.ingest` BullMQ queue (contract from `../contract/queue`),
  * dispatches each job to its per-kind handler via `runIngestJob`, and POSTs the
  * result back to the food API's `ingest.workerComplete` endpoint. Auth uses the
- * shared `POPS_API_INTERNAL_TOKEN` secret in the `x-pops-internal-token` header.
+ * worker's per-caller `POPS_INTERNAL_CREDENTIAL` in the
+ * `x-pops-internal-credential` header (ADR-039 E22).
  *
  * Lifecycle:
- *   1. `loadConfig()` reads env (fails fast on missing token).
+ *   1. `loadConfig()` reads env (fails fast on a missing credential).
  *   2. BullMQ Worker starts with the configured concurrency + rate limiter.
  *   3. A small HTTP server on `FOOD_WORKER_HEALTH_PORT` exposes /healthz.
  *   4. SIGTERM triggers `worker.close()` which drains active jobs up to
@@ -112,10 +113,7 @@ export async function startWorker(config: WorkerConfig): Promise<{
   const connection = createRedisConnection(config.redisUrl);
   const client = createApiClient({
     apiUrl: config.apiUrl,
-    internalToken: config.internalToken,
-    ...(config.internalCredential !== undefined
-      ? { internalCredential: config.internalCredential }
-      : {}),
+    internalCredential: config.internalCredential,
   });
 
   const worker = new Worker<IngestJobData, IngestJobResult>(

@@ -6,14 +6,9 @@
  * every other core settings route, then fans out over the live DB registry
  * snapshot: core itself is read in-process; every other registered pillar that
  * advertises the `settings` capability is read over the docker network at
- * `${baseUrl}/settings`, carrying the shared internal token (OD-7). Sensitive
- * values are re-redacted defensively at the aggregator (R12).
- *
- * The in-cluster fan-out cannot forward the browser session, so it presents
- * `x-pops-internal-token: POPS_API_INTERNAL_TOKEN`; pillars that gate their
- * collection read on the internal-token alias accept it, pillars that trust the
- * docker network ignore it. An unreachable / 401 pillar degrades to an empty
- * slice with an `error` tag rather than failing the whole call.
+ * `${baseUrl}/settings`. Sensitive values are re-redacted defensively at the
+ * aggregator (R12). An unreachable / 401 pillar degrades to an empty slice with
+ * an `error` tag rather than failing the whole call.
  */
 import { listEffective, redactSensitive } from '@pops/pillar-settings';
 
@@ -58,11 +53,9 @@ export function makeSettingsAggregateHandler(db: CoreDb): AggregateHandler {
     runHttp(async () => {
       const principal: Principal = readPrincipal(res);
       requireProtected(principal, AGGREGATE_SCOPE);
-      const internalToken = process.env['POPS_API_INTERNAL_TOKEN'];
       const aggregate = await aggregateSettings(snapshotTargets(db), {
         selfPillarId: SELF_PILLAR_ID,
         readSelf: () => readSelfSettings(db),
-        ...(internalToken === undefined ? {} : { internalToken }),
       });
       return { status: 200 as const, body: aggregate };
     });

@@ -9,12 +9,9 @@
  * at `${baseUrl}/settings`.
  *
  * Auth (OD-7). The PUBLIC `GET /settings/aggregate` route is identity-gated
- * by the caller (`core.settings.aggregate`). This in-cluster fan-out carries
- * the shared internal token (`x-pops-internal-token: POPS_API_INTERNAL_TOKEN`)
- * so a pillar that gates its collection read on the internal-token alias (the
- * food pattern) still answers; pillars that trust the docker network ignore
- * the header. The aggregator therefore never depends on a browser session it
- * cannot forward.
+ * by the caller (`core.settings.aggregate`). The in-cluster fan-out reads each
+ * pillar's `/settings` over the trusted docker network; the aggregator never
+ * depends on a browser session it cannot forward.
  *
  * Redaction (R12 / GAP-256-E). Each pillar already redacts its own sensitive
  * fields in its `list` handler, but the aggregator re-redacts DEFENSIVELY
@@ -66,8 +63,6 @@ export interface AggregateSettingsOptions {
   readonly selfPillarId?: string;
   /** Reads the self-pillar's effective, already-redacted rows in-process. */
   readonly readSelf: () => readonly SettingRow[];
-  /** Shared internal token presented on the in-cluster fan-out. */
-  readonly internalToken?: string;
   /** Per-probe timeout in ms. Defaults to 2500. */
   readonly timeoutMs?: number;
   /** Override the global `fetch` (tests inject a stub). */
@@ -78,7 +73,6 @@ export interface AggregateSettingsOptions {
 
 const DEFAULT_SELF_PILLAR_ID = 'registry';
 const DEFAULT_TIMEOUT_MS = 2500;
-const INTERNAL_TOKEN_HEADER = 'x-pops-internal-token';
 
 /** Sensitive-key set declared by a pillar's own settings manifests. */
 function sensitiveKeysOf(manifest: ManifestPayload): Set<string> {
@@ -114,13 +108,10 @@ async function fetchRemoteSettings(
   const fetchImpl = options.fetch ?? fetch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
-  const headers: Record<string, string> =
-    options.internalToken === undefined ? {} : { [INTERNAL_TOKEN_HEADER]: options.internalToken };
   try {
     const response = await fetchImpl(`${target.baseUrl}/settings`, {
       method: 'GET',
       signal: controller.signal,
-      headers,
     });
     if (response.status === 401 || response.status === 403) {
       return { pillarId: target.pillarId, settings: [], error: 'unauthorized' };

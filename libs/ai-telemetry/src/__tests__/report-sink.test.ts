@@ -24,22 +24,23 @@ const okFetch = (): ((input: RequestInfo | URL, init?: RequestInit) => Promise<R
 afterEach(() => {
   delete process.env['AI_API_URL'];
   delete process.env['POPS_API_URL'];
-  delete process.env['POPS_API_INTERNAL_TOKEN'];
   delete process.env['POPS_INTERNAL_CREDENTIAL'];
 });
 
 describe('createEnvReportSink', () => {
-  it('POSTs the record to /ai-usage/record with the internal token header', async () => {
+  it('POSTs the record to /ai-usage/record with the per-caller credential header', async () => {
     const fetchImpl = okFetch();
-    await createEnvReportSink({ baseUrl: 'http://ai-api:3008', token: 'secret', fetchImpl })(
-      record
-    );
+    await createEnvReportSink({
+      baseUrl: 'http://ai-api:3008',
+      credential: 'finance.secret',
+      fetchImpl,
+    })(record);
 
     expect(fetchImpl).toHaveBeenCalledOnce();
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
     expect(String(url)).toBe('http://ai-api:3008/ai-usage/record');
     expect(init?.method).toBe('POST');
-    expect(new Headers(init?.headers).get('x-pops-internal-token')).toBe('secret');
+    expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBe('finance.secret');
     expect(JSON.parse(String(init?.body))).toMatchObject({
       provider: 'anthropic',
       domain: 'finance',
@@ -78,29 +79,13 @@ describe('createEnvReportSink', () => {
     expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://self:3005/ai-usage/record');
   });
 
-  it('omits both auth headers when neither is configured', async () => {
+  it('omits the credential header when none is configured', async () => {
     const fetchImpl = okFetch();
     await createEnvReportSink({ baseUrl: 'http://ai-api:3008/', fetchImpl })(record);
     const [, init] = fetchImpl.mock.calls[0] ?? [];
-    expect(new Headers(init?.headers).get('x-pops-internal-token')).toBeNull();
     expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBeNull();
     // trailing slash on the base URL is trimmed, not doubled
     expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://ai-api:3008/ai-usage/record');
-  });
-
-  it('sends the per-caller credential header alongside the legacy token (accept-both)', async () => {
-    const fetchImpl = okFetch();
-    await createEnvReportSink({
-      baseUrl: 'http://ai-api:3008',
-      token: 'secret',
-      credential: 'finance.caller-secret',
-      fetchImpl,
-    })(record);
-    const [, init] = fetchImpl.mock.calls[0] ?? [];
-    expect(new Headers(init?.headers).get('x-pops-internal-token')).toBe('secret');
-    expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBe(
-      'finance.caller-secret'
-    );
   });
 
   it('reads the credential from POPS_INTERNAL_CREDENTIAL when not passed explicitly', async () => {

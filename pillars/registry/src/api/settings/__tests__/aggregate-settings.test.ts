@@ -87,24 +87,25 @@ describe('aggregateSettings', () => {
     expect(result.fetchedAt).toBe('2026-06-22T00:00:00.000Z');
   });
 
-  it('fans out to a capability-advertising remote pillar carrying the internal token', async () => {
+  it('fans out to a capability-advertising remote pillar over the trusted network', async () => {
     const fetchStub = vi.fn(async () =>
       jsonResponse({ data: [{ key: 'finance.aiCategorizer.model', value: 'claude-haiku-4-5' }] })
     );
     const result = await aggregateSettings([REGISTRY, FINANCE], {
       readSelf: () => [],
-      internalToken: 'secret-token',
       fetch: fetchStub,
       now: FIXED_NOW,
     });
 
     expect(fetchStub).toHaveBeenCalledWith(
       'http://finance-api:3000/settings',
-      expect.objectContaining({
-        method: 'GET',
-        headers: { 'x-pops-internal-token': 'secret-token' },
-      })
+      expect.objectContaining({ method: 'GET' })
     );
+    // The in-cluster fan-out reads /settings over the docker network; it no
+    // longer forwards any internal auth header (ADR-039 E22).
+    const init = fetchStub.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).get('x-pops-internal-token')).toBeNull();
+    expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBeNull();
     const finance = result.pillars.find((p) => p.pillarId === 'finance');
     expect(finance?.settings).toEqual([
       { key: 'finance.aiCategorizer.model', value: 'claude-haiku-4-5' },

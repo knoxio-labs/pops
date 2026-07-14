@@ -25,7 +25,8 @@ import { createFoodApiApp } from '../app.js';
 import { writeScreenshotPayload } from '../modules/ingest/ingest-storage.js';
 import { HttpError, makeClient } from './test-utils.js';
 
-const INTERNAL_TOKEN = 'test-internal-token';
+const FOOD_WORKER_SECRET = 'food-worker-caller-secret';
+const FOOD_WORKER_CRED = `food-worker.${FOOD_WORKER_SECRET}`;
 const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 const META = { extractor_version: 'test', stages: {} };
@@ -58,7 +59,7 @@ beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'food-api-ingest-test-'));
   foodDb = openFoodDb(join(tmpDir, 'food.db'));
   process.env['FOOD_INGEST_DIR'] = join(tmpDir, 'ingest');
-  process.env['POPS_API_INTERNAL_TOKEN'] = INTERNAL_TOKEN;
+  process.env['POPS_INTERNAL_SECRET_FOOD_WORKER'] = FOOD_WORKER_SECRET;
   delete process.env['REDIS_URL'];
   delete process.env['REDIS_HOST'];
 });
@@ -67,7 +68,7 @@ afterEach(() => {
   foodDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
   delete process.env['FOOD_INGEST_DIR'];
-  delete process.env['POPS_API_INTERNAL_TOKEN'];
+  delete process.env['POPS_INTERNAL_SECRET_FOOD_WORKER'];
 });
 
 describe('ingest REST — no-Redis degradation', () => {
@@ -103,7 +104,7 @@ describe('ingest REST — workerComplete (DB-only)', () => {
     const sourceId = seedSource('text');
     const res = await client().ingest.workerComplete(
       { sourceId, ok: true, dsl: '@recipe(title="Tomato Soup")', meta: META },
-      INTERNAL_TOKEN
+      FOOD_WORKER_CRED
     );
     expect(res).toMatchObject({ ok: true, compileStatus: 'uncompiled' });
     if (!res.ok) throw new Error('expected ok');
@@ -121,8 +122,8 @@ describe('ingest REST — workerComplete (DB-only)', () => {
       dsl: '@recipe(title="Tomato Soup")',
       meta: META,
     };
-    const first = await client().ingest.workerComplete(body, INTERNAL_TOKEN);
-    const second = await client().ingest.workerComplete(body, INTERNAL_TOKEN);
+    const first = await client().ingest.workerComplete(body, FOOD_WORKER_CRED);
+    const second = await client().ingest.workerComplete(body, FOOD_WORKER_CRED);
     if (!first.ok || !second.ok) throw new Error('expected ok');
     expect(second.draftRecipeId).toBe(first.draftRecipeId);
   });
@@ -137,75 +138,39 @@ describe('ingest REST — workerComplete (DB-only)', () => {
         errorMessage: 'the model declined',
         meta: META,
       },
-      INTERNAL_TOKEN
+      FOOD_WORKER_CRED
     );
     expect(res).toEqual({ ok: false, reason: 'vision-failed' });
   });
 
-  it('rejects the callback without the internal token', async () => {
+  it('rejects the callback without a credential', async () => {
     const sourceId = seedSource('text');
     await expect(
       client().ingest.workerComplete(
         { sourceId, ok: true, dsl: '@recipe(title="X")', meta: META }
-        // no token
+        // no credential
       )
     ).rejects.toMatchObject({ status: 401 });
   });
-});
 
-describe('ingest REST — workerComplete per-caller credential (E22)', () => {
-  const FOOD_WORKER_SECRET = 'food-worker-caller-secret';
-
-  beforeEach(() => {
-    process.env['POPS_INTERNAL_SECRET_FOOD_WORKER'] = FOOD_WORKER_SECRET;
-  });
-  afterEach(() => {
-    delete process.env['POPS_INTERNAL_SECRET_FOOD_WORKER'];
-  });
-
-  it('accepts the food-worker credential with the legacy token retired', async () => {
-    delete process.env['POPS_API_INTERNAL_TOKEN'];
-    const sourceId = seedSource('text');
-    const res = await client().ingest.workerComplete(
-      { sourceId, ok: true, dsl: '@recipe(title="Soup")', meta: META },
-      undefined,
-      `food-worker.${FOOD_WORKER_SECRET}`
-    );
-    expect(res).toMatchObject({ ok: true, compileStatus: 'uncompiled' });
-  });
-
-  it('401s a wrong credential secret with no legacy fallback', async () => {
-    delete process.env['POPS_API_INTERNAL_TOKEN'];
+  it('401s a wrong credential secret', async () => {
     const sourceId = seedSource('text');
     await expect(
       client().ingest.workerComplete(
         { sourceId, ok: true, dsl: '@recipe(title="X")', meta: META },
-        undefined,
         'food-worker.WRONG'
       )
     ).rejects.toMatchObject({ status: 401 });
   });
 
-  it('401s an unknown caller with no legacy fallback', async () => {
-    delete process.env['POPS_API_INTERNAL_TOKEN'];
+  it('401s an unknown caller', async () => {
     const sourceId = seedSource('text');
     await expect(
       client().ingest.workerComplete(
         { sourceId, ok: true, dsl: '@recipe(title="X")', meta: META },
-        undefined,
         `finance.${FOOD_WORKER_SECRET}`
       )
     ).rejects.toMatchObject({ status: 401 });
-  });
-
-  it('accepts either credential during the accept-both window', async () => {
-    const sourceId = seedSource('text');
-    const res = await client().ingest.workerComplete(
-      { sourceId, ok: true, dsl: '@recipe(title="Soup")', meta: META },
-      INTERNAL_TOKEN,
-      `food-worker.${FOOD_WORKER_SECRET}`
-    );
-    expect(res).toMatchObject({ ok: true });
   });
 });
 

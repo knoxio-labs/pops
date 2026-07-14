@@ -201,7 +201,6 @@ services:
       # `${AI_API_URL}/ai-usage/record` (internal-token gated). Read FIRST so
       # it never collides with a self-pointing POPS_API_URL.
       AI_API_URL: http://ai-api:3008
-      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3004'
@@ -299,7 +298,6 @@ services:
       # AI telemetry sink — read FIRST so it never collides with a
       # self-pointing POPS_API_URL (see @pops/ai-telemetry report-sink).
       AI_API_URL: http://ai-api:3008
-      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
       FOOD_INGEST_DIR: /data/food/ingest
     expose:
@@ -389,9 +387,9 @@ services:
       PORT: '3008'
       AI_SQLITE_PATH: /data/sqlite/ai.db
       AI_SELF_BASE_URL: http://ai-api:3008
-      # Validates `x-pops-internal-token` on `POST /ai-usage/record`. The
-      # reporting pillars (finance/food/cerebrum) carry the same token.
-      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
+      # Verifies a per-caller `x-pops-internal-credential` on `POST /ai-usage/record`
+      # (ADR-039 E22). The reporting pillars (finance/food/cerebrum) each present
+      # their own credential; the accepted secrets are provisioned per deploy.
       POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3008'
@@ -452,8 +450,8 @@ services:
       # to `${AI_API_URL}/ai-usage/record`. Read FIRST so it never collides with
       # the self-pointing POPS_API_URL above.
       AI_API_URL: http://ai-api:3008
-      # POPS_API_INTERNAL_TOKEN + ANTHROPIC_API_KEY come from
-      # /run/secrets/<lowercased-name> via the internal-token convention.
+      # POPS_INTERNAL_CREDENTIAL + ANTHROPIC_API_KEY come from
+      # /run/secrets/<lowercased-name> / the per-service internal-auth env file.
       # Worker pool & rate limiting (PRD-125 contract).
       FOOD_WORKER_CONCURRENCY: ${FOOD_WORKER_CONCURRENCY:-2}
       FOOD_INGEST_TIMEOUT_SEC: ${FOOD_INGEST_TIMEOUT_SEC:-300}
@@ -512,7 +510,6 @@ services:
       # AI telemetry sink — read FIRST so it never collides with the
       # self-pointing POPS_API_URL cerebrum sets elsewhere.
       AI_API_URL: http://ai-api:3008
-      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       EMBEDDING_API_URL: ${EMBEDDING_API_URL:-}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
@@ -566,7 +563,6 @@ services:
       # AI telemetry sink — the worker's @pops/ai-telemetry wrapper POSTs usage
       # to `${AI_API_URL}/ai-usage/record` (internal-token gated).
       AI_API_URL: http://ai-api:3008
-      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
       # The pillar LLM + embedding clients read these straight from the
       # process env (no /run/secrets convention), so surface them here.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -610,7 +606,6 @@ services:
       # this, mirroring the TS SDK's POPS_REGISTRY_ENABLED).
       POPS_REGISTRY_ENABLED: 'true'
       POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
-      POPS_API_INTERNAL_TOKEN: ${POPS_API_INTERNAL_TOKEN:-}
     expose:
       - '3010'
     depends_on:
