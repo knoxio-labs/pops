@@ -4,7 +4,7 @@
  * Express app via supertest against a temp SQLite (the ai pillar's own
  * baseline migration).
  *
- * Covers: internal-token gate (403 without the token),
+ * Covers: the per-caller credential gate (403 without a valid credential),
  * a valid record writes exactly one `ai_inference_log` row with the field
  * mapping applied (cached 0|1, promptVersion→metadata.prompt_version,
  * contextId→context_id), an invalid/malformed domain 400s, the handler is
@@ -22,7 +22,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openAiDb, type OpenedAiDb } from '../../db/index.js';
 import { createAiApiApp } from '../app.js';
 
-const TOKEN = 'test-internal-token';
+const FINANCE_SECRET = 'finance-caller-secret';
+const FINANCE_CRED = `finance.${FINANCE_SECRET}`;
 
 let tmpDir: string;
 let aiDb: OpenedAiDb;
@@ -55,7 +56,7 @@ function validRecord(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  process.env['POPS_API_INTERNAL_TOKEN'] = TOKEN;
+  process.env['POPS_INTERNAL_SECRET_FINANCE'] = FINANCE_SECRET;
   tmpDir = mkdtempSync(join(tmpdir(), 'ai-api-ingest-test-'));
   aiDb = openAiDb(join(tmpDir, 'ai.db'));
   app = createAiApiApp({ aiDb, version: '0.0.1-test', selfBaseUrl: 'http://localhost:3008' });
@@ -64,48 +65,26 @@ beforeEach(() => {
 afterEach(() => {
   aiDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
-  delete process.env['POPS_API_INTERNAL_TOKEN'];
+  delete process.env['POPS_INTERNAL_SECRET_FINANCE'];
 });
 
-describe('POST /ai-usage/record — internal-token gate', () => {
-  it('403s without the internal token', async () => {
-    const res = await supertest(app).post('/ai-usage/record').send(validRecord());
-    expect(res.status).toBe(403);
-    expect(countLogs()).toBe(0);
-  });
-
-  it('403s with a wrong internal token', async () => {
+describe('POST /ai-usage/record — per-caller credential gate', () => {
+  it('accepts a valid per-caller credential and writes the row', async () => {
     const res = await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', 'nope')
-      .send(validRecord());
-    expect(res.status).toBe(403);
-    expect(countLogs()).toBe(0);
-  });
-});
-
-describe('POST /ai-usage/record — per-caller credential gate (E22)', () => {
-  const FINANCE_SECRET = 'finance-caller-secret';
-
-  beforeEach(() => {
-    process.env['POPS_INTERNAL_SECRET_FINANCE'] = FINANCE_SECRET;
-  });
-  afterEach(() => {
-    delete process.env['POPS_INTERNAL_SECRET_FINANCE'];
-  });
-
-  it('accepts a valid per-caller credential with the legacy token retired', async () => {
-    delete process.env['POPS_API_INTERNAL_TOKEN'];
-    const res = await supertest(app)
-      .post('/ai-usage/record')
-      .set('x-pops-internal-credential', `finance.${FINANCE_SECRET}`)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord());
     expect(res.status).toBe(200);
     expect(countLogs()).toBe(1);
   });
 
-  it('403s a per-caller credential with a wrong secret and no legacy fallback', async () => {
-    delete process.env['POPS_API_INTERNAL_TOKEN'];
+  it('403s without any credential', async () => {
+    const res = await supertest(app).post('/ai-usage/record').send(validRecord());
+    expect(res.status).toBe(403);
+    expect(countLogs()).toBe(0);
+  });
+
+  it('403s a known caller presenting a wrong secret', async () => {
     const res = await supertest(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', 'finance.WRONG')
@@ -114,8 +93,7 @@ describe('POST /ai-usage/record — per-caller credential gate (E22)', () => {
     expect(countLogs()).toBe(0);
   });
 
-  it('403s an unconfigured caller (secret env absent) with no legacy fallback', async () => {
-    delete process.env['POPS_API_INTERNAL_TOKEN'];
+  it('403s an unconfigured caller (secret env absent)', async () => {
     const res = await supertest(app)
       .post('/ai-usage/record')
       .set('x-pops-internal-credential', 'cerebrum.anything')
@@ -123,23 +101,13 @@ describe('POST /ai-usage/record — per-caller credential gate (E22)', () => {
     expect(res.status).toBe(403);
     expect(countLogs()).toBe(0);
   });
-
-  it('accepts either credential during the accept-both window (both headers valid)', async () => {
-    const res = await supertest(app)
-      .post('/ai-usage/record')
-      .set('x-pops-internal-credential', `finance.${FINANCE_SECRET}`)
-      .set('x-pops-internal-token', TOKEN)
-      .send(validRecord());
-    expect(res.status).toBe(200);
-    expect(countLogs()).toBe(1);
-  });
 });
 
 describe('POST /ai-usage/record — happy path', () => {
   it('writes exactly one ai_inference_log row and never touches ai_inference_daily', async () => {
     const res = await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', TOKEN)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord());
 
     expect(res.status).toBe(200);
@@ -151,7 +119,7 @@ describe('POST /ai-usage/record — happy path', () => {
   it('maps cached→0|1, promptVersion→metadata.prompt_version, contextId→context_id', async () => {
     await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', TOKEN)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(
         validRecord({
           cached: true,
@@ -177,7 +145,7 @@ describe('POST /ai-usage/record — happy path', () => {
   it('persists null metadata when none is supplied', async () => {
     await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', TOKEN)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord());
 
     const row = aiDb.db.get<{ metadata: string | null }>(
@@ -191,7 +159,7 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
   it('400s a malformed domain without writing a row', async () => {
     const res = await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', TOKEN)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord({ domain: 'Finance Pillar!!' }));
 
     expect(res.status).toBe(400);
@@ -201,7 +169,7 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
   it('400s a body that fails the zod schema (negative tokens)', async () => {
     const res = await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', TOKEN)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord({ inputTokens: -5 }));
 
     expect(res.status).toBe(400);
@@ -212,7 +180,7 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
     const huge = 'x'.repeat(8000);
     const res = await supertest(app)
       .post('/ai-usage/record')
-      .set('x-pops-internal-token', TOKEN)
+      .set('x-pops-internal-credential', FINANCE_CRED)
       .send(validRecord({ metadata: { blob: huge } }));
 
     expect(res.status).toBe(200);

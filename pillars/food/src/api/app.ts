@@ -19,7 +19,6 @@ import express, { type Express, type NextFunction, type Request, type Response }
 
 import {
   INTERNAL_CREDENTIAL_HEADER,
-  INTERNAL_TOKEN_HEADER,
   type InternalCallerSpec,
   authenticateInternal,
   parseInternalCallers,
@@ -86,11 +85,9 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
   const result = authenticateInternal({
     path: req.path,
     credentialHeader: req.get(INTERNAL_CREDENTIAL_HEADER),
-    legacyTokenHeader: req.get(INTERNAL_TOKEN_HEADER),
     config: {
       pathScopes: INTERNAL_PATH_SCOPES,
       callers: parseInternalCallers(ACCEPTED_CALLERS, process.env),
-      legacyToken: process.env['POPS_API_INTERNAL_TOKEN'],
     },
   });
   if (!result.ok) {

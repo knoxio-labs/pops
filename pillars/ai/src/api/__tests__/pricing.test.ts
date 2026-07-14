@@ -57,8 +57,8 @@ describe('GET /ai-pricing/:provider/:model', () => {
     expect(res.body).toEqual({ input: 1, output: 5 });
   });
 
-  it('is NOT internal-token gated (public-readable)', async () => {
-    // No x-pops-internal-token header — must still resolve.
+  it('is NOT internal-auth gated (public-readable)', async () => {
+    // No x-pops-internal-credential header — must still resolve.
     const res = await supertest(app).get('/ai-pricing/claude/anything');
     expect(res.status).toBe(200);
     expect(typeof res.body.input).toBe('number');

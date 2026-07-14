@@ -13,14 +13,11 @@ export { InternalBaseUrlTransport } from './transport.js';
 export { createSinkHandler } from './sinks.js';
 export type { SinkHandler, SinkHandlerOptions, SinkInvocationResult } from './sinks.js';
 export {
-  INTERNAL_TOKEN_HEADER,
   INTERNAL_CREDENTIAL_HEADER,
-  passesInternalToken,
   authenticateInternal,
   parseInternalCallers,
 } from './internal-token.js';
 export type {
-  InternalTokenCheck,
   InternalCaller,
   InternalCallerSpec,
   InternalAuthConfig,

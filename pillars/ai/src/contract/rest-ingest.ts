@@ -1,8 +1,8 @@
 /**
  * `ai-ingest.*` sub-router — the canonical cross-pillar telemetry sink.
  *
- * `POST /ai-usage/record` is internal-only (gated by `x-pops-internal-token`
- * in `api/app.ts`'s {@link INTERNAL_PATHS}; nginx never proxies it). It is the
+ * `POST /ai-usage/record` is internal-only (gated by a per-caller
+ * `x-pops-internal-credential` in `api/app.ts`; nginx never proxies it). It is the
  * FIRST production write path into `ai_inference_log`: every pillar that calls
  * Claude routes its usage/cost/latency through the `@pops/ai-telemetry` wrapper,
  * which POSTs one {@link InferenceRecordSchema} row here.
@@ -27,9 +27,9 @@ export const aiIngestContract = c.router({
     method: 'POST',
     path: '/ai-usage/record',
     body: InferenceRecordSchema,
-    // 403: the internal-token gate (api/app.ts) rejects callers without a
-    // matching `x-pops-internal-token` before the handler runs. Declared so the
-    // OpenAPI projection is truthful for cross-pillar callers.
+    // 403: the internal-auth gate (api/app.ts) rejects callers without a valid
+    // per-caller `x-pops-internal-credential` before the handler runs. Declared
+    // so the OpenAPI projection is truthful for cross-pillar callers.
     responses: {
       200: z.object({ ok: z.literal(true) }),
       400: ErrorBodySchema,

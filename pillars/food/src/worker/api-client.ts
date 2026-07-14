@@ -6,31 +6,21 @@
  * the food API container's base URL.
  *
  * Auth is validated by the `requireInternalToken` middleware in
- * `pillars/food/src/api/app.ts`, which gates `/ingest/worker-complete`. During
- * the ADR-039 E22 accept-both window the worker sends both the legacy
- * `x-pops-internal-token` and, when configured, its per-caller
- * `x-pops-internal-credential`.
+ * `pillars/food/src/api/app.ts`, which gates `/ingest/worker-complete` on the
+ * worker's per-caller `x-pops-internal-credential` (ADR-039 E22).
  */
 import type { IngestJobResult } from '../contract/queue/index.js';
 
 export interface ApiClient {
   readonly apiUrl: string;
-  readonly internalToken: string;
-  /** Per-caller credential (`food-worker.secret`); omitted until provisioned. */
-  readonly internalCredential?: string;
+  /** Per-caller credential (`food-worker.secret`). */
+  readonly internalCredential: string;
 }
 
-export function createApiClient(opts: {
-  apiUrl: string;
-  internalToken: string;
-  internalCredential?: string;
-}): ApiClient {
+export function createApiClient(opts: { apiUrl: string; internalCredential: string }): ApiClient {
   return {
     apiUrl: opts.apiUrl.replace(/\/+$/, ''),
-    internalToken: opts.internalToken,
-    ...(opts.internalCredential !== undefined
-      ? { internalCredential: opts.internalCredential }
-      : {}),
+    internalCredential: opts.internalCredential,
   };
 }
 
@@ -97,17 +87,12 @@ export async function postWorkerComplete(
   const url = `${client.apiUrl}/ingest/worker-complete`;
   const body = JSON.stringify(buildInput(sourceId, result));
 
-  const headers: Record<string, string> = {
-    'content-type': 'application/json',
-    'x-pops-internal-token': client.internalToken,
-  };
-  if (client.internalCredential !== undefined && client.internalCredential !== '') {
-    headers['x-pops-internal-credential'] = client.internalCredential;
-  }
-
   const response = await fetch(url, {
     method: 'POST',
-    headers,
+    headers: {
+      'content-type': 'application/json',
+      'x-pops-internal-credential': client.internalCredential,
+    },
     body,
   });
 

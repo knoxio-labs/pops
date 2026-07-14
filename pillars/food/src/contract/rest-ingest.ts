@@ -5,7 +5,7 @@
  * / `list` read live job state + the persisted `ingest_sources` row, and
  * `cancel` / `retry` poke the queue. `workerComplete` is the internal
  * callback the `pops-worker-food` container posts on every job (success or
- * failure) — gated by `x-pops-internal-token` in `src/api/app.ts`.
+ * failure) — gated by a per-caller `x-pops-internal-credential` in `src/api/app.ts`.
  *
  * `start` / `retry` answer 503 when Redis is not configured (the producer
  * can't enqueue). Reads use POST-with-body — parity with `inbox.list` —

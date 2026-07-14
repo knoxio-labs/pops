@@ -394,9 +394,8 @@ export function makeClient(app: Express) {
         send<IngestCancelResult>(r.post('/ingest/cancel').send({ sourceId })),
       retry: (sourceId: number) =>
         send<IngestStartResult>(r.post('/ingest/retry').send({ sourceId })),
-      workerComplete: (body: WorkerCompleteBody, token?: string, credential?: string) => {
+      workerComplete: (body: WorkerCompleteBody, credential?: string) => {
         const req = r.post('/ingest/worker-complete');
-        if (token !== undefined) req.set('x-pops-internal-token', token);
         if (credential !== undefined) req.set('x-pops-internal-credential', credential);
         return send<WorkerCompleteResult>(req.send(body));
       },

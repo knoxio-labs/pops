@@ -5,9 +5,8 @@
  * plus the raw `/health`, `/pillars`, and `/openapi` routes ts-rest cannot
  * model. The cross-pillar ingest `POST /ai-usage/record` is internal-only: the
  * {@link INTERNAL_PATH_SCOPES} gate 403s any request lacking a valid per-caller
- * credential (or, during the E22 accept-both window, the legacy shared token);
- * nginx never proxies it either. `/ai-pricing/*` is NOT internal — cross-pillar
- * callers fetch it to shape pricing before `computeCostUsd`.
+ * credential; nginx never proxies it either. `/ai-pricing/*` is NOT internal —
+ * cross-pillar callers fetch it to shape pricing before `computeCostUsd`.
  *
  * Kept as a factory so the test suite can spin up an in-process `supertest`
  * instance without binding a real port.
@@ -21,7 +20,6 @@ import express, { type Express, type NextFunction, type Request, type Response }
 
 import {
   INTERNAL_CREDENTIAL_HEADER,
-  INTERNAL_TOKEN_HEADER,
   type InternalCallerSpec,
   authenticateInternal,
   parseInternalCallers,
@@ -69,11 +67,9 @@ function requireInternalToken(req: Request, res: Response, next: NextFunction): 
   const result = authenticateInternal({
     path: req.path,
     credentialHeader: req.get(INTERNAL_CREDENTIAL_HEADER),
-    legacyTokenHeader: req.get(INTERNAL_TOKEN_HEADER),
     config: {
       pathScopes: INTERNAL_PATH_SCOPES,
       callers: parseInternalCallers(ACCEPTED_CALLERS, process.env),
-      legacyToken: process.env['POPS_API_INTERNAL_TOKEN'],
     },
   });
   if (!result.ok) {

@@ -28,12 +28,13 @@ fn env_nonempty(key: &str) -> Option<String> {
 ///
 /// Resolution mirrors TS exactly: the base URL is `AI_API_URL` FIRST (so it
 /// never collides with a service's self-pointing `POPS_API_URL`), then
-/// `POPS_API_URL`; the token is `POPS_API_INTERNAL_TOKEN`. When no base URL
-/// resolves, [`report`](ReportSink::report) is a silent no-op. A non-2xx
-/// response or a transport failure is swallowed — best-effort by contract.
+/// `POPS_API_URL`; the per-caller credential is `POPS_INTERNAL_CREDENTIAL`
+/// (`name.secret`, ADR-039 E22). When no base URL resolves,
+/// [`report`](ReportSink::report) is a silent no-op. A non-2xx response or a
+/// transport failure is swallowed — best-effort by contract.
 pub struct EnvHttpSink {
     base_url: Option<String>,
-    token: Option<String>,
+    credential: Option<String>,
     client: reqwest::Client,
 }
 
@@ -43,17 +44,17 @@ impl EnvHttpSink {
     pub fn from_env() -> Self {
         Self {
             base_url: env_nonempty("AI_API_URL").or_else(|| env_nonempty("POPS_API_URL")),
-            token: env_nonempty("POPS_API_INTERNAL_TOKEN"),
+            credential: env_nonempty("POPS_INTERNAL_CREDENTIAL"),
             client: reqwest::Client::new(),
         }
     }
 
     /// Builds a sink with explicit configuration (for tests / non-env wiring).
     /// A `None` base URL yields a no-op sink, matching `from_env`.
-    pub fn new(base_url: Option<String>, token: Option<String>) -> Self {
+    pub fn new(base_url: Option<String>, credential: Option<String>) -> Self {
         Self {
             base_url,
-            token,
+            credential,
             client: reqwest::Client::new(),
         }
     }
@@ -76,8 +77,8 @@ impl ReportSink for EnvHttpSink {
             .client
             .post(format!("{base}{RECORD_PATH}"))
             .json(&record);
-        if let Some(token) = &self.token {
-            request = request.header("x-pops-internal-token", token);
+        if let Some(credential) = &self.credential {
+            request = request.header("x-pops-internal-credential", credential);
         }
         // Best-effort by contract: drop any transport error on the floor so a
         // failing sink can never propagate into (or panic) a caller.
