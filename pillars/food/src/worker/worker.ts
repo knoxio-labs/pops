@@ -113,6 +113,9 @@ export async function startWorker(config: WorkerConfig): Promise<{
   const client = createApiClient({
     apiUrl: config.apiUrl,
     internalToken: config.internalToken,
+    ...(config.internalCredential !== undefined
+      ? { internalCredential: config.internalCredential }
+      : {}),
   });
 
   const worker = new Worker<IngestJobData, IngestJobResult>(

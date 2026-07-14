@@ -153,6 +153,62 @@ describe('ingest REST — workerComplete (DB-only)', () => {
   });
 });
 
+describe('ingest REST — workerComplete per-caller credential (E22)', () => {
+  const FOOD_WORKER_SECRET = 'food-worker-caller-secret';
+
+  beforeEach(() => {
+    process.env['POPS_INTERNAL_SECRET_FOOD_WORKER'] = FOOD_WORKER_SECRET;
+  });
+  afterEach(() => {
+    delete process.env['POPS_INTERNAL_SECRET_FOOD_WORKER'];
+  });
+
+  it('accepts the food-worker credential with the legacy token retired', async () => {
+    delete process.env['POPS_API_INTERNAL_TOKEN'];
+    const sourceId = seedSource('text');
+    const res = await client().ingest.workerComplete(
+      { sourceId, ok: true, dsl: '@recipe(title="Soup")', meta: META },
+      undefined,
+      `food-worker.${FOOD_WORKER_SECRET}`
+    );
+    expect(res).toMatchObject({ ok: true, compileStatus: 'uncompiled' });
+  });
+
+  it('401s a wrong credential secret with no legacy fallback', async () => {
+    delete process.env['POPS_API_INTERNAL_TOKEN'];
+    const sourceId = seedSource('text');
+    await expect(
+      client().ingest.workerComplete(
+        { sourceId, ok: true, dsl: '@recipe(title="X")', meta: META },
+        undefined,
+        'food-worker.WRONG'
+      )
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('401s an unknown caller with no legacy fallback', async () => {
+    delete process.env['POPS_API_INTERNAL_TOKEN'];
+    const sourceId = seedSource('text');
+    await expect(
+      client().ingest.workerComplete(
+        { sourceId, ok: true, dsl: '@recipe(title="X")', meta: META },
+        undefined,
+        `finance.${FOOD_WORKER_SECRET}`
+      )
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('accepts either credential during the accept-both window', async () => {
+    const sourceId = seedSource('text');
+    const res = await client().ingest.workerComplete(
+      { sourceId, ok: true, dsl: '@recipe(title="Soup")', meta: META },
+      INTERNAL_TOKEN,
+      `food-worker.${FOOD_WORKER_SECRET}`
+    );
+    expect(res).toMatchObject({ ok: true });
+  });
+});
+
 describe('ingest media serve routes', () => {
   it('400s on a non-numeric source id', async () => {
     const res = await supertest(app()).get('/ingest/source/abc/screenshot');

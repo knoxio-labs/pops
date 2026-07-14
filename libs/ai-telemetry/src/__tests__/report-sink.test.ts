@@ -25,6 +25,7 @@ afterEach(() => {
   delete process.env['AI_API_URL'];
   delete process.env['POPS_API_URL'];
   delete process.env['POPS_API_INTERNAL_TOKEN'];
+  delete process.env['POPS_INTERNAL_CREDENTIAL'];
 });
 
 describe('createEnvReportSink', () => {
@@ -77,12 +78,38 @@ describe('createEnvReportSink', () => {
     expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://self:3005/ai-usage/record');
   });
 
-  it('omits the token header when none is configured', async () => {
+  it('omits both auth headers when neither is configured', async () => {
     const fetchImpl = okFetch();
     await createEnvReportSink({ baseUrl: 'http://ai-api:3008/', fetchImpl })(record);
     const [, init] = fetchImpl.mock.calls[0] ?? [];
     expect(new Headers(init?.headers).get('x-pops-internal-token')).toBeNull();
+    expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBeNull();
     // trailing slash on the base URL is trimmed, not doubled
     expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('http://ai-api:3008/ai-usage/record');
+  });
+
+  it('sends the per-caller credential header alongside the legacy token (accept-both)', async () => {
+    const fetchImpl = okFetch();
+    await createEnvReportSink({
+      baseUrl: 'http://ai-api:3008',
+      token: 'secret',
+      credential: 'finance.caller-secret',
+      fetchImpl,
+    })(record);
+    const [, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(new Headers(init?.headers).get('x-pops-internal-token')).toBe('secret');
+    expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBe(
+      'finance.caller-secret'
+    );
+  });
+
+  it('reads the credential from POPS_INTERNAL_CREDENTIAL when not passed explicitly', async () => {
+    process.env['POPS_INTERNAL_CREDENTIAL'] = 'cerebrum.env-secret';
+    const fetchImpl = okFetch();
+    await createEnvReportSink({ baseUrl: 'http://ai-api:3008', fetchImpl })(record);
+    const [, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(new Headers(init?.headers).get('x-pops-internal-credential')).toBe(
+      'cerebrum.env-secret'
+    );
   });
 });
