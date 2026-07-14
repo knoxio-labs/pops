@@ -45,6 +45,8 @@ const POST_TIMEOUT_MS = 10_000;
 interface BackfillConfig {
   aiApiUrl: string;
   token: string;
+  /** Per-caller credential (`ops-backfill.secret`, ADR-039 E22); optional. */
+  credential?: string;
   dryRun: boolean;
   sqlitePath: string;
 }
@@ -61,19 +63,27 @@ function readConfig(argv: readonly string[]): BackfillConfig {
   const dryRun = argv.includes('--dry-run');
   const aiApiUrl = process.env['AI_API_URL'] ?? '';
   const token = process.env['POPS_API_INTERNAL_TOKEN'] ?? '';
-  if (!dryRun && (aiApiUrl === '' || token === '')) {
+  const credentialRaw = process.env['POPS_INTERNAL_CREDENTIAL'] ?? '';
+  const credential = credentialRaw === '' ? undefined : credentialRaw;
+  if (!dryRun && aiApiUrl === '') {
+    throw new Error('backfill-ai-inference requires AI_API_URL (or pass --dry-run)');
+  }
+  if (!dryRun && token === '' && credential === undefined) {
     throw new Error(
-      'backfill-ai-inference requires AI_API_URL and POPS_API_INTERNAL_TOKEN (or pass --dry-run)'
+      'backfill-ai-inference requires POPS_INTERNAL_CREDENTIAL or POPS_API_INTERNAL_TOKEN (or pass --dry-run)'
     );
   }
-  return { aiApiUrl, token, dryRun, sqlitePath: resolveFoodSqlitePath() };
+  return { aiApiUrl, token, credential, dryRun, sqlitePath: resolveFoodSqlitePath() };
 }
 
 async function postRecord(config: BackfillConfig, record: InferenceRecord): Promise<void> {
   const base = config.aiApiUrl.replace(/\/+$/, '');
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (config.token !== '') headers['x-pops-internal-token'] = config.token;
+  if (config.credential !== undefined) headers['x-pops-internal-credential'] = config.credential;
   const res = await fetch(`${base}${RECORD_PATH}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-pops-internal-token': config.token },
+    headers,
     body: JSON.stringify(record),
     signal: AbortSignal.timeout(POST_TIMEOUT_MS),
   });

@@ -4,10 +4,10 @@
  * Serves the ts-rest `aiContract` surface (mounted via `createExpressEndpoints`)
  * plus the raw `/health`, `/pillars`, and `/openapi` routes ts-rest cannot
  * model. The cross-pillar ingest `POST /ai-usage/record` is internal-only: the
- * {@link INTERNAL_PATHS} gate 403s any request to it without a matching
- * `x-pops-internal-token` (nginx never proxies it either). `/ai-pricing/*` is
- * NOT internal — cross-pillar callers fetch it to shape pricing before
- * `computeCostUsd`.
+ * {@link INTERNAL_PATH_SCOPES} gate 403s any request lacking a valid per-caller
+ * credential (or, during the E22 accept-both window, the legacy shared token);
+ * nginx never proxies it either. `/ai-pricing/*` is NOT internal — cross-pillar
+ * callers fetch it to shape pricing before `computeCostUsd`.
  *
  * Kept as a factory so the test suite can spin up an in-process `supertest`
  * instance without binding a real port.
@@ -19,30 +19,64 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
-import { INTERNAL_TOKEN_HEADER, passesInternalToken } from '@pops/pillar-sdk/server';
+import {
+  INTERNAL_CREDENTIAL_HEADER,
+  INTERNAL_TOKEN_HEADER,
+  type InternalCallerSpec,
+  authenticateInternal,
+  parseInternalCallers,
+} from '@pops/pillar-sdk/server';
 
 import { aiContract } from '../contract/rest.js';
 import { type AiApiDeps, makeRequestHandler } from './handlers.js';
 import { makeAiRestHandlers } from './rest/handlers.js';
 
 /**
- * Paths that trust ONLY the internal token, never the docker network. The
- * cross-pillar telemetry sink is the sole entry today; nginx does not proxy it,
- * so the only reachable callers are sibling pillars carrying the shared token.
+ * Scope naming the telemetry-ingest procedure. A caller must hold it to reach
+ * {@link INTERNAL_PATH_SCOPES}'s `/ai-usage/record`.
  */
-const INTERNAL_PATHS = new Set(['/ai-usage/record']);
+const AI_USAGE_SCOPE = 'ai.usage.record';
+
+/**
+ * Paths that trust ONLY an internal credential, never the docker network, each
+ * mapped to the scope it requires. The cross-pillar telemetry sink is the sole
+ * entry today; nginx does not proxy it.
+ */
+const INTERNAL_PATH_SCOPES = new Map([['/ai-usage/record', AI_USAGE_SCOPE]]);
+
+/**
+ * The callers this pillar accepts for its internal paths (ADR-039 E22). Each
+ * presents `name.secret` in {@link INTERNAL_CREDENTIAL_HEADER}; the secret comes
+ * from the named env var (blank ⇒ that caller is revoked). Every model-calling
+ * pillar reports usage through `@pops/ai-telemetry`, plus the one-shot ops
+ * backfill.
+ */
+const ACCEPTED_CALLERS: readonly InternalCallerSpec[] = [
+  { name: 'finance', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_FINANCE' },
+  { name: 'cerebrum', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_CEREBRUM' },
+  { name: 'food-worker', scopes: [AI_USAGE_SCOPE], secretEnv: 'POPS_INTERNAL_SECRET_FOOD_WORKER' },
+  {
+    name: 'ops-backfill',
+    scopes: [AI_USAGE_SCOPE],
+    secretEnv: 'POPS_INTERNAL_SECRET_OPS_BACKFILL',
+  },
+];
 
 function requireInternalToken(req: Request, res: Response, next: NextFunction): void {
   // `req.get` normalises a possibly-repeated header to a single string so a
-  // client sending the token more than once (→ `string[]`) is not spuriously
+  // client sending a header more than once (→ `string[]`) is not spuriously
   // rejected.
-  const allowed = passesInternalToken({
+  const result = authenticateInternal({
     path: req.path,
-    internalPaths: INTERNAL_PATHS,
-    presentedToken: req.get(INTERNAL_TOKEN_HEADER),
-    expectedToken: process.env['POPS_API_INTERNAL_TOKEN'],
+    credentialHeader: req.get(INTERNAL_CREDENTIAL_HEADER),
+    legacyTokenHeader: req.get(INTERNAL_TOKEN_HEADER),
+    config: {
+      pathScopes: INTERNAL_PATH_SCOPES,
+      callers: parseInternalCallers(ACCEPTED_CALLERS, process.env),
+      legacyToken: process.env['POPS_API_INTERNAL_TOKEN'],
+    },
   });
-  if (!allowed) {
+  if (!result.ok) {
     res.status(403).json({ message: 'Forbidden' });
     return;
   }

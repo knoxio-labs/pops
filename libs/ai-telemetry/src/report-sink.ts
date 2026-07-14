@@ -9,8 +9,14 @@ export interface ReportSinkConfig {
    * `POPS_API_URL`. When neither resolves, reporting is a silent no-op.
    */
   baseUrl?: string;
-  /** Internal token; defaults to `POPS_API_INTERNAL_TOKEN`. */
+  /** Legacy internal token; defaults to `POPS_API_INTERNAL_TOKEN`. */
   token?: string;
+  /**
+   * Per-caller credential (`name.secret`, ADR-039 E22); defaults to
+   * `POPS_INTERNAL_CREDENTIAL`. Sent alongside the legacy token during the
+   * accept-both window so the ai pillar can verify either.
+   */
+  credential?: string;
   /** Injectable for tests. Defaults to the global `fetch`. */
   fetchImpl?: typeof fetch;
   /** Opt-in diagnostics for a swallowed transport failure. */
@@ -35,8 +41,10 @@ export function createEnvReportSink(config: ReportSinkConfig = {}): ReportInfere
     const baseUrl = resolveBaseUrl(config.baseUrl);
     if (!baseUrl) return;
     const token = config.token ?? process.env['POPS_API_INTERNAL_TOKEN'];
+    const credential = config.credential ?? process.env['POPS_INTERNAL_CREDENTIAL'];
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (token) headers['x-pops-internal-token'] = token;
+    if (credential) headers['x-pops-internal-credential'] = credential;
     const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     try {
       await fetchImpl(`${base}${RECORD_PATH}`, {

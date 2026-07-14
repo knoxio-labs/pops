@@ -74,6 +74,7 @@ function seedRows(rows: Partial<AiInferenceLogRow>[]): void {
 interface CapturedPost {
   url: string;
   token: string | null;
+  credential: string | null;
   body: unknown;
 }
 
@@ -83,6 +84,7 @@ function fakeFetch(captured: CapturedPost[], ok = true): typeof fetch {
     captured.push({
       url: String(input),
       token: headers.get('x-pops-internal-token'),
+      credential: headers.get('x-pops-internal-credential'),
       body: init?.body == null ? null : JSON.parse(String(init.body)),
     });
     return Promise.resolve(new Response(null, { status: ok ? 200 : 500 }));
@@ -117,11 +119,31 @@ describe('runBackfill', () => {
     for (const post of captured) {
       expect(post.url).toBe('http://ai-api:3008/ai-usage/record');
       expect(post.token).toBe('secret-token');
+      expect(post.credential).toBeNull();
       const body = post.body as { domain: string; metadata: Record<string, unknown> };
       expect(body.domain).toBe('food');
       expect(body.metadata['backfilled_from']).toBe('food');
       expect(String(body.metadata['dedupe_key'])).toMatch(/^food:ai_inference_log:\d+$/);
     }
+  });
+
+  it('sends the per-caller credential header when configured (E22)', async () => {
+    seedRows([{ contextId: 'ingest_source:11' }]);
+    const captured: CapturedPost[] = [];
+    vi.stubGlobal('fetch', fakeFetch(captured));
+
+    await runBackfill({
+      aiApiUrl: 'http://ai-api:3008',
+      token: '',
+      credential: 'ops-backfill.caller-secret',
+      dryRun: false,
+      sqlitePath: dbPath,
+    });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0]?.credential).toBe('ops-backfill.caller-secret');
+    // legacy token omitted when blank — the credential alone authenticates
+    expect(captured[0]?.token).toBeNull();
   });
 
   it('is idempotent — a second run posts byte-identical dedupe-keyed records', async () => {

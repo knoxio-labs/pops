@@ -2,7 +2,7 @@
 
 > Theme: [Federation](../README.md)
 >
-> Status: Not started. Delivers ADR-039 (#3679) workstream #3700 entanglements **E22** and **E23**. Prod-gated: needs service-account minting + vault edits on live capivara.
+> Status: In progress (E22). Delivers ADR-039 (#3679) workstream #3700 entanglements **E22** and **E23**. Prod-gated: needs per-caller secret minting + vault edits on live capivara. E22 decision settled: **option C** (per-caller static secrets). Stage 1 (shared verifier) + Stage 2 (accept-both, per-caller `name.secret` credential + scope) landed; Stages 3–4 (mint/wire/cutover) and E23 remain.
 
 ## Purpose
 
@@ -53,7 +53,7 @@ The MCP front-door bearer token is a separate inbound secret and is out of scope
 
 ## Acceptance Criteria
 
-- [ ] A single shared verifier helper enforces internal auth; no pillar re-implements the check inline. Its unit tests cover accept, reject, and missing-secret.
+- [x] A single shared verifier helper enforces internal auth; no pillar re-implements the check inline. Its unit tests cover accept, reject, and missing-secret. (`authenticateInternal` / `passesInternalToken` in `@pops/pillar-sdk/server`; ai + food callees delegate to it.)
 - [ ] Every internal caller→callee pair (worker→food-api callback; food-worker / cerebrum / finance → ai-api usage; ops backfill → ai-api) authenticates with a credential unique to that caller; revoking one caller leaves the others working (covered by a test that rejects a revoked caller while a sibling still passes).
 - [ ] Each internal callee gates its internal path on a scope naming that procedure; a caller lacking the scope is rejected with 403.
 - [ ] `moltbot` and `pops-mcp` present distinct credentials; a request is attributable to exactly one of them at the verification point (asserted by a test on the resolved principal name).

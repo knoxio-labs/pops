@@ -17,7 +17,13 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
-import { INTERNAL_TOKEN_HEADER, passesInternalToken } from '@pops/pillar-sdk/server';
+import {
+  INTERNAL_CREDENTIAL_HEADER,
+  INTERNAL_TOKEN_HEADER,
+  type InternalCallerSpec,
+  authenticateInternal,
+  parseInternalCallers,
+} from '@pops/pillar-sdk/server';
 
 import { foodContract } from '../contract/rest.js';
 import { type FoodApiDeps, makeRequestHandler } from './handlers.js';
@@ -53,21 +59,41 @@ const openapiDocument: unknown = JSON.parse(
   )
 );
 
+/** Scope naming the worker-completion callback procedure. */
+const INGEST_COMPLETE_SCOPE = 'food.ingest.worker-complete';
+
 /**
- * Endpoints the food worker calls back on — gated by the shared internal
- * token. Everything else trusts the docker network (the dispatcher in front
- * authenticates user traffic).
+ * Endpoints the food worker calls back on — gated by a per-caller credential,
+ * each mapped to the scope it requires. Everything else trusts the docker
+ * network (the dispatcher in front authenticates user traffic).
  */
-const INTERNAL_PATHS = new Set(['/ingest/worker-complete']);
+const INTERNAL_PATH_SCOPES = new Map([['/ingest/worker-complete', INGEST_COMPLETE_SCOPE]]);
+
+/**
+ * The callers this pillar accepts for its internal paths (ADR-039 E22). The
+ * food worker is the sole caller of the completion callback; its secret comes
+ * from the named env var (blank ⇒ revoked).
+ */
+const ACCEPTED_CALLERS: readonly InternalCallerSpec[] = [
+  {
+    name: 'food-worker',
+    scopes: [INGEST_COMPLETE_SCOPE],
+    secretEnv: 'POPS_INTERNAL_SECRET_FOOD_WORKER',
+  },
+];
 
 function requireInternalToken(req: Request, res: Response, next: NextFunction): void {
-  const allowed = passesInternalToken({
+  const result = authenticateInternal({
     path: req.path,
-    internalPaths: INTERNAL_PATHS,
-    presentedToken: req.get(INTERNAL_TOKEN_HEADER),
-    expectedToken: process.env['POPS_API_INTERNAL_TOKEN'],
+    credentialHeader: req.get(INTERNAL_CREDENTIAL_HEADER),
+    legacyTokenHeader: req.get(INTERNAL_TOKEN_HEADER),
+    config: {
+      pathScopes: INTERNAL_PATH_SCOPES,
+      callers: parseInternalCallers(ACCEPTED_CALLERS, process.env),
+      legacyToken: process.env['POPS_API_INTERNAL_TOKEN'],
+    },
   });
-  if (!allowed) {
+  if (!result.ok) {
     res.status(401).json({ message: 'Unauthorized' });
     return;
   }

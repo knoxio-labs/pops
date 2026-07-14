@@ -84,6 +84,57 @@ describe('POST /ai-usage/record — internal-token gate', () => {
   });
 });
 
+describe('POST /ai-usage/record — per-caller credential gate (E22)', () => {
+  const FINANCE_SECRET = 'finance-caller-secret';
+
+  beforeEach(() => {
+    process.env['POPS_INTERNAL_SECRET_FINANCE'] = FINANCE_SECRET;
+  });
+  afterEach(() => {
+    delete process.env['POPS_INTERNAL_SECRET_FINANCE'];
+  });
+
+  it('accepts a valid per-caller credential with the legacy token retired', async () => {
+    delete process.env['POPS_API_INTERNAL_TOKEN'];
+    const res = await supertest(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', `finance.${FINANCE_SECRET}`)
+      .send(validRecord());
+    expect(res.status).toBe(200);
+    expect(countLogs()).toBe(1);
+  });
+
+  it('403s a per-caller credential with a wrong secret and no legacy fallback', async () => {
+    delete process.env['POPS_API_INTERNAL_TOKEN'];
+    const res = await supertest(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', 'finance.WRONG')
+      .send(validRecord());
+    expect(res.status).toBe(403);
+    expect(countLogs()).toBe(0);
+  });
+
+  it('403s an unconfigured caller (secret env absent) with no legacy fallback', async () => {
+    delete process.env['POPS_API_INTERNAL_TOKEN'];
+    const res = await supertest(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', 'cerebrum.anything')
+      .send(validRecord());
+    expect(res.status).toBe(403);
+    expect(countLogs()).toBe(0);
+  });
+
+  it('accepts either credential during the accept-both window (both headers valid)', async () => {
+    const res = await supertest(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', `finance.${FINANCE_SECRET}`)
+      .set('x-pops-internal-token', TOKEN)
+      .send(validRecord());
+    expect(res.status).toBe(200);
+    expect(countLogs()).toBe(1);
+  });
+});
+
 describe('POST /ai-usage/record — happy path', () => {
   it('writes exactly one ai_inference_log row and never touches ai_inference_daily', async () => {
     const res = await supertest(app)
