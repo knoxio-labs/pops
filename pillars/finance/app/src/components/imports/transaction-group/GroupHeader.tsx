@@ -10,44 +10,31 @@ interface GroupBulkActionsProps {
   group: TransactionGroupType;
   entityExists?: boolean;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
-  onCreateAndAssignAll: (transactions: ProcessedTransaction[], entityName: string) => void;
   onToggleEntitySelector: () => void;
 }
 
+/**
+ * "Accept All" takes the AI's guess as-is; everything else — picking a
+ * different existing merchant or naming one that doesn't exist yet — is the
+ * single picker behind "Assign all". Choosing and creating were two buttons
+ * leading to two surfaces for what is one decision.
+ */
 function GroupBulkActions(props: GroupBulkActionsProps) {
-  const { group, entityExists, onAcceptAll, onCreateAndAssignAll, onToggleEntitySelector } = props;
+  const { group, entityExists, onAcceptAll, onToggleEntitySelector } = props;
   return (
     <div className="flex gap-2">
       {group.aiSuggestion && (
-        <>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => onAcceptAll(group.transactions)}
-            className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90"
-          >
-            {entityExists ? '✓' : '+'} Accept All as "{group.entityName}"
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onCreateAndAssignAll(group.transactions, group.entityName)}
-          >
-            Create new for all
-          </Button>
-        </>
-      )}
-      {!group.aiSuggestion && (
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
-          onClick={() => onCreateAndAssignAll(group.transactions, group.entityName)}
+          onClick={() => onAcceptAll(group.transactions)}
+          className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90"
         >
-          + Create new for all
+          {entityExists ? '✓' : '+'} Accept All as "{group.entityName}"
         </Button>
       )}
       <Button variant="outline" size="sm" onClick={onToggleEntitySelector}>
-        Choose existing...
+        Assign all...
       </Button>
     </div>
   );

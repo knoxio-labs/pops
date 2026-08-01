@@ -9,7 +9,7 @@ import {
 } from './fixtures/csv-samples';
 import { createMockData, type MockScenario } from './fixtures/import-test-data';
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * E2E tests for Import Wizard (7-step flow)
@@ -424,13 +424,23 @@ const navigateToTagReviewStep = async (page: Page, csvContent: string = simpleCS
 };
 
 /**
- * Helper: Resolve uncertain transaction by selecting entity
+ * Helper: pick an entity through an EntitySelect combobox — the one surface
+ * that both selects an existing entity and creates one from the search term.
+ * `scope` is the card or group whose picker to drive.
  */
-const _resolveUncertainTransaction = async (page: Page, description: string, entityId: string) => {
-  // Find the transaction card and its entity selector
-  const transactionCard = page.locator(`[data-testid*="${description}"]`).first();
-  const entitySelect = transactionCard.locator('select').first();
-  await entitySelect.selectOption(entityId);
+const pickEntity = async (scope: Locator, name: string, { create = false } = {}) => {
+  await scope.getByRole('combobox').first().click();
+  await scope
+    .page()
+    .getByPlaceholder(/search entities/i)
+    .fill(name);
+  const row = create
+    ? scope.page().getByText(new RegExp(`create\\s+“${name}”`, 'i'))
+    : scope
+        .page()
+        .getByRole('option', { name: new RegExp(name, 'i') })
+        .first();
+  await row.click();
 };
 
 /**
@@ -876,26 +886,47 @@ test.describe.skip('Import Wizard - AI Suggestions', () => {
     await expect(page.getByText(/found.*similar/i).first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('should accept AI suggestion and create new entity', async ({ page }) => {
+  test('should accept AI suggestion and create the entity it names', async ({ page }) => {
     await navigateToReviewStep(page, realisticCSV);
 
     await page.getByRole('tab', { name: /uncertain/i }).click();
-    // Switch to list view to access per-card "Create new" button
     await page.getByRole('button', { name: /list/i }).click();
 
-    // Click "Create new" button on first AI-suggestion card to open EntityCreateDialog
-    const createNewButton = page.getByRole('button', { name: /^create new$/i }).first();
-    await createNewButton.click();
+    // "Unknown Cafe" does not exist yet, so accepting it opens EntityCreateDialog
+    // pre-filled with the suggested name.
+    await page
+      .getByRole('button', { name: /accept.*unknown cafe/i })
+      .first()
+      .click();
 
-    // Verify EntityCreateDialog opens with pre-filled name
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByLabel(/entity name/i)).toHaveValue(/unknown cafe/i);
 
-    // Create entity
     await page.getByRole('button', { name: /create/i }).click();
 
     // Verify transaction assigned and moved to Matched
     await expect(page.getByRole('tab', { name: /matched/i })).toContainText(/matched/i);
+  });
+
+  test('should reassign an AI-matched transaction to a brand-new entity', async ({ page }) => {
+    await navigateToReviewStep(page, realisticCSV);
+
+    await page.getByRole('tab', { name: /uncertain/i }).click();
+    await page.getByRole('button', { name: /list/i }).click();
+
+    // The AI's guess is wrong and the right merchant does not exist yet: the
+    // card's own picker must create it, with no separate create button.
+    const card = page.getByTestId('transaction-card').first();
+    await expect(card.getByRole('button', { name: /^create new$/i })).toHaveCount(0);
+    await pickEntity(card, 'Sauna X', { create: true });
+
+    await page.getByRole('tab', { name: /matched/i }).click();
+    await expect(
+      page
+        .getByRole('tabpanel')
+        .getByText(/Sauna X/i)
+        .first()
+    ).toBeVisible();
   });
 
   test('should apply accepted entity to similar transactions', async ({ page }) => {
@@ -979,15 +1010,11 @@ test.describe.skip('Import Wizard - Bulk Operations', () => {
 
     const group = page.getByTestId('transaction-group').first();
 
-    // Click "Create new for all" button
-    await group.getByRole('button', { name: /create new/i }).click();
-
-    // EntityCreateDialog opens with suggested name
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.getByLabel(/entity name/i).fill('Cafe Network');
-
-    // Create
-    await page.getByRole('button', { name: /create/i }).click();
+    // Creating for the whole group is the picker's create row, not a button of
+    // its own — one surface for "which merchant is this?".
+    await expect(group.getByRole('button', { name: /create new for all/i })).toHaveCount(0);
+    await group.getByRole('button', { name: /assign all/i }).click();
+    await pickEntity(group, 'Cafe Network', { create: true });
 
     // Verify all transactions assigned and moved (scope to tabpanel)
     await page.getByRole('tab', { name: /matched/i }).click();
@@ -1003,12 +1030,8 @@ test.describe.skip('Import Wizard - Bulk Operations', () => {
 
     const group = page.getByTestId('transaction-group').first();
 
-    // Click "Choose existing..." button
-    await group.getByRole('button', { name: /choose existing/i }).click();
-
-    // Dropdown appears
-    const dropdown = group.locator('select');
-    await dropdown.selectOption('woolworths-id');
+    await group.getByRole('button', { name: /assign all/i }).click();
+    await pickEntity(group, 'Woolworths');
 
     // Verify all 7 transactions (1 original + 6 from group) moved to Matched
     await page.getByRole('tab', { name: /matched/i }).click();
@@ -1095,25 +1118,13 @@ test.describe.skip('Import Wizard - Entity Creation During Review', () => {
     await navigateToReviewStep(page, realisticCSV);
 
     await page.getByRole('tab', { name: /uncertain/i }).click();
-    // Switch to list view so per-card "Create new entity" buttons are accessible
     await page.getByRole('button', { name: /list/i }).click();
 
-    // Click "Create new" button on first AI-suggestion uncertain card
-    const createButton = page.getByRole('button', { name: /^create new$/i }).first();
-    await createButton.click();
-
-    // EntityCreateDialog opens
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByText('Create New Entity')).toBeVisible();
-
-    // Enter entity name (override the AI suggestion pre-fill)
-    await page.getByLabel(/entity name/i).fill('New Coffee Shop');
-
-    // Create
-    await page.getByRole('button', { name: /create/i }).click();
+    await pickEntity(page.getByTestId('transaction-card').first(), 'New Coffee Shop', {
+      create: true,
+    });
 
     // Verify entity assigned and transaction moved to Matched (3 original → 4)
-    await expect(page.getByRole('dialog')).not.toBeVisible();
     await page.getByRole('tab', { name: /matched/i }).click();
     await expect(page.getByRole('tab', { name: /matched/i })).toContainText('(4)');
   });
@@ -1122,17 +1133,11 @@ test.describe.skip('Import Wizard - Entity Creation During Review', () => {
     await navigateToReviewStep(page, realisticCSV);
 
     await page.getByRole('tab', { name: /failed/i }).click();
-    // Switch to list view so per-card "Create new entity" buttons are accessible
     await page.getByRole('button', { name: /list/i }).click();
 
-    // Click "+ Create new entity"
-    const createButton = page.getByRole('button', { name: /create.*entity/i }).first();
-    await createButton.click();
-
-    await expect(page.getByRole('dialog')).toBeVisible();
-
-    await page.getByLabel(/entity name/i).fill('Random Merchant');
-    await page.getByRole('button', { name: /create/i }).click();
+    await pickEntity(page.getByTestId('transaction-card').first(), 'Random Merchant', {
+      create: true,
+    });
 
     // Verify moved to Matched (3 original → 4)
     await page.getByRole('tab', { name: /matched/i }).click();
@@ -1143,11 +1148,14 @@ test.describe.skip('Import Wizard - Entity Creation During Review', () => {
     await navigateToReviewStep(page, realisticCSV);
 
     await page.getByRole('tab', { name: /uncertain/i }).click();
-    // Switch to list view to access per-card "Create new" button
     await page.getByRole('button', { name: /list/i }).click();
 
-    const createButton = page.getByRole('button', { name: /^create new$/i }).first();
-    await createButton.click();
+    // Accepting an AI suggestion for an entity that doesn't exist yet is the
+    // remaining route into EntityCreateDialog.
+    await page
+      .getByRole('button', { name: /accept.*unknown cafe/i })
+      .first()
+      .click();
 
     const createButtonInDialog = page.getByRole('dialog').getByRole('button', { name: /create/i });
 

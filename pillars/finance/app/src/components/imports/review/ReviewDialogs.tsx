@@ -90,10 +90,7 @@ export function ReviewDialogs({
         open={bulk.showCreateDialog}
         onOpenChange={(open) => {
           bulk.setShowCreateDialog(open);
-          if (!open) {
-            bulk.setPendingBulkTransactions(null);
-            bulk.setSelectedTransaction(null);
-          }
+          if (!open) bulk.setSelectedTransaction(null);
         }}
         onEntityCreated={bulk.handleEntityCreated}
         suggestedName={bulk.selectedTransaction?.entity?.entityName}

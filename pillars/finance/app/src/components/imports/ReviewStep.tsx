@@ -72,7 +72,7 @@ export function ReviewStep() {
         handleCancelEdit={editing.handleCancelEdit}
         handleEntitySelect={reviewActions.handleEntitySelect}
         handleBulkEntitySelect={reviewActions.handleBulkEntitySelect}
-        handleCreateEntity={bulk.handleCreateEntity}
+        handleCreateEntityWithName={bulk.handleCreateEntityWithName}
         handleAcceptAiSuggestion={bulk.handleAcceptAiSuggestion}
         handleAcceptAll={bulk.handleAcceptAll}
         handleCreateAndAssignAll={bulk.handleCreateAndAssignAll}

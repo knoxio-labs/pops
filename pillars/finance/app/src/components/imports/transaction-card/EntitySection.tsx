@@ -9,15 +9,13 @@ import type { ProcessedTransaction } from '@pops/finance';
 interface AiSuggestionProps {
   transaction: ProcessedTransaction;
   aiSuggestedEntityExists: boolean;
-  onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
-  onCreateEntity?: (transaction: ProcessedTransaction) => void;
+  onAcceptAiSuggestion: (transaction: ProcessedTransaction) => void;
 }
 
 function AiSuggestionPanel({
   transaction,
   aiSuggestedEntityExists,
   onAcceptAiSuggestion,
-  onCreateEntity,
 }: AiSuggestionProps) {
   return (
     <div className="mb-2 p-2 bg-app-accent/10 rounded-md border border-app-accent/20">
@@ -27,28 +25,14 @@ function AiSuggestionPanel({
           AI suggestion: {transaction.entity?.entityName}
         </span>
       </div>
-      <div className="flex gap-2">
-        {onAcceptAiSuggestion && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => onAcceptAiSuggestion(transaction)}
-            className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90 flex-1"
-          >
-            {aiSuggestedEntityExists ? '✓' : '+'} Accept "{transaction.entity?.entityName}"
-          </Button>
-        )}
-        {onCreateEntity && !aiSuggestedEntityExists && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onCreateEntity(transaction)}
-            className="flex-1"
-          >
-            Create new
-          </Button>
-        )}
-      </div>
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => onAcceptAiSuggestion(transaction)}
+        className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90 w-full"
+      >
+        {aiSuggestedEntityExists ? '✓' : '+'} Accept "{transaction.entity?.entityName}"
+      </Button>
     </div>
   );
 }
@@ -61,12 +45,22 @@ interface EntitySectionProps {
     entityId: string,
     entityName: string
   ) => void;
-  onCreateEntity?: (transaction: ProcessedTransaction) => void;
+  /** Create a new entity named after the picker's search term and assign it. */
+  onCreateEntityWithName?: (transaction: ProcessedTransaction, entityName: string) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
 }
 
+/**
+ * Entity assignment for one transaction: the AI suggestion (when there is one)
+ * plus a single picker that both selects an existing entity and creates a new
+ * one from the search term. Creation lives inside the picker so a wrong
+ * auto-match is fixable to a merchant that doesn't exist yet — the separate
+ * "Create new" buttons only appeared when the AI's guess was itself missing,
+ * which is exactly when the fix wasn't needed.
+ */
 export function EntitySection(props: EntitySectionProps) {
-  const { transaction, entities, onEntitySelect, onCreateEntity, onAcceptAiSuggestion } = props;
+  const { transaction, entities, onEntitySelect, onCreateEntityWithName, onAcceptAiSuggestion } =
+    props;
   const hasAiSuggestion = transaction.entity?.matchType === 'ai' && transaction.entity?.entityName;
   const aiSuggestedEntityExists = Boolean(
     hasAiSuggestion &&
@@ -74,28 +68,22 @@ export function EntitySection(props: EntitySectionProps) {
   );
   return (
     <div className="mb-3">
-      {hasAiSuggestion && (
+      {hasAiSuggestion && onAcceptAiSuggestion && (
         <AiSuggestionPanel
           transaction={transaction}
           aiSuggestedEntityExists={aiSuggestedEntityExists}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
-          onCreateEntity={onCreateEntity}
         />
-      )}
-      {!hasAiSuggestion && onCreateEntity && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onCreateEntity(transaction)}
-          className="w-full mb-2"
-        >
-          + Create new entity
-        </Button>
       )}
       <EntitySelect
         entities={entities ?? []}
         value={transaction.entity?.entityId ?? ''}
         onChange={(entityId, entityName) => onEntitySelect?.(transaction, entityId, entityName)}
+        onCreate={
+          onCreateEntityWithName
+            ? (entityName) => onCreateEntityWithName(transaction, entityName)
+            : undefined
+        }
       />
     </div>
   );

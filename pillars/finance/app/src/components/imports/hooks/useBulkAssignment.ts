@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { type UseBulkAssignmentArgs } from './bulk-assignment/types';
 import { useAcceptAiSuggestion, useAcceptAll } from './bulk-assignment/use-accept';
+import { useCreateEntity } from './bulk-assignment/use-create-entity';
 import { useEntityCreated } from './bulk-assignment/use-entity-created';
 import { useEntities } from './useEntities';
 
@@ -16,9 +17,6 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     args;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<ProcessedTransaction | null>(null);
-  const [pendingBulkTransactions, setPendingBulkTransactions] = useState<
-    ProcessedTransaction[] | null
-  >(null);
 
   const { entities, addPendingEntity, dbEntitiesData } = useEntities();
 
@@ -26,6 +24,14 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     setSelectedTransaction(transaction);
     setShowCreateDialog(true);
   }, []);
+
+  const { handleCreateAndAssignAll, handleCreateEntityWithName } = useCreateEntity({
+    addPendingEntity,
+    dbEntitiesData,
+    setLocalTransactions,
+    handleEntitySelect,
+    generateProposal,
+  });
 
   const handleAcceptAiSuggestion = useAcceptAiSuggestion({
     entities,
@@ -42,23 +48,10 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     generateProposal,
   });
 
-  const handleCreateAndAssignAll = useCallback(
-    (transactions: ProcessedTransaction[], _entityName: string) => {
-      setPendingBulkTransactions(transactions);
-      setSelectedTransaction(transactions[0] ?? null);
-      setShowCreateDialog(true);
-    },
-    []
-  );
-
   const handleEntityCreated = useEntityCreated({
-    pendingBulkTransactions,
     selectedTransaction,
-    setLocalTransactions,
-    setPendingBulkTransactions,
     setSelectedTransaction,
     handleEntitySelect,
-    generateProposal,
   });
 
   return {
@@ -66,11 +59,10 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     setShowCreateDialog,
     selectedTransaction,
     setSelectedTransaction,
-    pendingBulkTransactions,
-    setPendingBulkTransactions,
     entities,
     dbEntitiesData,
     handleCreateEntity,
+    handleCreateEntityWithName,
     handleAcceptAiSuggestion,
     handleAcceptAll,
     handleCreateAndAssignAll,
