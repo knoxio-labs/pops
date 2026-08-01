@@ -61,7 +61,7 @@ describe('mergeParsedFiles — schema agreement', () => {
   it('errors rather than merging nothing when no file was supplied', () => {
     const result = mergeParsedFiles([]);
     expect(result.ok).toBe(false);
-    expect(result.error).toBe('Please select a file');
+    expect(result.error).toBe('Please select at least one file');
   });
 });
 

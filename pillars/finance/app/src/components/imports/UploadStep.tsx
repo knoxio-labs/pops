@@ -118,7 +118,7 @@ function useUploadStep() {
         nextStep();
         return;
       }
-      setError('Please select a file');
+      setError('Please select at least one file');
       return;
     }
     setIsProcessing(true);

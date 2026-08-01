@@ -78,7 +78,7 @@ function mergeRows(files: ParsedCsvFile[], headers: string[]): Record<string, st
  */
 export function mergeParsedFiles(files: ParsedCsvFile[]): MergeResult {
   const [first, ...rest] = files;
-  if (!first) return { ok: false, error: 'Please select a file', headers: [], rows: [] };
+  if (!first) return { ok: false, error: 'Please select at least one file', headers: [], rows: [] };
 
   for (const file of rest) {
     const diff = diffHeaders(first.headers, file.headers);

@@ -106,6 +106,7 @@
   "import.resumeDescription": "You have an unfinished import of {{fileName}} ({{count}} transactions) at step {{step}}. Resume where you left off, or discard it and start fresh.",
   "import.resumeConfirm": "Resume",
   "import.resumeDiscard": "Discard",
+  "import.resumeFileSummary": "{{fileName}} and {{extraCount}} more",
   "import.resumeClearedElsewhere": "This import was completed or discarded in another tab.",
   "import.resumeFileNotice": "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting a file starts a fresh import.",
 

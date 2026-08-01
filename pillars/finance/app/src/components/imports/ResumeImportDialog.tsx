@@ -19,12 +19,18 @@ interface ResumeImportDialogProps {
   onDiscard: () => void;
 }
 
-/** Label a resumable run by its source files without spilling a long list into the prompt. */
-export function describeSourceFiles(names: string[]): string {
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Label a resumable run by its source files without spilling a long list into
+ * the prompt. The multi-file form goes through i18n rather than being assembled
+ * here, so a non-English locale does not render an English fragment.
+ */
+function describeSourceFiles(names: string[], t: Translate): string {
   const [first, ...rest] = names;
   if (!first) return 'CSV';
   if (rest.length === 0) return first;
-  return `${first} and ${rest.length} more`;
+  return t('import.resumeFileSummary', { fileName: first, extraCount: rest.length });
 }
 
 /**
@@ -45,7 +51,7 @@ export function ResumeImportDialog({ open, onResume, onDiscard }: ResumeImportDi
           <AlertDialogTitle>{t('import.resumeTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
             {t('import.resumeDescription', {
-              fileName: describeSourceFiles(sourceFileNames),
+              fileName: describeSourceFiles(sourceFileNames, t),
               count: parsedCount > 0 ? parsedCount : rowCount,
               step: currentStep,
             })}
