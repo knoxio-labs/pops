@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FileUpload } from './FileUpload';
@@ -131,6 +132,42 @@ describe('FileUpload', () => {
     expect(onFilesSelect).toHaveBeenLastCalledWith([feb]);
     expect(screen.queryByText('jan.csv')).not.toBeInTheDocument();
     expect(screen.getByText('feb.csv')).toBeInTheDocument();
+  });
+
+  it('reports a selection exactly once under StrictMode', () => {
+    const onFilesSelect = vi.fn();
+    render(
+      <StrictMode>
+        <FileUpload onFilesSelect={onFilesSelect} />
+      </StrictMode>
+    );
+
+    const jan = makeFile('jan.csv', 1024);
+    selectFiles([jan]);
+
+    // A double-invoked state updater would report the batch twice, and the
+    // second report reaches the store as a fresh setFiles call.
+    expect(onFilesSelect).toHaveBeenCalledTimes(1);
+    expect(onFilesSelect).toHaveBeenCalledWith([jan]);
+  });
+
+  it('reports a removal exactly once under StrictMode', () => {
+    const onFilesSelect = vi.fn();
+    render(
+      <StrictMode>
+        <FileUpload onFilesSelect={onFilesSelect} />
+      </StrictMode>
+    );
+
+    const jan = makeFile('jan.csv', 1024);
+    const feb = makeFile('feb.csv', 1024);
+    selectFiles([jan, feb]);
+    onFilesSelect.mockClear();
+
+    fireEvent.click(screen.getByLabelText('Remove jan.csv'));
+
+    expect(onFilesSelect).toHaveBeenCalledTimes(1);
+    expect(onFilesSelect).toHaveBeenCalledWith([feb]);
   });
 
   it('clears both display and reported batch on removal of the last file', () => {

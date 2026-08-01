@@ -58,36 +58,35 @@ function useFileSelection({
   const [errors, setErrors] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>(initialFiles);
 
+  // Side effects stay out of the state updaters: React may invoke an updater
+  // more than once (StrictMode does, and the shell enables it), which would
+  // fire onFilesSelect twice per selection.
   const handleFiles = useCallback(
     (incoming: File[]) => {
       if (incoming.length === 0) return;
-      setSelectedFiles((existing) => {
-        const result = acceptFiles({
-          incoming,
-          existing,
-          maxSizeBytes: maxSizeMB * 1024 * 1024,
-          maxSizeMB,
-          maxTotalSizeBytes: maxTotalSizeMB * 1024 * 1024,
-          maxTotalSizeMB,
-        });
-        setErrors(result.errors);
-        onFilesSelect(result.accepted);
-        return result.accepted;
+      const result = acceptFiles({
+        incoming,
+        existing: selectedFiles,
+        maxSizeBytes: maxSizeMB * 1024 * 1024,
+        maxSizeMB,
+        maxTotalSizeBytes: maxTotalSizeMB * 1024 * 1024,
+        maxTotalSizeMB,
       });
+      setSelectedFiles(result.accepted);
+      setErrors(result.errors);
+      onFilesSelect(result.accepted);
     },
-    [maxSizeMB, maxTotalSizeMB, onFilesSelect]
+    [selectedFiles, maxSizeMB, maxTotalSizeMB, onFilesSelect]
   );
 
   const handleRemove = useCallback(
     (file: File) => {
-      setSelectedFiles((existing) => {
-        const next = existing.filter((f) => !isSameFile(f, file));
-        setErrors([]);
-        onFilesSelect(next);
-        return next;
-      });
+      const next = selectedFiles.filter((f) => !isSameFile(f, file));
+      setSelectedFiles(next);
+      setErrors([]);
+      onFilesSelect(next);
     },
-    [onFilesSelect]
+    [selectedFiles, onFilesSelect]
   );
 
   return { errors, selectedFiles, handleFiles, handleRemove };
