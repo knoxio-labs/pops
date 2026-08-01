@@ -35,9 +35,13 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
   } = args;
 
   /**
-   * Mint a locally-pending entity. Returns null (after a toast) when the name
-   * collides with one the picker couldn't show — `entities` is a single capped
-   * page, so "absent from the list" is not proof the merchant doesn't exist.
+   * Mint a locally-pending entity, returning null (after a toast) when
+   * `addPendingEntity` rejects the name as a case-insensitive duplicate of one
+   * already pending or on the loaded DB page.
+   *
+   * That check is only as wide as what was loaded: the contacts pillar caps a
+   * page at 200, so a merchant past the cap is neither offered by the picker
+   * nor caught here, and creating it mints a duplicate entity.
    */
   const createPendingEntity = useCallback(
     (name: string): CreatedEntity | null => {
