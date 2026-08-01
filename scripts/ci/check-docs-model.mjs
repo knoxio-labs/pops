@@ -48,6 +48,9 @@ export const BANNED_DOC_DIRS = ['prds', 'themes', 'epics', 'ideas'];
 /** Repo-root directories a backticked token must start with to be treated as a path claim. */
 export const PATH_ROOTS = ['pillars/', 'libs/', 'docs/', 'infra/', 'scripts/', '.github/'];
 
+/** A backticked token naming a source file, so a directory-relative path is still checked. */
+export const SOURCE_FILE_RE = /\/[\w.-]+\.(?:tsx?|mjs|cjs|jsx?|json|css|md|ya?ml|rs|toml)$/u;
+
 /** Directories never walked. */
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'target', 'coverage', '.next']);
 
@@ -150,7 +153,26 @@ export function findMarkdownFiles(root) {
  * @returns {boolean}
  */
 export function isPlaceholderPath(token) {
-  return /[<>*{}$]/u.test(token) || token.includes('NNN') || token.includes('...');
+  return (
+    /[<>*{}$]/u.test(token) ||
+    token.includes('NNN') ||
+    token.includes('...') ||
+    token.startsWith('/') || // absolute host path in a shell snippet
+    token.startsWith('~') // home-relative path in a shell snippet
+  );
+}
+
+/**
+ * ADRs are historical records: an ADR describes the tree as it stood when the
+ * decision was made, and its numbering is frozen and append-only. Forcing its
+ * paths to keep resolving would mean rewriting the record every time code
+ * moves, so they are exempt from the path check.
+ *
+ * @param {string} mdPath
+ * @returns {boolean}
+ */
+export function isHistoricalRecord(mdPath) {
+  return /(^|\/)docs\/architecture\/adr-/u.test(mdPath) || /(^|\/)adr-\d+/u.test(mdPath);
 }
 
 /**
@@ -184,9 +206,16 @@ export function extractPathClaims(source, mdPath) {
 
   for (const match of source.matchAll(/`([^`\n]+)`/gu)) {
     const token = match[1].trim().replace(/[.,;:]$/u, '');
-    if (isPlaceholderPath(token)) continue;
-    if (!PATH_ROOTS.some((rootDir) => token.startsWith(rootDir))) continue;
-    if (/\s/u.test(token)) continue;
+    if (isPlaceholderPath(token) || /\s/u.test(token) || !token.includes('/')) continue;
+
+    // Either an explicit repo-root path, or a directory-relative one naming a
+    // real source file — `components/PhotoGallery.tsx` in a page README means
+    // that page's own `components/`, and used to slip through unchecked.
+    const rooted = PATH_ROOTS.some((rootDir) => token.startsWith(rootDir));
+    const looksLikeSourceFile = SOURCE_FILE_RE.test(token);
+    if (!rooted && !looksLikeSourceFile) continue;
+    if (token.startsWith('@')) continue; // npm scope, not a path
+
     claims.push({ raw: token, candidates: [token, join(fromDir, token)] });
   }
 
@@ -226,6 +255,42 @@ export function gitIgnoredSubset(root, paths) {
 }
 
 /**
+ * Every tracked file and directory path in the repo, repo-relative. Used to
+ * resolve abbreviated cross-unit references by suffix.
+ *
+ * @param {string} root
+ * @returns {string[]}
+ */
+export function allRepoPaths(root) {
+  /** @type {string[]} */
+  const out = [];
+  /** @param {string} dir */
+  const collect = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      out.push(relative(root, join(dir, entry.name)));
+      // walkDirs skips dotted dirs, but `.storybook/` and friends are real
+      // targets a doc may name, so descend one level into them here.
+      if (entry.isDirectory() && entry.name.startsWith('.') && entry.name !== '.git') {
+        try {
+          for (const sub of readdirSync(join(dir, entry.name), { withFileTypes: true })) {
+            out.push(relative(root, join(dir, entry.name, sub.name)));
+          }
+        } catch {
+          /* unreadable dot dir — nothing to index */
+        }
+      }
+    }
+  };
+  collect(root);
+  walkDirs(root, (full) => {
+    collect(full);
+    return true;
+  });
+  return out;
+}
+
+/**
  * @typedef {{ file: string, claim: string }} BrokenPath
  */
 
@@ -236,14 +301,20 @@ export function gitIgnoredSubset(root, paths) {
  * @returns {BrokenPath[]}
  */
 export function findBrokenDocPaths(root) {
+  const allPaths = allRepoPaths(root);
   /** @type {(BrokenPath & { candidates: string[] })[]} */
   const misses = [];
   for (const mdPath of findMarkdownFiles(root)) {
+    if (isHistoricalRecord(mdPath)) continue;
     const source = readFileSync(join(root, mdPath), 'utf8');
     for (const { raw, candidates } of extractPathClaims(source, mdPath)) {
       const targets = candidates.map((c) => c.replace(/\/$/u, '')).filter((c) => c !== '');
       if (targets.length === 0) continue;
       if (targets.some((t) => existsSync(join(root, t)))) continue;
+      // Prose abbreviates cross-unit references — `worker/ai/client.ts` for
+      // `pillars/food/src/worker/ai/client.ts`. Accept when some real file
+      // ends with the token; only a path matching nothing at all is a lie.
+      if (allPaths.some((p) => p.endsWith('/' + targets[0]))) continue;
       misses.push({ file: mdPath, claim: raw, candidates: targets });
     }
   }
@@ -353,13 +424,26 @@ function selfTest() {
   // Gitignored paths must be filtered out rather than reported.
   const ok6 = gitIgnoredSubset(repoRoot, ['node_modules']).has('node_modules');
 
+  // A directory-relative source path is checked against the file's own dir.
+  const rel = extractPathClaims(
+    'see `components/Foo.tsx`',
+    'pillars/x/app/src/pages/p/README.md'
+  ).at(0);
+  const ok7 =
+    rel !== undefined && rel.candidates.includes('pillars/x/app/src/pages/p/components/Foo.tsx');
+
+  // An npm specifier is not a path claim.
+  const ok8 = extractPathClaims('`@pops/pillar-sdk/server`', 'docs/x.md').length === 0;
+
   if (!ok1) console.error('self-test FAILED: unit discovery missed a known unit');
   if (!ok2) console.error('self-test FAILED: banned-dir walk misbehaved');
   if (!ok3) console.error('self-test FAILED: path-claim extraction wrong');
   if (!ok4) console.error('self-test FAILED: relative link not resolved against its own dir');
   if (!ok5) console.error('self-test FAILED: backticked token lacks both candidates');
   if (!ok6) console.error('self-test FAILED: gitignore filter did not detect an ignored path');
-  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6;
+  if (!ok7) console.error('self-test FAILED: directory-relative source path not resolved');
+  if (!ok8) console.error('self-test FAILED: npm specifier treated as a path claim');
+  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8;
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
