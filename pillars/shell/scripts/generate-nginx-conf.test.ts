@@ -426,6 +426,25 @@ describe('generate-nginx-conf', () => {
       expect(matches).toHaveLength(1);
       expect(rendered).toContain('set $orchestrator_api_upstream http://pops-orchestrator:3009;');
     });
+
+    it('skips a registry entry for the orchestrator — the fixed block already serves it', () => {
+      const rendered = renderNginxConfFromUpstreams([
+        { pillarId: 'orchestrator', host: 'pops-orchestrator', port: 3009 },
+        { pillarId: 'plugin-fitness', host: 'fitness-api', port: 4200 },
+      ]);
+      expect(rendered.match(/location \/orchestrator-api\/ \{/g)).toHaveLength(1);
+      expect(rendered).toContain('location /plugin-fitness-api/ {');
+      // The survivor is the fixed block — it carries the template's comment header.
+      expect(rendered).toContain('# ── Federated-search orchestrator (ADR-029, epic 06) ──');
+    });
+
+    it('renders a bare orchestrator-only registry as if it were empty', () => {
+      const rendered = renderNginxConfFromUpstreams([
+        { pillarId: 'orchestrator', host: 'pops-orchestrator', port: 3009 },
+      ]);
+      expect(rendered).toBe(renderNginxConfFromUpstreams([]));
+      expect(rendered.match(/location \/orchestrator-api\/ \{/g)).toHaveLength(1);
+    });
   });
 
   describe('renderNginxConfDynamic', () => {
@@ -483,6 +502,54 @@ describe('generate-nginx-conf', () => {
       const a = await renderNginxConfDynamic('http://registry-api:3001', makeTransport(pillars));
       const b = await renderNginxConfDynamic('http://registry-api:3001', makeTransport(pillars));
       expect(a).toBe(b);
+    });
+
+    /**
+     * The orchestrator self-registers, so a live snapshot lists it beside the
+     * pillars. Rendering a per-entry block for it as well produced a second
+     * `location /orchestrator-api/`, which nginx rejects with `[emerg]
+     * duplicate location` — every route in the file goes down, not just that
+     * one. Mirrors the production snapshot exactly.
+     */
+    it('renders one orchestrator block for a live-shaped snapshot that includes the orchestrator', async () => {
+      const transport = makeTransport([
+        ...PILLARS.map((id) => ({
+          pillarId: id,
+          baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
+        })),
+        { pillarId: 'documents', baseUrl: 'http://documents-api:3012' },
+        { pillarId: 'orchestrator', baseUrl: 'http://pops-orchestrator:3009' },
+      ]);
+      const rendered = await renderNginxConfDynamic('http://registry-api:3001', transport);
+
+      expect(rendered.match(/location \/orchestrator-api\/ \{/g)).toHaveLength(1);
+      for (const id of PILLARS) {
+        expect(rendered).toContain(`location /${id}-api/ {`);
+      }
+      expect(rendered).toContain('location /documents-api/ {');
+    });
+
+    /**
+     * Broader guard than the orchestrator case above: nginx refuses to load a
+     * config with any repeated `location` directive, so a collision between a
+     * registry-driven block and a fixed template block is always fatal. Assert
+     * uniqueness across the whole rendered file rather than per known offender.
+     */
+    it('never emits the same location directive twice', async () => {
+      const transport = makeTransport([
+        ...PILLARS.map((id) => ({
+          pillarId: id,
+          baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
+        })),
+        { pillarId: 'documents', baseUrl: 'http://documents-api:3012' },
+        { pillarId: 'orchestrator', baseUrl: 'http://pops-orchestrator:3009' },
+        { pillarId: 'plugin-fitness', baseUrl: 'http://fitness-api:4242' },
+      ]);
+      const rendered = await renderNginxConfDynamic('http://registry-api:3001', transport);
+
+      const directives = [...rendered.matchAll(/^\s*location\s+(.+?)\s*\{/gm)].map((m) => m[1]);
+      expect(directives.length).toBeGreaterThan(0);
+      expect(new Set(directives).size).toBe(directives.length);
     });
   });
 
