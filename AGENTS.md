@@ -433,6 +433,24 @@ pages/
 - **Env vars** — read via a pillar env accessor (e.g. `getEnv()`), which reads `process.env`. Production secrets are Docker file-based secrets mounted at `/run/secrets/` (see Security) — a separate mechanism, not read by `getEnv()`.
 - Schema changes go through Drizzle per pillar (generate/review/migrate flow — see Production hard rule).
 
+### Conventions duplicated per pillar
+
+Three patterns are repeated in every pillar rather than shared through a lib. That is deliberate in two cases and unpaid debt in the third, but in all three **a change has to be made everywhere** — there is no single definition to edit.
+
+- **The DB opener.** Each pillar exports its own `open<Pillar>Db(path)`. They agree on the pragmas, on creating the parent directory, and on resolving the migrations folder through `import.meta.url` so it works both through the workspace symlink and inside the image. Each opener's file header documents its own pragmas; read one before writing another.
+- **Queue settings.** `food` and `cerebrum` each declare their own BullMQ producer with matching retry, backoff and retention constants, and each builds its Redis connection with `maxRetriesPerRequest: null`. There is no shared SDK helper, so the two can drift silently.
+- **Unavailable-error classification.** Each pillar frontend keeps a local `*-api-helpers.ts` deciding what counts as "pillar unavailable". The SDK deliberately does not own this.
+
+### The OpenAPI version pin
+
+Every pillar's OpenAPI document is **3.0.x**, and that is a hard constraint rather than a default. The TypeScript side gets there via `z.toJSONSchema(schema, { target: 'openapi-3.0' })`. The Rust `contacts` pillar generates 3.1 from utoipa and then runs a deterministic downgrade pass, pinning the served document to 3.0.3 with a test asserting it.
+
+The reason is downstream: the client generators target 3.0. A pillar that emits 3.1 breaks consumer codegen rather than failing its own build, so the pin belongs with the producer.
+
+### Structural guards
+
+Repo-wide invariants are enforced by scripts under `scripts/ci/`, each self-testing and wired into `.github/workflows/agent-review.yml`. They cover lib-never-imports-pillar, contract isolation, the known-pillars tuple against disk, mise toolchain overrides, homelab-service isolation, vendored contracts, and the docs model. Run one directly with `--self-test` to see what it claims to catch.
+
 ### Cross-pillar generated FE clients
 
 A pillar's app talks to its OWN backend over the client `generate:api` produces. When one pillar's frontend needs to read another pillar's data directly (not through a backend proxy), it gets its own **per-consumer** Hey API client instead of reaching for `@pops/pillar-sdk` (that SDK is for backend-to-backend calls only): `pnpm --filter <app> generate:<pillar>-client`, projecting the producer's `./openapi` package export (or a vendored snapshot per [ADR-033](docs/architecture/adr-033-cross-language-pillar-contracts.md) when the producer has no npm package, e.g. the Rust `contacts` pillar) to `src/<pillar>-api/`. Live legs: `food/app` -> `lists`, `finance/app` -> `contacts`.
