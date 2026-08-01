@@ -328,14 +328,20 @@ The code and its tests **are** the specification. A requirement that is built ne
 
 #### READMEs — the HOW
 
-A directory gets a `README.md` when a reader would otherwise have to read every file in it to understand what it does. In practice that means each `pillars/<id>/`, each `libs/<lib>/`, each `pillars/<id>/src/api/modules/<feature>/`, each `pillars/<id>/app/src/pages/<feature>/`, and each standalone subsystem (`worker/`, `dsl/`, `db/`). CI enforces the floor — see `scripts/ci/check-readme-coverage.mjs`.
+**There is no coverage quota.** A README earns its place only where the code cannot speak for itself, and a directory with no README is a perfectly good outcome. `db/` full of obvious schema files needs nothing. A `dsl/`, a worker pipeline, or "how tag-rule creation actually works" needs one.
 
-Write it in **present tense, describing the thing as it is**:
+Two rules keep them useful:
 
-- What this unit does, and the shape of the flow through it.
-- The rules and invariants a signature does not carry — orderings, thresholds, sign conventions, precedence, what wins on conflict.
+**Colocate as deeply as the thing lives.** A README next to the code it describes beats one two levels up covering an "area". Never write a god README that summarises a whole subtree — split it, or push it down to where the concern actually is.
+
+**Only document what is not readily discoverable from the code.** In practice that is:
+
+- The narrative — how this feature works end to end, the shape of the flow through it.
+- Orderings, precedence and invariants that **span files**, which no single file can state.
 - What it talks to (which pillars, which external services) and over what transport.
-- What deliberately does **not** live here, when a reader would reasonably expect it to.
+- What deliberately does **not** live here, or does not exist at all, when silence would let a reader infer a capability that isn't there.
+
+Do **not** restate what a file-header docstring already says — name the file and let the reader go there. A README that paraphrases the code beneath it is pure drift surface.
 
 Never write: change history, migration notes, "this was refactored", status, percentages complete, or links to work that has not happened. A README describes the present; git describes the past; Huly describes the future.
 
