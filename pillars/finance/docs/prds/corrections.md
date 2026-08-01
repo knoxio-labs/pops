@@ -29,6 +29,7 @@ Indexes: `description_pattern`, `priority`, `confidence`, `times_applied`. A leg
 
 - [x] Table has all columns above with the confidence CHECK and the four indexes.
 - [x] `transaction_type` rules can carry **no** entity (entity-free transfer/income classifiers).
+- [x] `entity_id` is the operative field — it alone decides which merchant a firing rule assigns; `entity_name` is only the label carried alongside it (`buildEntityMatch` falls back to `'Unknown'`). Every writer therefore sets the pair together from a chosen entity, and no editing surface exposes `entity_name` on its own: a name without a resolvable id is a rule that reads as assigning a merchant and applies none.
 
 ## Normalization
 

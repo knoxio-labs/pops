@@ -1,4 +1,4 @@
-import { EntitySelect as UiEntitySelect } from '@pops/ui';
+import { EntitySelect as UiEntitySelect, type EntitySelectProps } from '@pops/ui';
 
 export interface FinanceEntityOption {
   id: string;
@@ -6,14 +6,9 @@ export interface FinanceEntityOption {
   type?: string;
 }
 
-interface FinanceEntitySelectProps {
+type FinanceEntitySelectProps = Omit<EntitySelectProps, 'entities'> & {
   entities: FinanceEntityOption[];
-  value?: string;
-  onChange?: (entityId: string, entityName: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  className?: string;
-}
+};
 
 /**
  * Finance-domain wrapper for @pops/ui EntitySelect.

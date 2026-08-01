@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 
 import { type UseBulkAssignmentArgs } from './bulk-assignment/types';
-import { useAcceptAiSuggestion, useAcceptAll, useEntities } from './bulk-assignment/use-accept';
+import { useAcceptAiSuggestion, useAcceptAll } from './bulk-assignment/use-accept';
 import { useEntityCreated } from './bulk-assignment/use-entity-created';
+import { useEntities } from './useEntities';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 

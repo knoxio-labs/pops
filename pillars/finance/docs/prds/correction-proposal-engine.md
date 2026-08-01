@@ -66,7 +66,7 @@ Triggered by Save & Learn or editing a rule-matched transaction. A large modal w
 - **Generation feedback** — the trigger opens this dialog immediately in a loading state ("Generating proposal…") while the ~2-3s analysis round-trip runs, so the click is never a silent wait. The dialog cannot be dismissed mid-generation (overlay click / Esc / close are ignored), and any further accept/create is blocked until the proposal resolves or falls back — a second trigger can't clobber the window about to open.
 - **Context panel** — the triggering transaction's raw description (prominent), amount, date, account, location, plus a "was → now" diff of the correction intent (entity / type / location); brand-new entity reads "assigned entity: <name>".
 - **Operations list** — every op with kind badge, one-line summary, per-op impact count, staleness marker, and a delete control; an Add-operation control appends a new add, or an edit/disable/remove of an existing rule picked from a searchable list.
-- **Detail editor** — edits `descriptionPattern`, `matchType`, target entity (existing or new), optional `location` / `transactionType` / `tags` for add/edit; rationale for disable/remove.
+- **Detail editor** — edits `descriptionPattern`, `matchType`, target entity (existing or new), optional `location` / `transactionType` / `tags` for add/edit; rationale for disable/remove. The entity is chosen from a searchable picker over known entities (DB + pending), never typed as free text: `entityId` is what assigns the merchant and `entityName` only labels it, so the editor writes the pair together, offers creating the searched name as a pending entity, offers clearing to no entity, and flags an inherited rule whose name has no entity behind it (it would apply no merchant).
 - **Impact panel** — live deterministic list for the selected op (will-change / already-match / unaffected), with a Combined-effect toggle for the whole ChangeSet net effect and a re-run control.
 - **AI helper** — free-text transcript with full scope over the ChangeSet; submitting sends the triggering txns + current ChangeSet + instruction to `revise-changeset` and replaces the ChangeSet with the revised version. AI-revised ChangeSets are never auto-applied.
 - **Actions** — Cancel (nothing persisted), Apply (atomic via `apply-changeset`, disabled while any preview is stale or the ChangeSet is empty), Reject with feedback.
@@ -102,6 +102,8 @@ On Apply: the ChangeSet is added to the local pending store (no DB write yet), r
 - [x] While a proposal is generating, further accept/create actions are blocked (no-op) so a concurrent action can't override the pending window.
 - [x] The loading dialog cannot be dismissed mid-generation (overlay click / Esc / close are ignored until the proposal resolves or falls back).
 - [x] A transfer/income rule with no entity is accepted, classifies matching rows as terminal `matched`, and counts toward the affected count.
+- [x] The detail editor's entity is a picker over known entities (DB + pending), not a free-text name: selecting writes `entityId` + `entityName` together, clearing nulls both, and an unmatched search term can be created as a pending entity and is selected by its temp id.
+- [x] A rule whose `entityName` has no resolvable `entityId` (a legacy free-text edit, or a deleted entity) is flagged in the editor as applying no merchant, rather than reading as if it assigns one.
 - [ ] A durable, queryable audit trail of all proposal attempts and outcomes (approved + rejected, append-only, per session) — NOT built; only the latest rejection per pattern is persisted. See [idea](../ideas/correction-proposal-audit-trail.md).
 
 ## Verification
@@ -110,3 +112,4 @@ On Apply: the ChangeSet is added to the local pending store (no DB write yet), r
 - A PayID transfer correction produces a transfer rule that classifies similar rows with no entity (terminal matched).
 - A proposal bundling entity + location can be split (manually or via AI) into two ops, previewed independently, and applied as one ChangeSet without ever rejecting.
 - A wrong rule match is fixed by adding a `disable` op against the existing rule alongside a new `add`, with Combined-effect confirming the net outcome before Apply.
+- Re-targeting a proposed rule at a different merchant in the detail editor produces a rule that both reads and applies that merchant — the applied ChangeSet carries the picked `entityId`, not just a changed label.

@@ -16,12 +16,14 @@ interface UseRuleFormStateOptions {
   onClose: () => void;
 }
 
-const ENTITIES_LIST_INPUT = { limit: 500 } as const;
+/** The contacts pillar clamps `limit` to 200; asking for more just reads as a lie. */
+const ENTITIES_LIST_INPUT = { limit: 200 } as const;
 
 interface CreateRulePayload {
   descriptionPattern: string;
   matchType: MatchType;
   entityId: string | null;
+  entityName: string | null;
   tags: string[];
   priority: number;
 }
@@ -30,6 +32,7 @@ interface UpdateRulePayload {
   descriptionPattern: string;
   matchType: MatchType;
   entityId: string | null;
+  entityName: string | null;
   tags: string[];
   priority: number;
   isActive: boolean;
@@ -65,19 +68,58 @@ function useRuleMutations(onClose: () => void) {
   return { createMutation, updateMutation };
 }
 
-function buildSubmit(
+interface SubmitDeps {
+  editingRule: Correction | null;
+  createMutation: ReturnType<typeof useRuleMutations>['createMutation'];
+  updateMutation: ReturnType<typeof useRuleMutations>['updateMutation'];
+  /** Resolves the picked entity's name so the stored label can never diverge from the id. */
+  entityNameOf: (entityId: string | null) => string | null;
+}
+
+interface RuleEntity {
+  entityId: string | null;
+  entityName: string | null;
+}
+
+/**
+ * The `(entityId, entityName)` pair to store, or `null` when the picked id
+ * cannot be named.
+ *
+ * The picker's option list is one capped page, so `entityNameOf` can come back
+ * empty for an id that is perfectly valid — while the list loads, or for an
+ * entity beyond the page. Writing that `null` through would strip the label off
+ * a live id and recreate the divergence this field exists to prevent, so an
+ * unchanged id keeps whatever label the rule already carries, and a newly
+ * picked id that cannot be named blocks the write instead of guessing.
+ */
+function resolveRuleEntity(
+  pickedId: string | null,
   editingRule: Correction | null,
-  createMutation: ReturnType<typeof useRuleMutations>['createMutation'],
-  updateMutation: ReturnType<typeof useRuleMutations>['updateMutation']
-) {
+  entityNameOf: (entityId: string | null) => string | null
+): RuleEntity | null {
+  if (!pickedId) return { entityId: null, entityName: null };
+  const resolved = entityNameOf(pickedId);
+  if (resolved) return { entityId: pickedId, entityName: resolved };
+  if (editingRule?.entityId === pickedId) {
+    return { entityId: pickedId, entityName: editingRule.entityName };
+  }
+  return null;
+}
+
+function buildSubmit({ editingRule, createMutation, updateMutation, entityNameOf }: SubmitDeps) {
   return (values: RuleFormValues) => {
+    const entity = resolveRuleEntity(values.entityId ?? null, editingRule, entityNameOf);
+    if (!entity) {
+      toast.error('Could not resolve the selected entity — reopen the picker and choose it again.');
+      return;
+    }
     if (editingRule) {
       updateMutation.mutate({
         id: editingRule.id,
         data: {
           descriptionPattern: values.descriptionPattern,
           matchType: values.matchType,
-          entityId: values.entityId ?? null,
+          ...entity,
           tags: values.tags,
           priority: values.priority,
           isActive: values.isActive,
@@ -88,7 +130,7 @@ function buildSubmit(
     createMutation.mutate({
       descriptionPattern: values.descriptionPattern,
       matchType: values.matchType,
-      entityId: values.entityId ?? null,
+      ...entity,
       tags: values.tags,
       priority: values.priority,
     });
@@ -152,7 +194,12 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
     entities,
     handleAdd,
     handleEdit,
-    onSubmit: buildSubmit(editingRule, createMutation, updateMutation),
+    onSubmit: buildSubmit({
+      editingRule,
+      createMutation,
+      updateMutation,
+      entityNameOf: (entityId) => entities.find((e) => e.id === entityId)?.name ?? null,
+    }),
     isSubmitting: createMutation.isPending || updateMutation.isPending,
   };
 }

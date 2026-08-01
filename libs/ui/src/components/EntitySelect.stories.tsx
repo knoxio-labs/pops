@@ -53,3 +53,25 @@ export const Disabled: Story = {
     disabled: true,
   },
 };
+
+export const WithCreateAndClear: Story = {
+  render: () => {
+    const [entities, setEntities] = useState(ENTITIES);
+    const [value, setValue] = useState<string | undefined>('1');
+    return (
+      <div className="w-64">
+        <EntitySelect
+          entities={entities}
+          value={value}
+          onChange={(id) => setValue(id)}
+          onClear={() => setValue(undefined)}
+          onCreate={(name) => {
+            const created = { id: `temp-${name}`, name, type: 'merchant', pending: true };
+            setEntities((prev) => [...prev, created]);
+            setValue(created.id);
+          }}
+        />
+      </div>
+    );
+  },
+};

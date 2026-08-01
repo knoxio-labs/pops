@@ -72,6 +72,10 @@ function EditOpView({
           onChange((current) => (current.kind === 'edit' ? { ...current, data: next } : current))
         }
         disabled={disabled}
+        entityBaseline={{
+          entityId: op.targetRule?.entityId ?? null,
+          entityName: op.targetRule?.entityName ?? null,
+        }}
       />
     </div>
   );
