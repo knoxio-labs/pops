@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed — 2026-08-02. Introduces the `purchases` pillar (POPS-236).
+Proposed — 2026-08-01. Introduces the `purchases` pillar (POPS-236).
 
 ## Context
 
