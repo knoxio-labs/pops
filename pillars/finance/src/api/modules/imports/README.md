@@ -13,8 +13,14 @@ The order is the thing to know, and no single file holds it — it spans `proces
 
 1. **Learned corrections** (`apply-learned-correction.ts`) — active rules at or above `MIN_MATCH_CONFIDENCE`, ordered `priority ASC, id ASC`. At or above `HIGH_CONFIDENCE_THRESHOLD` → `matched`, below → `uncertain`. A **type-only** correction (transfer/income, no entity) is terminal `matched` and never falls through.
 2. **Transfer/income heuristic** — short-circuits to `matched` with no entity.
-3. **Aliases**, then 4. **exact** → 5. **prefix** → 6. **contains**, then 7. a **punctuation-stripped retry** of exact/prefix/contains. All of stages 3–7 live in `entity-matcher.ts`; its helpers document their own normalization and tie-breaking rules.
-4. **AI fallback** (`ai-batch-resolver.ts`) — reached only after every deterministic stage misses.
+3. **Aliases** — substring match; longest matching alias wins.
+4. **Exact** — description equals an entity name.
+5. **Prefix** — description starts with an entity name; longest name wins.
+6. **Contains** — entity name anywhere in the description; longest name wins.
+7. **Punctuation-stripped retry** of stages 4–6. Aliases are not retried.
+8. **AI fallback** (`ai-batch-resolver.ts`) — reached only after every deterministic stage misses.
+
+Stages 3–7 all live in `entity-matcher.ts`, whose helpers document their own normalization, minimum-length guards and tie-breaking.
 
 Corrections outrank everything because they encode learned user intent. AI is best-effort: no configuration or provider failure ever fails an import, the row just becomes `uncertain`.
 
