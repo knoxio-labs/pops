@@ -483,8 +483,12 @@ function selfTest() {
     ambiguous.candidates.includes('scripts/x.ts') &&
     ambiguous.candidates.includes('pillars/shell/scripts/x.ts');
 
-  // Gitignored paths must be filtered out rather than reported.
-  const ok6 = gitIgnoredSubset(repoRoot, ['node_modules']).has('node_modules');
+  // Gitignored paths must be filtered out rather than reported. Probe with a
+  // FILE pattern (`.env`): `git check-ignore` cannot classify a path that is
+  // absent from disk, so a directory-only pattern like `node_modules/` matches
+  // locally and not on a CI checkout that never installed.
+  const ignored = gitIgnoredSubset(repoRoot, ['pillars/mcp/.env', 'pillars/mcp/README.md']);
+  const ok6 = ignored.has('pillars/mcp/.env') && !ignored.has('pillars/mcp/README.md');
 
   // A directory-relative source path is checked against the file's own dir.
   const rel = extractPathClaims(
