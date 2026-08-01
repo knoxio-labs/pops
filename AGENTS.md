@@ -181,25 +181,17 @@ pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (
 │                          #   (openapi/<id>.openapi.json), ./manifest export (self-registers
 │                          #   with registry), its frontend (app/), docs (docs/), migrations/,
 │                          #   Dockerfile, mise.toml.
-├── registry/              # Registry/platform: registry, settings, users, service-accounts, features (formerly core)
-├── inventory/ media/ finance/ food/ lists/ cerebrum/   # Domain data pillars (food + cerebrum run workers)
-├── ai/                    # AI-ops (:3008): providers, usage/telemetry, ingest
-├── contacts/              # Rust (axum + OpenAPI) (:3010): src/entities, migrations/, Cargo.toml, tests/
-├── orchestrator/          # Federated search + AI-tool registry (GET /ai/tools); stateless, no DB
-├── shell/                 # UI pillar: React SPA host (Vite + nginx reverse proxy), lazy-loads each pillar's app/
-├── mcp/                   # MCP gateway (binds :3011 in code via MCP_PORT)
-├── docs/                  # OpenAPI docs browser (Stoplight Elements over each contract's snapshot)
-└── moltbot/               # Telegram bot config + skills (no Dockerfile, uses upstream image)
+│                          # Which pillars exist is on disk (`ls pillars/`) and in the
+│                          #   ports table above — not enumerated again here.
+│                          # Exceptions to the shape: `contacts` is Rust (axum, src/entities,
+│                          #   Cargo.toml); `orchestrator`, `mcp` and `documents` own no DB;
+│                          #   `shell` and `docs` are UI/static and serve no contract;
+│                          #   `moltbot` ships no Dockerfile (upstream image).
 
-libs/                      # Shared libraries (no service, no DB)
-├── sdk/                   # @pops/pillar-sdk — REST cross-pillar SDK: pillar() client + manifest/registry/discovery helpers
-├── types/                 # ModuleManifest + pillar manifest types
-├── db-types/              # Shared DB type helpers
-├── ui/                    # @pops/ui component library (shadcn-based)
-├── navigation/            # App navigation config
-├── module-registry/       # Module/pillar registry helpers
-├── overlay-ego/           # Shared ego overlay
-├── settings/ pops-settings/ pops-ai/ ai-telemetry/ locales/   # Other cross-pillar shared concerns
+libs/                      # Shared libraries — no service, no DB, and a lib must NEVER
+│                          #   import from a pillar (enforced: scripts/ci/check-lib-no-pillar-import.mjs).
+│                          # Each lib's own README states what it is and who depends on it;
+│                          #   `ls libs/` is the inventory.
 
 infra/
 ├── docker-compose.yml     # Production compose (ghcr.io/knoxio/pops-<id> images + Watchtower)
@@ -330,7 +322,9 @@ The code and its tests **are** the specification. A requirement that is built ne
 
 **There is no coverage quota.** A README earns its place only where the code cannot speak for itself, and a directory with no README is a perfectly good outcome. `db/` full of obvious schema files needs nothing. A `dsl/`, a worker pipeline, or "how tag-rule creation actually works" needs one.
 
-CI enforces only two things (`scripts/ci/check-docs-model.mjs`): every `pillars/<id>` and `libs/<lib>` has a README, since a published unit's README is where a reader lands; and no `prds/`, `themes/`, `epics/` or `ideas/` directory reappears anywhere. Nothing requires a README further down — a gate that did would produce exactly the write-to-satisfy-the-gate documentation this model rejects. See [ADR-041](docs/architecture/adr-041-colocated-docs-and-external-tracking.md).
+CI enforces three things (`scripts/ci/check-docs-model.mjs`): every `pillars/<id>` and `libs/<lib>` has a README, since a published unit's README is where a reader lands; no `prds/`, `themes/`, `epics/` or `ideas/` directory reappears anywhere; and **every repo path a markdown file points at actually exists**. Nothing requires a README further down — a gate that did would produce exactly the write-to-satisfy-the-gate documentation this model rejects. See [ADR-041](docs/architecture/adr-041-colocated-docs-and-external-tracking.md).
+
+**Do not write indexes.** A hand-maintained list of what exists — a repo tree, a "key files" table, a roster of pillars or libs — drifts the moment anything moves, and nothing reads it closely enough to notice. `libs/db-types` was listed in three files and had never existed; the pillar roster in `.github/copilot-instructions.md` silently omitted `documents`. Describe the **shape** of a thing and let `ls` supply the inventory. Where a pointer genuinely helps, write the path so the guard can check it.
 
 Two rules keep them useful:
 

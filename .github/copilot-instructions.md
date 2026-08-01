@@ -5,8 +5,8 @@
 POPS (Personal Operations System) is a self-hosted personal command center for finance, media, inventory, and AI operations. It is a pnpm workspace running on Node.js (24 locally via `mise`, 22 in CI/production) built as a set of independent REST **pillars** — each a standalone service that owns its own SQLite database (Drizzle ORM), serves a zod → [ts-rest](https://ts-rest.com) contract projected to OpenAPI, exports a `./manifest`, and self-registers with the `registry` pillar on boot. There is **no tRPC** and **no `pops-api` monolith** — both were removed. The frontend is one React SPA (`pops-shell`) that lazy-loads per-domain feature apps over generated Hey API REST clients; cross-pillar calls go through the `@pops/pillar-sdk` `pillar()` client. AI categorization and entity matching use the Claude API; embeddings use an OpenAI-compatible client (configurable via `EMBEDDING_API_URL`, defaulting to `https://api.openai.com/v1`). Jobs run on BullMQ + Redis. The system deploys via Docker Compose to a home server behind Cloudflare Tunnel (host provisioning lives in the private `knoxio/homelab-infra` repo).
 
 **Repo layout:**
-- `pillars/<id>/` — one REST pillar per folder (registry, inventory, media, finance, food, lists, cerebrum, ai, contacts, orchestrator, shell, docs, mcp, moltbot). Each owns its SQLite DB (`src/db`), zod → ts-rest contract (`src/contract`), OpenAPI snapshot (`openapi/<id>.openapi.json`), `./manifest`, and Dockerfile.
-- `libs/<name>/` — shared workspace libraries (types, db-types, sdk, settings, ai-telemetry, ui, navigation, module-registry, overlay-ego, locales, pops-ai, pops-settings)
+- `pillars/<id>/` — one REST pillar per folder. Each owns its SQLite DB (`src/db`), a zod → ts-rest contract (`src/contract`), an OpenAPI snapshot (`openapi/<id>.openapi.json`), a `./manifest`, and a Dockerfile. Which pillars exist is on disk; `AGENTS.md` carries the ports table. Do not expect every pillar to fit the shape — some own no DB, one is Rust, and two serve no contract.
+- `libs/<name>/` — shared workspace libraries. Each has a README stating what it is and who depends on it. A lib must never import from a pillar.
 - `infra/` — Docker Compose (`docker-compose.yml` prod, `docker-compose.dev.yml` dev) + Litestream stream configs
 - `docs/` — cross-cutting ADRs (`docs/architecture/`) and `vision.md`. Nothing else.
 
@@ -125,7 +125,6 @@ Do not batch small issues into a single comment. File a separate review comment 
 | Work tracking | Huly, project `POPS` (`projects.knoxiolabs.com`) |
 | Architecture decisions | `docs/architecture/adr-NNN-slug.md` |
 | Per-pillar DB schema | `pillars/<id>/src/db/schema/` |
-| Shared DB type helpers | `libs/db-types/src/` |
 | Pillar ts-rest contract | `pillars/<id>/src/contract/` |
 | Business logic | `pillars/<id>/src/db/services/` |
 | UI components | `libs/ui/src/components/` |
