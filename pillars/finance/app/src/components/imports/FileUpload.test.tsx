@@ -10,84 +10,137 @@ function makeFile(name: string, sizeBytes: number, type = 'text/csv') {
 }
 
 function getFileInput() {
-  return screen.getByLabelText('Upload CSV file') as HTMLInputElement;
+  return screen.getByLabelText('Upload CSV files') as HTMLInputElement;
+}
+
+function selectFiles(files: File[]) {
+  fireEvent.change(getFileInput(), { target: { files } });
 }
 
 describe('FileUpload', () => {
   it('reports a valid CSV selection to the parent and displays it', () => {
-    const onFileSelect = vi.fn();
-    render(<FileUpload onFileSelect={onFileSelect} />);
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
 
     const file = makeFile('transactions.csv', 1024);
-    fireEvent.change(getFileInput(), { target: { files: [file] } });
+    selectFiles([file]);
 
-    expect(onFileSelect).toHaveBeenCalledWith(file);
+    expect(onFilesSelect).toHaveBeenCalledWith([file]);
     expect(screen.getByText('transactions.csv')).toBeInTheDocument();
   });
 
   it('accepts an uppercase .CSV extension', () => {
-    const onFileSelect = vi.fn();
-    render(<FileUpload onFileSelect={onFileSelect} />);
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
 
     const file = makeFile('Transactions.CSV', 1024);
-    fireEvent.change(getFileInput(), { target: { files: [file] } });
+    selectFiles([file]);
 
-    expect(onFileSelect).toHaveBeenCalledWith(file);
+    expect(onFilesSelect).toHaveBeenCalledWith([file]);
     expect(screen.getByText('Transactions.CSV')).toBeInTheDocument();
   });
 
-  it('rejecting a wrong-extension file notifies the parent the store file is gone, not just the display', () => {
-    const onFileSelect = vi.fn();
-    render(<FileUpload onFileSelect={onFileSelect} />);
+  it('reports every file of a multi-file selection', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
 
-    const invalidFile = makeFile('image.png', 1024, 'image/png');
-    fireEvent.change(getFileInput(), { target: { files: [invalidFile] } });
+    const jan = makeFile('jan.csv', 1024);
+    const feb = makeFile('feb.csv', 2048);
+    selectFiles([jan, feb]);
 
-    expect(onFileSelect).toHaveBeenCalledWith(null);
-    expect(screen.getByText(/invalid file type/i)).toBeInTheDocument();
+    expect(onFilesSelect).toHaveBeenCalledWith([jan, feb]);
+    expect(screen.getByText('jan.csv')).toBeInTheDocument();
+    expect(screen.getByText('feb.csv')).toBeInTheDocument();
+  });
+
+  it('appends a later selection instead of replacing the staged batch', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
+
+    const jan = makeFile('jan.csv', 1024);
+    const feb = makeFile('feb.csv', 1024);
+    selectFiles([jan]);
+    selectFiles([feb]);
+
+    expect(onFilesSelect).toHaveBeenLastCalledWith([jan, feb]);
+    expect(screen.getByText('jan.csv')).toBeInTheDocument();
+    expect(screen.getByText('feb.csv')).toBeInTheDocument();
+  });
+
+  it('rejects a re-added identical file rather than importing it twice', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
+
+    const jan = makeFile('jan.csv', 1024);
+    selectFiles([jan]);
+    selectFiles([jan]);
+
+    expect(onFilesSelect).toHaveBeenLastCalledWith([jan]);
+    expect(screen.getByText(/jan\.csv: already added/i)).toBeInTheDocument();
+  });
+
+  it('rejects a wrong-extension file while keeping the files already accepted', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
+
+    const valid = makeFile('transactions.csv', 1024);
+    selectFiles([valid]);
+    selectFiles([makeFile('image.png', 1024, 'image/png')]);
+
+    expect(onFilesSelect).toHaveBeenLastCalledWith([valid]);
+    expect(screen.getByText(/image\.png: not a CSV file/i)).toBeInTheDocument();
     expect(screen.queryByText('image.png')).not.toBeInTheDocument();
+    expect(screen.getByText('transactions.csv')).toBeInTheDocument();
   });
 
-  it('rejecting an oversized file notifies the parent the store file is gone, not just the display', () => {
-    const onFileSelect = vi.fn();
-    render(<FileUpload onFileSelect={onFileSelect} maxSizeMB={1} />);
+  it('rejects only the oversized member of a mixed selection', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} maxSizeMB={1} />);
 
-    const oversizedFile = makeFile('huge.csv', 2 * 1024 * 1024);
-    fireEvent.change(getFileInput(), { target: { files: [oversizedFile] } });
+    const ok = makeFile('small.csv', 1024);
+    const oversized = makeFile('huge.csv', 2 * 1024 * 1024);
+    selectFiles([ok, oversized]);
 
-    expect(onFileSelect).toHaveBeenCalledWith(null);
-    expect(screen.getByText(/File too large/i)).toBeInTheDocument();
+    expect(onFilesSelect).toHaveBeenLastCalledWith([ok]);
+    expect(screen.getByText(/huge\.csv: too large/i)).toBeInTheDocument();
+    expect(screen.queryByText('huge.csv')).not.toBeInTheDocument();
   });
 
-  it('does not leave a stale valid selection reported to the parent once a re-selection is rejected', () => {
-    const onFileSelect = vi.fn();
-    const { rerender } = render(<FileUpload onFileSelect={onFileSelect} initialFile={null} />);
+  it('enforces an aggregate cap that no single file breaches', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} maxSizeMB={10} maxTotalSizeMB={1} />);
 
-    const validFile = makeFile('transactions.csv', 1024);
-    fireEvent.change(getFileInput(), { target: { files: [validFile] } });
-    expect(onFileSelect).toHaveBeenLastCalledWith(validFile);
+    const first = makeFile('a.csv', 600 * 1024);
+    const second = makeFile('b.csv', 600 * 1024);
+    selectFiles([first, second]);
 
-    fireEvent.click(screen.getByLabelText('Remove file'));
-    expect(onFileSelect).toHaveBeenLastCalledWith(null);
-
-    rerender(<FileUpload onFileSelect={onFileSelect} initialFile={null} />);
-    const invalidFile = makeFile('image.png', 1024, 'image/png');
-    fireEvent.change(getFileInput(), { target: { files: [invalidFile] } });
-
-    expect(onFileSelect).toHaveBeenLastCalledWith(null);
-    expect(screen.queryByText('transactions.csv')).not.toBeInTheDocument();
+    expect(onFilesSelect).toHaveBeenLastCalledWith([first]);
+    expect(screen.getByText(/b\.csv: exceeds the 1MB total upload limit/i)).toBeInTheDocument();
   });
 
-  it('clears both display and store file on explicit removal', () => {
-    const onFileSelect = vi.fn();
-    render(<FileUpload onFileSelect={onFileSelect} />);
+  it('removes one file from the batch without disturbing the others', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
 
-    const file = makeFile('transactions.csv', 1024);
-    fireEvent.change(getFileInput(), { target: { files: [file] } });
+    const jan = makeFile('jan.csv', 1024);
+    const feb = makeFile('feb.csv', 1024);
+    selectFiles([jan, feb]);
 
-    fireEvent.click(screen.getByLabelText('Remove file'));
+    fireEvent.click(screen.getByLabelText('Remove jan.csv'));
 
-    expect(onFileSelect).toHaveBeenLastCalledWith(null);
+    expect(onFilesSelect).toHaveBeenLastCalledWith([feb]);
+    expect(screen.queryByText('jan.csv')).not.toBeInTheDocument();
+    expect(screen.getByText('feb.csv')).toBeInTheDocument();
+  });
+
+  it('clears both display and reported batch on removal of the last file', () => {
+    const onFilesSelect = vi.fn();
+    render(<FileUpload onFilesSelect={onFilesSelect} />);
+
+    selectFiles([makeFile('transactions.csv', 1024)]);
+    fireEvent.click(screen.getByLabelText('Remove transactions.csv'));
+
+    expect(onFilesSelect).toHaveBeenLastCalledWith([]);
     expect(screen.queryByText('transactions.csv')).not.toBeInTheDocument();
   });
 });

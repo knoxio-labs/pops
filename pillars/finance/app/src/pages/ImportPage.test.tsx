@@ -44,7 +44,7 @@ function seedSnapshot(overrides: Partial<PersistedImportState>): void {
   storage.setItem(IMPORT_PERSIST_KEY, {
     state: {
       ...partializeImportState(useImportStore.getState()),
-      sourceFileName: 'jan.csv',
+      sourceFileNames: ['jan.csv'],
       headers: ['Date', 'Amount'],
       rows: [{ Date: '01/01/2026', Amount: '-10.00' }],
       ...overrides,

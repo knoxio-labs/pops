@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, RadioInput } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
+import { mergeParsedFiles, type ParsedCsvFile } from './csv-merge';
 import { FileUpload } from './FileUpload';
 
 import type { BankType } from '../../store/import-store-types';
@@ -12,8 +13,7 @@ import type { BankType } from '../../store/import-store-types';
 interface ParseResult {
   ok: boolean;
   error?: string;
-  headers?: string[];
-  rows?: Record<string, string>[];
+  parsed?: ParsedCsvFile;
 }
 
 function parseCsvFile(file: File): Promise<ParseResult> {
@@ -25,24 +25,35 @@ function parseCsvFile(file: File): Promise<ParseResult> {
         if (results.errors.length > 0) {
           resolve({
             ok: false,
-            error: `CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`,
+            error: `${file.name}: CSV parsing error: ${results.errors[0]?.message ?? 'Unknown error'}`,
           });
           return;
         }
         if (results.data.length === 0) {
-          resolve({ ok: false, error: 'CSV file is empty' });
+          resolve({ ok: false, error: `${file.name}: CSV file is empty` });
           return;
         }
         const headers = results.meta.fields ?? [];
         if (headers.length === 0) {
-          resolve({ ok: false, error: 'CSV file has no headers' });
+          resolve({ ok: false, error: `${file.name}: CSV file has no headers` });
           return;
         }
-        resolve({ ok: true, headers, rows: results.data });
+        resolve({ ok: true, parsed: { fileName: file.name, headers, rows: results.data } });
       },
-      error: (error) => resolve({ ok: false, error: `Failed to parse CSV: ${error.message}` }),
+      error: (error) =>
+        resolve({ ok: false, error: `${file.name}: Failed to parse CSV: ${error.message}` }),
     });
   });
+}
+
+async function parseAllFiles(files: File[]): Promise<{ error?: string; parsed: ParsedCsvFile[] }> {
+  const parsed: ParsedCsvFile[] = [];
+  for (const file of files) {
+    const result = await parseCsvFile(file);
+    if (!result.ok || !result.parsed) return { error: result.error ?? 'Unknown error', parsed: [] };
+    parsed.push(result.parsed);
+  }
+  return { parsed };
 }
 
 function UploadFooter({
@@ -78,17 +89,17 @@ const BANK_HELP: Record<BankType, string> = {
 };
 
 function useUploadStep() {
-  const { file, rows, bankType, setFile, setBankType, setHeaders, setRows, nextStep } =
+  const { files, rows, bankType, setFiles, setBankType, setHeaders, setRows, nextStep } =
     useImportStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileSelect = useCallback(
-    (selectedFile: File | null) => {
-      setFile(selectedFile);
+  const handleFilesSelect = useCallback(
+    (selectedFiles: File[]) => {
+      setFiles(selectedFiles);
       setError(null);
     },
-    [setFile]
+    [setFiles]
   );
 
   const handleBankChange = useCallback(
@@ -99,10 +110,10 @@ function useUploadStep() {
   );
 
   const handleNext = useCallback(async () => {
-    if (!file) {
-      // A resumed run has parsed rows but no re-attached File; advance without
-      // re-parsing instead of demanding a re-upload (which would cascade a
-      // downstream reset over the restored work).
+    if (files.length === 0) {
+      // A resumed run has parsed rows but no re-attached File handles; advance
+      // without re-parsing instead of demanding a re-upload (which would cascade
+      // a downstream reset over the restored work).
       if (rows.length > 0) {
         nextStep();
         return;
@@ -112,24 +123,30 @@ function useUploadStep() {
     }
     setIsProcessing(true);
     setError(null);
-    const result = await parseCsvFile(file);
-    setIsProcessing(false);
-    if (!result.ok) {
-      setError(result.error ?? 'Unknown error');
+    const { error: parseError, parsed } = await parseAllFiles(files);
+    if (parseError) {
+      setIsProcessing(false);
+      setError(parseError);
       return;
     }
-    setHeaders(result.headers ?? []);
-    setRows(result.rows ?? []);
+    const merged = mergeParsedFiles(parsed);
+    setIsProcessing(false);
+    if (!merged.ok) {
+      setError(merged.error ?? 'Unknown error');
+      return;
+    }
+    setHeaders(merged.headers);
+    setRows(merged.rows);
     nextStep();
-  }, [file, rows, setHeaders, setRows, nextStep]);
+  }, [files, rows, setHeaders, setRows, nextStep]);
 
   return {
-    file,
+    files,
     rows,
     bankType,
     isProcessing,
     error,
-    handleFileSelect,
+    handleFilesSelect,
     handleBankChange,
     handleNext,
   };
@@ -137,12 +154,12 @@ function useUploadStep() {
 
 export function UploadStep() {
   const {
-    file,
+    files,
     rows,
     bankType,
     isProcessing,
     error,
-    handleFileSelect,
+    handleFilesSelect,
     handleBankChange,
     handleNext,
   } = useUploadStep();
@@ -153,7 +170,8 @@ export function UploadStep() {
       <div>
         <h2 className="text-2xl font-semibold mb-2">Upload CSV</h2>
         <p className="text-sm text-muted-foreground">
-          Select your bank and upload a CSV export to import transactions.
+          Select your bank and upload one or more CSV exports to import transactions. Multiple files
+          are merged into a single import when they share the same columns.
         </p>
       </div>
 
@@ -166,13 +184,14 @@ export function UploadStep() {
       />
 
       <FileUpload
-        onFileSelect={handleFileSelect}
+        onFilesSelect={handleFilesSelect}
         acceptedTypes=".csv"
         maxSizeMB={25}
-        initialFile={file}
+        maxTotalSizeMB={100}
+        initialFiles={files}
       />
 
-      {!file && rows.length > 0 && (
+      {files.length === 0 && rows.length > 0 && (
         <div className="bg-info/5 border border-info/20 rounded-lg p-4">
           <p className="text-xs text-info">{t('import.resumeFileNotice')}</p>
         </div>
@@ -193,7 +212,7 @@ export function UploadStep() {
 
       <UploadFooter
         onNext={handleNext}
-        disabled={(!file && rows.length === 0) || isProcessing}
+        disabled={(files.length === 0 && rows.length === 0) || isProcessing}
         isProcessing={isProcessing}
       />
     </div>

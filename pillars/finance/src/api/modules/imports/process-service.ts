@@ -59,6 +59,13 @@ export interface ProcessCoreOutput {
   processedNewCount: number;
 }
 
+/**
+ * Split a batch against what is already committed. Repeated checksums *within*
+ * a batch are deliberately kept: a statement legitimately lists two identical
+ * purchases on one day, and they share a canonical checksum. Overlap between
+ * merged CSVs is removed upstream by raw-row identity, where file boundaries
+ * are still known.
+ */
 function partitionByChecksum(
   db: FinanceDb,
   transactions: ParsedTransaction[]

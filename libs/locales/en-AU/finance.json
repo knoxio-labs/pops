@@ -107,7 +107,7 @@
   "import.resumeConfirm": "Resume",
   "import.resumeDiscard": "Discard",
   "import.resumeClearedElsewhere": "This import was completed or discarded in another tab.",
-  "import.resumeFileNotice": "Your file isn't re-attached after resuming — the parsed rows are preserved. Selecting a file starts a fresh import.",
+  "import.resumeFileNotice": "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting a file starts a fresh import.",
 
   "field.date": "Date",
   "field.amount": "Amount",

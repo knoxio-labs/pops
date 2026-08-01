@@ -19,6 +19,14 @@ interface ResumeImportDialogProps {
   onDiscard: () => void;
 }
 
+/** Label a resumable run by its source files without spilling a long list into the prompt. */
+export function describeSourceFiles(names: string[]): string {
+  const [first, ...rest] = names;
+  if (!first) return 'CSV';
+  if (rest.length === 0) return first;
+  return `${first} and ${rest.length} more`;
+}
+
 /**
  * Resume/Discard prompt shown when a persisted, uncommitted import wizard run
  * is found on mount. Resume mounts the wizard at the clamped step; Discard
@@ -26,7 +34,7 @@ interface ResumeImportDialogProps {
  */
 export function ResumeImportDialog({ open, onResume, onDiscard }: ResumeImportDialogProps) {
   const { t } = useTranslation('finance');
-  const sourceFileName = useImportStore((s) => s.sourceFileName);
+  const sourceFileNames = useImportStore((s) => s.sourceFileNames);
   const parsedCount = useImportStore((s) => s.parsedTransactions.length);
   const rowCount = useImportStore((s) => s.rows.length);
   const currentStep = useImportStore((s) => s.currentStep);
@@ -37,7 +45,7 @@ export function ResumeImportDialog({ open, onResume, onDiscard }: ResumeImportDi
           <AlertDialogTitle>{t('import.resumeTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
             {t('import.resumeDescription', {
-              fileName: sourceFileName ?? 'CSV',
+              fileName: describeSourceFiles(sourceFileNames),
               count: parsedCount > 0 ? parsedCount : rowCount,
               step: currentStep,
             })}

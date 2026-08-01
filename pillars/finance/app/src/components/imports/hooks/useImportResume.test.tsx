@@ -83,7 +83,7 @@ function seedStorage(overrides: Partial<PersistedImportState>): void {
 function seedResumableAtStepSix(): void {
   seedStorage({
     currentStep: 6,
-    sourceFileName: 'jan.csv',
+    sourceFileNames: ['jan.csv'],
     headers: ['A'],
     rows: [{ A: '1' }],
     parsedTransactions: [makeParsed('a')],
@@ -135,7 +135,7 @@ describe('useImportResume', () => {
 
     await waitFor(() => expect(result.current.status).toBe('prompt'));
     expect(useImportStore.getState().currentStep).toBe(3);
-    expect(useImportStore.getState().sourceFileName).toBe('jan.csv');
+    expect(useImportStore.getState().sourceFileNames).toEqual(['jan.csv']);
   });
 
   it('discard resets the store, clears storage, and broadcasts', async () => {

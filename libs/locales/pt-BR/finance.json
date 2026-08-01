@@ -107,7 +107,7 @@
   "import.resumeConfirm": "Retomar",
   "import.resumeDiscard": "Descartar",
   "import.resumeClearedElsewhere": "Esta importação foi concluída ou descartada em outra aba.",
-  "import.resumeFileNotice": "Seu arquivo não é reanexado após retomar — as linhas processadas são preservadas. Selecionar um arquivo inicia uma nova importação.",
+  "import.resumeFileNotice": "Seus arquivos não são reanexados após retomar — as linhas processadas são preservadas. Selecionar um arquivo inicia uma nova importação.",
 
   "field.date": "Data",
   "field.amount": "Valor",
