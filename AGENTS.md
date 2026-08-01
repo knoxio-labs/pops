@@ -12,9 +12,8 @@ These are non-negotiable. Each is stated once here; the rest of the doc is refer
 
 - **Never commit directly to `main`.** Every change goes through a PR. One branch = one focused task = one PR. Commits atomic and well-described.
 - **PRE-PUSH QUALITY GATE:** before every `git push`, run `mise lint` and `mise typecheck` — both MUST pass. For single-package scope, at minimum run that package's checks: `cd pillars/<id> && pnpm typecheck && pnpm test` (lint + format are workspace-level only — `mise lint` + `oxfmt`; pillar packages define no `lint`/`format` scripts). Do NOT push if any check fails — fix it, commit the fix, then push. A PR with red CI is not a PR. Verify CI passes locally before pushing (per `~/.claude/CLAUDE.md` "CI should never fail").
-- **PRD-FIRST:** before writing any code (feature, fix, or behavior tweak), check the PRDs first. See [PRD-First Rule](#prd-first-rule) for the locate + confirm procedure. No PRD for what you're changing = a blocker. Write the PRD first.
-- **DOCUMENTATION SYNC:** every code change updates related docs. See [Documentation Sync](#documentation-sync). Status flows upward: PRD criteria → PRD → Theme → Roadmap.
-- **GAP TRACKING:** any implementation gap found while working a PRD becomes a GitHub issue before the PR merges. See [Gap Tracking](#gap-tracking).
+- **DOCS ARE COLOCATED:** a behaviour change and the `README.md` next to it land in the **same commit**. See [Documentation Model](#documentation-model). There are no PRDs, no themes, no roadmap, and no status tables in this repo — do not reintroduce them.
+- **DEFERRED WORK GOES TO HULY:** anything you find and do not fix becomes a Huly issue before the PR merges. See [Tracking](#tracking). Never leave it as an orphan `TODO`, and never as a "not built yet" note inside a doc.
 - **TEST MANDATE:** every non-trivial piece of code ships with tests. See [Test Mandate](#test-mandate). "I implemented it" without tests = unverified, not done.
 
 ### Agent automation (overrides default ask-before-commit in any `pops*` workspace)
@@ -99,7 +98,7 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 
 **Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its OWN pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Backend-to-backend cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`); a browser page that needs another pillar's data directly uses a sanctioned **per-consumer generated client** instead — see [Cross-pillar generated FE clients](#cross-pillar-generated-fe-clients) and [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md).
 
-`docs/roadmap.md` is the implementation tracker — single source of truth for status across all pillars.
+Work in flight and work deferred both live in Huly (project `POPS`) — see [Tracking](#tracking). The repo carries no status tracker.
 
 ---
 
@@ -299,7 +298,7 @@ User-facing entry point: the **Import Wizard** (8-step UI in `pillars/finance/ap
 7. **Punctuation stripping** — strip apostrophes/backticks, retry stages 3–6.
 8. **AI fallback** — Claude Haiku API call, env-gated (`FINANCE_AI_CATEGORIZER_ENABLED`, default off), no disk or DB cache, exponential-backoff retry on 429 (max 5 retries, 6 total attempts). Any failure is non-fatal — the row degrades to `uncertain`.
 
-Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine.md`.
+Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full detail: [`pillars/finance/src/api/modules/imports/README.md`](pillars/finance/src/api/modules/imports/README.md).
 
 ---
 
@@ -313,54 +312,58 @@ To work a domain locally: `cd pillars/<id> && pnpm dev` (applies its own migrati
 
 > Workflow hard rules (no direct-to-main, pre-push quality gate, agent automation, PR review cadence) are in [HARD RULES](#hard-rules--do-not-violate) above.
 
-### PRD-First Rule
+### Documentation Model
 
-The docs model is **slug-only** — a PRD's id is its slug + path; there are no PRD numbers and no separate `us-*.md` user-story files. Acceptance criteria live **inline** in each PRD under `## Acceptance Criteria`. Hierarchy: **Theme → PRD**. ADRs keep frozen `adr-NNN` numbers.
+Three artifacts answer three questions. Nothing else in this repo is documentation.
 
-Docs live in two places:
+| Question  | Artifact              | Lives                                                                                      |
+| --------- | --------------------- | ------------------------------------------------------------------------------------------ |
+| **WHICH** | ADR                   | `docs/architecture/adr-NNN-slug.md`, or `pillars/<id>/docs/architecture/` when pillar-only |
+| **HOW**   | Colocated `README.md` | in the directory it describes — beside the code, not in a docs tree                        |
+| **WHY**   | Inline comment        | on the line whose reason is invisible from the code                                        |
 
-- **Pillar-scoped** under `pillars/<id>/docs/` (`README.md` domain overview, `prds/<slug>.md`, pillar-only `architecture/`, `runbooks/`, `ideas/`) — most PRDs live here.
-- **Cross-cutting** under `docs/themes/{platform,foundation,federation}/` plus central `docs/architecture/` (ADRs), `_templates/`, `runbooks/` (cut-release), `vision.md`, `roadmap.md`.
+The code and its tests **are** the specification. A requirement that is built needs no separate record of having been required; a requirement that is not built is work, and work lives in Huly. That is the whole model.
 
-**Locate the PRD** before any code:
+**Do not create:** PRDs, themes, epics, user stories, acceptance-criteria checkboxes, status tables, roadmaps, `ideas/` files, or any doc whose purpose is to say what is not built yet. If you catch yourself writing "not yet implemented" in a repo file, it belongs in Huly instead.
 
-```bash
-ls pillars/<id>/docs/prds/
-ls docs/themes/{platform,foundation,federation}/prds/ 2>/dev/null
-grep -rli '<feature-keyword>' pillars/*/docs/prds docs/themes/*/prds
+#### READMEs — the HOW
+
+A directory gets a `README.md` when a reader would otherwise have to read every file in it to understand what it does. In practice that means each `pillars/<id>/`, each `libs/<lib>/`, each `pillars/<id>/src/api/modules/<feature>/`, each `pillars/<id>/app/src/pages/<feature>/`, and each standalone subsystem (`worker/`, `dsl/`, `db/`). CI enforces the floor — see `scripts/ci/check-readme-coverage.mjs`.
+
+Write it in **present tense, describing the thing as it is**:
+
+- What this unit does, and the shape of the flow through it.
+- The rules and invariants a signature does not carry — orderings, thresholds, sign conventions, precedence, what wins on conflict.
+- What it talks to (which pillars, which external services) and over what transport.
+- What deliberately does **not** live here, when a reader would reasonably expect it to.
+
+Never write: change history, migration notes, "this was refactored", status, percentages complete, or links to work that has not happened. A README describes the present; git describes the past; Huly describes the future.
+
+**Keep it honest.** A README that has drifted from its code is worse than none — it is a confident lie. Changing behaviour means changing the README in the same commit, or deleting the paragraph that is no longer true.
+
+#### Inline comments — the WHY
+
+Default to none. Well-named identifiers are the documentation. A comment earns its place only when it explains a reason that is not recoverable from reading the code:
+
+```ts
+// Two fields rather than a single `name`: every entity in this cohort has
+// exactly one given and one family name, and the importer needs to match on
+// family name alone.
 ```
 
-**Then confirm:**
+Not `// increment the counter`. Full rules in `~/.claude/CLAUDE.md` §10.
 
-1. **The PRD exists and is current.** No PRD for the area → STOP, write one (slug folder + `README.md` with inline `## Acceptance Criteria`) before coding. Stale → update it before coding.
-2. **The acceptance criteria cover what you're about to do.** If not, add/update inline criteria to the new goal spec.
-3. **Your change matches the PRD's intent** — not just what it says today, but what it _should_ say. Intent unclear → STOP and clarify before implementing.
+#### ADRs — the WHICH
 
-**PRDs are greenfield artifacts** — they describe the goal specification and correct implementation, NOT change history. Not a changelog. When code and PRD disagree, one is wrong — decide which, and fix it.
+`adr-NNN` numbering is **frozen and append-only**; new ADRs take the next number and existing numbers never change. An ADR records context, the options genuinely considered, the decision, and its consequences. If there was no real alternative, it is not a decision — it is just how the code works, and that belongs in a README. An ADR moves into a pillar only when that pillar alone references it; a second referent promotes it back to `docs/architecture/`.
 
-**Track every change through the docs:** implementing new work → tick the relevant inline acceptance criteria as you land it; fixing/changing existing behavior → update the PRD's criteria to the new correct behavior even if the goal spec hasn't drifted. If you cannot find a PRD for what you're changing, that's a blocker — write the PRD first.
+### Tracking
 
-### Documentation Sync
+Work lives in **Huly**, project `POPS` at [projects.knoxiolabs.com](https://projects.knoxiolabs.com) (workspace `knoxiolabs`). One project for the whole fleet; a **Component** scopes each issue to a pillar (`finance`, `food`, …) or a cross-cutting concern (`federation`, `platform`, `ui`). Statuses are Backlog / Todo / In Progress / Done / Canceled. Labels are deliberately few — `bug`, `tech-debt`, `test-gap`, `security`, `needs-triage`. Reach for the MCP tools (`mcp__huly-knoxiolabs__*`) rather than the web UI.
 
-Every code change updates related docs. On completing a PRD / fixing a bug / adding a feature:
+**GitHub Issues are disabled on this repo.** Do not file one, and do not reference issue numbers as live work — an old `#NNNN` in git history is a historical artifact, not a ticket.
 
-1. **Acceptance criteria** — tick `- [ ]` → `- [x]` inline in the relevant PRD's `## Acceptance Criteria`.
-2. **PRD status** — `In progress` → `Done` when every checkbox is ticked.
-3. **Theme status** — update the PRD's row in the theme `README.md` (pillar's `docs/README.md` or central `docs/themes/<name>/README.md`) when its status changes.
-4. **Roadmap** — update `docs/roadmap.md` when a PRD or theme changes status.
-
-Status flows upward: PRD criteria → PRD → Theme → Roadmap. The roadmap tracker is the single source of truth for status across all pillars.
-
-### Gap Tracking
-
-Any implementation gap found while working a PRD must become a GitHub issue before the PR merges. A gap is: an acceptance criterion that can't be checked `[x]` because the code doesn't satisfy it; a PRD feature skipped or deferred; spec behaviour differing from what was built.
-
-1. Create a GitHub issue per gap, title `drift-check(<prd-slug>) — <what's missing>` (e.g. `drift-check(entity-matching-engine) — punctuation stripping not applied`).
-2. Add a `## Gaps (tracked)` section to the PR description linking all gap issues.
-3. Never list gaps in a PR description without linked issues.
-4. The gap issue does NOT block merging — but it MUST exist before merge.
-
-Chain: **gap discovered → issue filed → issue linked in PR → issue closed when implemented.**
+You do **not** need an issue to start work. The tracker exists for work that is deferred, not for permission to begin. But the converse is a hard rule: **anything you decide not to do right now gets filed before the PR merges** — a gap between what a README claims and what the code does, a shortcut taken under time pressure, a missing test, a follow-up you can see coming. File it with enough context to act on without this conversation, then let it go.
 
 ### Test Mandate
 
