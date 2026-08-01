@@ -23,7 +23,7 @@ describe('UploadStep — resumed run without a re-attached file', () => {
 
     expect(
       screen.getByText(
-        "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting a file starts a fresh import."
+        "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting any file starts a fresh import."
       )
     ).toBeInTheDocument();
 
@@ -39,7 +39,7 @@ describe('UploadStep — resumed run without a re-attached file', () => {
     render(<UploadStep />);
 
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-    expect(screen.queryByText(/isn't re-attached after resuming/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/re-attached after resuming/)).not.toBeInTheDocument();
   });
 });
 
