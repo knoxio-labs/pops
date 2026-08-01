@@ -17,7 +17,7 @@ export interface ReviewTabBaseProps {
   onViewModeChange: (mode: ViewMode) => void;
   onEntitySelect: (t: ProcessedTransaction, entityId: string, entityName: string) => void;
   onBulkEntitySelect?: (ts: ProcessedTransaction[], entityId: string, entityName: string) => void;
-  onCreateEntity: (t: ProcessedTransaction) => void;
+  onCreateEntityWithName: (t: ProcessedTransaction, entityName: string) => void;
   onAcceptAiSuggestion: (t: ProcessedTransaction) => void;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
   onCreateAndAssignAll: (transactions: ProcessedTransaction[], entityName: string) => void;
@@ -76,7 +76,7 @@ export function GroupedView({
           onCreateAndAssignAll={props.onCreateAndAssignAll}
           onEntitySelect={props.onEntitySelect}
           onBulkEntitySelect={props.onBulkEntitySelect}
-          onCreateEntity={props.onCreateEntity}
+          onCreateEntityWithName={props.onCreateEntityWithName}
           onAcceptAiSuggestion={props.onAcceptAiSuggestion}
           onEdit={props.onEdit}
           editingTransaction={props.editingTransaction}
@@ -113,7 +113,7 @@ export function ListView({
             key={idx}
             transaction={t}
             onEntitySelect={props.onEntitySelect}
-            onCreateEntity={props.onCreateEntity}
+            onCreateEntityWithName={props.onCreateEntityWithName}
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={props.entities}

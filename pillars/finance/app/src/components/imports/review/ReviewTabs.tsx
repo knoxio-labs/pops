@@ -34,7 +34,7 @@ export interface ReviewTabsProps {
     entityId: string,
     entityName: string
   ) => void;
-  handleCreateEntity: (t: ProcessedTransaction) => void;
+  handleCreateEntityWithName: (t: ProcessedTransaction, entityName: string) => void;
   handleAcceptAiSuggestion: (t: ProcessedTransaction) => void;
   handleAcceptAll: (ts: ProcessedTransaction[]) => void;
   handleCreateAndAssignAll: (ts: ProcessedTransaction[], entityName: string) => void;
@@ -47,7 +47,7 @@ function buildTabSharedProps(props: ReviewTabsProps) {
     onViewModeChange: props.setViewMode,
     onEntitySelect: props.handleEntitySelect,
     onBulkEntitySelect: props.handleBulkEntitySelect,
-    onCreateEntity: props.handleCreateEntity,
+    onCreateEntityWithName: props.handleCreateEntityWithName,
     onAcceptAiSuggestion: props.handleAcceptAiSuggestion,
     onAcceptAll: props.handleAcceptAll,
     onCreateAndAssignAll: props.handleCreateAndAssignAll,
@@ -70,7 +70,7 @@ export function ReviewTabs(props: ReviewTabsProps) {
           transactions={localTransactions.matched}
           onEdit={props.handleEdit}
           onEntitySelect={props.handleEntitySelect}
-          onCreateEntity={props.handleCreateEntity}
+          onCreateEntityWithName={props.handleCreateEntityWithName}
           editingTransaction={props.editingTransaction}
           onSaveEdit={props.handleSaveEdit}
           onCancelEdit={props.handleCancelEdit}

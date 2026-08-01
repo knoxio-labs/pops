@@ -21,7 +21,7 @@ interface TransactionGroupProps {
     entityId: string,
     entityName: string
   ) => void;
-  onCreateEntity: (transaction: ProcessedTransaction) => void;
+  onCreateEntityWithName: (transaction: ProcessedTransaction, entityName: string) => void;
   onAcceptAiSuggestion: (transaction: ProcessedTransaction) => void;
   onEdit: (transaction: ProcessedTransaction) => void;
   editingTransaction?: ProcessedTransaction | null;
@@ -39,6 +39,7 @@ interface BulkEntitySelectorProps {
   entities: Array<{ id: string; name: string }>;
   onBulkEntitySelect?: TransactionGroupProps['onBulkEntitySelect'];
   onEntitySelect: TransactionGroupProps['onEntitySelect'];
+  onCreateAndAssignAll: TransactionGroupProps['onCreateAndAssignAll'];
   onClose: () => void;
 }
 
@@ -47,6 +48,7 @@ function BulkEntitySelector({
   entities,
   onBulkEntitySelect,
   onEntitySelect,
+  onCreateAndAssignAll,
   onClose,
 }: BulkEntitySelectorProps) {
   return (
@@ -67,6 +69,10 @@ function BulkEntitySelector({
           }
           onClose();
         }}
+        onCreate={(entityName) => {
+          onCreateAndAssignAll(group.transactions, entityName);
+          onClose();
+        }}
       />
     </div>
   );
@@ -78,7 +84,7 @@ interface TransactionListProps {
   onSaveEdit?: TransactionGroupProps['onSaveEdit'];
   onCancelEdit?: () => void;
   onEntitySelect: TransactionGroupProps['onEntitySelect'];
-  onCreateEntity: TransactionGroupProps['onCreateEntity'];
+  onCreateEntityWithName: TransactionGroupProps['onCreateEntityWithName'];
   onAcceptAiSuggestion: TransactionGroupProps['onAcceptAiSuggestion'];
   onEdit: TransactionGroupProps['onEdit'];
   entities?: TransactionGroupProps['entities'];
@@ -103,7 +109,7 @@ function TransactionList(props: TransactionListProps) {
             key={idx}
             transaction={transaction}
             onEntitySelect={props.onEntitySelect}
-            onCreateEntity={props.onCreateEntity}
+            onCreateEntityWithName={props.onCreateEntityWithName}
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={entities}
@@ -141,15 +147,15 @@ export function TransactionGroup(props: TransactionGroupProps) {
           totalAmount={totalAmount}
           entityExists={entityExists}
           onAcceptAll={props.onAcceptAll}
-          onCreateAndAssignAll={props.onCreateAndAssignAll}
           onToggleEntitySelector={() => setShowEntitySelector((v) => !v)}
         />
-        {showEntitySelector && entities && entities.length > 0 && (
+        {showEntitySelector && (
           <BulkEntitySelector
             group={group}
-            entities={entities}
+            entities={entities ?? []}
             onBulkEntitySelect={props.onBulkEntitySelect}
             onEntitySelect={props.onEntitySelect}
+            onCreateAndAssignAll={props.onCreateAndAssignAll}
             onClose={() => setShowEntitySelector(false)}
           />
         )}
@@ -160,7 +166,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
             onSaveEdit={props.onSaveEdit}
             onCancelEdit={props.onCancelEdit}
             onEntitySelect={props.onEntitySelect}
-            onCreateEntity={props.onCreateEntity}
+            onCreateEntityWithName={props.onCreateEntityWithName}
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={entities}

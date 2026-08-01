@@ -16,7 +16,7 @@ interface TransactionCardProps {
     entityId: string,
     entityName: string
   ) => void;
-  onCreateEntity?: (transaction: ProcessedTransaction) => void;
+  onCreateEntityWithName?: (transaction: ProcessedTransaction, entityName: string) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
   entities?: Array<{ id: string; name: string }>;
@@ -31,7 +31,7 @@ interface TransactionCardProps {
 export function TransactionCard({
   transaction,
   onEntitySelect,
-  onCreateEntity,
+  onCreateEntityWithName,
   onAcceptAiSuggestion,
   onEdit,
   entities,
@@ -54,7 +54,7 @@ export function TransactionCard({
           transaction={transaction}
           entities={entities}
           onEntitySelect={onEntitySelect}
-          onCreateEntity={onCreateEntity}
+          onCreateEntityWithName={onCreateEntityWithName}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
         />
       )}

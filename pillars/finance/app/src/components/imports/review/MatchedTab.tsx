@@ -9,7 +9,7 @@ interface MatchedTabProps {
   transactions: ProcessedTransaction[];
   onEdit: (t: ProcessedTransaction) => void;
   onEntitySelect: (t: ProcessedTransaction, entityId: string, entityName: string) => void;
-  onCreateEntity: (t: ProcessedTransaction) => void;
+  onCreateEntityWithName: (t: ProcessedTransaction, entityName: string) => void;
   editingTransaction: ProcessedTransaction | null;
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
@@ -23,7 +23,7 @@ export function MatchedTab({
   transactions,
   onEdit,
   onEntitySelect,
-  onCreateEntity,
+  onCreateEntityWithName,
   editingTransaction,
   onSaveEdit,
   onCancelEdit,
@@ -50,7 +50,7 @@ export function MatchedTab({
             transaction={t}
             onEdit={onEdit}
             onEntitySelect={onEntitySelect}
-            onCreateEntity={onCreateEntity}
+            onCreateEntityWithName={onCreateEntityWithName}
             entities={entities}
             readonly={false}
             showMatchType={true}
