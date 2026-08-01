@@ -330,6 +330,8 @@ The code and its tests **are** the specification. A requirement that is built ne
 
 **There is no coverage quota.** A README earns its place only where the code cannot speak for itself, and a directory with no README is a perfectly good outcome. `db/` full of obvious schema files needs nothing. A `dsl/`, a worker pipeline, or "how tag-rule creation actually works" needs one.
 
+CI enforces only two things (`scripts/ci/check-docs-model.mjs`): every `pillars/<id>` and `libs/<lib>` has a README, since a published unit's README is where a reader lands; and no `prds/`, `themes/`, `epics/` or `ideas/` directory reappears anywhere. Nothing requires a README further down — a gate that did would produce exactly the write-to-satisfy-the-gate documentation this model rejects. See [ADR-041](docs/architecture/adr-041-colocated-docs-and-external-tracking.md).
+
 Two rules keep them useful:
 
 **Colocate as deeply as the thing lives.** A README next to the code it describes beats one two levels up covering an "area". Never write a god README that summarises a whole subtree — split it, or push it down to where the concern actually is.
