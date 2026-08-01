@@ -43,4 +43,4 @@ The cold-start guard documented in `basic.ts` is duplicated shelf-side: the `rec
 
 ## Absent
 
-Nothing here is TV-aware; every shelf and every section is movies-only. Trending is fetched live per request with no local cache. `franchise-completions` approximates "finish the series" with genre overlap — TMDB collection membership is not stored, so it cannot detect a partially-watched collection.
+Nothing here is TV-aware; every shelf and every section is movies-only, and trending is fetched live per request with no local cache (POPS-233). `franchise-completions` approximates "finish the series" with genre overlap — TMDB collection membership is not stored, so it cannot detect a partially-watched collection (POPS-84).

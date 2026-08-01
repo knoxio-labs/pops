@@ -44,6 +44,6 @@ Each carries a file-header comment explaining its own mechanics. Read the header
 
 ## Absent
 
-There is no per-bank parsing. The wizard maps CSV columns by hand for every source, and `parseDate` / `parseAmount` ignore the selected bank entirely. The bank selector is **not** inert, though: its value is stamped onto every row as `account` and persisted to `transactions.account` at commit, so changing it changes committed data.
+There is no per-bank parsing (POPS-29). The wizard maps CSV columns by hand for every source, and `parseDate` / `parseAmount` ignore the selected bank entirely. The bank selector is **not** inert, though: its value is stamped onto every row as `account` and persisted to `transactions.account` at commit, so changing it changes committed data.
 
 Related: `../corrections/`, `../tag-rules/`, `../tag-suggester/`, `../transfers/`, and the wizard UI at `pillars/finance/app/src/components/imports/`.

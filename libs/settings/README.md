@@ -17,7 +17,7 @@ It binds to no identity system and no particular database instance — the mount
 
 Two of those are not the standard mount:
 
-- **`media` does not use the service.** It keeps its legacy `plex_settings` / `rotation_settings` tables alongside a residual shared `settings` table, and supplies `src/db/services/settings-adapter.ts` as a stand-in — read that file's header for what it reconciles. The wire stays canonical; the storage does not. If you change the service's function surface, that adapter drifts silently — it is duck-typed, not implemented against an interface.
+- **`media` does not use the service.** It keeps its legacy `plex_settings` / `rotation_settings` tables alongside a residual shared `settings` table, and supplies `src/db/services/settings-adapter.ts` as a stand-in — read that file's header for what it reconciles. The wire stays canonical; the storage does not. If you change the service's function surface, that adapter drifts silently — it is duck-typed, not implemented against an interface (POPS-235).
 - **`registry` reads other pillars' settings.** Its aggregator fans out over the live registry, re-derives each pillar's sensitive-key set from the manifest snapshot, and re-redacts defensively — a downgraded pillar cannot leak a secret through the aggregate sweep.
 
 ## Constraints

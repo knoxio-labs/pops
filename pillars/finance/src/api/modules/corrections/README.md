@@ -35,4 +35,4 @@ Each carries a header comment covering its own mechanics.
 
 ## Absent
 
-There is no durable, queryable audit trail of proposal attempts and outcomes. The only persisted artefact is the latest rejection per pattern; approved proposals leave behind nothing but the resulting rule rows, and server logs are the only record of what was proposed and why.
+There is no durable, queryable audit trail of proposal attempts and outcomes (POPS-33). The only persisted artefact is the latest rejection per pattern; approved proposals leave behind nothing but the resulting rule rows, and server logs are the only record of what was proposed and why.

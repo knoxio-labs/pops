@@ -337,6 +337,11 @@ Two rules keep them useful:
 - What it talks to (which pillars, which external services) and over what transport.
 - What deliberately does **not** live here, or does not exist at all, when silence would let a reader infer a capability that isn't there.
 
+**A stated absence must carry its Huly key.** If a README says something is missing, unbuilt or approximated, that is undone work, and undone work lives in Huly — so name the issue inline: `There is no per-bank parsing (POPS-29).` Two things follow from this, and both matter more than the formatting:
+
+- **"What's next" must be answerable from Huly alone.** A gap described in a README but tracked nowhere is a second backlog that nobody reads, which is the exact failure this model exists to end.
+- **If you cannot name an issue, you have not decided.** Either file one, or the absence is permanent-by-design and should be written that way — "TV is out of scope for this module" rather than "TV is not supported yet". CI enforces the key.
+
 Do **not** restate what a file-header docstring already says — name the file and let the reader go there. A README that paraphrases the code beneath it is pure drift surface.
 
 Never write: change history, migration notes, "this was refactored", status, percentages complete, or links to work that has not happened. A README describes the present; git describes the past; Huly describes the future.

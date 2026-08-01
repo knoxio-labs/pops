@@ -325,8 +325,55 @@ export function findBrokenDocPaths(root) {
     .map(({ file, claim }) => ({ file, claim }));
 }
 
+/** Heading that introduces a section describing work that is not done. */
+export const ABSENCE_HEADING_RE =
+  /^#+[ \t]*(absent|not built|unbuilt|missing|gaps?|known gaps|limitations)\b/i;
+
+/** A Huly issue key. */
+export const HULY_KEY_RE = /\bPOPS-\d+\b/;
+
 /**
- * @typedef {{ missingReadme: string[], bannedDirs: string[], brokenPaths: BrokenPath[] }} DocsModelReport
+ * A README may say something is missing — silence about a real gap misleads.
+ * But an unbuilt thing is *work*, and work lives in Huly, so the section has to
+ * name its issue. Without this an absence becomes a second backlog nobody
+ * reads, which is the failure the whole model exists to end. An absence that is
+ * permanent by design should be written as scope ("TV is out of scope here"),
+ * not as a pending gap.
+ *
+ * @param {string} root
+ * @returns {{ file: string, heading: string }[]}
+ */
+export function findUntrackedAbsences(root) {
+  /** @type {{ file: string, heading: string }[]} */
+  const out = [];
+  for (const mdPath of findMarkdownFiles(root)) {
+    if (!mdPath.endsWith('README.md')) continue;
+    const lines = readFileSync(join(root, mdPath), 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!ABSENCE_HEADING_RE.test(lines[i])) continue;
+      const depth = (/^#+/u.exec(lines[i]) ?? [''])[0].length;
+      /** @type {string[]} */
+      const body = [];
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = /^#+/u.exec(lines[j]);
+        if (next && next[0].length <= depth) break;
+        body.push(lines[j]);
+      }
+      if (!HULY_KEY_RE.test(body.join('\n'))) {
+        out.push({ file: mdPath, heading: lines[i].trim() });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * @typedef {{
+ *   missingReadme: string[],
+ *   bannedDirs: string[],
+ *   brokenPaths: BrokenPath[],
+ *   untrackedAbsences: { file: string, heading: string }[],
+ * }} DocsModelReport
  */
 
 /**
@@ -341,6 +388,7 @@ export function checkDocsModel(root) {
     missingReadme,
     bannedDirs: findBannedDocDirs(root),
     brokenPaths: findBrokenDocPaths(root),
+    untrackedAbsences: findUntrackedAbsences(root),
   };
 }
 
@@ -359,10 +407,17 @@ function main() {
     process.exit(selfTest() ? 0 : 1);
   }
 
-  const { missingReadme, bannedDirs, brokenPaths } = checkDocsModel(repoRoot);
+  const { missingReadme, bannedDirs, brokenPaths, untrackedAbsences } = checkDocsModel(repoRoot);
 
-  if (missingReadme.length === 0 && bannedDirs.length === 0 && brokenPaths.length === 0) {
-    console.log('OK — units documented, no abolished doc tree, every doc path resolves.');
+  if (
+    missingReadme.length === 0 &&
+    bannedDirs.length === 0 &&
+    brokenPaths.length === 0 &&
+    untrackedAbsences.length === 0
+  ) {
+    console.log(
+      'OK — units documented, no abolished doc tree, every doc path resolves, every absence tracked.'
+    );
     process.exit(0);
   }
 
@@ -381,6 +436,13 @@ function main() {
   }
   for (const { file, claim } of brokenPaths) {
     console.error(`FAIL — ${file} points at "${claim}", which does not exist.`);
+  }
+  for (const { file, heading } of untrackedAbsences) {
+    console.error(
+      `FAIL — ${file} has an untracked absence under "${heading}". An unbuilt thing is work: ` +
+        'file a Huly issue and name its key inline (e.g. "…is not built (POPS-42)."), or rewrite ' +
+        'it as deliberate scope rather than a pending gap.'
+    );
   }
   process.exit(1);
 }
@@ -435,6 +497,14 @@ function selfTest() {
   // An npm specifier is not a path claim.
   const ok8 = extractPathClaims('`@pops/pillar-sdk/server`', 'docs/x.md').length === 0;
 
+  // An absence section must name its Huly issue.
+  const ok9 =
+    ABSENCE_HEADING_RE.test('## Absent') &&
+    ABSENCE_HEADING_RE.test('### Known gaps') &&
+    !ABSENCE_HEADING_RE.test('## Where things live') &&
+    HULY_KEY_RE.test('no per-bank parsing (POPS-29).') &&
+    !HULY_KEY_RE.test('no per-bank parsing.');
+
   if (!ok1) console.error('self-test FAILED: unit discovery missed a known unit');
   if (!ok2) console.error('self-test FAILED: banned-dir walk misbehaved');
   if (!ok3) console.error('self-test FAILED: path-claim extraction wrong');
@@ -443,7 +513,8 @@ function selfTest() {
   if (!ok6) console.error('self-test FAILED: gitignore filter did not detect an ignored path');
   if (!ok7) console.error('self-test FAILED: directory-relative source path not resolved');
   if (!ok8) console.error('self-test FAILED: npm specifier treated as a path claim');
-  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8;
+  if (!ok9) console.error('self-test FAILED: absence-heading or Huly-key detection wrong');
+  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8 && ok9;
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {

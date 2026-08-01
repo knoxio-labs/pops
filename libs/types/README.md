@@ -32,4 +32,4 @@ Eleven pillars — `ai`, `cerebrum`, `documents`, `finance`, `food`, `inventory`
 
 ## Absent
 
-The PRD-101 backend manifest slots are declared but never populated. `MigrationDescriptor`, `IngestSourceDescriptor`, `AiToolDescriptor`, `SearchAdapterDescriptor` and `UriHandlerDescriptor` have zero importers outside this package, and all nine modules in `libs/module-registry/src/generated.ts` report `hasBackend: false`. The capabilities they describe — migrations, AI tools, search adapters, URI handling — moved to the runtime `ManifestPayload` when the platform split into pillars. Do not add to them expecting a consumer.
+The backend manifest descriptors are declared but never populated (POPS-234). `MigrationDescriptor`, `IngestSourceDescriptor`, `AiToolDescriptor`, `SearchAdapterDescriptor` and `UriHandlerDescriptor` have zero importers outside this package, and all nine modules in `libs/module-registry/src/generated.ts` report `hasBackend: false`. The capabilities they describe — migrations, AI tools, search adapters, URI handling — moved to the runtime `ManifestPayload` when the platform split into pillars. Do not add to them expecting a consumer.
