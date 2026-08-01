@@ -82,9 +82,11 @@ function EntityField({
         <div className="flex flex-col gap-1.5 w-full">
           <Label>Entity</Label>
           <EntitySelect
+            aria-label="Entity"
             entities={entities}
             value={field.value ?? undefined}
             onChange={(id) => field.onChange(id)}
+            onClear={() => field.onChange(null)}
             placeholder="Choose entity..."
           />
         </div>

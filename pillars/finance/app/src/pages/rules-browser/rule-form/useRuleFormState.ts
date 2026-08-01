@@ -22,6 +22,7 @@ interface CreateRulePayload {
   descriptionPattern: string;
   matchType: MatchType;
   entityId: string | null;
+  entityName: string | null;
   tags: string[];
   priority: number;
 }
@@ -30,6 +31,7 @@ interface UpdateRulePayload {
   descriptionPattern: string;
   matchType: MatchType;
   entityId: string | null;
+  entityName: string | null;
   tags: string[];
   priority: number;
   isActive: boolean;
@@ -65,19 +67,25 @@ function useRuleMutations(onClose: () => void) {
   return { createMutation, updateMutation };
 }
 
-function buildSubmit(
-  editingRule: Correction | null,
-  createMutation: ReturnType<typeof useRuleMutations>['createMutation'],
-  updateMutation: ReturnType<typeof useRuleMutations>['updateMutation']
-) {
+interface SubmitDeps {
+  editingRule: Correction | null;
+  createMutation: ReturnType<typeof useRuleMutations>['createMutation'];
+  updateMutation: ReturnType<typeof useRuleMutations>['updateMutation'];
+  /** Resolves the picked entity's name so the stored label can never diverge from the id. */
+  entityNameOf: (entityId: string | null) => string | null;
+}
+
+function buildSubmit({ editingRule, createMutation, updateMutation, entityNameOf }: SubmitDeps) {
   return (values: RuleFormValues) => {
+    const entityId = values.entityId ?? null;
+    const entity = { entityId, entityName: entityNameOf(entityId) };
     if (editingRule) {
       updateMutation.mutate({
         id: editingRule.id,
         data: {
           descriptionPattern: values.descriptionPattern,
           matchType: values.matchType,
-          entityId: values.entityId ?? null,
+          ...entity,
           tags: values.tags,
           priority: values.priority,
           isActive: values.isActive,
@@ -88,7 +96,7 @@ function buildSubmit(
     createMutation.mutate({
       descriptionPattern: values.descriptionPattern,
       matchType: values.matchType,
-      entityId: values.entityId ?? null,
+      ...entity,
       tags: values.tags,
       priority: values.priority,
     });
@@ -152,7 +160,12 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
     entities,
     handleAdd,
     handleEdit,
-    onSubmit: buildSubmit(editingRule, createMutation, updateMutation),
+    onSubmit: buildSubmit({
+      editingRule,
+      createMutation,
+      updateMutation,
+      entityNameOf: (entityId) => entities.find((e) => e.id === entityId)?.name ?? null,
+    }),
     isSubmitting: createMutation.isPending || updateMutation.isPending,
   };
 }

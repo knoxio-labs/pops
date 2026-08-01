@@ -31,6 +31,7 @@ const mockRejectMutate = vi.fn();
 const mockListQuery = vi.fn();
 const mockReviseMutateAsync = vi.fn();
 const mockAddPendingChangeSet = vi.fn();
+const mockAddPendingEntity = vi.fn();
 
 const { mockDescriptionsForPreview } = vi.hoisted(() => ({
   mockDescriptionsForPreview: vi.fn(),
@@ -56,14 +57,41 @@ vi.mock('../../finance-api/index.js', () => ({
     Promise.resolve({ data: mockListQuery(arg.body).data }),
 }));
 
+vi.mock('../../contacts-api/index.js', () => ({
+  entitiesList: () =>
+    Promise.resolve({
+      data: {
+        data: [
+          { id: 'ent-woolies', name: 'Woolworths' },
+          { id: 'ent-coles', name: 'Coles' },
+        ].map((e) => ({
+          ...e,
+          aliases: [],
+          defaultTags: [],
+          type: 'company',
+          lastEditedTime: '2026-01-01T00:00:00.000Z',
+        })),
+        pagination: { hasMore: false, limit: 50, offset: 0, total: 2 },
+      },
+    }),
+}));
+
 vi.mock('../../store/importStore', () => {
   // Stable references: zustand returns the same slice until it mutates, and the
   // combined-preview effect keys on `pendingChangeSets` identity — a fresh array
   // per render would re-run (and cancel) the in-flight preview every render.
+  // `pendingEntities` is stable for the same reason: the entity picker merges it
+  // with the fetched contacts inside a `useMemo` keyed on its identity.
   const pendingChangeSets: unknown[] = [];
+  const pendingEntities: unknown[] = [];
   return {
     useImportStore: (selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ addPendingChangeSet: mockAddPendingChangeSet, pendingChangeSets }),
+      selector({
+        addPendingChangeSet: mockAddPendingChangeSet,
+        pendingChangeSets,
+        pendingEntities,
+        addPendingEntity: mockAddPendingEntity,
+      }),
   };
 });
 
@@ -590,6 +618,35 @@ describe('CorrectionProposalDialog', () => {
     });
     await waitFor(() => expect(applyBtn).not.toBeDisabled());
     expect(screen.queryByText(/Preview stale/i)).not.toBeInTheDocument();
+  });
+
+  it('applies the entity picked in the detail editor as an id/name pair', async () => {
+    // The editor used to expose `entityName` as free text while `entityId` — the
+    // field that actually assigns the merchant — stayed untouched, so a rename
+    // produced a rule that read "Coles" and applied Woolworths (or nothing).
+    seedTwoAddOps();
+    renderDialog();
+
+    await waitFor(() => expect(screen.getByText(/Operations \(2\)/)).toBeInTheDocument());
+    await waitFor(() => expect(mockPreviewMutateAsync).toHaveBeenCalled());
+
+    const user = userEvent.setup();
+    const entityPicker = screen.getByRole('combobox', { name: 'Entity' });
+    expect(entityPicker).toHaveTextContent('Woolworths');
+    await user.click(entityPicker);
+    await user.click(within(screen.getByRole('listbox')).getByText('Coles'));
+
+    const applyBtn = screen.getByRole('button', { name: /Apply ChangeSet/i });
+    await waitFor(() => expect(applyBtn).not.toBeDisabled());
+    fireEvent.click(applyBtn);
+
+    const call = mockAddPendingChangeSet.mock.calls[0]?.[0] as {
+      changeSet: { ops: Array<{ data: { entityId?: string; entityName?: string } }> };
+    };
+    expect(call.changeSet.ops[0]?.data).toMatchObject({
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+    });
   });
 
   it("adds a new 'add' op via the Add operation menu", async () => {

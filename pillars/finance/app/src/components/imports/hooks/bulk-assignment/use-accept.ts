@@ -1,36 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { useMemo } from 'react';
 import { toast } from 'sonner';
 
-import { unwrap } from '../../../../contacts-api-helpers.js';
-import { entitiesList } from '../../../../contacts-api/index.js';
-import { computeMergedEntities } from '../../../../lib/merged-state';
-import { useImportStore } from '../../../../store/importStore';
 import { type LocalTxState, moveToMatched, pluralize, type UseBulkAssignmentArgs } from './types';
 
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { ProcessedTransaction } from '../../../../store/importStore';
-
-const ENTITIES_LIST_INPUT = {} as const;
-
-export function useEntities() {
-  const { data: dbEntitiesData } = useQuery({
-    queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
-    queryFn: async () => unwrap(await entitiesList({ query: ENTITIES_LIST_INPUT })),
-  });
-  const pendingEntities = useImportStore((s) => s.pendingEntities);
-  const addPendingEntity = useImportStore((s) => s.addPendingEntity);
-  const entities = useMemo(
-    () =>
-      dbEntitiesData?.data
-        ? computeMergedEntities(dbEntitiesData.data, pendingEntities)
-        : undefined,
-    [dbEntitiesData?.data, pendingEntities]
-  );
-  return { entities, addPendingEntity, dbEntitiesData };
-}
+import type { useEntities } from '../useEntities';
 
 interface AcceptAllArgs {
   entities: ReturnType<typeof useEntities>['entities'];

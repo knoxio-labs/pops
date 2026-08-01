@@ -1,5 +1,6 @@
 import { Input, Label, Select } from '@pops/ui';
 
+import { EntityField, type EntityOutcome } from './EntityField';
 import { MATCH_TYPE_OPTIONS, parseTxnType, TYPE_OPTIONS } from './TypeOptions';
 
 import type { AddRuleData, EditRuleData } from '../types';
@@ -8,23 +9,34 @@ interface OutcomeFieldsProps<T extends EditRuleData> {
   data: T;
   onChange: (next: T) => void;
   disabled: boolean;
+  /**
+   * The target rule's current entity, for `edit` ops: their `data` is a patch,
+   * so an untouched `entityId`/`entityName` is `undefined` and the effective
+   * value is whatever the rule already carries.
+   */
+  entityBaseline?: EntityOutcome;
+}
+
+function effectiveEntity(data: EditRuleData, baseline?: EntityOutcome): EntityOutcome {
+  return {
+    entityId: data.entityId === undefined ? (baseline?.entityId ?? null) : data.entityId,
+    entityName: data.entityName === undefined ? (baseline?.entityName ?? null) : data.entityName,
+  };
 }
 
 function OutcomeFields<T extends EditRuleData>({
   data,
   onChange,
   disabled,
+  entityBaseline,
 }: OutcomeFieldsProps<T>) {
   return (
     <>
-      <div className="space-y-1">
-        <Label>Entity name</Label>
-        <Input
-          value={data.entityName ?? ''}
-          onChange={(e) => onChange({ ...data, entityName: e.target.value || undefined })}
-          disabled={disabled}
-        />
-      </div>
+      <EntityField
+        value={effectiveEntity(data, entityBaseline)}
+        onChange={(entity) => onChange({ ...data, ...entity })}
+        disabled={disabled}
+      />
       <div className="space-y-1">
         <Label>Transaction type</Label>
         <Select
@@ -82,6 +94,7 @@ export function EditDataEditor(props: {
   data: EditRuleData;
   onChange: (next: EditRuleData) => void;
   disabled: boolean;
+  entityBaseline?: EntityOutcome;
 }) {
   return (
     <div className="space-y-3">
