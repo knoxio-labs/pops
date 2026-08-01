@@ -364,6 +364,8 @@ Not `// increment the counter`. Full rules in `~/.claude/CLAUDE.md` §10.
 
 `adr-NNN` numbering is **frozen and append-only**; new ADRs take the next number and existing numbers never change. An ADR records context, the options genuinely considered, the decision, and its consequences. If there was no real alternative, it is not a decision — it is just how the code works, and that belongs in a README. An ADR moves into a pillar only when that pillar alone references it; a second referent promotes it back to `docs/architecture/`.
 
+**Status-line dates are UTC** (`Proposed — YYYY-MM-DD`, `Accepted — YYYY-MM-DD`). Take the date from `date -u`, not from the authoring machine's clock: contributors east of UTC roll over first, so a local date produces an ADR that reads as future-dated against its own commit — which reviewers catch and authors do not.
+
 ### Tracking
 
 Work lives in **Huly**, project `POPS` at [projects.knoxiolabs.com](https://projects.knoxiolabs.com) (workspace `knoxiolabs`). One project for the whole fleet; a **Component** scopes each issue to a pillar (`finance`, `food`, …) or a cross-cutting concern (`federation`, `platform`, `ui`). Statuses are Backlog / Todo / In Progress / Done / Canceled. Labels are deliberately few — `bug`, `tech-debt`, `test-gap`, `security`, `needs-triage`. Reach for the MCP tools (`mcp__huly-knoxiolabs__*`) rather than the web UI.
