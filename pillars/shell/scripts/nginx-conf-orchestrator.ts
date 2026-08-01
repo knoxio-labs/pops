@@ -14,6 +14,15 @@
  * pillar-shaped fragments; the generator concatenates this block between the
  * per-pillar REST surfaces and the tail.
  */
+/**
+ * Registry id the orchestrator registers itself under. The orchestrator is a
+ * registry participant like any pillar, so the dynamic renderer sees it in the
+ * snapshot and would emit a second `location /orchestrator-api/` on top of the
+ * fixed block below — nginx rejects a duplicate prefix location outright and
+ * refuses to load the whole config. Exported so the generator can skip it.
+ */
+export const ORCHESTRATOR_PILLAR_ID = 'orchestrator';
+
 export const NGINX_CONF_ORCHESTRATOR = `    # ── Federated-search orchestrator (ADR-029, epic 06) ──
     #
     # Non-pillar cross-cutting service: federates search over the pillars

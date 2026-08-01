@@ -132,6 +132,7 @@ generator output.
 | Hand-edit to committed `nginx.conf`     | `pnpm gen:nginx:check` exits 1; CI fails until regenerated.                                      |
 | `nginx -t` rejects the conf             | `validate-nginx-conf.sh` fails; the runtime entrypoint keeps the previous conf (registry PRD).   |
 | Empty registry (dynamic mode)           | Renders HEAD + orchestrator + TAIL with zero `/<id>-api/` blocks — no monolith catch-all exists. |
+| Registry advertises the orchestrator    | Skipped by the per-entry loop — the fixed `/orchestrator-api/` block already serves that route.  |
 | External pillar with invalid `baseUrl`  | `resolveUpstreamForEntry` throws with the offending pillar id (no host / bad port).              |
 | Pillar container absent at request time | Route 502s; the shell itself stays up (variable-form `proxy_pass`).                              |
 
@@ -174,6 +175,10 @@ exposed publicly — registration runs entirely inside the docker bridge.
       per-pillar blocks.
 - [x] Dynamic-mode tests run against an injected fake discovery transport — no
       live registry needed in the suite.
+- [x] A registry entry whose route is already a fixed template block (the
+      orchestrator) is skipped in dynamic mode, and the rendered conf never
+      repeats a `location` directive — nginx rejects a duplicate outright, which
+      takes down every route in the file rather than just the offender.
 
 ## Out of Scope
 

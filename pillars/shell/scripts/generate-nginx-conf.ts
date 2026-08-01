@@ -54,7 +54,7 @@ import {
 
 import { parseCliArgs, type CliOptions } from './nginx-cli-args.ts';
 import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.ts';
-import { NGINX_CONF_ORCHESTRATOR } from './nginx-conf-orchestrator.ts';
+import { NGINX_CONF_ORCHESTRATOR, ORCHESTRATOR_PILLAR_ID } from './nginx-conf-orchestrator.ts';
 import { NGINX_CONF_HEAD, NGINX_CONF_REST_INTRO, NGINX_CONF_TAIL } from './nginx-conf-template.ts';
 import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.ts';
 
@@ -186,15 +186,27 @@ export function renderNginxConf(order: readonly BuildPillarId[] = PILLAR_RENDER_
 }
 
 /**
+ * Registry ids whose `/<id>-api/` route is already emitted as a fixed block in
+ * the template. A registry entry matching one of these is skipped by the
+ * per-entry loop: rendering it too would produce a duplicate prefix location,
+ * which nginx rejects with `[emerg] duplicate location` — taking down every
+ * route in the file, not just the offender.
+ */
+const FIXED_BLOCK_IDS: ReadonlySet<string> = new Set([ORCHESTRATOR_PILLAR_ID]);
+
+/**
  * Pure renderer (dynamic mode). Takes an explicit list of upstreams in
- * the order they should appear in the output. Empty input is valid and
- * produces a config with zero per-pillar `/<pillar>-api/` REST blocks.
+ * the order they should appear in the output. Entries already covered by a
+ * fixed template block are dropped. Empty input — or input consisting only of
+ * such entries — is valid and produces a config with zero per-pillar
+ * `/<pillar>-api/` REST blocks.
  */
 export function renderNginxConfFromUpstreams(upstreams: readonly PillarUpstream[]): string {
-  if (upstreams.length === 0) {
+  const rendered = upstreams.filter((upstream) => !FIXED_BLOCK_IDS.has(upstream.pillarId));
+  if (rendered.length === 0) {
     return `${NGINX_CONF_HEAD}\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
   }
-  const restBlocks = upstreams.map(renderPillarRestBlockFromUpstream).join('\n\n');
+  const restBlocks = rendered.map(renderPillarRestBlockFromUpstream).join('\n\n');
   return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
 }
 
