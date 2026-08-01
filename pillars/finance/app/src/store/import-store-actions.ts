@@ -7,7 +7,7 @@ import {
   fingerprintParsedTransactions,
   type ImportStore,
   initialState,
-  isSameFile,
+  isSameFileSet,
   type PendingChangeSet,
   type PendingEntity,
   type PendingTagRuleChangeSet,
@@ -21,12 +21,13 @@ type StoreGet = () => ImportStore;
 
 export function buildSetters(set: StoreSet) {
   return {
-    setFile: (file: File | null) =>
-      set((state) =>
-        isSameFile(state.file, file)
-          ? { file, sourceFileName: file?.name ?? null }
-          : { ...downstreamReset, file, sourceFileName: file?.name ?? null }
-      ),
+    setFiles: (files: File[]) =>
+      set((state) => {
+        const sourceFileNames = files.map((f) => f.name);
+        return isSameFileSet(state.files, files)
+          ? { files, sourceFileNames }
+          : { ...downstreamReset, files, sourceFileNames };
+      }),
     setBankType: (bankType: ImportStore['bankType']) => set({ bankType }),
     setHeaders: (headers: string[]) => set({ headers }),
     setRows: (rows: Record<string, string>[]) => set({ rows }),

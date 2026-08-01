@@ -8,13 +8,13 @@ import type { ImportStore } from './import-store-types';
 
 export const IMPORT_PERSIST_KEY = 'pops-finance-import-wizard';
 /** Bump on ANY change to the persisted shape — a version mismatch silently discards the stored copy. */
-export const IMPORT_PERSIST_VERSION = 1;
+export const IMPORT_PERSIST_VERSION = 2;
 export const IMPORT_PERSIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type PersistedImportState = Pick<
   ImportStore,
   | 'currentStep'
-  | 'sourceFileName'
+  | 'sourceFileNames'
   | 'bankType'
   | 'headers'
   | 'rows'
@@ -33,14 +33,14 @@ export type PersistedImportState = Pick<
 >;
 
 /**
- * Explicit field pick (never a spread-minus): the non-serializable `file` and
+ * Explicit field pick (never a spread-minus): the non-serializable `files` and
  * every action stay out, and a future field must be consciously added here —
  * the `PersistedImportState` return type makes the compiler flag drift.
  */
 export function partializeImportState(state: ImportStore): PersistedImportState {
   return {
     currentStep: state.currentStep,
-    sourceFileName: state.sourceFileName,
+    sourceFileNames: state.sourceFileNames,
     bankType: state.bankType,
     headers: state.headers,
     rows: state.rows,

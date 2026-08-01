@@ -36,7 +36,7 @@ beforeEach(() => {
 describe('ResumeImportDialog', () => {
   it('describes the file name, parsed-transaction count, and step of the persisted run', () => {
     useImportStore.setState({
-      sourceFileName: 'jan.csv',
+      sourceFileNames: ['jan.csv'],
       parsedTransactions: [makeParsed('a'), makeParsed('b'), makeParsed('c')],
       rows: makeRows(5),
       currentStep: 4,
@@ -54,7 +54,7 @@ describe('ResumeImportDialog', () => {
 
   it('falls back to "CSV" and the raw row count when parsing never happened', () => {
     useImportStore.setState({
-      sourceFileName: null,
+      sourceFileNames: [],
       parsedTransactions: [],
       rows: makeRows(7),
       currentStep: 2,
@@ -78,6 +78,18 @@ describe('ResumeImportDialog', () => {
 
     expect(onResume).toHaveBeenCalledTimes(1);
     expect(onDiscard).toHaveBeenCalledTimes(1);
+  });
+
+  it('summarises a multi-file batch instead of listing every name', () => {
+    useImportStore.setState({
+      sourceFileNames: ['jan.csv', 'feb.csv', 'mar.csv'],
+      rows: makeRows(9),
+      currentStep: 2,
+    });
+
+    renderDialog();
+
+    expect(screen.getByText(/unfinished import of jan\.csv and 2 more/)).toBeInTheDocument();
   });
 
   it('renders nothing when closed', () => {

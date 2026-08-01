@@ -95,7 +95,7 @@ describe('importStore — parsed/processed fingerprint', () => {
     expect(useImportStore.getState().processedForFingerprint).toBe('z');
   });
 
-  it('setFile with a different file resets fingerprints and processed state', () => {
+  it('setFiles with a different batch resets fingerprints and processed state', () => {
     useImportStore.getState().setParsedTransactions([makeTxn('a')]);
     useImportStore.getState().setProcessedTransactions({
       ...sampleProcessed(),
@@ -103,7 +103,7 @@ describe('importStore — parsed/processed fingerprint', () => {
     });
 
     const fakeFile = { name: 'new.csv', size: 10, lastModified: 1 } as unknown as File;
-    useImportStore.getState().setFile(fakeFile);
+    useImportStore.getState().setFiles([fakeFile]);
 
     const state = useImportStore.getState();
     expect(state.parsedTransactionsFingerprint).toBe('');
@@ -234,10 +234,10 @@ describe('importStore — pendingEntities (local-first-import)', () => {
     expect(useImportStore.getState().pendingEntities).toEqual([]);
   });
 
-  it('setFile with a different file clears pending entities', () => {
+  it('setFiles with a different batch clears pending entities', () => {
     useImportStore.getState().addPendingEntity({ name: 'Test', type: 'company' });
     const fakeFile = { name: 'new.csv', size: 10, lastModified: 1 } as unknown as File;
-    useImportStore.getState().setFile(fakeFile);
+    useImportStore.getState().setFiles([fakeFile]);
     expect(useImportStore.getState().pendingEntities).toEqual([]);
   });
 });
@@ -336,13 +336,13 @@ describe('importStore — pendingChangeSets (local-first-import)', () => {
     expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
 
-  it('setFile with a different file clears pending changeSets', () => {
+  it('setFiles with a different batch clears pending changeSets', () => {
     useImportStore.getState().addPendingChangeSet({
       changeSet: sampleChangeSet,
       source: 'test',
     });
     const fakeFile = { name: 'new.csv', size: 10, lastModified: 1 } as unknown as File;
-    useImportStore.getState().setFile(fakeFile);
+    useImportStore.getState().setFiles([fakeFile]);
     expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
 });

@@ -53,8 +53,8 @@ export interface ProcessedTransaction extends BaseProcessedTransaction {
 
 export interface ImportStore {
   currentStep: number;
-  file: File | null;
-  sourceFileName: string | null;
+  files: File[];
+  sourceFileNames: string[];
   bankType: BankType;
   headers: string[];
   rows: Record<string, string>[];
@@ -82,7 +82,7 @@ export interface ImportStore {
   pendingTagRuleChangeSets: PendingTagRuleChangeSet[];
   manuallyResolvedChecksums: string[];
 
-  setFile: (file: File | null) => void;
+  setFiles: (files: File[]) => void;
   setBankType: (bankType: BankType) => void;
   setHeaders: (headers: string[]) => void;
   setRows: (rows: Record<string, string>[]) => void;
@@ -122,8 +122,8 @@ export interface ImportStore {
 
 export const initialState = {
   currentStep: 1,
-  file: null,
-  sourceFileName: null,
+  files: [],
+  sourceFileNames: [],
   bankType: 'Amex' as BankType,
   headers: [],
   rows: [],
@@ -190,4 +190,13 @@ export function isSameFile(a: File | null, b: File | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+}
+
+/**
+ * Positional comparison — reordering a batch reorders the merged rows, which is
+ * a genuinely different parse, so it must cascade the downstream reset too.
+ */
+export function isSameFileSet(a: File[], b: File[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((file, i) => isSameFile(file, b[i] ?? null));
 }

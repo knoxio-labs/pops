@@ -14,7 +14,7 @@ import type { ProcessedTransaction } from './import-store-types';
 
 const PERSISTED_KEYS = [
   'currentStep',
-  'sourceFileName',
+  'sourceFileNames',
   'bankType',
   'headers',
   'rows',
@@ -68,7 +68,7 @@ beforeEach(() => {
 });
 
 describe('partializeImportState', () => {
-  it('persists exactly the seventeen data fields — never file, never actions', () => {
+  it('persists exactly the seventeen data fields — never files, never actions', () => {
     const persisted = partializeImportState(useImportStore.getState());
     expect(Object.keys(persisted).toSorted()).toEqual([...PERSISTED_KEYS].toSorted());
     expect(Object.values(persisted).some((entry) => typeof entry === 'function')).toBe(false);

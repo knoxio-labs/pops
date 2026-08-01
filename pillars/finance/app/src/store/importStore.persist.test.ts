@@ -61,7 +61,7 @@ describe('importStore persistence', () => {
       storage,
       makeSnapshot({
         currentStep: 4,
-        sourceFileName: 'jan.csv',
+        sourceFileNames: ['jan.csv'],
         headers: ['A'],
         rows: [{ A: '1' }],
         parsedTransactions: [makeParsed('a')],
@@ -74,11 +74,11 @@ describe('importStore persistence', () => {
 
     const state = useImportStore.getState();
     expect(state.currentStep).toBe(4);
-    expect(state.sourceFileName).toBe('jan.csv');
+    expect(state.sourceFileNames).toEqual(['jan.csv']);
     expect(state.rows).toEqual([{ A: '1' }]);
     expect(state.parsedTransactions).toEqual([makeParsed('a')]);
     expect(state.processSessionId).toBe('session-1');
-    expect(state.file).toBeNull();
+    expect(state.files).toEqual([]);
   });
 
   it('discards a snapshot with a mismatched version', async () => {
@@ -100,7 +100,7 @@ describe('importStore persistence', () => {
     expect(record.version).toBe(IMPORT_PERSIST_VERSION);
     expect(record.state.parsedTransactions).toHaveLength(2);
     expect(record.state.parsedTransactionsFingerprint).toBe('a|b');
-    expect('file' in record.state).toBe(false);
+    expect('files' in record.state).toBe(false);
   });
 
   it('persists, dedupes, and rehydrates manuallyResolvedChecksums', async () => {
@@ -130,23 +130,45 @@ describe('importStore persistence', () => {
   it('a new file cascades downstreamReset over manuallyResolvedChecksums', () => {
     useImportStore.getState().markChecksumsResolved(['a']);
 
-    useImportStore.getState().setFile(new File(['x'], 'new.csv', { lastModified: 1 }));
+    useImportStore.getState().setFiles([new File(['x'], 'new.csv', { lastModified: 1 })]);
 
     expect(useImportStore.getState().manuallyResolvedChecksums).toEqual([]);
   });
 
-  it('setFile records sourceFileName in both the same-file and cascade branches', () => {
+  it('setFiles records sourceFileNames in both the same-batch and cascade branches', () => {
     const first = new File(['x'], 'jan.csv', { lastModified: 42 });
-    useImportStore.getState().setFile(first);
-    expect(useImportStore.getState().sourceFileName).toBe('jan.csv');
+    useImportStore.getState().setFiles([first]);
+    expect(useImportStore.getState().sourceFileNames).toEqual(['jan.csv']);
 
     useImportStore.getState().setRows([{ A: '1' }]);
-    useImportStore.getState().setFile(new File(['x'], 'jan.csv', { lastModified: 42 }));
-    expect(useImportStore.getState().sourceFileName).toBe('jan.csv');
+    useImportStore.getState().setFiles([new File(['x'], 'jan.csv', { lastModified: 42 })]);
+    expect(useImportStore.getState().sourceFileNames).toEqual(['jan.csv']);
     expect(useImportStore.getState().rows).toEqual([{ A: '1' }]);
 
-    useImportStore.getState().setFile(new File(['x'], 'feb.csv', { lastModified: 43 }));
-    expect(useImportStore.getState().sourceFileName).toBe('feb.csv');
+    useImportStore.getState().setFiles([new File(['x'], 'feb.csv', { lastModified: 43 })]);
+    expect(useImportStore.getState().sourceFileNames).toEqual(['feb.csv']);
+    expect(useImportStore.getState().rows).toEqual([]);
+  });
+
+  it('adding a second file to an existing batch cascades the downstream reset', () => {
+    const jan = new File(['x'], 'jan.csv', { lastModified: 42 });
+    useImportStore.getState().setFiles([jan]);
+    useImportStore.getState().setRows([{ A: '1' }]);
+
+    useImportStore.getState().setFiles([jan, new File(['x'], 'feb.csv', { lastModified: 43 })]);
+
+    expect(useImportStore.getState().sourceFileNames).toEqual(['jan.csv', 'feb.csv']);
+    expect(useImportStore.getState().rows).toEqual([]);
+  });
+
+  it('re-supplying the same batch in a different order still cascades', () => {
+    const jan = new File(['x'], 'jan.csv', { lastModified: 42 });
+    const feb = new File(['x'], 'feb.csv', { lastModified: 43 });
+    useImportStore.getState().setFiles([jan, feb]);
+    useImportStore.getState().setRows([{ A: '1' }]);
+
+    useImportStore.getState().setFiles([feb, jan]);
+
     expect(useImportStore.getState().rows).toEqual([]);
   });
 });
