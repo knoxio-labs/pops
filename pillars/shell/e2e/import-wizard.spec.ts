@@ -401,6 +401,27 @@ const navigateToReviewStep = async (page: Page, csvContent: string = simpleCSV) 
 };
 
 /**
+ * Helper: pick an entity through an EntitySelect combobox — the one surface
+ * that both selects an existing entity and creates one from the search term.
+ * `scope` is the card, group, or tabpanel whose picker to drive.
+ */
+const pickEntity = async (scope: Locator, name: string, { create = false } = {}) => {
+  const escaped = name.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  await scope.getByRole('combobox').first().click();
+  await scope
+    .page()
+    .getByPlaceholder(/search entities/i)
+    .fill(name);
+  const row = create
+    ? scope.page().getByText(new RegExp(String.raw`create\s+“${escaped}”`, 'i'))
+    : scope
+        .page()
+        .getByRole('option', { name: new RegExp(escaped, 'i') })
+        .first();
+  await row.click();
+};
+
+/**
  * Helper: Navigate to Tag Review step (step 5) — goes through Review and clicks Continue
  */
 const navigateToTagReviewStep = async (page: Page, csvContent: string = simpleCSV) => {
@@ -414,33 +435,14 @@ const navigateToTagReviewStep = async (page: Page, csvContent: string = simpleCS
     await uncertainTab.click();
     await page.getByRole('button', { name: /list/i }).click();
     for (let i = 0; i < uncertainCount; i++) {
-      await page.getByRole('tabpanel').locator('select').first().selectOption('woolworths-id');
+      // Each resolved card leaves the tab, so the first remaining one is next.
+      await pickEntity(page.getByRole('tabpanel'), 'Woolworths');
     }
   }
 
   // Click Continue to Tag Review
   await page.getByRole('button', { name: /continue to tag review/i }).click();
   await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible({ timeout: 5000 });
-};
-
-/**
- * Helper: pick an entity through an EntitySelect combobox — the one surface
- * that both selects an existing entity and creates one from the search term.
- * `scope` is the card or group whose picker to drive.
- */
-const pickEntity = async (scope: Locator, name: string, { create = false } = {}) => {
-  await scope.getByRole('combobox').first().click();
-  await scope
-    .page()
-    .getByPlaceholder(/search entities/i)
-    .fill(name);
-  const row = create
-    ? scope.page().getByText(new RegExp(`create\\s+“${name}”`, 'i'))
-    : scope
-        .page()
-        .getByRole('option', { name: new RegExp(name, 'i') })
-        .first();
-  await row.click();
 };
 
 /**
@@ -499,9 +501,9 @@ test.describe.skip('Import Wizard - Complete Flow', () => {
 
       // Should show matched transaction with entity assigned
       await expect(page.getByText('WOOLWORTHS 1234')).toBeVisible();
-      // Verify Woolworths is the selected entity (select value)
-      await expect(page.getByRole('tabpanel').locator('select').first()).toHaveValue(
-        'woolworths-id'
+      // Verify Woolworths is the selected entity (combobox trigger label)
+      await expect(page.getByRole('tabpanel').getByRole('combobox').first()).toHaveText(
+        /woolworths/i
       );
 
       // Switch to uncertain tab
@@ -511,8 +513,7 @@ test.describe.skip('Import Wizard - Complete Flow', () => {
       await expect(page.getByText('UNKNOWN MERCHANT', { exact: true }).first()).toBeVisible();
 
       // Resolve uncertain transaction
-      const entitySelect = page.getByRole('tabpanel').locator('select').first();
-      await entitySelect.selectOption('woolworths-id');
+      await pickEntity(page.getByRole('tabpanel'), 'Woolworths');
 
       // Should move to matched
       await page.getByRole('tab', { name: /matched/i }).click();
@@ -1240,13 +1241,13 @@ test.describe.skip('Import Wizard - Review Tab Navigation', () => {
     // Verify Failed tab shows count
     await expect(page.getByRole('tab', { name: /failed.*\(2\)/i })).toBeVisible();
 
-    // Resolve 2 uncertain transactions - switch to list view for per-card selects
+    // Resolve 2 uncertain transactions - switch to list view for per-card pickers
     await page.getByRole('tab', { name: /uncertain/i }).click();
     await page.getByRole('button', { name: /list/i }).click();
     // Scope to active tabpanel to avoid matching resolved transactions
     const uncertainPanel = page.getByRole('tabpanel');
-    await uncertainPanel.locator('select').nth(0).selectOption('woolworths-id');
-    await uncertainPanel.locator('select').nth(1).selectOption('coles-id');
+    await pickEntity(uncertainPanel, 'Woolworths');
+    await pickEntity(uncertainPanel, 'Coles');
 
     // Verify count updates
     await expect(page.getByRole('tab', { name: /uncertain.*\(4\)/i })).toBeVisible();
@@ -1263,30 +1264,22 @@ test.describe.skip('Import Wizard - Review Tab Navigation', () => {
     // Verify tooltip or text shown
     await expect(page.getByText(/resolve all/i)).toBeVisible();
 
-    // Resolve all uncertain - switch to list view for per-card selects
+    // Resolve all uncertain - switch to list view for per-card pickers
     await page.getByRole('tab', { name: /uncertain/i }).click();
     await page.getByRole('button', { name: /list/i }).click();
     // Scope to active tabpanel to avoid matching resolved transactions in other tabs
     const uncertainPanel = page.getByRole('tabpanel');
     for (let i = 0; i < 6; i++) {
-      await uncertainPanel.locator('select').first().selectOption('woolworths-id');
+      await pickEntity(uncertainPanel, 'Woolworths');
     }
 
-    // Resolve all failed - switch to list view for per-card create buttons
+    // Resolve all failed by creating an entity from each card's own picker
     await page.getByRole('tab', { name: /failed/i }).click();
     await page.getByRole('button', { name: /list/i }).click();
-    // Click first() each iteration since resolved transactions leave the tab
+    const failedPanel = page.getByRole('tabpanel');
     for (let i = 0; i < 2; i++) {
-      await page
-        .getByRole('button', { name: /create.*entity/i })
-        .first()
-        .click();
-      await page.getByLabel(/entity name/i).fill(`Entity ${i}`);
-      await page
-        .getByRole('dialog')
-        .getByRole('button', { name: /create/i })
-        .click();
-      await page.waitForTimeout(500); // Wait for dialog to close
+      // first() each iteration: resolved transactions leave the tab
+      await pickEntity(failedPanel, `Entity ${i}`, { create: true });
     }
 
     // Go back to matched tab — Continue button should now be enabled
@@ -1346,31 +1339,17 @@ test.describe.skip('Import Wizard - Complete Import Flows', () => {
     }
 
     // Manually select for remaining 2 (scope to active tabpanel)
-    const selects = page.getByRole('tabpanel').locator('select');
-    await selects.first().selectOption('mystery-store-id');
-    await page.waitForTimeout(300);
-    await selects.first().selectOption('acme-corp-id');
+    const uncertainPanel = page.getByRole('tabpanel');
+    await pickEntity(uncertainPanel, 'Mystery Store');
+    await pickEntity(uncertainPanel, 'Acme Corporation');
 
-    // 2 failed - create entities - switch to list view for per-card create buttons
+    // 2 failed - create entities from each card's own picker
     await page.getByRole('tab', { name: /failed/i }).click();
     await page.getByRole('button', { name: /list/i }).click();
 
-    const createButtons = page.getByRole('button', { name: /create.*entity/i });
-    await createButtons.first().click();
-    await page.getByLabel(/entity name/i).fill('Random Merchant');
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: /create/i })
-      .click();
-    await page.waitForTimeout(500);
-
-    await createButtons.first().click();
-    await page.getByLabel(/entity name/i).fill('Unrecognized Payee');
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: /create/i })
-      .click();
-    await page.waitForTimeout(500);
+    const failedPanel = page.getByRole('tabpanel');
+    await pickEntity(failedPanel, 'Random Merchant', { create: true });
+    await pickEntity(failedPanel, 'Unrecognized Payee', { create: true });
 
     // Continue to Tag Review → Final Review → commit → Summary
     await page.getByRole('tab', { name: /matched/i }).click();
@@ -1565,11 +1544,14 @@ test.describe.skip('Import Wizard - Error Recovery', () => {
     await navigateToReviewStep(page, realisticCSV);
 
     await page.getByRole('tab', { name: /uncertain/i }).click();
-    // Switch to list view to access per-card "Create new" button
     await page.getByRole('button', { name: /list/i }).click();
 
-    const createButton = page.getByRole('button', { name: /^create new$/i }).first();
-    await createButton.click();
+    // Accepting a suggestion whose entity doesn't exist yet is the remaining
+    // route into EntityCreateDialog, where the retry lives.
+    await page
+      .getByRole('button', { name: /accept.*unknown cafe/i })
+      .first()
+      .click();
 
     await page.getByLabel(/entity name/i).fill('Retry Entity');
     await page.getByRole('button', { name: /create/i }).click();
