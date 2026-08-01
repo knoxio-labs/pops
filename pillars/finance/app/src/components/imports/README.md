@@ -4,20 +4,20 @@ Eight steps that turn a bank CSV into committed transactions. Unlike the backend
 
 | #   | Step    | What happens                                                                                                                             |
 | --- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Upload  | Pick a file and a bank. **The bank selector is cosmetic** — it does not route to a parser.                                               |
+| 1   | Upload  | Pick a file and a bank. The bank does not select a parser, but it **is** stamped onto every row as `account`.                            |
 | 2   | Map     | Map CSV columns to date / description / amount / location; parse client-side into `ParsedTransaction[]` with a SHA-256 checksum per row. |
 | 3   | Process | `POST /imports/process` — dedup by checksum, then classify. Long-running, so the step polls `GET /imports/progress`.                     |
 | 4   | Review  | Resolve `uncertain` rows: assign entities, correct matches, trigger correction proposals.                                                |
 | 5   | Tags    | Review suggested tags per entity group or per transaction.                                                                               |
 | 6   | Rules   | Confirm the tag-rule ChangeSets this import would create.                                                                                |
-| 7   | Commit  | `POST /imports/commit` — the first and only server write.                                                                                |
-| 8   | Summary | What landed, what failed, what was skipped.                                                                                              |
+| 7   | Commit  | `POST /imports/commit` — writes the transactions and applies every buffered ChangeSet.                                                   |
+| 8   | Summary | Counts for what was committed.                                                                                                           |
 
 ## Local-first is the whole design
 
-Steps 4 through 6 write nothing to the server. Every entity creation, correction ChangeSet and tag-rule ChangeSet accumulates in `../../store/importStore` as _pending_ state, and re-evaluation runs against DB rules merged with that pending set — so the user sees the effect of a rule before it exists.
+No transaction and no rule is written before step 7. Every entity creation, correction ChangeSet and tag-rule ChangeSet accumulates in `../../store/importStore` as _pending_ state, and re-evaluation runs against DB rules merged with that pending set — so the user sees the effect of a rule before it exists. Abandon the import and no rule was ever created, which is why one made during review does not appear in the rules browser until commit.
 
-Everything commits atomically at step 7. Abandon the import and none of it ever happened. This is why a correction rule made during review does not appear in the rules browser until the import is committed.
+"Nothing is written" is not literally true, and the exceptions bite. Rejecting a correction proposal in step 4 persists rejection feedback to finance's settings table immediately. And every `POST /imports/process` — including the re-runs the wizard fires on resume or dead-session recovery — bumps `timesApplied` on every rule that matched.
 
 ## What survives a reload
 
@@ -37,6 +37,6 @@ Two more sharp edges in the same area: resuming mid-processing always restarts `
 | Tag review and the tag-rule dialog                                            | `tag-review/`, `tag-rule-dialog/`                    |
 | Commit step                                                                   | `final-review/`                                      |
 | Data fetching, mutations, derived state                                       | `hooks/`                                             |
-| Pure helpers — merged rules, local re-evaluation                              | `lib/`                                               |
+| Description normalization, correction helpers, preview scoping                | `lib/`                                               |
 
 `correction-proposal/` is the largest surface here by a wide margin; the backend contract it drives is documented in `pillars/finance/src/api/modules/corrections/`.

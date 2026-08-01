@@ -80,8 +80,7 @@ pillars/finance/
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server registers via
 `bootstrapPillar` from `@pops/pillar-sdk` (`/registry/register` on the
-`registry` pillar) and deregisters on `SIGTERM`. There is no per-request auth:
-the pillar trusts the docker network and the gateway in front authenticates.
+`registry` pillar) and deregisters on `SIGTERM`.
 
 ## Commands
 

@@ -1,28 +1,27 @@
 # Import pipeline
 
-Turns parsed bank rows into committed transactions, in two phases that are deliberately split:
+Turns parsed bank rows into committed transactions, in two phases:
 
-- `POST /imports/process` — read-only. Dedups by checksum, then classifies each surviving row (entity + tags).
-- `POST /imports/commit` — the only write. Applies rule ChangeSets, inserts transactions, re-classifies history, in one SQLite transaction.
+- `POST /imports/process` — dedups by checksum, then classifies each surviving row. It creates no transactions, but it is **not** side-effect free: every correction and tag rule that fires has its `timesApplied` and `lastUsedAt` bumped, gated on `!isPreview`.
+- `POST /imports/commit` — writes the transactions themselves, applies rule ChangeSets, and re-classifies history, in one SQLite transaction.
 
-Between them the wizard buffers every edit, entity creation and rule ChangeSet **client-side**, so an abandoned import leaves nothing behind. `POST /imports/reevaluate-pending` re-runs matching against DB rules merged with those buffered ChangeSets; `GET /imports/progress` polls a running process session.
+Between them the wizard buffers edits, entity creations and rule ChangeSets client-side. `POST /imports/reevaluate-pending` re-runs matching against DB rules merged with that pending set; `GET /imports/progress` polls a running process session.
 
 ## Classification ladder
 
-The order is the thing to know, and no single file holds it — it spans `process-transaction.ts`, `apply-learned-correction.ts` and `entity-matcher.ts`. First hit wins.
+`classifyWithoutAi` runs two stages and then defers to AI; the middle of the ladder is entirely inside `entity-matcher.ts`. First hit wins.
 
-1. **Learned corrections** (`apply-learned-correction.ts`) — active rules at or above `MIN_MATCH_CONFIDENCE`, ordered `priority ASC, id ASC`. At or above `HIGH_CONFIDENCE_THRESHOLD` → `matched`, below → `uncertain`. A **type-only** correction (transfer/income, no entity) is terminal `matched` and never falls through.
-2. **Transfer/income heuristic** — short-circuits to `matched` with no entity.
-3. **Aliases** — substring match; longest matching alias wins.
-4. **Exact** — description equals an entity name.
-5. **Prefix** — description starts with an entity name; longest name wins.
-6. **Contains** — entity name anywhere in the description; longest name wins.
-7. **Punctuation-stripped retry** of stages 4–6. Aliases are not retried.
-8. **AI fallback** (`ai-batch-resolver.ts`) — reached only after every deterministic stage misses.
+1. **Learned corrections** (`apply-learned-correction.ts`) — active rules at or above `MIN_MATCH_CONFIDENCE`, ordered `priority ASC, id ASC`. At or above `HIGH_CONFIDENCE_THRESHOLD` → `matched`, below → `uncertain`. A rule may carry a `transaction_type` of transfer or income with no entity; it then classifies with no merchant, but it is subject to the **same confidence split** — a transfer rule below the high threshold still buckets `uncertain`.
+2. **Aliases** — substring match; longest matching alias wins.
+3. **Exact** — description equals an entity name.
+4. **Prefix** — description starts with an entity name; longest name wins.
+5. **Contains** — entity name anywhere in the description; longest name wins.
+6. **Punctuation-stripped retry** of stages 3–5. Aliases are not retried.
+7. **AI fallback** (`ai-batch-resolver.ts`) — only once every deterministic stage has missed.
 
-Stages 3–7 all live in `entity-matcher.ts`, whose helpers document their own normalization, minimum-length guards and tie-breaking.
+Stages 2–6 live in `entity-matcher.ts`, whose helpers document their own normalization, minimum-length guards and tie-breaking.
 
-Corrections outrank everything because they encode learned user intent. AI is best-effort: no configuration or provider failure ever fails an import, the row just becomes `uncertain`.
+AI is best-effort: no configuration or provider failure ever fails an import, the row just becomes `uncertain`.
 
 ## Where things live
 
@@ -30,22 +29,21 @@ Corrections outrank everything because they encode learned user intent. AI is be
 | ----------------------------------------------------------- | ----------------------------------------------- |
 | Two-pass orchestration, dedup, per-run map building         | `process-service.ts`                            |
 | Per-row ladder walk and bucketing                           | `process-transaction.ts`                        |
-| Stages 3–7 matching and normalization                       | `entity-matcher.ts`                             |
+| Stages 2–6 matching and normalization                       | `entity-matcher.ts`                             |
 | Batching, chunking, and the rate-limit circuit breaker      | `ai-batch-resolver.ts`, `ai-circuit-breaker.ts` |
 | Prompt construction and the field allowlist                 | `ai-categorizer*.ts`                            |
 | Transactional write, rollback semantics, commit idempotency | `commit.ts`                                     |
 
-Each of those carries a file-header comment explaining its own mechanics and the reasoning behind them. Read the header before the body.
+Each carries a file-header comment explaining its own mechanics. Read the header before the body.
 
 ## Rules that span files
 
 - **Reference data is fetched once per run, never per row.** Entity names, aliases and default tags come live from the `contacts` pillar — finance keeps no entity mirror. The correction rule set is loaded once and threaded through `ProcessContext`. Entity-key normalization is cached against the lookup map's identity, so **building a map and then mutating it mid-run yields stale keys** — build a fresh one.
-- **Only an allowlisted projection reaches the model.** `toCategorizerInput` drops `rawRow`, `account`, `location` and `checksum`, so no account, card or reference column can be interpolated into a prompt. Telemetry carries an opaque `import_batch:<id>`, never the description.
-- **A disabled categorizer is loud, not silent.** A run where rows reached the AI stage with it switched off surfaces an `AI_CATEGORIZATION_UNAVAILABLE` warning carrying the affected count — "matched nothing because AI was off" must never look like "matched everything".
-- **Tag suggestion runs after matching**, in `../tag-suggester/` — its header documents the source priority and dedup. Worth knowing here: there is no online/in-person field on a transaction, so that distinction is an ordinary tag applied by `transaction_tag_rules`.
+- **Processing mutates rule telemetry.** Because `process` bumps usage counters, re-running it over the same batch — which the wizard does on resume, and on any dead-session recovery — inflates `timesApplied` for every rule that fires. Preview paths pass `isPreview` precisely to avoid this.
+- **Tag suggestion runs after matching**, in `../tag-suggester/` — its header documents the source priority and dedup.
 
 ## Absent
 
-Per-bank parsing does not exist. The wizard maps CSV columns by hand for every source, and the bank selector in the upload step is cosmetic — it does not route to a parser or set the account.
+There is no per-bank parsing. The wizard maps CSV columns by hand for every source, and `parseDate` / `parseAmount` ignore the selected bank entirely. The bank selector is **not** inert, though: its value is stamped onto every row as `account` and persisted to `transactions.account` at commit, so changing it changes committed data.
 
 Related: `../corrections/`, `../tag-rules/`, `../tag-suggester/`, `../transfers/`, and the wizard UI at `pillars/finance/app/src/components/imports/`.
