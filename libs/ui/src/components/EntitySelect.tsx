@@ -93,10 +93,15 @@ function EntityRow({ entity, selectedId }: { entity: EntityOption; selectedId?: 
   );
 }
 
+/**
+ * Always mounted: cmdk filters on the row's own label, so a search term that
+ * doesn't match it would hide the only way to select no entity — exactly when
+ * the user is searching for what to replace.
+ */
 function ClearRow({ label, onSelect }: { label: string; onSelect: () => void }) {
   return (
-    <CommandGroup>
-      <CommandItem value={label} onSelect={onSelect}>
+    <CommandGroup forceMount>
+      <CommandItem forceMount value={label} onSelect={onSelect}>
         <X className="mr-2 h-4 w-4" />
         <span className="text-muted-foreground">{label}</span>
       </CommandItem>

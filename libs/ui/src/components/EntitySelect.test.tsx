@@ -56,6 +56,19 @@ describe('EntitySelect — clear row', () => {
     expect(screen.queryByText('No entity')).not.toBeInTheDocument();
   });
 
+  it('stays reachable while a search term is typed', async () => {
+    // cmdk filters rows by their own label, so a term like "wool" would hide the
+    // clear row — exactly when the user is searching for what to replace.
+    const onClear = vi.fn();
+    render(<EntitySelect entities={ENTITIES} value="e1" onClear={onClear} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'wool');
+    await userEvent.click(screen.getByText('No entity'));
+
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+
   it('clears the selection when picked', async () => {
     const onClear = vi.fn();
     const onChange = vi.fn();

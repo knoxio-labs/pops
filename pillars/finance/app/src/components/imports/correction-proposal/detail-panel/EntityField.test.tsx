@@ -121,19 +121,32 @@ describe('EntityField — creating a merchant that does not exist yet', () => {
     expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
   });
 
-  it('surfaces a rejected creation instead of throwing', async () => {
+  it('does not offer creation while the entity list is still loading', async () => {
+    // An incomplete list cannot answer "does this merchant exist?", so offering
+    // to create one invites a duplicate of an entity we simply haven't seen.
     mockEntitiesList.mockReturnValue(new Promise(() => {}));
-    const onChange = await renderField({ entityId: null, entityName: null });
-    useImportStore.getState().addPendingEntity({ name: 'Universal Hotel', type: 'company' });
+    await renderField({ entityId: null, entityName: null });
 
     const search = await openPicker();
     await userEvent.type(search, 'Universal Hotel');
-    await userEvent.click(await screen.findByText('Create “Universal Hotel”'));
 
-    expect(onChange).not.toHaveBeenCalled();
-    expect(mockToastError).toHaveBeenCalledWith(
-      'Entity with name "Universal Hotel" already exists in pending list'
-    );
+    expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
+  });
+
+  it('does not offer creation when the entity list is a partial page', async () => {
+    mockEntitiesList.mockResolvedValue({
+      data: {
+        ...dbEntities(['ent-woolies', 'Woolworths']),
+        pagination: { hasMore: true, limit: 200, offset: 0, total: 240 },
+      },
+    });
+    await renderField({ entityId: null, entityName: null });
+
+    const search = await openPicker();
+    await userEvent.type(search, 'Universal Hotel');
+
+    expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Showing the first 1 of 240 entities/)).toBeInTheDocument();
   });
 });
 
@@ -169,6 +182,21 @@ describe('EntityField — reporting a broken pair', () => {
     mockEntitiesList.mockReturnValue(new Promise(() => {}));
     await renderField({ entityId: 'ent-woolies', entityName: 'Woolworths' });
 
+    expect(screen.queryByText(/not a known entity/)).not.toBeInTheDocument();
+  });
+
+  it('does not call an unseen id dead when the list is only a partial page', async () => {
+    // The id may live on a page we never fetched; "not in the list" is not
+    // evidence of a deleted entity, and warning here would cry wolf.
+    mockEntitiesList.mockResolvedValue({
+      data: {
+        ...dbEntities(['ent-woolies', 'Woolworths']),
+        pagination: { hasMore: true, limit: 200, offset: 0, total: 240 },
+      },
+    });
+    await renderField({ entityId: 'ent-on-another-page', entityName: 'Bunnings' });
+
+    expect(await screen.findByText(/Showing the first 1 of 240/)).toBeInTheDocument();
     expect(screen.queryByText(/not a known entity/)).not.toBeInTheDocument();
   });
 });
