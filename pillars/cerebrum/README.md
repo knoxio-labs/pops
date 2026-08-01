@@ -58,8 +58,39 @@ On boot, when `POPS_REGISTRY_ENABLED=true`, the server registers via
 `registry` pillar) and deregisters on `SIGTERM`. The heartbeat reports the live
 `cerebrum.vectorSearch` capability (whether sqlite-vec loaded on this
 connection) and advertises the pillar's federated `/settings/*` surface. There
-is no per-request auth: the pillar trusts the docker network and the gateway in
-front authenticates.
+is no per-request auth.
+
+## Vector storage invariants
+
+Embeddings occupy two tables in `cerebrum.db`, and only one of them is in the
+migration journal:
+
+| Table            | Created by                                                                                                                   | In `migrations/meta/_journal.json` |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `embeddings`     | `migrations/0054_embeddings_baseline.sql` (hand-written); drizzle mirror in `src/db/schema/core/embeddings.ts`               | yes, as `0054_embeddings_baseline` |
+| `embeddings_vec` | `ensureEmbeddingsVecTable` in `src/db/vec-loader.ts` — `CREATE VIRTUAL TABLE IF NOT EXISTS … USING vec0(vector float[1536])` | no                                 |
+
+The `0054` header comment records why: drizzle's schema builder cannot express
+a virtual table, and keeping the `CREATE VIRTUAL TABLE` out of the journal lets
+the metadata baseline apply on a build where `sqlite-vec` is unavailable.
+`openCerebrumDb` runs the steps in that order — extension load, then
+`migrate()`, then create-and-probe — so a failed extension load costs
+`vecAvailable: false` and nothing else; the journal still applies in full.
+`vecAvailable` is `true` only when the load, the create, **and** a
+`SELECT 1 FROM embeddings_vec LIMIT 0` probe all succeed.
+
+`embeddings_vec.rowid == embeddings.id` is enforced by application code; there
+is no foreign key between the two. The worker inserts the metadata row
+first and reuses its `id` as the vector rowid, binding it as `BigInt(...)`
+because sqlite-vec's rowid insert rejects a plain JS number
+(`src/worker/embeddings-handler.ts`, including the orphan-chunk deletes).
+Reads assume the same identity: the k-NN queries in
+`src/api/modules/retrieval/semantic-search.ts` and `semantic-search-helpers.ts`
+join `embeddings e ON e.id = ev.rowid`.
+
+The vector width is the literal `1536` inside `ensureEmbeddingsVecTable`; it is
+not read from `embeddings.dimensions` or from `EMBEDDING_DIMENSIONS`, so a
+model of another dimensionality needs a full re-embed against a rebuilt table.
 
 ## Commands
 

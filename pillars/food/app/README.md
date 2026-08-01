@@ -55,5 +55,4 @@ pnpm generate:lists-client   # regenerate src/lists-api from the lists OpenAPI c
 
 ## Docs
 
-- Domain overview and PRD index: [`pillars/food/docs/README.md`](../docs/README.md)
-- This module's PRD: [`pillars/food/docs/prds/app-shell.md`](../docs/prds/app-shell.md)
+- Pillar overview: [`pillars/food/README.md`](../README.md)

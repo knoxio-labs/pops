@@ -94,7 +94,7 @@ Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over
 
 ## Roadmap
 
-[`docs/roadmap.md`](docs/roadmap.md) is the current-state snapshot of the platform and the forward view, with links into each pillar's `docs/README.md`.
+Unfinished work lives in Huly, project `POPS` at https://projects.knoxiolabs.com. Each pillar's own README describes what it does.
 
 ## Quick Start
 

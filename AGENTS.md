@@ -324,7 +324,7 @@ The code and its tests **are** the specification. A requirement that is built ne
 
 CI enforces three things (`scripts/ci/check-docs-model.mjs`): every `pillars/<id>` and `libs/<lib>` has a README, since a published unit's README is where a reader lands; no `prds/`, `themes/`, `epics/` or `ideas/` directory reappears anywhere; and **every repo path a markdown file points at actually exists**. Nothing requires a README further down — a gate that did would produce exactly the write-to-satisfy-the-gate documentation this model rejects. See [ADR-041](docs/architecture/adr-041-colocated-docs-and-external-tracking.md).
 
-**Do not write indexes.** A hand-maintained list of what exists — a repo tree, a "key files" table, a roster of pillars or libs — drifts the moment anything moves, and nothing reads it closely enough to notice. `libs/db-types` was listed in three files and had never existed; the pillar roster in `.github/copilot-instructions.md` silently omitted `documents`. Describe the **shape** of a thing and let `ls` supply the inventory. Where a pointer genuinely helps, write the path so the guard can check it.
+**Do not write indexes.** A hand-maintained list of what exists — a repo tree, a "key files" table, a roster of pillars or libs — drifts the moment anything moves, and nothing reads it closely enough to notice. a `db-types` lib was listed in three files and had never existed; the pillar roster in `.github/copilot-instructions.md` silently omitted `documents`. Describe the **shape** of a thing and let `ls` supply the inventory. Where a pointer genuinely helps, write the path so the guard can check it.
 
 Two rules keep them useful:
 

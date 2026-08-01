@@ -40,6 +40,41 @@ Failure is a value, never a throw. Every call returns `CallResult<T>` and the ca
 - **The proxy path carries no pillar prefix.** `pillar('finance').wishlist.list` resolves operationId `wishlist.list` in finance's own document. Fewer than two segments is a `contract-mismatch`, not a runtime error.
 - **A pillar serving no `/openapi` reports `contract-mismatch`, not `unavailable`.** "Registered but uncallable" and "not answering" are deliberately distinct.
 
+## Server call-site conventions
+
+Nothing about a `pillar()` call throws on failure, so a floating promise discards
+the failure discriminant in silence.
+
+`PillarCallError` is constructed in exactly one place, the `.orThrow()` wrapper in
+`client/proxy.ts`. No production call site calls `.orThrow()`. Each branches on
+`CallResult` and translates into its own vocabulary instead: `finance`'s contacts
+client splits the kinds into `ContactsUnavailableError` (retryable — the import
+path degrades to an outbox row) and `ContactsPermanentError`; its cron adapter
+folds them to `ok` / `not-found` / `bad-uri` / `unavailable`; the best-effort
+paths log the kind and carry on. Catching `PillarCallError` is purely defensive —
+`inventory`'s reconciler is the only place that does.
+
+Two unrelated classes share the name `PillarCallError`. The root barrel exports
+the one from `capabilities/call-result.ts` (carries `.cause`; has a
+`validation-error` kind); `/client` and `/server` export the one from
+`client/errors.ts` (carries `.pillarId` and `.result`; has `conflict`,
+`bad-request` and `unauthorized` kinds). `CallResult` is likewise two different
+unions. An `instanceof` check against the wrong import never matches, and fails
+quietly.
+
+## Unavailable-classification is not the SDK's
+
+The `unavailable` discriminant covers `pillar()` calls only. A pillar app's own
+browser traffic goes through its generated Hey API client, which the SDK never
+sees, and the classification for that lives in eight hand-written copies:
+`pillars/{ai,cerebrum,finance,food,inventory,media}/app/src/<id>-api-helpers.ts`,
+`pillars/shell/src/registry-api-helpers.ts`, and
+`libs/overlay-ego/src/ego-api-helpers.ts`. Each exports its own
+`isUnavailableError` as an `instanceof` test against its own `<Pillar>ApiError`
+class, so there is no shared type for the SDK to own without first unifying those
+classes. The copies have drifted: three check `status === 503` separately from
+the `status >= 500` that already covers it.
+
 ## Unconsumed
 
 `/orchestrator` (`runFederatedSearch`, `publishEvent`) and `/ranking` (`mergeResults`) have no consumer in the tree. The `orchestrator` pillar federates search itself in `pillars/orchestrator/src/search/federation.ts` over `pillar(id).search.search`, and no pillar declares a `sinks` manifest entry or mounts a `_sinks` route, so the event dispatcher has nothing to dispatch to. `/testing/discovery` is exercised only by its own test.

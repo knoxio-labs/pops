@@ -9,7 +9,7 @@ a [ts-rest](https://ts-rest.com) contract built from zod, exports a
 A pillar is a **black box with a published wire contract**. Everything else is
 private, enforced by Node's `exports` map.
 
-Domain model, REST surface, and PRDs: [`docs/README.md`](docs/README.md).
+Domain model and REST surface: see `src/contract/`.
 
 ## Public surface
 
@@ -71,7 +71,7 @@ pillars/lists/
 ```
 
 Everything inside the pillar imports across subdirs using **relative paths**
-(`../db/index.js`), never via the package name.
+(a relative specifier such as ../db/index.js from within src/api/), never via the package name.
 
 ## Registration
 

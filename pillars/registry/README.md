@@ -2,15 +2,11 @@
 
 The **registry** pillar — the single source of truth for which pillars are
 currently running, plus settings, features, users, service accounts, and URI
-resolution. Every other pillar self-registers here on boot, so the registry is
-the one place the federation looks to enumerate live surfaces. Default port
-**3001** (override with `PORT`).
+resolution. Default port **3001** (override with `PORT`).
 
 It is itself a pillar: it owns its own SQLite DB, serves a
 [ts-rest](https://ts-rest.com) contract built from zod, and exports a
-`./manifest` with id `registry`. When `POPS_REGISTRY_ENABLED=true` it runs the
-same bootstrap handshake every other pillar uses, pointed at its own localhost
-endpoint — it registers with itself.
+`./manifest` with id `registry`.
 
 ## Public surface
 
@@ -63,6 +59,35 @@ Additional raw HTTP routes that ts-rest cannot model:
   proxies to the owning pillar).
 - `GET /openapi` — serves the committed OpenAPI projection verbatim so the
   pillar SDK can build its route map from the live pillar.
+
+## Registration trust model
+
+`register`, `heartbeat` and `deregister` carry no per-request credential — the
+SDK's bootstrap transport sends `content-type` and nothing else, and
+`api_key_hash` is written `null`. The handlers attribute this to
+[ADR-027](../../docs/architecture/adr-027-runtime-pillar-registry.md), "the
+docker network is the boundary"; the ADR's own text covers the
+push-with-heartbeat decision and never discusses a trust boundary, so the
+handler comments are where that model is actually written down.
+
+The public shell nginx proxies the read-only surface (`/pillars`,
+`/pillars/health`, `/registry/subscribe`) and mounts no location for
+`/registry/{register,heartbeat,deregister}` or their dotted aliases — the
+omission is deliberate and commented in the generated `pillars/shell/nginx.conf`.
+It is not a seal. The generic `/registry-api/` block strips its own prefix and
+forwards whatever follows, so `POST /registry-api/registry/register` still lands
+on the register handler from outside the network.
+
+`register` UPSERTs on `pillar_id` and always passes `origin = 'external'`
+(`external-registry/register.ts`). The two guards keyed on that value are
+inert: deregister's
+`403 internal-pillar-not-deregisterable-externally` and the eviction ticker's
+refusal to hard-evict a non-external row.
+
+Nothing rejects a register whose `pillarId` collides with an in-tree pillar. The
+only checks are `PILLAR_ID_PATTERN`, the manifest schema, and
+`manifest.pillar === pillarId`, so an in-network caller can overwrite a core
+pillar's `base_url` and manifest by registering under its id.
 
 ## Modules
 

@@ -56,8 +56,4 @@ uninstalling only removes the UI — list data stays in the lists pillar.
 
 ## Docs
 
-- Domain overview: [`pillars/lists/docs/README.md`](../docs/README.md)
-- Schema: [`pillars/lists/docs/prds/schema.md`](../docs/prds/schema.md)
-- Shell module: [`pillars/lists/docs/prds/shell-module.md`](../docs/prds/shell-module.md)
-- Generic CRUD UI: [`pillars/lists/docs/prds/crud-ui.md`](../docs/prds/crud-ui.md)
-- Shopping specialisation: [`pillars/lists/docs/prds/shopping-specialisation.md`](../docs/prds/shopping-specialisation.md)
+- Pillar overview: [`pillars/lists/README.md`](../README.md)

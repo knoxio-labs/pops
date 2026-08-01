@@ -69,7 +69,7 @@ pillars/inventory/
 ```
 
 Everything inside the pillar imports across subdirs using **relative paths**
-(`../db/index.js`), never via the package name.
+(a relative specifier such as ../db/index.js from within src/api/), never via the package name.
 
 ## Registration
 

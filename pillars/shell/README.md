@@ -71,6 +71,40 @@ headers; the outcome shapes are the `RegisterShellOutcome` union in the lib.
 Every outcome exits `0` so a partially-configured deploy still boots — only an
 unexpected throw sets a non-zero exit code.
 
+## Overlay mount contract
+
+The props an overlay receives are `OverlayComponentProps` in
+`src/app/overlays/OverlayHost.tsx`.
+
+The named chrome slots are **`assistant`, `notification`, `command`** — and
+that list is declared **twice**, as two independent literals in two packages:
+
+| Declaration site                                                      | Effect                                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/overlays/OverlayHost.tsx` — `KNOWN_CHROME_SLOTS`             | Runtime. An overlay declaring anything else is dropped at module load with a `console.warn`; the shell still boots.                   |
+| `libs/module-registry/scripts/chrome-slots.ts` — `KNOWN_CHROME_SLOTS` | Registry codegen. `warnUnknownChromeSlots`, called from `validateManifests`, writes to stderr. Deliberately a warning, never a throw. |
+
+Nothing cross-checks the two lists, and a new slot needs a third file besides:
+`RootLayout` renders one `<OverlayHost slot="…" />` per slot, each inside a
+`data-overlay-slot` wrapper div. The `slot` prop is typed
+`KnownChromeSlot`, which does **not** force a host to exist — add a slot to
+the tuple and forget the host, and overlays declaring it compile and silently
+never mount. (The bucket record in `buildSlotMounts` is type-checked against
+the tuple, so that half is caught.)
+
+One host per slot, any number of overlays per host: `OverlayHost` mounts every
+installed overlay whose `chromeSlot` equals its `slot` prop. Two overlays
+declaring the same slot both mount — there is no collision rejection at
+codegen, boot, or mount, and no z-index arbitration in the shell (overlays own
+their own positioning; the wrapper divs are bare anchors).
+
+Getting mounted at all needs both halves of `src/app/overlays/registry.ts`:
+the manifest must be in the shell-local `SHELL_OVERLAY_MANIFESTS` array — a
+static import, so adding an overlay edits shell source — **and** its id must
+be in `INSTALLED_MODULES`. A manifest with no `frontend.overlay.component`
+loader is projected away and never mounts. `assistant` is the only occupied
+slot today, held by `@pops/overlay-ego`.
+
 ## Commands
 
 ```bash

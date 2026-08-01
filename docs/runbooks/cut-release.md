@@ -2,7 +2,7 @@
 
 > Audience: anyone with `write` access to `knoxio/pops`.
 > Frequency: only when you want to pin a stable point — day-to-day deploys need no release (see below).
-> Related: [Application Packaging & GHCR Contract](../themes/platform/prds/application-packaging.md).
+> Related: [`infra/README.md`](../../infra/README.md) — the compose deploy contract.
 
 ## TL;DR
 
@@ -93,7 +93,7 @@ push to main (Conventional Commits)
                 vX.Y.Z, X.Y.Z, vX.Y, X.Y, vX, X
 ```
 
-> `release.yml` currently runs `on: workflow_dispatch` only — auto-trigger on push to `main` was parked during the pillar-colocation work so a half-renamed tag→publish chain couldn't reach the live host. Restoring `push: branches: [main]` is tracked in [docs/ideas/application-packaging.md](../ideas/application-packaging.md). The publish workflow already runs on every push to `main`; only the _versioned tag_ step is gated.
+> `release.yml` currently runs `on: workflow_dispatch` only — auto-trigger on push to `main` was parked during the pillar-colocation work so a half-renamed tag→publish chain couldn't reach the live host. Restoring `push: branches: [main]` is tracked in Huly. The publish workflow already runs on every push to `main`; only the _versioned tag_ step is gated.
 
 ## Manual escape hatch
 
