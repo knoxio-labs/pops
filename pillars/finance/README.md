@@ -9,7 +9,18 @@ entities live in the `contacts` pillar; finance keeps no entities table of its
 own — it reads them over HTTP and create-or-fetches by name (creating a contact
 only when none already matches) during import.
 
-Domain docs: [`docs/README.md`](docs/README.md).
+## How the domain works
+
+Behaviour is documented next to the code that implements it:
+
+| Read this                                                               | For                                                            |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [`src/api/modules/imports/`](src/api/modules/imports/README.md)         | The import pipeline and the classification ladder              |
+| [`src/api/modules/corrections/`](src/api/modules/corrections/README.md) | Learned classification rules and the ChangeSet proposal engine |
+| [`src/api/modules/tag-rules/`](src/api/modules/tag-rules/README.md)     | Tag rules, and the boundary against correction rules           |
+| [`app/src/components/imports/`](app/src/components/imports/README.md)   | The eight-step import wizard and its local-first buffering     |
+
+Other directories carry no README on purpose — their file headers already explain them. Start with a file's header comment before its body.
 
 ## Public surface
 

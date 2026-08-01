@@ -35,7 +35,7 @@ The categorisation-rules browser and the prompt-template viewer are **not** part
 - `/ai/rules → /finance/rules` — the corrections/rules management view.
 - `/ai/prompts → /finance/prompts` — the read-only prompt-template viewer.
 
-See `../../../finance/docs/` for those specs. This PRD deliberately authors no rules or prompt content.
+See `../../../finance/src/api/modules/` for those specs. This PRD deliberately authors no rules or prompt content.
 
 ## Acceptance Criteria
 

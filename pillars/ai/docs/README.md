@@ -76,6 +76,6 @@ The AI Ops dashboard — the pillar's `app` surface, mounted by the shell at `/a
 
 ## Cross-References
 
-- AI categorisation, rule generation, and the entity cache: `../../finance/docs/`
+- AI categorisation, rule generation, and the entity cache: `../../finance/src/api/modules/imports/` and `../../finance/src/api/modules/corrections/`
 - Cerebrum nudge feed used as an alert delivery channel: `../../cerebrum/docs/`
 - The telemetry wrapper every caller uses: `@pops/ai-telemetry` (`libs/`)
