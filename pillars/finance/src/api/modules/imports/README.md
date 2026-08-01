@@ -42,7 +42,7 @@ Each of those carries a file-header comment explaining its own mechanics and the
 - **Reference data is fetched once per run, never per row.** Entity names, aliases and default tags come live from the `contacts` pillar — finance keeps no entity mirror. The correction rule set is loaded once and threaded through `ProcessContext`. Entity-key normalization is cached against the lookup map's identity, so **building a map and then mutating it mid-run yields stale keys** — build a fresh one.
 - **Only an allowlisted projection reaches the model.** `toCategorizerInput` drops `rawRow`, `account`, `location` and `checksum`, so no account, card or reference column can be interpolated into a prompt. Telemetry carries an opaque `import_batch:<id>`, never the description.
 - **A disabled categorizer is loud, not silent.** A run where rows reached the AI stage with it switched off surfaces an `AI_CATEGORIZATION_UNAVAILABLE` warning carrying the affected count — "matched nothing because AI was off" must never look like "matched everything".
-- **Tag suggestions are deduplicated and source-attributed** in the order correction → tag-rule → AI → entity-default. A tag appears once regardless of how many sources propose it. There is no online/in-person field on a transaction; that distinction is an ordinary tag applied by `transaction_tag_rules`.
+- **Tag suggestion runs after matching**, in `../tag-suggester/` — its header documents the source priority and dedup. Worth knowing here: there is no online/in-person field on a transaction, so that distinction is an ordinary tag applied by `transaction_tag_rules`.
 
 ## Absent
 
