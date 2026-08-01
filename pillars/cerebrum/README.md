@@ -7,7 +7,10 @@ serves a [ts-rest](https://ts-rest.com) contract built from zod, runs a worker,
 exports a `./manifest`, and self-registers with the `registry` pillar on boot.
 Port **3007**.
 
-Domain docs (theme, components, scope model, success criteria): [`docs/README.md`](docs/README.md).
+Architecture decisions (engram storage model, hierarchical scopes, Glia trust
+graduation): [`docs/architecture/`](docs/architecture/). Feature-level docs are
+colocated as `README.md` next to the code they describe — see
+`src/api/modules/{glia,reflex,thalamus,workers}/`.
 
 ## Public surface
 
@@ -37,7 +40,7 @@ pillars/cerebrum/
 ├── Dockerfile
 ├── mise.toml               per-pillar tasks
 ├── app/                    @pops/app-cerebrum — FE feature module
-├── docs/                   domain docs (theme, PRDs, architecture)
+├── docs/architecture/      ADRs
 ├── openapi/
 │   └── cerebrum.openapi.json   generated projection of the contract
 ├── scripts/                verify-manifest, generate-openapi, generate-api-types

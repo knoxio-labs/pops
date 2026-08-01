@@ -1,7 +1,6 @@
 /**
  * Unit tests for the inventory cross-pillar URI reconciliation cron.
  *
- * Soft-URI reconciliation contract: pillars/inventory/docs/prds/data-model-api.
  * Covers happy-path, 404, owning-pillar-unavailable, and bad-URI outcomes,
  * plus the timer-based scheduling path that arms the next tick after the
  * current one settles.

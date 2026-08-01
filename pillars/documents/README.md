@@ -5,30 +5,17 @@ paperless-ngx integration. It has no domain database of its own; it proxies
 live to a paperless-ngx instance and exposes a thin REST contract over it.
 It listens on port **3012**.
 
-This pillar exists because paperless-ngx was previously an orphaned
-integration embedded inside the `inventory` pillar (ADR-039, workstream 13):
-no owning pillar, no network reachability plan, no backup story. `documents`
-gives it a single owner.
+| Surface                        | What it does                                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `GET /paperless/status`        | Whether paperless-ngx is configured (env present) and reachable.                                           |
+| `GET /paperless/search`        | Search paperless-ngx documents by query string. `412` when unconfigured.                                   |
+| `GET /documents/:id/thumbnail` | Raw byte proxy for a document's thumbnail image.                                                           |
+| `GET /health`                  | Liveness shape. No DB round-trip — there is no DB.                                                         |
+| `GET /pillars`                 | Fleet view parsed from the `POPS_PILLARS` env string, prepended with the synthetic `documents` self-entry. |
+| `GET /openapi`                 | The committed contract projection, served verbatim so peers can build a route map.                         |
 
-| Surface                        | What it does                                                                           |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| `GET /paperless/status`        | Whether paperless-ngx is configured (env present) and reachable.                       |
-| `GET /paperless/search`        | Search paperless-ngx documents by query string. `412` when unconfigured.               |
-| `GET /documents/:id/thumbnail` | Raw byte proxy for a document's thumbnail image.                                       |
-| `GET /health`                  | Liveness shape. No DB round-trip — there is no DB.                                     |
-| `GET /pillars`                 | Registry-first view of the fleet, prepended with the synthetic `documents` self-entry. |
-
-Like every pillar, it self-registers with the `registry` pillar on boot
-(opt-in via `POPS_REGISTRY_ENABLED`, using `bootstrapPillar` from
-`@pops/pillar-sdk`). Its manifest declares empty `search`/`ai`/`uri`
-dimensions in this scaffold increment — a future increment can populate
-`search.adapters` once the pillar mirrors document metadata locally instead
-of proxying live.
-
-`inventory` used to embed a `PaperlessClient` directly; it now calls
-`pillar('documents')` over the pillar SDK with graceful degrade (see
-`pillars/inventory/src/api/documents/client.ts`), keeping its own
-identically-shaped `paperless.*` contract for its frontend.
+When `POPS_REGISTRY_ENABLED=true` it self-registers with the `registry` pillar
+on boot, using `bootstrapPillar` from `@pops/pillar-sdk/bootstrap`.
 
 ## Layout
 
@@ -52,7 +39,7 @@ pillars/documents/
         ├── modules/paperless/     PaperlessClient + factory + types
         ├── rest/                  ts-rest handler composer + paperless handlers
         ├── files/                 raw thumbnail byte-proxy route
-        └── pillars/               GET /pillars — registry-first fleet view
+        └── pillars/               GET /pillars — `POPS_PILLARS` fleet view
 ```
 
 ## Commands
@@ -75,11 +62,9 @@ pnpm --filter @pops/documents start        # node dist/api/server.js
 | `PAPERLESS_API_TOKEN`     | —                          | paperless-ngx API token.                                      |
 | `POPS_REGISTRY_ENABLED`   | `false`                    | Opt-in self-registration with the `registry` pillar.          |
 | `POPS_REGISTRY_URL`       | `http://registry-api:3001` | Registry base URL.                                            |
+| `POPS_PILLARS`            | — (empty registry)         | `id:baseUrl[,id:baseUrl,...]` string backing `GET /pillars`.  |
 
-This scaffold does not wire `PAPERLESS_BASE_URL` / `PAPERLESS_API_TOKEN` /
-networks / volumes / secrets in `infra/docker-compose.yml` — that is the
-prod cutover tracked separately (ADR-039 workstream 22).
+## Architecture
 
-## Domain docs
-
-See [docs/README.md](docs/README.md) for the full domain summary.
+- [ADR-035](../../docs/architecture/adr-035-pillar-redefinition-and-implicit-kinds.md) — the bridge pillar kind this pillar is an instance of
+- [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md) — the pillar-isolation program that pulled paperless-ngx out of `inventory`

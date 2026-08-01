@@ -1,6 +1,5 @@
 /**
- * Orchestrator AI-tool registry handler. See
- * `pillars/orchestrator/docs/prds/ai-tool-registry`.
+ * Orchestrator AI-tool registry handler.
  *
  * The orchestrator hosts the aggregated AI-tool registry; the aggregation
  * itself lives in the SDK. `@pops/pillar-sdk`'s `buildToolList()` pulls the

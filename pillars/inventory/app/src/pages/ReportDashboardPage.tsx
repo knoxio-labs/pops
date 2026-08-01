@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router';
 
 /**
  * ReportDashboardPage — inventory reporting hub at `/inventory/reports`.
- *
- * Spec: pillars/inventory/docs/prds/value-insurance-reporting.
  */
 import { Button, PageHeader } from '@pops/ui';
 

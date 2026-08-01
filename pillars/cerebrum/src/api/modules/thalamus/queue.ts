@@ -3,8 +3,9 @@
  *
  * cerebrum-api is the *producer* — the thalamus index procs enqueue embedding
  * jobs (one per changed engram on `reindex --force`, one per changed source row
- * on `reindexSources`). The consumer (the embeddings worker) still runs in the
- * monolith, so this file only declares the enqueue surface. Mirrors the ingest
+ * on `reindexSources`). The consumer is the pillar's own worker process
+ * (`src/worker/embeddings-handler.ts`), so this file declares only the enqueue
+ * surface. Mirrors the ingest
  * slice's lazy-singleton `queue.ts`: returns `null` when Redis is unconfigured
  * so tests + dev runs without Redis don't blow up at module init. Closed on
  * graceful shutdown via {@link closeCerebrumEmbeddingsQueue}.

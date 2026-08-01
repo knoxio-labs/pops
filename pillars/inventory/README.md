@@ -111,7 +111,17 @@ hand-authored paths.
 
 ## Domain docs
 
-The inventory domain — items, locations, the connection graph, warranties,
-Paperless-ngx links, and insurance reporting — is documented in
-[docs/README.md](docs/README.md), with one PRD per feature under
-[docs/prds/](docs/prds/).
+Feature-level documentation is colocated with the code it describes. The ones
+that exist:
+
+- [`src/api/modules/fixtures/`](src/api/modules/fixtures/README.md) — what a
+  fixture is, who calls it, and what it deliberately does not do.
+- [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
+  read-only report surface and the warranty window it does not own.
+- [`app/src/pages/items-page/`](app/src/pages/items-page/README.md),
+  [`item-detail-page/`](app/src/pages/item-detail-page/README.md),
+  [`item-form-page/`](app/src/pages/item-form-page/README.md),
+  [`location-tree-page/`](app/src/pages/location-tree-page/README.md).
+
+Everything else is documented by the file header comments in the directory
+itself.

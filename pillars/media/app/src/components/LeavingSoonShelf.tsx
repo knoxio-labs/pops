@@ -5,8 +5,6 @@ import { toast } from 'sonner';
 /**
  * LeavingSoonShelf — horizontal shelf showing movies scheduled for removal.
  * Used on the Library page above the main grid.
- *
- * Spec: pillars/media/docs/prds/rotation-ui
  */
 import { Button, Skeleton } from '@pops/ui';
 

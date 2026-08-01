@@ -10,8 +10,6 @@ import { Button } from '@pops/ui';
  * build. Rendered by the router's catch-all `UnmatchedRoute`, which only
  * picks this over `NotFoundPage` when the leading segment is in
  * `KNOWN_MODULES` but absent from the live install set.
- *
- * See pillars/shell/docs/prds/shell.
  */
 export function NotInstalledPage() {
   const { pathname } = useLocation();

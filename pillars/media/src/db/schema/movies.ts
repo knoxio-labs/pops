@@ -31,7 +31,6 @@ export const movies = sqliteTable(
     updatedAt: text('updated_at')
       .notNull()
       .default(sql`(datetime('now'))`),
-    // Rotation lifecycle: see pillars/media/docs/prds/rotation-engine
     rotationStatus: text('rotation_status', { enum: ['leaving', 'protected'] }),
     rotationExpiresAt: text('rotation_expires_at'),
     rotationMarkedAt: text('rotation_marked_at'),

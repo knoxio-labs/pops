@@ -4,9 +4,8 @@
  * arg.
  *
  * Each `markStale` compounds the value by ×0.5 (floor 0.01); a fresh item
- * defaults to 1.0. `resetStaleness` deletes the row so it returns to fresh —
- * exported for the watch-history log/batchLog paths to call when a movie is
- * (re)watched (wired up by a later follow-up).
+ * defaults to 1.0. `resetStaleness` deletes the row so it returns to fresh; the
+ * watch-history log/batchLog paths call it when an item is (re)watched.
  */
 import { and, eq, type SQL, sql } from 'drizzle-orm';
 

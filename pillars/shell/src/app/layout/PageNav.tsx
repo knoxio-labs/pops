@@ -5,9 +5,8 @@ import { findActiveApp, findActiveItem } from '@/app/nav/path-utils';
  * Page navigation panel.
  *
  * Renders page links for the currently active app, determined by URL. Sits
- * alongside the AppRail in the two-level navigation layout
- * (pillars/shell/docs/prds/app-switcher). Colour is inherited from the
- * --app-accent CSS variable set on the shell root.
+ * alongside the AppRail in the two-level navigation layout. Colour is
+ * inherited from the --app-accent CSS variable set on the shell root.
  */
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router';

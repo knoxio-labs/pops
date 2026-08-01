@@ -94,10 +94,9 @@ export type ContactsEntityListInput = {
   offset?: number;
 };
 
-// Entities live on the CONTACTS pillar — the authoritative entity store
-// (pillars/contacts/docs/prds/entities). The finance↔transactions usage rollup
-// is finance's, but the entity table itself is contacts'. Reached over the same
-// REST pillar SDK as the finance calls above.
+// Entities live on the CONTACTS pillar — the authoritative entity store. The
+// finance↔transactions usage rollup is finance's, but the entity table itself
+// is contacts'. Reached over the same REST pillar SDK as the finance calls above.
 export type ContactsShape = {
   entities: {
     list: (input: ContactsEntityListInput) => unknown;
