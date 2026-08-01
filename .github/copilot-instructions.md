@@ -5,12 +5,16 @@
 POPS (Personal Operations System) is a self-hosted personal command center for finance, media, inventory, and AI operations. It is a pnpm workspace running on Node.js (24 locally via `mise`, 22 in CI/production) built as a set of independent REST **pillars** — each a standalone service that owns its own SQLite database (Drizzle ORM), serves a zod → [ts-rest](https://ts-rest.com) contract projected to OpenAPI, exports a `./manifest`, and self-registers with the `registry` pillar on boot. There is **no tRPC** and **no `pops-api` monolith** — both were removed. The frontend is one React SPA (`pops-shell`) that lazy-loads per-domain feature apps over generated Hey API REST clients; cross-pillar calls go through the `@pops/pillar-sdk` `pillar()` client. AI categorization and entity matching use the Claude API; embeddings use an OpenAI-compatible client (configurable via `EMBEDDING_API_URL`, defaulting to `https://api.openai.com/v1`). Jobs run on BullMQ + Redis. The system deploys via Docker Compose to a home server behind Cloudflare Tunnel (host provisioning lives in the private `knoxio/homelab-infra` repo).
 
 **Repo layout:**
-- `pillars/<id>/` — one REST pillar per folder (registry, inventory, media, finance, food, lists, cerebrum, ai, contacts, orchestrator, shell, docs, mcp, moltbot). Each owns its SQLite DB (`src/db`), zod → ts-rest contract (`src/contract`), OpenAPI snapshot (`openapi/<id>.openapi.json`), `./manifest`, and Dockerfile.
-- `libs/<name>/` — shared workspace libraries (types, db-types, sdk, settings, ai-telemetry, ui, navigation, module-registry, overlay-ego, locales, pops-ai, pops-settings)
+- `pillars/<id>/` — one REST pillar per folder. Each owns its SQLite DB (`src/db`), a zod → ts-rest contract (`src/contract`), an OpenAPI snapshot (`openapi/<id>.openapi.json`), a `./manifest`, and a Dockerfile. Which pillars exist is on disk; `AGENTS.md` carries the ports table. Do not expect every pillar to fit the shape — some own no DB, one is Rust, and two serve no contract.
+- `libs/<name>/` — shared workspace libraries. Each has a README stating what it is and who depends on it. A lib must never import from a pillar.
 - `infra/` — Docker Compose (`docker-compose.yml` prod, `docker-compose.dev.yml` dev) + Litestream stream configs
-- `docs/` — cross-cutting PRDs (under `docs/themes/{platform,foundation,federation}/`), ADRs (`docs/architecture/`), templates, runbooks, roadmap, vision. Pillar-scoped PRDs live under `pillars/<id>/docs/prds/`.
+- `docs/` — cross-cutting ADRs (`docs/architecture/`) and `vision.md`. Nothing else.
 
-**Documentation model (slug-only, strictly maintained):** hierarchy is **Theme → PRD** — there are no epics and no separate `us-*.md` user-story files (both layers were removed). A PRD's id is its slug; it lives at a single-file path (`pillars/<id>/docs/prds/<slug>.md` for pillar-scoped, `docs/themes/<name>/prds/<slug>.md` for cross-cutting). Acceptance criteria live **inline** in each PRD under `## Acceptance Criteria`. There is no PRD numbering. ADRs keep frozen `adr-NNN` numbers. Status flows upward: PRD criteria → PRD → Theme → `docs/roadmap.md`.
+**Documentation model — three artifacts, three questions.** **WHICH**: an ADR (`docs/architecture/adr-NNN-slug.md`, or `pillars/<id>/docs/architecture/` when pillar-only; numbering is frozen and append-only). **HOW**: a `README.md` colocated in the directory it describes. **WHY**: an inline comment on the line whose reason is invisible from the code.
+
+There are **no PRDs, themes, epics, user stories, acceptance-criteria checkboxes, status tables or roadmaps** in this repo. Do not ask for them, and treat a PR that adds one as introducing drift. The code and its tests are the specification; work that is not done lives in Huly (project `POPS`, `projects.knoxiolabs.com`).
+
+READMEs have **no coverage quota** — one is warranted only where the code cannot speak for itself, and a directory without one is a fine outcome. Do not request a README for a directory whose file headers already explain it, and do not accept a README that merely paraphrases the code beneath it.
 
 ---
 
@@ -49,22 +53,21 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 
 **1. Documentation sync (zero drift tolerated)**
 
-- Every code change that touches a feature, API surface, data model, or behavior must have corresponding updates in its PRD — pillar-scoped at `pillars/<id>/docs/prds/<slug>.md` or cross-cutting at `docs/themes/<name>/prds/<slug>.md`. (There are no epics or `us-*.md` files; acceptance criteria are inline in the PRD.)
-- Update status fields to reflect the current state: tick `- [ ]` → `- [x]` inline criteria as work lands; `Done` when every criterion is ticked; `In progress` otherwise. Deferred criteria must be explicitly documented (and a gap issue filed — see "Implementation gaps").
-- `docs/roadmap.md` must reflect the current state of any phase or PRD that changed.
+- If a directory has a `README.md` and this PR changes behaviour that README describes, the README must change in the **same** commit — or the stale paragraph must be deleted. A README that has drifted from its code is worse than none.
+- Do **not** demand a new README for changed code that has none. Ask for one only when the change introduces behaviour a reader could not recover from the code — a cross-file ordering, a precedence rule, a non-obvious invariant.
 - API changes must update or maintain the pillar's OpenAPI snapshot (`pillars/<id>/openapi/<id>.openapi.json`). Regenerate via `mise openapi:generate`.
 - Schema changes must have a Drizzle migration: edit the pillar's schema, run `drizzle-kit generate` in that pillar, review, and commit the result (each pillar auto-migrates its own SQLite DB on startup; there is no shared/global drizzle step).
-- Any behavior documented in `AGENTS.md` or `docs/CLAUDE.md` that changes must be updated in those files too.
+- Any behavior documented in `AGENTS.md` that changes must be updated there too.
 
 **2. Implementation gaps — no partial work**
 
-- If a PR implements part of a feature but leaves gaps (TODOs, stubs, placeholder logic, skipped edge cases), either: (a) the gaps must be closed in this PR, or (b) a GitHub issue must exist that explicitly tracks each gap before the PR merges. A gap without a tracking issue is a blocker.
-- `// TODO`, `// FIXME`, `// HACK`, `// TEMP`, `// placeholder`, or any similar marker introduced by this PR is a blocker unless it references an open GitHub issue by URL or number.
+- If a PR implements part of a feature but leaves gaps (TODOs, stubs, placeholder logic, skipped edge cases), either: (a) the gaps must be closed in this PR, or (b) a Huly issue must exist that explicitly tracks each gap before the PR merges. A gap without a tracking issue is a blocker.
+- `// TODO`, `// FIXME`, `// HACK`, `// TEMP`, `// placeholder`, or any similar marker introduced by this PR is a blocker unless it references an open Huly issue by key (e.g. `POPS-42`). **GitHub Issues are disabled on this repo** — a bare `#NNNN` in new code is not a tracking reference.
 - Commented-out code is a blocker.
 
 **3. Correctness**
 
-- Verify all acceptance criteria in the referenced PRD are fully satisfied.
+- Verify the change does what its tests claim, and that the tests would fail if it did not.
 - Drizzle queries must use parameterized inputs — never string interpolation.
 - All external inputs (user input, webhook payloads, imported CSV data) must be validated with Zod at the boundary.
 - No secrets, `.env` values, or credentials may be hardcoded or committed.
@@ -103,7 +106,7 @@ Do not soften or hedge. Do not say "you might want to consider" or "this is just
 Report every issue as a required change. Use direct language:
 
 > "This procedure lacks a Zod input schema. Add one before merging."
-> "Acceptance criterion 3 in `pillars/finance/docs/prds/import-dedup-csv.md` is not satisfied by this implementation."
+> "This changes the classification ladder, but `pillars/finance/src/api/modules/imports/README.md` still documents the old order. Update it in this PR."
 > "There is no migration for the new `tags` column. Run `drizzle-kit generate` in this pillar and commit the result."
 > "This TODO at line 47 has no tracking issue. Either resolve it or open a GitHub issue and reference it here."
 
@@ -118,10 +121,10 @@ Do not batch small issues into a single comment. File a separate review comment 
 | Agent guidance (primary) | `AGENTS.md` |
 | Coding conventions | `AGENTS.md` → "Coding Conventions" |
 | Design context | `AGENTS.md` → "Design Context" |
-| Documentation standards | `docs/CLAUDE.md` |
-| Roadmap & phase tracker | `docs/roadmap.md` |
+| Documentation model | `AGENTS.md` → "Documentation Model" |
+| Work tracking | Huly, project `POPS` (`projects.knoxiolabs.com`) |
+| Architecture decisions | `docs/architecture/adr-NNN-slug.md` |
 | Per-pillar DB schema | `pillars/<id>/src/db/schema/` |
-| Shared DB type helpers | `libs/db-types/src/` |
 | Pillar ts-rest contract | `pillars/<id>/src/contract/` |
 | Business logic | `pillars/<id>/src/db/services/` |
 | UI components | `libs/ui/src/components/` |

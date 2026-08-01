@@ -5,17 +5,12 @@ This directory ships:
 
 - The **config** files (prod + dev) that get mounted into the upstream
   `moltbot/moltbot:latest` container.
-- The **skill prompts** (`pops-cerebrum/`, `pops-finance/`) that turn `/capture`,
-  `/ask`, and `/help` Telegram messages into pillar REST calls.
 - A small **validator script** (`scripts/validate-config.sh`) that the compose
   stack runs as a one-shot init container before the bot starts so missing
   secrets or an empty `allowed_user_ids` fail loudly instead of silently
   dropping every message.
 
 The bot itself is the upstream image — we don't fork it.
-
-Domain docs live in the cerebrum pillar's
-[ego-channels PRD](../cerebrum/docs/prds/ego-channels.md).
 
 ## First-run runbook
 
@@ -38,16 +33,7 @@ The bot calls the pillars as a machine client using a service-account key. The
 key is hashed at rest; the plaintext is shown exactly once at creation time.
 
 Service accounts are owned by the `registry` pillar. From a logged-in shell
-(Cloudflare Access session) mint one with its admin-only REST endpoint:
-
-```bash
-curl -sS -X POST https://pops.local/registry/service-accounts \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "moltbot",
-    "scopes": ["cerebrum.ingest", "cerebrum.query", "cerebrum.retrieval"]
-  }'
-```
+(Cloudflare Access session) mint one with its admin-only REST endpoint.
 
 The response includes the one-time `plaintextKey`. Add `finance.transactions`,
 `finance.budgets`, etc. to the scope list only if you actually run the
@@ -134,22 +120,45 @@ Skills authenticate to the pillars using:
 X-API-Key: <plaintext key from pops_api_key secret>
 ```
 
-The target pillar rejects the call with 401 if the key is missing/invalid.
-The registry also collapses a scope miss — a valid key whose row's `scopes`
-don't cover the requested route — into the same 401 (e.g. `moltbot` calling
+The registry collapses a scope miss — a valid key whose row's `scopes`
+don't cover the requested route — into a 401 (e.g. `moltbot` calling
 `POST /registry/service-accounts` is rejected because that admin route needs
 a human session, not a service-account scope). See
 `pillars/registry/src/contract/rest-service-accounts.ts` for the
 service-account mint/revoke API and `pillars/registry/src/api/middleware/identity.ts`
-for the auth gate. Requests reach each pillar via the `shell` nginx reverse
-proxy that fronts every service.
+for the auth gate.
 
 ## Why a separate validator container?
 
 The upstream bot doesn't expose a "validate config and exit" mode and we
-don't want to fork the image just for that. A 6-line `alpine:3.20` init
-container that runs `validate-config.sh` keeps the failure visible at
-`docker compose up` time without touching the upstream binary.
+don't want to fork the image just for that.
+
+## Deployment footprint: this directory must exist on the host
+
+The two `moltbot`-profile services are the only ones in the compose stack that
+bind-mount the repo's `pillars/` tree. They take their config and skills from
+this directory rather than from inside an image:
+
+| Host path                                    | Container path                         | Service             |
+| -------------------------------------------- | -------------------------------------- | ------------------- |
+| `pillars/moltbot/config/config.yml`          | `/config/config.yml`                   | `moltbot-validator` |
+| `pillars/moltbot/scripts/validate-config.sh` | `/validate.sh`                         | `moltbot-validator` |
+| `pillars/moltbot/config/config.yml`          | `/home/node/.moltbot/config.yml`       | `moltbot`           |
+| `pillars/moltbot/skills`                     | `/home/node/.moltbot/workspace/skills` | `moltbot`           |
+
+All four are read-only. The only other host paths in
+`infra/docker-compose.yml` stay inside `infra/` or are not repo content at all
+— the litestream profile mounts `./litestream/*.yml` siblings of the compose
+file, and watchtower mounts the docker socket. In
+`infra/docker-compose.dev.yml` (`config.dev.yml` in place of `config.yml`)
+these four are the only host bind mounts of any kind.
+
+The consequence for a deployer: `--profile moltbot` cannot be served by pulling
+images. The host needs this directory laid out so that `../pillars/moltbot`
+resolves from wherever the compose file sits. Nothing in the mounts is
+versioned or tagged, so editing `config.yml` or a skill prompt on the host
+changes what the bot loads on its next restart, with no image rebuild in the
+loop.
 
 ## Scope
 

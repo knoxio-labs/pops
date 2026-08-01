@@ -4,7 +4,7 @@ The **ai** pillar — the platform's AI governance surface: providers, usage,
 budgets, alerts, observability, and pricing. A standalone REST service that owns
 its own SQLite DB (`ai.db`), serves a [ts-rest](https://ts-rest.com) contract
 built from zod, exports a `./manifest`, and self-registers with the `registry`
-pillar on boot. Port **3008**. Domain docs: [`docs/README.md`](docs/README.md).
+pillar on boot. Port **3008**.
 
 ## Public surface
 

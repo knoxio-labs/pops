@@ -2,8 +2,9 @@
  * BullMQ producer for the `pops-curation` queue, pillar-side.
  *
  * cerebrum-api is the *producer* — it enqueues `classifyEngram` jobs from
- * `quickCapture` / `retryEnrichment`. The consumer (the curation worker) still
- * runs in the monolith, so this file only declares the enqueue surface, not a
+ * `quickCapture` / `retryEnrichment`. The consumer is the pillar's own worker
+ * process (`src/worker/curation-handler.ts`), so this file declares only the
+ * enqueue surface, not a
  * worker. Mirrors the food pillar's lazy-singleton `queue.ts`: returns `null`
  * when Redis is not configured so tests + dev runs without Redis don't blow up
  * at module init. Closed on graceful shutdown via {@link closeCerebrumIngestQueue}.
@@ -11,7 +12,7 @@
 import { type DefaultJobOptions, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-/** Must match the monolith's `CURATION_QUEUE` name so the worker picks jobs up. */
+/** Must match the name the pillar worker subscribes to so it picks jobs up. */
 export const CURATION_QUEUE_NAME = 'pops-curation';
 
 /**

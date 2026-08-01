@@ -9,8 +9,6 @@ self-registers with the `registry` pillar on boot. Default port **3010** (the
 slot after `ai` 3008 and `orchestrator` 3009; override with `CONTACTS_PORT` /
 `PORT`).
 
-Domain docs: [`docs/README.md`](docs/README.md).
-
 ## Contract surface
 
 contacts has no ts-rest/zod contract because it is not TypeScript. Its wire
@@ -52,6 +50,41 @@ does exactly this — its vendored copy lives at
 canonical file by a repo-level drift gate
 (`scripts/ci/check-vendored-contracts.mjs`).
 
+## What proves cross-language wire conformance
+
+There is no generic conformance harness in the repo — no `wire-conformance`
+package, no black-box probe CLI a pillar author can point at a base URL. Three
+things stand in for one, and they are what a change to the wire shape has to
+survive.
+
+**The registry rejects a non-conforming manifest at register time.**
+`pillars/registry/src/api/modules/external-registry/register.ts` runs the
+posted `manifest` through `validateManifestPayload` from `@pops/pillar-sdk` —
+the same validator TS pillars run locally inside `bootstrapPillar` — and
+answers `400 { ok: false, issues }`, with a second `400` when
+`manifest.pillar !== pillarId`. On the contacts side that 400 is terminal:
+`RegistryError.retriable` is true only for a network failure or `status >= 500`
+(`src/registry/transport.rs`), so `register_with_retry` logs and stops instead
+of backing off (`src/registry/lifecycle.rs`). A non-conforming manifest means
+contacts serves its HTTP surface but never appears in the registry — which is
+why `is_manifest_semver` in `src/registry/mod.rs` is deliberately stricter than
+semver.
+
+**`tests/openapi_contract.rs` pins the emitted document.** Four guards: the
+`openapi` version string starts with `3.0`; _every_ `operationId` is dotted and
+lowercase, not merely the seven required ones
+(`entities.{list,get,create,update,delete,lookup}`, `search.search`); the wire
+`Entity` schema exposes `id`/`name`/`type`/`aliases`/`defaultTags`/
+`lastEditedTime` and hides `notionId`/`ownerUri`/`ownerUriStaleAt`; and
+`/search` is present.
+
+**`tests/registry.rs` drives the real `reqwest` transport** against a throwaway
+axum registry on an ephemeral port: register POSTs a schema-shaped manifest to
+the canonical path, falls back to the legacy dotted path on a 404, and
+heartbeat/deregister round-trip. `tests/entities.rs` and `tests/health.rs`
+cover the REST envelopes by `oneshot`ing the assembled router over a migrated
+in-memory SQLite DB.
+
 ## Layout
 
 ```
@@ -59,7 +92,6 @@ pillars/contacts/
 ├── Cargo.toml              crate `contacts` (lib + `contacts`/`emit-openapi` bins)
 ├── Dockerfile              builds and runs the `contacts` binary
 ├── mise.toml               per-pillar cargo tasks
-├── docs/                   domain docs (PRDs, ideas) — see docs/README.md
 ├── migrations/             embedded SQLite migration journal (applied on boot)
 ├── openapi/                committed OpenAPI 3.0.3 contract
 ├── src/

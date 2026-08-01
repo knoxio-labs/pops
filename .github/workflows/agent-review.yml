@@ -35,6 +35,7 @@ jobs:
           node scripts/ci/check-known-pillars-coverage.mjs --self-test
           node scripts/ci/check-mise-tool-overrides.mjs --self-test
           node scripts/ci/check-homelab-service-isolation.mjs --self-test
+          node scripts/ci/check-docs-model.mjs --self-test
       - name: Isolation litmus — no cross-contract reach-behind
         run: node scripts/ci/check-contract-isolation.mjs --base "origin/${{ github.base_ref }}"
       - name: Lib-never-imports-pillar guard
@@ -45,6 +46,8 @@ jobs:
         run: node scripts/ci/check-mise-tool-overrides.mjs
       - name: Homelab-service isolation guard (ADR-039 Inv 4 — HA/MQTT/Zigbee2MQTT/Matter never a pops service)
         run: node scripts/ci/check-homelab-service-isolation.mjs
+      - name: Docs-model guard (ADR-041 — every unit has a README; no PRD/theme/ideas tree returns)
+        run: node scripts/ci/check-docs-model.mjs
       - name: LLM review (advisory — federation invariants rubric)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

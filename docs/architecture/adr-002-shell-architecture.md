@@ -2,57 +2,14 @@
 
 ## Status
 
-Accepted
+**Superseded** by [ADR-026](./adr-026-pillar-architecture.md) and [ADR-038](./adr-038-pillar-discovery-protocol.md) — 2026-08-01.
 
-## Context
+## What it decided
 
-POPS is a multi-app platform (finance, media, inventory, fitness, etc.) that needs a frontend architecture supporting:
+A single SPA with one workspace package per app under `packages/app-*`, imported by the shell as build-time dependencies and code-split per route by Vite. Module Federation was rejected as too much runtime overhead and infrastructure for the benefit.
 
-- Multiple apps with independent pages and domain components
-- Shared shell (layout, navigation, app switcher, theming)
-- Shared UI component library
-- One dev server, not one per app
-- Fast load times via code splitting
-- Single Storybook instance covering all packages
+## Why it no longer holds
 
-## Options Considered
+`packages/` does not exist — each pillar ships its own frontend under `pillars/<id>/app`. The load-bearing change is the part this ADR chose deliberately: the build-time dependency. The shell now discovers surfaces from the live registry at runtime (ADR-038), so a pillar's frontend can join the fleet without the shell being rebuilt, which is exactly the independence Module Federation was rejected for.
 
-| Option                                     | Pros                                                               | Cons                                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| Single SPA with lazy-loaded routes         | One dev server, shared runtime, simple deployment                  | All code in one package.json, monolith creep as apps grow                        |
-| Module Federation (separate Vite builds)   | Independent builds/deploys, true isolation                         | Runtime overhead, multiple dev servers, version skew, complex infra              |
-| Single SPA with workspace packages per app | One dev server, logical separation, independent testing, one build | More workspace config, still one build graph                                     |
-| Next.js                                    | Built-in code splitting, file-based routing                        | SSR is pointless for single-user self-hosted PWA, adds complexity for no benefit |
-
-## Decision
-
-Single SPA with workspace packages per app. Each app lives in its own workspace package (`packages/app-*`). The shell imports them as dependencies. Vite resolves workspace packages natively and code-splits per route.
-
-Key reasons:
-
-- One dev server, one build, one Docker image
-- Each app has clear boundaries (own package.json, tsconfig, tests) without Module Federation complexity
-- One Storybook discovers stories from all packages via globs
-- No SSR overhead for a self-hosted single-user PWA
-- One developer with AI agents, not five teams — independent deploys add complexity without value
-
-## Consequences
-
-- New apps are scaffolded as workspace packages with a known structure
-- All apps share one version of React, tRPC client, Zustand, Tailwind — no version skew
-- Cross-app navigation is instant (SPA, no full page reload)
-- Build time scales with total code, but Vite is fast and dev mode only processes the active route
-- Apps import from `@pops/ui` and shared packages, never from other apps. Cross-app communication goes through the API or shared stores in the shell
-
-## Surface Categories
-
-A module exposes one or more surfaces. The shell renders them differently:
-
-| Surface   | Render path                                                                                                 |
-| --------- | ----------------------------------------------------------------------------------------------------------- |
-| `app`     | Page-routed module owning its navigation and pages (e.g. finance, media, inventory, ai, cerebrum)           |
-| `overlay` | Mounted into a shell chrome slot; summoned by shortcut/icon; no dedicated `/path` (e.g. ego floating panel) |
-
-A module may declare multiple surfaces. `ego` is **dual-surface** — it has both a `/cerebrum/chat` route (`app`) and a system-wide overlay panel (`overlay`) sharing tRPC state. Modules express this via `surfaces: ['app', 'overlay']` on their `ModuleManifest`.
-
-The set of installed modules is a runtime decision driven by the `POPS_APPS` and `POPS_OVERLAYS` env vars; the shell composes routers and routes from the manifests of installed modules only. See [plugin-contract (ModuleManifest + Tier 1 loader)](../themes/foundation/prds/plugin-contract.md).
+Stubbed deliberately: the full options table is in git history. Left inline, it described a `packages/` layout that no longer exists.

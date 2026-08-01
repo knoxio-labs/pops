@@ -10,8 +10,8 @@
  *   - `listDistinct*Uris` — read-side fan-out
  *   - `mark*Stale` / `clear*Stale` — write-side reconciliation
  *
- * The stale columns are best-effort warnings, not deletes — see
- * pillars/inventory/docs/prds/data-model-api.
+ * The stale columns are best-effort warnings, not deletes — a row survives its
+ * target 404ing, and consumers branch on the stale marker.
  */
 import { eq, isNotNull } from 'drizzle-orm';
 

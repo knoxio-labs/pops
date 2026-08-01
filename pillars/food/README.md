@@ -6,7 +6,7 @@ standalone REST service that owns its own SQLite DB, serves a
 [ts-rest](https://ts-rest.com) contract built from zod, runs a BullMQ ingest
 worker, exports a `./manifest`, and self-registers with the `registry` pillar on
 boot. Default port **3005** (override with `PORT`). Domain docs:
-[docs/README.md](docs/README.md).
+the module READMEs under `src/` and `app/src/`.
 
 ## Public surface
 

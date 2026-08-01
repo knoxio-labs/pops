@@ -7,7 +7,12 @@ integrations. A standalone REST service that owns its own SQLite DB, serves a
 and self-registers with the `registry` pillar on boot. Default port **3003**
 (override with `PORT`).
 
-Domain docs: [docs/README.md](docs/README.md).
+Architecture decisions live in [docs/architecture/](docs/architecture/). Everything
+else is a README colocated with the code it describes — the deepest ones are
+[the ranking engine](src/db/services/comparisons/README.md),
+[the discover surface](src/api/modules/discovery/README.md),
+[the compare arena](app/src/pages/compare-arena/README.md) and
+[season detail](app/src/pages/season-detail/README.md).
 
 ## Public surface
 
@@ -38,7 +43,7 @@ pillars/media/
 │   └── media.openapi.json  generated projection of the contract
 ├── migrations/             drizzle migrations + journal
 ├── scripts/                generate-openapi.ts, generate-api-types.ts
-├── docs/                   domain docs (Theme + PRDs)
+├── docs/architecture/      ADRs
 └── src/
     ├── contract/   PUBLIC: ts-rest contract, entity types/schemas, settings manifests, error envelopes
     ├── api/        PRIVATE: Express app, ts-rest handlers, health/pillars/openapi probes, schedulers, server

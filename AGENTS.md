@@ -12,9 +12,8 @@ These are non-negotiable. Each is stated once here; the rest of the doc is refer
 
 - **Never commit directly to `main`.** Every change goes through a PR. One branch = one focused task = one PR. Commits atomic and well-described.
 - **PRE-PUSH QUALITY GATE:** before every `git push`, run `mise lint` and `mise typecheck` — both MUST pass. For single-package scope, at minimum run that package's checks: `cd pillars/<id> && pnpm typecheck && pnpm test` (lint + format are workspace-level only — `mise lint` + `oxfmt`; pillar packages define no `lint`/`format` scripts). Do NOT push if any check fails — fix it, commit the fix, then push. A PR with red CI is not a PR. Verify CI passes locally before pushing (per `~/.claude/CLAUDE.md` "CI should never fail").
-- **PRD-FIRST:** before writing any code (feature, fix, or behavior tweak), check the PRDs first. See [PRD-First Rule](#prd-first-rule) for the locate + confirm procedure. No PRD for what you're changing = a blocker. Write the PRD first.
-- **DOCUMENTATION SYNC:** every code change updates related docs. See [Documentation Sync](#documentation-sync). Status flows upward: PRD criteria → PRD → Theme → Roadmap.
-- **GAP TRACKING:** any implementation gap found while working a PRD becomes a GitHub issue before the PR merges. See [Gap Tracking](#gap-tracking).
+- **DOCS ARE COLOCATED:** a behaviour change and the `README.md` next to it land in the **same commit**. See [Documentation Model](#documentation-model). There are no PRDs, no themes, no roadmap, and no status tables in this repo — do not reintroduce them.
+- **DEFERRED WORK GOES TO HULY:** anything you find and do not fix becomes a Huly issue before the PR merges. See [Tracking](#tracking). Never leave it as an orphan `TODO`, and never as a "not built yet" note inside a doc.
 - **TEST MANDATE:** every non-trivial piece of code ships with tests. See [Test Mandate](#test-mandate). "I implemented it" without tests = unverified, not done.
 
 ### Agent automation (overrides default ask-before-commit in any `pops*` workspace)
@@ -99,7 +98,7 @@ The **data pillars** (each owns a SQLite DB) are registry, inventory, media, fin
 
 **Frontend:** ONE SPA (the `shell` pillar) that lazy-loads per-domain feature apps. Each data pillar ships its own frontend under `pillars/<id>/app`, consuming its OWN pillar over a generated **Hey API** REST client (`@hey-api/openapi-ts` over the pillar's OpenAPI snapshot). Backend-to-backend cross-pillar calls go through the REST `@pops/pillar-sdk` `pillar('<id>')` client (`libs/sdk`); a browser page that needs another pillar's data directly uses a sanctioned **per-consumer generated client** instead — see [Cross-pillar generated FE clients](#cross-pillar-generated-fe-clients) and [ADR-040](docs/architecture/adr-040-cross-pillar-contract-discipline.md).
 
-`docs/roadmap.md` is the implementation tracker — single source of truth for status across all pillars.
+Work in flight and work deferred both live in Huly (project `POPS`) — see [Tracking](#tracking). The repo carries no status tracker.
 
 ---
 
@@ -182,25 +181,17 @@ pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (
 │                          #   (openapi/<id>.openapi.json), ./manifest export (self-registers
 │                          #   with registry), its frontend (app/), docs (docs/), migrations/,
 │                          #   Dockerfile, mise.toml.
-├── registry/              # Registry/platform: registry, settings, users, service-accounts, features (formerly core)
-├── inventory/ media/ finance/ food/ lists/ cerebrum/   # Domain data pillars (food + cerebrum run workers)
-├── ai/                    # AI-ops (:3008): providers, usage/telemetry, ingest
-├── contacts/              # Rust (axum + OpenAPI) (:3010): src/entities, migrations/, Cargo.toml, tests/
-├── orchestrator/          # Federated search + AI-tool registry (GET /ai/tools); stateless, no DB
-├── shell/                 # UI pillar: React SPA host (Vite + nginx reverse proxy), lazy-loads each pillar's app/
-├── mcp/                   # MCP gateway (binds :3011 in code via MCP_PORT)
-├── docs/                  # OpenAPI docs browser (Stoplight Elements over each contract's snapshot)
-└── moltbot/               # Telegram bot config + skills (no Dockerfile, uses upstream image)
+│                          # Which pillars exist is on disk (`ls pillars/`) and in the
+│                          #   ports table above — not enumerated again here.
+│                          # Exceptions to the shape: `contacts` is Rust (axum, src/entities,
+│                          #   Cargo.toml); `orchestrator`, `mcp` and `documents` own no DB;
+│                          #   `shell` and `docs` are UI/static and serve no contract;
+│                          #   `moltbot` ships no Dockerfile (upstream image).
 
-libs/                      # Shared libraries (no service, no DB)
-├── sdk/                   # @pops/pillar-sdk — REST cross-pillar SDK: pillar() client + manifest/registry/discovery helpers
-├── types/                 # ModuleManifest + pillar manifest types
-├── db-types/              # Shared DB type helpers
-├── ui/                    # @pops/ui component library (shadcn-based)
-├── navigation/            # App navigation config
-├── module-registry/       # Module/pillar registry helpers
-├── overlay-ego/           # Shared ego overlay
-├── settings/ pops-settings/ pops-ai/ ai-telemetry/ locales/   # Other cross-pillar shared concerns
+libs/                      # Shared libraries — no service, no DB, and a lib must NEVER
+│                          #   import from a pillar (enforced: scripts/ci/check-lib-no-pillar-import.mjs).
+│                          # Each lib's own README states what it is and who depends on it;
+│                          #   `ls libs/` is the inventory.
 
 infra/
 ├── docker-compose.yml     # Production compose (ghcr.io/knoxio/pops-<id> images + Watchtower)
@@ -299,7 +290,7 @@ User-facing entry point: the **Import Wizard** (8-step UI in `pillars/finance/ap
 7. **Punctuation stripping** — strip apostrophes/backticks, retry stages 3–6.
 8. **AI fallback** — Claude Haiku API call, env-gated (`FINANCE_AI_CATEGORIZER_ENABLED`, default off), no disk or DB cache, exponential-backoff retry on 429 (max 5 retries, 6 total attempts). Any failure is non-fatal — the row degrades to `uncertain`.
 
-Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full PRD: `pillars/finance/docs/prds/entity-matching-engine.md`.
+Hit rate ~95–100% with aliases and corrections; AI fallback handles the rest. Full detail: [`pillars/finance/src/api/modules/imports/README.md`](pillars/finance/src/api/modules/imports/README.md).
 
 ---
 
@@ -313,54 +304,73 @@ To work a domain locally: `cd pillars/<id> && pnpm dev` (applies its own migrati
 
 > Workflow hard rules (no direct-to-main, pre-push quality gate, agent automation, PR review cadence) are in [HARD RULES](#hard-rules--do-not-violate) above.
 
-### PRD-First Rule
+### Documentation Model
 
-The docs model is **slug-only** — a PRD's id is its slug + path; there are no PRD numbers and no separate `us-*.md` user-story files. Acceptance criteria live **inline** in each PRD under `## Acceptance Criteria`. Hierarchy: **Theme → PRD**. ADRs keep frozen `adr-NNN` numbers.
+Three artifacts answer three questions. Nothing else in this repo is documentation.
 
-Docs live in two places:
+| Question  | Artifact              | Lives                                                                                      |
+| --------- | --------------------- | ------------------------------------------------------------------------------------------ |
+| **WHICH** | ADR                   | `docs/architecture/adr-NNN-slug.md`, or `pillars/<id>/docs/architecture/` when pillar-only |
+| **HOW**   | Colocated `README.md` | in the directory it describes — beside the code, not in a docs tree                        |
+| **WHY**   | Inline comment        | on the line whose reason is invisible from the code                                        |
 
-- **Pillar-scoped** under `pillars/<id>/docs/` (`README.md` domain overview, `prds/<slug>.md`, pillar-only `architecture/`, `runbooks/`, `ideas/`) — most PRDs live here.
-- **Cross-cutting** under `docs/themes/{platform,foundation,federation}/` plus central `docs/architecture/` (ADRs), `_templates/`, `runbooks/` (cut-release), `vision.md`, `roadmap.md`.
+The code and its tests **are** the specification. A requirement that is built needs no separate record of having been required; a requirement that is not built is work, and work lives in Huly. That is the whole model.
 
-**Locate the PRD** before any code:
+**Do not create:** PRDs, themes, epics, user stories, acceptance-criteria checkboxes, status tables, roadmaps, `ideas/` files, or any doc whose purpose is to say what is not built yet. If you catch yourself writing "not yet implemented" in a repo file, it belongs in Huly instead.
 
-```bash
-ls pillars/<id>/docs/prds/
-ls docs/themes/{platform,foundation,federation}/prds/ 2>/dev/null
-grep -rli '<feature-keyword>' pillars/*/docs/prds docs/themes/*/prds
+#### READMEs — the HOW
+
+**There is no coverage quota.** A README earns its place only where the code cannot speak for itself, and a directory with no README is a perfectly good outcome. `db/` full of obvious schema files needs nothing. A `dsl/`, a worker pipeline, or "how tag-rule creation actually works" needs one.
+
+CI enforces three things (`scripts/ci/check-docs-model.mjs`): every `pillars/<id>` and `libs/<lib>` has a README, since a published unit's README is where a reader lands; no `prds/`, `themes/`, `epics/` or `ideas/` directory reappears anywhere; and **every repo path a markdown file points at actually exists**. Nothing requires a README further down — a gate that did would produce exactly the write-to-satisfy-the-gate documentation this model rejects. See [ADR-041](docs/architecture/adr-041-colocated-docs-and-external-tracking.md).
+
+**Do not write indexes.** A hand-maintained list of what exists — a repo tree, a "key files" table, a roster of pillars or libs — drifts the moment anything moves, and nothing reads it closely enough to notice. a `db-types` lib was listed in three files and had never existed; the pillar roster in `.github/copilot-instructions.md` silently omitted `documents`. Describe the **shape** of a thing and let `ls` supply the inventory. Where a pointer genuinely helps, write the path so the guard can check it.
+
+Two rules keep them useful:
+
+**Colocate as deeply as the thing lives.** A README next to the code it describes beats one two levels up covering an "area". Never write a god README that summarises a whole subtree — split it, or push it down to where the concern actually is.
+
+**Only document what is not readily discoverable from the code.** In practice that is:
+
+- The narrative — how this feature works end to end, the shape of the flow through it.
+- Orderings, precedence and invariants that **span files**, which no single file can state.
+- What it talks to (which pillars, which external services) and over what transport.
+- What deliberately does **not** live here, or does not exist at all, when silence would let a reader infer a capability that isn't there.
+
+**A stated absence must carry its Huly key.** If a README says something is missing, unbuilt or approximated, that is undone work, and undone work lives in Huly — so name the issue inline: `There is no per-bank parsing (POPS-29).` Two things follow from this, and both matter more than the formatting:
+
+- **"What's next" must be answerable from Huly alone.** A gap described in a README but tracked nowhere is a second backlog that nobody reads, which is the exact failure this model exists to end.
+- **If you cannot name an issue, you have not decided.** Either file one, or the absence is permanent-by-design and should be written that way — "TV is out of scope for this module" rather than "TV is not supported yet". CI enforces the key.
+
+Do **not** restate what a file-header docstring already says — name the file and let the reader go there. A README that paraphrases the code beneath it is pure drift surface.
+
+Never write: change history, migration notes, "this was refactored", status, percentages complete, or links to work that has not happened. A README describes the present; git describes the past; Huly describes the future.
+
+**Keep it honest.** A README that has drifted from its code is worse than none — it is a confident lie. Changing behaviour means changing the README in the same commit, or deleting the paragraph that is no longer true.
+
+#### Inline comments — the WHY
+
+Default to none. Well-named identifiers are the documentation. A comment earns its place only when it explains a reason that is not recoverable from reading the code:
+
+```ts
+// Two fields rather than a single `name`: every entity in this cohort has
+// exactly one given and one family name, and the importer needs to match on
+// family name alone.
 ```
 
-**Then confirm:**
+Not `// increment the counter`. Full rules in `~/.claude/CLAUDE.md` §10.
 
-1. **The PRD exists and is current.** No PRD for the area → STOP, write one (slug folder + `README.md` with inline `## Acceptance Criteria`) before coding. Stale → update it before coding.
-2. **The acceptance criteria cover what you're about to do.** If not, add/update inline criteria to the new goal spec.
-3. **Your change matches the PRD's intent** — not just what it says today, but what it _should_ say. Intent unclear → STOP and clarify before implementing.
+#### ADRs — the WHICH
 
-**PRDs are greenfield artifacts** — they describe the goal specification and correct implementation, NOT change history. Not a changelog. When code and PRD disagree, one is wrong — decide which, and fix it.
+`adr-NNN` numbering is **frozen and append-only**; new ADRs take the next number and existing numbers never change. An ADR records context, the options genuinely considered, the decision, and its consequences. If there was no real alternative, it is not a decision — it is just how the code works, and that belongs in a README. An ADR moves into a pillar only when that pillar alone references it; a second referent promotes it back to `docs/architecture/`.
 
-**Track every change through the docs:** implementing new work → tick the relevant inline acceptance criteria as you land it; fixing/changing existing behavior → update the PRD's criteria to the new correct behavior even if the goal spec hasn't drifted. If you cannot find a PRD for what you're changing, that's a blocker — write the PRD first.
+### Tracking
 
-### Documentation Sync
+Work lives in **Huly**, project `POPS` at [projects.knoxiolabs.com](https://projects.knoxiolabs.com) (workspace `knoxiolabs`). One project for the whole fleet; a **Component** scopes each issue to a pillar (`finance`, `food`, …) or a cross-cutting concern (`federation`, `platform`, `ui`). Statuses are Backlog / Todo / In Progress / Done / Canceled. Labels are deliberately few — `bug`, `tech-debt`, `test-gap`, `security`, `needs-triage`. Reach for the MCP tools (`mcp__huly-knoxiolabs__*`) rather than the web UI.
 
-Every code change updates related docs. On completing a PRD / fixing a bug / adding a feature:
+**GitHub Issues are disabled on this repo.** Do not file one, and do not reference issue numbers as live work — an old `#NNNN` in git history is a historical artifact, not a ticket.
 
-1. **Acceptance criteria** — tick `- [ ]` → `- [x]` inline in the relevant PRD's `## Acceptance Criteria`.
-2. **PRD status** — `In progress` → `Done` when every checkbox is ticked.
-3. **Theme status** — update the PRD's row in the theme `README.md` (pillar's `docs/README.md` or central `docs/themes/<name>/README.md`) when its status changes.
-4. **Roadmap** — update `docs/roadmap.md` when a PRD or theme changes status.
-
-Status flows upward: PRD criteria → PRD → Theme → Roadmap. The roadmap tracker is the single source of truth for status across all pillars.
-
-### Gap Tracking
-
-Any implementation gap found while working a PRD must become a GitHub issue before the PR merges. A gap is: an acceptance criterion that can't be checked `[x]` because the code doesn't satisfy it; a PRD feature skipped or deferred; spec behaviour differing from what was built.
-
-1. Create a GitHub issue per gap, title `drift-check(<prd-slug>) — <what's missing>` (e.g. `drift-check(entity-matching-engine) — punctuation stripping not applied`).
-2. Add a `## Gaps (tracked)` section to the PR description linking all gap issues.
-3. Never list gaps in a PR description without linked issues.
-4. The gap issue does NOT block merging — but it MUST exist before merge.
-
-Chain: **gap discovered → issue filed → issue linked in PR → issue closed when implemented.**
+You do **not** need an issue to start work. The tracker exists for work that is deferred, not for permission to begin. But the converse is a hard rule: **anything you decide not to do right now gets filed before the PR merges** — a gap between what a README claims and what the code does, a shortcut taken under time pressure, a missing test, a follow-up you can see coming. File it with enough context to act on without this conversation, then let it go.
 
 ### Test Mandate
 
@@ -427,6 +437,24 @@ pages/
 - **JSON columns** — stored as TEXT, parsed on read (e.g. tags, genres).
 - **Env vars** — read via a pillar env accessor (e.g. `getEnv()`), which reads `process.env`. Production secrets are Docker file-based secrets mounted at `/run/secrets/` (see Security) — a separate mechanism, not read by `getEnv()`.
 - Schema changes go through Drizzle per pillar (generate/review/migrate flow — see Production hard rule).
+
+### Conventions duplicated per pillar
+
+Three patterns are repeated in every pillar rather than shared through a lib. That is deliberate in two cases and unpaid debt in the third, but in all three **a change has to be made everywhere** — there is no single definition to edit.
+
+- **The DB opener.** Each pillar exports its own `open<Pillar>Db(path)`. They agree on the pragmas, on creating the parent directory, and on resolving the migrations folder through `import.meta.url` so it works both through the workspace symlink and inside the image. Each opener's file header documents its own pragmas; read one before writing another.
+- **Queue settings.** `food` and `cerebrum` each declare their own BullMQ producer with matching retry, backoff and retention constants, and each builds its Redis connection with `maxRetriesPerRequest: null`. There is no shared SDK helper, so the two can drift silently.
+- **Unavailable-error classification.** Each pillar frontend keeps a local `*-api-helpers.ts` deciding what counts as "pillar unavailable". The SDK deliberately does not own this.
+
+### The OpenAPI version pin
+
+Every pillar's OpenAPI document is **3.0.x**, and that is a hard constraint rather than a default. The TypeScript side gets there via `z.toJSONSchema(schema, { target: 'openapi-3.0' })`. The Rust `contacts` pillar generates 3.1 from utoipa and then runs a deterministic downgrade pass, pinning the served document to 3.0.3 with a test asserting it.
+
+The reason is downstream: the client generators target 3.0. A pillar that emits 3.1 breaks consumer codegen rather than failing its own build, so the pin belongs with the producer.
+
+### Structural guards
+
+Repo-wide invariants are enforced by scripts under `scripts/ci/`, each self-testing and wired into `.github/workflows/agent-review.yml`. They cover lib-never-imports-pillar, contract isolation, the known-pillars tuple against disk, mise toolchain overrides, homelab-service isolation, vendored contracts, and the docs model. Run one directly with `--self-test` to see what it claims to catch.
 
 ### Cross-pillar generated FE clients
 

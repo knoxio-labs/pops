@@ -1,9 +1,10 @@
 /**
  * Glia worker run-once panel.
  *
- * Surfaces the four BullMQ-backed curation workers (pruner,
- * consolidator, linker, auditor) with a single run-with-dry-run
- * checkbox each. Mirrors `cerebrum.glia.run{Pruner,Consolidator,Linker,Auditor}`.
+ * Surfaces the four curation workers (pruner, consolidator, linker, auditor)
+ * with a single run-with-dry-run checkbox each. Mirrors
+ * `cerebrum.glia.run{Pruner,Consolidator,Linker,Auditor}`, which run
+ * synchronously inside the request — there is no queue behind them.
  */
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';

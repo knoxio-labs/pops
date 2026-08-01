@@ -41,7 +41,7 @@ External APIs
 
 A pillar is any service registered with the `registry` pillar that exposes `/manifest.json` (ADR-035). Three kinds:
 
-- **Data pillars** — the seven services above. Each owns a SQLite DB under `pillars/<id>/src/db`, streamed to backup via `infra/litestream/<id>.yml`.
+- **Data pillars** — each owns a SQLite DB under `pillars/<id>/src/db`, streamed to backup via `infra/litestream/<id>.yml`.
 - **Bridge pillars** — adapters that mirror an external system into the platform (e.g. the Home Assistant bridge).
 - **UI pillars** — the `shell` pillar registers as `id: 'shell'` and hosts the SPA.
 
@@ -53,7 +53,7 @@ A new data pillar needs: a `pillars/<id>/` package with its own SQLite DB and zo
 
 ### Wire Format
 
-Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over-HTTP wire format. See the [cross-language wire-format spec](docs/themes/federation/prds/cross-language-wire-format-spec.md) for the canonical contract.
+Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over-HTTP wire format. See [ADR-033](docs/architecture/adr-033-cross-language-pillar-contracts.md) for how that contract holds across languages, and the `contacts` pillar for the Rust proof.
 
 ### Docker Networks
 
@@ -94,7 +94,7 @@ Pillar-to-pillar and consumer-to-pillar communication uses a versioned JSON-over
 
 ## Roadmap
 
-[`docs/roadmap.md`](docs/roadmap.md) is the current-state snapshot of the platform and the forward view, with links into each pillar's `docs/README.md`.
+Unfinished work lives in Huly, project `POPS` at https://projects.knoxiolabs.com. Each pillar's own README describes what it does.
 
 ## Quick Start
 
@@ -209,32 +209,23 @@ Server provisioning (Docker, secrets, Cloudflare Tunnel, backups, github runner)
 There are exactly **two unit kinds**: `pillars/` (services) and `libs/` (shared libraries). No `apps/`, no `packages/`, no turbo, no central API monolith.
 
 ```
-pillars/                   # One pillar per folder — owns SQLite DB, ts-rest contract, OpenAPI, manifest, its app/ frontend, Dockerfile
-├── registry/              # Registry / platform: registry, settings, users, service-accounts, features
-├── inventory/  media/  finance/  food/  lists/  cerebrum/   # Domain data pillars (food + cerebrum run workers)
-├── ai/                    # AI-ops pillar (:3008): providers, usage/telemetry, ingest
-├── contacts/              # Rust pillar (:3010, axum + OpenAPI)
-├── orchestrator/          # Federated search + AI-tool registry (GET /ai/tools), owns no DB
-├── shell/                 # UI pillar: React SPA host (Vite + nginx reverse proxy), lazy-loads each pillar's app/
-├── mcp/                   # MCP gateway (binds :3011 in code via MCP_PORT)
-├── docs/                  # OpenAPI docs browser
-└── moltbot/               # Telegram bot config + skills (no Dockerfile, uses upstream image)
+pillars/<id>/              # One pillar per folder. Run `ls pillars/` for the current fleet.
+├── src/contract/          #   PUBLIC: zod → ts-rest contract, types, manifest
+├── src/api/               #   PRIVATE: server, handlers, registry wiring
+├── src/db/                #   PRIVATE: drizzle schema + services (a pillar owns its own SQLite DB)
+├── app/                   #   its frontend feature module, mounted by the shell
+├── openapi/<id>.openapi.json
+└── Dockerfile, mise.toml
 
-libs/                      # Shared libraries (no service, no DB)
-├── sdk/                   # @pops/pillar-sdk — REST cross-pillar SDK (pillar() client) + manifest/registry/discovery helpers
-├── types/                 # ModuleManifest + pillar manifest types
-├── db-types/              # Shared DB type helpers
-├── module-registry/       # Module/pillar registry helpers
-├── ui/                    # @pops/ui component library (shadcn-based)
-├── navigation/            # App navigation config
-└── overlay-ego/           # Shared ego overlay
+libs/<name>/               # Shared libraries — no service, no DB, and never imports a pillar.
+                           #   Each carries a README saying what it is and who depends on it.
 
 infra/
-├── docker-compose.yml     # Production service definitions (ghcr.io/knoxio/pops-<id> images + Watchtower)
+├── docker-compose.yml     # Production (ghcr.io/knoxio/pops-<id> images + Watchtower)
 ├── docker-compose.dev.yml # Local development with build: contexts
 └── litestream/            # One <id>.yml backup-stream config per pillar SQLite DB
 
-docs/
-├── roadmap.md             # Implementation tracker
-└── themes/                # Cross-cutting themes + PRDs (pillar-scoped docs live under pillars/<id>/docs/)
+docs/architecture/         # ADRs. Everything else lives beside the code it describes.
 ```
+
+Not every pillar fits that shape, and the exceptions matter: `contacts` is Rust (axum, `src/entities/`, `Cargo.toml`); `orchestrator`, `mcp` and `documents` own no database; `shell` and `docs` serve no contract of their own; `moltbot` ships no Dockerfile and runs an upstream image.

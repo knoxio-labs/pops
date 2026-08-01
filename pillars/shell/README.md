@@ -5,18 +5,18 @@ each domain's feature app and renders the federated navigation assembled from
 the live registry. It is a **UI pillar**: it owns no SQLite DB and serves no
 data procedures. Its manifest carries a sentinel contract block plus empty
 capability arrays — the registry's manifest schema requires those fields, so a
-UI pillar fills them with empties rather than dropping them. It still announces
-itself to the `registry` pillar so the federation has one dynamic list of every
-running surface — UI included.
+UI pillar fills them with empties rather than dropping them.
 
-The frontend source lives in `pillars/shell/src` (`main.tsx`, `components/`,
-`store/`, `i18n/`, `registry-api/`). The production image is `nginx:alpine`
-serving the built bundle; there is no Node at request time.
+The frontend source lives in `pillars/shell/src` — `main.tsx` plus `app/` (the
+boot install-set resolver, router, chrome, pages, overlays), `components/`,
+`store/`, `i18n/` and the generated `registry-api/` client. The production image
+is `nginx:alpine` with a Node binary added (`apk add nodejs`): nginx serves the
+built bundle, Node runs the boot-time conf render and the long-lived registry
+watcher. That pipeline is documented in [`scripts/README.md`](scripts/README.md)
+and in each script's own header.
 
 ## UI-pillar registration
 
-A UI pillar registers exactly like a data pillar, but every capability array is
-empty — no procedures, no search/AI/uri contributions, no consumed settings.
 The `ManifestPayloadSchema` (in `@pops/pillar-sdk`) is `.strict()` and requires
 `contract`, `routes`, `search`, `ai`, `uri`, `consumedSettings`, and
 `healthcheck`, so `buildShellManifest()` emits all of them — empties plus a
@@ -30,7 +30,7 @@ sentinel contract triplet — rather than omitting them:
     "pillar": "shell",
     "version": "0.1.0",
     "contract": {
-      "package": "@pops/shell",
+      "package": "@pops/shell-contract",
       "version": "0.1.0",
       "tag": "contract-shell@v0.1.0",
     },
@@ -46,21 +46,9 @@ sentinel contract triplet — rather than omitting them:
 ```
 
 `manifest.pillar` MUST equal `pillarId` — the registry rejects a mismatch. The
-sentinel `contract.package` is a placeholder that need not exist in the
-workspace; it only has to satisfy the cross-field validator
-(`checkContractPackageMatchesPillar`), which requires the package to equal
-`@pops/<pillar>` (the collapsed form shown above is the simplest value that
-passes). `sinks` and the other UI-only blocks (`settings`, `nav`, `pages`,
-`features`, …) are optional in the schema, so a UI pillar omits those.
+shell ships the `-contract` form.
 
 ### Registration runs at deploy time, not in the browser
-
-The shell registers via a Node CLI, never from the browser bundle:
-
-- the shared `POPS_INTERNAL_API_KEY` (the docker-network trust boundary) must
-  not reach the client bundle;
-- the runtime image is `nginx:alpine` with no Node, so registration happens at
-  deploy time.
 
 The CLI entrypoint `scripts/register-with-registry.ts` delegates to
 `registerShellWithRegistry` in `src/lib/register-with-registry.ts`. Run it with
@@ -78,84 +66,44 @@ POPS_INTERNAL_API_KEY=… \
 > operation on both that path and the canonical `/registry/register` (see the
 > pillar SDK's `REGISTRY_PATHS` / `LEGACY_REGISTRY_PATHS`), so either resolves.
 
-Behaviour (always exits `0` so a partially-configured deploy still boots):
+The trust model and the best-effort failure policy are in those two files'
+headers; the outcome shapes are the `RegisterShellOutcome` union in the lib.
+Every outcome exits `0` so a partially-configured deploy still boots — only an
+unexpected throw sets a non-zero exit code.
 
-- **All env vars present** → POSTs to the registry, returns
-  `{ kind: 'registered', pillarId, registeredAt }`.
-- **Any env var missing** → silent skip
-  (`{ kind: 'skipped', reason: 'missing-env', missing: [...] }`).
-- **Registry unreachable** → logs a warning, returns `{ kind: 'unreachable' }`.
-  Registration is best-effort: a UI pillar that fails to announce itself is
-  degraded, not broken.
-- **Registry returns non-2xx** → `{ kind: 'failed', status, body }` with the
-  structured error payload (e.g. `{ ok: false, reason: 'invalid-api-key' }`).
+## Overlay mount contract
 
-### Reusing this pattern for iOS / kiosk / future UI surfaces
+The props an overlay receives are `OverlayComponentProps` in
+`src/app/overlays/OverlayHost.tsx`.
 
-A new UI surface copies the two pieces in `pillars/shell`:
+The named chrome slots are **`assistant`, `notification`, `command`** — and
+that list is declared **twice**, as two independent literals in two packages:
 
-1. `src/lib/register-with-registry.ts` — the pure registration function with
-   deps-injected transport + logger.
-2. `scripts/register-with-registry.ts` — the thin Node entrypoint that reads
-   env and calls the lib.
+| Declaration site                                                      | Effect                                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/overlays/OverlayHost.tsx` — `KNOWN_CHROME_SLOTS`             | Runtime. An overlay declaring anything else is dropped at module load with a `console.warn`; the shell still boots.                   |
+| `libs/module-registry/scripts/chrome-slots.ts` — `KNOWN_CHROME_SLOTS` | Registry codegen. `warnUnknownChromeSlots`, called from `validateManifests`, writes to stderr. Deliberately a warning, never a throw. |
 
-…then swaps the `SHELL_*` env prefix (`IOS_BASE_URL`, `KIOSK_BASE_URL`, …) and
-points at the same registry. The manifest stays empty.
+Nothing cross-checks the two lists, and a new slot needs a third file besides:
+`RootLayout` renders one `<OverlayHost slot="…" />` per slot, each inside a
+`data-overlay-slot` wrapper div. The `slot` prop is typed
+`KnownChromeSlot`, which does **not** force a host to exist — add a slot to
+the tuple and forget the host, and overlays declaring it compile and silently
+never mount. (The bucket record in `buildSlotMounts` is type-checked against
+the tuple, so that half is caught.)
 
-## Event-driven nginx reload
+One host per slot, any number of overlays per host: `OverlayHost` mounts every
+installed overlay whose `chromeSlot` equals its `slot` prop. Two overlays
+declaring the same slot both mount — there is no collision rejection at
+codegen, boot, or mount, and no z-index arbitration in the shell (overlays own
+their own positioning; the wrapper divs are bare anchors).
 
-The shell renders a dynamic `nginx.conf` from the live registry so the gateway
-routes to exactly the pillars that are currently registered. The watcher CLI
-(`pnpm --filter @pops/shell gen:nginx:watch`,
-`scripts/watch-registry-and-reload-cli.ts`) is a long-lived process that
-subscribes to `GET /registry/subscribe` and, on each `pillar.registered`,
-`pillar.deregistered`, or `pillar.health-changed` frame, regenerates the conf,
-runs `nginx -t` to validate it, and on pass executes the reload command. A
-trailing 250ms debounce coalesces bursts (multi-pillar boot, eviction storms)
-into a single regen + reload. The initial `pillar.snapshot` frame is ignored —
-the dispatcher already reflects boot state.
-
-If `nginx -t` rejects the new conf, the reload is skipped (the previous conf
-stays live) and the optional health endpoint flips to `503` with
-`nginx_generator_last_error_at` set until the next clean cycle.
-
-Related scripts (all under `package.json`):
-
-```bash
-pnpm --filter @pops/shell gen:nginx          # one-shot static render
-pnpm --filter @pops/shell gen:nginx:dynamic  # render from the live registry
-pnpm --filter @pops/shell gen:nginx:check     # drift check (CI)
-pnpm --filter @pops/shell gen:nginx:watch     # long-lived watch + reload
-```
-
-### Watcher env
-
-| Var                          | Default                    | Purpose                                                                                                                      |
-| ---------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `POPS_REGISTRY_URL`          | `http://registry-api:3001` | Registry pillar base URL; SSE consumed from `<url>/registry/subscribe`. `CORE_REGISTRY_URL` is a deprecated legacy fallback. |
-| `POPS_NGINX_OUTPUT`          | shell `nginx.conf`         | Where the regenerated conf is written.                                                                                       |
-| `POPS_NGINX_RELOAD_CMD`      | `nginx -s reload`          | Shell command run after each successful validate.                                                                            |
-| `POPS_NGINX_CONFIG_TEST_CMD` | `nginx -t -c <output>`     | Pre-reload validation. Empty string disables the gate (e.g. nginx in another container).                                     |
-| `POPS_NGINX_DEBOUNCE_MS`     | `250`                      | Trailing-debounce window for coalescing bursts.                                                                              |
-| `POPS_NGINX_BACKOFF_MS`      | `1000`                     | Initial reconnect backoff (caps at 30s, doubles per failure).                                                                |
-| `POPS_NGINX_HEALTH_PORT`     | (unset)                    | If set + positive, expose a JSON health endpoint with `nginx_generator_last_error_at`.                                       |
-| `POPS_NGINX_HEALTH_HOST`     | `0.0.0.0`                  | Health endpoint bind host.                                                                                                   |
-| `POPS_NGINX_HEALTH_PATH`     | `/health`                  | Health endpoint path.                                                                                                        |
-
-### Health endpoint payload
-
-```jsonc
-{
-  "status": "ok" | "degraded",
-  "lastSuccessAt": 1718328000000 | null,
-  "lastError": { "stage": "validate" | "regenerate" | "reload", "message": "...", "at": 1718327900000 } | null,
-  "nginx_generator_last_error_at": 1718327900000 | null
-}
-```
-
-`nginx_generator_last_error_at` is a unix-epoch-ms timestamp while the last
-cycle failed, `null` while healthy. Returns `200` when `status` is `ok`, `503`
-when `degraded`.
+Getting mounted at all needs both halves of `src/app/overlays/registry.ts`:
+the manifest must be in the shell-local `SHELL_OVERLAY_MANIFESTS` array — a
+static import, so adding an overlay edits shell source — **and** its id must
+be in `INSTALLED_MODULES`. A manifest with no `frontend.overlay.component`
+loader is projected away and never mounts. `assistant` is the only occupied
+slot today, held by `@pops/overlay-ego`.
 
 ## Commands
 

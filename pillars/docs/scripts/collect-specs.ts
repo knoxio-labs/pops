@@ -1,6 +1,6 @@
 /**
  * Collect every pillar's OpenAPI snapshot into the pops-docs image build
- * context (spec: pillars/docs/docs/prds/swagger-container).
+ * context.
  *
  * Walks `pillars/*` from the monorepo root. For each pillar:
  *   - if `openapi/<pillar>.openapi.json` exists → emit a catalog entry,

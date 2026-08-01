@@ -2,32 +2,14 @@
 
 ## Status
 
-Accepted
+**Superseded** by [ADR-026](./adr-026-pillar-architecture.md) and [ADR-033](./adr-033-cross-language-pillar-contracts.md) — 2026-08-01.
 
-## Context
+## What it decided
 
-POPS needs an API layer between the React frontend and the Express backend. With 10+ domain modules and growing, the API surface is large. The frontend and backend live in the same monorepo, built by the same developer (with AI agents), and deployed together.
+tRPC for the API layer, over REST and GraphQL. The reasoning was that its client/server coupling did not matter for one TypeScript frontend talking to one TypeScript backend in one monorepo, and that end-to-end type inference with no schema or codegen step was worth more than a language-neutral contract.
 
-## Options Considered
+## Why it no longer holds
 
-| Option                | Pros                                                                                                                                                                  | Cons                                                                                                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| REST (Express routes) | Simple, universally understood, no tooling                                                                                                                            | No type safety across the boundary, manual request/response typing, versioning overhead, boilerplate for CRUD                                       |
-| GraphQL               | Flexible queries, typed schema, introspection                                                                                                                         | Schema definition language adds overhead, resolver boilerplate, overkill for single-user with one frontend, over-fetching isn't a real problem here |
-| tRPC                  | End-to-end type safety (change a return type and the frontend knows immediately), zero codegen, zero schema definition, RPC model maps naturally to service functions | Coupled to TypeScript — only works when client and server share a type system. Not suitable for public APIs                                         |
+Both premises were retired. The single backend became a federation of independently deployable pillars (ADR-026), and one of them — `contacts` — is written in Rust (ADR-033), so the wire format had to be something a non-TypeScript service could serve. POPS now runs zod → ts-rest → OpenAPI per pillar. There is no tRPC anywhere in the tree.
 
-## Decision
-
-tRPC. The coupling limitation is irrelevant — POPS has one frontend, one backend, both TypeScript, same monorepo. The benefits are significant:
-
-- Change a procedure's return type and every callsite gets a compile error immediately — no runtime surprises
-- No schema files, no codegen step, no OpenAPI spec to maintain
-- Procedures map 1:1 to service functions — `trpc.media.movies.list` calls `movieService.list()`
-- React Query integration via `@trpc/react-query` gives caching, invalidation, and optimistic updates for free
-
-## Consequences
-
-- End-to-end type safety from database row to React component with zero manual type definitions at the API boundary
-- Adding a new endpoint is: write service function, add procedure to router — no schema update, no codegen
-- Not suitable if POPS ever needs a public API or non-TypeScript clients — but that's not on the roadmap
-- All domain modules follow the same pattern: `router.ts` (tRPC procedures) calls `service.ts` (business logic)
+Stubbed deliberately: the full options table and rationale are in git history. Left inline, it read as a current description of an API layer the code has not had for months.
