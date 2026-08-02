@@ -40,7 +40,7 @@ services:
       dockerfile: pillars/registry/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-registry:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-registry:${POPS_IMAGE_TAG:-main}
     container_name: pops-registry
     restart: unless-stopped
     labels:
@@ -95,7 +95,7 @@ services:
       dockerfile: pillars/inventory/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-inventory:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-inventory:${POPS_IMAGE_TAG:-main}
     container_name: pops-inventory
     restart: unless-stopped
     labels:
@@ -140,7 +140,7 @@ services:
       dockerfile: pillars/documents/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-documents:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-documents:${POPS_IMAGE_TAG:-main}
     container_name: pops-documents-api
     restart: unless-stopped
     labels:
@@ -182,7 +182,7 @@ services:
       dockerfile: pillars/finance/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-finance:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-finance:${POPS_IMAGE_TAG:-main}
     container_name: pops-finance
     restart: unless-stopped
     labels:
@@ -229,7 +229,7 @@ services:
       dockerfile: pillars/media/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-media:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-media:${POPS_IMAGE_TAG:-main}
     container_name: pops-media-api
     restart: unless-stopped
     labels:
@@ -276,7 +276,7 @@ services:
       dockerfile: pillars/food/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-food:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-food:${POPS_IMAGE_TAG:-main}
     container_name: pops-food
     restart: unless-stopped
     labels:
@@ -327,7 +327,7 @@ services:
       dockerfile: pillars/lists/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-lists:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-lists:${POPS_IMAGE_TAG:-main}
     container_name: pops-lists
     restart: unless-stopped
     labels:
@@ -372,7 +372,7 @@ services:
       dockerfile: pillars/ai/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-ai:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-ai:${POPS_IMAGE_TAG:-main}
     container_name: pops-ai
     restart: unless-stopped
     labels:
@@ -420,7 +420,7 @@ services:
       dockerfile: pillars/food/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-food:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-food:${POPS_IMAGE_TAG:-main}
     container_name: pops-worker-food
     restart: unless-stopped
     command: ['node', 'dist/worker/worker.js']
@@ -489,7 +489,7 @@ services:
       dockerfile: pillars/cerebrum/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-cerebrum:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-cerebrum:${POPS_IMAGE_TAG:-main}
     container_name: pops-cerebrum-api
     restart: unless-stopped
     networks:
@@ -545,7 +545,7 @@ services:
       dockerfile: pillars/cerebrum/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-cerebrum:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-cerebrum:${POPS_IMAGE_TAG:-main}
     container_name: pops-cerebrum-worker
     restart: unless-stopped
     command: ['node', 'dist/worker/index.js']
@@ -588,7 +588,7 @@ services:
       dockerfile: pillars/contacts/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-contacts:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-contacts:${POPS_IMAGE_TAG:-main}
     container_name: pops-contacts
     restart: unless-stopped
     labels:
@@ -779,7 +779,7 @@ services:
       dockerfile: pillars/orchestrator/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-orchestrator:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-orchestrator:${POPS_IMAGE_TAG:-main}
     container_name: pops-orchestrator
     restart: unless-stopped
     networks:
@@ -809,7 +809,7 @@ services:
 
   # ── FRONTEND ─────────────────────────────────────────────────────
   pops-shell:
-    image: ghcr.io/knoxio/pops-shell:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-shell:${POPS_IMAGE_TAG:-main}
     container_name: pops-shell
     restart: unless-stopped
     labels:
@@ -840,7 +840,7 @@ services:
   # snapshot baked into the image — redeploys reflect the contracts
   # that existed at image build time.
   pops-docs:
-    image: ghcr.io/knoxio/pops-docs:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-docs:${POPS_IMAGE_TAG:-main}
     container_name: pops-docs
     restart: unless-stopped
     labels:
@@ -968,7 +968,7 @@ services:
   # Requires a service-account API key provisioned in pops-api.
   # Enable with:  docker compose --profile mcp up -d
   pops-mcp:
-    image: ghcr.io/knoxio/pops-mcp:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-mcp:${POPS_IMAGE_TAG:-main}
     container_name: pops-mcp
     restart: unless-stopped
     profiles:

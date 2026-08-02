@@ -49,7 +49,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/knoxio/${{ matrix.app.image }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.app.image }}
           tags: |
             type=raw,value=main,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
@@ -83,7 +83,7 @@ jobs:
       - id: list
         name: Enumerate pillars published from the prod compose
         # A pillar is publishable iff infra/docker-compose.yml pins it to a
-        # `ghcr.io/knoxio/pops-<x>` image AND a hand-written
+        # `ghcr.io/<owner>/pops-<x>` image AND a hand-written
         # `pillars/<x>/Dockerfile` exists to build it from. This keeps the
         # publish set in lockstep with compose's `image:` refs — adding a
         # pillar image to compose makes it publish here with no workflow
@@ -93,9 +93,13 @@ jobs:
         # existence check even though they pin an `image:` ref.
         run: |
           set -euo pipefail
+          # Owner-agnostic: compose pins the owner as
+          # `${POPS_IMAGE_OWNER:-<default>}`, so match any owner segment
+          # rather than a literal. Hardcoding it here is what made the repo
+          # transfer to knoxio-labs a silent breakage waiting to happen.
           mapfile -t pillars < <(
-            grep -oE 'image: ghcr\.io/knoxio/pops-[a-z]+:' infra/docker-compose.yml \
-              | sed -E 's#image: ghcr\.io/knoxio/pops-([a-z]+):#\1#' \
+            grep -oE 'image: ghcr\.io/[^/]+/pops-[a-z]+:' infra/docker-compose.yml \
+              | sed -E 's#image: ghcr\.io/[^/]+/pops-([a-z]+):#\1#' \
               | sort -u \
               | while read -r p; do [ -f "pillars/$p/Dockerfile" ] && echo "$p"; done
           )
@@ -137,7 +141,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/knoxio/pops-${{ matrix.pillar }}
+          images: ghcr.io/${{ github.repository_owner }}/pops-${{ matrix.pillar }}
           tags: |
             type=raw,value=main,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short

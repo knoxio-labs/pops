@@ -155,7 +155,7 @@ cd pillars/shell && pnpm test:e2e
 POPS ships as Docker images on GHCR. Anyone can self-host with the compose file in this repo:
 
 ```bash
-git clone https://github.com/knoxio/pops.git && cd pops
+git clone https://github.com/knoxio-labs/pops.git && cd pops
 cp .env.example .env                  # then edit: POPS_DOMAIN, image tag, watchtower settings
 
 # Create one file per secret. Replace each placeholder with the real value
@@ -194,7 +194,7 @@ If the packages are public there is no setup needed.
 
 The compose file mounts each `secrets/<name>` file into containers via Docker file-based secrets (`/run/secrets/<name>`). All thirteen secret files must exist for `docker compose up` to succeed; leave a file empty if the corresponding integration is unused.
 
-Pushing to `main` builds and publishes one image per pillar — `ghcr.io/knoxio/pops-<id>` (e.g. `pops-registry`, `pops-finance`, `pops-media`, …) plus `ghcr.io/knoxio/pops-shell` and `ghcr.io/knoxio/pops-docs`. The [`publish-images.yml`](.github/workflows/publish-images.yml) workflow discovers each pillar's `pillars/<id>/Dockerfile` and publishes it. The compose file ships a Watchtower service that polls GHCR every 60s and rolls out new digests for any container labelled `com.centurylinklabs.watchtower.enable=true`.
+Pushing to `main` builds and publishes one image per pillar — `ghcr.io/knoxio-labs/pops-<id>` (e.g. `pops-registry`, `pops-finance`, `pops-media`, …) plus `ghcr.io/knoxio/pops-shell` and `ghcr.io/knoxio/pops-docs`. The [`publish-images.yml`](.github/workflows/publish-images.yml) workflow discovers each pillar's `pillars/<id>/Dockerfile` and publishes it. The compose file ships a Watchtower service that polls GHCR every 60s and rolls out new digests for any container labelled `com.centurylinklabs.watchtower.enable=true`.
 
 Override `POPS_IMAGE_TAG` in `.env` to pin a release. Track stability over freshness by pinning a semver tag (`POPS_IMAGE_TAG=v0.1.0`, `v0.1`, or `v0`) — see the [release runbook](docs/runbooks/cut-release.md) — or pin to a specific build with `POPS_IMAGE_TAG=sha-abc1234`. Use the dev compose for local builds:
 
@@ -221,7 +221,7 @@ libs/<name>/               # Shared libraries — no service, no DB, and never i
                            #   Each carries a README saying what it is and who depends on it.
 
 infra/
-├── docker-compose.yml     # Production (ghcr.io/knoxio/pops-<id> images + Watchtower)
+├── docker-compose.yml     # Production (ghcr.io/knoxio-labs/pops-<id> images + Watchtower)
 ├── docker-compose.dev.yml # Local development with build: contexts
 └── litestream/            # One <id>.yml backup-stream config per pillar SQLite DB
 

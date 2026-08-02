@@ -177,7 +177,7 @@ services:
       dockerfile: pillars/media/Dockerfile
       args:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
-    image: ghcr.io/knoxio/pops-media:${POPS_IMAGE_TAG:-main}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-media:${POPS_IMAGE_TAG:-main}
     container_name: pops-media-api
     restart: unless-stopped
     networks:

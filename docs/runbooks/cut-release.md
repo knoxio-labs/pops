@@ -1,6 +1,6 @@
 # Runbook: Cut a Pops Release
 
-> Audience: anyone with `write` access to `knoxio/pops`.
+> Audience: anyone with `write` access to `knoxio-labs/pops`.
 > Frequency: only when you want to pin a stable point — day-to-day deploys need no release (see below).
 > Related: [`infra/README.md`](../../infra/README.md) — the compose deploy contract.
 
@@ -14,16 +14,16 @@ You almost never need this runbook. Pushing to `main` already ships the whole fl
 
 Cut a versioned release (`vX.Y.Z`) only when a deployer wants to **pin** to a stable point instead of tracking `main`. That's the whole reason the semver tags exist.
 
-The full changelog history lives in [GitHub Releases](https://github.com/knoxio/pops/releases) — there's no in-repo `CHANGELOG.md`. The repo ruleset forbids direct pushes to `main`, so the release flow is tag-only by design.
+The full changelog history lives in [GitHub Releases](https://github.com/knoxio-labs/pops/releases) — there's no in-repo `CHANGELOG.md`. The repo ruleset forbids direct pushes to `main`, so the release flow is tag-only by design.
 
 ## What gets published
 
 `publish-images.yml` builds two sets of images, each tagged `main` (on the default branch), `sha-<short>`, and the six semver variants on a `v*` tag:
 
-| Set     | Images                                                                                                                                             | Built from                      | How it's selected                                                                                                                                                                                                                   |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pillars | `ghcr.io/knoxio/pops-<id>` for every served pillar (`registry`, `inventory`, `media`, `finance`, `food`, `lists`, `cerebrum`, `ai`, `contacts`, …) | `pillars/<id>/Dockerfile`       | **Discovered**: the workflow greps `infra/docker-compose.yml` for `image: ghcr.io/knoxio/pops-<x>:` refs that have a matching `pillars/<x>/Dockerfile`. Adding a pillar image to the prod compose enrolls it with no workflow edit. |
-| Apps    | `pops-shell`, `pops-mcp`, `pops-orchestrator`, `pops-docs`                                                                                         | their `pillars/<id>/Dockerfile` | **Static matrix** in the workflow. These pin an `image:` ref but are listed explicitly rather than discovered.                                                                                                                      |
+| Set     | Images                                                                                                                                                  | Built from                      | How it's selected                                                                                                                                                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pillars | `ghcr.io/knoxio-labs/pops-<id>` for every served pillar (`registry`, `inventory`, `media`, `finance`, `food`, `lists`, `cerebrum`, `ai`, `contacts`, …) | `pillars/<id>/Dockerfile`       | **Discovered**: the workflow greps `infra/docker-compose.yml` for `image: ghcr.io/knoxio/pops-<x>:` refs that have a matching `pillars/<x>/Dockerfile`. Adding a pillar image to the prod compose enrolls it with no workflow edit. |
+| Apps    | `pops-shell`, `pops-mcp`, `pops-orchestrator`, `pops-docs`                                                                                              | their `pillars/<id>/Dockerfile` | **Static matrix** in the workflow. These pin an `image:` ref but are listed explicitly rather than discovered.                                                                                                                      |
 
 One pillar image can back more than one service: the food worker (`pops-worker-food`) and the cerebrum worker (`cerebrum-worker`) reuse `pops-food` / `pops-cerebrum` with a runtime command override, so they need no separate publish.
 
@@ -77,7 +77,7 @@ Pre-1.0, [`release.sh`](../../.github/scripts/release.sh) collapses `major` bump
 push to main (Conventional Commits)
         │
         ├─▶ publish-images.yml: rebuild + push the full fleet as
-        │   ghcr.io/knoxio/pops-<id>:main and :sha-<short>
+        │   ghcr.io/knoxio-labs/pops-<id>:main and :sha-<short>
         │   → Watchtower rolls live `main` deployers forward
         │
         └─▶ (to PIN) run release.yml (workflow_dispatch):
