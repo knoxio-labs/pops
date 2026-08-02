@@ -5,7 +5,7 @@ CREATE TABLE `purchase_sources` (
 	`settlement_window_days` integer DEFAULT 21 NOT NULL,
 	`auto_link_policy` text DEFAULT 'review' NOT NULL,
 	`ingest_adapter` text,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	CONSTRAINT "ck_purchase_sources_auto_link_policy" CHECK("purchase_sources"."auto_link_policy" IN ('auto','review')),
 	CONSTRAINT "ck_purchase_sources_settlement_window_days" CHECK("purchase_sources"."settlement_window_days" > 0)
 );
@@ -29,8 +29,8 @@ CREATE TABLE `purchases` (
 	`raw_ref` text,
 	`checksum` text NOT NULL,
 	`status` text DEFAULT 'awaiting_settlement' NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
-	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`source`) REFERENCES `purchase_sources`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "ck_purchases_ingest_method" CHECK("purchases"."ingest_method" IN ('email','export','upload','manual')),
 	CONSTRAINT "ck_purchases_settlement_mode" CHECK("purchases"."settlement_mode" IN ('card','cash','unknown')),
@@ -55,8 +55,8 @@ CREATE TABLE `purchase_shipments` (
 	`delivered_at` text,
 	`status` text DEFAULT 'pending' NOT NULL,
 	`shipping_cents` integer DEFAULT 0 NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
-	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "ck_purchase_shipments_status" CHECK("purchase_shipments"."status" IN ('pending','shipped','delivered','cancelled','returned')),
 	CONSTRAINT "ck_purchase_shipments_shipping_cents" CHECK("purchase_shipments"."shipping_cents" >= 0)
@@ -83,7 +83,7 @@ CREATE TABLE `purchase_items` (
 	`allocated_adjustment_cents` integer DEFAULT 0 NOT NULL,
 	`merchant_category` text,
 	`kind` text,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`shipment_id`) REFERENCES `purchase_shipments`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "ck_purchase_items_kind" CHECK("purchase_items"."kind" IS NULL OR "purchase_items"."kind" IN ('consumable','durable','digital','service')),
@@ -102,7 +102,7 @@ CREATE TABLE `purchase_item_units` (
 	`serial_number` text,
 	`inventory_item_uri` text,
 	`inventory_item_stale_at` text,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`item_id`) REFERENCES `purchase_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -112,7 +112,7 @@ CREATE INDEX `idx_purchase_item_units_serial` ON `purchase_item_units` (`serial_
 CREATE TABLE `purchase_item_tags` (
 	`item_id` text NOT NULL,
 	`tag` text NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	PRIMARY KEY(`item_id`, `tag`),
 	FOREIGN KEY (`item_id`) REFERENCES `purchase_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -131,7 +131,7 @@ CREATE TABLE `purchase_match_rules` (
 	`confidence` real DEFAULT 0.5 NOT NULL,
 	`priority` integer DEFAULT 0 NOT NULL,
 	`times_applied` integer DEFAULT 0 NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`last_used_at` text,
 	CONSTRAINT "ck_purchase_match_rules_match_type" CHECK("purchase_match_rules"."match_type" IN ('exact','contains','regex')),
 	CONSTRAINT "ck_purchase_match_rules_is_active" CHECK("purchase_match_rules"."is_active" IN (0,1)),
@@ -156,8 +156,8 @@ CREATE TABLE `purchase_charges` (
 	`role` text DEFAULT 'capture' NOT NULL,
 	`payment_hint` text,
 	`origin` text DEFAULT 'merchant' NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
-	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
+	`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`shipment_id`) REFERENCES `purchase_shipments`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "ck_purchase_charges_role" CHECK("purchase_charges"."role" IN ('capture','authorization','refund','adjustment')),
@@ -178,7 +178,7 @@ CREATE TABLE `purchase_charge_links` (
 	`link_type` text NOT NULL,
 	`confidence` real DEFAULT 0.5 NOT NULL,
 	`match_rule_id` text,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	`confirmed_at` text,
 	FOREIGN KEY (`charge_id`) REFERENCES `purchase_charges`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`match_rule_id`) REFERENCES `purchase_match_rules`(`id`) ON UPDATE no action ON DELETE no action,
@@ -195,7 +195,7 @@ CREATE TABLE `purchase_item_allocations` (
 	`charge_id` text NOT NULL,
 	`item_id` text NOT NULL,
 	`amount_cents` integer NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`charge_id`) REFERENCES `purchase_charges`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`item_id`) REFERENCES `purchase_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -210,7 +210,7 @@ CREATE TABLE `purchase_documents` (
 	`document_uri` text NOT NULL,
 	`document_stale_at` text,
 	`kind` text DEFAULT 'other' NOT NULL,
-	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,
 	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`shipment_id`) REFERENCES `purchase_shipments`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "ck_purchase_documents_kind" CHECK("purchase_documents"."kind" IN ('tax_invoice','receipt','order_confirmation','delivery_photo','other'))

@@ -4,7 +4,7 @@
  * **A purchase row is one ORDER**, not one delivery and not one charge. An
  * Amazon order that ships in three boxes and settles as two card charges is
  * one row here, three `purchase_shipments`, and two
- * `purchase_transaction_links`. Collapsing any of those three grains into
+ * `purchase_charges`. Collapsing any of those three grains into
  * the others loses information that cannot be recovered: shipment-grain
  * purchases lose the order's identity, and order-grain-only loses carrier,
  * tracking and per-delivery cost.
@@ -93,10 +93,10 @@ export const purchases = sqliteTable(
 
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     // A merchant order id identifies one order. Stronger than `checksum`,
@@ -122,9 +122,9 @@ export const purchases = sqliteTable(
  *
  * Deliberately NOT assumed to align with charges. Amazon sometimes charges
  * per product group rather than per box, and whether AliExpress's
- * purchase-time groupings map to deliveries is unverified. Links may
- * reference a shipment when the attribution is known and simply don't when
- * it isn't — see `purchase_transaction_links.shipmentId`.
+ * purchase-time groupings map to deliveries is unverified. A charge may
+ * reference a shipment when the attribution is known and simply doesn't
+ * when it isn't — see `purchase_charges.shipmentId`.
  */
 export const purchaseShipments = sqliteTable(
   'purchase_shipments',
@@ -151,10 +151,10 @@ export const purchaseShipments = sqliteTable(
     shippingCents: integer('shipping_cents').notNull().default(0),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     index('idx_purchase_shipments_purchase').on(t.purchaseId),

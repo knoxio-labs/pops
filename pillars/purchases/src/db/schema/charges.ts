@@ -100,10 +100,10 @@ export const purchaseCharges = sqliteTable(
 
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     updatedAt: text('updated_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     unique('uq_purchase_charges_source_ref').on(t.purchaseId, t.sourceChargeRef),
@@ -146,7 +146,7 @@ export const purchaseChargeLinks = sqliteTable(
     matchRuleId: text('match_rule_id').references(() => purchaseMatchRules.id),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     /** NULL = engine-derived and disposable. Non-NULL = human-confirmed and pinned. */
     confirmedAt: text('confirmed_at'),
   },
@@ -189,7 +189,7 @@ export const purchaseItemAllocations = sqliteTable(
     amountCents: integer('amount_cents').notNull(),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     unique('uq_purchase_item_allocations').on(t.chargeId, t.itemId),

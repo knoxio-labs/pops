@@ -32,7 +32,7 @@ export const purchaseMatchRules = sqliteTable(
     timesApplied: integer('times_applied').notNull().default(0),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     lastUsedAt: text('last_used_at'),
   },
   (t) => [

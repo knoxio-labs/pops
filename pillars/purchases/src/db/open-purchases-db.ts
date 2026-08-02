@@ -46,7 +46,7 @@ export interface OpenedPurchasesDb {
  *   - The parent directory of `path` is created if missing (recursive).
  *   - `journal_mode=WAL`, `foreign_keys=ON`, and `busy_timeout=5000` are
  *     enabled. `foreign_keys=ON` is load-bearing here: `purchase_items` and
- *     `purchase_transaction_links` both cascade from `purchases`, and
+ *     `purchase_charges` both cascade from `purchases`, and
  *     SQLite silently ignores `ON DELETE cascade` when the pragma is off.
  *   - Every migration in the journal is applied via drizzle's built-in
  *     migrator (idempotent — re-running against the same DB short-circuits

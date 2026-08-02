@@ -83,7 +83,7 @@ export const purchaseItems = sqliteTable(
 
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     index('idx_purchase_items_purchase').on(t.purchaseId, t.position),
@@ -117,7 +117,7 @@ export const purchaseItemUnits = sqliteTable(
     inventoryItemStaleAt: text('inventory_item_stale_at'),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     index('idx_purchase_item_units_item').on(t.itemId),
@@ -147,7 +147,7 @@ export const purchaseItemTags = sqliteTable(
     tag: text('tag').notNull(),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     primaryKey({ columns: [t.itemId, t.tag] }),

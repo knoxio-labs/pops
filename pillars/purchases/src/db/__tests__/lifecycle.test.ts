@@ -111,27 +111,53 @@ describe('domain errors', () => {
 });
 
 describe('sources', () => {
-  it('upsert replaces every field, not just the ones supplied', () => {
+  it('upsert is a full replace — every omitted field returns to its default', () => {
     upsertSource(opened.db, {
       id: 'bunnings',
       label: 'Bunnings',
       descriptorPattern: 'BUNNINGS%',
+      settlementWindowDays: 7,
+      autoLinkPolicy: 'auto',
       ingestAdapter: 'manual',
     });
     upsertSource(opened.db, { id: 'bunnings', label: 'Bunnings Warehouse' });
 
     const source = getSource(opened.db, 'bunnings');
     expect(source?.label).toBe('Bunnings Warehouse');
-    // Omitted nullable fields are cleared, not silently retained — an
-    // upsert that half-applies is worse than one that fully replaces.
+    // Nullable fields clear...
     expect(source?.descriptorPattern).toBeNull();
     expect(source?.ingestAdapter).toBeNull();
+    // ...and the tuning fields return to their declared defaults rather
+    // than retaining 7/auto. One rule for every field: the result of a
+    // seed is a function of its input, not of what was in the table.
+    expect(source?.settlementWindowDays).toBe(21);
+    expect(source?.autoLinkPolicy).toBe('review');
   });
 
-  it('keeps the default settlement window when the caller omits it', () => {
-    upsertSource(opened.db, { id: 'bunnings', label: 'Bunnings' });
-    expect(getSource(opened.db, 'bunnings')?.settlementWindowDays).toBe(21);
-    expect(getSource(opened.db, 'bunnings')?.autoLinkPolicy).toBe('review');
+  it('applies the same defaults on the insert path as on the update path', () => {
+    upsertSource(opened.db, { id: 'fresh', label: 'Fresh' });
+    const inserted = getSource(opened.db, 'fresh');
+
+    upsertSource(opened.db, { id: 'fresh', label: 'Fresh', settlementWindowDays: 3 });
+    upsertSource(opened.db, { id: 'fresh', label: 'Fresh' });
+    const roundTripped = getSource(opened.db, 'fresh');
+
+    expect(roundTripped?.settlementWindowDays).toBe(inserted?.settlementWindowDays);
+    expect(roundTripped?.autoLinkPolicy).toBe(inserted?.autoLinkPolicy);
+  });
+
+  it('is idempotent — the same input twice yields the same row', () => {
+    const first = upsertSource(opened.db, {
+      id: 'woolworths',
+      label: 'Woolworths',
+      autoLinkPolicy: 'auto',
+    });
+    const second = upsertSource(opened.db, {
+      id: 'woolworths',
+      label: 'Woolworths',
+      autoLinkPolicy: 'auto',
+    });
+    expect({ ...second, createdAt: first.createdAt }).toEqual(first);
   });
 
   it('lists sources in a stable order', () => {
@@ -174,5 +200,115 @@ describe('setPurchaseStatus', () => {
       .get(id) as { status: string; updatedAt: string };
     expect(row.status).toBe('linked');
     expect(row.updatedAt).not.toBe('2000-01-01T00:00:00Z');
+  });
+});
+
+describe('timestamp format', () => {
+  /**
+   * Every timestamp column must hold ISO-8601, whichever path wrote it.
+   *
+   * SQLite's `datetime('now')` emits `2026-08-02 16:28:14` while the
+   * service layer emits `2026-08-02T16:28:14.929Z`. A space sorts before
+   * `T`, so mixing the two makes a row written by one path always sort
+   * before a row written by the other — regardless of which actually
+   * happened first. Every `orderBy(asc(createdAt))` in the read path, and
+   * any dated sweep window, would be quietly wrong.
+   */
+  const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+  const TIMESTAMP_COLUMNS: readonly (readonly [string, string])[] = [
+    ['purchases', 'created_at'],
+    ['purchases', 'updated_at'],
+    ['purchase_shipments', 'created_at'],
+    ['purchase_shipments', 'updated_at'],
+    ['purchase_items', 'created_at'],
+    ['purchase_item_units', 'created_at'],
+    ['purchase_item_tags', 'created_at'],
+    ['purchase_charges', 'created_at'],
+    ['purchase_charges', 'updated_at'],
+    ['purchase_item_allocations', 'created_at'],
+    ['purchase_documents', 'created_at'],
+    ['purchase_sources', 'created_at'],
+  ];
+
+  it('is ISO-8601 on every column the service layer writes', () => {
+    createPurchase(
+      opened.db,
+      amazonOrder({
+        shipments: [{ ref: 'box1' }],
+        items: [
+          {
+            ref: 'a',
+            shipmentRef: 'box1',
+            name: 'A',
+            unitPriceCents: 100,
+            lineTotalCents: 100,
+            tags: ['x'],
+            units: [{ serialNumber: 'SN-1' }],
+          },
+        ],
+        charges: [
+          {
+            sourceChargeRef: 'c',
+            amountCents: 100,
+            allocations: [{ itemRef: 'a', amountCents: 100 }],
+          },
+        ],
+        documents: [{ documentUri: 'pops://documents/document/x' }],
+      })
+    );
+
+    for (const [table, column] of TIMESTAMP_COLUMNS) {
+      const rows = opened.raw
+        .prepare(`SELECT ${column} AS ts FROM ${table} WHERE ${column} IS NOT NULL`)
+        .all() as { ts: string }[];
+      expect(rows.length, `${table}.${column} had no rows to check`).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.ts, `${table}.${column}`).toMatch(ISO);
+      }
+    }
+  });
+
+  it('is ISO-8601 on every column the schema DEFAULT writes', () => {
+    // A raw insert that supplies no timestamps at all, so the column
+    // defaults fire rather than the service layer.
+    opened.raw
+      .prepare(
+        `INSERT INTO purchases (id, source, ingest_method, ordered_at, currency, total_cents, checksum)
+         VALUES ('default-path', 'amazon', 'export', '2026-02-02T01:41:21Z', 'AUD', 100, 'default-path')`
+      )
+      .run();
+    const row = opened.raw
+      .prepare('SELECT created_at AS c, updated_at AS u FROM purchases WHERE id = ?')
+      .get('default-path') as { c: string; u: string };
+
+    expect(row.c).toMatch(ISO);
+    expect(row.u).toMatch(ISO);
+  });
+
+  it('sorts a service-written row before a later default-written row', () => {
+    // Insert order matters here. The service path writes first and the
+    // DEFAULT path second, so a correct schema orders them service-first.
+    // Under the old mixed format the default row carried a leading space
+    // where the service row carried `T`, and ' ' < 'T' put the *later* row
+    // first unconditionally. Doing it the other way round would pass either
+    // way and prove nothing.
+    const firstId = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'written-first', sourceOrderId: 'a' })
+    );
+    opened.raw
+      .prepare(
+        `INSERT INTO purchases (id, source, ingest_method, ordered_at, currency, total_cents, checksum)
+         VALUES ('written-second', 'amazon', 'export', '2026-02-02T01:41:21Z', 'AUD', 100, 'b')`
+      )
+      .run();
+
+    const order = (
+      opened.raw.prepare('SELECT id FROM purchases ORDER BY created_at ASC').all() as {
+        id: string;
+      }[]
+    ).map((r) => r.id);
+    expect(order).toEqual([firstId, 'written-second']);
   });
 });

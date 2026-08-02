@@ -40,7 +40,7 @@ export const purchaseDocuments = sqliteTable(
     kind: text('kind', { enum: DOCUMENT_KINDS }).notNull().default('other'),
     createdAt: text('created_at')
       .notNull()
-      .default(sql`(datetime('now'))`),
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => [
     unique('uq_purchase_documents').on(t.purchaseId, t.documentUri),

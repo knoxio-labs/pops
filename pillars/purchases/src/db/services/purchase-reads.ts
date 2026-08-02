@@ -6,7 +6,7 @@
  * every consumer wants and re-deriving it per caller is how the residual
  * ends up computed three different ways.
  */
-import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 
 import {
   purchaseChargeLinks,
@@ -20,7 +20,7 @@ import {
   purchaseShipments,
 } from '../schema.js';
 import { computeAccounting, landedCostCents, type PurchaseAccounting } from './accounting.js';
-import { type PurchasesDb } from './internal.js';
+import { nowIso, type PurchasesDb } from './internal.js';
 
 import type { PurchaseStatus } from '../../contract/constants.js';
 import type {
@@ -228,14 +228,19 @@ export function listItemsByTag(
     .map((row) => row.item);
 }
 
-/** Set an order's reconciliation status. The engine owns this transition. */
+/**
+ * Set an order's reconciliation status. The engine owns this transition.
+ *
+ * `updatedAt` is written with the same `nowIso()` every other write path
+ * uses. SQLite's `datetime('now')` would produce `2026-08-02 16:28:14`
+ * where the service layer produces `2026-08-02T16:28:14.929Z`, and since a
+ * space sorts before `T`, a row last touched here would sort before one
+ * last touched by ingest regardless of which actually happened first.
+ */
 export function setPurchaseStatus(db: PurchasesDb, id: string, status: PurchaseStatus): boolean {
   return (
-    db
-      .update(purchases)
-      .set({ status, updatedAt: sql`(datetime('now'))` })
-      .where(eq(purchases.id, id))
-      .run().changes > 0
+    db.update(purchases).set({ status, updatedAt: nowIso() }).where(eq(purchases.id, id)).run()
+      .changes > 0
   );
 }
 

@@ -37,5 +37,5 @@ export const purchaseSources = sqliteTable('purchase_sources', {
   ingestAdapter: text('ingest_adapter'),
   createdAt: text('created_at')
     .notNull()
-    .default(sql`(datetime('now'))`),
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 });
