@@ -17,8 +17,8 @@
  *
  * `merchantEntityId` is operative; `merchantEntityName` is only its label.
  * Entities live in `contacts` and are read live — this pillar keeps no
- * entity mirror, so a rename in `contacts` must not require a write here
- * (#3807).
+ * entity mirror, so a rename in `contacts` must not require a write here.
+ * Finance carries the same invariant on `transaction_corrections`.
  */
 import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';

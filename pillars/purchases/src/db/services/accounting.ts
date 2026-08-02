@@ -109,8 +109,8 @@ export function computeAccounting(
  * line total.
  *
  * Derived rather than stored so it cannot drift from its parts. This is the
- * figure `inventory` wants for insurance and resale value (POPS-47) — the
- * sticker price of a thing is not what it cost to get it into the house.
+ * figure `inventory` wants for insurance and resale value — the sticker
+ * price of a thing is not what it cost to get it into the house.
  */
 export function landedCostCents(item: {
   readonly lineTotalCents: number;

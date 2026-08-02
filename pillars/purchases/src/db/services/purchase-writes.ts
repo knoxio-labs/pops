@@ -3,8 +3,8 @@
  * transaction.
  *
  * Deliberately contains no matching logic. The reconciliation engine
- * (POPS-237) consumes these rows; nothing here decides which charge pays
- * for which line, it only records what an adapter was told.
+ * consumes these rows; nothing here decides which charge pays for which
+ * line, it only records what an adapter was told.
  *
  * The insert helpers share an `IngestContext` (see
  * `purchase-write-context.ts`) rather than threading six positional

@@ -10,9 +10,8 @@ export const PURCHASES_PILLAR_ID = 'purchases' as const;
  * on the shell rail. Both dimensions arrive with the UI.
  *
  * `search`, `ai.tools` and `uri.types` are likewise empty on purpose. A
- * search adapter over purchases is worth having (POPS-221 tracks lighting
- * up adapters fleet-wide) but declaring one the pillar doesn't implement
- * would make federated search fan out to a 404.
+ * search adapter over purchases is worth having, but declaring one the
+ * pillar doesn't implement would make federated search fan out to a 404.
  */
 export function buildPurchasesManifest(version: string): ManifestPayload {
   return {

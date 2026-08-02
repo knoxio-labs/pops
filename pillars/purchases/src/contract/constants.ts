@@ -61,7 +61,9 @@ export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
 /**
  * What a line item is, which decides who may want to fan out from it —
  * `durable` proposes to inventory, `consumable` proposes to the food
- * pantry. Both are proposals; neither is automatic (POPS-245, POPS-246).
+ * pantry. Both are proposals; neither is automatic — unattended fan-out
+ * fills those pillars with cables and single-use ingredients, after which
+ * the user stops trusting them.
  */
 export const ITEM_KINDS = ['consumable', 'durable', 'digital', 'service'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -123,7 +125,7 @@ export type MatchType = (typeof MATCH_TYPES)[number];
 /**
  * Kind of evidence a linked `documents` record holds. A tax invoice is the
  * arbiter when the CSV's own arithmetic is ambiguous; a delivery photo is
- * proof of receipt for an insurance claim (POPS-47).
+ * proof of receipt for an insurance claim.
  */
 export const DOCUMENT_KINDS = [
   'tax_invoice',

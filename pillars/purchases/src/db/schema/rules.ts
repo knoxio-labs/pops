@@ -3,7 +3,8 @@
  *
  * Mirrors finance's `transaction_corrections` field-for-field so a rule
  * means the same thing on both sides of the seam, including the invariant
- * that `entityId` is operative and `entityName` is only its label (#3807).
+ * that `entityId` is operative and `entityName` is only its label — see
+ * `pillars/finance/src/db/schema/corrections.ts`.
  */
 import { sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';

@@ -2,7 +2,7 @@
  * Order CRUD — `purchase.*` sub-router.
  *
  * Read and write only. Nothing here links, matches, or sweeps: the
- * reconciliation surface arrives with the engine (POPS-237).
+ * reconciliation surface arrives with the matching engine.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';

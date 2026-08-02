@@ -10,7 +10,7 @@
  *
  * Units are created lazily. A line with `quantity: 3` and zero unit rows is
  * normal and complete — units appear only when a unit needs identity, which
- * in practice means a serial number or an inventory fan-out (POPS-245).
+ * in practice means a serial number or an inventory fan-out.
  */
 import { sql } from 'drizzle-orm';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';

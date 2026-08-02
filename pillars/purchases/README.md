@@ -58,7 +58,7 @@ Folding `awaitingImport` into the residual would flag every recent order as brok
 
 **`position` is not cosmetic.** Ids are random UUIDs and every row written in one ingest shares a `createdAt` to the second, so without an explicit position the read order of lines, deliveries and charges is genuinely non-deterministic — a 100-line grocery receipt would render shuffled, and the deterministic candidate ordering the reconciliation engine needs for re-derivation to be safe would not hold.
 
-**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live. Nothing here resolves an entity by name, and no mirror table exists — the invariant `transaction_corrections` has carried since #3807.
+**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live. Nothing here resolves an entity by name, and no mirror table exists — the same invariant finance carries on `transaction_corrections` (`pillars/finance/src/db/schema/corrections.ts`).
 
 **`finance` has no idea this pillar exists.** No foreign key crosses the boundary and no schema change was made on the finance side, which is what lets the two be migrated and restored independently.
 
