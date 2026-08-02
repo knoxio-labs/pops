@@ -10,7 +10,8 @@
  * tracking and per-delivery cost.
  *
  * All money is integer cents. Never a float dollar value, anywhere, for any
- * reason — the same rule finance enforces (#3665, CF041). Subset-sum in the
+ * reason — the same rule finance enforces on
+ * `pillars/finance/src/db/schema/transactions.ts`. Subset-sum in the
  * reconciliation ladder is exact integer arithmetic and stops being exact
  * the moment a float enters.
  *
