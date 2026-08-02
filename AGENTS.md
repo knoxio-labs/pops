@@ -140,7 +140,7 @@ Tests live next to the code they cover (`pillars/<id>/src/**/__tests__/`, `libs/
 
 ### Docker
 
-Production compose pulls published images from `ghcr.io/knoxio/pops-*`; dev compose builds locally. Each pillar applies its own migrations on startup and owns its own SQLite file.
+Production compose pulls published images from `ghcr.io/knoxio-labs/pops-*`; dev compose builds locally. Each pillar applies its own migrations on startup and owns its own SQLite file.
 
 ```bash
 # Full local stack (build from source)
@@ -166,7 +166,7 @@ These wrap the `worktree-branch <branch-name>` script (add `--install-deps` to i
 
 ### Deployment
 
-pops ships code, per-pillar Dockerfiles, and `infra/docker-compose.yml`. Pushing to `main` publishes one image per pillar — `ghcr.io/knoxio/pops-<id>` (built from `pillars/<id>/Dockerfile`) plus `pops-shell` and `pops-docs`; `publish-images.yml` discovers and publishes them. Deployers (including the knoxio home lab via [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra)) run Watchtower against those images for auto-rollout.
+pops ships code, per-pillar Dockerfiles, and `infra/docker-compose.yml`. Pushing to `main` publishes one image per pillar — `ghcr.io/knoxio-labs/pops-<id>` (built from `pillars/<id>/Dockerfile`) plus `pops-shell` and `pops-docs`; `publish-images.yml` discovers and publishes them. Deployers (including the knoxio home lab via [`knoxio/homelab-infra`](https://github.com/knoxio/homelab-infra)) run Watchtower against those images for auto-rollout.
 
 **Host provisioning (ansible, vault, networks) lives in the deployer's own infra repo, NOT here.** Run ansible from `knoxio/homelab-infra` when host config changes (Cloudflare Tunnel, secrets, networks, github runner, backups). Day-to-day app rollouts are Watchtower's job — no ansible run required.
 
@@ -195,7 +195,7 @@ libs/                      # Shared libraries — no service, no DB, and a lib m
 │                          #   `ls libs/` is the inventory.
 
 infra/
-├── docker-compose.yml     # Production compose (ghcr.io/knoxio/pops-<id> images + Watchtower)
+├── docker-compose.yml     # Production compose (ghcr.io/knoxio-labs/pops-<id> images + Watchtower)
 ├── docker-compose.dev.yml # Local dev compose (build: contexts)
 └── litestream/            # One <id>.yml backup-stream config per pillar SQLite DB
 ```
