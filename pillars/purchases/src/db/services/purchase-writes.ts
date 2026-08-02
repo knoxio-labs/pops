@@ -73,6 +73,7 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
       tx,
       purchase: insertOrder(tx, input, now),
       shipmentIds: new Map(),
+      shipmentSourceRefs: new Set(),
       itemIds: new Map(),
       now,
     };
@@ -145,12 +146,24 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
 }
 
 function insertShipment(ctx: IngestContext, input: CreateShipmentInput, position: number): void {
-  // Checked before the write, not after. The (purchase_id,
-  // source_shipment_ref) unique index would otherwise fire first and
-  // surface as a 409 "conflicts with existing data", when the truth is
-  // that this one payload names the same delivery twice.
+  // Both identities are checked before the write, not after. The
+  // (purchase_id, source_shipment_ref) unique index would otherwise fire
+  // first and surface as a 409 "conflicts with existing data", when the
+  // truth is that this one payload names the same delivery twice.
+  //
+  // Two checks, not one, because `ref` and `sourceShipmentRef` are
+  // different things: a payload can repeat a merchant shipment id under
+  // two distinct wiring handles, which the ref check alone cannot see.
   if (ctx.shipmentIds.has(input.ref)) {
     throw new InvalidIngestPayloadError(`duplicate shipment ref '${input.ref}'`);
+  }
+  if (input.sourceShipmentRef != null) {
+    if (ctx.shipmentSourceRefs.has(input.sourceShipmentRef)) {
+      throw new InvalidIngestPayloadError(
+        `duplicate merchant shipment id '${input.sourceShipmentRef}'`
+      );
+    }
+    ctx.shipmentSourceRefs.add(input.sourceShipmentRef);
   }
   const rows = ctx.tx
     .insert(purchaseShipments)

@@ -16,6 +16,14 @@ export interface IngestContext {
   readonly purchase: PurchaseRow;
   /** Adapter-local shipment ref → persisted id. */
   readonly shipmentIds: Map<string, string>;
+  /**
+   * Merchant shipment identifiers already claimed in this payload.
+   *
+   * Separate from {@link shipmentIds} since the two were split: a payload
+   * can name the same delivery twice under two different wiring handles,
+   * and only this catches it.
+   */
+  readonly shipmentSourceRefs: Set<string>;
   /** Adapter-local item ref → persisted id. */
   readonly itemIds: Map<string, string>;
   readonly now: string;

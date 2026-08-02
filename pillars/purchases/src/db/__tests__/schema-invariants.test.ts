@@ -245,10 +245,37 @@ describe('ingest idempotency', () => {
     ).toThrow(InvalidIngestPayloadError);
   });
 
-  it('rejects two deliveries claiming the same ref', () => {
+  it('rejects two deliveries claiming the same wiring ref', () => {
     expect(() =>
       createPurchase(opened.db, amazonOrder({ shipments: [{ ref: 'box' }, { ref: 'box' }] }))
-    ).toThrow(InvalidIngestPayloadError);
+    ).toThrow(/duplicate shipment ref 'box'/);
+  });
+
+  it('rejects two deliveries claiming the same merchant shipment id', () => {
+    // Distinct wiring handles, same real delivery. The ref check cannot see
+    // this, and without its own guard the unique index reports a 409
+    // "conflicts with existing data" for what is one malformed payload.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          shipments: [
+            { ref: 'a', sourceShipmentRef: 'SHIP-1' },
+            { ref: 'b', sourceShipmentRef: 'SHIP-1' },
+          ],
+        })
+      )
+    ).toThrow(/duplicate merchant shipment id 'SHIP-1'/);
+  });
+
+  it('allows many deliveries with no merchant shipment id', () => {
+    // NULLs do not collide, and an export without shipment ids is normal.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({ shipments: [{ ref: 'a' }, { ref: 'b' }, { ref: 'c' }] })
+      )
+    ).not.toThrow();
   });
 
   it('writes one timestamp across the whole graph', () => {
