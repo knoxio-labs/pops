@@ -8,8 +8,8 @@
  * are already matched.
  */
 import { type FinanceDb } from '../../../db/index.js';
-import { type CorrectionRow } from '../corrections/index.js';
-import { applyLearnedCorrection } from './apply-learned-correction.js';
+import { findAllMatchingCorrectionFromRules, type CorrectionRow } from '../corrections/index.js';
+import { applyLearnedCorrection, correctionOutcomeBucket } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
 import { transactionChanged } from './reevaluate-diff.js';
 import { buildSuggestedTags } from './tag-management.js';
@@ -143,6 +143,19 @@ export function reapplyCorrectionToMatched(
   ctx: ReevaluateContext,
   buckets: BucketAccumulator
 ): boolean {
+  // Decide from the winning rule before applying it. `applyLearnedCorrection`
+  // credits `timesApplied` the moment it produces an outcome, so probing with
+  // it and then discarding the result would count a rule that changed nothing.
+  const winner = findAllMatchingCorrectionFromRules(
+    tx.description,
+    ctx.rules,
+    ctx.minConfidence
+  )[0];
+  if (!winner || correctionOutcomeBucket(winner) !== 'matched') {
+    buckets.matched.push(tx);
+    return false;
+  }
+
   const correctionApplied = applyLearnedCorrection(ctx.db, {
     transaction: tx,
     minConfidence: ctx.minConfidence,
@@ -151,7 +164,7 @@ export function reapplyCorrectionToMatched(
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
   });
-  if (!correctionApplied || correctionApplied.bucket !== 'matched') {
+  if (!correctionApplied) {
     buckets.matched.push(tx);
     return false;
   }

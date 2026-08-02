@@ -233,6 +233,47 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
     expect(nextResult.uncertain).toHaveLength(0);
     expect(nextResult.matched).toHaveLength(1);
     expect(nextResult.matched[0]?.entity.entityName).toBe('Woolworths');
+    // The discarded outcome must not credit the rule: `timesApplied` records
+    // real applications, and this rule changed nothing.
+    expect(timesApplied('r-weak')).toBe(0);
+  });
+
+  it('credits usage exactly once for a matched row the rule does re-decide', async () => {
+    seedRule('r-1');
+    const sibling = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      matchType: 'ai',
+    });
+
+    await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [sibling], uncertain: [], failed: [], skipped: [] },
+      minConfidence: 0.7,
+    });
+
+    expect(timesApplied('r-1')).toBe(1);
+  });
+
+  it('never credits usage from the pending-preview path, matched rows included', async () => {
+    seedRule('r-1');
+    const sibling = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      matchType: 'ai',
+    });
+
+    const { affectedCount } = await reevaluateImportSessionWithRules({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [sibling], uncertain: [], failed: [], skipped: [] },
+      minConfidence: 0.7,
+      pendingChangeSets: [],
+    });
+
+    expect(affectedCount).toBe(1);
+    expect(timesApplied('r-1')).toBe(0);
   });
 
   it('preserves the relative order of the matched bucket', async () => {

@@ -164,6 +164,23 @@ function handleNoEntityCorrection(
 }
 
 /**
+ * The bucket the winning correction would land a transaction in, or `null` when
+ * the rule has nothing to apply — decided from the rule alone, with no DB write
+ * and no usage telemetry.
+ *
+ * Exists so a caller can find out where a rule would put a row *before*
+ * applying it: `applyLearnedCorrection` bumps `timesApplied` as soon as it
+ * produces an outcome, so a caller that inspects the outcome and then discards
+ * it has already credited a rule that changed nothing. The bucket decision
+ * lives here rather than in that caller so it cannot drift from
+ * `resolveApplyResult`, which reads it back below.
+ */
+export function correctionOutcomeBucket(correction: CorrectionRow): 'matched' | 'uncertain' | null {
+  if (!correction.entityId) return resolveCorrectionApplyStatus(correction);
+  return classifyCorrectionMatch(correction).status === 'matched' ? 'matched' : 'uncertain';
+}
+
+/**
  * Resolve the ChangeSet-application outcome for the winning correction, or
  * `null` when the rule carries neither an entity nor a transaction type (has
  * nothing to apply).
