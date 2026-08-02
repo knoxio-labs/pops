@@ -360,6 +360,54 @@ services:
       timeout: 5s
       retries: 3
 
+  # Purchases pillar API (ADR-042). Owns the order/delivery/line/charge
+  # graph in purchases.db and the N:M links to finance transactions.
+  # nginx routes /purchases-api/ here on port 3013.
+  #
+  # No frontend yet, so the manifest declares no nav or pages — a deployed
+  # instance serves /health, /openapi and an empty order list. That is the
+  # point of deploying it early: it proves the container builds, boots,
+  # migrates its own DB and self-registers, which is the part most likely
+  # to be wrong and cheapest to find out before the first ingest adapter.
+  purchases-api:
+    build:
+      context: ..
+      dockerfile: pillars/purchases/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-purchases:${POPS_IMAGE_TAG:-main}
+    container_name: pops-purchases
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - sqlite-data:/data/sqlite
+    environment:
+      NODE_ENV: production
+      PORT: '3013'
+      PURCHASES_SQLITE_PATH: /data/sqlite/purchases.db
+      PURCHASES_SELF_BASE_URL: http://purchases-api:3013
+      POPS_REGISTRY_ENABLED: 'true'
+    expose:
+      - '3013'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3013/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # AI Ops pillar API (PRD-055). Hosts ai.db reads/writes for the AI-ops
   # telemetry slice — observability, providers, model pricing, budgets,
   # alerts — and the cross-pillar ingest `POST /ai-usage/record`
