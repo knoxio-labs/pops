@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
 import { requiresEntity } from '../../../lib/transaction-type';
+import { promptToLearn } from './learn-prompt';
 import { bucketOfChecksum, replaceByChecksum } from './local-tx-reconcile';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -92,10 +93,7 @@ function applyEditToBucket(
 }
 
 function showLearnToast(invokeRetry: () => void): void {
-  toast.info('Apply this correction to future imports?', {
-    description: 'This will help auto-match similar transactions next time.',
-    action: { label: 'Save & Learn', onClick: invokeRetry },
-  });
+  promptToLearn(invokeRetry);
   toast.success('Transaction updated');
 }
 

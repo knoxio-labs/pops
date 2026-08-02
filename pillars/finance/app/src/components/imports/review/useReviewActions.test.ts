@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { moveOneToMatched, type LocalTxState } from './useReviewActions';
+import { moveOneToMatched, useReviewActions, type LocalTxState } from './useReviewActions';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
+
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
+vi.mock('sonner', () => ({ toast: toastMock }));
 
 function makeProcessed(
   checksum: string,
@@ -152,5 +156,156 @@ describe('moveOneToMatched', () => {
 
     expect(twice.matched).toHaveLength(1);
     expect(twice.matched[0]?.entity.entityId).toBe('ent-a');
+  });
+});
+
+function setupActions(similar: ProcessedTransaction[] = []) {
+  const setLocalTransactions = vi.fn();
+  const generateProposal = vi.fn().mockResolvedValue(undefined);
+  const findSimilar = vi.fn().mockReturnValue(similar);
+  const { result } = renderHook(() =>
+    useReviewActions({ setLocalTransactions, findSimilar, generateProposal })
+  );
+  return { result, setLocalTransactions, generateProposal, findSimilar };
+}
+
+/** Invoke the "Save & Learn" action the fallback toast offers. */
+function invokeLearnAction(): void {
+  const options = toastMock.info.mock.calls.at(-1)?.[1] as
+    | { action?: { onClick: () => void } }
+    | undefined;
+  options?.action?.onClick();
+}
+
+describe('useReviewActions — correcting a wrong match offers a rule', () => {
+  beforeEach(() => {
+    toastMock.info.mockClear();
+    toastMock.success.mockClear();
+  });
+
+  // The reported bug: an AI-matched row sits alone in `matched`, the user picks
+  // the right merchant from the inline picker, and nothing offers to learn it —
+  // so the next import repeats the same wrong match.
+  it.each(['ai', 'learned', 'alias', 'exact', 'prefix', 'contains'] as const)(
+    'proposes a rule when a lone %s-matched row is reassigned',
+    (matchType) => {
+      const { result, generateProposal } = setupActions();
+      const transaction = makeProcessed('maccas', {
+        description: 'MCLUU DARLINGHURST',
+        status: 'matched',
+        entity: { matchType, entityId: 'ent-mcd', entityName: "McDonald's", confidence: 0.85 },
+      });
+
+      act(() => {
+        result.current.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
+      });
+
+      expect(generateProposal).toHaveBeenCalledWith(
+        expect.objectContaining({ entityId: 'ent-sauna', entityName: 'SaunaX' })
+      );
+      expect(toastMock.info).not.toHaveBeenCalled();
+    }
+  );
+
+  it('stays silent when the picked entity is the one already matched', () => {
+    const { result, generateProposal, setLocalTransactions } = setupActions();
+    const transaction = makeProcessed('maccas', {
+      status: 'matched',
+      entity: { matchType: 'ai', entityId: 'ent-mcd', entityName: "McDonald's" },
+    });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-mcd', "McDonald's");
+    });
+
+    expect(generateProposal).not.toHaveBeenCalled();
+    expect(toastMock.info).not.toHaveBeenCalled();
+    // The bucket move still runs: accepting an AI suggestion that already
+    // resolved to an entity id lands here and has to leave `uncertain`.
+    expect(setLocalTransactions).toHaveBeenCalledTimes(1);
+  });
+
+  it('promotes an uncertain row whose AI suggestion already carries the picked entity id', () => {
+    const { result, setLocalTransactions } = setupActions();
+    const transaction = makeProcessed('maccas', {
+      status: 'uncertain',
+      entity: { matchType: 'ai', entityId: 'ent-mcd', entityName: "McDonald's", confidence: 0.55 },
+    });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-mcd', "McDonald's");
+    });
+
+    const updater = setLocalTransactions.mock.calls[0][0] as (p: LocalTxState) => LocalTxState;
+    const next = updater(emptyState({ uncertain: [transaction] }));
+    expect(next.uncertain).toHaveLength(0);
+    expect(next.matched).toHaveLength(1);
+  });
+
+  it('falls back to an explicit learn offer when assigning an unmatched row with no siblings', () => {
+    const { result, generateProposal } = setupActions();
+    const transaction = makeProcessed('unknown-1', { entity: { matchType: 'none' } });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-x', 'X Corp');
+    });
+
+    expect(generateProposal).not.toHaveBeenCalled();
+    expect(toastMock.info).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      invokeLearnAction();
+    });
+    expect(generateProposal).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'ent-x', entityName: 'X Corp' })
+    );
+  });
+
+  it('proposes straight away for an unmatched row that has similar siblings', () => {
+    const sibling = makeProcessed('sibling');
+    const { result, generateProposal } = setupActions([sibling]);
+    const transaction = makeProcessed('unknown-2', { entity: { matchType: 'none' } });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-x', 'X Corp');
+    });
+
+    expect(generateProposal).toHaveBeenCalledTimes(1);
+    expect(toastMock.info).not.toHaveBeenCalled();
+  });
+
+  it('reassigning a row the user already fixed by hand only offers, never forces', () => {
+    const { result, generateProposal } = setupActions();
+    const transaction = makeProcessed('manual-1', {
+      status: 'matched',
+      entity: { matchType: 'manual', entityId: 'ent-a', entityName: 'A' },
+    });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-b', 'B');
+    });
+
+    expect(generateProposal).not.toHaveBeenCalled();
+    expect(toastMock.info).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries the correction into the local buckets regardless of the learn route', () => {
+    const { result, setLocalTransactions } = setupActions();
+    const transaction = makeProcessed('maccas', {
+      status: 'matched',
+      entity: { matchType: 'ai', entityId: 'ent-mcd', entityName: "McDonald's" },
+    });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
+    });
+
+    const updater = setLocalTransactions.mock.calls[0][0] as (p: LocalTxState) => LocalTxState;
+    const next = updater(emptyState({ matched: [transaction] }));
+    expect(next.matched[0]?.entity).toMatchObject({
+      entityId: 'ent-sauna',
+      entityName: 'SaunaX',
+      matchType: 'manual',
+    });
   });
 });

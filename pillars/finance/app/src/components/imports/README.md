@@ -23,6 +23,8 @@ Consecutive statement exports repeat the days they share, so `mergeParsedFiles` 
 
 No transaction and no rule is written before step 7. Every entity creation, correction ChangeSet and tag-rule ChangeSet accumulates in `../../store/importStore` as _pending_ state, and re-evaluation runs against DB rules merged with that pending set — so the user sees the effect of a rule before it exists. Abandon the import and no rule was ever created, which is why one made during review does not appear in the rules browser until commit.
 
+A correction that never becomes a rule is worthless past this run, so no fix on step 4 is silently absorbed. Overriding an entity the matcher chose on its own — a rule, an AI guess, or one of the alias/exact/prefix/contains stages — opens the correction proposal immediately, as does assigning a row that has similar siblings anywhere in the run. Everything else (a first-time merchant on an unmatched row) still offers the rule, through a "Save & Learn" toast rather than the dialog. `findSimilar` therefore scans the `matched` bucket too: a wrong auto-match puts its whole merchant in `matched`, and scanning only uncertain/failed reported "nothing similar" for exactly the case the rule exists to fix.
+
 "Nothing is written" is not literally true, and the exceptions bite. Rejecting a correction proposal in step 4 persists rejection feedback to finance's settings table immediately. And every `POST /imports/process` — including the re-runs the wizard fires on resume or dead-session recovery — bumps `timesApplied` on every rule that matched.
 
 ## What survives a reload
@@ -47,3 +49,5 @@ Two more sharp edges in the same area: resuming mid-processing always restarts `
 | Description normalization, correction helpers, preview scoping                | `lib/`                                               |
 
 `correction-proposal/` is the largest surface here by a wide margin; the backend contract it drives is documented in `pillars/finance/src/api/modules/corrections/`.
+
+Its impact panel answers "what does approving this change?", and the honest answer spans two populations: the rows in this import and the rows already committed. Both dialogs — the mid-import proposal and the rules browser — read the committed side from the same `useDbPreviewDescriptions` query and render the two as separate sections, because a correction rule outlives the run that created it. The server previews one combined list capped at `PREVIEW_CHANGESET_MAX_TRANSACTIONS`; `scopeAndBudget` gives the session rows first claim on that budget and spends the remainder on the database, so a large import shrinks the committed sample rather than dropping session rows. When it does, the section says so.

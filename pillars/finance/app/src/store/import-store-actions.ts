@@ -139,9 +139,18 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
 
 export function buildTransactionActions(set: StoreSet, get: StoreGet) {
   return {
+    /**
+     * The rows that a correction on `transaction` would also cover.
+     *
+     * `matched` counts: a rule born from this correction re-decides those rows
+     * too, and a wrong auto-match lands its whole merchant in `matched`, so
+     * scanning only uncertain/failed reported "no similar rows" for exactly the
+     * case where the rule matters most.
+     */
     findSimilar: (transaction: ProcessedTransaction): ProcessedTransaction[] => {
       const state = get();
       const allTransactions: ProcessedTransaction[] = [
+        ...state.processedTransactions.matched,
         ...state.processedTransactions.uncertain,
         ...state.processedTransactions.failed,
       ];

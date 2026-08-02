@@ -1043,3 +1043,67 @@ describe('US-14: Save & Learn — acceptance criteria', () => {
     expect(mockAddPendingChangeSet).not.toHaveBeenCalled();
   });
 });
+
+describe('CorrectionProposalDialog — impact reaches past the import', () => {
+  // A rule approved mid-import keeps re-deciding rows long after the run ends,
+  // so an impact panel scoped to the session understates what the user is
+  // agreeing to. The proposal dialog used to pass no DB rows at all.
+  function seedDbRows() {
+    mockDescriptionsForPreview.mockResolvedValue({
+      data: {
+        data: [
+          { checksum: 'db-1', description: 'WOOLWORTHS 4321 MELB' },
+          { checksum: 'db-2', description: 'WOOLWORTHS METRO 77' },
+        ],
+        total: 2,
+        truncated: false,
+      },
+      error: undefined,
+    });
+  }
+
+  it('previews the proposed rules against committed transactions, not just the import', async () => {
+    seedTwoAddOps();
+    seedDbRows();
+    renderDialog();
+
+    await waitFor(() => {
+      expect(mockPreviewMutateAsync).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      const descriptions = mockPreviewMutateAsync.mock.calls
+        .flatMap(
+          (call) => (call[0] as { transactions: Array<{ description: string }> }).transactions
+        )
+        .map((t) => t.description);
+      expect(descriptions).toContain('WOOLWORTHS 4321 MELB');
+      // The session rows are still previewed alongside them.
+      expect(descriptions).toContain('WOOLWORTHS 1234 SYD');
+    });
+  });
+
+  it('splits the panel into import and existing sections once the DB rows load', async () => {
+    seedTwoAddOps();
+    seedDbRows();
+    renderDialog();
+
+    await waitFor(() => {
+      expect(screen.getByText('Existing transactions')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Import transactions')).toBeInTheDocument();
+  });
+
+  it('still names the database section when nothing committed matches', async () => {
+    // Silence is ambiguous — an absent section reads as "not checked" rather
+    // than "checked, nothing hit", which is the answer the user needs before
+    // approving a rule.
+    seedTwoAddOps();
+    renderDialog();
+
+    await waitFor(() => {
+      expect(mockPreviewMutateAsync).toHaveBeenCalled();
+    });
+    expect(screen.getByText('Existing transactions')).toBeInTheDocument();
+    expect(screen.getByText('No existing transactions match.')).toBeInTheDocument();
+  });
+});

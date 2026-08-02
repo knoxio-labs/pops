@@ -55,6 +55,7 @@ export interface ViewSelection {
   previewView: PreviewView;
   setPreviewView: React.Dispatch<React.SetStateAction<PreviewView>>;
   previewResult: PreviewChangeSetOutput | null;
+  dbPreviewResult: PreviewChangeSetOutput | null;
   previewError: string | null;
   previewTruncated: boolean;
   currentPreviewLabel: string;
@@ -76,6 +77,7 @@ export function useViewSelection(
     previewView,
     setPreviewView,
     previewResult: isCombined ? previewHook.combinedPreview : previewHook.selectedOpPreview,
+    dbPreviewResult: isCombined ? previewHook.combinedDbPreview : previewHook.selectedOpDbPreview,
     previewError: isCombined
       ? previewHook.combinedPreviewError
       : previewHook.selectedOpPreviewError,
@@ -111,6 +113,9 @@ export function renderBody(
       setPreviewView={view.setPreviewView}
       currentPreviewLabel={view.currentPreviewLabel}
       previewResult={view.previewResult}
+      dbPreviewResult={view.dbPreviewResult}
+      dbTruncated={hooks.dbTxnsQuery.data?.truncated}
+      dbTotal={hooks.dbTxnsQuery.data?.total}
       previewError={view.previewError}
       previewTruncated={view.previewTruncated}
     />

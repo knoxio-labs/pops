@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { promptToLearn } from '../hooks/learn-prompt';
 import { replaceByChecksum } from '../hooks/local-tx-reconcile';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -45,6 +46,25 @@ export function moveOneToMatched(prev: LocalTxState, args: MoveArgs): LocalTxSta
     entity: { entityId, entityName, matchType, confidence: 1 },
     status: 'matched' as const,
   }));
+}
+
+/**
+ * Whether picking `entityId` overrides an assignment the matcher made on its
+ * own — a rule, an AI guess, or one of the deterministic alias/exact/prefix/
+ * contains stages.
+ *
+ * This is the signal that the correction is worth learning: the matcher will
+ * make the same call on the next import of this merchant unless a rule says
+ * otherwise. `manual`/`none` are excluded — there is nothing to overrule in a
+ * row the user assigned themselves or that was never matched at all.
+ */
+export function overridesAutomaticMatch(
+  transaction: ProcessedTransaction,
+  entityId: string
+): boolean {
+  const match = transaction.entity;
+  if (!match || match.matchType === 'manual' || match.matchType === 'none') return false;
+  return match.entityId !== entityId;
 }
 
 interface UseReviewActionsArgs {
@@ -93,15 +113,24 @@ export function useReviewActions({
       setLocalTransactions((prev) =>
         moveOneToMatched(prev, { transaction, entityId, entityName, matchType: 'manual' })
       );
-      if (similar.length > 0) {
-        void generateProposal({
+      const propose = () =>
+        generateProposal({
           triggeringTransaction: transaction,
           entityId,
           entityName,
           location: transaction.location ?? null,
           transactionType: transaction.transactionType ?? null,
         });
+      if (overridesAutomaticMatch(transaction, entityId) || similar.length > 0) {
+        void propose();
+        return;
       }
+      // Re-picking the entity the row already carries corrects nothing, so
+      // there is nothing to learn. The bucket move above still runs: accepting
+      // an AI suggestion that already resolved to an entity id comes through
+      // here, and that row has to leave `uncertain`.
+      if (transaction.entity?.entityId === entityId) return;
+      promptToLearn(() => void propose());
     },
     [findSimilar, generateProposal, setLocalTransactions]
   );

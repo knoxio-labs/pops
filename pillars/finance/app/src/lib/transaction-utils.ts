@@ -29,8 +29,11 @@ export function findSimilarTransactions(
   candidates: ProcessedTransaction[]
 ): ProcessedTransaction[] {
   return candidates.filter((candidate) => {
-    // Skip the reference transaction itself
-    if (candidate === reference) return false;
+    // Identity is the checksum, not the object (#3590/#3620): the reference
+    // comes from the review step's local copy, which is a different object from
+    // the store's once anything has been edited, so a reference check counted
+    // the row as its own sibling.
+    if (candidate.checksum === reference.checksum) return false;
 
     // Exact match
     if (candidate.description === reference.description) return true;
