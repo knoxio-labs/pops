@@ -429,3 +429,57 @@ describe('payload arithmetic', () => {
     ).not.toThrow();
   });
 });
+
+describe('unknown refs', () => {
+  it('rejects a line naming a delivery the payload never declared', () => {
+    // Resolving to null would silently demote a typo into an unassigned
+    // line — indistinguishable downstream from a line that genuinely has no
+    // delivery, with the order still balancing either way.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          shipments: [{ ref: 'box1' }],
+          items: [{ shipmentRef: 'box2', name: 'A', unitPriceCents: 100, lineTotalCents: 100 }],
+        })
+      )
+    ).toThrow(/unknown shipment ref 'box2'/);
+  });
+
+  it('rejects a charge naming a delivery the payload never declared', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          shipments: [{ ref: 'box1' }],
+          charges: [{ sourceChargeRef: 'c', shipmentRef: 'nope', amountCents: 100 }],
+        })
+      )
+    ).toThrow(/unknown shipment ref 'nope'/);
+  });
+
+  it('rejects a document naming a delivery the payload never declared', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          shipments: [{ ref: 'box1' }],
+          documents: [{ documentUri: 'pops://documents/document/x', shipmentRef: 'ghost' }],
+        })
+      )
+    ).toThrow(/unknown shipment ref 'ghost'/);
+  });
+
+  it('still allows an explicit null, which means "no delivery"', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          shipments: [{ ref: 'box1' }],
+          items: [{ shipmentRef: null, name: 'Digital', unitPriceCents: 100, lineTotalCents: 100 }],
+          charges: [{ sourceChargeRef: 'c', shipmentRef: null, amountCents: 100 }],
+        })
+      )
+    ).not.toThrow();
+  });
+});
