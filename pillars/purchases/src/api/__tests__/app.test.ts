@@ -165,12 +165,58 @@ describe('POST /purchases', () => {
     expect(res.body.code).toBe('DUPLICATE_PURCHASE');
   });
 
-  it('answers 409 on a re-imported merchant order id even under a new checksum', async () => {
+  it('answers 409 DUPLICATE_PURCHASE on a re-import under a new checksum', async () => {
+    // An adapter that changed how it hashes a row is still re-running the
+    // same import. Asserting only the status would have hidden that this
+    // used to come back as CONFLICT_UNIQUE, which an adapter branching on
+    // DUPLICATE_PURCHASE to skip would treat as a hard failure.
     await request(app).post('/purchases').send(minimalOrder);
     const res = await request(app)
       .post('/purchases')
       .send({ ...minimalOrder, checksum: 'different-recipe' });
     expect(res.status).toBe(409);
+    expect(res.body.code).toBe('DUPLICATE_PURCHASE');
+    // The message names the checksum already on file, not the one submitted.
+    expect(res.body.message).toContain('http-1');
+  });
+
+  it('answers the same way whichever identity matched', async () => {
+    await request(app).post('/purchases').send(minimalOrder);
+    const byChecksum = await request(app).post('/purchases').send(minimalOrder);
+    const byOrderId = await request(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, checksum: 'another-recipe' });
+
+    expect(byChecksum.body.code).toBe(byOrderId.body.code);
+    expect(byChecksum.status).toBe(byOrderId.status);
+  });
+
+  it('still allows a distinct order from the same source', async () => {
+    await request(app).post('/purchases').send(minimalOrder);
+    const res = await request(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, checksum: 'other', sourceOrderId: 'a-different-order' });
+    expect(res.status).toBe(201);
+  });
+
+  it('does not treat two orders with no merchant order id as duplicates', async () => {
+    // NULLs do not collide, so hand-entered orders are not forced to invent
+    // an id — the guard must not over-reach into them.
+    const bare = { ...minimalOrder, sourceOrderId: null };
+    expect(
+      (
+        await request(app)
+          .post('/purchases')
+          .send({ ...bare, checksum: 'n1' })
+      ).status
+    ).toBe(201);
+    expect(
+      (
+        await request(app)
+          .post('/purchases')
+          .send({ ...bare, checksum: 'n2' })
+      ).status
+    ).toBe(201);
   });
 
   it('answers 400, not 404, for an unregistered source', async () => {

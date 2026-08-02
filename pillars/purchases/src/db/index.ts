@@ -18,7 +18,6 @@ export {
 
 export {
   deletePurchase,
-  findPurchaseByChecksum,
   getPurchase,
   listItemsByTag,
   listPurchases,
@@ -28,6 +27,11 @@ export {
   type PurchaseDetail,
   type PurchaseItemDetail,
 } from './services/purchase-reads.js';
+
+export {
+  findPurchaseByChecksum,
+  findPurchaseBySourceOrderId,
+} from './services/purchase-lookups.js';
 
 export {
   createPurchase,

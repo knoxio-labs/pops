@@ -95,10 +95,6 @@ export function listPurchases(
     .all();
 }
 
-export function findPurchaseByChecksum(db: PurchasesDb, checksum: string): PurchaseRow | undefined {
-  return db.select().from(purchases).where(eq(purchases.checksum, checksum)).all()[0];
-}
-
 export function getPurchase(db: PurchasesDb, id: string): PurchaseDetail | undefined {
   const purchase = db.select().from(purchases).where(eq(purchases.id, id)).all()[0];
   if (purchase === undefined) return undefined;

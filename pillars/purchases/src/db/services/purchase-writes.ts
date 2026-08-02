@@ -24,7 +24,7 @@ import {
   purchaseShipments,
 } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
-import { findPurchaseByChecksum } from './purchase-reads.js';
+import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
 import { shipmentIdFor, type IngestContext } from './purchase-write-context.js';
 import { insertItem } from './purchase-write-items.js';
 import { assertAllocationsFit, resolveOrderAmount } from './purchase-write-validation.js';
@@ -63,9 +63,7 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
     if (getSource(tx, input.source) === undefined) {
       throw new PurchaseSourceNotFoundError(input.source);
     }
-    if (findPurchaseByChecksum(tx, input.checksum) !== undefined) {
-      throw new DuplicatePurchaseError(input.checksum);
-    }
+    assertNotAlreadyImported(tx, input);
 
     // One timestamp for the whole transaction. Calling nowIso() twice can
     // put the order row a millisecond ahead of its own children, which
@@ -94,6 +92,25 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
 
     return ctx.purchase.id;
   });
+}
+
+/**
+ * Reject an order we already hold, under either identity.
+ *
+ * The `(source, source_order_id)` unique index would catch the second case
+ * on its own, but would report it as a generic conflict. An adapter that
+ * changed its checksum recipe is still re-running the same import and must
+ * get back the same "already have it" signal it branches on to skip.
+ */
+function assertNotAlreadyImported(tx: PurchasesDb, input: CreatePurchaseInput): void {
+  if (findPurchaseByChecksum(tx, input.checksum) !== undefined) {
+    throw new DuplicatePurchaseError(input.checksum, 'checksum');
+  }
+  if (input.sourceOrderId == null) return;
+  const existing = findPurchaseBySourceOrderId(tx, input.source, input.sourceOrderId);
+  if (existing !== undefined) {
+    throw new DuplicatePurchaseError(existing.checksum, 'source-order-id');
+  }
 }
 
 function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): PurchaseRow {

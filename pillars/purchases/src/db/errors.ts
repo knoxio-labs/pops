@@ -26,18 +26,36 @@ export class PurchaseSourceNotFoundError extends Error {
   }
 }
 
+/** Which identity already claimed the order. See {@link DuplicatePurchaseError}. */
+export type DuplicateMatch = 'checksum' | 'source-order-id';
+
 /**
- * Raised when an ingest attempts to write a purchase whose `checksum`
- * already exists. Callers treat this as a no-op rather than a failure —
- * re-ingesting the same export bundle must be idempotent.
+ * Raised when an ingest attempts to write an order that already exists.
+ * Callers treat this as a no-op rather than a failure — re-ingesting the
+ * same export bundle must be idempotent.
+ *
+ * Two identities can match, and both must raise this rather than only the
+ * first. `checksum` catches a byte-identical re-upload; `source-order-id`
+ * catches the same merchant order arriving under a *different* checksum,
+ * which happens whenever an adapter changes how it hashes a row. Letting
+ * the second fall through to the database's unique index would surface it
+ * as a generic conflict, and an adapter branching on this error to skip
+ * would treat its own idempotent re-run as a hard failure.
  */
 export class DuplicatePurchaseError extends Error {
+  /** The EXISTING row's checksum, which is not necessarily the one submitted. */
   readonly checksum: string;
+  readonly matchedOn: DuplicateMatch;
 
-  constructor(checksum: string) {
-    super(`A purchase with checksum ${checksum} already exists`);
+  constructor(checksum: string, matchedOn: DuplicateMatch = 'checksum') {
+    super(
+      matchedOn === 'checksum'
+        ? `A purchase with checksum ${checksum} already exists`
+        : `That merchant order was already imported, under checksum ${checksum}`
+    );
     this.name = 'DuplicatePurchaseError';
     this.checksum = checksum;
+    this.matchedOn = matchedOn;
   }
 }
 
