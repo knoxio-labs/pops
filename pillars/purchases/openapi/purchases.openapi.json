@@ -1,0 +1,1426 @@
+{
+  "info": {
+    "description": "OpenAPI projection of the purchases pillar's REST contract. Authored as a ts-rest contract (src/contract/rest.ts); consumed directly by polyglot clients and via openapi-typescript by TS consumers.",
+    "title": "@pops/purchases",
+    "version": "0.1.0"
+  },
+  "openapi": "3.0.2",
+  "paths": {
+    "/purchases": {
+      "get": {
+        "operationId": "purchase.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sources",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "items": {
+                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "checksum": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "pattern": "^[A-Z]{3}$",
+                            "type": "string"
+                          },
+                          "discountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "ingestMethod": {
+                            "enum": ["email", "export", "upload", "manual"],
+                            "type": "string"
+                          },
+                          "merchantEntityId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "merchantEntityName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "orderedAt": {
+                            "type": "string"
+                          },
+                          "paymentHint": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "rawRef": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "settlementMode": {
+                            "enum": ["card", "cash", "unknown"],
+                            "type": "string"
+                          },
+                          "shippingCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "sourceOrderId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "awaiting_settlement",
+                              "linked",
+                              "partial",
+                              "settled_cash",
+                              "ignored"
+                            ],
+                            "type": "string"
+                          },
+                          "subtotalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "taxCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "totalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "source",
+                          "sourceOrderId",
+                          "ingestMethod",
+                          "orderedAt",
+                          "currency",
+                          "subtotalCents",
+                          "shippingCents",
+                          "taxCents",
+                          "discountCents",
+                          "totalCents",
+                          "merchantEntityId",
+                          "merchantEntityName",
+                          "settlementMode",
+                          "paymentHint",
+                          "rawRef",
+                          "checksum",
+                          "status",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["items"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "List purchase documents, newest first",
+        "tags": ["purchase"]
+      },
+      "post": {
+        "operationId": "purchase.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "checksum": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "currency": {
+                    "pattern": "^[A-Z]{3}$",
+                    "type": "string"
+                  },
+                  "discountCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "ingestMethod": {
+                    "enum": ["email", "export", "upload", "manual"],
+                    "type": "string"
+                  },
+                  "items": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "imageUrl": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": ["consumable", "durable", "digital", "service"],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "lineTotalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "merchantCategory": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "name": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "sku": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "tags": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "unitPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "url": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "unitPriceCents", "lineTotalCents"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "merchantEntityId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "merchantEntityName": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "orderedAt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "paymentHint": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "rawRef": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "settlementMode": {
+                    "enum": ["card", "cash", "unknown"],
+                    "type": "string"
+                  },
+                  "shippingCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "sourceOrderId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "subtotalCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "taxCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "totalCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "source",
+                  "ingestMethod",
+                  "orderedAt",
+                  "currency",
+                  "totalCents",
+                  "checksum"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "inventoryItemStaleAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "inventoryItemUri": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["consumable", "durable", "digital", "service"],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lineTotalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "merchantCategory": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "refundedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sku": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tags": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "unitPriceCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "url": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "name",
+                          "sku",
+                          "url",
+                          "imageUrl",
+                          "quantity",
+                          "unitPriceCents",
+                          "lineTotalCents",
+                          "refundedCents",
+                          "merchantCategory",
+                          "tags",
+                          "kind",
+                          "inventoryItemUri",
+                          "inventoryItemStaleAt",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "links": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "confidence": {
+                            "maximum": 1,
+                            "minimum": 0,
+                            "type": "number"
+                          },
+                          "confirmedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "linkType": {
+                            "enum": ["exact", "split", "combined", "partial", "refund", "manual"],
+                            "type": "string"
+                          },
+                          "matchRuleId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "transactionUri": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "transactionUri",
+                          "amountCents",
+                          "linkType",
+                          "confidence",
+                          "matchRuleId",
+                          "createdAt",
+                          "confirmedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "purchase": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "checksum": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "pattern": "^[A-Z]{3}$",
+                          "type": "string"
+                        },
+                        "discountCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ingestMethod": {
+                          "enum": ["email", "export", "upload", "manual"],
+                          "type": "string"
+                        },
+                        "merchantEntityId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "merchantEntityName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "orderedAt": {
+                          "type": "string"
+                        },
+                        "paymentHint": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rawRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "settlementMode": {
+                          "enum": ["card", "cash", "unknown"],
+                          "type": "string"
+                        },
+                        "shippingCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "sourceOrderId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "awaiting_settlement",
+                            "linked",
+                            "partial",
+                            "settled_cash",
+                            "ignored"
+                          ],
+                          "type": "string"
+                        },
+                        "subtotalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "taxCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "sourceOrderId",
+                        "ingestMethod",
+                        "orderedAt",
+                        "currency",
+                        "subtotalCents",
+                        "shippingCents",
+                        "taxCents",
+                        "discountCents",
+                        "totalCents",
+                        "merchantEntityId",
+                        "merchantEntityName",
+                        "settlementMode",
+                        "paymentHint",
+                        "rawRef",
+                        "checksum",
+                        "status",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "residualCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["purchase", "items", "links", "residualCents"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Create a purchase document and its line items",
+        "tags": ["purchase"]
+      }
+    },
+    "/purchases/{id}": {
+      "delete": {
+        "operationId": "purchase.delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Hard-delete a purchase (cascades items and links)",
+        "tags": ["purchase"]
+      },
+      "get": {
+        "operationId": "purchase.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "inventoryItemStaleAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "inventoryItemUri": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["consumable", "durable", "digital", "service"],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lineTotalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "merchantCategory": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "refundedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sku": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tags": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "unitPriceCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "url": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "name",
+                          "sku",
+                          "url",
+                          "imageUrl",
+                          "quantity",
+                          "unitPriceCents",
+                          "lineTotalCents",
+                          "refundedCents",
+                          "merchantCategory",
+                          "tags",
+                          "kind",
+                          "inventoryItemUri",
+                          "inventoryItemStaleAt",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "links": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "confidence": {
+                            "maximum": 1,
+                            "minimum": 0,
+                            "type": "number"
+                          },
+                          "confirmedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "linkType": {
+                            "enum": ["exact", "split", "combined", "partial", "refund", "manual"],
+                            "type": "string"
+                          },
+                          "matchRuleId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "transactionUri": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "transactionUri",
+                          "amountCents",
+                          "linkType",
+                          "confidence",
+                          "matchRuleId",
+                          "createdAt",
+                          "confirmedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "purchase": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "checksum": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "pattern": "^[A-Z]{3}$",
+                          "type": "string"
+                        },
+                        "discountCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ingestMethod": {
+                          "enum": ["email", "export", "upload", "manual"],
+                          "type": "string"
+                        },
+                        "merchantEntityId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "merchantEntityName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "orderedAt": {
+                          "type": "string"
+                        },
+                        "paymentHint": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rawRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "settlementMode": {
+                          "enum": ["card", "cash", "unknown"],
+                          "type": "string"
+                        },
+                        "shippingCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "sourceOrderId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "awaiting_settlement",
+                            "linked",
+                            "partial",
+                            "settled_cash",
+                            "ignored"
+                          ],
+                          "type": "string"
+                        },
+                        "subtotalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "taxCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "sourceOrderId",
+                        "ingestMethod",
+                        "orderedAt",
+                        "currency",
+                        "subtotalCents",
+                        "shippingCents",
+                        "taxCents",
+                        "discountCents",
+                        "totalCents",
+                        "merchantEntityId",
+                        "merchantEntityName",
+                        "settlementMode",
+                        "paymentHint",
+                        "rawRef",
+                        "checksum",
+                        "status",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "residualCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["purchase", "items", "links", "residualCents"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Get a purchase with its line items, links and residual",
+        "tags": ["purchase"]
+      }
+    },
+    "/sources": {
+      "get": {
+        "operationId": "source.list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "autoLinkPolicy": {
+                            "enum": ["auto", "review"],
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "descriptorPattern": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "ingestAdapter": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "settlementWindowDays": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "descriptorPattern",
+                          "settlementWindowDays",
+                          "autoLinkPolicy",
+                          "ingestAdapter",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["items"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "List registered purchase sources",
+        "tags": ["source"]
+      }
+    },
+    "/sources/{id}": {
+      "delete": {
+        "operationId": "source.delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Delete a purchase source that has no purchases",
+        "tags": ["source"]
+      },
+      "get": {
+        "operationId": "source.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "autoLinkPolicy": {
+                      "enum": ["auto", "review"],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "descriptorPattern": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "ingestAdapter": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "settlementWindowDays": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "descriptorPattern",
+                    "settlementWindowDays",
+                    "autoLinkPolicy",
+                    "ingestAdapter",
+                    "createdAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Get a single purchase source",
+        "tags": ["source"]
+      },
+      "put": {
+        "operationId": "source.upsert",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "autoLinkPolicy": {
+                    "enum": ["auto", "review"],
+                    "type": "string"
+                  },
+                  "descriptorPattern": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ingestAdapter": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "label": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "settlementWindowDays": {
+                    "maximum": 9007199254740991,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": ["label"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "autoLinkPolicy": {
+                      "enum": ["auto", "review"],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "descriptorPattern": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "ingestAdapter": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "settlementWindowDays": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "descriptorPattern",
+                    "settlementWindowDays",
+                    "autoLinkPolicy",
+                    "ingestAdapter",
+                    "createdAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Register or update a purchase source",
+        "tags": ["source"]
+      }
+    }
+  }
+}
