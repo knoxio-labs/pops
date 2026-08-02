@@ -11,7 +11,11 @@
  * arguments each, so adding a table to the graph does not mean changing
  * every signature.
  */
-import { DuplicatePurchaseError, PurchaseSourceNotFoundError } from '../errors.js';
+import {
+  DuplicatePurchaseError,
+  InvalidIngestPayloadError,
+  PurchaseSourceNotFoundError,
+} from '../errors.js';
 import {
   purchaseCharges,
   purchaseDocuments,
@@ -62,12 +66,16 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
       throw new DuplicatePurchaseError(input.checksum);
     }
 
+    // One timestamp for the whole transaction. Calling nowIso() twice can
+    // put the order row a millisecond ahead of its own children, which
+    // makes an atomically-written graph look like it arrived in pieces.
+    const now = nowIso();
     const ctx: IngestContext = {
       tx,
-      purchase: insertOrder(tx, input, nowIso()),
+      purchase: insertOrder(tx, input, now),
       shipmentIds: new Map(),
       itemIds: new Map(),
-      now: nowIso(),
+      now,
     };
 
     for (const [position, shipment] of (input.shipments ?? []).entries()) {
@@ -119,6 +127,13 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
 }
 
 function insertShipment(ctx: IngestContext, input: CreateShipmentInput, position: number): void {
+  // Checked before the write, not after. The (purchase_id,
+  // source_shipment_ref) unique index would otherwise fire first and
+  // surface as a 409 "conflicts with existing data", when the truth is
+  // that this one payload names the same delivery twice.
+  if (ctx.shipmentIds.has(input.ref)) {
+    throw new InvalidIngestPayloadError(`duplicate shipment ref '${input.ref}'`);
+  }
   const rows = ctx.tx
     .insert(purchaseShipments)
     .values({
@@ -169,8 +184,8 @@ function insertAllocations(ctx: IngestContext, chargeId: string, input: CreateCh
   for (const allocation of input.allocations ?? []) {
     const itemId = ctx.itemIds.get(allocation.itemRef);
     if (itemId === undefined) {
-      throw new Error(
-        `createPurchase.allocation: charge references unknown item ref '${allocation.itemRef}'`
+      throw new InvalidIngestPayloadError(
+        `charge references unknown item ref '${allocation.itemRef}'`
       );
     }
     ctx.tx

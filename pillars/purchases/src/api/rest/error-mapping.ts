@@ -5,6 +5,7 @@
  */
 import {
   DuplicatePurchaseError,
+  InvalidIngestPayloadError,
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
 } from '../../db/index.js';
@@ -32,6 +33,12 @@ export function tryMapServiceError(err: unknown): MappedHttpError | null {
   // processed lands here and treats the 409 as "already have it".
   if (err instanceof DuplicatePurchaseError) {
     return { status: 409, body: { message: err.message, code: 'DUPLICATE_PURCHASE' } };
+  }
+  // A self-inconsistent payload is the caller's mistake. Returning 500
+  // would leave an adapter unable to distinguish a bad payload from a
+  // broken pillar, and reasonably retrying forever.
+  if (err instanceof InvalidIngestPayloadError) {
+    return { status: 400, body: { message: err.message, code: 'INVALID_INGEST_PAYLOAD' } };
   }
   if (isUniqueConstraintError(err)) {
     return {

@@ -40,3 +40,21 @@ export class DuplicatePurchaseError extends Error {
     this.checksum = checksum;
   }
 }
+
+/**
+ * The ingest payload is internally inconsistent — a charge allocation names
+ * an item ref the payload never defined, or two rows claim the same ref.
+ *
+ * A client mistake, not a server fault, so the REST layer maps it to 400.
+ * An adapter that gets a 500 here has no way to tell "my payload is wrong"
+ * from "the pillar is broken", and would reasonably retry forever.
+ */
+export class InvalidIngestPayloadError extends Error {
+  readonly detail: string;
+
+  constructor(detail: string) {
+    super(`Invalid ingest payload: ${detail}`);
+    this.name = 'InvalidIngestPayloadError';
+    this.detail = detail;
+  }
+}

@@ -324,8 +324,45 @@ describe('payload rejections', () => {
           },
         ],
       });
-    // An adapter bug, surfaced rather than silently dropping the allocation.
-    expect(res.status).toBe(500);
+    // A client payload error, not a server fault. A 500 would leave an
+    // adapter unable to tell a bad payload from a broken pillar.
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INGEST_PAYLOAD');
+  });
+
+  it('rejects two lines claiming the same ref', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        checksum: 'dupe-ref',
+        sourceOrderId: 'dupe-ref',
+        items: [
+          { ref: 'a', name: 'A', unitPriceCents: 100, lineTotalCents: 100 },
+          { ref: 'a', name: 'B', unitPriceCents: 200, lineTotalCents: 200 },
+        ],
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INGEST_PAYLOAD');
+  });
+
+  it("rejects an explicit ref that collides with another line's positional key", async () => {
+    // The silent-corruption case: line 0 has no ref so it registers under
+    // '0'; line 1 declares ref '0'. Overwriting would attach line 1's
+    // charge money to line 0, and the order would still balance.
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        checksum: 'colliding-ref',
+        sourceOrderId: 'colliding-ref',
+        items: [
+          { name: 'Positional', unitPriceCents: 100, lineTotalCents: 100 },
+          { ref: '0', name: 'Explicit', unitPriceCents: 200, lineTotalCents: 200 },
+        ],
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INGEST_PAYLOAD');
   });
 
   it('rejects a shipment status outside the vocabulary', async () => {

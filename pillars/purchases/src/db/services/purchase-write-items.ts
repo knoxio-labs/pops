@@ -5,6 +5,7 @@
  * size limit — the line is the only part of the order graph with children
  * of its own.
  */
+import { InvalidIngestPayloadError } from '../errors.js';
 import { purchaseItems, purchaseItemTags, purchaseItemUnits } from '../schema.js';
 import { expectRow } from './internal.js';
 import { shipmentIdFor, type IngestContext } from './purchase-write-context.js';
@@ -34,10 +35,40 @@ export function insertItem(ctx: IngestContext, input: CreateItemInput, position:
     .returning()
     .all();
   const itemId = expectRow(rows, 'createPurchase.item').id;
-  ctx.itemIds.set(input.ref ?? String(position), itemId);
+  registerItemRef(ctx, input.ref, position, itemId);
 
   insertItemTags(ctx, itemId, input);
   insertItemUnits(ctx, itemId, input);
+}
+
+/**
+ * Record the adapter-local handle a charge allocation will reference.
+ *
+ * A line with no `ref` is addressable by its index, which is convenient for
+ * a simple adapter — but it means an explicit ref of `'0'` and the implicit
+ * key for the line at position 0 are the same string. Silently overwriting
+ * would attach a charge's money to the wrong line, and nothing downstream
+ * could detect it: both lines exist, both amounts are plausible, and the
+ * order still balances.
+ *
+ * So a collision is rejected rather than resolved. An adapter that wants
+ * numeric refs must declare them on every line.
+ */
+function registerItemRef(
+  ctx: IngestContext,
+  ref: string | undefined,
+  position: number,
+  itemId: string
+): void {
+  const key = ref ?? String(position);
+  if (ctx.itemIds.has(key)) {
+    throw new InvalidIngestPayloadError(
+      ref === undefined
+        ? `item at position ${String(position)} has no ref and its positional key '${key}' is already taken by an explicit ref`
+        : `duplicate item ref '${key}'`
+    );
+  }
+  ctx.itemIds.set(key, itemId);
 }
 
 function insertItemTags(ctx: IngestContext, itemId: string, input: CreateItemInput): void {

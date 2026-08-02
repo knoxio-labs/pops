@@ -8,7 +8,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createPurchase, DuplicatePurchaseError, listPurchases, purchases } from '../index.js';
+import {
+  createPurchase,
+  DuplicatePurchaseError,
+  InvalidIngestPayloadError,
+  listPurchases,
+  purchases,
+} from '../index.js';
 import { openPurchasesDb } from '../open-purchases-db.js';
 import { amazonOrder, coffeeOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
@@ -200,7 +206,62 @@ describe('ingest idempotency', () => {
           ],
         })
       )
-    ).toThrow(/unknown item ref 'typo'/);
+    ).toThrow(InvalidIngestPayloadError);
+  });
+
+  it('rejects two lines claiming the same ref rather than overwriting one', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [
+            { ref: 'a', name: 'A', unitPriceCents: 100, lineTotalCents: 100 },
+            { ref: 'a', name: 'B', unitPriceCents: 200, lineTotalCents: 200 },
+          ],
+        })
+      )
+    ).toThrow(/duplicate item ref 'a'/);
+  });
+
+  it("rejects an explicit ref colliding with an earlier line's positional key", () => {
+    // Silent corruption if allowed: the charge allocation would attach to
+    // the wrong line and the order would still balance, so nothing
+    // downstream could detect it.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [
+            { name: 'Positional', unitPriceCents: 100, lineTotalCents: 100 },
+            { ref: '0', name: 'Explicit', unitPriceCents: 200, lineTotalCents: 200 },
+          ],
+        })
+      )
+    ).toThrow(InvalidIngestPayloadError);
+  });
+
+  it('rejects two deliveries claiming the same ref', () => {
+    expect(() =>
+      createPurchase(opened.db, amazonOrder({ shipments: [{ ref: 'box' }, { ref: 'box' }] }))
+    ).toThrow(InvalidIngestPayloadError);
+  });
+
+  it('writes one timestamp across the whole graph', () => {
+    // Two nowIso() calls would put the order a millisecond ahead of its own
+    // children, making an atomic write look like it arrived in pieces.
+    const id = createPurchase(opened.db, coffeeOrder());
+    const order = opened.raw
+      .prepare('SELECT created_at AS ts FROM purchases WHERE id = ?')
+      .get(id) as { ts: string };
+    for (const table of ['purchase_shipments', 'purchase_items', 'purchase_charges']) {
+      const rows = opened.raw.prepare(`SELECT DISTINCT created_at AS ts FROM ${table}`).all() as {
+        ts: string;
+      }[];
+      expect(
+        rows.map((r) => r.ts),
+        table
+      ).toEqual([order.ts]);
+    }
   });
 });
 
