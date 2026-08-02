@@ -8,18 +8,30 @@
  * manifest fails CI.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { MANIFEST_OUTPUT_PATH, readContractVersion, renderManifest } from './render-manifest.js';
 
+/**
+ * Normalise `content` the way `generate:manifest` does, via a scratch file
+ * oxfmt can rewrite in place.
+ *
+ * The directory is removed in a `finally` so a formatting failure does not
+ * leak it. This runs on every `build`, so on a long-lived CI runner the
+ * leak accumulates rather than being cleaned up between jobs.
+ */
 function oxfmt(content: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'manifest-verify-'));
-  const path = join(dir, 'manifest.generated.ts');
-  writeFileSync(path, content);
-  execFileSync('pnpm', ['exec', 'oxfmt', '--write', path], { stdio: 'ignore' });
-  return readFileSync(path, 'utf8');
+  try {
+    const path = join(dir, 'manifest.generated.ts');
+    writeFileSync(path, content);
+    execFileSync('pnpm', ['exec', 'oxfmt', '--write', path], { stdio: 'ignore' });
+    return readFileSync(path, 'utf8');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 const version = readContractVersion();
