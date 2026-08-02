@@ -125,6 +125,11 @@ export function useReviewActions({
         void propose();
         return;
       }
+      // Re-picking the entity the row already carries corrects nothing, so
+      // there is nothing to learn. The bucket move above still runs: accepting
+      // an AI suggestion that already resolved to an entity id comes through
+      // here, and that row has to leave `uncertain`.
+      if (transaction.entity?.entityId === entityId) return;
       promptToLearn(() => void propose());
     },
     [findSimilar, generateProposal, setLocalTransactions]

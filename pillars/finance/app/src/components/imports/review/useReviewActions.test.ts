@@ -207,8 +207,8 @@ describe('useReviewActions — correcting a wrong match offers a rule', () => {
     }
   );
 
-  it('does not re-propose when the picked entity is the one already matched', () => {
-    const { result, generateProposal } = setupActions();
+  it('stays silent when the picked entity is the one already matched', () => {
+    const { result, generateProposal, setLocalTransactions } = setupActions();
     const transaction = makeProcessed('maccas', {
       status: 'matched',
       entity: { matchType: 'ai', entityId: 'ent-mcd', entityName: "McDonald's" },
@@ -219,7 +219,27 @@ describe('useReviewActions — correcting a wrong match offers a rule', () => {
     });
 
     expect(generateProposal).not.toHaveBeenCalled();
-    expect(toastMock.info).toHaveBeenCalledTimes(1);
+    expect(toastMock.info).not.toHaveBeenCalled();
+    // The bucket move still runs: accepting an AI suggestion that already
+    // resolved to an entity id lands here and has to leave `uncertain`.
+    expect(setLocalTransactions).toHaveBeenCalledTimes(1);
+  });
+
+  it('promotes an uncertain row whose AI suggestion already carries the picked entity id', () => {
+    const { result, setLocalTransactions } = setupActions();
+    const transaction = makeProcessed('maccas', {
+      status: 'uncertain',
+      entity: { matchType: 'ai', entityId: 'ent-mcd', entityName: "McDonald's", confidence: 0.55 },
+    });
+
+    act(() => {
+      result.current.handleEntitySelect(transaction, 'ent-mcd', "McDonald's");
+    });
+
+    const updater = setLocalTransactions.mock.calls[0][0] as (p: LocalTxState) => LocalTxState;
+    const next = updater(emptyState({ uncertain: [transaction] }));
+    expect(next.uncertain).toHaveLength(0);
+    expect(next.matched).toHaveLength(1);
   });
 
   it('falls back to an explicit learn offer when assigning an unmatched row with no siblings', () => {

@@ -140,7 +140,7 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
 export function buildTransactionActions(set: StoreSet, get: StoreGet) {
   return {
     /**
-     * Siblings a correction on `transaction` would also cover.
+     * The rows that a correction on `transaction` would also cover.
      *
      * `matched` counts: a rule born from this correction re-decides those rows
      * too, and a wrong auto-match lands its whole merchant in `matched`, so
