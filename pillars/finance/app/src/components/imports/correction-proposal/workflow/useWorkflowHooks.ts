@@ -6,6 +6,7 @@ import { correctionsProposeChangeSet } from '../../../../finance-api/index.js';
 import { toRestPendingChangeSets } from '../../../../lib/rest-changeset';
 import { useImportStore } from '../../../../store/importStore';
 import { useApplyRejectMutations } from '../../hooks/useApplyRejectMutations';
+import { useDbPreviewDescriptions } from '../../hooks/useDbPreviewDescriptions';
 import { useLocalOps } from '../../hooks/useLocalOps';
 import { usePreviewEffects } from '../../hooks/usePreviewEffects';
 
@@ -71,6 +72,11 @@ export function useWorkflowHooks(props: CorrectionProposalWorkflowProps) {
     isBrowseMode: false,
     proposeData: proposeQuery.data,
   });
+  // A rule proposed mid-import re-decides committed rows too, so the impact
+  // panel counts the database alongside the session — it used to show the
+  // current import only, which understated the blast radius of every rule
+  // approved from here.
+  const dbTxnsQuery = useDbPreviewDescriptions(props.open);
   const previewHook = usePreviewEffects(
     {
       open: props.open,
@@ -78,7 +84,7 @@ export function useWorkflowHooks(props: CorrectionProposalWorkflowProps) {
       selectedOp: localOpsHook.selectedOp,
       minConfidence: props.minConfidence,
       previewTransactions: props.previewTransactions,
-      dbTransactions: undefined,
+      dbTransactions: dbTxnsQuery.data?.data ?? [],
       pendingChangeSets,
     },
     localOpsHook.setLocalOps
@@ -102,5 +108,5 @@ export function useWorkflowHooks(props: CorrectionProposalWorkflowProps) {
     lastCombinedStructuralSigRef: previewHook.lastCombinedStructuralSigRef,
     selectedOpPreviewKeyRef: previewHook.selectedOpPreviewKeyRef,
   });
-  return { proposeQuery, localOpsHook, previewHook, mutationsHook, handleCloseRef };
+  return { proposeQuery, dbTxnsQuery, localOpsHook, previewHook, mutationsHook, handleCloseRef };
 }

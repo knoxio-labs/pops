@@ -1,11 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { unwrap } from '../../../../finance-api-helpers.js';
-import { transactionsDescriptionsForPreview } from '../../../../finance-api/index.js';
 import { toRestPendingChangeSets } from '../../../../lib/rest-changeset';
 import { useImportStore } from '../../../../store/importStore';
 import { type PreviewView } from '../../CorrectionProposalDialogPanels';
+import { useDbPreviewDescriptions } from '../../hooks/useDbPreviewDescriptions';
 import { useLocalOps } from '../../hooks/useLocalOps';
 import { usePreviewEffects } from '../../hooks/usePreviewEffects';
 import { useBrowseRules } from './useBrowseRules';
@@ -49,12 +47,7 @@ export function useRuleManagerHooks(props: RuleManagerInputs) {
     proposeData: undefined,
   });
   const dialogState = useDialogState(open);
-  const dbTxnsQuery = useQuery({
-    queryKey: ['finance', 'transactions', 'descriptionsForPreview'],
-    queryFn: async () => unwrap(await transactionsDescriptionsForPreview()),
-    enabled: open,
-    staleTime: 60_000,
-  });
+  const dbTxnsQuery = useDbPreviewDescriptions(open);
   const previewHook = usePreviewEffects(
     {
       open,

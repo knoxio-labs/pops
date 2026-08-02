@@ -49,3 +49,5 @@ Two more sharp edges in the same area: resuming mid-processing always restarts `
 | Description normalization, correction helpers, preview scoping                | `lib/`                                               |
 
 `correction-proposal/` is the largest surface here by a wide margin; the backend contract it drives is documented in `pillars/finance/src/api/modules/corrections/`.
+
+Its impact panel answers "what does approving this change?", and the honest answer spans two populations: the rows in this import and the rows already committed. Both dialogs — the mid-import proposal and the rules browser — read the committed side from the same `useDbPreviewDescriptions` query and render the two as separate sections, because a correction rule outlives the run that created it. The server previews one combined list capped at `PREVIEW_CHANGESET_MAX_TRANSACTIONS`; `scopeAndBudget` gives the session rows first claim on that budget and spends the remainder on the database, so a large import shrinks the committed sample rather than dropping session rows. When it does, the section says so.

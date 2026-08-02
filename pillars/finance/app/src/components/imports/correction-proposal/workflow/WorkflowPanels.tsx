@@ -73,6 +73,9 @@ interface ProposalBodyProps {
   setPreviewView: (v: PreviewView) => void;
   currentPreviewLabel: string;
   previewResult: PreviewChangeSetOutput | null;
+  dbPreviewResult: PreviewChangeSetOutput | null;
+  dbTruncated: boolean | undefined;
+  dbTotal: number | undefined;
   previewError: string | null;
   previewTruncated: boolean;
 }
@@ -106,6 +109,9 @@ export function ProposalBody(props: ProposalBodyProps) {
         onViewChange={props.setPreviewView}
         label={props.currentPreviewLabel}
         previewResult={props.previewResult}
+        dbPreviewResult={props.dbPreviewResult}
+        dbTruncated={props.dbTruncated}
+        dbTotal={props.dbTotal}
         previewError={props.previewError}
         isPending={previewHook.previewMutationPending}
         stale={previewHook.hasDirty}
