@@ -1,6 +1,8 @@
 /**
- * Synchronous re-evaluation of an import session's remaining (uncertain/failed)
- * transactions against the current rule set, with no AI.
+ * Synchronous re-evaluation of an import session against the current rule set,
+ * with no AI. Unmatched rows (uncertain/failed) run the full correction-then-
+ * entity-matcher ladder; already-matched rows are re-decided by correction
+ * rules only, and never demoted out of `matched`.
  *
  * Ported from the monolith `lib/correction-application.ts`, db-injected. Used by
  * applyChangeSetAndReevaluate (DB rules) and reevaluateWithPendingRules
@@ -12,134 +14,36 @@ import {
   transactionCorrectionsService,
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
-import { applyChangeSetToRules, type CorrectionRow } from '../corrections/index.js';
-import { applyLearnedCorrection } from './apply-learned-correction.js';
-import { matchEntity } from './entity-matcher.js';
-import { transactionChanged } from './reevaluate-diff.js';
-import { buildSuggestedTags, loadKnownTags } from './tag-management.js';
+import { applyChangeSetToRules } from '../corrections/index.js';
+import {
+  processRemainingItem,
+  reapplyCorrectionToMatched,
+  type BucketAccumulator,
+  type ReevaluateContext,
+  type RemainingItem,
+} from './reevaluate-stages.js';
+import { loadKnownTags } from './tag-management.js';
 
 import type { ChangeSet } from '../../../contract/rest-corrections.js';
-import type { EntityMaps } from '../../../db/index.js';
-import type { ProcessedTransaction, ProcessImportOutput } from './types.js';
-
-interface ReevaluateContext {
-  db: FinanceDb;
-  /** The correction rule set, fetched once per run (CF040/#3664) — never re-queried per transaction. */
-  rules: CorrectionRow[];
-  /** True when `rules` is merged with un-persisted pending ChangeSets — gates usage telemetry, see `applyLearnedCorrection`. */
-  isPreview: boolean;
-  minConfidence: number;
-  knownTags: string[];
-  entityLookup: EntityMaps['entityLookup'];
-  aliases: EntityMaps['aliasMap'];
-  entityDefaultTags: ReadonlyMap<string, string[]>;
-}
-
-interface RemainingItem {
-  tx: ProcessedTransaction;
-  bucket: 'uncertain' | 'failed';
-}
-
-interface BucketAccumulator {
-  matched: ProcessedTransaction[];
-  uncertain: ProcessedTransaction[];
-  failed: ProcessedTransaction[];
-}
-
-interface StageResult {
-  handled: boolean;
-  changed: boolean;
-}
-
-function tryApplyCorrectionStage(
-  item: RemainingItem,
-  ctx: ReevaluateContext,
-  buckets: BucketAccumulator
-): StageResult {
-  const correctionApplied = applyLearnedCorrection(ctx.db, {
-    transaction: item.tx,
-    minConfidence: ctx.minConfidence,
-    knownTags: ctx.knownTags,
-    rules: ctx.rules,
-    isPreview: ctx.isPreview,
-    entityDefaultTags: ctx.entityDefaultTags,
-  });
-  if (!correctionApplied) return { handled: false, changed: false };
-
-  const nextTx = correctionApplied.processed;
-  const nextBucket = correctionApplied.bucket;
-  if (nextBucket === 'matched') buckets.matched.push(nextTx);
-  else buckets.uncertain.push(nextTx);
-
-  return { handled: true, changed: transactionChanged(item.tx, nextTx, item.bucket, nextBucket) };
-}
-
-function tryEntityMatchStage(
-  item: RemainingItem,
-  ctx: ReevaluateContext,
-  buckets: BucketAccumulator,
-  alwaysAffected: boolean
-): StageResult {
-  const match = matchEntity(item.tx.description, ctx.entityLookup, ctx.aliases);
-  if (!match) return { handled: false, changed: false };
-
-  const entityEntry = ctx.entityLookup.get(match.entityName.toLowerCase());
-  if (!entityEntry) {
-    if (item.bucket === 'failed') buckets.failed.push(item.tx);
-    else buckets.uncertain.push(item.tx);
-    return { handled: true, changed: false };
-  }
-
-  const nextTx: ProcessedTransaction = {
-    ...item.tx,
-    entity: { entityId: entityEntry.id, entityName: entityEntry.name, matchType: match.matchType },
-    status: 'matched',
-    error: undefined,
-    suggestedTags: buildSuggestedTags(ctx.db, {
-      description: item.tx.description,
-      entityId: entityEntry.id,
-      correctionTags: [],
-      aiCategory: null,
-      knownTags: ctx.knownTags,
-      entityDefaultTags: ctx.entityDefaultTags,
-      recordTagRuleUsage: !ctx.isPreview,
-    }),
-  };
-
-  buckets.matched.push(nextTx);
-  return { handled: true, changed: alwaysAffected || transactionChanged(item.tx, nextTx) };
-}
-
-function processRemainingItem(
-  item: RemainingItem,
-  ctx: ReevaluateContext,
-  buckets: BucketAccumulator,
-  alwaysAffectedOnEntityMatch: boolean
-): boolean {
-  const corrStage = tryApplyCorrectionStage(item, ctx, buckets);
-  if (corrStage.handled) return corrStage.changed;
-
-  const entityStage = tryEntityMatchStage(item, ctx, buckets, alwaysAffectedOnEntityMatch);
-  if (entityStage.handled) return entityStage.changed;
-
-  if (item.bucket === 'failed') buckets.failed.push(item.tx);
-  else buckets.uncertain.push(item.tx);
-  return false;
-}
+import type { ProcessImportOutput } from './types.js';
 
 function runReevaluate(
   result: ProcessImportOutput,
   ctx: ReevaluateContext,
   alwaysAffectedOnEntityMatch: boolean
 ): { nextResult: ProcessImportOutput; affectedCount: number } {
-  const buckets: BucketAccumulator = { matched: [...result.matched], uncertain: [], failed: [] };
+  const buckets: BucketAccumulator = { matched: [], uncertain: [], failed: [] };
+
+  let affectedCount = 0;
+  for (const tx of result.matched) {
+    if (reapplyCorrectionToMatched(tx, ctx, buckets)) affectedCount += 1;
+  }
 
   const remaining: RemainingItem[] = [
     ...result.uncertain.map((tx) => ({ tx, bucket: 'uncertain' as const })),
     ...result.failed.map((tx) => ({ tx, bucket: 'failed' as const })),
   ];
 
-  let affectedCount = 0;
   for (const item of remaining) {
     if (processRemainingItem(item, ctx, buckets, alwaysAffectedOnEntityMatch)) affectedCount += 1;
   }

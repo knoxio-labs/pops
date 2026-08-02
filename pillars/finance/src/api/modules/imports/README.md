@@ -7,6 +7,8 @@ Turns parsed bank rows into committed transactions, in two phases:
 
 Between them the wizard buffers edits, entity creations and rule ChangeSets client-side. `POST /imports/reevaluate-pending` re-runs matching against DB rules merged with that pending set; `GET /imports/progress` polls a running process session.
 
+Re-evaluation is asymmetric by bucket, and the asymmetry is the point (`reevaluate.ts`). Unmatched rows (`uncertain`/`failed`) run the full ladder below. Already-`matched` rows are re-decided by **learned corrections only** — never the alias/exact/prefix/contains stages — and an outcome that would drop one below `matched` is discarded, leaving the row untouched. A correction rule is written to overrule a match the system got wrong, and those rows are all in `matched`, so passing that bucket through made every new rule a no-op for the siblings of the row the user hand-fixed. Re-running the entity matcher there, or honouring a demotion, would instead relitigate rows the user never asked about and hand back ones they had already settled.
+
 ## Classification ladder
 
 `classifyWithoutAi` runs two stages and then defers to AI; the middle of the ladder is entirely inside `entity-matcher.ts`. First hit wins.
