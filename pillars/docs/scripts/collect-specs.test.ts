@@ -29,6 +29,7 @@ const EXPECTED_PILLARS = [
   'inventory',
   'lists',
   'media',
+  'purchases',
   'registry',
 ] as const;
 
