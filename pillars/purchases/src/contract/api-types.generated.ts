@@ -3,6 +3,23 @@
  * Do not edit by hand — regenerate via `pnpm -F @pops/purchases generate:api-types`.
  */
 export interface paths {
+  '/items': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Every line carrying a tag, across every order */
+    get: operations['purchase.itemsByTag'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases': {
     parameters: {
       query?: never;
@@ -10,10 +27,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List purchase documents, newest first */
+    /** List orders, newest first */
     get: operations['purchase.list'];
     put?: never;
-    /** Create a purchase document and its line items */
+    /** Create an order with its deliveries, lines, charges and documents */
     post: operations['purchase.create'];
     delete?: never;
     options?: never;
@@ -28,11 +45,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Get a purchase with its line items, links and residual */
+    /** Get an order with its deliveries, lines, charges, documents and accounting split */
     get: operations['purchase.get'];
     put?: never;
     post?: never;
-    /** Hard-delete a purchase (cascades items and links) */
+    /** Hard-delete an order (everything hanging off it cascades) */
     delete: operations['purchase.delete'];
     options?: never;
     head?: never;
@@ -87,6 +104,50 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  'purchase.itemsByTag': {
+    parameters: {
+      query: {
+        tag: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: {
+              allocatedAdjustmentCents: number;
+              allocatedShippingCents: number;
+              createdAt: string;
+              id: string;
+              imageUrl: string | null;
+              /** @enum {string|null} */
+              kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
+              lineTotalCents: number;
+              merchantCategory: string | null;
+              name: string;
+              position: number;
+              purchaseId: string;
+              quantity: number;
+              refundedCents: number;
+              shipmentId: string | null;
+              sku: string | null;
+              unitPriceCents: number;
+              url: string | null;
+            }[];
+          };
+        };
+      };
+    };
+  };
   'purchase.list': {
     parameters: {
       query?: {
@@ -151,12 +212,37 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          charges?: {
+            allocations?: {
+              amountCents: number;
+              itemRef: string;
+            }[];
+            amountCents: number;
+            chargedAt?: string | null;
+            currency?: string;
+            orderAmountCents?: number;
+            /** @enum {string} */
+            origin?: 'merchant' | 'derived';
+            paymentHint?: string | null;
+            /** @enum {string} */
+            role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+            shipmentRef?: string | null;
+            sourceChargeRef?: string | null;
+          }[];
           checksum: string;
           currency: string;
           discountCents?: number;
+          documents?: {
+            documentUri: string;
+            /** @enum {string} */
+            kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+            shipmentRef?: string | null;
+          }[];
           /** @enum {string} */
           ingestMethod: 'email' | 'export' | 'upload' | 'manual';
           items?: {
+            allocatedAdjustmentCents?: number;
+            allocatedShippingCents?: number;
             imageUrl?: string | null;
             /** @enum {string|null} */
             kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
@@ -164,9 +250,15 @@ export interface operations {
             merchantCategory?: string | null;
             name: string;
             quantity?: number;
+            ref?: string;
+            shipmentRef?: string | null;
             sku?: string | null;
             tags?: string[];
             unitPriceCents: number;
+            units?: {
+              inventoryItemUri?: string | null;
+              serialNumber?: string | null;
+            }[];
             url?: string | null;
           }[];
           merchantEntityId?: string | null;
@@ -176,6 +268,16 @@ export interface operations {
           rawRef?: string | null;
           /** @enum {string} */
           settlementMode?: 'card' | 'cash' | 'unknown';
+          shipments?: {
+            carrier?: string | null;
+            deliveredAt?: string | null;
+            ref: string;
+            shippedAt?: string | null;
+            shippingCents?: number;
+            /** @enum {string} */
+            status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+            trackingNumber?: string | null;
+          }[];
           shippingCents?: number;
           source: string;
           sourceOrderId?: string | null;
@@ -193,36 +295,92 @@ export interface operations {
         };
         content: {
           'application/json': {
-            items: {
-              createdAt: string;
-              id: string;
-              imageUrl: string | null;
-              inventoryItemStaleAt: string | null;
-              inventoryItemUri: string | null;
-              /** @enum {string|null} */
-              kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
-              lineTotalCents: number;
-              merchantCategory: string | null;
-              name: string;
-              purchaseId: string;
-              quantity: number;
-              refundedCents: number;
-              sku: string | null;
-              tags: string[];
-              unitPriceCents: number;
-              url: string | null;
+            accounting: {
+              awaitingImportCents: number;
+              matchedCents: number;
+              residualCents: number;
+              totalCents: number;
+            };
+            charges: {
+              allocations: {
+                amountCents: number;
+                chargeId: string;
+                createdAt: string;
+                id: string;
+                itemId: string;
+              }[];
+              charge: {
+                amountCents: number;
+                chargedAt: string | null;
+                createdAt: string;
+                currency: string;
+                id: string;
+                orderAmountCents: number;
+                /** @enum {string} */
+                origin: 'merchant' | 'derived';
+                paymentHint: string | null;
+                position: number;
+                purchaseId: string;
+                /** @enum {string} */
+                role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+                shipmentId: string | null;
+                sourceChargeRef: string | null;
+                updatedAt: string;
+              };
+              links: {
+                amountCents: number;
+                chargeId: string;
+                confidence: number;
+                confirmedAt: string | null;
+                createdAt: string;
+                id: string;
+                /** @enum {string} */
+                linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                matchRuleId: string | null;
+                transactionUri: string;
+              }[];
             }[];
-            links: {
-              amountCents: number;
-              confidence: number;
-              confirmedAt: string | null;
+            documents: {
               createdAt: string;
+              documentStaleAt: string | null;
+              documentUri: string;
               id: string;
               /** @enum {string} */
-              linkType: 'exact' | 'split' | 'combined' | 'partial' | 'refund' | 'manual';
-              matchRuleId: string | null;
+              kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
               purchaseId: string;
-              transactionUri: string;
+              shipmentId: string | null;
+            }[];
+            items: {
+              item: {
+                allocatedAdjustmentCents: number;
+                allocatedShippingCents: number;
+                createdAt: string;
+                id: string;
+                imageUrl: string | null;
+                /** @enum {string|null} */
+                kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
+                lineTotalCents: number;
+                merchantCategory: string | null;
+                name: string;
+                position: number;
+                purchaseId: string;
+                quantity: number;
+                refundedCents: number;
+                shipmentId: string | null;
+                sku: string | null;
+                unitPriceCents: number;
+                url: string | null;
+              };
+              landedCostCents: number;
+              tags: string[];
+              units: {
+                createdAt: string;
+                id: string;
+                inventoryItemStaleAt: string | null;
+                inventoryItemUri: string | null;
+                itemId: string;
+                serialNumber: string | null;
+              }[];
             }[];
             purchase: {
               checksum: string;
@@ -249,7 +407,21 @@ export interface operations {
               totalCents: number;
               updatedAt: string;
             };
-            residualCents: number;
+            shipments: {
+              carrier: string | null;
+              createdAt: string;
+              deliveredAt: string | null;
+              id: string;
+              position: number;
+              purchaseId: string;
+              shippedAt: string | null;
+              shippingCents: number;
+              sourceShipmentRef: string | null;
+              /** @enum {string} */
+              status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+              trackingNumber: string | null;
+              updatedAt: string;
+            }[];
           };
         };
       };
@@ -297,36 +469,92 @@ export interface operations {
         };
         content: {
           'application/json': {
-            items: {
-              createdAt: string;
-              id: string;
-              imageUrl: string | null;
-              inventoryItemStaleAt: string | null;
-              inventoryItemUri: string | null;
-              /** @enum {string|null} */
-              kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
-              lineTotalCents: number;
-              merchantCategory: string | null;
-              name: string;
-              purchaseId: string;
-              quantity: number;
-              refundedCents: number;
-              sku: string | null;
-              tags: string[];
-              unitPriceCents: number;
-              url: string | null;
+            accounting: {
+              awaitingImportCents: number;
+              matchedCents: number;
+              residualCents: number;
+              totalCents: number;
+            };
+            charges: {
+              allocations: {
+                amountCents: number;
+                chargeId: string;
+                createdAt: string;
+                id: string;
+                itemId: string;
+              }[];
+              charge: {
+                amountCents: number;
+                chargedAt: string | null;
+                createdAt: string;
+                currency: string;
+                id: string;
+                orderAmountCents: number;
+                /** @enum {string} */
+                origin: 'merchant' | 'derived';
+                paymentHint: string | null;
+                position: number;
+                purchaseId: string;
+                /** @enum {string} */
+                role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+                shipmentId: string | null;
+                sourceChargeRef: string | null;
+                updatedAt: string;
+              };
+              links: {
+                amountCents: number;
+                chargeId: string;
+                confidence: number;
+                confirmedAt: string | null;
+                createdAt: string;
+                id: string;
+                /** @enum {string} */
+                linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                matchRuleId: string | null;
+                transactionUri: string;
+              }[];
             }[];
-            links: {
-              amountCents: number;
-              confidence: number;
-              confirmedAt: string | null;
+            documents: {
               createdAt: string;
+              documentStaleAt: string | null;
+              documentUri: string;
               id: string;
               /** @enum {string} */
-              linkType: 'exact' | 'split' | 'combined' | 'partial' | 'refund' | 'manual';
-              matchRuleId: string | null;
+              kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
               purchaseId: string;
-              transactionUri: string;
+              shipmentId: string | null;
+            }[];
+            items: {
+              item: {
+                allocatedAdjustmentCents: number;
+                allocatedShippingCents: number;
+                createdAt: string;
+                id: string;
+                imageUrl: string | null;
+                /** @enum {string|null} */
+                kind: 'consumable' | 'durable' | 'digital' | 'service' | null;
+                lineTotalCents: number;
+                merchantCategory: string | null;
+                name: string;
+                position: number;
+                purchaseId: string;
+                quantity: number;
+                refundedCents: number;
+                shipmentId: string | null;
+                sku: string | null;
+                unitPriceCents: number;
+                url: string | null;
+              };
+              landedCostCents: number;
+              tags: string[];
+              units: {
+                createdAt: string;
+                id: string;
+                inventoryItemStaleAt: string | null;
+                inventoryItemUri: string | null;
+                itemId: string;
+                serialNumber: string | null;
+              }[];
             }[];
             purchase: {
               checksum: string;
@@ -353,7 +581,21 @@ export interface operations {
               totalCents: number;
               updatedAt: string;
             };
-            residualCents: number;
+            shipments: {
+              carrier: string | null;
+              createdAt: string;
+              deliveredAt: string | null;
+              id: string;
+              position: number;
+              purchaseId: string;
+              shippedAt: string | null;
+              shippingCents: number;
+              sourceShipmentRef: string | null;
+              /** @enum {string} */
+              status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+              trackingNumber: string | null;
+              updatedAt: string;
+            }[];
           };
         };
       };

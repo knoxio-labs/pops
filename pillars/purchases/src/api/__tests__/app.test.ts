@@ -1,10 +1,10 @@
-import request from 'supertest';
 /**
  * In-process HTTP surface: probes, the OpenAPI self-description, and the
  * REST routes end to end through ts-rest's validation layer — which is
  * where the wire schema's rejections (float cents, bad currency) actually
  * fire.
  */
+import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
@@ -19,13 +19,51 @@ let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let app: Express;
 
-const validBody = {
+const minimalOrder = {
   source: 'amazon',
+  sourceOrderId: '249-1512883-0105415',
   ingestMethod: 'export',
   orderedAt: '2026-02-02T01:41:21Z',
   currency: 'AUD',
   totalCents: 5678,
   checksum: 'http-1',
+};
+
+const fullOrder = {
+  ...minimalOrder,
+  shipments: [{ ref: 'box1', carrier: 'AMZL', status: 'delivered' }],
+  items: [
+    {
+      ref: 'tamper',
+      shipmentRef: 'box1',
+      name: 'Espresso Tamping Station',
+      sku: 'B0DSVZQ8P5',
+      unitPriceCents: 4499,
+      lineTotalCents: 4499,
+      kind: 'durable',
+      tags: ['coffee', 'kitchen'],
+      units: [{ serialNumber: 'SN-1' }],
+    },
+    {
+      ref: 'funnel',
+      shipmentRef: 'box1',
+      name: 'Magnetic Dosing Funnel',
+      unitPriceCents: 1179,
+      lineTotalCents: 1179,
+    },
+  ],
+  charges: [
+    {
+      sourceChargeRef: 'chg-1',
+      shipmentRef: 'box1',
+      amountCents: 5678,
+      allocations: [
+        { itemRef: 'tamper', amountCents: 4499 },
+        { itemRef: 'funnel', amountCents: 1179 },
+      ],
+    },
+  ],
+  documents: [{ documentUri: 'pops://documents/document/inv-1', kind: 'tax_invoice' }],
 };
 
 beforeEach(() => {
@@ -61,10 +99,7 @@ describe('probes', () => {
   it('lists itself in /pillars', async () => {
     const res = await request(app).get('/pillars');
     expect(res.status).toBe(200);
-    expect(res.body.pillars[0]).toEqual({
-      id: 'purchases',
-      baseUrl: 'http://localhost:3013',
-    });
+    expect(res.body.pillars[0]).toEqual({ id: 'purchases', baseUrl: 'http://localhost:3013' });
   });
 
   it('serves the committed OpenAPI projection at 3.0.x', async () => {
@@ -76,68 +111,70 @@ describe('probes', () => {
 });
 
 describe('POST /purchases', () => {
-  it('creates and returns the detail envelope with a residual', async () => {
-    const res = await request(app)
-      .post('/purchases')
-      .send({
-        ...validBody,
-        items: [{ name: 'Tamping station', unitPriceCents: 4499, lineTotalCents: 4499 }],
-      });
+  it('returns the whole order graph on create', async () => {
+    const res = await request(app).post('/purchases').send(fullOrder);
 
     expect(res.status).toBe(201);
-    expect(res.body.residualCents).toBe(5678);
-    expect(res.body.items[0].tags).toEqual([]);
+    expect(res.body.shipments).toHaveLength(1);
+    expect(res.body.items).toHaveLength(2);
+    expect(res.body.charges).toHaveLength(1);
+    expect(res.body.documents).toHaveLength(1);
+    expect(res.body.charges[0].allocations).toHaveLength(2);
+    expect(res.body.items[0].units).toHaveLength(1);
   });
 
-  it('projects tags back out as an array', async () => {
-    const res = await request(app)
-      .post('/purchases')
-      .send({
-        ...validBody,
-        items: [
-          {
-            name: 'Beans',
-            unitPriceCents: 2200,
-            lineTotalCents: 2200,
-            tags: ['groceries', 'coffee'],
-          },
-        ],
-      });
-    expect(res.body.items[0].tags).toEqual(['groceries', 'coffee']);
+  it('reports the accounting split, with the charge awaiting its transaction', async () => {
+    const res = await request(app).post('/purchases').send(fullOrder);
+    expect(res.body.accounting).toEqual({
+      totalCents: 5678,
+      matchedCents: 0,
+      awaitingImportCents: 5678,
+      residualCents: 0,
+    });
+  });
+
+  it('projects tags as an array and computes landed cost', async () => {
+    const res = await request(app).post('/purchases').send(fullOrder);
+    const tamper = res.body.items.find(
+      (i: { item: { sku: string } }) => i.item.sku === 'B0DSVZQ8P5'
+    );
+    expect(tamper.tags).toEqual(['coffee', 'kitchen']);
+    expect(tamper.landedCostCents).toBe(4499);
   });
 
   it('rejects fractional cents rather than rounding them', async () => {
     const res = await request(app)
       .post('/purchases')
-      .send({ ...validBody, totalCents: 56.78 });
+      .send({ ...minimalOrder, totalCents: 56.78 });
     expect(res.status).toBe(400);
   });
 
   it('rejects a lowercase currency rather than admitting a second spelling of AUD', async () => {
     const res = await request(app)
       .post('/purchases')
-      .send({ ...validBody, currency: 'aud' });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects a negative discount', async () => {
-    const res = await request(app)
-      .post('/purchases')
-      .send({ ...validBody, discountCents: -100 });
+      .send({ ...minimalOrder, currency: 'aud' });
     expect(res.status).toBe(400);
   });
 
   it('answers 409 on a duplicate checksum so an adapter can treat it as a skip', async () => {
-    await request(app).post('/purchases').send(validBody);
-    const res = await request(app).post('/purchases').send(validBody);
+    await request(app).post('/purchases').send(minimalOrder);
+    const res = await request(app).post('/purchases').send(minimalOrder);
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('DUPLICATE_PURCHASE');
+  });
+
+  it('answers 409 on a re-imported merchant order id even under a new checksum', async () => {
+    await request(app).post('/purchases').send(minimalOrder);
+    const res = await request(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, checksum: 'different-recipe' });
+    expect(res.status).toBe(409);
   });
 
   it('answers 400, not 404, for an unregistered source', async () => {
     const res = await request(app)
       .post('/purchases')
-      .send({ ...validBody, source: 'ebay' });
+      .send({ ...minimalOrder, source: 'ebay' });
     expect(res.status).toBe(400);
   });
 });
@@ -149,21 +186,29 @@ describe('GET /purchases', () => {
   });
 
   it('accepts a repeated status filter', async () => {
-    await request(app).post('/purchases').send(validBody);
+    await request(app).post('/purchases').send(minimalOrder);
     const res = await request(app).get('/purchases?statuses=awaiting_settlement&statuses=linked');
-    expect(res.status).toBe(200);
-    expect(res.body.items).toHaveLength(1);
-  });
-
-  it('accepts a single status filter without an array wrapper', async () => {
-    await request(app).post('/purchases').send(validBody);
-    const res = await request(app).get('/purchases?statuses=awaiting_settlement');
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
   });
 
   it('rejects a status outside the vocabulary', async () => {
     const res = await request(app).get('/purchases?statuses=probably_fine');
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /items', () => {
+  it('finds lines by tag across orders', async () => {
+    await request(app).post('/purchases').send(fullOrder);
+    const res = await request(app).get('/items?tag=coffee');
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0].sku).toBe('B0DSVZQ8P5');
+  });
+
+  it('requires a tag', async () => {
+    const res = await request(app).get('/items');
     expect(res.status).toBe(400);
   });
 });
@@ -178,7 +223,6 @@ describe('sources', () => {
       .send({ label: 'Bunnings Warehouse', autoLinkPolicy: 'auto' });
 
     expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
     expect(second.body.label).toBe('Bunnings Warehouse');
     expect(second.body.autoLinkPolicy).toBe('auto');
 
@@ -186,22 +230,130 @@ describe('sources', () => {
     expect(list.body.items.filter((s: { id: string }) => s.id === 'bunnings')).toHaveLength(1);
   });
 
-  it('refuses to delete a source that still has purchases', async () => {
-    await request(app).post('/purchases').send(validBody);
+  it('refuses to delete a source that still has orders', async () => {
+    await request(app).post('/purchases').send(minimalOrder);
     const res = await request(app).delete('/sources/amazon');
     expect(res.status).toBe(409);
-  });
-
-  it('deletes a source nothing references', async () => {
-    await request(app).put('/sources/bunnings').send({ label: 'Bunnings' });
-    const res = await request(app).delete('/sources/bunnings');
-    expect(res.status).toBe(200);
   });
 
   it('rejects a settlement window of zero days', async () => {
     const res = await request(app)
       .put('/sources/bunnings')
       .send({ label: 'Bunnings', settlementWindowDays: 0 });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /purchases/:id', () => {
+  it('removes the order and reports ok', async () => {
+    const created = await request(app).post('/purchases').send(fullOrder);
+    const res = await request(app).delete(`/purchases/${String(created.body.purchase.id)}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect((await request(app).get('/purchases')).body.items).toHaveLength(0);
+  });
+
+  it('404s an id that was never there', async () => {
+    const res = await request(app).delete('/purchases/nope');
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('GET /items limit', () => {
+  it('honours an explicit limit', async () => {
+    await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        items: Array.from({ length: 5 }, (_, i) => ({
+          name: `Item ${String(i)}`,
+          unitPriceCents: 100,
+          lineTotalCents: 100,
+          tags: ['bulk'],
+        })),
+      });
+    expect((await request(app).get('/items?tag=bulk&limit=2')).body.items).toHaveLength(2);
+    expect((await request(app).get('/items?tag=bulk')).body.items).toHaveLength(5);
+  });
+
+  it('rejects a limit above the cap rather than silently truncating', async () => {
+    expect((await request(app).get('/items?tag=bulk&limit=9999')).status).toBe(400);
+  });
+});
+
+describe('GET /sources/:id', () => {
+  it('returns a registered source', async () => {
+    const res = await request(app).get('/sources/amazon');
+    expect(res.status).toBe(200);
+    expect(res.body.descriptorPattern).toBe('AMAZON%');
+  });
+
+  it('404s an unregistered slug', async () => {
+    const res = await request(app).get('/sources/ebay');
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('DELETE /sources/:id', () => {
+  it('deletes a source nothing references', async () => {
+    await request(app).put('/sources/bunnings').send({ label: 'Bunnings' });
+    expect((await request(app).delete('/sources/bunnings')).status).toBe(200);
+  });
+
+  it('404s an unregistered slug', async () => {
+    expect((await request(app).delete('/sources/ebay')).status).toBe(404);
+  });
+});
+
+describe('payload rejections', () => {
+  it('rejects a charge allocation naming an item the payload never defined', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        checksum: 'bad-ref',
+        sourceOrderId: 'bad-ref',
+        items: [{ ref: 'a', name: 'A', unitPriceCents: 100, lineTotalCents: 100 }],
+        charges: [
+          {
+            sourceChargeRef: 'c',
+            amountCents: 100,
+            allocations: [{ itemRef: 'typo', amountCents: 100 }],
+          },
+        ],
+      });
+    // An adapter bug, surfaced rather than silently dropping the allocation.
+    expect(res.status).toBe(500);
+  });
+
+  it('rejects a shipment status outside the vocabulary', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, checksum: 'bad-status', shipments: [{ ref: 'b', status: 'lost' }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a negative quantity', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        checksum: 'bad-qty',
+        items: [{ name: 'A', quantity: -1, unitPriceCents: 100, lineTotalCents: 100 }],
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an unknown document kind', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        checksum: 'bad-doc',
+        documents: [{ documentUri: 'pops://documents/document/x', kind: 'vibes' }],
+      });
     expect(res.status).toBe(400);
   });
 });

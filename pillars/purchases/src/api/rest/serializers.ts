@@ -1,37 +1,40 @@
+import type { z } from 'zod';
+
 /**
- * Row → wire projections.
+ * Row → wire projection for the order detail envelope.
  *
- * The only real work here is `tags`: SQLite has no array type, so the
- * column holds a JSON string while the contract declares `string[]`. The
- * conversion is confined to this file so no handler has to remember it.
+ * Rows already match the contract's field names one-for-one — tags moved
+ * out to their own table precisely so no row needs a JSON round-trip — so
+ * this is a shape assembler rather than a converter. It exists to give the
+ * handler one call instead of four nested `.map`s, and to widen the
+ * service layer's `readonly` arrays into the mutable ones ts-rest's
+ * response types expect.
+ *
+ * The return type is the contract's own inferred type, so a field added to
+ * `PurchaseDetailSchema` without a matching row fails here rather than at
+ * runtime.
  */
-import type { Purchase, PurchaseItem, PurchaseSource } from '../../contract/types/index.js';
-import type { PurchaseItemRow, PurchaseRow, PurchaseSourceRow } from '../../db/index.js';
+import type { PurchaseDetailSchema } from '../../contract/schemas/purchase.js';
+import type { PurchaseDetail } from '../../db/index.js';
 
-/**
- * Parse a `tags` column. A malformed or non-array value degrades to `[]`
- * rather than throwing: a corrupt tag list should not make a purchase
- * unreadable, and the money fields — the ones that matter — are unaffected.
- */
-function parseTags(raw: string): string[] {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((tag): tag is string => typeof tag === 'string');
-  } catch {
-    return [];
-  }
-}
+export type PurchaseDetailBody = z.infer<typeof PurchaseDetailSchema>;
 
-export function toPurchase(row: PurchaseRow): Purchase {
-  return row;
-}
-
-export function toPurchaseItem(row: PurchaseItemRow): PurchaseItem {
-  const { tags, ...rest } = row;
-  return { ...rest, tags: parseTags(tags) };
-}
-
-export function toPurchaseSource(row: PurchaseSourceRow): PurchaseSource {
-  return row;
+export function toPurchaseDetailBody(detail: PurchaseDetail): PurchaseDetailBody {
+  return {
+    purchase: detail.purchase,
+    shipments: [...detail.shipments],
+    items: detail.items.map((entry) => ({
+      item: entry.item,
+      tags: [...entry.tags],
+      units: [...entry.units],
+      landedCostCents: entry.landedCostCents,
+    })),
+    charges: detail.charges.map((entry) => ({
+      charge: entry.charge,
+      links: [...entry.links],
+      allocations: [...entry.allocations],
+    })),
+    documents: [...detail.documents],
+    accounting: detail.accounting,
+  };
 }

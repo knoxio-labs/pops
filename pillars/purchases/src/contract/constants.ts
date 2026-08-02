@@ -28,7 +28,7 @@ export const SETTLEMENT_MODES = ['card', 'cash', 'unknown'] as const;
 export type SettlementMode = (typeof SETTLEMENT_MODES)[number];
 
 /**
- * Reconciliation state of a purchase.
+ * Reconciliation state of an order.
  *
  * `awaiting_settlement` is a normal, permanent, valid state — a receipt
  * captured before its card statement is imported is correct, not broken.
@@ -43,6 +43,22 @@ export const PURCHASE_STATUSES = [
 export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 
 /**
+ * Fulfilment state of one delivery.
+ *
+ * `cancelled` and `returned` matter to spend: a cancelled shipment's items
+ * were never received and a returned one generates a refund charge, and
+ * both must be visible rather than deleted.
+ */
+export const SHIPMENT_STATUSES = [
+  'pending',
+  'shipped',
+  'delivered',
+  'cancelled',
+  'returned',
+] as const;
+export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
+
+/**
  * What a line item is, which decides who may want to fan out from it —
  * `durable` proposes to inventory, `consumable` proposes to the food
  * pantry. Both are proposals; neither is automatic (POPS-245, POPS-246).
@@ -51,16 +67,72 @@ export const ITEM_KINDS = ['consumable', 'durable', 'digital', 'service'] as con
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
 /**
- * How a purchase↔transaction link was derived. The first four come out of
- * the reconciliation ladder (POPS-237); `refund` carries a negative amount;
- * `manual` is a human assertion and is always confirmed on creation.
+ * How a charge↔transaction link was derived.
+ *
+ * Derivation only. What the money *is* — a capture, a hold, a refund — is
+ * {@link SETTLEMENT_ROLES}, which is orthogonal: a refund can be matched
+ * exactly or by subset-sum just as a capture can. Conflating the two (an
+ * earlier draft had `refund` as a link type) makes "an exactly-matched
+ * refund" inexpressible.
  */
-export const LINK_TYPES = ['exact', 'split', 'combined', 'partial', 'refund', 'manual'] as const;
+export const LINK_TYPES = ['exact', 'split', 'combined', 'partial', 'rule', 'manual'] as const;
 export type LinkType = (typeof LINK_TYPES)[number];
+
+/**
+ * Where a charge came from.
+ *
+ * `merchant` — the source stated it, so the figure is authoritative and an
+ * inference must never overwrite it. `derived` — the engine minted a charge
+ * to hold a transaction it matched against an order whose source gives no
+ * charge breakdown at all, e.g. a bare till receipt.
+ */
+export const CHARGE_ORIGINS = ['merchant', 'derived'] as const;
+export type ChargeOrigin = (typeof CHARGE_ORIGINS)[number];
+
+/**
+ * What the linked money actually is.
+ *
+ * `authorization` is the load-bearing one. A card hold and its later
+ * capture are two transactions for one charge; counting both against the
+ * order drives the residual negative and makes a correct order look
+ * over-linked. Authorizations are linked (so they are visibly accounted
+ * for) but **excluded from the residual**.
+ *
+ * `adjustment` covers a merchant re-charging a price difference after the
+ * fact — rare, but it is neither a fresh capture nor a refund.
+ */
+export const SETTLEMENT_ROLES = ['capture', 'authorization', 'refund', 'adjustment'] as const;
+export type SettlementRole = (typeof SETTLEMENT_ROLES)[number];
+
+/** Roles that count toward `totalCents − Σ amount`. See {@link SETTLEMENT_ROLES}. */
+export const RESIDUAL_BEARING_ROLES: readonly SettlementRole[] = [
+  'capture',
+  'refund',
+  'adjustment',
+];
+
+/** True when a charge in this role moves the residual. */
+export function isResidualBearing(role: SettlementRole): boolean {
+  return RESIDUAL_BEARING_ROLES.includes(role);
+}
 
 /** How a learned match rule's pattern is applied. Mirrors finance. */
 export const MATCH_TYPES = ['exact', 'contains', 'regex'] as const;
 export type MatchType = (typeof MATCH_TYPES)[number];
+
+/**
+ * Kind of evidence a linked `documents` record holds. A tax invoice is the
+ * arbiter when the CSV's own arithmetic is ambiguous; a delivery photo is
+ * proof of receipt for an insurance claim (POPS-47).
+ */
+export const DOCUMENT_KINDS = [
+  'tax_invoice',
+  'receipt',
+  'order_confirmation',
+  'delivery_photo',
+  'other',
+] as const;
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 /**
  * Whether a source's links may be applied without review. Grocery must be

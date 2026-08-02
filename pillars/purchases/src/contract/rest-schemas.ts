@@ -1,20 +1,27 @@
 /**
  * Shared zod building blocks for the purchases REST contract.
  *
- * Split from `rest.ts` so the per-group route files can stay focused on
- * the path map.
+ * The create body mirrors the order's own shape: one order, then flat lists
+ * of deliveries, lines, charges and documents. Relationships between those
+ * lists are expressed with adapter-local `ref` strings, because an adapter
+ * cannot know the ids of rows it has not inserted yet. Refs are resolved
+ * server-side and never persisted.
  */
 import { z } from 'zod';
 
 import {
   AutoLinkPolicySchema,
   CentsSchema,
+  ChargeOriginSchema,
   CurrencySchema,
+  DocumentKindSchema,
   IngestMethodSchema,
   ItemKindSchema,
   NonNegativeCentsSchema,
   PurchaseStatusSchema,
   SettlementModeSchema,
+  SettlementRoleSchema,
+  ShipmentStatusSchema,
 } from './schemas/purchase.js';
 
 export const ErrorBodySchema = z.object({
@@ -24,12 +31,27 @@ export const ErrorBodySchema = z.object({
 
 export const OkSchema = z.object({ ok: z.literal(true) });
 
-/**
- * A line item as submitted by an ingest adapter. Server-assigned fields
- * (`id`, `purchaseId`, `refundedCents`, the inventory URI pair) are absent:
- * an adapter describes what was bought, not what POPS later inferred.
- */
-export const CreatePurchaseItemBodySchema = z.object({
+/** Adapter-local handle, unique within one create call. Never stored. */
+const RefSchema = z.string().trim().min(1);
+
+export const CreateShipmentBodySchema = z.object({
+  ref: RefSchema,
+  carrier: z.string().nullable().optional(),
+  trackingNumber: z.string().nullable().optional(),
+  shippedAt: z.string().nullable().optional(),
+  deliveredAt: z.string().nullable().optional(),
+  status: ShipmentStatusSchema.optional(),
+  shippingCents: NonNegativeCentsSchema.optional(),
+});
+
+export const CreateItemUnitBodySchema = z.object({
+  serialNumber: z.string().nullable().optional(),
+  inventoryItemUri: z.string().nullable().optional(),
+});
+
+export const CreateItemBodySchema = z.object({
+  ref: RefSchema.optional(),
+  shipmentRef: RefSchema.nullable().optional(),
   name: z.string().trim().min(1),
   sku: z.string().nullable().optional(),
   url: z.string().nullable().optional(),
@@ -37,9 +59,38 @@ export const CreatePurchaseItemBodySchema = z.object({
   quantity: z.int().min(1).optional(),
   unitPriceCents: CentsSchema,
   lineTotalCents: CentsSchema,
+  allocatedShippingCents: NonNegativeCentsSchema.optional(),
+  allocatedAdjustmentCents: CentsSchema.optional(),
   merchantCategory: z.string().nullable().optional(),
-  tags: z.array(z.string()).optional(),
   kind: ItemKindSchema.nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  units: z.array(CreateItemUnitBodySchema).optional(),
+});
+
+export const CreateChargeAllocationBodySchema = z.object({
+  itemRef: RefSchema,
+  amountCents: CentsSchema,
+});
+
+export const CreateChargeBodySchema = z.object({
+  sourceChargeRef: z.string().nullable().optional(),
+  shipmentRef: RefSchema.nullable().optional(),
+  amountCents: CentsSchema,
+  /** Settlement currency. Defaults to the order's currency. */
+  currency: CurrencySchema.optional(),
+  /** Value in the order's currency. Defaults to `amountCents` when currencies match. */
+  orderAmountCents: CentsSchema.optional(),
+  chargedAt: z.string().nullable().optional(),
+  role: SettlementRoleSchema.optional(),
+  paymentHint: z.string().nullable().optional(),
+  origin: ChargeOriginSchema.optional(),
+  allocations: z.array(CreateChargeAllocationBodySchema).optional(),
+});
+
+export const CreateDocumentBodySchema = z.object({
+  documentUri: z.string().trim().min(1),
+  shipmentRef: RefSchema.nullable().optional(),
+  kind: DocumentKindSchema.optional(),
 });
 
 export const CreatePurchaseBodySchema = z.object({
@@ -60,11 +111,14 @@ export const CreatePurchaseBodySchema = z.object({
   rawRef: z.string().nullable().optional(),
   /**
    * Ingest-level dedup key. Required, not derived server-side: only the
-   * adapter knows which fields of its source identify a document, and
+   * adapter knows which fields of its source identify an order, and
    * re-uploading the same bundle must be a no-op.
    */
   checksum: z.string().trim().min(1),
-  items: z.array(CreatePurchaseItemBodySchema).optional(),
+  shipments: z.array(CreateShipmentBodySchema).optional(),
+  items: z.array(CreateItemBodySchema).optional(),
+  charges: z.array(CreateChargeBodySchema).optional(),
+  documents: z.array(CreateDocumentBodySchema).optional(),
 });
 
 export const UpsertPurchaseSourceBodySchema = z.object({
@@ -76,7 +130,7 @@ export const UpsertPurchaseSourceBodySchema = z.object({
 });
 
 /**
- * Query filters for the purchase index. `sources` and `statuses` accept a
+ * Query filters for the order index. `sources` and `statuses` accept a
  * repeated query parameter; a single value is lifted into an array so
  * `?statuses=linked` and `?statuses=linked&statuses=partial` both work.
  */
@@ -94,4 +148,9 @@ export const ListPurchasesQuerySchema = z.object({
   to: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+});
+
+export const ListItemsByTagQuerySchema = z.object({
+  tag: z.string().trim().min(1),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
 });

@@ -1,5 +1,13 @@
 /**
- * `purchases` and `purchase_items` — the purchase document and its lines.
+ * `purchases` and `purchase_shipments` — the order and its deliveries.
+ *
+ * **A purchase row is one ORDER**, not one delivery and not one charge. An
+ * Amazon order that ships in three boxes and settles as two card charges is
+ * one row here, three `purchase_shipments`, and two
+ * `purchase_transaction_links`. Collapsing any of those three grains into
+ * the others loses information that cannot be recovered: shipment-grain
+ * purchases lose the order's identity, and order-grain-only loses carrier,
+ * tracking and per-delivery cost.
  *
  * All money is integer cents. Never a float dollar value, anywhere, for any
  * reason — the same rule finance enforces (#3665, CF041). Subset-sum in the
@@ -12,13 +20,13 @@
  * (#3807).
  */
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 import {
   INGEST_METHODS,
-  ITEM_KINDS,
   PURCHASE_STATUSES,
   SETTLEMENT_MODES,
+  SHIPMENT_STATUSES,
 } from '../../contract/constants.js';
 import { purchaseSources } from './sources.js';
 
@@ -31,26 +39,35 @@ export const purchases = sqliteTable(
     source: text('source')
       .notNull()
       .references(() => purchaseSources.id),
-    /** The merchant's own order identifier, when it has one. Not unique: Amazon reuses an order id across shipments. */
+    /** The merchant's own order identifier. One per order, hence the unique below. */
     sourceOrderId: text('source_order_id'),
     ingestMethod: text('ingest_method', { enum: INGEST_METHODS }).notNull(),
     /** ISO-8601. Matched against `transaction.date`, NOT against when the row was observed. */
     orderedAt: text('ordered_at').notNull(),
-    /** ISO 4217. Per-purchase — one account genuinely spans AUD, USD and BRL. */
+    /**
+     * ISO 4217 currency the order was priced in. NOT necessarily the
+     * currency it settled in — an AliExpress order priced in USD settles as
+     * AUD on the card. The link table carries both sides.
+     */
     currency: text('currency').notNull(),
 
     subtotalCents: integer('subtotal_cents').notNull().default(0),
+    /**
+     * Order-level shipping as the merchant stated it. Per-delivery shipping
+     * lives on `purchase_shipments.shippingCents`; this is the roll-up, and
+     * the two need not agree when the merchant only quotes one of them.
+     */
     shippingCents: integer('shipping_cents').notNull().default(0),
     taxCents: integer('tax_cents').notNull().default(0),
     /** Non-negative magnitude of the discount, subtracted from the total. */
     discountCents: integer('discount_cents').notNull().default(0),
     /**
-     * What actually settled — the amount a bank transaction must sum to.
+     * What the order is expected to cost in {@link currency}.
      *
      * Deliberately NOT constrained to `subtotal + shipping + tax - discount`:
      * real merchant exports disagree with their own component columns often
-     * enough that a CHECK here would reject valid purchases at ingest. An
-     * adapter that finds a mismatch records the purchase and routes it to
+     * enough that a CHECK here would reject valid orders at ingest. An
+     * adapter that finds a mismatch records the order and routes it to
      * review rather than forcing the arithmetic.
      */
     totalCents: integer('total_cents').notNull(),
@@ -63,7 +80,7 @@ export const purchases = sqliteTable(
       .default('unknown'),
     /** Raw payment string as the source stated it, e.g. `Visa - 7373`. Blocking signal for the linker; never parsed into a stored card record. */
     paymentHint: text('payment_hint'),
-    /** Pointer back to the evidence this purchase was derived from (file name + row, message id, upload id). */
+    /** Pointer back to the evidence this order was derived from (file name + row, message id, upload id). */
     rawRef: text('raw_ref'),
     /**
      * Ingest-level dedup key. Unique so re-uploading the same export is a
@@ -82,16 +99,35 @@ export const purchases = sqliteTable(
       .default(sql`(datetime('now'))`),
   },
   (t) => [
+    // A merchant order id identifies one order. Stronger than `checksum`,
+    // which is only as good as the adapter's hashing choice: if an adapter
+    // changes its checksum recipe, this still stops a re-import from
+    // duplicating every order. NULLs don't collide in SQLite, so
+    // manually-entered orders with no merchant id are unaffected.
+    unique('uq_purchases_source_order').on(t.source, t.sourceOrderId),
     // The linker's hot path: block by source, then scan a date window.
     index('idx_purchases_source_ordered_at').on(t.source, t.orderedAt),
     index('idx_purchases_status').on(t.status),
     index('idx_purchases_merchant_entity').on(t.merchantEntityId),
-    index('idx_purchases_source_order_id').on(t.source, t.sourceOrderId),
   ]
 );
 
-export const purchaseItems = sqliteTable(
-  'purchase_items',
+/**
+ * One delivery of an order.
+ *
+ * Exists because delivery facts have nowhere else to live: carrier,
+ * tracking, the date it actually arrived, and what postage cost for THIS
+ * box rather than the order as a whole. An AliExpress order whose items
+ * arrive across two months is one `purchases` row and many of these.
+ *
+ * Deliberately NOT assumed to align with charges. Amazon sometimes charges
+ * per product group rather than per box, and whether AliExpress's
+ * purchase-time groupings map to deliveries is unverified. Links may
+ * reference a shipment when the attribution is known and simply don't when
+ * it isn't — see `purchase_transaction_links.shipmentId`.
+ */
+export const purchaseShipments = sqliteTable(
+  'purchase_shipments',
   {
     id: text('id')
       .primaryKey()
@@ -99,39 +135,31 @@ export const purchaseItems = sqliteTable(
     purchaseId: text('purchase_id')
       .notNull()
       .references(() => purchases.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    /** Merchant's own product identifier — ASIN, article number, barcode. */
-    sku: text('sku'),
-    url: text('url'),
-    imageUrl: text('image_url'),
-
-    quantity: integer('quantity').notNull().default(1),
-    unitPriceCents: integer('unit_price_cents').notNull(),
-    lineTotalCents: integer('line_total_cents').notNull(),
-    /** Running total refunded against this line. Only a settled refund decrements it — a failed refund request is not a refund. */
-    refundedCents: integer('refunded_cents').notNull().default(0),
-
-    /** The merchant's own category string, kept verbatim. Not a POPS tag. */
-    merchantCategory: text('merchant_category'),
-    /** JSON array of tag slugs drawn from the finance `tag_vocabulary`. */
-    tags: text('tags').notNull().default('[]'),
-    kind: text('kind', { enum: ITEM_KINDS }),
-
     /**
-     * Soft `pops://` reference to an inventory item this line became, with a
-     * `staleAt` companion resolved by a nightly cron and never at read time.
-     * Follows `home_inventory.purchaseTransactionUri`.
+     * The merchant's own shipment identifier where one exists. Amazon's DSAR
+     * export has none, so its adapter synthesises `(orderId, shipDate)`.
      */
-    inventoryItemUri: text('inventory_item_uri'),
-    inventoryItemStaleAt: text('inventory_item_stale_at'),
-
+    sourceShipmentRef: text('source_shipment_ref'),
+    /** Order within the parent order. See `purchase_items.position` for why. */
+    position: integer('position').notNull().default(0),
+    carrier: text('carrier'),
+    trackingNumber: text('tracking_number'),
+    shippedAt: text('shipped_at'),
+    deliveredAt: text('delivered_at'),
+    status: text('status', { enum: SHIPMENT_STATUSES }).notNull().default('pending'),
+    /** Postage attributable to this delivery, in the order's currency. */
+    shippingCents: integer('shipping_cents').notNull().default(0),
     createdAt: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updatedAt: text('updated_at')
       .notNull()
       .default(sql`(datetime('now'))`),
   },
   (t) => [
-    index('idx_purchase_items_purchase').on(t.purchaseId),
-    index('idx_purchase_items_sku').on(t.sku),
-    index('idx_purchase_items_kind').on(t.kind),
+    index('idx_purchase_shipments_purchase').on(t.purchaseId),
+    index('idx_purchase_shipments_status').on(t.status),
+    index('idx_purchase_shipments_delivered_at').on(t.deliveredAt),
+    unique('uq_purchase_shipments_source_ref').on(t.purchaseId, t.sourceShipmentRef),
   ]
 );

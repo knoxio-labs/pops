@@ -1,5 +1,5 @@
 /**
- * Purchase document CRUD — `purchase.*` sub-router.
+ * Order CRUD — `purchase.*` sub-router.
  *
  * Read and write only. Nothing here links, matches, or sweeps: the
  * reconciliation surface arrives with the engine (POPS-237).
@@ -10,10 +10,11 @@ import { z } from 'zod';
 import {
   CreatePurchaseBodySchema,
   ErrorBodySchema,
+  ListItemsByTagQuerySchema,
   ListPurchasesQuerySchema,
   OkSchema,
 } from './rest-schemas.js';
-import { PurchaseDetailSchema, PurchaseSchema } from './schemas/purchase.js';
+import { PurchaseDetailSchema, PurchaseItemSchema, PurchaseSchema } from './schemas/purchase.js';
 
 const c = initContract();
 
@@ -25,7 +26,7 @@ export const purchasesPurchaseContract = c.router({
     responses: {
       200: z.object({ items: z.array(PurchaseSchema) }),
     },
-    summary: 'List purchase documents, newest first',
+    summary: 'List orders, newest first',
   },
   get: {
     method: 'GET',
@@ -35,7 +36,7 @@ export const purchasesPurchaseContract = c.router({
       200: PurchaseDetailSchema,
       404: ErrorBodySchema,
     },
-    summary: 'Get a purchase with its line items, links and residual',
+    summary: 'Get an order with its deliveries, lines, charges, documents and accounting split',
   },
   create: {
     method: 'POST',
@@ -48,7 +49,7 @@ export const purchasesPurchaseContract = c.router({
       // a failure — re-ingesting the same export bundle is expected.
       409: ErrorBodySchema,
     },
-    summary: 'Create a purchase document and its line items',
+    summary: 'Create an order with its deliveries, lines, charges and documents',
   },
   delete: {
     method: 'DELETE',
@@ -56,6 +57,13 @@ export const purchasesPurchaseContract = c.router({
     pathParams: z.object({ id: z.string() }),
     body: z.object({}).optional(),
     responses: { 200: OkSchema, 404: ErrorBodySchema },
-    summary: 'Hard-delete a purchase (cascades items and links)',
+    summary: 'Hard-delete an order (everything hanging off it cascades)',
+  },
+  itemsByTag: {
+    method: 'GET',
+    path: '/items',
+    query: ListItemsByTagQuerySchema,
+    responses: { 200: z.object({ items: z.array(PurchaseItemSchema) }) },
+    summary: 'Every line carrying a tag, across every order',
   },
 });

@@ -1,38 +1,82 @@
 # purchases
 
-A bank transaction is an aggregate: `AMAZON MKTPLACE AU $412.80` records that money moved and nothing about what was bought. This pillar owns the other half — the purchase document, its line items, and the N:M links from those documents to finance transactions. The reasoning, the alternatives, and why this is a pillar rather than a finance module are in [ADR-042](../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md).
+A bank transaction is an aggregate: `AMAZON MKTPLACE AU $412.80` records that money moved and nothing about what was bought. This pillar owns the other half — the order, its deliveries, its line items, and the charges that paid for it. The reasoning, the alternatives, and why this is a pillar rather than a finance module are in [ADR-042](../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md).
 
 Port 3013, `purchases.db`, registers itself with `registry` on boot.
 
-## What is here, and what is deliberately not
+## The shape
 
-Shipped: the schema, the ts-rest contract, purchase and source CRUD, and the residual.
+An **order** is the single point of entry. Three flat lists hang off it, and the cross-references between those lists are all optional:
 
-Not shipped, and not stubbed either:
+```
+purchases  (the order)
+  ├─ purchase_shipments             every delivery
+  ├─ purchase_items                 every line, complete
+  │    ├─ purchase_item_units       per-unit identity → inventory
+  │    └─ purchase_item_tags
+  ├─ purchase_charges               every charge, matched or not
+  │    ├─ purchase_charge_links     charge → finance transaction
+  │    └─ purchase_item_allocations which charge paid for which line
+  └─ purchase_documents             evidence → documents
+```
 
-- **The reconciliation engine** (POPS-237). Nothing in this tree links, matches, or sweeps. `purchase_transaction_links` and `purchase_match_rules` exist because the schema is easier to get right in one migration than in four, but no code writes to them yet.
-- **Every ingest adapter** (POPS-238 Amazon export, POPS-239 Woolworths, POPS-242 Gmail IMAP). `POST /purchases` is the seam they will all write through.
-- **Any frontend.** `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link, not a placeholder. `search.adapters` and `ai.tools` are empty on the same logic: declaring a search adapter the pillar does not implement makes federated search fan out to a 404.
+Four grains, because real purchase data has four and collapsing any of them loses information that cannot be recovered. One Amazon order ships in three boxes and settles as two card charges. One AliExpress order trickles in over two months. A quantity-3 line becomes three inventory records with three serial numbers.
 
-## Invariants that span files
+## Two things that are load-bearing
 
-**All money is integer cents.** The wire schema (`CentsSchema` in `src/contract/schemas/purchase.ts`) uses `z.int()`, so a float is a validation error rather than a silent rounding. This is not stylistic: the reconciliation ladder's stage 2 is subset-sum, which is exact over integers and is not exact over anything else.
+**A charge does not depend on finance.** `purchase_charges` records what the merchant says was charged; `purchase_charge_links` attaches a `pops://finance/transaction/<id>` once one is imported. The weeks between "Amazon charged the card" and "the statement was imported" are a represented state, not a gap. An earlier draft made a charge _be_ the link, which meant a perfectly normal order looked unexplained for a month.
 
-**`totalCents` is not constrained to the sum of its components.** `subtotal + shipping + tax − discount` disagrees with the merchant's own stated total often enough in real exports that a CHECK on the identity would reject valid purchases at ingest. Adapters that find a mismatch record the purchase and route it to review. The non-negativity of the component columns _is_ enforced.
+**Charge grouping is not assumed to equal delivery grouping.** Amazon sometimes charges per product group rather than per box, and whether AliExpress's purchase-time groupings map to deliveries is unverified. So a charge belongs to the _order_ — always correct — and names a shipment only when the evidence supports it. No "charge block" entity has been invented on a guess. If blocks do turn out to equal deliveries, that will show up as `purchase_charges.shipment_id` being reliably populated, and the entity can be introduced then with real data behind it.
 
-**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live. Nothing here resolves an entity by name, and no mirror table exists — the same invariant `transaction_corrections` carries since #3807.
+## The accounting split
 
-**`finance` has no idea this pillar exists.** The link table lives here and holds `pops://finance/transaction/<id>` strings. There is no foreign key across the boundary and no schema change on the finance side, which is what lets the two be migrated and restored independently.
+`GET /purchases/:id` returns four numbers, not one, because they call for different actions:
 
-**Closed vocabularies are CHECK-backed.** Every enum in `src/contract/constants.ts` has a matching CHECK in the migration. Adding a value means writing a migration that widens the CHECK, not just editing the tuple. `purchase_sources` is the deliberate exception: merchants are rows, so registering Bunnings is an insert, not a deploy.
+|                       | meaning                                                           | action        |
+| --------------------- | ----------------------------------------------------------------- | ------------- |
+| `matchedCents`        | charged, and a finance transaction backs it                       | none          |
+| `awaitingImportCents` | charged, no transaction yet                                       | wait          |
+| `residualCents`       | no charge accounts for it — gift card, rewards, or a genuine miss | a human looks |
 
-**The residual is on the wire.** `GET /purchases/:id` returns `residualCents` (`totalCents − Σ linked amountCents`) rather than leaving consumers to compute it. It is never clamped to zero: a negative residual means over-linking, which is a bug worth seeing.
+Folding the second into the third would flag every recent order as broken until its statement imports, which is exactly the false alarm that teaches someone to ignore the number. `residualCents` is never clamped: a negative value means over-charging, which is a bug worth seeing.
+
+`authorization` charges are excluded from all of it. A card hold and its capture are two records of one payment, and counting both makes a correctly-settled order look doubly paid.
+
+## Other invariants that span files
+
+**All money is integer cents.** `CentsSchema` is `z.int()`, so a float is a validation error rather than a silent rounding. Not stylistic: stage 2 of the reconciliation ladder is subset-sum, which is exact over integers and is not exact over anything else.
+
+**A charge carries two amounts.** `amountCents` is in the settlement currency — what moved on the card, and what the matcher compares against finance transactions. `orderAmountCents` is the same money in the order's currency, which is what the residual is computed in. For a USD AliExpress order settling in AUD they differ; for everything else they are equal, stored anyway so the residual never branches.
+
+**`totalCents` is not constrained to the sum of its components.** Profiling the real Amazon DSAR export found `subtotal + shipping + tax − discount` holding on 926 of 943 rows; the rest drift by cents on older orders. A CHECK on the identity would reject valid orders at ingest, so adapters record the order and route the mismatch to review. Component non-negativity _is_ enforced.
+
+**`position` is not cosmetic.** Ids are random UUIDs and every row written in one ingest shares a `createdAt` to the second, so without an explicit position the read order of lines, deliveries and charges is genuinely non-deterministic — a 100-line grocery receipt would render shuffled, and the deterministic candidate ordering the reconciliation engine needs for re-derivation to be safe would not hold.
+
+**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live. Nothing here resolves an entity by name, and no mirror table exists — the invariant `transaction_corrections` has carried since #3807.
+
+**`finance` has no idea this pillar exists.** No foreign key crosses the boundary and no schema change was made on the finance side, which is what lets the two be migrated and restored independently.
+
+**Closed vocabularies are CHECK-backed.** Every enum in `src/contract/constants.ts` has a matching CHECK in the migration. `purchase_sources` is the deliberate exception: merchants are rows, so registering Bunnings is an insert, not a deploy.
 
 ## Two states that look like errors and are not
 
-A purchase with **no link** (`awaiting_settlement`) is normal and permanent. A receipt captured in October is correct in October whether or not the card that paid for it is imported in December. Spend analysis reads from purchases regardless of link state.
+An order with **no charge and no link** (`awaiting_settlement`) is normal and permanent. A receipt captured in October is correct in October whether or not the card that paid for it is imported in December.
 
-A **cash** purchase (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue or a "never settled?" prompt, while still counting in every spend figure.
+A **cash** order (`settlementMode='cash'`) is terminal on arrival — `createPurchase` writes it straight to `settled_cash`. No transaction will ever exist for it, so it must never enter the reconcile queue, while still counting in every spend figure.
+
+## What is deliberately absent
+
+Not shipped, and not stubbed either:
+
+- **The reconciliation engine** (POPS-237). Nothing here links, matches, or sweeps. `purchase_charge_links` and `purchase_match_rules` exist because the schema is easier to get right in one migration than in five, but no code writes to them.
+- **Every ingest adapter** (POPS-238 Amazon export, POPS-239 Woolworths, POPS-242 Gmail IMAP). `POST /purchases` is the seam they all write through.
+- **Any frontend.** `buildPurchasesManifest` declares no `nav` and no `pages` for that reason — a rail entry pointing at a bundle slot that does not exist is a dead link. `search.adapters` and `ai.tools` are empty on the same logic.
+
+## Tests
+
+`schema-migration-drift.test.ts` is the one to know about. The drizzle definitions and the hand-written migration are two independent descriptions of the same database and nothing forces them to agree — there is no `drizzle-kit generate` step here. That test introspects the migrated database and diffs it against the drizzle schema in both directions, including NOT NULL, foreign keys, `ON DELETE` behaviour and the indexes the hot paths depend on. Without it, a column added to `src/db/schema/*.ts` without a matching migration edit would typecheck, pass every service test that doesn't touch it, and fail in production on the first INSERT.
+
+Coverage carries a threshold ratchet in `vitest.config.ts`; the service layer sits at 100%.
 
 ## Local development
 

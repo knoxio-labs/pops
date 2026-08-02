@@ -40,13 +40,37 @@ CREATE TABLE `purchases` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `purchases_checksum_unique` ON `purchases` (`checksum`);--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_purchases_source_order` ON `purchases` (`source`,`source_order_id`);--> statement-breakpoint
 CREATE INDEX `idx_purchases_source_ordered_at` ON `purchases` (`source`,`ordered_at`);--> statement-breakpoint
 CREATE INDEX `idx_purchases_status` ON `purchases` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_purchases_merchant_entity` ON `purchases` (`merchant_entity_id`);--> statement-breakpoint
-CREATE INDEX `idx_purchases_source_order_id` ON `purchases` (`source`,`source_order_id`);--> statement-breakpoint
+CREATE TABLE `purchase_shipments` (
+	`id` text PRIMARY KEY NOT NULL,
+	`purchase_id` text NOT NULL,
+	`source_shipment_ref` text,
+	`position` integer DEFAULT 0 NOT NULL,
+	`carrier` text,
+	`tracking_number` text,
+	`shipped_at` text,
+	`delivered_at` text,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`shipping_cents` integer DEFAULT 0 NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "ck_purchase_shipments_status" CHECK("purchase_shipments"."status" IN ('pending','shipped','delivered','cancelled','returned')),
+	CONSTRAINT "ck_purchase_shipments_shipping_cents" CHECK("purchase_shipments"."shipping_cents" >= 0)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_purchase_shipments_source_ref` ON `purchase_shipments` (`purchase_id`,`source_shipment_ref`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_shipments_purchase` ON `purchase_shipments` (`purchase_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_shipments_status` ON `purchase_shipments` (`status`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_shipments_delivered_at` ON `purchase_shipments` (`delivered_at`);--> statement-breakpoint
 CREATE TABLE `purchase_items` (
 	`id` text PRIMARY KEY NOT NULL,
 	`purchase_id` text NOT NULL,
+	`shipment_id` text,
+	`position` integer DEFAULT 0 NOT NULL,
 	`name` text NOT NULL,
 	`sku` text,
 	`url` text,
@@ -55,21 +79,45 @@ CREATE TABLE `purchase_items` (
 	`unit_price_cents` integer NOT NULL,
 	`line_total_cents` integer NOT NULL,
 	`refunded_cents` integer DEFAULT 0 NOT NULL,
+	`allocated_shipping_cents` integer DEFAULT 0 NOT NULL,
+	`allocated_adjustment_cents` integer DEFAULT 0 NOT NULL,
 	`merchant_category` text,
-	`tags` text DEFAULT '[]' NOT NULL,
 	`kind` text,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`shipment_id`) REFERENCES `purchase_shipments`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "ck_purchase_items_kind" CHECK("purchase_items"."kind" IS NULL OR "purchase_items"."kind" IN ('consumable','durable','digital','service')),
+	CONSTRAINT "ck_purchase_items_quantity" CHECK("purchase_items"."quantity" > 0),
+	CONSTRAINT "ck_purchase_items_refunded_cents" CHECK("purchase_items"."refunded_cents" >= 0),
+	CONSTRAINT "ck_purchase_items_allocated_shipping" CHECK("purchase_items"."allocated_shipping_cents" >= 0)
+);
+--> statement-breakpoint
+CREATE INDEX `idx_purchase_items_purchase` ON `purchase_items` (`purchase_id`,`position`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_items_shipment` ON `purchase_items` (`shipment_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_items_sku` ON `purchase_items` (`sku`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_items_kind` ON `purchase_items` (`kind`);--> statement-breakpoint
+CREATE TABLE `purchase_item_units` (
+	`id` text PRIMARY KEY NOT NULL,
+	`item_id` text NOT NULL,
+	`serial_number` text,
 	`inventory_item_uri` text,
 	`inventory_item_stale_at` text,
 	`created_at` text DEFAULT (datetime('now')) NOT NULL,
-	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "ck_purchase_items_kind" CHECK("purchase_items"."kind" IS NULL OR "purchase_items"."kind" IN ('consumable','durable','digital','service')),
-	CONSTRAINT "ck_purchase_items_quantity" CHECK("purchase_items"."quantity" > 0),
-	CONSTRAINT "ck_purchase_items_refunded_cents" CHECK("purchase_items"."refunded_cents" >= 0)
+	FOREIGN KEY (`item_id`) REFERENCES `purchase_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `idx_purchase_items_purchase` ON `purchase_items` (`purchase_id`);--> statement-breakpoint
-CREATE INDEX `idx_purchase_items_sku` ON `purchase_items` (`sku`);--> statement-breakpoint
-CREATE INDEX `idx_purchase_items_kind` ON `purchase_items` (`kind`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_item_units_item` ON `purchase_item_units` (`item_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_item_units_inventory` ON `purchase_item_units` (`inventory_item_uri`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_item_units_serial` ON `purchase_item_units` (`serial_number`);--> statement-breakpoint
+CREATE TABLE `purchase_item_tags` (
+	`item_id` text NOT NULL,
+	`tag` text NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	PRIMARY KEY(`item_id`, `tag`),
+	FOREIGN KEY (`item_id`) REFERENCES `purchase_items`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `idx_purchase_item_tags_tag` ON `purchase_item_tags` (`tag`);--> statement-breakpoint
 CREATE TABLE `purchase_match_rules` (
 	`id` text PRIMARY KEY NOT NULL,
 	`description_pattern` text NOT NULL,
@@ -95,9 +143,36 @@ CREATE INDEX `idx_purchase_match_rules_pattern` ON `purchase_match_rules` (`desc
 CREATE INDEX `idx_purchase_match_rules_priority` ON `purchase_match_rules` (`priority`);--> statement-breakpoint
 CREATE INDEX `idx_purchase_match_rules_confidence` ON `purchase_match_rules` (`confidence`);--> statement-breakpoint
 CREATE INDEX `idx_purchase_match_rules_times_applied` ON `purchase_match_rules` (`times_applied`);--> statement-breakpoint
-CREATE TABLE `purchase_transaction_links` (
+CREATE TABLE `purchase_charges` (
 	`id` text PRIMARY KEY NOT NULL,
 	`purchase_id` text NOT NULL,
+	`shipment_id` text,
+	`source_charge_ref` text,
+	`position` integer DEFAULT 0 NOT NULL,
+	`amount_cents` integer NOT NULL,
+	`currency` text NOT NULL,
+	`order_amount_cents` integer NOT NULL,
+	`charged_at` text,
+	`role` text DEFAULT 'capture' NOT NULL,
+	`payment_hint` text,
+	`origin` text DEFAULT 'merchant' NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	`updated_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`shipment_id`) REFERENCES `purchase_shipments`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "ck_purchase_charges_role" CHECK("purchase_charges"."role" IN ('capture','authorization','refund','adjustment')),
+	CONSTRAINT "ck_purchase_charges_origin" CHECK("purchase_charges"."origin" IN ('merchant','derived')),
+	CONSTRAINT "ck_purchase_charges_currency" CHECK(length("purchase_charges"."currency") = 3)
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_purchase_charges_source_ref` ON `purchase_charges` (`purchase_id`,`source_charge_ref`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charges_purchase` ON `purchase_charges` (`purchase_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charges_shipment` ON `purchase_charges` (`shipment_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charges_charged_at` ON `purchase_charges` (`charged_at`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charges_role` ON `purchase_charges` (`role`);--> statement-breakpoint
+CREATE TABLE `purchase_charge_links` (
+	`id` text PRIMARY KEY NOT NULL,
+	`charge_id` text NOT NULL,
 	`transaction_uri` text NOT NULL,
 	`amount_cents` integer NOT NULL,
 	`link_type` text NOT NULL,
@@ -105,13 +180,43 @@ CREATE TABLE `purchase_transaction_links` (
 	`match_rule_id` text,
 	`created_at` text DEFAULT (datetime('now')) NOT NULL,
 	`confirmed_at` text,
-	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`charge_id`) REFERENCES `purchase_charges`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`match_rule_id`) REFERENCES `purchase_match_rules`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "ck_purchase_transaction_links_link_type" CHECK("purchase_transaction_links"."link_type" IN ('exact','split','combined','partial','refund','manual')),
-	CONSTRAINT "ck_purchase_transaction_links_confidence" CHECK("purchase_transaction_links"."confidence" >= 0 AND "purchase_transaction_links"."confidence" <= 1)
+	CONSTRAINT "ck_purchase_charge_links_link_type" CHECK("purchase_charge_links"."link_type" IN ('exact','split','combined','partial','rule','manual')),
+	CONSTRAINT "ck_purchase_charge_links_confidence" CHECK("purchase_charge_links"."confidence" >= 0 AND "purchase_charge_links"."confidence" <= 1)
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uq_purchase_transaction_links` ON `purchase_transaction_links` (`purchase_id`,`transaction_uri`);--> statement-breakpoint
-CREATE INDEX `idx_purchase_links_purchase` ON `purchase_transaction_links` (`purchase_id`);--> statement-breakpoint
-CREATE INDEX `idx_purchase_links_transaction` ON `purchase_transaction_links` (`transaction_uri`);--> statement-breakpoint
-CREATE INDEX `idx_purchase_links_confirmed_at` ON `purchase_transaction_links` (`confirmed_at`);
+CREATE UNIQUE INDEX `uq_purchase_charge_links` ON `purchase_charge_links` (`charge_id`,`transaction_uri`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charge_links_charge` ON `purchase_charge_links` (`charge_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charge_links_transaction` ON `purchase_charge_links` (`transaction_uri`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_charge_links_confirmed_at` ON `purchase_charge_links` (`confirmed_at`);--> statement-breakpoint
+CREATE TABLE `purchase_item_allocations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`charge_id` text NOT NULL,
+	`item_id` text NOT NULL,
+	`amount_cents` integer NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`charge_id`) REFERENCES `purchase_charges`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`item_id`) REFERENCES `purchase_items`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_purchase_item_allocations` ON `purchase_item_allocations` (`charge_id`,`item_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_item_allocations_charge` ON `purchase_item_allocations` (`charge_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_item_allocations_item` ON `purchase_item_allocations` (`item_id`);--> statement-breakpoint
+CREATE TABLE `purchase_documents` (
+	`id` text PRIMARY KEY NOT NULL,
+	`purchase_id` text NOT NULL,
+	`shipment_id` text,
+	`document_uri` text NOT NULL,
+	`document_stale_at` text,
+	`kind` text DEFAULT 'other' NOT NULL,
+	`created_at` text DEFAULT (datetime('now')) NOT NULL,
+	FOREIGN KEY (`purchase_id`) REFERENCES `purchases`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`shipment_id`) REFERENCES `purchase_shipments`(`id`) ON UPDATE no action ON DELETE set null,
+	CONSTRAINT "ck_purchase_documents_kind" CHECK("purchase_documents"."kind" IN ('tax_invoice','receipt','order_confirmation','delivery_photo','other'))
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_purchase_documents` ON `purchase_documents` (`purchase_id`,`document_uri`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_documents_purchase` ON `purchase_documents` (`purchase_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_documents_shipment` ON `purchase_documents` (`shipment_id`);--> statement-breakpoint
+CREATE INDEX `idx_purchase_documents_kind` ON `purchase_documents` (`kind`);

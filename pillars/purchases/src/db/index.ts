@@ -11,17 +11,34 @@ export * from './schema.js';
 export type { PurchasesDb } from './services/internal.js';
 
 export {
-  createPurchase,
+  computeAccounting,
+  landedCostCents,
+  type PurchaseAccounting,
+} from './services/accounting.js';
+
+export {
   deletePurchase,
   findPurchaseByChecksum,
   getPurchase,
+  listItemsByTag,
   listPurchases,
   setPurchaseStatus,
-  type CreatePurchaseInput,
-  type CreatePurchaseItemInput,
   type ListPurchasesFilter,
+  type PurchaseChargeDetail,
   type PurchaseDetail,
-} from './services/purchases.js';
+  type PurchaseItemDetail,
+} from './services/purchase-reads.js';
+
+export {
+  createPurchase,
+  type CreateChargeAllocationInput,
+  type CreateChargeInput,
+  type CreateDocumentInput,
+  type CreateItemInput,
+  type CreateItemUnitInput,
+  type CreatePurchaseInput,
+  type CreateShipmentInput,
+} from './services/purchase-writes.js';
 
 export {
   deleteSource,

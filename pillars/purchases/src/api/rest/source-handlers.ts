@@ -3,7 +3,6 @@
  */
 import { deleteSource, getSource, listSources, upsertSource } from '../../db/index.js';
 import { tryMapServiceError } from './error-mapping.js';
-import { toPurchaseSource } from './serializers.js';
 
 import type { z } from 'zod';
 
@@ -16,7 +15,7 @@ export function makeSourceHandlers(db: PurchasesDb) {
   return {
     list: async () => ({
       status: 200 as const,
-      body: { items: listSources(db).map(toPurchaseSource) },
+      body: { items: [...listSources(db)] },
     }),
 
     get: async ({ params }: { params: { id: string } }) => {
@@ -27,14 +26,14 @@ export function makeSourceHandlers(db: PurchasesDb) {
           body: { message: `Purchase source '${params.id}' not found`, code: 'NOT_FOUND' },
         };
       }
-      return { status: 200 as const, body: toPurchaseSource(source) };
+      return { status: 200 as const, body: source };
     },
 
     upsert: async ({ params, body }: { params: { id: string }; body: UpsertBody }) => {
       try {
         return {
           status: 200 as const,
-          body: toPurchaseSource(upsertSource(db, { id: params.id, ...body })),
+          body: upsertSource(db, { id: params.id, ...body }),
         };
       } catch (err) {
         const mapped = tryMapServiceError(err);

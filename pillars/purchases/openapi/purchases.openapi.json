@@ -6,6 +6,149 @@
   },
   "openapi": "3.0.2",
   "paths": {
+    "/items": {
+      "get": {
+        "operationId": "purchase.itemsByTag",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tag",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "allocatedAdjustmentCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "allocatedShippingCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "imageUrl": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["consumable", "durable", "digital", "service"],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lineTotalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "merchantCategory": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "refundedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "shipmentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sku": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "unitPriceCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "url": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "shipmentId",
+                          "position",
+                          "name",
+                          "sku",
+                          "url",
+                          "imageUrl",
+                          "quantity",
+                          "unitPriceCents",
+                          "lineTotalCents",
+                          "refundedCents",
+                          "allocatedShippingCents",
+                          "allocatedAdjustmentCents",
+                          "merchantCategory",
+                          "kind",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["items"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Every line carrying a tag, across every order",
+        "tags": ["purchase"]
+      }
+    },
     "/purchases": {
       "get": {
         "operationId": "purchase.list",
@@ -196,7 +339,7 @@
             "description": "200"
           }
         },
-        "summary": "List purchase documents, newest first",
+        "summary": "List orders, newest first",
         "tags": ["purchase"]
       },
       "post": {
@@ -208,6 +351,74 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "charges": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "allocations": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amountCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "itemRef": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": ["itemRef", "amountCents"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "amountCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "chargedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "currency": {
+                          "pattern": "^[A-Z]{3}$",
+                          "type": "string"
+                        },
+                        "orderAmountCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "origin": {
+                          "enum": ["merchant", "derived"],
+                          "type": "string"
+                        },
+                        "paymentHint": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "role": {
+                          "enum": ["capture", "authorization", "refund", "adjustment"],
+                          "type": "string"
+                        },
+                        "shipmentRef": {
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "sourceChargeRef": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["amountCents"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "checksum": {
                     "minLength": 1,
                     "type": "string"
@@ -221,6 +432,35 @@
                     "minimum": 0,
                     "type": "integer"
                   },
+                  "documents": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "documentUri": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "tax_invoice",
+                            "receipt",
+                            "order_confirmation",
+                            "delivery_photo",
+                            "other"
+                          ],
+                          "type": "string"
+                        },
+                        "shipmentRef": {
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["documentUri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "ingestMethod": {
                     "enum": ["email", "export", "upload", "manual"],
                     "type": "string"
@@ -229,6 +469,16 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
+                        "allocatedAdjustmentCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "allocatedShippingCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "imageUrl": {
                           "nullable": true,
                           "type": "string"
@@ -256,6 +506,15 @@
                           "minimum": 1,
                           "type": "integer"
                         },
+                        "ref": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "shipmentRef": {
+                          "minLength": 1,
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "sku": {
                           "nullable": true,
                           "type": "string"
@@ -270,6 +529,23 @@
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
                           "type": "integer"
+                        },
+                        "units": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "inventoryItemUri": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "serialNumber": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
                         },
                         "url": {
                           "nullable": true,
@@ -304,6 +580,45 @@
                   "settlementMode": {
                     "enum": ["card", "cash", "unknown"],
                     "type": "string"
+                  },
+                  "shipments": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "carrier": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "deliveredAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "ref": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "shippedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "shippingCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "status": {
+                          "enum": ["pending", "shipped", "delivered", "cancelled", "returned"],
+                          "type": "string"
+                        },
+                        "trackingNumber": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["ref"],
+                      "type": "object"
+                    },
+                    "type": "array"
                   },
                   "shippingCents": {
                     "maximum": 9007199254740991,
@@ -355,61 +670,366 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
-                    "items": {
+                    "accounting": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaitingImportCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "matchedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "residualCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalCents",
+                        "matchedCents",
+                        "awaitingImportCents",
+                        "residualCents"
+                      ],
+                      "type": "object"
+                    },
+                    "charges": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "allocations": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "chargeId": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "itemId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "chargeId", "itemId", "amountCents", "createdAt"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "charge": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amountCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "chargedAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "orderAmountCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "origin": {
+                                "enum": ["merchant", "derived"],
+                                "type": "string"
+                              },
+                              "paymentHint": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "position": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "purchaseId": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "enum": ["capture", "authorization", "refund", "adjustment"],
+                                "type": "string"
+                              },
+                              "shipmentId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sourceChargeRef": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "purchaseId",
+                              "shipmentId",
+                              "sourceChargeRef",
+                              "position",
+                              "amountCents",
+                              "currency",
+                              "orderAmountCents",
+                              "chargedAt",
+                              "role",
+                              "paymentHint",
+                              "origin",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "links": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "chargeId": {
+                                  "type": "string"
+                                },
+                                "confidence": {
+                                  "maximum": 1,
+                                  "minimum": 0,
+                                  "type": "number"
+                                },
+                                "confirmedAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "linkType": {
+                                  "enum": [
+                                    "exact",
+                                    "split",
+                                    "combined",
+                                    "partial",
+                                    "rule",
+                                    "manual"
+                                  ],
+                                  "type": "string"
+                                },
+                                "matchRuleId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "transactionUri": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "chargeId",
+                                "transactionUri",
+                                "amountCents",
+                                "linkType",
+                                "confidence",
+                                "matchRuleId",
+                                "createdAt",
+                                "confirmedAt"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": ["charge", "links", "allocations"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "documents": {
                       "items": {
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
                             "type": "string"
                           },
+                          "documentStaleAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "documentUri": {
+                            "type": "string"
+                          },
                           "id": {
                             "type": "string"
                           },
-                          "imageUrl": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "inventoryItemStaleAt": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "inventoryItemUri": {
-                            "nullable": true,
-                            "type": "string"
-                          },
                           "kind": {
-                            "enum": ["consumable", "durable", "digital", "service"],
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "lineTotalCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": -9007199254740991,
-                            "type": "integer"
-                          },
-                          "merchantCategory": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "name": {
+                            "enum": [
+                              "tax_invoice",
+                              "receipt",
+                              "order_confirmation",
+                              "delivery_photo",
+                              "other"
+                            ],
                             "type": "string"
                           },
                           "purchaseId": {
                             "type": "string"
                           },
-                          "quantity": {
-                            "maximum": 9007199254740991,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "refundedCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "sku": {
+                          "shipmentId": {
                             "nullable": true,
                             "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "shipmentId",
+                          "documentUri",
+                          "documentStaleAt",
+                          "kind",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "item": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "allocatedAdjustmentCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "allocatedShippingCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "imageUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["consumable", "durable", "digital", "service"],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "lineTotalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "merchantCategory": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "position": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "purchaseId": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "maximum": 9007199254740991,
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "refundedCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "shipmentId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sku": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "unitPriceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "url": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "purchaseId",
+                              "shipmentId",
+                              "position",
+                              "name",
+                              "sku",
+                              "url",
+                              "imageUrl",
+                              "quantity",
+                              "unitPriceCents",
+                              "lineTotalCents",
+                              "refundedCents",
+                              "allocatedShippingCents",
+                              "allocatedAdjustmentCents",
+                              "merchantCategory",
+                              "kind",
+                              "createdAt"
+                            ],
+                            "type": "object"
+                          },
+                          "landedCostCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
                           },
                           "tags": {
                             "items": {
@@ -417,88 +1037,46 @@
                             },
                             "type": "array"
                           },
-                          "unitPriceCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": -9007199254740991,
-                            "type": "integer"
-                          },
-                          "url": {
-                            "nullable": true,
-                            "type": "string"
+                          "units": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "createdAt": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "inventoryItemStaleAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "inventoryItemUri": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "itemId": {
+                                  "type": "string"
+                                },
+                                "serialNumber": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "itemId",
+                                "serialNumber",
+                                "inventoryItemUri",
+                                "inventoryItemStaleAt",
+                                "createdAt"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           }
                         },
-                        "required": [
-                          "id",
-                          "purchaseId",
-                          "name",
-                          "sku",
-                          "url",
-                          "imageUrl",
-                          "quantity",
-                          "unitPriceCents",
-                          "lineTotalCents",
-                          "refundedCents",
-                          "merchantCategory",
-                          "tags",
-                          "kind",
-                          "inventoryItemUri",
-                          "inventoryItemStaleAt",
-                          "createdAt"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "links": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "amountCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": -9007199254740991,
-                            "type": "integer"
-                          },
-                          "confidence": {
-                            "maximum": 1,
-                            "minimum": 0,
-                            "type": "number"
-                          },
-                          "confirmedAt": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "linkType": {
-                            "enum": ["exact", "split", "combined", "partial", "refund", "manual"],
-                            "type": "string"
-                          },
-                          "matchRuleId": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "purchaseId": {
-                            "type": "string"
-                          },
-                          "transactionUri": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "purchaseId",
-                          "transactionUri",
-                          "amountCents",
-                          "linkType",
-                          "confidence",
-                          "matchRuleId",
-                          "createdAt",
-                          "confirmedAt"
-                        ],
+                        "required": ["item", "tags", "units", "landedCostCents"],
                         "type": "object"
                       },
                       "type": "array"
@@ -616,13 +1194,84 @@
                       ],
                       "type": "object"
                     },
-                    "residualCents": {
-                      "maximum": 9007199254740991,
-                      "minimum": -9007199254740991,
-                      "type": "integer"
+                    "shipments": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "carrier": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "deliveredAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "shippedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "shippingCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceShipmentRef": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": ["pending", "shipped", "delivered", "cancelled", "returned"],
+                            "type": "string"
+                          },
+                          "trackingNumber": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "sourceShipmentRef",
+                          "position",
+                          "carrier",
+                          "trackingNumber",
+                          "shippedAt",
+                          "deliveredAt",
+                          "status",
+                          "shippingCents",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
                     }
                   },
-                  "required": ["purchase", "items", "links", "residualCents"],
+                  "required": [
+                    "purchase",
+                    "shipments",
+                    "items",
+                    "charges",
+                    "documents",
+                    "accounting"
+                  ],
                   "type": "object"
                 }
               }
@@ -670,7 +1319,7 @@
             "description": "409"
           }
         },
-        "summary": "Create a purchase document and its line items",
+        "summary": "Create an order with its deliveries, lines, charges and documents",
         "tags": ["purchase"]
       }
     },
@@ -739,7 +1388,7 @@
             "description": "404"
           }
         },
-        "summary": "Hard-delete a purchase (cascades items and links)",
+        "summary": "Hard-delete an order (everything hanging off it cascades)",
         "tags": ["purchase"]
       },
       "get": {
@@ -761,61 +1410,366 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
-                    "items": {
+                    "accounting": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaitingImportCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "matchedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "residualCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalCents",
+                        "matchedCents",
+                        "awaitingImportCents",
+                        "residualCents"
+                      ],
+                      "type": "object"
+                    },
+                    "charges": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "allocations": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "chargeId": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "itemId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "chargeId", "itemId", "amountCents", "createdAt"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "charge": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "amountCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "chargedAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "pattern": "^[A-Z]{3}$",
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "orderAmountCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "origin": {
+                                "enum": ["merchant", "derived"],
+                                "type": "string"
+                              },
+                              "paymentHint": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "position": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "purchaseId": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "enum": ["capture", "authorization", "refund", "adjustment"],
+                                "type": "string"
+                              },
+                              "shipmentId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sourceChargeRef": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "purchaseId",
+                              "shipmentId",
+                              "sourceChargeRef",
+                              "position",
+                              "amountCents",
+                              "currency",
+                              "orderAmountCents",
+                              "chargedAt",
+                              "role",
+                              "paymentHint",
+                              "origin",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "links": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "chargeId": {
+                                  "type": "string"
+                                },
+                                "confidence": {
+                                  "maximum": 1,
+                                  "minimum": 0,
+                                  "type": "number"
+                                },
+                                "confirmedAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "linkType": {
+                                  "enum": [
+                                    "exact",
+                                    "split",
+                                    "combined",
+                                    "partial",
+                                    "rule",
+                                    "manual"
+                                  ],
+                                  "type": "string"
+                                },
+                                "matchRuleId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "transactionUri": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "chargeId",
+                                "transactionUri",
+                                "amountCents",
+                                "linkType",
+                                "confidence",
+                                "matchRuleId",
+                                "createdAt",
+                                "confirmedAt"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": ["charge", "links", "allocations"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "documents": {
                       "items": {
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
                             "type": "string"
                           },
+                          "documentStaleAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "documentUri": {
+                            "type": "string"
+                          },
                           "id": {
                             "type": "string"
                           },
-                          "imageUrl": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "inventoryItemStaleAt": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "inventoryItemUri": {
-                            "nullable": true,
-                            "type": "string"
-                          },
                           "kind": {
-                            "enum": ["consumable", "durable", "digital", "service"],
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "lineTotalCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": -9007199254740991,
-                            "type": "integer"
-                          },
-                          "merchantCategory": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "name": {
+                            "enum": [
+                              "tax_invoice",
+                              "receipt",
+                              "order_confirmation",
+                              "delivery_photo",
+                              "other"
+                            ],
                             "type": "string"
                           },
                           "purchaseId": {
                             "type": "string"
                           },
-                          "quantity": {
-                            "maximum": 9007199254740991,
-                            "minimum": 1,
-                            "type": "integer"
-                          },
-                          "refundedCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "sku": {
+                          "shipmentId": {
                             "nullable": true,
                             "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "shipmentId",
+                          "documentUri",
+                          "documentStaleAt",
+                          "kind",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "item": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "allocatedAdjustmentCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "allocatedShippingCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "imageUrl": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["consumable", "durable", "digital", "service"],
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "lineTotalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "merchantCategory": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "position": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "purchaseId": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "maximum": 9007199254740991,
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "refundedCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "shipmentId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sku": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "unitPriceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "url": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "purchaseId",
+                              "shipmentId",
+                              "position",
+                              "name",
+                              "sku",
+                              "url",
+                              "imageUrl",
+                              "quantity",
+                              "unitPriceCents",
+                              "lineTotalCents",
+                              "refundedCents",
+                              "allocatedShippingCents",
+                              "allocatedAdjustmentCents",
+                              "merchantCategory",
+                              "kind",
+                              "createdAt"
+                            ],
+                            "type": "object"
+                          },
+                          "landedCostCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
                           },
                           "tags": {
                             "items": {
@@ -823,88 +1777,46 @@
                             },
                             "type": "array"
                           },
-                          "unitPriceCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": -9007199254740991,
-                            "type": "integer"
-                          },
-                          "url": {
-                            "nullable": true,
-                            "type": "string"
+                          "units": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "createdAt": {
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "inventoryItemStaleAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "inventoryItemUri": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "itemId": {
+                                  "type": "string"
+                                },
+                                "serialNumber": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "itemId",
+                                "serialNumber",
+                                "inventoryItemUri",
+                                "inventoryItemStaleAt",
+                                "createdAt"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
                           }
                         },
-                        "required": [
-                          "id",
-                          "purchaseId",
-                          "name",
-                          "sku",
-                          "url",
-                          "imageUrl",
-                          "quantity",
-                          "unitPriceCents",
-                          "lineTotalCents",
-                          "refundedCents",
-                          "merchantCategory",
-                          "tags",
-                          "kind",
-                          "inventoryItemUri",
-                          "inventoryItemStaleAt",
-                          "createdAt"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "links": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "amountCents": {
-                            "maximum": 9007199254740991,
-                            "minimum": -9007199254740991,
-                            "type": "integer"
-                          },
-                          "confidence": {
-                            "maximum": 1,
-                            "minimum": 0,
-                            "type": "number"
-                          },
-                          "confirmedAt": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "linkType": {
-                            "enum": ["exact", "split", "combined", "partial", "refund", "manual"],
-                            "type": "string"
-                          },
-                          "matchRuleId": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "purchaseId": {
-                            "type": "string"
-                          },
-                          "transactionUri": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "purchaseId",
-                          "transactionUri",
-                          "amountCents",
-                          "linkType",
-                          "confidence",
-                          "matchRuleId",
-                          "createdAt",
-                          "confirmedAt"
-                        ],
+                        "required": ["item", "tags", "units", "landedCostCents"],
                         "type": "object"
                       },
                       "type": "array"
@@ -1022,13 +1934,84 @@
                       ],
                       "type": "object"
                     },
-                    "residualCents": {
-                      "maximum": 9007199254740991,
-                      "minimum": -9007199254740991,
-                      "type": "integer"
+                    "shipments": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "carrier": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "deliveredAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "purchaseId": {
+                            "type": "string"
+                          },
+                          "shippedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "shippingCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceShipmentRef": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": ["pending", "shipped", "delivered", "cancelled", "returned"],
+                            "type": "string"
+                          },
+                          "trackingNumber": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "purchaseId",
+                          "sourceShipmentRef",
+                          "position",
+                          "carrier",
+                          "trackingNumber",
+                          "shippedAt",
+                          "deliveredAt",
+                          "status",
+                          "shippingCents",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
                     }
                   },
-                  "required": ["purchase", "items", "links", "residualCents"],
+                  "required": [
+                    "purchase",
+                    "shipments",
+                    "items",
+                    "charges",
+                    "documents",
+                    "accounting"
+                  ],
                   "type": "object"
                 }
               }
@@ -1056,7 +2039,7 @@
             "description": "404"
           }
         },
-        "summary": "Get a purchase with its line items, links and residual",
+        "summary": "Get an order with its deliveries, lines, charges, documents and accounting split",
         "tags": ["purchase"]
       }
     },
