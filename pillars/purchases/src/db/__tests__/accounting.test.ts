@@ -55,6 +55,8 @@ describe('a charge the bank has not caught up with', () => {
       matchedCents: 0,
       awaitingImportCents: 5678,
       residualCents: 0,
+      refundedCents: 0,
+      netSpendCents: 5678,
     });
   });
 
@@ -67,6 +69,8 @@ describe('a charge the bank has not caught up with', () => {
       matchedCents: 5678,
       awaitingImportCents: 0,
       residualCents: 0,
+      refundedCents: 0,
+      netSpendCents: 5678,
     });
   });
 });
@@ -80,6 +84,8 @@ describe('an order with no charge asserted at all', () => {
       matchedCents: 0,
       awaitingImportCents: 0,
       residualCents: 5678,
+      refundedCents: 0,
+      netSpendCents: 0,
     });
   });
 });
@@ -101,6 +107,8 @@ describe('gift card part-payment', () => {
       matchedCents: 4000,
       awaitingImportCents: 0,
       residualCents: 1678,
+      refundedCents: 0,
+      netSpendCents: 4000,
     });
   });
 });
@@ -128,12 +136,14 @@ describe('an authorization and its capture', () => {
       matchedCents: 5678,
       awaitingImportCents: 0,
       residualCents: 0,
+      refundedCents: 0,
+      netSpendCents: 5678,
     });
   });
 });
 
 describe('a refund', () => {
-  it('nets back out of the matched total', () => {
+  it('is its own bucket, and does not masquerade as unexplained money', () => {
     const id = createPurchase(
       opened.db,
       amazonOrder({
@@ -147,11 +157,18 @@ describe('a refund', () => {
     matchCharge(id, 'cap', 'pops://finance/transaction/capture');
     matchCharge(id, 'ref', 'pops://finance/transaction/refund');
 
-    const accounting = getPurchase(opened.db, id)?.accounting;
-    expect(accounting?.matchedCents).toBe(4499);
-    // The order still says it cost $56.78; $11.79 came back. The gap is
-    // real and visible rather than being absorbed into the total.
-    expect(accounting?.residualCents).toBe(1179);
+    // The order was charged in full and $11.79 came back. Nothing is
+    // unexplained — an earlier version reported residual 1179 here, which
+    // presented returned money as missing money and made getting a refund
+    // raise the "something is wrong" number.
+    expect(getPurchase(opened.db, id)?.accounting).toEqual({
+      totalCents: 5678,
+      matchedCents: 5678,
+      awaitingImportCents: 0,
+      residualCents: 0,
+      refundedCents: 1179,
+      netSpendCents: 4499,
+    });
   });
 });
 

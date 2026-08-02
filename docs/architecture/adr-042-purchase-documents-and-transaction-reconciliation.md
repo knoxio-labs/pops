@@ -108,7 +108,9 @@ AI is used where its output can be checked: extracting structure from a photogra
 
 ### The residual is a first-class, visible quantity
 
-`purchase.totalCents − Σ charge amounts` is how gift cards, rewards balances, refunds and genuine misses surface. It is never hidden, absorbed or auto-zeroed, and it aggregates into the metric the feature is judged by: _$10,412 at Amazon, of which $8,900 is explained by line items and $1,512 is not._
+`purchase.totalCents − Σ non-refund charge amounts` is how gift cards, rewards balances and genuine misses surface. It is never hidden, absorbed or auto-zeroed, and it aggregates into the metric the feature is judged by: _$10,412 at Amazon, of which $8,900 is explained by line items and $1,512 is not._
+
+**Refunds are excluded from it and reported separately.** Netting them in makes a fully-paid, partly-refunded order report the refunded amount as a residual — presenting returned money as missing money, so that receiving a refund makes the "something is wrong" number go _up_. A consumer would have to special-case that to render anything truthful. The published split is therefore four numbers plus a derived one: `matched`, `awaitingImport`, `residual`, `refunded`, and `netSpend`, with the identity `total = matched + awaitingImport + residual` and `refunded` orthogonal to it.
 
 A view that silently drops the residual is worse than no view, because it converts a known unknown into a false certainty. A view that clamps it at zero is worse still: a negative residual means the order was over-charged, which is a bug, and hiding it removes the only signal that the bug exists.
 

@@ -189,10 +189,21 @@ export interface PurchaseDocument {
  */
 export interface PurchaseAccounting {
   totalCents: number;
-  /** Charged and backed by at least one finance transaction. */
+  /** Charged and backed by at least one finance transaction. Refunds excluded. */
   matchedCents: number;
   /** Charged, but no transaction has landed yet. Not a problem. */
   awaitingImportCents: number;
-  /** Money no charge accounts for: gift cards, rewards, genuine misses. Never clamped. */
+  /**
+   * Money no charge accounts for: gift cards, rewards, genuine misses.
+   * Never clamped — negative means over-charged, which is a bug to surface.
+   */
   residualCents: number;
+  /**
+   * Magnitude of money returned. Positive, and deliberately NOT subtracted
+   * from the three above: a refund is not an unexplained gap, and folding
+   * it in made getting a refund raise the "something is wrong" number.
+   */
+  refundedCents: number;
+  /** `matched + awaitingImport − refunded`. What the order actually cost. */
+  netSpendCents: number;
 }

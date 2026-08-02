@@ -298,6 +298,8 @@ export interface operations {
             accounting: {
               awaitingImportCents: number;
               matchedCents: number;
+              netSpendCents: number;
+              refundedCents: number;
               residualCents: number;
               totalCents: number;
             };
@@ -472,6 +474,8 @@ export interface operations {
             accounting: {
               awaitingImportCents: number;
               matchedCents: number;
+              netSpendCents: number;
+              refundedCents: number;
               residualCents: number;
               totalCents: number;
             };

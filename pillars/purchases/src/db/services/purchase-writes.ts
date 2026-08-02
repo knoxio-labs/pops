@@ -27,6 +27,7 @@ import { expectRow, nowIso, type PurchasesDb } from './internal.js';
 import { findPurchaseByChecksum } from './purchase-reads.js';
 import { shipmentIdFor, type IngestContext } from './purchase-write-context.js';
 import { insertItem } from './purchase-write-items.js';
+import { assertAllocationsFit, resolveOrderAmount } from './purchase-write-validation.js';
 import { getSource } from './sources.js';
 
 import type { PurchaseRow } from '../schema.js';
@@ -178,43 +179,8 @@ function insertCharge(ctx: IngestContext, input: CreateChargeInput, position: nu
   insertAllocations(ctx, expectRow(rows, 'createPurchase.charge').id, input);
 }
 
-/**
- * Resolve a charge's value in the ORDER's currency, which is the unit the
- * residual is computed in.
- *
- * Defaulting it to the settled amount is only correct when the two
- * currencies are the same. An earlier version defaulted unconditionally on
- * the assumption that they were — an assumption nothing enforced, so an
- * adapter that set a foreign settlement currency and forgot
- * `orderAmountCents` would record AUD cents as though they were USD cents.
- * The residual is computed from this number, so the error would surface as
- * an arbitrary unexplained gap rather than as anything traceable.
- *
- * Both directions are rejected: a currency mismatch with no explicit
- * amount, and an explicit amount that contradicts a matching currency.
- */
-function resolveOrderAmount(ctx: IngestContext, input: CreateChargeInput): number {
-  const settlementCurrency = input.currency ?? ctx.purchase.currency;
-  const sameCurrency = settlementCurrency === ctx.purchase.currency;
-
-  if (input.orderAmountCents === undefined) {
-    if (!sameCurrency) {
-      throw new InvalidIngestPayloadError(
-        `charge settles in ${settlementCurrency} but the order is priced in ${ctx.purchase.currency}, so orderAmountCents is required`
-      );
-    }
-    return input.amountCents;
-  }
-
-  if (sameCurrency && input.orderAmountCents !== input.amountCents) {
-    throw new InvalidIngestPayloadError(
-      `charge settles in the order's own currency (${settlementCurrency}) but orderAmountCents ${String(input.orderAmountCents)} differs from amountCents ${String(input.amountCents)}`
-    );
-  }
-  return input.orderAmountCents;
-}
-
 function insertAllocations(ctx: IngestContext, chargeId: string, input: CreateChargeInput): void {
+  assertAllocationsFit(input);
   const seen = new Set<string>();
   for (const allocation of input.allocations ?? []) {
     // Checked before the write so the (charge_id, item_id) unique index

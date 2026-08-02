@@ -32,10 +32,10 @@ export default defineConfig({
        *   introspecting the migrated database.
        */
       thresholds: {
-        statements: 85,
-        branches: 82,
-        functions: 80,
-        lines: 85,
+        statements: 88,
+        branches: 86,
+        functions: 83,
+        lines: 88,
       },
     },
   },

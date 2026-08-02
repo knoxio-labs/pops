@@ -21,7 +21,9 @@ import { purchasesManifest } from '../manifest.js';
 import {
   CentsSchema,
   CurrencySchema,
+  IsoTimestampSchema,
   NonNegativeCentsSchema,
+  PopsUriSchema,
   PurchaseAccountingSchema,
 } from '../schemas/purchase.js';
 
@@ -69,8 +71,85 @@ describe('PurchaseAccountingSchema', () => {
         matchedCents: 5778,
         awaitingImportCents: 0,
         residualCents: -100,
+        refundedCents: 0,
+        netSpendCents: 5778,
       }).success
     ).toBe(true);
+  });
+
+  it('rejects a negative refund total, which would be a sign error not a fact', () => {
+    // Refunds are reported as a magnitude. A negative here means something
+    // upstream flipped a sign, and passing it through would corrupt any
+    // consumer summing spend.
+    expect(
+      PurchaseAccountingSchema.safeParse({
+        totalCents: 5678,
+        matchedCents: 5678,
+        awaitingImportCents: 0,
+        residualCents: 0,
+        refundedCents: -1179,
+        netSpendCents: 4499,
+      }).success
+    ).toBe(false);
+  });
+
+  it('permits a negative net spend, which a refunded-in-full order genuinely has', () => {
+    expect(
+      PurchaseAccountingSchema.safeParse({
+        totalCents: 5678,
+        matchedCents: 0,
+        awaitingImportCents: 0,
+        residualCents: 5678,
+        refundedCents: 5678,
+        netSpendCents: -5678,
+      }).success
+    ).toBe(true);
+  });
+});
+
+describe('IsoTimestampSchema', () => {
+  it('accepts a UTC timestamp with or without fractional seconds', () => {
+    for (const value of ['2026-02-02T01:41:21Z', '2026-02-02T01:41:21.965Z']) {
+      expect(IsoTimestampSchema.safeParse(value).success, value).toBe(true);
+    }
+  });
+
+  it('accepts an explicit offset', () => {
+    expect(IsoTimestampSchema.safeParse('2026-02-02T11:41:21+10:00').success).toBe(true);
+  });
+
+  it('rejects a timestamp with no timezone, which is ambiguous by up to a day', () => {
+    // The matching window is 14–21 days, so a day of ambiguity is a
+    // meaningful fraction of it.
+    expect(IsoTimestampSchema.safeParse('2026-02-02T01:41:21').success).toBe(false);
+  });
+
+  it.each(['2026-02-02', 'next tuesday', '02/02/2026', '', '2026-2-2T01:41:21Z'])(
+    'rejects %p, which the date-window matcher would silently never match',
+    (value) => {
+      expect(IsoTimestampSchema.safeParse(value).success).toBe(false);
+    }
+  );
+});
+
+describe('PopsUriSchema', () => {
+  it.each([
+    'pops://finance/transaction/abc-123',
+    'pops://inventory/item/1',
+    'pops://documents/document/inv-1',
+  ])('accepts %p', (value) => {
+    expect(PopsUriSchema.safeParse(value).success).toBe(true);
+  });
+
+  it.each([
+    'finance/transaction/1',
+    'pops://finance/transaction/',
+    'pops://finance/1',
+    'https://finance/transaction/1',
+    'pops://Finance/transaction/1',
+    'pops://finance/transaction/with space',
+  ])('rejects %p, which the nightly resolver would silently never resolve', (value) => {
+    expect(PopsUriSchema.safeParse(value).success).toBe(false);
   });
 });
 

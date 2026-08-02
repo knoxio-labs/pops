@@ -51,6 +51,7 @@
                             "type": "integer"
                           },
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "id": {
@@ -178,6 +179,7 @@
             "in": "query",
             "name": "from",
             "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
               "type": "string"
             }
           },
@@ -185,6 +187,7 @@
             "in": "query",
             "name": "to",
             "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
               "type": "string"
             }
           },
@@ -222,6 +225,7 @@
                             "type": "string"
                           },
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "currency": {
@@ -249,6 +253,7 @@
                             "type": "string"
                           },
                           "orderedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "paymentHint": {
@@ -301,6 +306,7 @@
                             "type": "integer"
                           },
                           "updatedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           }
                         },
@@ -381,6 +387,7 @@
                         },
                         "chargedAt": {
                           "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "currency": {
@@ -437,7 +444,7 @@
                       "additionalProperties": false,
                       "properties": {
                         "documentUri": {
-                          "minLength": 1,
+                          "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                           "type": "string"
                         },
                         "kind": {
@@ -536,6 +543,7 @@
                             "properties": {
                               "inventoryItemUri": {
                                 "nullable": true,
+                                "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                 "type": "string"
                               },
                               "serialNumber": {
@@ -566,7 +574,7 @@
                     "type": "string"
                   },
                   "orderedAt": {
-                    "minLength": 1,
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                     "type": "string"
                   },
                   "paymentHint": {
@@ -591,6 +599,7 @@
                         },
                         "deliveredAt": {
                           "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "ref": {
@@ -599,6 +608,7 @@
                         },
                         "shippedAt": {
                           "nullable": true,
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "shippingCents": {
@@ -683,6 +693,16 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "netSpendCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "refundedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "residualCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -698,7 +718,9 @@
                         "totalCents",
                         "matchedCents",
                         "awaitingImportCents",
-                        "residualCents"
+                        "residualCents",
+                        "refundedCents",
+                        "netSpendCents"
                       ],
                       "type": "object"
                     },
@@ -719,6 +741,7 @@
                                   "type": "string"
                                 },
                                 "createdAt": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -743,9 +766,11 @@
                               },
                               "chargedAt": {
                                 "nullable": true,
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "createdAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "currency": {
@@ -789,6 +814,7 @@
                                 "type": "string"
                               },
                               "updatedAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               }
                             },
@@ -829,9 +855,11 @@
                                 },
                                 "confirmedAt": {
                                   "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "createdAt": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -853,6 +881,7 @@
                                   "type": "string"
                                 },
                                 "transactionUri": {
+                                  "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
                                 }
                               },
@@ -882,13 +911,16 @@
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentStaleAt": {
                             "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentUri": {
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                             "type": "string"
                           },
                           "id": {
@@ -943,6 +975,7 @@
                                 "type": "integer"
                               },
                               "createdAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "id": {
@@ -1042,6 +1075,7 @@
                               "additionalProperties": false,
                               "properties": {
                                 "createdAt": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1049,10 +1083,12 @@
                                 },
                                 "inventoryItemStaleAt": {
                                   "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "inventoryItemUri": {
                                   "nullable": true,
+                                  "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
                                 },
                                 "itemId": {
@@ -1088,6 +1124,7 @@
                           "type": "string"
                         },
                         "createdAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "currency": {
@@ -1115,6 +1152,7 @@
                           "type": "string"
                         },
                         "orderedAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "paymentHint": {
@@ -1167,6 +1205,7 @@
                           "type": "integer"
                         },
                         "updatedAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         }
                       },
@@ -1203,10 +1242,12 @@
                             "type": "string"
                           },
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "deliveredAt": {
                             "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "id": {
@@ -1222,6 +1263,7 @@
                           },
                           "shippedAt": {
                             "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "shippingCents": {
@@ -1242,6 +1284,7 @@
                             "type": "string"
                           },
                           "updatedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           }
                         },
@@ -1423,6 +1466,16 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "netSpendCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "refundedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "residualCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
@@ -1438,7 +1491,9 @@
                         "totalCents",
                         "matchedCents",
                         "awaitingImportCents",
-                        "residualCents"
+                        "residualCents",
+                        "refundedCents",
+                        "netSpendCents"
                       ],
                       "type": "object"
                     },
@@ -1459,6 +1514,7 @@
                                   "type": "string"
                                 },
                                 "createdAt": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1483,9 +1539,11 @@
                               },
                               "chargedAt": {
                                 "nullable": true,
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "createdAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "currency": {
@@ -1529,6 +1587,7 @@
                                 "type": "string"
                               },
                               "updatedAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               }
                             },
@@ -1569,9 +1628,11 @@
                                 },
                                 "confirmedAt": {
                                   "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "createdAt": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1593,6 +1654,7 @@
                                   "type": "string"
                                 },
                                 "transactionUri": {
+                                  "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
                                 }
                               },
@@ -1622,13 +1684,16 @@
                         "additionalProperties": false,
                         "properties": {
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentStaleAt": {
                             "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "documentUri": {
+                            "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                             "type": "string"
                           },
                           "id": {
@@ -1683,6 +1748,7 @@
                                 "type": "integer"
                               },
                               "createdAt": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                 "type": "string"
                               },
                               "id": {
@@ -1782,6 +1848,7 @@
                               "additionalProperties": false,
                               "properties": {
                                 "createdAt": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "id": {
@@ -1789,10 +1856,12 @@
                                 },
                                 "inventoryItemStaleAt": {
                                   "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                                   "type": "string"
                                 },
                                 "inventoryItemUri": {
                                   "nullable": true,
+                                  "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
                                 },
                                 "itemId": {
@@ -1828,6 +1897,7 @@
                           "type": "string"
                         },
                         "createdAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "currency": {
@@ -1855,6 +1925,7 @@
                           "type": "string"
                         },
                         "orderedAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         },
                         "paymentHint": {
@@ -1907,6 +1978,7 @@
                           "type": "integer"
                         },
                         "updatedAt": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                           "type": "string"
                         }
                       },
@@ -1943,10 +2015,12 @@
                             "type": "string"
                           },
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "deliveredAt": {
                             "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "id": {
@@ -1962,6 +2036,7 @@
                           },
                           "shippedAt": {
                             "nullable": true,
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "shippingCents": {
@@ -1982,6 +2057,7 @@
                             "type": "string"
                           },
                           "updatedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           }
                         },
@@ -2063,6 +2139,7 @@
                             "type": "string"
                           },
                           "createdAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "descriptorPattern": {
@@ -2223,6 +2300,7 @@
                       "type": "string"
                     },
                     "createdAt": {
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                       "type": "string"
                     },
                     "descriptorPattern": {
@@ -2343,6 +2421,7 @@
                       "type": "string"
                     },
                     "createdAt": {
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                       "type": "string"
                     },
                     "descriptorPattern": {

@@ -16,8 +16,10 @@ import {
   CurrencySchema,
   DocumentKindSchema,
   IngestMethodSchema,
+  IsoTimestampSchema,
   ItemKindSchema,
   NonNegativeCentsSchema,
+  PopsUriSchema,
   PurchaseStatusSchema,
   SettlementModeSchema,
   SettlementRoleSchema,
@@ -38,15 +40,15 @@ export const CreateShipmentBodySchema = z.object({
   ref: RefSchema,
   carrier: z.string().nullable().optional(),
   trackingNumber: z.string().nullable().optional(),
-  shippedAt: z.string().nullable().optional(),
-  deliveredAt: z.string().nullable().optional(),
+  shippedAt: IsoTimestampSchema.nullable().optional(),
+  deliveredAt: IsoTimestampSchema.nullable().optional(),
   status: ShipmentStatusSchema.optional(),
   shippingCents: NonNegativeCentsSchema.optional(),
 });
 
 export const CreateItemUnitBodySchema = z.object({
   serialNumber: z.string().nullable().optional(),
-  inventoryItemUri: z.string().nullable().optional(),
+  inventoryItemUri: PopsUriSchema.nullable().optional(),
 });
 
 export const CreateItemBodySchema = z.object({
@@ -80,7 +82,7 @@ export const CreateChargeBodySchema = z.object({
   currency: CurrencySchema.optional(),
   /** Value in the order's currency. Defaults to `amountCents` when currencies match. */
   orderAmountCents: CentsSchema.optional(),
-  chargedAt: z.string().nullable().optional(),
+  chargedAt: IsoTimestampSchema.nullable().optional(),
   role: SettlementRoleSchema.optional(),
   paymentHint: z.string().nullable().optional(),
   origin: ChargeOriginSchema.optional(),
@@ -88,7 +90,7 @@ export const CreateChargeBodySchema = z.object({
 });
 
 export const CreateDocumentBodySchema = z.object({
-  documentUri: z.string().trim().min(1),
+  documentUri: PopsUriSchema,
   shipmentRef: RefSchema.nullable().optional(),
   kind: DocumentKindSchema.optional(),
 });
@@ -97,7 +99,7 @@ export const CreatePurchaseBodySchema = z.object({
   source: z.string().trim().min(1),
   sourceOrderId: z.string().nullable().optional(),
   ingestMethod: IngestMethodSchema,
-  orderedAt: z.string().trim().min(1),
+  orderedAt: IsoTimestampSchema,
   currency: CurrencySchema,
   subtotalCents: NonNegativeCentsSchema.optional(),
   shippingCents: NonNegativeCentsSchema.optional(),
@@ -144,8 +146,8 @@ export const ListPurchasesQuerySchema = z.object({
       z.array(PurchaseStatusSchema)
     )
     .optional(),
-  from: z.string().optional(),
-  to: z.string().optional(),
+  from: IsoTimestampSchema.optional(),
+  to: IsoTimestampSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });

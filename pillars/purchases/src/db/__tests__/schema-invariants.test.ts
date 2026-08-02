@@ -302,3 +302,130 @@ describe('migrations', () => {
     }
   });
 });
+
+describe('payload arithmetic', () => {
+  it('rejects allocations summing past their charge', () => {
+    // Allocating $60 and $50 out of a $100 charge makes per-item spend sum
+    // to more than was ever paid, and every downstream per-item figure
+    // inherits the error.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [
+            { ref: 'a', name: 'A', unitPriceCents: 6000, lineTotalCents: 6000 },
+            { ref: 'b', name: 'B', unitPriceCents: 5000, lineTotalCents: 5000 },
+          ],
+          charges: [
+            {
+              sourceChargeRef: 'c',
+              amountCents: 10000,
+              allocations: [
+                { itemRef: 'a', amountCents: 6000 },
+                { itemRef: 'b', amountCents: 5000 },
+              ],
+            },
+          ],
+        })
+      )
+    ).toThrow(/allocations sum to 11000 but the charge is only 10000/);
+  });
+
+  it('allows a charge to cover only part of an order', () => {
+    // Under-allocation is legitimate: the unallocated remainder is visible
+    // as the difference, which is how a partly-attributed charge reads.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [{ ref: 'a', name: 'A', unitPriceCents: 6000, lineTotalCents: 6000 }],
+          charges: [
+            {
+              sourceChargeRef: 'c',
+              amountCents: 10000,
+              allocations: [{ itemRef: 'a', amountCents: 6000 }],
+            },
+          ],
+        })
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects a positive allocation against a refund', () => {
+    // A refund is negative money. Crediting a line positively for money
+    // that came back doubles the error in both directions.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [{ ref: 'a', name: 'A', unitPriceCents: 1000, lineTotalCents: 1000 }],
+          charges: [
+            {
+              sourceChargeRef: 'r',
+              amountCents: -1000,
+              role: 'refund',
+              allocations: [{ itemRef: 'a', amountCents: 1000 }],
+            },
+          ],
+        })
+      )
+    ).toThrow(/signs must agree/);
+  });
+
+  it('accepts a correctly-signed refund allocation', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [{ ref: 'a', name: 'A', unitPriceCents: 1000, lineTotalCents: 1000 }],
+          charges: [
+            {
+              sourceChargeRef: 'r',
+              amountCents: -1000,
+              role: 'refund',
+              allocations: [{ itemRef: 'a', amountCents: -1000 }],
+            },
+          ],
+        })
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects more units than the line has quantity', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [
+            {
+              name: 'Bulb',
+              quantity: 2,
+              unitPriceCents: 1000,
+              lineTotalCents: 2000,
+              units: [{ serialNumber: 'a' }, { serialNumber: 'b' }, { serialNumber: 'c' }],
+            },
+          ],
+        })
+      )
+    ).toThrow(/3 units but a quantity of 2/);
+  });
+
+  it('allows fewer units than quantity, since units are created lazily', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [
+            {
+              name: 'Bulb',
+              quantity: 3,
+              unitPriceCents: 1000,
+              lineTotalCents: 3000,
+              units: [{ serialNumber: 'a' }],
+            },
+          ],
+        })
+      )
+    ).not.toThrow();
+  });
+});

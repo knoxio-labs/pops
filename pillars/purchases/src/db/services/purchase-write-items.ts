@@ -80,7 +80,16 @@ function insertItemTags(ctx: IngestContext, itemId: string, input: CreateItemInp
 }
 
 function insertItemUnits(ctx: IngestContext, itemId: string, input: CreateItemInput): void {
-  for (const unit of input.units ?? []) {
+  const units = input.units ?? [];
+  // A unit is one physical thing, so a line of quantity 2 cannot have three
+  // of them. Fewer is fine and normal — units are created lazily, only where
+  // one needs identity (a serial number, an inventory fan-out).
+  if (units.length > (input.quantity ?? 1)) {
+    throw new InvalidIngestPayloadError(
+      `line '${input.name}' has ${String(units.length)} units but a quantity of ${String(input.quantity ?? 1)}`
+    );
+  }
+  for (const unit of units) {
     ctx.tx
       .insert(purchaseItemUnits)
       .values({

@@ -30,15 +30,21 @@ Four grains, because real purchase data has four and collapsing any of them lose
 
 ## The accounting split
 
-`GET /purchases/:id` returns four numbers, not one, because they call for different actions:
+`GET /purchases/:id` returns the split pre-computed, because each number calls for something different and deriving them per consumer is how three frontends end up disagreeing:
 
-|                       | meaning                                                           | action        |
-| --------------------- | ----------------------------------------------------------------- | ------------- |
-| `matchedCents`        | charged, and a finance transaction backs it                       | none          |
-| `awaitingImportCents` | charged, no transaction yet                                       | wait          |
-| `residualCents`       | no charge accounts for it — gift card, rewards, or a genuine miss | a human looks |
+|                       | meaning                                                           | action           |
+| --------------------- | ----------------------------------------------------------------- | ---------------- |
+| `matchedCents`        | charged, and a finance transaction backs it                       | none             |
+| `awaitingImportCents` | charged, no transaction yet                                       | wait             |
+| `residualCents`       | no charge accounts for it — gift card, rewards, or a genuine miss | a human looks    |
+| `refundedCents`       | money returned, as a positive magnitude                           | none             |
+| `netSpendCents`       | `matched + awaitingImport − refunded`                             | the headline one |
 
-Folding the second into the third would flag every recent order as broken until its statement imports, which is exactly the false alarm that teaches someone to ignore the number. `residualCents` is never clamped: a negative value means over-charging, which is a bug worth seeing.
+The identity to rely on: `totalCents === matchedCents + awaitingImportCents + residualCents`, with `refundedCents` orthogonal to it.
+
+Folding `awaitingImport` into the residual would flag every recent order as broken until its statement imports — the false alarm that teaches someone to ignore the number. Folding **refunds** in is worse, and an earlier version did: a fully-paid order with an $11.79 refund reported an $11.79 residual, presenting returned money as missing money, so receiving a refund made the "something is wrong" number go _up_. A property test now asserts a refund can never increase the residual.
+
+`residualCents` is never clamped: a negative value means over-charging, which is a bug worth seeing.
 
 `authorization` charges are excluded from all of it. A card hold and its capture are two records of one payment, and counting both makes a correctly-settled order look doubly paid.
 
@@ -74,9 +80,15 @@ Not shipped, and not stubbed either:
 
 ## Tests
 
-`schema-migration-drift.test.ts` is the one to know about. The drizzle definitions and the hand-written migration are two independent descriptions of the same database and nothing forces them to agree — there is no `drizzle-kit generate` step here. That test introspects the migrated database and diffs it against the drizzle schema in both directions, including NOT NULL, foreign keys, `ON DELETE` behaviour and the indexes the hot paths depend on. Without it, a column added to `src/db/schema/*.ts` without a matching migration edit would typecheck, pass every service test that doesn't touch it, and fail in production on the first INSERT.
+Three of these do work the rest cannot, and are worth knowing about before changing anything here.
 
-Coverage carries a threshold ratchet in `vitest.config.ts`; the service layer sits at 100%.
+**`contract-conformance.test.ts`** parses every response the pillar actually returns back through the zod schema the contract publishes. ts-rest validates _requests_ against the contract but not responses, so without this the contract is only half-enforced — and the generated Hey API client a frontend consumes is derived from those schemas, so a field returned as `null` where the schema says `string` produces a client whose types are a polite fiction. It also asserts `POST` and a subsequent `GET` return identical bodies, and that every declared route carries a unique `operationId`.
+
+**`accounting-properties.test.ts`** generates orders from a seeded PRNG and asserts what must hold for _any_ combination: the identity reconstructs, authorizations move nothing, a refund never raises the residual, every bucket is a safe integer. The example-based tests beside it were written from the same understanding that produced the code and share its blind spots — this one found a real modelling error on its first run. Generation is seeded rather than random, and the seed is printed on failure, so a case can be replayed.
+
+**`schema-migration-drift.test.ts`** covers the third gap. The drizzle definitions and the hand-written migration are two independent descriptions of the same database and nothing forces them to agree — there is no `drizzle-kit generate` step here. It introspects the migrated database and diffs it against the drizzle schema in both directions, including NOT NULL, foreign keys, `ON DELETE` behaviour and the indexes the hot paths depend on. Without it, a column added to `src/db/schema/*.ts` without a matching migration edit would typecheck, pass every service test that doesn't touch it, and fail in production on the first INSERT.
+
+Coverage carries a threshold ratchet in `vitest.config.ts`; the service layer sits at 100% statements.
 
 ## Local development
 

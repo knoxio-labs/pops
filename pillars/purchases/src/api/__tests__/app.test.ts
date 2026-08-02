@@ -130,6 +130,8 @@ describe('POST /purchases', () => {
       matchedCents: 0,
       awaitingImportCents: 5678,
       residualCents: 0,
+      refundedCents: 0,
+      netSpendCents: 5678,
     });
   });
 
@@ -391,6 +393,95 @@ describe('payload rejections', () => {
         checksum: 'bad-doc',
         documents: [{ documentUri: 'pops://documents/document/x', kind: 'vibes' }],
       });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('source handler edge paths', () => {
+  it('rejects an upsert with an empty label rather than storing a blank source', async () => {
+    const res = await request(app).put('/sources/bunnings').send({ label: '   ' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an unknown auto-link policy', async () => {
+    const res = await request(app)
+      .put('/sources/bunnings')
+      .send({ label: 'Bunnings', autoLinkPolicy: 'sometimes' });
+    expect(res.status).toBe(400);
+  });
+
+  it('clears a descriptor pattern when the caller passes null', async () => {
+    await request(app)
+      .put('/sources/bunnings')
+      .send({ label: 'Bunnings', descriptorPattern: 'BUNNINGS%' });
+    const res = await request(app)
+      .put('/sources/bunnings')
+      .send({ label: 'Bunnings', descriptorPattern: null });
+    expect(res.status).toBe(200);
+    expect(res.body.descriptorPattern).toBeNull();
+  });
+
+  it('reports an empty list before any source beyond the seed exists', async () => {
+    const res = await request(app).get('/sources');
+    expect(res.body.items.map((s: { id: string }) => s.id)).toEqual(['amazon']);
+  });
+});
+
+describe('purchase handler edge paths', () => {
+  it('paginates the index deterministically', async () => {
+    for (const n of [1, 2, 3]) {
+      await request(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          checksum: `p${String(n)}`,
+          sourceOrderId: `p${String(n)}`,
+          orderedAt: `2026-0${String(n)}-01T00:00:00Z`,
+        });
+    }
+    const page1 = await request(app).get('/purchases?limit=2&offset=0');
+    const page2 = await request(app).get('/purchases?limit=2&offset=2');
+
+    expect(page1.body.items.map((p: { checksum: string }) => p.checksum)).toEqual(['p3', 'p2']);
+    expect(page2.body.items.map((p: { checksum: string }) => p.checksum)).toEqual(['p1']);
+  });
+
+  it('filters by source', async () => {
+    await request(app).post('/purchases').send(minimalOrder);
+    expect((await request(app).get('/purchases?sources=amazon')).body.items).toHaveLength(1);
+    expect((await request(app).get('/purchases?sources=ebay')).body.items).toHaveLength(0);
+  });
+
+  it('bounds an orderedAt range inclusively', async () => {
+    await request(app).post('/purchases').send(minimalOrder);
+    const inside = await request(app).get(
+      '/purchases?from=2026-02-02T01:41:21Z&to=2026-02-02T01:41:21Z'
+    );
+    const outside = await request(app).get('/purchases?from=2026-03-01T00:00:00Z');
+    expect(inside.body.items).toHaveLength(1);
+    expect(outside.body.items).toHaveLength(0);
+  });
+
+  it('rejects a non-ISO range bound rather than silently matching nothing', async () => {
+    expect((await request(app).get('/purchases?from=last%20tuesday')).status).toBe(400);
+  });
+
+  it('rejects a malformed pops:// document uri', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({
+        ...minimalOrder,
+        checksum: 'bad-uri',
+        sourceOrderId: 'bad-uri',
+        documents: [{ documentUri: 'https://example.com/invoice.pdf' }],
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a non-ISO orderedAt', async () => {
+    const res = await request(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, checksum: 'bad-date', orderedAt: '2 Feb 2026' });
     expect(res.status).toBe(400);
   });
 });

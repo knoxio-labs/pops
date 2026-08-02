@@ -37,12 +37,48 @@ export const NonNegativeCentsSchema = z.int().min(0);
 /** ISO 4217. Uppercase three letters, so `aud` is a validation error, not a silent second currency. */
 export const CurrencySchema = z.string().regex(/^[A-Z]{3}$/, 'expected an ISO 4217 code');
 
+/**
+ * An ISO-8601 timestamp carrying an explicit timezone.
+ *
+ * Enforced rather than merely documented, because the failure is silent:
+ * `orderedAt` is what the reconciliation ladder's date window is measured
+ * against, so a value the window cannot parse does not error — it simply
+ * never matches, and the order sits in `awaiting_settlement` forever
+ * looking like a purchase nobody paid for.
+ *
+ * The timezone is required for the same reason. A naive local timestamp
+ * compared against a transaction date is ambiguous by up to a day, which
+ * is a meaningful fraction of a 14–21 day matching window.
+ */
+export const IsoTimestampSchema = z
+  .string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/u,
+    'expected an ISO-8601 timestamp with a timezone, e.g. 2026-02-02T01:41:21Z'
+  );
+
+/**
+ * A soft cross-pillar reference: `pops://<pillar>/<type>/<id>`.
+ *
+ * These are resolved by a nightly cron and never at read time, so a
+ * malformed one produces no error at ingest and no error on read — it just
+ * never resolves, and the link to `finance`, `inventory` or `documents`
+ * quietly stays broken. Validating the shape at the boundary is the only
+ * place the mistake is cheap to catch.
+ */
+export const PopsUriSchema = z
+  .string()
+  .regex(
+    /^pops:\/\/[a-z0-9-]+\/[a-z0-9-]+\/[^/\s]+$/u,
+    'expected a pops:// URI, e.g. pops://finance/transaction/<id>'
+  );
+
 export const PurchaseSchema = z.object({
   id: z.string(),
   source: z.string(),
   sourceOrderId: z.string().nullable(),
   ingestMethod: IngestMethodSchema,
-  orderedAt: z.string(),
+  orderedAt: IsoTimestampSchema,
   currency: CurrencySchema,
   subtotalCents: NonNegativeCentsSchema,
   shippingCents: NonNegativeCentsSchema,
@@ -56,8 +92,8 @@ export const PurchaseSchema = z.object({
   rawRef: z.string().nullable(),
   checksum: z.string(),
   status: PurchaseStatusSchema,
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 
 export const PurchaseShipmentSchema = z.object({
@@ -67,12 +103,12 @@ export const PurchaseShipmentSchema = z.object({
   position: z.int().min(0),
   carrier: z.string().nullable(),
   trackingNumber: z.string().nullable(),
-  shippedAt: z.string().nullable(),
-  deliveredAt: z.string().nullable(),
+  shippedAt: IsoTimestampSchema.nullable(),
+  deliveredAt: IsoTimestampSchema.nullable(),
   status: ShipmentStatusSchema,
   shippingCents: NonNegativeCentsSchema,
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 
 export const PurchaseItemSchema = z.object({
@@ -92,16 +128,16 @@ export const PurchaseItemSchema = z.object({
   allocatedAdjustmentCents: CentsSchema,
   merchantCategory: z.string().nullable(),
   kind: ItemKindSchema.nullable(),
-  createdAt: z.string(),
+  createdAt: IsoTimestampSchema,
 });
 
 export const PurchaseItemUnitSchema = z.object({
   id: z.string(),
   itemId: z.string(),
   serialNumber: z.string().nullable(),
-  inventoryItemUri: z.string().nullable(),
-  inventoryItemStaleAt: z.string().nullable(),
-  createdAt: z.string(),
+  inventoryItemUri: PopsUriSchema.nullable(),
+  inventoryItemStaleAt: IsoTimestampSchema.nullable(),
+  createdAt: IsoTimestampSchema,
 });
 
 export const PurchaseChargeSchema = z.object({
@@ -113,24 +149,24 @@ export const PurchaseChargeSchema = z.object({
   amountCents: CentsSchema,
   currency: CurrencySchema,
   orderAmountCents: CentsSchema,
-  chargedAt: z.string().nullable(),
+  chargedAt: IsoTimestampSchema.nullable(),
   role: SettlementRoleSchema,
   paymentHint: z.string().nullable(),
   origin: ChargeOriginSchema,
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 
 export const PurchaseChargeLinkSchema = z.object({
   id: z.string(),
   chargeId: z.string(),
-  transactionUri: z.string(),
+  transactionUri: PopsUriSchema,
   amountCents: CentsSchema,
   linkType: LinkTypeSchema,
   confidence: z.number().min(0).max(1),
   matchRuleId: z.string().nullable(),
-  createdAt: z.string(),
-  confirmedAt: z.string().nullable(),
+  createdAt: IsoTimestampSchema,
+  confirmedAt: IsoTimestampSchema.nullable(),
 });
 
 export const PurchaseItemAllocationSchema = z.object({
@@ -138,17 +174,17 @@ export const PurchaseItemAllocationSchema = z.object({
   chargeId: z.string(),
   itemId: z.string(),
   amountCents: CentsSchema,
-  createdAt: z.string(),
+  createdAt: IsoTimestampSchema,
 });
 
 export const PurchaseDocumentSchema = z.object({
   id: z.string(),
   purchaseId: z.string(),
   shipmentId: z.string().nullable(),
-  documentUri: z.string(),
-  documentStaleAt: z.string().nullable(),
+  documentUri: PopsUriSchema,
+  documentStaleAt: IsoTimestampSchema.nullable(),
   kind: DocumentKindSchema,
-  createdAt: z.string(),
+  createdAt: IsoTimestampSchema,
 });
 
 export const PurchaseSourceSchema = z.object({
@@ -158,23 +194,31 @@ export const PurchaseSourceSchema = z.object({
   settlementWindowDays: z.int().min(1),
   autoLinkPolicy: AutoLinkPolicySchema,
   ingestAdapter: z.string().nullable(),
-  createdAt: z.string(),
+  createdAt: IsoTimestampSchema,
 });
 
 /**
  * The accounting split.
  *
- * Part of the wire format on purpose. A consumer that renders spend without
- * it would convert a known unknown into a false certainty, which ADR-042
- * rates as worse than showing nothing — and one that folded
- * `awaitingImportCents` into the residual would flag every recent order as
- * broken until its statement imports.
+ * Part of the wire format on purpose, and pre-split so no consumer has to
+ * derive it. A view that drops the residual converts a known unknown into a
+ * false certainty, which ADR-042 rates as worse than showing nothing; one
+ * that folds `awaitingImportCents` into it flags every recent order as
+ * broken until its statement imports; and one that folds refunds in reports
+ * returned money as missing money.
+ *
+ * The identity consumers can rely on:
+ * `totalCents === matchedCents + awaitingImportCents + residualCents`,
+ * with `refundedCents` orthogonal and `netSpendCents` the headline figure.
  */
 export const PurchaseAccountingSchema = z.object({
   totalCents: CentsSchema,
   matchedCents: CentsSchema,
   awaitingImportCents: CentsSchema,
   residualCents: CentsSchema,
+  /** Positive magnitude, so `refundedCents: 1179` reads as "$11.79 came back". */
+  refundedCents: NonNegativeCentsSchema,
+  netSpendCents: CentsSchema,
 });
 
 export const PurchaseItemDetailSchema = z.object({
