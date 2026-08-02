@@ -20,8 +20,10 @@ import type {
 } from '../../contract/constants.js';
 
 export interface CreateShipmentInput {
-  /** Adapter-local handle used to attach lines and charges to this delivery within one call. */
+  /** Adapter-local wiring handle. Never persisted. */
   readonly ref: string;
+  /** The merchant's own identifier for this delivery, which IS persisted. */
+  readonly sourceShipmentRef?: string | null;
   readonly carrier?: string | null;
   readonly trackingNumber?: string | null;
   readonly shippedAt?: string | null;

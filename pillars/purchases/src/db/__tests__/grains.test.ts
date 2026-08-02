@@ -39,6 +39,7 @@ describe('one order, many deliveries', () => {
       shipments: [
         {
           ref: 'box1',
+          sourceShipmentRef: 'SHIP-1',
           carrier: 'AMZL',
           trackingNumber: 'TBA1',
           deliveredAt: '2026-02-04T00:00:00Z',
@@ -47,6 +48,7 @@ describe('one order, many deliveries', () => {
         },
         {
           ref: 'box2',
+          sourceShipmentRef: 'SHIP-2',
           carrier: 'AusPost',
           trackingNumber: 'AP2',
           status: 'shipped',
@@ -92,10 +94,25 @@ describe('one order, many deliveries', () => {
     const shipments = getPurchase(opened.db, id)?.shipments ?? [];
     const byRef = new Map(shipments.map((s) => [s.sourceShipmentRef, s]));
 
-    expect(byRef.get('box1')?.carrier).toBe('AMZL');
-    expect(byRef.get('box1')?.deliveredAt).toBe('2026-02-04T00:00:00Z');
-    expect(byRef.get('box2')?.status).toBe('shipped');
-    expect(byRef.get('box2')?.shippingCents).toBe(500);
+    expect(byRef.get('SHIP-1')?.carrier).toBe('AMZL');
+    expect(byRef.get('SHIP-1')?.deliveredAt).toBe('2026-02-04T00:00:00Z');
+    expect(byRef.get('SHIP-2')?.status).toBe('shipped');
+    expect(byRef.get('SHIP-2')?.shippingCents).toBe(500);
+  });
+
+  it('leaves sourceShipmentRef null when the merchant has no shipment id', () => {
+    // Amazon's DSAR export has none, so its adapter supplies only the local
+    // wiring `ref`. Promoting that handle into the persisted field would
+    // fabricate a merchant identifier that does not exist.
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'no-ship-id',
+        sourceOrderId: 'no-ship-id',
+        shipments: [{ ref: 'box1' }],
+      })
+    );
+    expect(getPurchase(opened.db, id)?.shipments[0]?.sourceShipmentRef).toBeNull();
   });
 
   it('lets a line belong to no delivery at all', () => {
@@ -112,7 +129,7 @@ describe('one order, many deliveries', () => {
       .select()
       .from(purchaseShipments)
       .all()
-      .find((s) => s.sourceShipmentRef === 'box1');
+      .find((s) => s.sourceShipmentRef === 'SHIP-1');
     opened.raw.prepare('DELETE FROM purchase_shipments WHERE id = ?').run(box1?.id);
 
     const detail = getPurchase(opened.db, id);
@@ -161,7 +178,11 @@ describe('ordering', () => {
       opened.db,
       amazonOrder({
         totalCents: 3000,
-        shipments: [{ ref: 'first' }, { ref: 'second' }, { ref: 'third' }],
+        shipments: [
+          { ref: 'a', sourceShipmentRef: 'first' },
+          { ref: 'b', sourceShipmentRef: 'second' },
+          { ref: 'c', sourceShipmentRef: 'third' },
+        ],
         charges: [
           { sourceChargeRef: 'c1', amountCents: 1000 },
           { sourceChargeRef: 'c2', amountCents: 1000 },

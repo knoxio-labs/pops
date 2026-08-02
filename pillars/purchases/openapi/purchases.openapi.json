@@ -616,6 +616,10 @@
                           "minimum": 0,
                           "type": "integer"
                         },
+                        "sourceShipmentRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "status": {
                           "enum": ["pending", "shipped", "delivered", "cancelled", "returned"],
                           "type": "string"

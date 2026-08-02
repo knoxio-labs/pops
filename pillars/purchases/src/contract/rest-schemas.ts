@@ -33,11 +33,23 @@ export const ErrorBodySchema = z.object({
 
 export const OkSchema = z.object({ ok: z.literal(true) });
 
-/** Adapter-local handle, unique within one create call. Never stored. */
+/**
+ * Adapter-local wiring handle, unique within one create call and never
+ * persisted. It exists only so a line or charge can point at a delivery
+ * the payload has not been given ids for yet.
+ */
 const RefSchema = z.string().trim().min(1);
 
 export const CreateShipmentBodySchema = z.object({
   ref: RefSchema,
+  /**
+   * The merchant's own identifier for this delivery, which IS persisted.
+   * Distinct from `ref`: that is local plumbing, this is a fact about the
+   * order. Null when the source has none — Amazon's DSAR export does not,
+   * so its adapter leaves this unset rather than promoting its wiring
+   * handle into a field that means something else.
+   */
+  sourceShipmentRef: z.string().nullable().optional(),
   carrier: z.string().nullable().optional(),
   trackingNumber: z.string().nullable().optional(),
   shippedAt: IsoTimestampSchema.nullable().optional(),

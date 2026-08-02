@@ -274,6 +274,7 @@ export interface operations {
             ref: string;
             shippedAt?: string | null;
             shippingCents?: number;
+            sourceShipmentRef?: string | null;
             /** @enum {string} */
             status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
             trackingNumber?: string | null;

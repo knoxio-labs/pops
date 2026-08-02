@@ -156,7 +156,7 @@ function insertShipment(ctx: IngestContext, input: CreateShipmentInput, position
     .insert(purchaseShipments)
     .values({
       purchaseId: ctx.purchase.id,
-      sourceShipmentRef: input.ref,
+      sourceShipmentRef: input.sourceShipmentRef ?? null,
       position,
       carrier: input.carrier ?? null,
       trackingNumber: input.trackingNumber ?? null,

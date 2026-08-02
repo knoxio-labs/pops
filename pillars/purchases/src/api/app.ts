@@ -38,10 +38,20 @@ const openapiDocument: unknown = JSON.parse(
   )
 );
 
+/**
+ * One order is one request, and a grocery shop is ~100 lines with tags,
+ * units, per-line charge allocations and documents — measured at ~39kb,
+ * which clears Express's 100kb default but not by much. A bigger shop, or
+ * longer product names, would start rejecting legitimate ingests with a
+ * 413 that reads like a server fault. Matches the limit finance, food,
+ * inventory, media and cerebrum already set.
+ */
+const JSON_BODY_LIMIT = '20mb';
+
 export function createPurchasesApiApp(deps: PurchasesApiDeps): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json());
+  app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
   const handlers = makeRequestHandler(deps);
 
