@@ -74,6 +74,7 @@ describe('PILLARS', () => {
       'lists',
       'contacts',
       'ai',
+      'purchases',
     ]);
   });
 

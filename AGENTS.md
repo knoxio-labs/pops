@@ -90,9 +90,10 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 | `contacts`     | 3010 | contacts                                                  | **Rust** (axum + OpenAPI), `src/entities/`        |
 | `mcp`          | 3011 | MCP gateway                                               | **binds :3011 in code** (`MCP_PORT ?? 3011`)      |
 | `documents`    | 3012 | paperless-ngx bridge (status/search proxy, thumbnails)    | bridge pillar (ADR-035), owns **no DB**           |
+| `purchases`    | 3013 | purchase documents, line items, transaction links         | data pillar; ADR-042; no frontend yet             |
 | `shell`        | 5568 | React SPA host                                            | UI pillar; Vite + nginx, **not** the default 5173 |
 
-The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
+The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
 
 **Pillar kinds (ADR-035):** a pillar is any service registered with `registry` that exposes `/manifest.json`. **Data** pillars own a domain DB; **bridge** pillars adapt external systems; **UI** pillars host frontend SPAs (`pops-shell` registers as `id: 'shell'`).
 

@@ -86,6 +86,7 @@ export const PILLAR_UPSTREAMS: Record<BuildPillarId, { host: string; port: numbe
   cerebrum: { host: 'cerebrum-api', port: 3007 },
   ai: { host: 'ai-api', port: 3008 },
   contacts: { host: 'contacts-api', port: 3010 },
+  purchases: { host: 'purchases-api', port: 3013 },
 };
 
 const PILLAR_UPSTREAMS_BY_ID: ReadonlyMap<string, { host: string; port: number }> = new Map(
@@ -116,6 +117,7 @@ export const PILLAR_RENDER_ORDER: readonly BuildPillarId[] = [
   'cerebrum',
   'ai',
   'contacts',
+  'purchases',
 ];
 
 export { DEFAULT_REGISTRY_URL };

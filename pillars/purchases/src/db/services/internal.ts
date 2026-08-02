@@ -1,0 +1,33 @@
+/**
+ * Shared helpers for the purchases schema service layer.
+ *
+ * `PurchasesDb` is re-exported from the db barrel (`src/db/index.ts`) so
+ * callers can type the handle they pass in.
+ *
+ * The type uses `Record<string, unknown>` (not `Record<string, never>`) so
+ * the alias matches both a narrow per-table handle and the drizzle handle
+ * that `openPurchasesDb` returns.
+ */
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+
+/** A drizzle handle — either the top-level db or a transaction. */
+export type PurchasesDb = BetterSQLite3Database<Record<string, unknown>>;
+
+/**
+ * Extract the row from an `.insert(...).returning().all()` or equivalent
+ * mutation that's guaranteed to produce at least one result. Throws with a
+ * pointed message if it didn't — that indicates a logic error in the caller
+ * rather than a normal flow.
+ */
+export function expectRow<T>(rows: readonly T[], label: string): T {
+  const row = rows[0];
+  if (row === undefined) {
+    throw new Error(`${label}: expected a row but got none`);
+  }
+  return row;
+}
+
+/** Current ISO timestamp (UTC) — service-layer wall-clock. */
+export function nowIso(): string {
+  return new Date().toISOString();
+}

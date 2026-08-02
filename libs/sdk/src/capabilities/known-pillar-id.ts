@@ -36,6 +36,7 @@ export const PILLARS = [
   'lists',
   'contacts',
   'ai',
+  'purchases',
 ] as const;
 
 /**
