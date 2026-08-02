@@ -155,6 +155,7 @@ function insertShipment(ctx: IngestContext, input: CreateShipmentInput, position
 }
 
 function insertCharge(ctx: IngestContext, input: CreateChargeInput, position: number): void {
+  const orderAmountCents = resolveOrderAmount(ctx, input);
   const rows = ctx.tx
     .insert(purchaseCharges)
     .values({
@@ -164,10 +165,7 @@ function insertCharge(ctx: IngestContext, input: CreateChargeInput, position: nu
       position,
       amountCents: input.amountCents,
       currency: input.currency ?? ctx.purchase.currency,
-      // When the adapter doesn't state an order-currency value, the two
-      // currencies are the same by construction, so the settled amount IS
-      // the order-currency amount.
-      orderAmountCents: input.orderAmountCents ?? input.amountCents,
+      orderAmountCents,
       chargedAt: input.chargedAt ?? null,
       role: input.role ?? 'capture',
       paymentHint: input.paymentHint ?? ctx.purchase.paymentHint,
@@ -180,8 +178,54 @@ function insertCharge(ctx: IngestContext, input: CreateChargeInput, position: nu
   insertAllocations(ctx, expectRow(rows, 'createPurchase.charge').id, input);
 }
 
+/**
+ * Resolve a charge's value in the ORDER's currency, which is the unit the
+ * residual is computed in.
+ *
+ * Defaulting it to the settled amount is only correct when the two
+ * currencies are the same. An earlier version defaulted unconditionally on
+ * the assumption that they were — an assumption nothing enforced, so an
+ * adapter that set a foreign settlement currency and forgot
+ * `orderAmountCents` would record AUD cents as though they were USD cents.
+ * The residual is computed from this number, so the error would surface as
+ * an arbitrary unexplained gap rather than as anything traceable.
+ *
+ * Both directions are rejected: a currency mismatch with no explicit
+ * amount, and an explicit amount that contradicts a matching currency.
+ */
+function resolveOrderAmount(ctx: IngestContext, input: CreateChargeInput): number {
+  const settlementCurrency = input.currency ?? ctx.purchase.currency;
+  const sameCurrency = settlementCurrency === ctx.purchase.currency;
+
+  if (input.orderAmountCents === undefined) {
+    if (!sameCurrency) {
+      throw new InvalidIngestPayloadError(
+        `charge settles in ${settlementCurrency} but the order is priced in ${ctx.purchase.currency}, so orderAmountCents is required`
+      );
+    }
+    return input.amountCents;
+  }
+
+  if (sameCurrency && input.orderAmountCents !== input.amountCents) {
+    throw new InvalidIngestPayloadError(
+      `charge settles in the order's own currency (${settlementCurrency}) but orderAmountCents ${String(input.orderAmountCents)} differs from amountCents ${String(input.amountCents)}`
+    );
+  }
+  return input.orderAmountCents;
+}
+
 function insertAllocations(ctx: IngestContext, chargeId: string, input: CreateChargeInput): void {
+  const seen = new Set<string>();
   for (const allocation of input.allocations ?? []) {
+    // Checked before the write so the (charge_id, item_id) unique index
+    // doesn't fire first and report a 409 against stored data, when the
+    // truth is that one charge allocates to the same line twice.
+    if (seen.has(allocation.itemRef)) {
+      throw new InvalidIngestPayloadError(
+        `charge allocates to item ref '${allocation.itemRef}' more than once`
+      );
+    }
+    seen.add(allocation.itemRef);
     const itemId = ctx.itemIds.get(allocation.itemRef);
     if (itemId === undefined) {
       throw new InvalidIngestPayloadError(

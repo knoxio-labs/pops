@@ -124,11 +124,16 @@ describe('charge constraints', () => {
   });
 
   it('rejects a settlement currency that is not three characters', () => {
+    // orderAmountCents is supplied so the payload clears the service-level
+    // FX guard and the DB CHECK is what actually rejects it — otherwise
+    // this would pass for the wrong reason.
     expect(() =>
       createPurchase(
         opened.db,
         amazonOrder({
-          charges: [{ sourceChargeRef: 'c', amountCents: 100, currency: 'AUDD' }],
+          charges: [
+            { sourceChargeRef: 'c', amountCents: 100, currency: 'AUDD', orderAmountCents: 100 },
+          ],
         })
       )
     ).toThrow(/CHECK constraint failed/i);

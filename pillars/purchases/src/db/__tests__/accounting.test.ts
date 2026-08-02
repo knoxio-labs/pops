@@ -202,3 +202,81 @@ describe('a foreign-currency order', () => {
     expect(detail?.charges[0]?.charge.currency).toBe('AUD');
   });
 });
+
+describe('charge currency consistency', () => {
+  it('rejects a foreign settlement currency with no order-currency amount', () => {
+    // The silent-corruption case: without orderAmountCents this used to
+    // record 4210 AUD cents as though they were USD cents, and the residual
+    // is computed from that number.
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          currency: 'USD',
+          totalCents: 2750,
+          charges: [{ sourceChargeRef: 'c', amountCents: 4210, currency: 'AUD' }],
+        })
+      )
+    ).toThrow(/orderAmountCents is required/);
+  });
+
+  it('accepts a foreign settlement currency when the order-currency amount is stated', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        currency: 'USD',
+        totalCents: 2750,
+        charges: [
+          { sourceChargeRef: 'c', amountCents: 4210, currency: 'AUD', orderAmountCents: 2750 },
+        ],
+      })
+    );
+    expect(getPurchase(opened.db, id)?.accounting.residualCents).toBe(0);
+  });
+
+  it("rejects an order-currency amount that contradicts the order's own currency", () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          currency: 'AUD',
+          totalCents: 5678,
+          charges: [
+            { sourceChargeRef: 'c', amountCents: 5678, currency: 'AUD', orderAmountCents: 9999 },
+          ],
+        })
+      )
+    ).toThrow(/differs from amountCents/);
+  });
+
+  it('defaults the order-currency amount when the charge settles in the order currency', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ totalCents: 5678, charges: [{ sourceChargeRef: 'c', amountCents: 5678 }] })
+    );
+    const charge = getPurchase(opened.db, id)?.charges[0]?.charge;
+    expect(charge?.orderAmountCents).toBe(5678);
+    expect(charge?.currency).toBe('AUD');
+  });
+
+  it('rejects a charge allocating to the same line twice', () => {
+    expect(() =>
+      createPurchase(
+        opened.db,
+        amazonOrder({
+          items: [{ ref: 'a', name: 'A', unitPriceCents: 100, lineTotalCents: 100 }],
+          charges: [
+            {
+              sourceChargeRef: 'c',
+              amountCents: 100,
+              allocations: [
+                { itemRef: 'a', amountCents: 60 },
+                { itemRef: 'a', amountCents: 40 },
+              ],
+            },
+          ],
+        })
+      )
+    ).toThrow(/more than once/);
+  });
+});
