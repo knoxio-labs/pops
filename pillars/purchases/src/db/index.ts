@@ -52,4 +52,19 @@ export {
   type UpsertSourceInput,
 } from './services/sources.js';
 
+export {
+  listConfirmedLinks,
+  listOrdersNeedingDerivedCharge,
+  listSolvableCharges,
+  type ReconcileScope,
+} from './services/reconcile-reads.js';
+
+export {
+  chargeIdsForPurchases,
+  confirmLink,
+  mintDerivedCharge,
+  persistProposedLinks,
+  tearDownUnconfirmedLinks,
+} from './services/reconcile-writes.js';
+
 export { openPurchasesDb, type OpenedPurchasesDb } from './open-purchases-db.js';
