@@ -73,6 +73,10 @@ const DEFAULT_REGISTRY_URL = 'http://registry-api:3001';
  * The fallback is unchanged, so nothing about a compose deployment moves.
  */
 function defaultRegistryUrl(): string {
+  // `@pops/pillar-sdk/client` is imported by browser code too (the shell),
+  // where `process` does not exist under Vite — reading it unguarded turns
+  // a default-constructed transport into a ReferenceError at runtime.
+  if (typeof process === 'undefined') return DEFAULT_REGISTRY_URL;
   const fromEnv = process.env['POPS_REGISTRY_URL'];
   return fromEnv === undefined || fromEnv === '' ? DEFAULT_REGISTRY_URL : fromEnv;
 }

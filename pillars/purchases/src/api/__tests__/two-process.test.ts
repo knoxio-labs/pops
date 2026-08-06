@@ -190,7 +190,24 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  purchases.kill('SIGTERM');
+  // Wait for the child to actually exit. Not politeness: an unawaited
+  // ChildProcess handle keeps the Vitest run alive, and removing the temp
+  // directory while the child still holds the SQLite file open is a race.
+  await new Promise<void>((resolve) => {
+    if (purchases.exitCode !== null || purchases.signalCode !== null) {
+      resolve();
+      return;
+    }
+    const kill = setTimeout(() => {
+      purchases.kill('SIGKILL');
+    }, 5000);
+    purchases.once('exit', () => {
+      clearTimeout(kill);
+      resolve();
+    });
+    purchases.kill('SIGTERM');
+  });
+
   await new Promise<void>((resolve) => {
     registry.close(() => {
       resolve();
