@@ -16,7 +16,7 @@ import {
   type ReconcileScope,
 } from '../db/index.js';
 import { solve } from './solve.js';
-import { settlementWindowFor, unionOfWindows } from './window.js';
+import { settlementWindowFor, unionOfWindows, type SettlementWindow } from './window.js';
 
 import type { FinanceClient } from '../api/finance/client.js';
 import type { PurchasesDb } from '../db/index.js';
@@ -48,33 +48,33 @@ export interface SweepDeps {
 /**
  * Run one sweep over `scope`.
  *
- * **An unreachable finance skips the sweep entirely.** The teardown and the
- * re-solve are one operation: tearing down links and then re-solving
- * against an empty candidate set would unlink every correctly matched order
- * in the window and report the money as unexplained. So the candidates are
- * fetched FIRST, and a non-`ok` fetch returns before anything is written.
- * This is the constraint the finance client's discriminated result exists
- * to make unmissable.
+ * **An unreachable finance writes nothing at all.** Everything before the
+ * fetch is a read; every write happens after it, in one transaction.
+ *
+ * The obvious half of that is teardown: discarding links and then
+ * re-solving against an empty candidate set would unlink every correctly
+ * matched order in the window and report the money as unexplained. The less
+ * obvious half is minting — a derived charge moves an order's money out of
+ * `residual` and into `awaitingImport`, so minting during an outage would
+ * change what the user sees as explained while the sweep reported that it
+ * had done nothing. `skipped` means nothing changed, and it has to be true.
  */
 export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Promise<SweepOutcome> {
   const { db, finance, defaultWindowDays } = deps;
 
-  const minted = mintMissingCharges(db, scope);
-  const charges = listSolvableCharges(db, scope);
-  if (charges.length === 0) {
-    return emptySweep(minted);
-  }
+  // Read-only until the fetch succeeds. Minting is a WRITE, and not a
+  // harmless one: a derived charge moves an order's money out of `residual`
+  // and into `awaitingImport`, so minting during an outage would change what
+  // the user sees as explained while reporting that nothing happened.
+  const chargeless = listOrdersNeedingDerivedCharge(db, scope);
+  const existing = listSolvableCharges(db, scope);
+  if (chargeless.length === 0 && existing.length === 0) return emptySweep();
 
-  const window = unionOfWindows(
-    charges.flatMap((charge) => {
-      const each = settlementWindowFor(
-        charge.orderedAt,
-        charge.settlementWindowDays ?? defaultWindowDays
-      );
-      return each === null ? [] : [each];
-    })
-  );
-  if (window === null) return emptySweep(minted);
+  const window = unionOfWindows([
+    ...windowsFor(existing, defaultWindowDays),
+    ...windowsFor(chargeless, defaultWindowDays),
+  ]);
+  if (window === null) return emptySweep();
 
   const fetched = await finance.fetchCandidates(window);
   if (fetched.kind !== 'ok') {
@@ -82,44 +82,59 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
   }
 
   const confirmed = listConfirmedLinks(db);
-  const solved = solve({
-    charges,
-    transactions: fetched.transactions,
-    confirmed,
-    defaultWindowDays,
-  });
 
-  // Teardown and write are one transaction: a sweep that discarded links
-  // and then failed would leave every order in the window looking unpaid.
-  let tornDown = 0;
-  let written = 0;
+  // One transaction for every write the sweep makes. Minting reads its own
+  // work list inside it, so two concurrent sweeps cannot both see the same
+  // order as chargeless and mint a twin. Teardown and persist share it for a
+  // different reason: a sweep that discarded links and then failed would
+  // leave every order in its window looking unpaid.
+  let result: SweepResult | null = null;
   db.transaction((tx) => {
-    tornDown = tearDownUnconfirmedLinks(tx, unconfirmedChargeIds(charges, confirmed));
-    written = persistProposedLinks(tx, solved.links);
+    const minted = mintMissingCharges(tx, scope);
+    const charges = listSolvableCharges(tx, scope);
+    const solved = solve({
+      charges,
+      transactions: fetched.transactions,
+      confirmed,
+      defaultWindowDays,
+    });
+
+    result = {
+      kind: 'swept',
+      chargesConsidered: charges.length,
+      derivedChargesMinted: minted,
+      linksTornDown: tearDownUnconfirmedLinks(tx, unconfirmedChargeIds(charges, confirmed)),
+      linksWritten: persistProposedLinks(tx, solved.links),
+      review: solved.review,
+    };
   });
 
-  return {
-    kind: 'swept',
-    chargesConsidered: charges.length,
-    derivedChargesMinted: minted,
-    linksTornDown: tornDown,
-    linksWritten: written,
-    review: solved.review,
-  };
+  return result ?? emptySweep();
+}
+
+/** The settlement window each row contributes to the candidate fetch. */
+function windowsFor(
+  rows: readonly { orderedAt: string; settlementWindowDays?: number | null }[],
+  defaultWindowDays: number
+): SettlementWindow[] {
+  return rows.flatMap((row) => {
+    const each = settlementWindowFor(row.orderedAt, row.settlementWindowDays ?? defaultWindowDays);
+    return each === null ? [] : [each];
+  });
 }
 
 /**
- * Give every chargeless order a `derived` charge before the snapshot is
- * read, so the same sweep can match it. Amazon states no charges at all, so
- * without this its whole backlog is invisible to the solver.
+ * Give every chargeless order a `derived` charge, so the same sweep can
+ * match it. Amazon states no charges at all, so without this its whole
+ * backlog is invisible to the solver.
+ *
+ * The work list is re-read here rather than passed in, and the caller runs
+ * this inside its transaction: reading outside it would let two concurrent
+ * sweeps both observe the same order as chargeless and mint a twin.
  */
 function mintMissingCharges(db: PurchasesDb, scope: ReconcileScope): number {
   const orders = listOrdersNeedingDerivedCharge(db, scope);
-  if (orders.length === 0) return 0;
-
-  db.transaction((tx) => {
-    for (const order of orders) mintDerivedCharge(tx, order);
-  });
+  for (const order of orders) mintDerivedCharge(db, order);
   return orders.length;
 }
 
@@ -137,11 +152,11 @@ function unconfirmedChargeIds(
   return charges.filter((charge) => !pinned.has(charge.id)).map((charge) => charge.id);
 }
 
-function emptySweep(minted: number): SweepResult {
+function emptySweep(): SweepResult {
   return {
     kind: 'swept',
     chargesConsidered: 0,
-    derivedChargesMinted: minted,
+    derivedChargesMinted: 0,
     linksTornDown: 0,
     linksWritten: 0,
     review: [],

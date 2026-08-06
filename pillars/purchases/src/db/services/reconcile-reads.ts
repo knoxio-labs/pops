@@ -82,7 +82,13 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
 export function listOrdersNeedingDerivedCharge(
   db: PurchasesDb,
   scope: ReconcileScope = {}
-): { id: string; totalCents: number; orderedAt: string; currency: string }[] {
+): {
+  id: string;
+  totalCents: number;
+  orderedAt: string;
+  currency: string;
+  settlementWindowDays: number | null;
+}[] {
   // A left join with a null charge id is the "has no charge" predicate, and
   // it stays one query — the alternative, filtering in JS against a second
   // read, re-runs that read per row.
@@ -92,8 +98,10 @@ export function listOrdersNeedingDerivedCharge(
       totalCents: purchases.totalCents,
       orderedAt: purchases.orderedAt,
       currency: purchases.currency,
+      settlementWindowDays: purchaseSources.settlementWindowDays,
     })
     .from(purchases)
+    .leftJoin(purchaseSources, eq(purchases.source, purchaseSources.id))
     .leftJoin(purchaseCharges, eq(purchaseCharges.purchaseId, purchases.id))
     .where(
       and(

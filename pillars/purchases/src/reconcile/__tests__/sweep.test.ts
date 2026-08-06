@@ -146,6 +146,22 @@ describe('an unreachable finance', () => {
     ]);
   });
 
+  it('mints no derived charge either, so nothing the user sees changes', async () => {
+    // Not a technicality. A derived charge moves an order's money out of
+    // residual and into awaitingImport, so minting during an outage would
+    // change the explained/unexplained split while reporting that the sweep
+    // did nothing.
+    anAmazonOrder(4128, 'a');
+
+    const result = await runSweep(deps(UNAVAILABLE));
+    expect(result.kind).toBe('skipped');
+
+    const charges = opened.raw.prepare('SELECT COUNT(*) as n FROM purchase_charges').get() as {
+      n: number;
+    };
+    expect(charges.n).toBe(0);
+  });
+
   it('reports why it skipped', async () => {
     anAmazonOrder(4128, 'a');
     const result = await runSweep(deps(UNAVAILABLE));

@@ -76,7 +76,7 @@ Three properties it must have, each with a test that fails loudly if it loses th
 
 Amazon's export publishes no charge breakdown at all, so without minting, its 748 orders have nothing to match against and the backfill sits permanently at 100% unexplained.
 
-Before each sweep, every chargeless order gets one `derived` charge for its total. `origin='derived'` marks it as the engine's inference rather than a figure the merchant stated, so a later ingest that _does_ state charges is distinguishable. Minting is idempotent because the query only selects orders with no charge at all — and once minted the row persists: teardown removes links, never charges, because a charge is a fact about the order rather than a guess about the statement.
+After a successful candidate fetch, every chargeless order gets one `derived` charge for its total. `origin='derived'` marks it as the engine's inference rather than a figure the merchant stated, so a later ingest that _does_ state charges is distinguishable. Minting is idempotent because the query only selects orders with no charge at all — and once minted the row persists: teardown removes links, never charges, because a charge is a fact about the order rather than a guess about the statement.
 
 Cash orders are excluded from all of it. `settlementMode='cash'` is terminal, so including one would put a permanently unmatchable row in the review queue every night — the false alarm that teaches someone to stop reading the queue.
 
