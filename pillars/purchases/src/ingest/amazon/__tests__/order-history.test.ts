@@ -232,9 +232,17 @@ describe('rows the parser cannot fully take', () => {
     expect(result.orders[0]?.items ?? []).toHaveLength(1);
   });
 
-  it('skips a row carrying no order id at all', () => {
+  it('reports a row carrying no order id rather than skipping it quietly', () => {
     const result = parseAmazonOrderHistory(csvWithRows([rowWith({ 'Order ID': 'Not Available' })]));
     expect(result.orders).toHaveLength(0);
+    expect(result.anomalies.map((anomaly) => anomaly.kind)).toContain('dropped-line');
+  });
+
+  it('refuses a file whose rows do not parse as CSV', () => {
+    // Papa returns data alongside errors, so a half-parsed file would
+    // otherwise become plausible wrong orders.
+    const ragged = `${csvWithRows([rowWith({})]).trimEnd()},surplus,fields\n`;
+    expect(() => parseAmazonOrderHistory(ragged)).toThrow(AmazonBundleShapeError);
   });
 
   it('skips an order whose date or currency is unreadable', () => {

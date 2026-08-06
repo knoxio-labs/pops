@@ -8,7 +8,11 @@
  * through means this exercises the real validation, dedup and write path
  * rather than a private shortcut into the database.
  *
- *   pnpm ingest:amazon -- "/path/to/Your Orders" [--dry-run]
+ *   pnpm ingest:amazon -- "<bundle-root>" [--dry-run]
+ *
+ * `<bundle-root>` is the directory CONTAINING `Your Amazon Orders/`, not
+ * that folder itself. Amazon names it `Your Orders`, so the path usually
+ * ends in it — which reads as if the inner folder were meant.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,8 +35,9 @@ function readArgs(argv: readonly string[]): Args {
   const bundlePath = positional[0];
   if (bundlePath === undefined) {
     throw new Error(
-      'usage: pnpm ingest:amazon -- "/path/to/Your Orders" [--dry-run]\n' +
-        'The directory is the unzipped DSAR bundle — the one containing "Your Amazon Orders".'
+      'usage: pnpm ingest:amazon -- "<bundle-root>" [--dry-run]\n' +
+        '<bundle-root> is the unzipped DSAR bundle: the directory CONTAINING ' +
+        '"Your Amazon Orders", not that folder itself.'
     );
   }
   return { bundlePath, dryRun: argv.includes('--dry-run') };

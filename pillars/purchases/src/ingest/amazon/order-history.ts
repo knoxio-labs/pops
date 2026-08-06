@@ -26,6 +26,9 @@ import type { CreatePurchaseInput } from '../../db/services/purchase-input.js';
 /** `purchase_sources.id` this adapter writes under. */
 export const AMAZON_SOURCE_ID = 'amazon';
 
+/** Stands in on an anomaly for a row that names no order at all. */
+const UNKNOWN_ORDER_ID = '(no order id)';
+
 export interface AmazonParseResult {
   readonly orders: readonly CreatePurchaseInput[];
   readonly anomalies: readonly AmazonAnomaly[];
@@ -42,17 +45,26 @@ export interface AmazonParseResult {
  * reconciliation engine needs would not hold.
  */
 export function parseAmazonOrderHistory(csvText: string): AmazonParseResult {
+  const orders: CreatePurchaseInput[] = [];
+  const anomalies: AmazonAnomaly[] = [];
+
   const byOrderId = new Map<string, Row[]>();
   for (const row of parseRows(csvText)) {
     const orderId = readText(row['Order ID']);
-    if (orderId === null) continue;
+    if (orderId === null) {
+      // Nothing can be done with a row that names no order, but dropping it
+      // quietly would be the one thing this adapter promises not to do.
+      anomalies.push({
+        kind: 'dropped-line',
+        sourceOrderId: UNKNOWN_ORDER_ID,
+        detail: `row for "${readText(row['ASIN']) ?? 'unknown ASIN'}" carries no Order ID`,
+      });
+      continue;
+    }
     const existing = byOrderId.get(orderId);
     if (existing === undefined) byOrderId.set(orderId, [row]);
     else existing.push(row);
   }
-
-  const orders: CreatePurchaseInput[] = [];
-  const anomalies: AmazonAnomaly[] = [];
 
   for (const [orderId, orderRows] of byOrderId) {
     const order = buildOrder(orderId, orderRows, anomalies);
@@ -68,6 +80,18 @@ function parseRows(csvText: string): Row[] {
     skipEmptyLines: true,
     transformHeader: (header) => header.trim(),
   });
+
+  // Papa returns rows AND errors, so ignoring `errors` lets a malformed file
+  // half-parse into plausible wrong orders — the exact outcome the shape
+  // check below exists to prevent. The reference bundle parses with zero
+  // errors, so any error at all means this is not the file we think it is.
+  const [firstError] = parsed.errors;
+  if (firstError !== undefined) {
+    throw new AmazonBundleShapeError(
+      `${ORDER_HISTORY_FILENAME} did not parse as CSV: ${firstError.type} ${firstError.code} ` +
+        `at row ${String(firstError.row ?? '?')} — ${firstError.message}`
+    );
+  }
 
   const fields = parsed.meta.fields ?? [];
   if (fields.length === 0) {

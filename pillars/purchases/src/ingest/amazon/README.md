@@ -59,7 +59,13 @@ Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one 
 ## Running it
 
 ```bash
-cd pillars/purchases && pnpm ingest:amazon -- "/path/to/Your Orders"
+cd pillars/purchases && pnpm ingest:amazon -- "<bundle-root>" --dry-run
+```
+
+`<bundle-root>` is the unzipped bundle's top directory — the one that _contains_ `Your Amazon Orders/`, not that folder itself. Amazon names it `Your Orders`, so the path usually ends in it:
+
+```bash
+pnpm ingest:amazon -- ~/Downloads/"Your Orders"
 ```
 
 Re-running is safe: each order carries a content checksum, and `(source, sourceOrderId)` is unique, so a second run reports every order as a skip. Neither guard _updates_ an order whose bundle has since gained a shipment — a re-download that extends an existing order is skipped, not merged.
