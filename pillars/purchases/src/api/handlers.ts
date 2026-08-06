@@ -9,6 +9,7 @@ import { getPillarRegistry } from './pillars/registry.js';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedPurchasesDb } from '../db/index.js';
+import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
 export interface PurchasesApiDeps {
   /** Open handle to the purchases pillar's SQLite. */
@@ -22,6 +23,8 @@ export interface PurchasesApiDeps {
   selfBaseUrl: string;
   /** Fired after a successful ingest — trigger 1 of the reconciliation sweep. */
   onIngest?: () => void;
+  /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
+  sweep?: SweepTrigger;
 }
 
 export interface HealthResponse {

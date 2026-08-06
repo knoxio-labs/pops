@@ -121,6 +121,29 @@ export function chargeIdsForPurchases(db: PurchasesDb, purchaseIds: readonly str
     .map((row) => row.id);
 }
 
+/**
+ * Remove one link entirely, confirmed or not.
+ *
+ * Un-pinning rather than rejecting: the next sweep is free to re-derive it,
+ * and probably will. Rejecting a proposal *so that it stays rejected* needs
+ * somewhere to remember the decision, which is `purchase_match_rules` and
+ * therefore POPS-1309 — a reject that the next sweep silently undoes would
+ * be worse than no reject at all.
+ */
+export function unlinkCharge(db: PurchasesDb, chargeId: string, transactionUri: string): boolean {
+  return (
+    db
+      .delete(purchaseChargeLinks)
+      .where(
+        and(
+          eq(purchaseChargeLinks.chargeId, chargeId),
+          eq(purchaseChargeLinks.transactionUri, transactionUri)
+        )
+      )
+      .run().changes > 0
+  );
+}
+
 /** Confirm a link, pinning it against every future re-derivation. */
 export function confirmLink(
   db: PurchasesDb,

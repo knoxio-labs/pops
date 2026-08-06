@@ -21,6 +21,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { QueueEntrySchema, SweepOutcomeSchema } from '../../contract/rest-reconcile.js';
 import {
   PurchaseDetailSchema,
   PurchaseSchema,
@@ -28,6 +29,7 @@ import {
 } from '../../contract/schemas/purchase.js';
 import { PurchaseItemSchema } from '../../contract/schemas/purchase.js';
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
+import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 
@@ -49,6 +51,14 @@ beforeEach(() => {
     purchasesDb: opened,
     version: '1.2.3',
     selfBaseUrl: 'http://localhost:3013',
+    // A sweep with no candidates: enough for the outcome shape, and it
+    // keeps this file's fixtures independent of the matcher's behaviour.
+    sweep: () =>
+      runSweep({
+        db: opened.db,
+        finance: { fetchCandidates: () => Promise.resolve({ kind: 'ok', transactions: [] }) },
+        defaultWindowDays: 21,
+      }),
   });
 });
 
@@ -229,6 +239,55 @@ describe('source responses', () => {
     for (const [i, source] of (listed.body.items as unknown[]).entries()) {
       expectConforms(PurchaseSourceSchema, source, `GET /sources item ${String(i)}`);
     }
+  });
+});
+
+describe('reconcile responses', () => {
+  it('conform for a queue with both a proposal and an unexplained charge', async () => {
+    // The tightened field types (PopsUriSchema, IsoTimestampSchema,
+    // CurrencySchema, 0..1 confidence) are only a promise until something
+    // parses a real response back through them — ts-rest validates
+    // requests, not responses.
+    await request(app).post('/purchases').send(RICH_ORDER);
+    await runSweep({
+      db: opened.db,
+      finance: {
+        fetchCandidates: () =>
+          Promise.resolve({
+            kind: 'ok',
+            transactions: [
+              {
+                // Exactly the rich order's first charge, so the sweep
+                // produces a real proposal — otherwise `proposed` is empty
+                // and QueuedLinkSchema, the part that was tightened, never
+                // gets parsed at all.
+                uri: 'pops://finance/transaction/conformance-1',
+                description: 'AMAZON MKTPLACE AU',
+                amountCents: 4499,
+                date: '2026-02-03',
+              },
+            ],
+          }),
+      },
+      defaultWindowDays: 21,
+    });
+
+    const res = await request(app).get('/reconcile/queue');
+    expect(res.status).toBe(200);
+    const items = res.body.items as { proposed: unknown[] }[];
+    expect(items.length).toBeGreaterThan(0);
+    // At least one entry must carry a proposal, or the link schema below
+    // is never exercised and this test asserts less than it appears to.
+    expect(items.some((entry) => entry.proposed.length > 0)).toBe(true);
+    for (const [i, entry] of items.entries()) {
+      expectConforms(QueueEntrySchema, entry, `GET /reconcile/queue item ${String(i)}`);
+    }
+  });
+
+  it('conform for both sweep outcomes', async () => {
+    const swept = await request(app).post('/reconcile/sweep').send({});
+    expect(swept.status).toBe(200);
+    expectConforms(SweepOutcomeSchema, swept.body, 'POST /reconcile/sweep (swept)');
   });
 });
 

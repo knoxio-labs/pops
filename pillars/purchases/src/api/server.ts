@@ -92,6 +92,9 @@ const app = createPurchasesApiApp({
   onIngest: () => {
     sweepRunner.request();
   },
+  // The explicit trigger. Shares the runner's gate, so a manual sweep
+  // cannot run alongside a scheduled one and tear down its work.
+  sweep: () => sweepRunner.runOnce(),
 });
 
 const server = app.listen(port, () => {
