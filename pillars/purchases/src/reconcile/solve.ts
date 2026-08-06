@@ -13,48 +13,132 @@
  * to partition a set of amounts will produce a plausible partition that is
  * wrong (ADR-042).
  */
-import { descriptorMatcherFor } from './descriptor.js';
-import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
+import { matchCombined } from './combined.js';
 import {
-  STAGE_CONFIDENCE,
-  type ChargeForReview,
-  type ProposedLink,
-  type SolvableCharge,
-  type SolvableTransaction,
-  type SolverInput,
-  type SolverOutput,
+  candidatesFor,
+  matchExact,
+  matchPartial,
+  matchSplit,
+  type MatchOutcome,
+} from './stages.js';
+
+import type {
+  ChargeForReview,
+  ProposedLink,
+  SolvableCharge,
+  SolverInput,
+  SolverOutput,
 } from './types.js';
-import { isWithinWindow, settlementWindowFor } from './window.js';
 
+/**
+ * Three phases, not one loop.
+ *
+ * Phases 1 and 3 are per-charge: they ask what settles *this* charge. Phase
+ * 2 is the one that cannot be, because deciding that several charges
+ * together settle one transaction means seeing them together.
+ *
+ * The order is evidence strength, and each boundary carries a reason:
+ *
+ * - **exact and split before combined** — a charge with its own exact match
+ *   should take it rather than being swept into someone else's partition.
+ * - **combined before partial** — partial is the weakest guess the ladder
+ *   makes and it consumes a transaction, so running it first would let one
+ *   speculative link eat the transaction a clean partition needed.
+ *
+ * **Stage 4, learned rules, is absent.** `purchase_match_rules` is a
+ * descriptor-pattern table mirroring finance's `transaction_corrections`,
+ * not a purchase-to-transaction pointer, and what a matched pattern should
+ * do here depends on how the review queue writes rules when a user accepts
+ * a link (POPS-241). Deferred to POPS-1309 rather than guessed at.
+ */
 export function solve(input: SolverInput): SolverOutput {
-  const links: ProposedLink[] = [];
-  const review: ChargeForReview[] = [];
-
   const confirmedCharges = new Set(input.confirmed.map((link) => link.chargeId));
   const claimed = new Set(input.confirmed.map((link) => link.transactionUri));
 
-  for (const charge of orderedCharges(input.charges)) {
-    if (confirmedCharges.has(charge.id)) continue;
+  const charges = orderedCharges(input.charges).filter(
+    (charge) => !confirmedCharges.has(charge.id)
+  );
 
-    const candidates = candidatesFor(charge, input, claimed);
-    const outcome = matchCharge(charge, candidates);
+  const state: SolveState = {
+    links: [],
+    review: [],
+    claimed,
+    settled: new Set<string>(),
+  };
+  const deferred: SolvableCharge[] = [];
 
-    if (outcome.kind === 'linked') {
-      for (const link of outcome.links) {
-        links.push(link);
-        claimed.add(link.transactionUri);
-      }
+  for (const charge of charges) {
+    const candidates = candidatesFor(charge, input.transactions, claimed, input.defaultWindowDays);
+    const outcome = matchExact(charge, candidates) ?? matchSplit(charge, candidates);
+
+    if (outcome === null) {
+      deferred.push(charge);
     } else {
-      review.push({
-        chargeId: charge.id,
-        purchaseId: charge.purchaseId,
-        reason: outcome.reason,
-        candidateCount: candidates.length,
-      });
+      apply(state, charge, outcome, candidates.length);
     }
   }
 
-  return { links, review };
+  const combined = matchCombined(deferred, input.transactions, claimed, input.defaultWindowDays);
+  for (const link of combined.links) {
+    state.links.push(link);
+    state.claimed.add(link.transactionUri);
+    state.settled.add(link.chargeId);
+  }
+
+  for (const charge of deferred) {
+    if (state.settled.has(charge.id)) continue;
+    settlePartially(state, charge, input);
+  }
+
+  return { links: state.links, review: state.review };
+}
+
+/** The accumulators every phase writes through. */
+interface SolveState {
+  readonly links: ProposedLink[];
+  readonly review: ChargeForReview[];
+  /** Transactions already spent, including those pinned by a human. */
+  readonly claimed: Set<string>;
+  /** Charges that reached an outcome, so later phases skip them. */
+  readonly settled: Set<string>;
+}
+
+/** Phase 3 for one charge: partial payment, or the review queue. */
+function settlePartially(state: SolveState, charge: SolvableCharge, input: SolverInput): void {
+  const candidates = candidatesFor(
+    charge,
+    input.transactions,
+    state.claimed,
+    input.defaultWindowDays
+  );
+  const outcome = matchPartial(charge, candidates) ?? {
+    kind: 'review' as const,
+    reason: candidates.length === 0 ? ('no-candidate' as const) : ('ambiguous' as const),
+  };
+  apply(state, charge, outcome, candidates.length);
+}
+
+/** Record one charge's outcome — a set of links, or a place in the queue. */
+function apply(
+  state: SolveState,
+  charge: SolvableCharge,
+  outcome: MatchOutcome,
+  candidateCount: number
+): void {
+  if (outcome.kind === 'linked') {
+    for (const link of outcome.links) {
+      state.links.push(link);
+      state.claimed.add(link.transactionUri);
+    }
+  } else {
+    state.review.push({
+      chargeId: charge.id,
+      purchaseId: charge.purchaseId,
+      reason: outcome.reason,
+      candidateCount,
+    });
+  }
+  state.settled.add(charge.id);
 }
 
 /**
@@ -79,183 +163,4 @@ function orderedCharges(charges: readonly SolvableCharge[]): readonly SolvableCh
       a.amountCents - b.amountCents ||
       a.id.localeCompare(b.id)
   );
-}
-
-/** Same reasoning as {@link orderedCharges}, for the candidate side. */
-function orderedTransactions(
-  transactions: readonly SolvableTransaction[]
-): readonly SolvableTransaction[] {
-  return [...transactions].toSorted(
-    (a, b) =>
-      a.date.localeCompare(b.date) || a.amountCents - b.amountCents || a.uri.localeCompare(b.uri)
-  );
-}
-
-/**
- * Stage 0 — blocking. Narrow the field to transactions that could plausibly
- * settle this charge: unclaimed, inside the window, matching the source's
- * descriptor, and of the same sign.
- *
- * Sign matters more than it looks. A refund is a negative charge, and
- * without this guard a refund could be "settled" by an ordinary purchase of
- * the same magnitude.
- */
-function candidatesFor(
-  charge: SolvableCharge,
-  input: SolverInput,
-  claimed: ReadonlySet<string>
-): readonly SolvableTransaction[] {
-  const window = settlementWindowFor(
-    charge.orderedAt,
-    charge.settlementWindowDays ?? input.defaultWindowDays
-  );
-  if (window === null) return [];
-
-  const wantPositive = charge.amountCents > 0;
-  // Compiled once per charge rather than once per candidate.
-  const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
-
-  return orderedTransactions(
-    input.transactions.filter((transaction) => {
-      if (claimed.has(transaction.uri)) return false;
-      if (!isWithinWindow(transaction.date, window)) return false;
-      if (transaction.amountCents === 0) return false;
-      if (transaction.amountCents > 0 !== wantPositive) return false;
-      return matchesDescriptor(transaction.description);
-    })
-  );
-}
-
-type MatchOutcome =
-  | { kind: 'linked'; links: readonly ProposedLink[] }
-  | { kind: 'review'; reason: ChargeForReview['reason'] };
-
-/**
- * Walk the ladder for one charge. Each stage is tried only when the
- * stronger ones above it found nothing.
- *
- * **Stage 4, learned rules, is not here.** `purchase_match_rules` is a
- * descriptor-pattern table mirroring finance's `transaction_corrections` —
- * `descriptionPattern`, `matchType`, `source`, `priority` — not a
- * purchase-to-transaction pointer, and what a matched pattern should do to
- * the ladder depends on how the review queue writes rules when a user
- * accepts a link (POPS-241). Implementing it against a guessed model would
- * put a second, incompatible rule shape in the engine, so it is deferred to
- * its own slice rather than approximated here.
- */
-function matchCharge(
-  charge: SolvableCharge,
-  candidates: readonly SolvableTransaction[]
-): MatchOutcome {
-  const exact = matchExact(charge, candidates);
-  if (exact !== null) return exact;
-
-  const split = matchSplit(charge, candidates);
-  if (split !== null) return split;
-
-  const partial = matchPartial(charge, candidates);
-  if (partial !== null) return partial;
-
-  return { kind: 'review', reason: candidates.length === 0 ? 'no-candidate' : 'ambiguous' };
-}
-
-/** Stage 1 — a single transaction for exactly the charge amount. */
-function matchExact(
-  charge: SolvableCharge,
-  candidates: readonly SolvableTransaction[]
-): MatchOutcome | null {
-  const hits = candidates.filter((t) => t.amountCents === charge.amountCents);
-  if (hits.length === 0) return null;
-
-  // Two transactions of the same amount in the same window is exactly the
-  // case a coin flip gets wrong half the time — a duplicate charge and its
-  // correction look identical from here.
-  if (hits.length > 1) return { kind: 'review', reason: 'ambiguous' };
-
-  const [only] = hits;
-  if (only === undefined) return null;
-  return {
-    kind: 'linked',
-    links: [linkOf(charge, only, only.amountCents, 'exact')],
-  };
-}
-
-/**
- * Stage 2 — subset-sum. A charge settled by several transactions, which is
- * what a multi-shipment order looks like on a statement.
- *
- * The combined case (several charges, one transaction) is the same search
- * with the sides exchanged and arrives with the sweep that can see all of
- * an order's charges at once; this slice covers the split direction.
- */
-function matchSplit(
-  charge: SolvableCharge,
-  candidates: readonly SolvableTransaction[]
-): MatchOutcome | null {
-  const search = findSubsetSummingTo(
-    candidates.map((t) => t.amountCents),
-    charge.amountCents,
-    { minSize: MIN_SPLIT_SIZE }
-  );
-
-  switch (search.kind) {
-    case 'unique':
-      return {
-        kind: 'linked',
-        links: search.indices.flatMap((index) => {
-          const transaction = candidates[index];
-          return transaction === undefined
-            ? []
-            : [linkOf(charge, transaction, transaction.amountCents, 'split')];
-        }),
-      };
-    case 'ambiguous':
-      return { kind: 'review', reason: 'ambiguous' };
-    case 'too-many':
-      return { kind: 'review', reason: 'too-many-candidates' };
-    case 'none':
-      return null;
-  }
-}
-
-/**
- * Stage 3 — partial payment: a gift card, rewards balance or points paid
- * part of the order, so the card was charged less than the total and no
- * partition can ever close the gap.
- *
- * Deliberately the most conservative stage. It fires only when exactly one
- * candidate remains, because "the charge is bigger than this transaction"
- * describes every unrelated transaction in the window too — with two
- * candidates there is no evidence for choosing either, and the residual it
- * would record is a number invented to make the arithmetic close.
- */
-function matchPartial(
-  charge: SolvableCharge,
-  candidates: readonly SolvableTransaction[]
-): MatchOutcome | null {
-  const smaller = candidates.filter((t) => Math.abs(t.amountCents) < Math.abs(charge.amountCents));
-  if (smaller.length === 0) return null;
-  if (smaller.length > 1) return { kind: 'review', reason: 'ambiguous-partial' };
-
-  const [only] = smaller;
-  if (only === undefined) return null;
-  return {
-    kind: 'linked',
-    links: [linkOf(charge, only, only.amountCents, 'partial')],
-  };
-}
-
-function linkOf(
-  charge: SolvableCharge,
-  transaction: SolvableTransaction,
-  amountCents: number,
-  linkType: ProposedLink['linkType']
-): ProposedLink {
-  return {
-    chargeId: charge.id,
-    transactionUri: transaction.uri,
-    amountCents,
-    linkType,
-    confidence: STAGE_CONFIDENCE[linkType],
-  };
 }

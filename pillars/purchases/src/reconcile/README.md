@@ -24,6 +24,19 @@ Deterministic first, AI never. Matching is arithmetic, and a model asked to part
 
 **Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. What a matched pattern should do to the ladder depends on how the review queue writes rules when a user accepts a link (POPS-241), so implementing it now would embed a second, incompatible rule model in the engine. It has its own slice.
 
+## Three phases, not one loop
+
+Exact, split and partial are per-charge: they ask what settles _this_ charge. **Combined cannot be**, which is why the traversal has phases at all — deciding that several charges together settle one transaction means seeing them together, and a loop considering one charge at a time can only ask "does something here sum to _me_".
+
+So: per-charge exact and split, then combined over everything they left untouched, then per-charge partial, then review.
+
+Both boundaries carry a reason, and both have a test that fails if the phases are swapped:
+
+- **exact and split before combined** — a charge with its own exact match should take it rather than being swept into someone else's partition.
+- **combined before partial** — partial is the weakest guess the ladder makes _and it consumes a transaction_. Running it first lets one speculative part-payment claim the very transaction a clean multi-charge partition needed, leaving those charges with nothing.
+
+A charge only joins a combination if the transaction is eligible for it on its own terms — inside _its_ window, matching _its_ source descriptor, same sign. Amounts adding up is not a reason to link across merchants or across years.
+
 ## Ambiguity is a signal, not a coin flip
 
 Every stage that could pick between equally-good candidates routes to review instead. Two transactions of the same amount in one window is not a tie to break — it is a duplicate charge and its correction, and choosing gets it wrong half the time.
