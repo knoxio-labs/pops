@@ -28,15 +28,16 @@
   "scripts": {
     "build": "tsx scripts/verify-manifest.ts && tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts && tsx scripts/generate-api-types.ts",
     "dev": "tsx watch --clear-screen=false src/api/server.ts",
+    "generate:api-types": "tsx scripts/generate-api-types.ts",
+    "generate:manifest": "tsx scripts/generate-manifest.ts",
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
+    "ingest:amazon": "tsx scripts/ingest-amazon.ts",
     "start": "node dist/api/server.js",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "generate:manifest": "tsx scripts/generate-manifest.ts",
-    "verify:manifest": "tsx scripts/verify-manifest.ts",
-    "generate:openapi": "tsx scripts/generate-openapi.ts",
-    "generate:api-types": "tsx scripts/generate-api-types.ts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
+    "verify:manifest": "tsx scripts/verify-manifest.ts"
   },
   "dependencies": {
     "@pops/pillar-sdk": "workspace:*",
@@ -48,12 +49,14 @@
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "express": "^5.1.0",
+    "papaparse": "^5.5.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
     "@types/node": "^25.9.3",
+    "@types/papaparse": "^5.5.2",
     "@types/supertest": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.8",
     "openapi-typescript": "^7.13.0",
