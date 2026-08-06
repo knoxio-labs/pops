@@ -8,17 +8,17 @@
  * an `operationId`. None of that is exercised by a stub, and all of it
  * fails at runtime rather than at build.
  *
- * So this stands up a real server and serves **finance's own committed
- * OpenAPI document**, unmodified. That makes the test contract-pinned: if
- * finance renames the operation, changes the path, or moves the query
- * parameters, this fails here rather than in production. It is the closest
- * thing this leg can have to the regenerate-and-diff gate that covers the
- * browser-facing clients.
+ * So this stands up a real HTTP server and drives the client through the
+ * real SDK proxy — discovery, route map, call, parse.
+ *
+ * That the served document still matches finance's real one is a separate
+ * question, and a separate guard answers it:
+ * `scripts/ci/check-cross-pillar-expectations.mjs` reads finance's
+ * published OpenAPI and fails if `transactions.list` is renamed, moved, or
+ * loses a query parameter this client sends. Together they cover the seam
+ * the browser-facing clients get from regenerate-and-diff.
  */
-import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -27,24 +27,39 @@ import { pillar } from '@pops/pillar-sdk/client';
 import { createFinanceClient, type FinanceRouter } from '../client.js';
 
 /**
- * Finance's OpenAPI, vendored inside this pillar's own boundary.
+ * A minimal OpenAPI document declaring exactly the operation this leg
+ * calls, in the shape finance publishes it.
  *
- * Not `require.resolve('@pops/finance/openapi')`: purchases declares no
- * dependency on finance and must not — no backend pillar depends on another
- * pillar's package, and reaching across into `pillars/finance/` would break
- * the extractability the repo guards. Resolving it through pnpm's workspace
- * links happened to work locally and failed in CI, which is precisely the
- * phantom dependency that convention exists to prevent.
+ * Not a vendored copy of finance's real document: that is 17k lines
+ * describing its whole API, and pinning one operation with it would mean an
+ * unrelated finance route change failing this pillar's drift check — noise
+ * that teaches people to re-vendor without reading. It would also be a
+ * 640KB blob in the repo to assert one path.
  *
- * `scripts/ci/check-vendored-contracts.mjs` asserts this copy is
- * byte-identical to finance's canonical spec, so the pin cannot go stale:
- * if finance changes its contract, CI fails until this is re-vendored and
- * these tests re-run against the new document.
+ * The agreement with finance's actual contract is asserted separately and
+ * cheaply by `scripts/ci/check-cross-pillar-expectations.mjs`, which reads
+ * finance's published spec and fails if `transactions.list` is renamed,
+ * moved, or loses a query parameter this client sends. That guard pins the
+ * contract; this fixture exercises the transport.
  */
-const CONTRACTS_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../../contracts');
-const FINANCE_OPENAPI: unknown = JSON.parse(
-  readFileSync(join(CONTRACTS_DIR, 'finance.openapi.json'), 'utf8')
-);
+const FINANCE_OPENAPI = {
+  openapi: '3.0.3',
+  info: { title: 'finance', version: '0.1.0' },
+  paths: {
+    '/transactions': {
+      get: {
+        operationId: 'transactions.list',
+        parameters: ['search', 'startDate', 'endDate', 'limit', 'offset'].map((name) => ({
+          name,
+          in: 'query',
+          required: false,
+          schema: { type: 'string' },
+        })),
+        responses: { '200': { description: 'ok' } },
+      },
+    },
+  },
+};
 
 /**
  * The snapshot entry the registry publishes for finance. `status` is a

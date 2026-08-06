@@ -322,6 +322,29 @@ jobs:
       - name: Every vendored contract matches its canonical source
         run: node scripts/ci/check-vendored-contracts.mjs
 
+  cross-pillar-expectations:
+    name: Backend cross-pillar expectations (ADR-040)
+    # The backend counterpart to `cross-pillar-clients` below. A pillar's
+    # SERVER calls a sibling through the pillar-SDK proxy, which is typed by
+    # the CALLER and resolves the call at runtime against the producer's
+    # OpenAPI `operationId` — so nothing checks the two agree, and a renamed
+    # operation breaks the consumer silently in production rather than at
+    # build. There is no generated client to diff on this side, so this guard
+    # asserts the narrow thing the consumer depends on: the operation still
+    # exists, at the expected path and method, with the query parameters the
+    # consumer sends. Reads the source tree directly, so it skips
+    # `pnpm install`. See scripts/ci/check-cross-pillar-expectations.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Gate self-test (proves it catches rename, move, dropped param)
+        run: node scripts/ci/check-cross-pillar-expectations.mjs --self-test
+      - name: Every backend cross-pillar expectation holds
+        run: node scripts/ci/check-cross-pillar-expectations.mjs
+
   cross-pillar-clients:
     name: Cross-pillar generated FE clients (ADR-040)
     # Per-consumer generated FE clients (a consumer app's own Hey API client
