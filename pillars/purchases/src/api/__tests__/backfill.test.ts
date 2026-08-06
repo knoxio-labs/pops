@@ -14,7 +14,7 @@
  * satisfy every zod rule and still be rejected on INSERT.
  */
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { ORDER_HISTORY_CSV } from '../../ingest/amazon/__tests__/__fixtures__/order-history.js';
@@ -113,6 +113,64 @@ describe('the parser output is acceptable to the real API', () => {
     expect(second).toEqual(orders.map(() => 409));
     const list = await request(app).get('/purchases').expect(200);
     expect(list.body.items).toHaveLength(orders.length);
+  });
+});
+
+describe('the ingest trigger', () => {
+  it('fires once per successful create', async () => {
+    const fired = vi.fn();
+    const triggered = createPurchasesApiApp({
+      purchasesDb: opened,
+      version: '1.2.3',
+      selfBaseUrl: 'http://localhost:3013',
+      onIngest: fired,
+    });
+
+    const [order] = orders;
+    if (order === undefined) throw new Error('fixture has no orders');
+    await request(triggered).post('/purchases').send(order).expect(201);
+
+    expect(fired).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire when the create was rejected', async () => {
+    // A duplicate writes nothing, so there is nothing to reconcile — and a
+    // re-run of a 748-order backfill would otherwise request 748 sweeps
+    // for work that did not happen.
+    const fired = vi.fn();
+    const triggered = createPurchasesApiApp({
+      purchasesDb: opened,
+      version: '1.2.3',
+      selfBaseUrl: 'http://localhost:3013',
+      onIngest: fired,
+    });
+
+    const [order] = orders;
+    if (order === undefined) throw new Error('fixture has no orders');
+    await request(triggered).post('/purchases').send(order).expect(201);
+    await request(triggered).post('/purchases').send(order).expect(409);
+
+    expect(fired).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fail the request when the trigger throws', async () => {
+    // Reconciliation must never be the reason an ingest fails. The order is
+    // already written by the time this runs.
+    const triggered = createPurchasesApiApp({
+      purchasesDb: opened,
+      version: '1.2.3',
+      selfBaseUrl: 'http://localhost:3013',
+      onIngest: () => {
+        throw new Error('sweep scheduling blew up');
+      },
+    });
+
+    const [order] = orders;
+    if (order === undefined) throw new Error('fixture has no orders');
+    await request(triggered).post('/purchases').send(order).expect(201);
+
+    const list = await request(triggered).get('/purchases').expect(200);
+    expect(list.body.items).toHaveLength(1);
   });
 });
 

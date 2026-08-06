@@ -34,7 +34,7 @@ function notFound(id: string) {
   };
 }
 
-export function makePurchaseHandlers(db: PurchasesDb) {
+export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () => undefined) {
   return {
     list: async ({ query }: { query: ListQuery }) => {
       const items = listPurchases(db, {
@@ -70,6 +70,20 @@ export function makePurchaseHandlers(db: PurchasesDb) {
       const detail = getPurchase(db, id);
       if (detail === undefined) {
         throw new Error(`createPurchase returned id ${id} but it could not be read back`);
+      }
+      // Trigger 1, fired only after the write succeeded, and swallowed.
+      // The order is already committed by this point: letting a scheduling
+      // failure turn a successful ingest into a 500 would make the caller
+      // retry a write that already happened, and a backfill would report
+      // failures for orders that are sitting in the database. The runner
+      // also collapses a backfill's 748 calls into one sweep, so this is
+      // cheap as well as safe.
+      try {
+        onIngest();
+      } catch (err) {
+        console.error('[purchases-api] ingest sweep trigger failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
       return { status: 201 as const, body: toPurchaseDetailBody(detail) };
     },

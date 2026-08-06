@@ -17,9 +17,11 @@ const server: ReturnType<typeof initServer> = initServer();
 
 export function makePurchasesRestHandlers(deps: {
   purchasesDb: OpenedPurchasesDb;
+  /** Fired after a successful ingest — trigger 1 of the reconciliation sweep. */
+  onIngest?: () => void;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
-    purchase: makePurchaseHandlers(deps.purchasesDb.db),
+    purchase: makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest),
     source: makeSourceHandlers(deps.purchasesDb.db),
   });
 }

@@ -58,6 +58,25 @@ export type HttpDiscoveryTransportOptions = {
 
 const DEFAULT_REGISTRY_URL = 'http://registry-api:3001';
 
+/**
+ * Where to DISCOVER other pillars from, when the caller passes no explicit
+ * `registryUrl`.
+ *
+ * Reads the same `POPS_REGISTRY_URL` that `bootstrap` uses to decide where
+ * to REGISTER. Those two were previously inconsistent: a deployment could
+ * be told where to register and still discover only from the compiled
+ * default, so a registry anywhere other than `registry-api:3001` produced a
+ * pillar that registered correctly and then silently failed every
+ * cross-pillar call. In Docker the two are the same host, which is why it
+ * went unnoticed.
+ *
+ * The fallback is unchanged, so nothing about a compose deployment moves.
+ */
+function defaultRegistryUrl(): string {
+  const fromEnv = process.env['POPS_REGISTRY_URL'];
+  return fromEnv === undefined || fromEnv === '' ? DEFAULT_REGISTRY_URL : fromEnv;
+}
+
 const DEFAULT_FETCH_TIMEOUT_MS = 5_000;
 
 /**
@@ -83,7 +102,7 @@ export class HttpDiscoveryTransport implements DiscoveryTransport {
   private readonly leg: ResolverLeg;
 
   constructor(options: HttpDiscoveryTransportOptions = {}) {
-    this.registryUrl = options.registryUrl ?? DEFAULT_REGISTRY_URL;
+    this.registryUrl = options.registryUrl ?? defaultRegistryUrl();
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
     this.headers = options.headers ?? {};

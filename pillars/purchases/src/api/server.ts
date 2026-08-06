@@ -1,5 +1,6 @@
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 
+import { DEFAULT_SETTLEMENT_WINDOW_DAYS } from '../contract/constants.js';
 /**
  * Entry point for the purchases pillar HTTP server.
  *
@@ -16,7 +17,10 @@ import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bo
  * explicit deregister.
  */
 import { openPurchasesDb } from '../db/index.js';
+import { resolveSweepIntervals } from '../reconcile/config.js';
+import { createSweepRunner } from '../reconcile/runner.js';
 import { createPurchasesApiApp } from './app.js';
+import { createFinanceClient } from './finance/client.js';
 import { buildPurchasesManifest } from './manifest.js';
 import { parseBareOrigin } from './pillars/env.js';
 import { resolvePurchasesSqlitePath } from './purchases-sqlite-path.js';
@@ -54,10 +58,46 @@ function resolveSelfBaseUrl(): string {
 const selfBaseUrl = resolveSelfBaseUrl();
 
 const purchasesDb = openPurchasesDb(resolvePurchasesSqlitePath());
-const app = createPurchasesApiApp({ purchasesDb, version, selfBaseUrl });
+
+/**
+ * The reconciliation triggers.
+ *
+ * Started unconditionally: a sweep with an unreachable finance is a no-op
+ * that writes nothing (see `reconcile/sweep.ts`), so a deployment without
+ * finance costs a log line per tick rather than misbehaving. Gating it on
+ * an env var would instead mean a silently un-reconciled deployment, which
+ * looks identical to one where nothing has settled yet.
+ */
+const sweepRunner = createSweepRunner({
+  db: purchasesDb.db,
+  finance: createFinanceClient(),
+  defaultWindowDays: DEFAULT_SETTLEMENT_WINDOW_DAYS,
+  // Overridable so a smoke test does not wait a quarter of an hour for the
+  // first tick. Absent in production, where the module defaults apply.
+  ...resolveSweepIntervals(),
+  logger: {
+    info: (message, context) => {
+      console.warn(`[purchases-api] ${message}`, context ?? {});
+    },
+    warn: (message, context) => {
+      console.error(`[purchases-api] ${message}`, context ?? {});
+    },
+  },
+});
+
+const app = createPurchasesApiApp({
+  purchasesDb,
+  version,
+  selfBaseUrl,
+  onIngest: () => {
+    sweepRunner.request();
+  },
+});
 
 const server = app.listen(port, () => {
   console.warn(`[purchases-api] Listening on port ${port}`);
+  // After listen: the first tick must not delay serving traffic.
+  sweepRunner.start();
 });
 
 let pillarHandle: PillarBootstrapHandle | undefined;
@@ -73,6 +113,7 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[purchases-api] Shutting down (${signal})`);
+  sweepRunner.stop();
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
     server.close(() => {
       purchasesDb.raw.close();
