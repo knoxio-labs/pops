@@ -185,6 +185,22 @@ describe('blocking', () => {
   });
 });
 
+describe('an overcrowded window', () => {
+  it('routes to review rather than searching a window it cannot search honestly', () => {
+    // Past the subset-sum ceiling the number of coincidental combinations
+    // grows with the candidate count, so refusing is more honest than
+    // returning one of them.
+    const { links, review } = run({
+      charges: [charge({ amountCents: 99_999 })],
+      transactions: Array.from({ length: 14 }, (_, i) =>
+        txn({ uri: `t${String(i)}`, amountCents: (i + 1) * 100, date: '2026-03-06' })
+      ),
+    });
+    expect(links).toHaveLength(0);
+    expect(review[0]?.reason).toBe('too-many-candidates');
+  });
+});
+
 describe('refunds', () => {
   it('matches a refund against a negative transaction', () => {
     const { links } = run({
