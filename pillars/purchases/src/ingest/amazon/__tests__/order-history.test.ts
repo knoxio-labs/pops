@@ -245,13 +245,21 @@ describe('rows the parser cannot fully take', () => {
     expect(() => parseAmazonOrderHistory(ragged)).toThrow(AmazonBundleShapeError);
   });
 
-  it('skips an order whose date or currency is unreadable', () => {
-    expect(
-      parseAmazonOrderHistory(csvWithRows([rowWith({ 'Order Date': 'nonsense' })])).orders
-    ).toHaveLength(0);
-    expect(
-      parseAmazonOrderHistory(csvWithRows([rowWith({ Currency: 'Not Available' })])).orders
-    ).toHaveLength(0);
+  it('reports an order whose date or currency is unreadable', () => {
+    // The largest thing this parser can drop, so the one that must never be
+    // silent.
+    for (const override of [{ 'Order Date': 'nonsense' }, { Currency: 'Not Available' }]) {
+      const result = parseAmazonOrderHistory(csvWithRows([rowWith(override)]));
+      expect(result.orders).toHaveLength(0);
+      expect(result.anomalies.map((anomaly) => anomaly.kind)).toContain('dropped-order');
+    }
+  });
+
+  it('names the order it dropped, so a backfill stays auditable', () => {
+    const result = parseAmazonOrderHistory(csvWithRows([rowWith({ 'Order Date': 'nonsense' })]));
+    const dropped = result.anomalies.find((anomaly) => anomaly.kind === 'dropped-order');
+    expect(dropped?.sourceOrderId).toBe('249-0000099-0000099');
+    expect(dropped?.detail).toContain('Order Date');
   });
 
   it('maps an unrecognised shipment status to pending rather than guessing', () => {

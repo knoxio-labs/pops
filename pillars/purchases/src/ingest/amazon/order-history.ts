@@ -119,9 +119,9 @@ function buildOrder(
   const firstRow = rows[0];
   if (firstRow === undefined) return null;
 
-  const orderedAt = readTimestamp(firstRow['Order Date']);
-  const currency = readText(firstRow['Currency']);
-  if (orderedAt === null || currency === null) return null;
+  const header = readOrderHeader(firstRow, sourceOrderId, anomalies);
+  if (header === null) return null;
+  const { orderedAt, currency } = header;
 
   const built = [...groupShipmentRows(rows)]
     .map(([key, shipmentRows]) =>
@@ -160,8 +160,13 @@ function buildOrder(
       sum((s) => s.shippingCents),
       0
     ),
-    // Amazon states discounts as negative; the column is a non-negative
-    // magnitude, and the sign convention lives in the schema.
+    // The two sides disagree on sign, deliberately. Amazon states discounts
+    // as NEGATIVE (`'-5.5'`), and the per-line `allocatedAdjustmentCents`
+    // keeps that sign because an adjustment is directional. The order-level
+    // `discountCents` is a NonNegativeCents magnitude, so it takes the
+    // absolute value here. Do not "fix" this into agreeing: dropping the
+    // Math.abs makes the contract reject every discounted order, and
+    // negating the line adjustment reverses the residual arithmetic.
     discountCents: Math.abs(sum((s) => s.discountCents)),
     totalCents: sum((s) => s.totalCents),
     merchantEntityName: 'Amazon',
@@ -172,6 +177,33 @@ function buildOrder(
     shipments: built.map((shipment) => shipment.shipment),
     items: built.flatMap((shipment) => [...shipment.items]),
   };
+}
+
+/**
+ * Read the two order-level fields without which an order cannot exist.
+ *
+ * Losing a whole order is the largest thing this parser can drop, and
+ * `orderedAt` is not optional downstream: it is what the reconciliation
+ * window is measured against, so an order without one could never match a
+ * transaction anyway. Skipping is right; skipping quietly is not.
+ */
+function readOrderHeader(
+  row: Row,
+  sourceOrderId: string,
+  anomalies: AmazonAnomaly[]
+): { orderedAt: string; currency: string } | null {
+  const orderedAt = readTimestamp(row['Order Date']);
+  const currency = readText(row['Currency']);
+  if (orderedAt !== null && currency !== null) return { orderedAt, currency };
+
+  anomalies.push({
+    kind: 'dropped-order',
+    sourceOrderId,
+    detail:
+      'order was not ingested: ' +
+      (orderedAt === null ? 'unreadable Order Date' : 'unreadable Currency'),
+  });
+  return null;
 }
 
 /**

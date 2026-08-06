@@ -44,7 +44,9 @@ Every one of these is present in the reference bundle and every one is silent if
 
 Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one that lands every order it can and names what it could not take. Every compromise is reported as an `AmazonAnomaly` carrying the order it happened on.
 
-`dropped-line` is the one that matters most. A line that cannot be read is money leaving the order invisibly — the order still totals correctly from `Total Amount`, so nothing downstream can tell a line is missing. A test asserts lines-out plus dropped equals rows-in.
+`dropped-line` and `dropped-order` are the ones that matter most, because they are the cases where data does not arrive at all. A line that cannot be read is money leaving the order invisibly — the order still totals correctly from `Total Amount`, so nothing downstream can tell a line is missing. A test asserts lines-out plus dropped equals rows-in.
+
+An order is dropped only when its `Order Date` or `Currency` is unreadable. Skipping is correct there — `orderedAt` is what the reconciliation window is measured against, so an order without one could never match a transaction — but it is reported, because a backfill that quietly lands 700 of 748 orders is indistinguishable from one that landed everything.
 
 ## What this adapter does not produce
 
