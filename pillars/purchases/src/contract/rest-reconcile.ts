@@ -15,15 +15,22 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ErrorBodySchema, OkSchema } from './rest-schemas.js';
-import { CentsSchema, LinkTypeSchema } from './schemas/purchase.js';
+import {
+  CentsSchema,
+  CurrencySchema,
+  IsoTimestampSchema,
+  LinkTypeSchema,
+  PopsUriSchema,
+} from './schemas/purchase.js';
 
 const c = initContract();
 
+/** Mirrors `PurchaseChargeLinkSchema` field-for-field where they overlap. */
 export const QueuedLinkSchema = z.object({
-  transactionUri: z.string(),
+  transactionUri: PopsUriSchema,
   amountCents: CentsSchema,
   linkType: LinkTypeSchema,
-  confidence: z.number(),
+  confidence: z.number().min(0).max(1),
 });
 
 export const QueueEntrySchema = z.object({
@@ -32,8 +39,8 @@ export const QueueEntrySchema = z.object({
   source: z.string(),
   sourceOrderId: z.string().nullable(),
   merchantEntityName: z.string().nullable(),
-  orderedAt: z.string(),
-  currency: z.string(),
+  orderedAt: IsoTimestampSchema,
+  currency: CurrencySchema,
   amountCents: CentsSchema,
   /** Empty means unexplained rather than contested — a different UI state. */
   proposed: z.array(QueuedLinkSchema),
@@ -54,7 +61,7 @@ export const ReconcileQueueQuerySchema = z.object({
 
 const LinkDecisionBodySchema = z.object({
   chargeId: z.string().trim().min(1),
-  transactionUri: z.string().trim().min(1),
+  transactionUri: PopsUriSchema,
 });
 
 export const SweepOutcomeSchema = z.discriminatedUnion('kind', [

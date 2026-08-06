@@ -2138,7 +2138,7 @@
                     "type": "string"
                   },
                   "transactionUri": {
-                    "minLength": 1,
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                     "type": "string"
                   }
                 },
@@ -2251,6 +2251,7 @@
                             "type": "string"
                           },
                           "currency": {
+                            "pattern": "^[A-Z]{3}$",
                             "type": "string"
                           },
                           "deltaCents": {
@@ -2263,6 +2264,7 @@
                             "type": "string"
                           },
                           "orderedAt": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
                           "proposed": {
@@ -2275,6 +2277,8 @@
                                   "type": "integer"
                                 },
                                 "confidence": {
+                                  "maximum": 1,
+                                  "minimum": 0,
                                   "type": "number"
                                 },
                                 "linkType": {
@@ -2289,6 +2293,7 @@
                                   "type": "string"
                                 },
                                 "transactionUri": {
+                                  "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                                   "type": "string"
                                 }
                               },
@@ -2471,7 +2476,7 @@
                     "type": "string"
                   },
                   "transactionUri": {
-                    "minLength": 1,
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
                     "type": "string"
                   }
                 },
