@@ -13,6 +13,7 @@
  * to partition a set of amounts will produce a plausible partition that is
  * wrong (ADR-042).
  */
+import { descriptorMatches } from './descriptor.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 import {
   STAGE_CONFIDENCE,
@@ -36,7 +37,7 @@ export function solve(input: SolverInput): SolverOutput {
     if (confirmedCharges.has(charge.id)) continue;
 
     const candidates = candidatesFor(charge, input, claimed);
-    const outcome = matchCharge(charge, candidates, input);
+    const outcome = matchCharge(charge, candidates);
 
     if (outcome.kind === 'linked') {
       for (const link of outcome.links) {
@@ -59,15 +60,22 @@ export function solve(input: SolverInput): SolverOutput {
 /**
  * Deterministic processing order.
  *
- * Row ids are random UUIDs written within the same second, so neither id
- * nor creation time is stable. Ordering by the order's date, then the
- * amount, then the id gives a total order that depends only on the data —
- * which is what makes two runs over the same snapshot agree.
+ * Keyed on the source document — order date, then the charge's `position`
+ * within its order, then amount. Ids are random UUIDs and a re-ingest
+ * re-mints them, so ordering primarily by id would let the solver reach a
+ * different answer from the same source document; `position` exists
+ * precisely to give this a stable key (ADR-042).
+ *
+ * The id remains only as the last tiebreak, to guarantee a total order when
+ * two charges are otherwise indistinguishable. Two such charges are
+ * interchangeable by construction, so which one is processed first cannot
+ * change the outcome.
  */
 function orderedCharges(charges: readonly SolvableCharge[]): readonly SolvableCharge[] {
   return [...charges].toSorted(
     (a, b) =>
       a.orderedAt.localeCompare(b.orderedAt) ||
+      a.position - b.position ||
       a.amountCents - b.amountCents ||
       a.id.localeCompare(b.id)
   );
@@ -103,7 +111,6 @@ function candidatesFor(
   );
   if (window === null) return [];
 
-  const pattern = charge.descriptorPattern?.toLowerCase();
   const wantPositive = charge.amountCents > 0;
 
   return orderedTransactions(
@@ -112,10 +119,7 @@ function candidatesFor(
       if (!isWithinWindow(transaction.date, window)) return false;
       if (transaction.amountCents === 0) return false;
       if (transaction.amountCents > 0 !== wantPositive) return false;
-      if (pattern !== undefined && !transaction.description.toLowerCase().includes(pattern)) {
-        return false;
-      }
-      return true;
+      return descriptorMatches(transaction.description, charge.descriptorPattern);
     })
   );
 }
@@ -126,32 +130,26 @@ type MatchOutcome =
 
 /**
  * Walk the ladder for one charge. Each stage is tried only when the
- * stronger ones above it found nothing, so a rule can rescue a miss but
- * never overrule an exact amount.
+ * stronger ones above it found nothing.
  *
- * **Rules are consulted before partial-payment detection, which inverts the
- * order ADR-042 states.** The ADR lists partial at stage 3 and learned
- * rules at stage 4; this is a deliberate deviation, for one reason: a rule
- * is a decision a human already made about this order, while a partial
- * match is the weakest guess the ladder makes and it *consumes* a
- * transaction. Running partial first lets a speculative link claim the very
- * transaction a rule was written to point at, and the rule then finds
- * nothing left to match — so the user's correction silently stops working.
- * Every other stage keeps its ADR order.
+ * **Stage 4, learned rules, is not here.** `purchase_match_rules` is a
+ * descriptor-pattern table mirroring finance's `transaction_corrections` —
+ * `descriptionPattern`, `matchType`, `source`, `priority` — not a
+ * purchase-to-transaction pointer, and what a matched pattern should do to
+ * the ladder depends on how the review queue writes rules when a user
+ * accepts a link (POPS-241). Implementing it against a guessed model would
+ * put a second, incompatible rule shape in the engine, so it is deferred to
+ * its own slice rather than approximated here.
  */
 function matchCharge(
   charge: SolvableCharge,
-  candidates: readonly SolvableTransaction[],
-  input: SolverInput
+  candidates: readonly SolvableTransaction[]
 ): MatchOutcome {
   const exact = matchExact(charge, candidates);
   if (exact !== null) return exact;
 
   const split = matchSplit(charge, candidates);
   if (split !== null) return split;
-
-  const rule = matchRule(charge, candidates, input);
-  if (rule !== null) return rule;
 
   const partial = matchPartial(charge, candidates);
   if (partial !== null) return partial;
@@ -216,32 +214,6 @@ function matchSplit(
     case 'none':
       return null;
   }
-}
-
-/** Stage 4 — a learned rule, honoured only if its transaction is still free. */
-function matchRule(
-  charge: SolvableCharge,
-  candidates: readonly SolvableTransaction[],
-  input: SolverInput
-): MatchOutcome | null {
-  const rule = input.rules.find((candidate) => candidate.purchaseId === charge.purchaseId);
-  if (rule === undefined) return null;
-
-  const transaction = candidates.find((t) => t.uri === rule.transactionUri);
-  if (transaction === undefined) return null;
-
-  return {
-    kind: 'linked',
-    links: [
-      {
-        chargeId: charge.id,
-        transactionUri: transaction.uri,
-        amountCents: transaction.amountCents,
-        linkType: 'rule',
-        confidence: rule.confidence,
-      },
-    ],
-  };
 }
 
 /**

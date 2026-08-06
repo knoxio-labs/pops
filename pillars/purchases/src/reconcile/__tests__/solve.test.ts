@@ -8,6 +8,7 @@ function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge {
   return {
     id: 'chg-1',
     purchaseId: 'ord-1',
+    position: 0,
     amountCents: 4128,
     role: 'capture',
     orderedAt: '2026-03-04T00:00:00Z',
@@ -32,7 +33,6 @@ function run(input: Partial<SolverInput> = {}): SolverOutput {
     charges: [charge()],
     transactions: [txn()],
     confirmed: [],
-    rules: [],
     defaultWindowDays: 21,
     ...input,
   });
@@ -133,53 +133,6 @@ describe('stage 3 — partial payment', () => {
   });
 });
 
-describe('stage 4 — learned rule', () => {
-  const rules = [
-    {
-      id: 'r1',
-      purchaseId: 'ord-1',
-      transactionUri: 'pops://finance/transaction/odd',
-      confidence: 0.8,
-    },
-  ];
-
-  it('rescues a charge the arithmetic could not match', () => {
-    const { links } = run({
-      charges: [charge({ amountCents: 5000 })],
-      transactions: [txn({ uri: 'pops://finance/transaction/odd', amountCents: 9999 })],
-      rules,
-    });
-    expect(links[0]?.linkType).toBe('rule');
-    expect(links[0]?.confidence).toBe(0.8);
-  });
-
-  it('wins over a partial match that would otherwise consume its transaction', () => {
-    // The deliberate deviation from ADR-042's stage order, and the test
-    // that discriminates it. Both stages can fire here: the rule points at
-    // `odd`, and `odd` is also the only smaller-than-the-charge candidate,
-    // so partial would claim it first and leave the rule matching nothing.
-    // The user's correction would then silently stop working.
-    const { links } = run({
-      charges: [charge({ amountCents: 5000 })],
-      transactions: [txn({ uri: 'pops://finance/transaction/odd', amountCents: 3000 })],
-      rules,
-    });
-    expect(links[0]?.linkType).toBe('rule');
-    expect(links[0]?.confidence).toBe(0.8);
-  });
-
-  it('never overrules an exact amount match', () => {
-    const { links } = run({
-      transactions: [
-        txn({ uri: 'pops://finance/transaction/t1', amountCents: 4128 }),
-        txn({ uri: 'pops://finance/transaction/odd', amountCents: 9999, date: '2026-03-07' }),
-      ],
-      rules,
-    });
-    expect(links[0]?.linkType).toBe('exact');
-  });
-});
-
 describe('confirmed links are pinned', () => {
   it('leaves a confirmed charge alone entirely', () => {
     const { links, review } = run({
@@ -217,7 +170,7 @@ describe('blocking', () => {
 
   it('blocks on the source descriptor pattern', () => {
     const { review } = run({
-      charges: [charge({ descriptorPattern: 'WOOLWORTHS' })],
+      charges: [charge({ descriptorPattern: 'WOOLWORTHS%' })],
       transactions: [txn({ description: 'AMAZON MKTPLACE AU' })],
     });
     expect(review[0]?.reason).toBe('no-candidate');
@@ -225,7 +178,7 @@ describe('blocking', () => {
 
   it('matches the descriptor case-insensitively', () => {
     const { links } = run({
-      charges: [charge({ descriptorPattern: 'amazon' })],
+      charges: [charge({ descriptorPattern: 'amazon%' })],
       transactions: [txn({ description: 'AMAZON MKTPLACE AU' })],
     });
     expect(links).toHaveLength(1);

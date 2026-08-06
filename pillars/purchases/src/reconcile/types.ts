@@ -21,6 +21,17 @@ import type { LinkType, SettlementRole } from '../contract/constants.js';
 export interface SolvableCharge {
   readonly id: string;
   readonly purchaseId: string;
+  /**
+   * `purchase_charges.position` — the charge's place in its source
+   * document.
+   *
+   * This is the stable ordering key, and the reason the column exists at
+   * all (ADR-042). Ids are random UUIDs and every row of one ingest shares
+   * a `createdAt` to the second, so neither can order charges reproducibly;
+   * worse, a re-ingest re-mints the UUIDs, so an id-ordered solver could
+   * reach a different answer from the same source document.
+   */
+  readonly position: number;
   /** Signed, integer cents, in the settlement currency. */
   readonly amountCents: number;
   readonly role: SettlementRole;
@@ -55,23 +66,10 @@ export interface ConfirmedLink {
   readonly transactionUri: string;
 }
 
-/**
- * A learned rule, mirroring finance's `transaction_corrections`. Stage 4:
- * consulted only after the arithmetic stages find nothing, so a rule can
- * rescue a miss but never overrule an exact match.
- */
-export interface MatchRule {
-  readonly id: string;
-  readonly purchaseId: string;
-  readonly transactionUri: string;
-  readonly confidence: number;
-}
-
 export interface SolverInput {
   readonly charges: readonly SolvableCharge[];
   readonly transactions: readonly SolvableTransaction[];
   readonly confirmed: readonly ConfirmedLink[];
-  readonly rules: readonly MatchRule[];
   /** Default settlement window when a source states none. */
   readonly defaultWindowDays: number;
 }

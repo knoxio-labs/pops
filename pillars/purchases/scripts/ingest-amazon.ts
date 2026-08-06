@@ -60,9 +60,12 @@ async function upsertSource(baseUrl: string): Promise<void> {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       label: 'Amazon',
-      // Covers `AMAZON MKTPLACE AU`, `Amazon AU`, `AMAZON.COM.AU` — the
-      // linker's stage-0 blocking, not a matcher in its own right.
-      descriptorPattern: 'AMAZON',
+      // A LIKE pattern, not a substring: the trailing `%` is load-bearing.
+      // Without it this is an equality test that matches nothing, because
+      // no bank descriptor is the bare word AMAZON — it is `AMAZON
+      // MKTPLACE AU`, `Amazon AU`, `AMAZON.COM.AU`. See
+      // `src/reconcile/descriptor.ts`.
+      descriptorPattern: 'AMAZON%',
       // One order routinely settles as several shipment charges days apart,
       // so Amazon gets review rather than auto-linking.
       autoLinkPolicy: 'review',

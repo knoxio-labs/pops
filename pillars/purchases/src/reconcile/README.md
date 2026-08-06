@@ -1,6 +1,6 @@
 # reconciliation solver
 
-The arithmetic core of POPS-237: given a snapshot of charges, candidate transactions, confirmed links and learned rules, decide which links to propose.
+The arithmetic core of POPS-237: given a snapshot of charges, candidate transactions and confirmed links, decide which links to propose.
 
 **Pure.** Nothing here touches the database, calls finance, reads a clock or uses randomness. That is not tidiness — it is the invariant the whole design rests on:
 
@@ -19,11 +19,10 @@ Deterministic first, AI never. Matching is arithmetic, and a model asked to part
 | 0     | block: unclaimed, in window, descriptor match, same sign | —         |
 | 1     | exactly one transaction for the charge amount            | `exact`   |
 | 2     | subset-sum over the remaining candidates                 | `split`   |
-| 4     | a learned rule naming a still-free transaction           | `rule`    |
 | 3     | one candidate smaller than the charge — a part-payment   | `partial` |
 | 5     | anything ambiguous or unmatched                          | review    |
 
-**Stages 3 and 4 run in the opposite order to ADR-042, deliberately.** The ADR lists partial at 3 and rules at 4. A rule is a decision a human already made about this order; a partial match is the ladder's weakest guess _and it consumes a transaction_. Running partial first lets a speculative link claim the very transaction a rule was written to point at, after which the rule matches nothing and the user's correction silently stops working. Every other stage keeps its ADR order, and a test discriminates this one specifically.
+**Stage 4, learned rules, is deliberately absent.** `purchase_match_rules` is a descriptor-pattern table mirroring finance's `transaction_corrections` — `descriptionPattern`, `matchType`, `source`, `priority` — not a purchase-to-transaction pointer. What a matched pattern should do to the ladder depends on how the review queue writes rules when a user accepts a link (POPS-241), so implementing it now would embed a second, incompatible rule model in the engine. It has its own slice.
 
 ## Ambiguity is a signal, not a coin flip
 
@@ -38,6 +37,14 @@ Every stage that could pick between equally-good candidates routes to review ins
 **Sign is never mixed.** Only candidates with the same sign as the target take part. Without that guard, a refund and a purchase cancel out to hit a target neither belongs to — arithmetically valid, factually absurd — and a refund can be "settled" by an ordinary purchase of the same magnitude.
 
 **The candidate ceiling is about honesty, not cost.** 2^12 subsets is trivial to enumerate. The bound exists because as a window gets more crowded, the number of subsets that coincidentally hit any given total grows with it. A wider window does not find better answers, it finds more coincidences, so a window past the ceiling is refused rather than searched.
+
+## The descriptor pattern is LIKE, not a substring
+
+`purchase_sources.descriptorPattern` had no documented format, and the repo disagreed with itself: the source fixtures store `AMAZON%` and `BUNNINGS%` while the Amazon ingest CLI registered a bare `AMAZON`. Under substring matching the first matches nothing; under LIKE the second matches only a descriptor that is exactly `AMAZON`. Either reading silently blocks a source's entire backlog into review.
+
+It is **LIKE**, matching what the stored data already assumed: `%` is any run of characters, `_` is exactly one, the pattern is anchored and matching is case-insensitive. A pattern with no wildcard is therefore an equality test — which is why the CLI was corrected to write `AMAZON%`.
+
+Patterns are compiled with regex metacharacters escaped first, because `PAYPAL *MERCHANT` is a real bank descriptor and an unescaped `*` would be read as a quantifier.
 
 ## The window
 
