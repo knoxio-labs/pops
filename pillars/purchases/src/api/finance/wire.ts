@@ -50,8 +50,26 @@ export const FinanceTransactionWireSchema = z.object({
   account: z.string(),
   /** DECIMAL DOLLARS, not cents. Converted at the boundary; never propagated. */
   amount: z.number(),
-  /** Date-only `YYYY-MM-DD`, not a timestamp. */
-  date: z.string(),
+  /**
+   * Date-only `YYYY-MM-DD`, and enforced as such.
+   *
+   * The window this leg queries is expressed in the same form, and the
+   * ladder compares it against `purchase.orderedAt`. A producer that began
+   * emitting a full timestamp would pass a bare `z.string()` and then sort
+   * and compare differently — a drift that changes which transactions fall
+   * inside a 14–21 day window without ever failing.
+   */
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, 'expected a date-only YYYY-MM-DD value'),
+  /**
+   * Left deliberately open.
+   *
+   * Finance's transaction type is a closed vocabulary, but pinning it here
+   * would mean finance could not ADD a type without this leg rejecting
+   * every transaction in the window — turning a routine producer change
+   * into a fleet-wide reconciliation outage. Nothing here branches on
+   * `type`; it is carried for the solver's blocking stage, which treats an
+   * unfamiliar value as simply not matching.
+   */
   type: z.string(),
   entityId: z.string().nullable(),
   entityName: z.string().nullable(),

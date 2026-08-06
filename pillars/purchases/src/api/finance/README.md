@@ -37,8 +37,10 @@ The same reasoning makes truncation a failure rather than a short read: a partia
 
 ## What finance can and cannot filter
 
-`GET /transactions` supports `startDate`, `endDate`, `search`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.
+`GET /transactions` accepts `search`, `account`, `startDate`, `endDate`, `tag`, `entityId`, `type`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.
 
-There is **no amount filter**, so amount narrowing happens in the solver after the window pull. `search` is a substring filter used for stage-0 descriptor blocking from `purchase_sources.descriptorPattern`; it narrows the pull and never decides a match.
+**This leg uses four of them** — `startDate`, `endDate`, `search` and the paging pair. The rest are available and deliberately unused: `entityId` and `tag` describe finance's own classification of a transaction, and a charge should match on date and amount regardless of how finance happens to have categorised it. Narrowing by them would hide exactly the mis-categorised transactions reconciliation most needs to find.
+
+There is **no amount filter** in that set, so amount narrowing happens in the solver after the window pull. `search` is a substring filter used for stage-0 descriptor blocking from `purchase_sources.descriptorPattern`; it narrows the pull and never decides a match.
 
 Two shape mismatches the caller has to handle: finance's `date` is a date-only `YYYY-MM-DD`, while `purchases.orderedAt` is a full ISO timestamp; and there is no "already linked" flag on the wire — `relatedTransactionId` covers finance's own transfer pairs and says nothing about this pillar's links.

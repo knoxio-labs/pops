@@ -76,6 +76,29 @@ describe('FinanceListResponseSchema', () => {
   it('rejects a response missing its pagination envelope', () => {
     expect(FinanceListResponseSchema.safeParse({ data: [validRow] }).success).toBe(false);
   });
+
+  it('rejects a date that drifted into a full timestamp', () => {
+    // The window is expressed as YYYY-MM-DD and compared against it. A
+    // producer emitting a timestamp would sort and compare differently
+    // without ever failing, silently changing which transactions fall
+    // inside a 14-21 day window.
+    const parsed = FinanceListResponseSchema.safeParse({
+      data: [{ ...validRow, date: '2026-03-04T00:00:00Z' }],
+      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('accepts an unfamiliar transaction type rather than rejecting the window', () => {
+    // Deliberately NOT a closed enum. Pinning it would mean finance could
+    // not add a type without this leg rejecting every transaction — a
+    // routine producer change becoming a fleet-wide reconciliation outage.
+    const parsed = FinanceListResponseSchema.safeParse({
+      data: [{ ...validRow, type: 'chargeback' }],
+      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+    });
+    expect(parsed.success).toBe(true);
+  });
 });
 
 describe('toCandidateTransaction', () => {
