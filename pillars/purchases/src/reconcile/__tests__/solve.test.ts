@@ -185,6 +185,26 @@ describe('blocking', () => {
   });
 });
 
+describe('a zero-amount charge', () => {
+  it('reports no candidate rather than ambiguity', () => {
+    // Nothing can settle a zero charge. Treating it as merely sign-less
+    // would let every negative transaction in the window count as a
+    // candidate, and the charge would land in review as though the problem
+    // were too much evidence rather than an unmatchable amount.
+    const { links, review } = run({
+      charges: [charge({ amountCents: 0 })],
+      transactions: [
+        txn({ uri: 'a', amountCents: -500 }),
+        txn({ uri: 'b', amountCents: -900, date: '2026-03-07' }),
+      ],
+    });
+
+    expect(links).toHaveLength(0);
+    expect(review[0]?.reason).toBe('no-candidate');
+    expect(review[0]?.candidateCount).toBe(0);
+  });
+});
+
 describe('an overcrowded window', () => {
   it('routes to review rather than searching a window it cannot search honestly', () => {
     // Past the subset-sum ceiling the number of coincidental combinations

@@ -37,56 +37,61 @@ export function orderedTransactions(
 }
 
 /**
- * Stage 0 — blocking. Narrow the field to transactions that could plausibly
- * settle this charge: unclaimed, inside the window, matching the source's
- * descriptor, and of the same sign.
+ * Stage 0 — blocking, compiled once per charge.
+ *
+ * Narrows the field to transactions that could plausibly settle this
+ * charge: inside its window, matching its source descriptor, same sign,
+ * non-zero on both sides.
+ *
+ * Returned as a predicate rather than applied directly because the combined
+ * phase tests one charge against many transactions in a nested loop. Doing
+ * the window arithmetic and — worse — recompiling the descriptor regex per
+ * pair is exactly what `descriptor.ts` was changed to avoid.
  *
  * Sign matters more than it looks. A refund is a negative charge, and
- * without this guard a refund could be "settled" by an ordinary purchase of
+ * without that guard a refund could be "settled" by an ordinary purchase of
  * the same magnitude.
+ *
+ * A **zero-amount charge accepts nothing**. There is no transaction that
+ * could settle it, and treating it as merely sign-less would let every
+ * negative transaction in the window count as a candidate — routing it to
+ * `ambiguous` review as though the problem were too much evidence rather
+ * than a charge that cannot be matched at all.
  */
+export function eligibilityFor(
+  charge: SolvableCharge,
+  defaultWindowDays: number
+): (transaction: SolvableTransaction) => boolean {
+  if (charge.amountCents === 0) return () => false;
+
+  const window = settlementWindowFor(
+    charge.orderedAt,
+    charge.settlementWindowDays ?? defaultWindowDays
+  );
+  if (window === null) return () => false;
+
+  const wantPositive = charge.amountCents > 0;
+  const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
+
+  return (transaction) => {
+    if (!isWithinWindow(transaction.date, window)) return false;
+    if (transaction.amountCents === 0) return false;
+    if (transaction.amountCents > 0 !== wantPositive) return false;
+    return matchesDescriptor(transaction.description);
+  };
+}
+
+/** {@link eligibilityFor}, applied to the unclaimed transactions. */
 export function candidatesFor(
   charge: SolvableCharge,
   transactions: readonly SolvableTransaction[],
   claimed: ReadonlySet<string>,
   defaultWindowDays: number
 ): readonly SolvableTransaction[] {
-  const window = settlementWindowFor(
-    charge.orderedAt,
-    charge.settlementWindowDays ?? defaultWindowDays
-  );
-  if (window === null) return [];
-
-  const wantPositive = charge.amountCents > 0;
-  // Compiled once per charge rather than once per candidate.
-  const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
-
+  const accepts = eligibilityFor(charge, defaultWindowDays);
   return orderedTransactions(
-    transactions.filter((transaction) => {
-      if (claimed.has(transaction.uri)) return false;
-      if (!isWithinWindow(transaction.date, window)) return false;
-      if (transaction.amountCents === 0) return false;
-      if (transaction.amountCents > 0 !== wantPositive) return false;
-      return matchesDescriptor(transaction.description);
-    })
+    transactions.filter((transaction) => !claimed.has(transaction.uri) && accepts(transaction))
   );
-}
-
-/** True when this transaction could settle this charge at all (stage 0). */
-export function isEligible(
-  charge: SolvableCharge,
-  transaction: SolvableTransaction,
-  defaultWindowDays: number
-): boolean {
-  const window = settlementWindowFor(
-    charge.orderedAt,
-    charge.settlementWindowDays ?? defaultWindowDays
-  );
-  if (window === null) return false;
-  if (!isWithinWindow(transaction.date, window)) return false;
-  if (transaction.amountCents === 0 || charge.amountCents === 0) return false;
-  if (transaction.amountCents > 0 !== charge.amountCents > 0) return false;
-  return descriptorMatcherFor(charge.descriptorPattern)(transaction.description);
 }
 
 /** Stage 1 — a single transaction for exactly the charge amount. */

@@ -11,7 +11,7 @@
  * time can only ever ask "does something here sum to *me*".
  */
 
-import { isEligible, linkOf, orderedTransactions } from './stages.js';
+import { eligibilityFor, linkOf, orderedTransactions } from './stages.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 
 import type { ProposedLink, SolvableCharge, SolvableTransaction } from './types.js';
@@ -48,13 +48,19 @@ export function matchCombined(
   const matchedChargeIds = new Set<string>();
   const claimedUris = new Set<string>();
 
+  // Compiled once per charge, not once per (charge, transaction) pair. The
+  // loop below is nested, and `eligibilityFor` builds a regex.
+  const admissible = charges.map((charge) => ({
+    charge,
+    accepts: eligibilityFor(charge, defaultWindowDays),
+  }));
+
   for (const transaction of orderedTransactions(transactions)) {
     if (claimed.has(transaction.uri) || claimedUris.has(transaction.uri)) continue;
 
-    const eligible = charges.filter(
-      (charge) =>
-        !matchedChargeIds.has(charge.id) && isEligible(charge, transaction, defaultWindowDays)
-    );
+    const eligible = admissible
+      .filter((entry) => !matchedChargeIds.has(entry.charge.id) && entry.accepts(transaction))
+      .map((entry) => entry.charge);
     // Fewer than two eligible charges cannot be a *combined* settlement; a
     // single charge for this amount is an exact match and was already tried.
     if (eligible.length < MIN_SPLIT_SIZE) continue;
