@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 /**
  * The finance leg over REAL HTTP.
  *
@@ -16,8 +15,10 @@ import { readFileSync } from 'node:fs';
  * thing this leg can have to the regenerate-and-diff gate that covers the
  * browser-facing clients.
  */
+import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
-import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -25,9 +26,24 @@ import { pillar } from '@pops/pillar-sdk/client';
 
 import { createFinanceClient, type FinanceRouter } from '../client.js';
 
-const require = createRequire(import.meta.url);
+/**
+ * Finance's OpenAPI, vendored inside this pillar's own boundary.
+ *
+ * Not `require.resolve('@pops/finance/openapi')`: purchases declares no
+ * dependency on finance and must not — no backend pillar depends on another
+ * pillar's package, and reaching across into `pillars/finance/` would break
+ * the extractability the repo guards. Resolving it through pnpm's workspace
+ * links happened to work locally and failed in CI, which is precisely the
+ * phantom dependency that convention exists to prevent.
+ *
+ * `scripts/ci/check-vendored-contracts.mjs` asserts this copy is
+ * byte-identical to finance's canonical spec, so the pin cannot go stale:
+ * if finance changes its contract, CI fails until this is re-vendored and
+ * these tests re-run against the new document.
+ */
+const CONTRACTS_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../../contracts');
 const FINANCE_OPENAPI: unknown = JSON.parse(
-  readFileSync(require.resolve('@pops/finance/openapi'), 'utf8')
+  readFileSync(join(CONTRACTS_DIR, 'finance.openapi.json'), 'utf8')
 );
 
 /**

@@ -2,10 +2,14 @@
 /**
  * Vendored-contract drift guard.
  *
- * Some app units consume a sibling pillar's OpenAPI contract at codegen time
- * but cannot depend on it through a `@pops/*` package — the producing pillar
- * has no npm package (e.g. `contacts`, a Rust pillar invisible to pnpm by
- * design, see docs/plans/repo-federation/02-build-system.md). Per ADR-033 the
+ * Two kinds of unit consume a sibling pillar's OpenAPI contract without
+ * being able to reach for it directly. An app unit generates a client at
+ * codegen time from a producer with no npm package (e.g. `contacts`, a Rust
+ * pillar invisible to pnpm by design, see
+ * docs/plans/repo-federation/02-build-system.md). A pillar's SERVER pins a
+ * sibling's contract in a test — the backend-to-backend SDK proxy is untyped
+ * at the network edge, so a served-document test is the only thing that
+ * fails when a producer renames an operation. Per ADR-033 the
  * OpenAPI snapshot IS that pillar's cross-language contract, so the consumer
  * vendors a copy of the published snapshot inside its OWN unit boundary
  * (`pillars/<consumer>/app/contracts/<pillar>.openapi.json`) and generates its
@@ -52,8 +56,19 @@ const VENDORED_SUFFIX = '.openapi.json';
  */
 
 /**
- * Discover every vendored contract under `pillars/<consumer>/app/contracts/`
- * and pair each with the canonical producer spec it must mirror.
+ * Where a consumer may keep a vendored snapshot, relative to its own unit.
+ *
+ * `app/contracts/` is the frontend codegen case. `contracts/` is the
+ * backend one: a pillar's SERVER that pins a sibling's contract in a test
+ * has the same extractability problem and the same drift risk, and reaching
+ * across into `pillars/<producer>/openapi/` would break the black-box
+ * boundary just as surely.
+ */
+const CONTRACT_DIRS = [['contracts'], ['app', 'contracts']];
+
+/**
+ * Discover every vendored contract under a consumer's own boundary and pair
+ * each with the canonical producer spec it must mirror.
  *
  * @param {string} root Repo root to scan.
  * @returns {VendoredContract[]}
@@ -66,16 +81,18 @@ export function discoverVendoredContracts(root) {
 
   for (const consumer of readdirSync(pillarsDir, { withFileTypes: true })) {
     if (!consumer.isDirectory()) continue;
-    const contractsDir = join(pillarsDir, consumer.name, 'app', 'contracts');
-    if (!existsSync(contractsDir)) continue;
-    for (const entry of readdirSync(contractsDir, { withFileTypes: true })) {
-      if (!entry.isFile() || !entry.name.endsWith(VENDORED_SUFFIX)) continue;
-      const pillarId = entry.name.slice(0, -VENDORED_SUFFIX.length);
-      found.push({
-        copy: join(contractsDir, entry.name),
-        source: join(pillarsDir, pillarId, 'openapi', entry.name),
-        pillarId,
-      });
+    for (const segments of CONTRACT_DIRS) {
+      const contractsDir = join(pillarsDir, consumer.name, ...segments);
+      if (!existsSync(contractsDir)) continue;
+      for (const entry of readdirSync(contractsDir, { withFileTypes: true })) {
+        if (!entry.isFile() || !entry.name.endsWith(VENDORED_SUFFIX)) continue;
+        const pillarId = entry.name.slice(0, -VENDORED_SUFFIX.length);
+        found.push({
+          copy: join(contractsDir, entry.name),
+          source: join(pillarsDir, pillarId, 'openapi', entry.name),
+          pillarId,
+        });
+      }
     }
   }
   return found.toSorted((a, b) => a.copy.localeCompare(b.copy));
