@@ -60,8 +60,16 @@ export {
 } from './services/reconcile-reads.js';
 
 export {
+  listReconcileQueue,
+  type QueueEntry,
+  type QueueFilter,
+  type QueuedLink,
+} from './services/reconcile-queue.js';
+
+export {
   chargeIdsForPurchases,
   confirmLink,
+  unlinkCharge,
   mintDerivedCharge,
   persistProposedLinks,
   tearDownUnconfirmedLinks,

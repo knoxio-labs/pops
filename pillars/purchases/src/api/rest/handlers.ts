@@ -9,6 +9,7 @@ import { initServer } from '@ts-rest/express';
 
 import { purchasesContract } from '../../contract/rest.js';
 import { makePurchaseHandlers } from './purchase-handlers.js';
+import { makeReconcileHandlers, type SweepTrigger } from './reconcile-handlers.js';
 import { makeSourceHandlers } from './source-handlers.js';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
@@ -19,9 +20,12 @@ export function makePurchasesRestHandlers(deps: {
   purchasesDb: OpenedPurchasesDb;
   /** Fired after a successful ingest — trigger 1 of the reconciliation sweep. */
   onIngest?: () => void;
+  /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
+  sweep?: SweepTrigger;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
     purchase: makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest),
+    reconcile: makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),
     source: makeSourceHandlers(deps.purchasesDb.db),
   });
 }

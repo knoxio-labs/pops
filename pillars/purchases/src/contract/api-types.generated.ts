@@ -56,6 +56,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/reconcile/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Pin a link so re-derivation never revises it */
+    post: operations['reconcile.confirm'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reconcile/queue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Charges awaiting a decision, newest order first */
+    get: operations['reconcile.queue'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reconcile/sweep': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run a reconciliation sweep now */
+    post: operations['reconcile.sweep'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/reconcile/unlink': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Remove a link. The next sweep may re-derive it — see POPS-1309 */
+    post: operations['reconcile.unlink'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/sources': {
     parameters: {
       query?: never;
@@ -631,6 +699,189 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'reconcile.confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          chargeId: string;
+          transactionUri: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'reconcile.queue': {
+    parameters: {
+      query?: {
+        source?: string;
+        kind?: 'proposed' | 'unexplained';
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: {
+              amountCents: number;
+              chargeId: string;
+              currency: string;
+              deltaCents: number;
+              merchantEntityName: string | null;
+              orderedAt: string;
+              proposed: {
+                amountCents: number;
+                confidence: number;
+                /** @enum {string} */
+                linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                transactionUri: string;
+              }[];
+              purchaseId: string;
+              source: string;
+              sourceOrderId: string | null;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  'reconcile.sweep': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          source?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json':
+            | {
+                chargesConsidered: number;
+                derivedChargesMinted: number;
+                /** @enum {string} */
+                kind: 'swept';
+                linksTornDown: number;
+                linksWritten: number;
+                reviewCount: number;
+              }
+            | {
+                /** @enum {string} */
+                kind: 'skipped';
+                reason: string;
+              };
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'reconcile.unlink': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          chargeId: string;
+          transactionUri: string;
+        };
       };
     };
     responses: {
