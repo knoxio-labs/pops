@@ -34,8 +34,13 @@ export interface SweepResult {
 export type SweepOutcome =
   | SweepResult
   /**
-   * Nothing was read, so nothing was written. Distinct from a sweep that
-   * found no work — see {@link runSweep}.
+   * Finance could not be asked, so **nothing was written** — no links, and
+   * no derived charges either. Reads did happen: the window is computed
+   * from local state before the fetch is attempted.
+   *
+   * Distinct from a `swept` result with zero counts, which means the sweep
+   * ran and found no work. A caller that conflates the two would report an
+   * outage as a clean, empty reconciliation.
    */
   | { readonly kind: 'skipped'; readonly reason: string };
 
