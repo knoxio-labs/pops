@@ -391,6 +391,11 @@ services:
       PURCHASES_SQLITE_PATH: /data/sqlite/purchases.db
       PURCHASES_SELF_BASE_URL: http://purchases-api:3013
       POPS_REGISTRY_ENABLED: 'true'
+      # Reconciliation sweep cadence. Unset in production (module defaults:
+      # 5min coalesce, 15min poll); the smoke test lowers them so it does
+      # not wait a quarter of an hour for the first tick.
+      PURCHASES_SWEEP_COALESCE_MS: ${PURCHASES_SWEEP_COALESCE_MS:-}
+      PURCHASES_SWEEP_POLL_MS: ${PURCHASES_SWEEP_POLL_MS:-}
     expose:
       - '3013'
     depends_on:

@@ -20,6 +20,8 @@ export interface PurchasesApiDeps {
    * `purchases` entry in `GET /pillars`.
    */
   selfBaseUrl: string;
+  /** Fired after a successful ingest — trigger 1 of the reconciliation sweep. */
+  onIngest?: () => void;
 }
 
 export interface HealthResponse {

@@ -93,6 +93,32 @@ After a successful candidate fetch, every chargeless order gets one `derived` ch
 
 Cash orders are excluded from all of it. `settlementMode='cash'` is terminal, so including one would put a permanently unmatchable row in the review queue every night — the false alarm that teaches someone to stop reading the queue.
 
+## The three triggers
+
+`runner.ts` is scheduling and nothing else — all the behaviour is in the sweep. ADR-042 names the triggers and they share one operation:
+
+1. **Purchase ingest** — `POST /purchases` calls `request()` after a successful write.
+2. **Transaction commit** — a poll, every 15 minutes. Finance gets no webhook and no schema change (ADR-042), and perpetual retry is already how import lag is absorbed, so a timer is both sufficient and the only option that leaves the producer untouched.
+3. **Nightly** — the backstop for whatever the other two missed while the process was down.
+
+**Coalescing is why this file exists** rather than each trigger calling `runSweep`. A backfill posts 748 orders in about a second; a sweep per ingest would run 748 full reconciliations, each re-solving what the last just did and each asking finance for the same window. Requests inside one five-minute window collapse into a single run, and a request arriving _during_ a run schedules exactly one more — so the last order of a burst is never left unswept.
+
+The ingest trigger is fired after the write and its errors are swallowed. The order is already committed by then, so letting a scheduling failure turn a successful ingest into a 500 would make the caller retry a write that already happened — and a backfill would report failures for orders sitting in the database.
+
+Cadence is overridable via `PURCHASES_SWEEP_COALESCE_MS` and `PURCHASES_SWEEP_POLL_MS`. A malformed value crashes boot rather than falling back, because a silently-default cadence looks exactly like the setting having worked.
+
+## Testing this across processes
+
+Three layers, each covering what the one below cannot:
+
+| layer                                | what only it proves                                                                             |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `finance-http.test.ts`               | the SDK proxy really resolves and calls, in-process                                             |
+| `two-process.test.ts`                | the real entry point boots, migrates a fresh DB, starts the runner and reconciles over a socket |
+| `infra/smoke/purchases-reconcile.sh` | the Docker network and the compose file                                                         |
+
+Only the last needs Docker, which is why it is a script rather than a test — a suite that takes minutes stops being run.
+
 ## What slice 2 does not do
 
 `combined` (several charges settled by one transaction) is the same subset-sum with the sides exchanged. It needs to consider an order's charges as a group rather than one at a time, which is a change to the solver's traversal rather than to its arithmetic. The `combined` link type exists in the vocabulary and is not yet produced.
