@@ -198,6 +198,41 @@ describe('the timed triggers', () => {
     sweeper.stop();
   });
 
+  it('drain waits for a sweep that is already running', async () => {
+    // What shutdown depends on: stop() cancels timers but a sweep awaiting
+    // finance is still going to write when it returns, and the process
+    // must not close the database before then.
+    order('a');
+    let resolveFetch: ((value: CandidateFetch) => void) | undefined;
+    const gate = new Promise<CandidateFetch>((resolve) => {
+      resolveFetch = resolve;
+    });
+    const slow: FinanceClient = {
+      fetchCandidates: () => {
+        fetches += 1;
+        return gate;
+      },
+    };
+    const sweeper = runner({ finance: slow });
+
+    void sweeper.runOnce().catch(() => undefined);
+    expect(fetches).toBe(1);
+
+    sweeper.stop();
+    let drained = false;
+    const draining = sweeper.drain().then(() => {
+      drained = true;
+    });
+
+    // Still in flight, so drain must not have resolved.
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(drained).toBe(false);
+
+    resolveFetch?.({ kind: 'ok', transactions: [] });
+    await draining;
+    expect(drained).toBe(true);
+  });
+
   it('stops cleanly', async () => {
     order('a');
     const sweeper = runner();

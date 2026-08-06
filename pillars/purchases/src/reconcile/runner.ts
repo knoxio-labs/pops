@@ -63,8 +63,17 @@ export interface SweepRunner {
   runOnce(): Promise<SweepOutcome>;
   /** Start triggers 2 and 3. */
   start(): void;
+  /** Cancel every timer. Does NOT wait for a sweep already running. */
   stop(): void;
-  /** Test-only: settle any in-flight run. */
+  /**
+   * Settle any in-flight sweep.
+   *
+   * The shutdown primitive, not a test helper. `stop()` only cancels
+   * timers, so a SIGTERM arriving while a sweep is awaiting finance would
+   * otherwise let the process close its SQLite handle before the writes
+   * that follow the fetch — the sweep would then fail against a closed
+   * database, mid-transaction, on the way out.
+   */
   drain(): Promise<void>;
 }
 

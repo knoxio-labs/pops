@@ -113,12 +113,20 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[purchases-api] Shutting down (${signal})`);
+  // Cancel the timers, then WAIT for a sweep that is already running. A
+  // sweep awaits finance between its reads and its writes, so closing the
+  // database here would fail those writes mid-transaction on the way out.
   sweepRunner.stop();
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      purchasesDb.raw.close();
+  void sweepRunner
+    .drain()
+    .catch(() => undefined)
+    .then(() => pillarHandle?.stop() ?? Promise.resolve())
+    .catch(() => undefined)
+    .finally(() => {
+      server.close(() => {
+        purchasesDb.raw.close();
+      });
     });
-  });
 }
 
 process.on('SIGTERM', shutdown);
