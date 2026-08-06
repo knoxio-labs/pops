@@ -29,6 +29,13 @@ export const MAX_SUBSET_CANDIDATES = 12;
 /** Smallest subset size worth reporting for a split. */
 export const MIN_SPLIT_SIZE = 2;
 
+/**
+ * Hard ceiling on the candidate count, imposed by the bitmask enumeration.
+ * `1 << 31` is negative in JavaScript, so anything above this would make
+ * the loop bound wrong rather than slow.
+ */
+const MASK_BIT_LIMIT = 30;
+
 export type SubsetSearch =
   /** No combination reaches the target. */
   | { readonly kind: 'none' }
@@ -70,7 +77,12 @@ export function findSubsetSummingTo(
   options: SubsetSearchOptions = {}
 ): SubsetSearch {
   const minSize = options.minSize ?? 1;
-  const maxCandidates = options.maxCandidates ?? MAX_SUBSET_CANDIDATES;
+  // Enumeration is a 32-bit bitmask, so a ceiling above 30 would overflow
+  // `1 << eligible.length` into a negative loop bound and silently search
+  // nothing. The production ceiling is nowhere near it, but the override
+  // exists, and a search that quietly finds no combinations is exactly the
+  // failure this module must not have.
+  const maxCandidates = Math.min(options.maxCandidates ?? MAX_SUBSET_CANDIDATES, MASK_BIT_LIMIT);
 
   const eligible = eligibleIndices(amounts, target);
   if (eligible.length > maxCandidates) {

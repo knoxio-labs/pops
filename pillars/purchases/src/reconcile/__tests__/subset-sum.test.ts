@@ -99,6 +99,15 @@ describe('findSubsetSummingTo', () => {
     });
   });
 
+  it('clamps an override that would overflow the bitmask enumeration', () => {
+    // 1 << 31 is negative in JS, so an unclamped ceiling above 30 makes the
+    // loop bound wrong and the search silently finds nothing — the one
+    // failure mode this module must not have.
+    const amounts = Array.from({ length: 40 }, (_, i) => (i + 1) * 100);
+    const result = findSubsetSummingTo(amounts, 100, { maxCandidates: 64 });
+    expect(result.kind).toBe('too-many');
+  });
+
   it('honours a minimum subset size, so a split cannot be a single txn', () => {
     // 2500 alone reaches the target, but a split means two or more.
     const result = findSubsetSummingTo([2500, 1000, 1500], 2500, { minSize: 2 });

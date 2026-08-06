@@ -60,7 +60,12 @@ export function settlementWindowFor(
   if (anchor === null) return null;
 
   const anchorMs = Date.parse(`${anchor}T00:00:00Z`);
-  const offset = Math.max(windowDays, 0) * MS_PER_DAY;
+  // A non-finite or fractional day count is not merely odd input: NaN makes
+  // `toISOString()` throw a RangeError, which would abort a whole sweep on
+  // one bad source row, and a fractional day shifts the truncated boundary
+  // in a way nothing downstream could explain.
+  const days = Number.isFinite(windowDays) ? Math.max(Math.trunc(windowDays), 0) : 0;
+  const offset = days * MS_PER_DAY;
 
   return {
     startDate: new Date(anchorMs - offset).toISOString().slice(0, 10),

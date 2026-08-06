@@ -53,6 +53,32 @@ describe('settlementWindowFor', () => {
     });
   });
 
+  it('does not throw on a non-finite window, which would abort a whole sweep', () => {
+    // NaN reaches toISOString() as an invalid date and raises a RangeError,
+    // so one bad source row would take down the sweep rather than one order.
+    expect(settlementWindowFor('2026-03-04T00:00:00Z', Number.NaN)).toEqual({
+      startDate: '2026-03-04',
+      endDate: '2026-03-04',
+    });
+    expect(settlementWindowFor('2026-03-04T00:00:00Z', Number.POSITIVE_INFINITY)).toEqual({
+      startDate: '2026-03-04',
+      endDate: '2026-03-04',
+    });
+  });
+
+  it('truncates a fractional day rather than shifting the boundary', () => {
+    expect(settlementWindowFor('2026-03-04T00:00:00Z', 2.9)).toEqual(
+      settlementWindowFor('2026-03-04T00:00:00Z', 2)
+    );
+  });
+
+  it('treats a negative window as zero', () => {
+    expect(settlementWindowFor('2026-03-04T00:00:00Z', -5)).toEqual({
+      startDate: '2026-03-04',
+      endDate: '2026-03-04',
+    });
+  });
+
   it('returns null for an unparseable order date', () => {
     expect(settlementWindowFor('not-a-date', 21)).toBeNull();
   });

@@ -123,8 +123,15 @@ export interface SolverOutput {
  */
 export const STAGE_CONFIDENCE: Readonly<Record<LinkType, number>> = {
   exact: 0.99,
+  /**
+   * `split` and `combined` share a value because they are the same
+   * exhaustive search with the two sides exchanged, and carry the same
+   * ambiguity profile. Scoring them differently would sort the review queue
+   * by which direction the partition happened to run, which is a property
+   * of the merchant's billing rather than of how good the evidence is.
+   */
   split: 0.9,
-  combined: 0.85,
+  combined: 0.9,
   partial: 0.6,
   rule: 0.8,
   /** Only ever written by a human action, never proposed by the solver. */

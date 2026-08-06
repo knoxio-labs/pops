@@ -13,7 +13,7 @@
  * to partition a set of amounts will produce a plausible partition that is
  * wrong (ADR-042).
  */
-import { descriptorMatches } from './descriptor.js';
+import { descriptorMatcherFor } from './descriptor.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 import {
   STAGE_CONFIDENCE,
@@ -112,6 +112,8 @@ function candidatesFor(
   if (window === null) return [];
 
   const wantPositive = charge.amountCents > 0;
+  // Compiled once per charge rather than once per candidate.
+  const matchesDescriptor = descriptorMatcherFor(charge.descriptorPattern);
 
   return orderedTransactions(
     input.transactions.filter((transaction) => {
@@ -119,7 +121,7 @@ function candidatesFor(
       if (!isWithinWindow(transaction.date, window)) return false;
       if (transaction.amountCents === 0) return false;
       if (transaction.amountCents > 0 !== wantPositive) return false;
-      return descriptorMatches(transaction.description, charge.descriptorPattern);
+      return matchesDescriptor(transaction.description);
     })
   );
 }

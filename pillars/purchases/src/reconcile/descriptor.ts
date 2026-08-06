@@ -39,15 +39,32 @@ export function compileDescriptorPattern(pattern: string): RegExp {
   return new RegExp(`^${body}$`, 'iu');
 }
 
+/** Matches every descriptor. What a source with no declared pattern gets. */
+const MATCH_EVERYTHING: DescriptorMatcher = () => true;
+
+export type DescriptorMatcher = (descriptor: string) => boolean;
+
 /**
- * Whether a transaction descriptor matches the source's pattern.
+ * Compile a source's pattern once, for reuse across a charge's candidates.
  *
- * A null or empty pattern blocks nothing — the source has simply not
+ * Compiling per candidate re-escapes and re-parses the same pattern for
+ * every transaction in the window. Hoisting it is why this returns a
+ * matcher rather than taking the descriptor: the alternative — a
+ * module-level regex cache — would put unbounded mutable state in a module
+ * the solver relies on being pure.
+ *
+ * A null or empty pattern blocks nothing. The source has simply not
  * declared one, which is different from declaring one that matches nothing.
  */
+export function descriptorMatcherFor(pattern: string | null): DescriptorMatcher {
+  if (pattern === null || pattern.trim() === '') return MATCH_EVERYTHING;
+  const compiled = compileDescriptorPattern(pattern);
+  return (descriptor) => compiled.test(descriptor);
+}
+
+/** One-shot convenience over {@link descriptorMatcherFor}. */
 export function descriptorMatches(descriptor: string, pattern: string | null): boolean {
-  if (pattern === null || pattern.trim() === '') return true;
-  return compileDescriptorPattern(pattern).test(descriptor);
+  return descriptorMatcherFor(pattern)(descriptor);
 }
 
 /** True when a pattern contains a wildcard, i.e. is not an equality test. */
