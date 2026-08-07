@@ -107,6 +107,16 @@ The ingest trigger is fired after the write and its errors are swallowed. The or
 
 Cadence is overridable via `PURCHASES_SWEEP_COALESCE_MS` and `PURCHASES_SWEEP_POLL_MS`. A malformed value crashes boot rather than falling back, because a silently-default cadence looks exactly like the setting having worked.
 
+## Zero-touch sources
+
+`purchase_sources.autoLinkPolicy` decides whether a source's charges are allowed to interrupt. It was a column that nothing read until POPS-239 needed it.
+
+`auto` means **do not ask** — it does _not_ mean auto-confirm. Confirming would pin the links against re-derivation, which contradicts the invariant the whole engine rests on. Auto-linked charges keep unconfirmed, re-derivable links; they simply stay out of the daily queue.
+
+The arithmetic behind that: a weekly grocery shop is roughly 60 line items, about 6,000 a year from one merchant. If each of those charges asked a question, the queue stops being usable and gets abandoned — taking the orders that genuinely need a decision with it (ADR-042).
+
+They are excluded, not hidden: `includeAuto=true` surfaces the low-priority bucket for the merchant lens. And a source with **no registered row at all** is treated as `review`, because an unregistered merchant is the one most likely to want looking at — silence would be exactly the wrong default.
+
 ## Testing this across processes
 
 Three layers, each covering what the one below cannot:

@@ -776,6 +776,7 @@ export interface operations {
       query?: {
         source?: string;
         kind?: 'proposed' | 'unexplained';
+        includeAuto?: boolean;
         limit?: number;
         offset?: number;
       };

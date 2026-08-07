@@ -55,6 +55,13 @@ export const QueueEntrySchema = z.object({
 export const ReconcileQueueQuerySchema = z.object({
   source: z.string().optional(),
   kind: z.enum(['proposed', 'unexplained']).optional(),
+  /**
+   * Include sources set to auto-link. Off by default: grocery is ~6,000
+   * line items a year from one merchant, and a queue that asks about every
+   * one of them gets abandoned along with the orders that do need a
+   * decision (ADR-042).
+   */
+  includeAuto: z.coerce.boolean().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });

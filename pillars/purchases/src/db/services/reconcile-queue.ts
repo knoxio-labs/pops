@@ -15,7 +15,7 @@
  */
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
-import { purchaseChargeLinks, purchaseCharges, purchases } from '../schema.js';
+import { purchaseChargeLinks, purchaseCharges, purchases, purchaseSources } from '../schema.js';
 
 import type { LinkType } from '../../contract/constants.js';
 import type { PurchasesDb } from './internal.js';
@@ -51,6 +51,19 @@ export interface QueueFilter {
   readonly source?: string;
   /** Only charges with at least one proposal, or only those with none. */
   readonly kind?: 'proposed' | 'unexplained';
+  /**
+   * Include sources whose `autoLinkPolicy` is `auto`.
+   *
+   * Off by default, which is the whole point of the column. A weekly
+   * grocery shop is ~60 line items and ~6,000 a year from one merchant; if
+   * every one of those charges asked a question the queue becomes
+   * unusable and gets abandoned, taking the orders that DO need a decision
+   * with it (ADR-042).
+   *
+   * On means "show me the low-priority bucket too" — the merchant lens
+   * wants it, the daily queue does not.
+   */
+  readonly includeAuto?: boolean;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -126,10 +139,17 @@ function undecidedCharges(db: PurchasesDb, filter: QueueFilter): UndecidedCharge
     })
     .from(purchaseCharges)
     .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
+    .leftJoin(purchaseSources, eq(purchases.source, purchaseSources.id))
     .where(
       and(
         sql`${purchases.settlementMode} <> 'cash'`,
         sql`${purchases.status} <> 'ignored'`,
+        // A source with no row at all is treated as `review`: an
+        // unregistered merchant is the one most likely to need looking at,
+        // so silence would be exactly the wrong default.
+        filter.includeAuto === true
+          ? undefined
+          : sql`(${purchaseSources.autoLinkPolicy} IS NULL OR ${purchaseSources.autoLinkPolicy} <> 'auto')`,
         filter.source === undefined ? undefined : eq(purchases.source, filter.source),
         // A charge is undecided when it has an unconfirmed link, or no link
         // at all. The OUTER PARENTHESES are load-bearing: `AND` binds
