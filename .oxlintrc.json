@@ -246,8 +246,8 @@
     },
     {
       "files": [
-        "**/*.test.{ts,tsx}",
-        "**/*.spec.{ts,tsx}",
+        "**/*.test.{ts,tsx,js,mjs}",
+        "**/*.spec.{ts,tsx,js,mjs}",
         "**/test-utils.ts",
         "**/test-utils.tsx",
         "**/test-setup.ts",
