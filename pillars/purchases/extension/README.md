@@ -47,11 +47,11 @@ over **XMLHttpRequest** rather than `fetch` — verified against the live
 site. Both are patched anyway; assuming one and being wrong captures
 nothing at all.
 
-| operation                     | variables                     | payload                             | how it is used                                                                                    |
-| ----------------------------- | ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `RewardsActivityHome`         | `$featureFlags`               | `data.activityHome.results`         | **Observed only.** It fires once at page load and takes no cursor, so there is nothing to replay. |
-| `RewardsActivityHomeNextPage` | `$pageToken`, `$featureFlags` | `data.activityHomeNextPage.results` | **Replayed.** `results.nextPageToken` feeds the next call until it comes back null.               |
-| `ActivityDetails`             | `$id`, `$featureFlags`        | `data.activityDetails.tabs[]`       | **Replayed** per receipt id, keeping the tab whose page is a `ReceiptDetails`.                    |
+| operation                      | variables                     | where the rows are                                              | how it is used                                                                                 |
+| ------------------------------ | ----------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `RewardsActivityHomeFirstPage` | `$featureFlags`               | `data.activityHome.`**`results`**`.sections`                    | **Observed only.** Fires once at page load and takes no cursor, so there is nothing to replay. |
+| `RewardsActivityHomeNextPage`  | `$pageToken`, `$featureFlags` | `data.activityHomeNextPage.sections` — **no `results` wrapper** | **Replayed.** `nextPageToken` feeds the next call until it comes back null.                    |
+| `ActivityDetails`              | `$id`, `$featureFlags`        | `data.activityDetails.tabs[]`                                   | **Replayed** per row, keeping the tab whose page is a `ReceiptDetails`.                        |
 
 **A replay needs the app's headers, not just its cookies.** The endpoint
 sits behind an API key and a bearer token that the app sets per request —
@@ -63,13 +63,18 @@ For an XHR the only place they are visible is `setRequestHeader`, which is
 why that is patched too. They stay in page memory and never reach the
 export.
 
-The two list operations put their payload under different `data` keys, so
-`pure.js` looks for whichever key carries a `results` object instead of
-naming either. It deliberately does **not** require `results.sections` to be
-an array: the last page of a history answers `{ sections: null,
-nextPageToken: null }`, and treating that as unreadable ends the walk with
-"the list stopped advancing" on the one response that means "that was
-everything".
+**The two list operations disagree about more than their `data` key.** The
+first page nests its sections under a `results` object; every page after it
+puts them directly on the operation. Requiring the wrapper read page one
+and silently discarded the rest — 47 rows kept out of 419 in a real
+capture, with no error anywhere, because a response that yields no rows
+looks exactly like the end of a history.
+
+So `pure.js` accepts either level, and names neither `data` key. It also
+does not require `sections` to be an array: the last page answers
+`{ sections: null, nextPageToken: null }`, a real empty final page.
+Having either key at all is what marks a list; a receipt response has
+neither, at either level.
 
 The receipt id comes from `sectionItems[].activityDetailsId`, and **having
 one is the whole test for keeping a row.** Two narrower filters were tried

@@ -29,6 +29,7 @@ beforeAll(() => {
   );
 });
 
+/** `RewardsActivityHomeFirstPage`: sections under a `results` wrapper. */
 const listResponse = (key, items, nextPageToken = null) => ({
   data: {
     [key]: {
@@ -36,6 +37,17 @@ const listResponse = (key, items, nextPageToken = null) => ({
         sections: [{ sectionTitle: 'January 2026', sectionItems: items }],
         nextPageToken,
       },
+    },
+  },
+});
+
+/** `RewardsActivityHomeNextPage`: sections directly on the operation. */
+const pagedResponse = (items, nextPageToken = null) => ({
+  data: {
+    activityHomeNextPage: {
+      __typename: 'ActivityHomeNextPage',
+      sections: [{ sectionTitle: 'January 2026', sectionItems: items }],
+      nextPageToken,
     },
   },
 });
@@ -64,6 +76,23 @@ describe('finding the list payload', () => {
     // shopping rather than like a bug.
     expect(popsPure.resultsIn(listResponse('activityHome', []))).not.toBeNull();
     expect(popsPure.resultsIn(listResponse('activityHomeNextPage', []))).not.toBeNull();
+  });
+
+  it('reads the paged shape, which has no results wrapper', () => {
+    // THE bug that cost most of a year. The first page nests sections under
+    // `results`; every page after it does not. Requiring the wrapper kept
+    // 47 rows out of 419 in one real capture — and dropped them silently,
+    // because a response yielding no rows looks exactly like the end of the
+    // history.
+    const { rows, nextPageToken } = popsPure.rowsFrom(pagedResponse([shop('a'), shop('b')], 'tok'));
+    expect(rows.map((r) => r.activityDetailsId)).toEqual(['a', 'b']);
+    expect(nextPageToken).toBe('tok');
+  });
+
+  it('reads both shapes the same way', () => {
+    const wrapped = popsPure.rowsFrom(listResponse('activityHome', [shop('a')]));
+    const bare = popsPure.rowsFrom(pagedResponse([shop('a')]));
+    expect(bare).toEqual(wrapped);
   });
 
   it('reads a key it has never seen, because it looks for the shape', () => {

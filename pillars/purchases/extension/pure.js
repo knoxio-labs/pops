@@ -76,25 +76,31 @@ function popsOrNull(value) {
 
 const popsPure = {
   /**
-   * The list payload, whichever operation produced it.
+   * The list payload, whichever operation produced it and whichever shape
+   * that operation uses.
    *
-   * `RewardsActivityHome` answers under `activityHome` and
-   * `RewardsActivityHomeNextPage` under `activityHomeNextPage`. Naming
-   * either means missing the other, so this looks for the shape instead.
+   * The two list operations disagree about more than their `data` key:
    *
-   * The shape it looks for deliberately does NOT require `sections` to be
-   * an array. The last page of a history answers `{ sections: null,
-   * nextPageToken: null }` — a real, empty, final page. Requiring the array
-   * made that unrecognisable, so the cursor never moved, and the walk ended
-   * with "the list stopped advancing" instead of "that was everything".
-   * Having `sections` or `nextPageToken` as a key at all is what marks a
-   * list; a receipt response has neither.
+   *   RewardsActivityHomeFirstPage  data.activityHome.results.sections
+   *   RewardsActivityHomeNextPage   data.activityHomeNextPage.sections
+   *
+   * The paged one has no `results` wrapper at all. Requiring one read the
+   * first page and silently discarded every page after it — 47 rows kept
+   * out of 419 in one capture, with no error anywhere, because a response
+   * that yields no rows is indistinguishable from the end of a history.
+   *
+   * It also does not require `sections` to be an array: the last page
+   * answers `{ sections: null, nextPageToken: null }`, a real empty final
+   * page. Having either key at all is what marks a list; a receipt response
+   * has neither, at either level.
    */
   resultsIn(json) {
     for (const value of Object.values(json?.data ?? {})) {
-      const results = value?.results;
-      if (results == null || typeof results !== 'object') continue;
-      if ('sections' in results || 'nextPageToken' in results) return results;
+      if (value == null || typeof value !== 'object') continue;
+      for (const candidate of [value.results, value]) {
+        if (candidate == null || typeof candidate !== 'object') continue;
+        if ('sections' in candidate || 'nextPageToken' in candidate) return candidate;
+      }
     }
     return null;
   },
