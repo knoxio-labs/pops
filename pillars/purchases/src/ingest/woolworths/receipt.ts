@@ -21,10 +21,11 @@
 import { createHash } from 'node:crypto';
 
 import { readBlocks, type ReceiptHeader, type ReceiptPage } from './blocks.js';
-import { readPayment } from './payment.js';
+import { readPayment, type PaymentReading } from './payment.js';
 import { groupReceiptRows, parseAmountCents, type GroupingAnomaly } from './rows.js';
 import { readTransactionDetails } from './time.js';
 
+import type { SettlementMode } from '../../contract/constants.js';
 import type { CreateItemInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
 export const WOOLWORTHS_SOURCE_ID = 'woolworths';
@@ -119,6 +120,20 @@ function readStore(header: ReceiptHeader | null): { number: string; merchantName
   };
 }
 
+/**
+ * How it was paid for, or an admission that the receipt does not say.
+ *
+ * `unknown` is not a hedge. Nine receipts in a real 413-receipt export
+ * carry no readable payment block, and calling those `card` asserts
+ * something the merchant never stated — while `cash` would be worse still,
+ * since that is terminal and would exclude a real card shop from
+ * reconciliation forever (ADR-042).
+ */
+function readSettlementMode(payment: PaymentReading): SettlementMode {
+  if (payment.isCash) return 'cash';
+  return payment.isCard ? 'card' : 'unknown';
+}
+
 function collectAnomalies(
   activityDetailsId: string,
   grouping: readonly GroupingAnomaly[],
@@ -184,7 +199,7 @@ export function mapReceipt(activityDetailsId: string, page: ReceiptPage): Mapped
       currency: CURRENCY,
       ...totals,
       merchantEntityName: store.merchantName,
-      settlementMode: payment.isCash ? 'cash' : 'card',
+      settlementMode: readSettlementMode(payment),
       paymentHint: payment.hint,
       rawRef: activityDetailsId,
       checksum: checksumFor({

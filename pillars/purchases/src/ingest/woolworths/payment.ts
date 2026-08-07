@@ -37,6 +37,8 @@ export interface PaymentReading {
   /** `AMEX ····6895`, or null when nothing identifiable was on the slip. */
   readonly hint: string | null;
   readonly isCash: boolean;
+  /** False when no payment could be read at all — not the same as "card". */
+  readonly isCard: boolean;
   readonly amountCents: number | null;
 }
 
@@ -64,7 +66,7 @@ function readLastFour(description: string, lines: readonly string[]): string | n
  * first entry blindly would describe an $8 cash shop as a $2 one.
  */
 export function readPayment(payments: readonly ReceiptPayment[] | null): PaymentReading {
-  const empty: PaymentReading = { hint: null, isCash: false, amountCents: null };
+  const empty: PaymentReading = { hint: null, isCash: false, isCard: false, amountCents: null };
   if (payments === null) return empty;
 
   for (const payment of payments) {
@@ -75,7 +77,7 @@ export function readPayment(payments: readonly ReceiptPayment[] | null): Payment
     const lines = (payment.details ?? []).map((detail) => detail.text ?? '');
 
     if (/cash/iu.test(description) || lines.some((line) => /^\s*cash\b/iu.test(line))) {
-      return { hint: null, isCash: true, amountCents };
+      return { hint: null, isCash: true, isCard: false, amountCents };
     }
 
     const scheme = readScheme(lines);
@@ -85,7 +87,7 @@ export function readPayment(payments: readonly ReceiptPayment[] | null): Payment
     const label = [scheme, lastFour === null ? null : `····${lastFour}`]
       .filter((part) => part !== null)
       .join(' ');
-    return { hint: label, isCash: false, amountCents };
+    return { hint: label, isCash: false, isCard: true, amountCents };
   }
 
   return empty;

@@ -64,7 +64,7 @@ describe('readPayment', () => {
 
   it('recognises cash from the payment description', () => {
     const reading = readPayment(asPayments([cash('$20.00')]));
-    expect(reading).toEqual({ hint: null, isCash: true, amountCents: 2000 });
+    expect(reading).toEqual({ hint: null, isCash: true, isCard: false, amountCents: 2000 });
   });
 
   it('names the scheme for the cards this account sees', () => {
@@ -89,12 +89,9 @@ describe('readPayment', () => {
   });
 
   it('reports nothing rather than guessing when there is no payment block', () => {
-    expect(readPayment(null)).toEqual({ hint: null, isCash: false, amountCents: null });
-    expect(readPayment(asPayments([]))).toEqual({ hint: null, isCash: false, amountCents: null });
-    expect(readPayment(asPayments([changeRow()]))).toEqual({
-      hint: null,
-      isCash: false,
-      amountCents: null,
-    });
+    const nothing = { hint: null, isCash: false, isCard: false, amountCents: null };
+    expect(readPayment(null)).toEqual(nothing);
+    expect(readPayment(asPayments([]))).toEqual(nothing);
+    expect(readPayment(asPayments([changeRow()]))).toEqual(nothing);
   });
 });

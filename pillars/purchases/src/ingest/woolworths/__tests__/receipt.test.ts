@@ -114,6 +114,16 @@ describe('how it was paid for', () => {
     expect(purchase?.settlementMode).toBe('cash');
     expect(purchase?.paymentHint).toBeNull();
   });
+
+  it('admits it does not know when the receipt states no payment', () => {
+    // Nine receipts in a real 413-receipt export carry no readable payment
+    // block. Calling those `card` asserts something the merchant never
+    // said; calling them `cash` would be worse, since that is terminal and
+    // would exclude a real card shop from reconciliation forever.
+    const purchase = map({ payments: [] })?.purchase;
+    expect(purchase?.settlementMode).toBe('unknown');
+    expect(purchase?.paymentHint).toBeNull();
+  });
 });
 
 describe('receipts it refuses', () => {

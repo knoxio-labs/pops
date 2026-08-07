@@ -88,6 +88,12 @@ Putting that figure in `taxCents` would make it appear twice in any sum of
 components. It is not lost — `#` marks each GST-applicable line, and that is
 carried through as `merchantCategory: 'gst-applicable'`.
 
+**A receipt that states no payment is `unknown`, not `card`.** Nine of 413
+real receipts carry no readable payment block. `card` would assert
+something the merchant never said, and `cash` would be worse — that is
+terminal, and would exclude a real card shop from reconciliation forever
+(ADR-042).
+
 **Only the card scheme and last four survive.** `payments[].details[]` is
 the raw EFTPOS slip: merchant id, terminal id, AID, ARQC, TVR. None of it
 helps match a transaction — reconciliation runs on amount and date — so the
