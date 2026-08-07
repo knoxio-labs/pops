@@ -261,6 +261,26 @@ describe('the checksum', () => {
     expect(noted?.purchase.checksum).not.toBe(plain?.purchase.checksum);
   });
 
+  it('cannot be collided by a promotion whose wording contains a separator', () => {
+    // `tags` is verbatim merchant text. Joining it on a delimiter is not
+    // injective, so a merchant printing that character could make two
+    // materially different readings hash the same.
+    const withTags = (notes: string[]) =>
+      map({
+        lines: [
+          { prefixChar: null, description: 'A', amount: '1.00' },
+          ...notes.map((note) => ({ prefixChar: null, description: note, amount: '' })),
+        ],
+        total: '$1.00',
+      })?.purchase;
+
+    const split = withTags(['PRICE REDUCED a', 'PRICE REDUCED b']);
+    const joined = withTags(['PRICE REDUCED a~PRICE REDUCED b']);
+    expect(split?.items?.[0]?.tags).toHaveLength(2);
+    expect(joined?.items?.[0]?.tags).toHaveLength(1);
+    expect(split?.checksum).not.toBe(joined?.checksum);
+  });
+
   it('survives the site reordering its blocks or adding fields nothing reads', () => {
     // Hashing the raw payload would turn the checksum over for a change
     // that changed nothing about the purchase, marking a year of history as

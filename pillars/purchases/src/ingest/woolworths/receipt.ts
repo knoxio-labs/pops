@@ -79,13 +79,23 @@ function checksumFor(purchase: {
   hash.update(`${WOOLWORTHS_SOURCE_ID}:${purchase.sourceOrderId}:${purchase.orderedAt}`);
   hash.update(`:${String(purchase.totalCents)}:${String(purchase.discountCents)}`);
   for (const item of purchase.items) {
-    // Every mapped field, including the ones that carry no money: a
-    // promotion's wording and the GST mark are part of what was read off
-    // the receipt, so a change to either is a change to the purchase.
+    // Every mapped field, including the ones carrying no money: a
+    // promotion's wording and the GST mark are read off the receipt like
+    // everything else, so a change to either is a change to the purchase.
+    //
+    // JSON rather than delimiters, because `tags` holds verbatim promo
+    // text. Joining on a separator is not injective — `["a~b","c"]` and
+    // `["a","b","c"]` produce the same string — so a merchant whose
+    // wording happens to contain the separator could hide a real change.
     hash.update(
-      ` ${item.name}|${String(item.quantity)}|${String(item.unitPriceCents)}` +
-        `|${String(item.lineTotalCents)}|${String(item.merchantCategory)}` +
-        `|${(item.tags ?? []).join('~')}`
+      JSON.stringify([
+        item.name,
+        item.quantity,
+        item.unitPriceCents,
+        item.lineTotalCents,
+        item.merchantCategory,
+        item.tags,
+      ])
     );
   }
   return hash.digest('hex');
