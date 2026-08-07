@@ -1,3 +1,5 @@
+import { parseAmountCents } from '../money.js';
+
 /**
  * Grouping an Everyday Rewards receipt's rows into products.
  *
@@ -29,6 +31,8 @@
  * totals check cannot catch this class of error, so the grouping itself has
  * to be asserted.
  */
+
+export { parseAmountCents } from '../money.js';
 
 /** A row exactly as the GraphQL `ReceiptDetailsItems.items[]` gives it. */
 export interface ReceiptRow {
@@ -91,23 +95,6 @@ const MEASURE_RE = /^[\d.,]+\s*(kg|g|ml|l|ea)\b.*@/iu;
  * guess about arithmetic the receipt already did.
  */
 const NOTE_RE = /^(price reduced|was\s|save\s|member price|special|multibuy|discount)/iu;
-
-/** Money on this receipt: `8.00`, `$8.00`, `1,495.00`. */
-export function parseAmountCents(raw: string | null | undefined): number | null {
-  if (raw === null || raw === undefined) return null;
-  const text = raw.trim().replace(/^\$/u, '');
-  if (text === '') return null;
-  if (!/^-?\d{1,3}(,\d{3})*(\.\d+)?$|^-?\d+(\.\d+)?$/u.test(text)) return null;
-
-  const match = /^(-?)(\d[\d,]*)(?:\.(\d+))?$/u.exec(text);
-  if (match === null) return null;
-  const [, sign, whole = '', fraction = ''] = match;
-  const digits = `${fraction}000`.slice(0, 3);
-  const rounded = Number(digits.slice(0, 2)) + (Number(digits.slice(2, 3)) >= 5 ? 1 : 0);
-  const cents = Number(whole.replaceAll(',', '')) * 100 + rounded;
-  if (!Number.isSafeInteger(cents)) return null;
-  return sign === '-' ? -cents : cents;
-}
 
 interface OpenItem {
   name: string;
