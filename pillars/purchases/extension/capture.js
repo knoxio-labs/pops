@@ -21,15 +21,26 @@ function popsPause() {
   return new Promise((resolve) => setTimeout(resolve, POPS_REQUEST_GAP_MS));
 }
 
-/** Walk the list to the end of history, one page token at a time. */
+/**
+ * Walk the list to the end of history, one page token at a time.
+ *
+ * The end of a history is not one shape. It has been observed as a null
+ * cursor, as an empty final page, and as a response carrying no list at
+ * all — so the loop stops on any answer it cannot read a page out of, and
+ * only calls it an error when it reads a real page whose cursor has not
+ * moved. Asking "did the state change?" instead conflated the two and
+ * ended a completed walk with a failure message.
+ */
 async function popsPaginate() {
   for (let page = 0; page < POPS_MAX_PAGES; page += 1) {
     const token = popsState.nextPageToken;
     if (token == null) return;
     popsState.progress = { done: popsState.listRows.size, total: 0 };
-    // popsAbsorb, called from the vault's answer, advances the cursor.
-    popsAbsorbReplay(await popsVault.post('page', { pageToken: token }));
-    if (popsState.nextPageToken === token) {
+    const { rows, nextPageToken } = popsAbsorbReplay(
+      await popsVault.post('page', { pageToken: token })
+    );
+    if (rows === null) return;
+    if (nextPageToken === token) {
       throw new Error('the list stopped advancing; its cursor repeated');
     }
     await popsPause();
@@ -55,13 +66,14 @@ async function popsFetchReceipts() {
  * site used `fetch` — which it does not.
  */
 function popsAbsorbReplay(json, id) {
-  const { rows, nextPageToken } = popsPure.rowsFrom(json);
-  if (rows !== null) {
-    popsState.nextPageToken = nextPageToken;
-    for (const row of rows) popsState.listRows.set(row.activityDetailsId, row);
+  const read = popsPure.rowsFrom(json);
+  if (read.rows !== null) {
+    popsState.nextPageToken = read.nextPageToken;
+    for (const row of read.rows) popsState.listRows.set(row.activityDetailsId, row);
   }
   const page = popsPure.receiptPageIn(json);
   if (typeof id === 'string' && page !== null) popsState.receipts.set(id, page);
+  return read;
 }
 
 /**
