@@ -98,9 +98,13 @@ export function parseExtraction(raw: string): ExtractedReceipt {
 
   const parsed = ExtractedReceiptSchema.safeParse(decoded);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where = issue?.path.join('.') ?? '(root)';
-    throw new ExtractionShapeError(`${where}: ${issue?.message ?? 'unexpected shape'}`);
+    // Every fault, not the first. A model that omits four fields has one
+    // problem, not four consecutive ones, and reporting them one at a time
+    // turns diagnosing it into four round trips.
+    const faults = parsed.error.issues.map(
+      (issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`
+    );
+    throw new ExtractionShapeError(faults.join('; '));
   }
   return parsed.data;
 }

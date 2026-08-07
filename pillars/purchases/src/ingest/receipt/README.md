@@ -51,6 +51,41 @@ layer parses it, so a malformed amount is a located failure rather than a
 silent zero. Quantity is optional, and absent means the paper did not say —
 inventing a 1 makes a weighed line look like a counted one.
 
+## The vision call
+
+`vision.ts` is a port: `read(image) -> raw model text`. The real one is
+`anthropic-vision.ts`, ~90 lines of wiring with no judgement in it, because
+everything that decides whether a reading may be believed is pure and
+tested against fixtures. **No test reaches a real API** — one that costs
+money and needs a network is one that gets skipped.
+
+`read-receipt.ts` joins the three steps and returns one of:
+
+| outcome        | meaning                                                         |
+| -------------- | --------------------------------------------------------------- |
+| `read`         | the model read it and the arithmetic agrees; admissible as fact |
+| `needs-review` | read, but the figures disagree; a real purchase needing a human |
+| `unreadable`   | nothing usable came back — **not** a receipt with no items      |
+
+Those last two are deliberately distinct: "retry later" and "photograph it
+again" are different actions, and a transport failure is not a statement
+about the receipt.
+
+**There is no retry-until-it-sums loop.** Re-rolling until the arithmetic
+agrees selects for readings that pass the gate rather than readings that
+are right, which is the exact property the gate exists to provide. The
+prompt says so to the model too — a model that balances the books on
+request destroys the only evidence there is.
+
+The prompt and the extraction schema are two statements of one contract
+with nothing else coupling them, so a test asserts the prompt names every
+field the schema requires. Adding a field without teaching the model about
+it fails there rather than silently producing extractions that lack it.
+
+Usage, cost and latency go to the ai pillar through `@pops/ai-telemetry`,
+so a drop-zone that quietly becomes expensive shows up where everything
+else does.
+
 ## Reading printed money
 
 `../money.ts`, shared with the Woolworths adapter. The two sources see
