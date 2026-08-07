@@ -86,6 +86,30 @@ Usage, cost and latency go to the ai pillar through `@pops/ai-telemetry`,
 so a drop-zone that quietly becomes expensive shows up where everything
 else does.
 
+## Keeping the photograph
+
+The image is not a by-product. When the gate refuses a reading, the only
+way anyone settles what the receipt actually said is by looking at it — so
+a drop-zone that extracts and discards has thrown away the evidence for
+exactly the cases that need it.
+
+`store.ts` is **content-addressed**: the file is named for the SHA-256 of
+its own bytes, sharded one level on the hash prefix. That makes the
+ticket's dedup requirement structural rather than a check someone has to
+remember to write — the same photo lands on the same path, so a re-upload
+is a 409 from the existing write path rather than a twin. It also means a
+truncated upload cannot quietly overwrite a good one: different bytes,
+different name.
+
+Images live beside the database (`PURCHASES_RECEIPT_DIR`, else
+`<dirname(sqlite)>/receipts`), so one volume holds the whole pillar, and a
+purchase references one as `pops://purchases/receipt/<sha256>`.
+
+`looksLikeImage` checks the magic number at the edge. "That is not a JPEG"
+is something a user can act on immediately; a vision model's confusion
+about it is not, and costs a call to discover. The check is deliberately
+shallow — it catches a mislabelled or truncated upload, not a hostile one.
+
 ## Reading printed money
 
 `../money.ts`, shared with the Woolworths adapter. The two sources see
