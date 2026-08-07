@@ -60,7 +60,8 @@ export interface ReceiptOptions {
   readonly gst?: string;
   readonly discounts?: Line[];
   readonly transactionDetails?: string | null;
-  readonly storeNo?: string;
+  /** `null` omits it, the way a receipt with no store number would. */
+  readonly storeNo?: string | null;
   readonly storeTitle?: string;
   readonly payments?: unknown[];
 }
@@ -97,7 +98,7 @@ export function receiptPage(options: ReceiptOptions = {}): {
         title: options.storeTitle ?? '1034 Canterbury Plaza',
         content: '2A Charles St',
         division: 'SUPERMARKETS',
-        storeNo: options.storeNo ?? '1034',
+        storeNo: options.storeNo === undefined ? '1034' : options.storeNo,
       },
       { __typename: 'ReceiptDetailsTotal', total },
       {

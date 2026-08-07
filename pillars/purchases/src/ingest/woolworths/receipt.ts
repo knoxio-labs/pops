@@ -101,12 +101,17 @@ function toItem(grouped: ReturnType<typeof groupReceiptRows>['items'][number]): 
  * The store, as both a key part and a label.
  *
  * `title` already reads `1034 Canterbury Plaza`, so the merchant name is
- * that prefixed rather than the store number repeated.
+ * that prefixed rather than the store number repeated — and the title is
+ * also the fallback for the number itself. A literal `unknown` in the key
+ * is a bucket every store without a `storeNo` falls into, and two shops at
+ * different stores that share a POS and transaction number would collide
+ * there and silently de-duplicate each other.
  */
 function readStore(header: ReceiptHeader | null): { number: string; merchantName: string } {
   const title = header?.title ?? null;
+  const fromTitle = /^\s*(\d+)\b/u.exec(title ?? '')?.[1] ?? null;
   return {
-    number: header?.storeNo ?? 'unknown',
+    number: header?.storeNo ?? fromTitle ?? 'unknown-store',
     merchantName: title === null ? 'Woolworths' : `Woolworths ${title}`,
   };
 }

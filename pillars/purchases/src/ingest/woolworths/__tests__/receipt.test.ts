@@ -78,6 +78,22 @@ describe('a real shop', () => {
   });
 });
 
+describe('the store number, which is part of the key', () => {
+  it('falls back to the number printed in the title', () => {
+    // A literal placeholder is a bucket every store without a `storeNo`
+    // falls into, where two shops at different stores sharing a POS and
+    // transaction number would silently de-duplicate each other.
+    const purchase = map({ storeNo: null, storeTitle: '1766 Kogarah' })?.purchase;
+    expect(purchase?.sourceOrderId).toBe('1766-066-3184-24072026');
+  });
+
+  it('keeps two stores apart even when neither states a number', () => {
+    const one = map({ storeNo: null, storeTitle: 'Canterbury' })?.purchase.sourceOrderId;
+    const two = map({ storeNo: '1766', storeTitle: 'Kogarah' })?.purchase.sourceOrderId;
+    expect(one).not.toBe(two);
+  });
+});
+
 describe('how it was paid for', () => {
   it('marks a card shop as card-settled and carries the hint', () => {
     const purchase = map()?.purchase;

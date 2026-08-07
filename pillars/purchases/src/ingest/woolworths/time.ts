@@ -64,6 +64,22 @@ function instantFromLocalParts(parts: {
   minute: number;
 }): string | null {
   const naive = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  // `Date.UTC` normalises rather than rejects: month 13 becomes January of
+  // the next year, 31 February becomes 3 March, hour 25 becomes tomorrow.
+  // A garbled footer would yield a confident, wrong date. Rejecting
+  // anything the round-trip does not reproduce catches all of it, including
+  // 31 February, without a table of month lengths.
+  const roundTrip = new Date(naive);
+  if (
+    roundTrip.getUTCFullYear() !== parts.year ||
+    roundTrip.getUTCMonth() !== parts.month - 1 ||
+    roundTrip.getUTCDate() !== parts.day ||
+    roundTrip.getUTCHours() !== parts.hour ||
+    roundTrip.getUTCMinutes() !== parts.minute
+  ) {
+    return null;
+  }
+
   const firstGuess = zoneOffsetMinutes(new Date(naive));
   if (firstGuess === null) return null;
   const corrected = zoneOffsetMinutes(new Date(naive - firstGuess * 60_000));

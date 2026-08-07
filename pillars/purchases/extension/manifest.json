@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Exports Woolworths Everyday Rewards receipts as JSON for the POPS purchases pillar. Read-only; nothing leaves the browser except the file you save.",
   "permissions": ["downloads", "scripting", "tabs"],
-  "host_permissions": ["https://www.everyday.com.au/*", "https://apigee-prod.api-wr.com/*"],
+  "host_permissions": ["https://www.everyday.com.au/*"],
   "content_scripts": [
     {
       "matches": ["https://www.everyday.com.au/*"],

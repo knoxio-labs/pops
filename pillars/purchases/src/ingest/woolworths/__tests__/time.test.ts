@@ -46,6 +46,23 @@ describe('readTransactionDetails', () => {
     expect(readTransactionDetails('POS  06  TRANS  9  9:05  01/01/2026')?.pos).toBe('06');
   });
 
+  it('refuses a date that only exists because Date normalised it', () => {
+    // `Date.UTC` does not reject: month 13 rolls into the next year, 31
+    // February becomes 3 March, and hour 25 becomes tomorrow. Each produces
+    // a confident, wrong instant from a garbled footer.
+    expect(readTransactionDetails('POS 1 TRANS 1 12:00 01/13/2026')).toBeNull();
+    expect(readTransactionDetails('POS 1 TRANS 1 12:00 31/02/2026')).toBeNull();
+    expect(readTransactionDetails('POS 1 TRANS 1 25:00 01/01/2026')).toBeNull();
+    expect(readTransactionDetails('POS 1 TRANS 1 12:99 01/01/2026')).toBeNull();
+    expect(readTransactionDetails('POS 1 TRANS 1 12:00 00/01/2026')).toBeNull();
+  });
+
+  it('still accepts the edges that are real', () => {
+    expect(readTransactionDetails('POS 1 TRANS 1 00:00 01/01/2026')?.localDate).toBe('01012026');
+    expect(readTransactionDetails('POS 1 TRANS 1 23:59 31/12/2026')?.localDate).toBe('31122026');
+    expect(readTransactionDetails('POS 1 TRANS 1 12:00 29/02/2028')?.localDate).toBe('29022028');
+  });
+
   it('returns null rather than a partial reading', () => {
     expect(readTransactionDetails(null)).toBeNull();
     expect(readTransactionDetails(undefined)).toBeNull();
