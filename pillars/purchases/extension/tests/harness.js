@@ -11,6 +11,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createContext, runInContext } from 'node:vm';
 
 const SCRIPTS = ['pure.js', 'observe.js', 'capture.js'];
 
@@ -68,18 +69,25 @@ export function bootExtension({ respond, xhrRespond } = {}) {
     xhrRespond(body === null ? null : JSON.parse(body), url)
   );
 
-  // eslint-disable-next-line no-new-func -- see the file comment: this runs
-  // the shipped scripts the way Chrome does, without editing them to suit.
-  const boot = new Function(
-    'window',
-    'XMLHttpRequest',
-    'Request',
-    'globalThis',
-    `${source()}\nreturn { api: window.__popsEveryday, patchedFetch: window.fetch };`
-  );
+  // A real realm rather than a wrapper function: the scripts declare
+  // top-level `const`s and expect a global `window`, which is exactly what
+  // a vm context provides. `setTimeout` has to be handed over because a
+  // context gets JavaScript's built-ins, not Node's.
+  const context = createContext({
+    window,
+    XMLHttpRequest: XMLHttpRequestStub,
+    Request: class Request {},
+    setTimeout,
+  });
+  runInContext(source(), context);
 
-  const { api, patchedFetch } = boot(window, XMLHttpRequestStub, class Request {}, {});
-  return { api, patchedFetch, fetchCalls, XMLHttpRequest: XMLHttpRequestStub, window };
+  return {
+    api: window.__popsEveryday,
+    patchedFetch: window.fetch,
+    fetchCalls,
+    XMLHttpRequest: XMLHttpRequestStub,
+    window,
+  };
 }
 
 /** Drive one observed request through the patched `XMLHttpRequest`. */

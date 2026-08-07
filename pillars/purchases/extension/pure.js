@@ -100,20 +100,26 @@ const popsPure = {
   },
 
   /**
-   * A list row worth keeping, or null for one that is not a shop.
+   * A list row worth keeping, or null for one there is nothing to ask about.
    *
-   * Either signal is enough. Requiring `receipt` alone dropped a shop that
-   * had one — the real export came back with 45 receipts against 44 listed
-   * rows — and the cost of keeping a row that turns out to have no receipt
-   * is one wasted request whose answer is simply not stored, while the cost
-   * of dropping one is a purchase missing from the year with nothing to say
-   * so.
+   * **Having an `activityDetailsId` is the whole test.** Two narrower
+   * filters were tried and both lost real purchases: requiring `receipt`
+   * dropped shops that had one, and adding `transactionType === 'purchase'`
+   * still left a list of 46 against a page showing several hundred rows.
+   * Both were inferred from rows that had already passed the filter, which
+   * is circular — the rows that would have disproved them were the ones
+   * being discarded.
+   *
+   * So nothing is guessed. Every row the API will answer questions about is
+   * kept, and whether it has a receipt is decided by the answer rather than
+   * predicted from the row. A row that turns out to have none costs one
+   * request whose result is discarded; a row wrongly dropped is a purchase
+   * missing from the year with nothing anywhere to say so.
    */
   rowFrom(item, sectionTitle) {
     const id = item?.activityDetailsId;
     if (typeof id !== 'string') return null;
     const receipt = popsOrNull(item.receipt);
-    if (receipt === null && item.transactionType !== 'purchase') return null;
     const analytics = receipt === null ? {} : (popsOrNull(receipt.analytics) ?? {});
     return {
       activityDetailsId: id,
@@ -181,9 +187,16 @@ const popsPure = {
     return headers;
   },
 
-  /** Listed receipts not captured yet, in the order they were listed. */
-  pendingIds(listRows, receipts) {
-    return [...listRows.keys()].filter((id) => !receipts.has(id));
+  /**
+   * Listed rows still worth asking about, in the order they were listed.
+   *
+   * `answered` holds the rows already asked about that turned out to have
+   * no receipt — points adjustments and the like. Without it they can never
+   * leave the pending count, so the popup would forever offer to fetch
+   * receipts that do not exist.
+   */
+  pendingIds(listRows, receipts, answered = new Set()) {
+    return [...listRows.keys()].filter((id) => !receipts.has(id) && !answered.has(id));
   },
 
   /**

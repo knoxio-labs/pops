@@ -147,6 +147,17 @@ describe('walking the history', () => {
     expect(api.status().error).toBeNull();
   });
 
+  it('stops claiming there is more once there is not', async () => {
+    // Ending on an unreadable answer used to leave the cursor set, so the
+    // popup kept telling the user to load a history it had just finished
+    // loading — and kept the button live to do it again.
+    const { api } = primed({
+      pages: { 'token-1': okJson({ data: { activityHomeNextPage: null } }) },
+    });
+    await api.loadHistory();
+    expect(api.status().moreHistory).toBe(false);
+  });
+
   it('stops quietly on an empty final page', async () => {
     const empty = {
       data: { activityHomeNextPage: { results: { sections: null, nextPageToken: null } } },
@@ -200,6 +211,33 @@ describe('fetching the receipts', () => {
     expect(fetchCalls.map((c) => c.body.variables.id)).toEqual(['a', 'b']);
     expect(api.status()).toMatchObject({ captured: 3, pending: 0, running: null });
     expect(api.status().progress).toEqual({ done: 2, total: 2 });
+  });
+
+  it('stops offering rows that turned out to have no receipt', async () => {
+    // With the row filter widened, points adjustments are asked about too.
+    // They never yield a receipt, so without remembering that they were
+    // asked, the popup offers to fetch them again forever.
+    const booted = bootExtension({
+      respond: async () => okJson({ data: { activityDetails: { tabs: [] } } }),
+      xhrRespond: (body) =>
+        typeof body?.variables?.pageToken === 'string'
+          ? listPage(['a', 'b'], null)
+          : receiptResponse('observed'),
+    });
+    observeXhr(booted.XMLHttpRequest, {
+      url: GRAPHQL_URL,
+      query: PAGE_QUERY,
+      variables: { pageToken: 't' },
+    });
+    observeXhr(booted.XMLHttpRequest, {
+      url: GRAPHQL_URL,
+      query: DETAILS_QUERY,
+      variables: { id: 'seen' },
+    });
+
+    await booted.api.fetchAll();
+
+    expect(booted.api.status()).toMatchObject({ listed: 2, captured: 1, pending: 0 });
   });
 
   it('resumes rather than restarting after a failure', async () => {

@@ -32,6 +32,8 @@ const popsVault = popsTemplateVault(POPS_FETCH);
 const popsState = {
   listRows: new Map(),
   receipts: new Map(),
+  /** Rows asked about that had no receipt. See `popsPure.pendingIds`. */
+  answered: new Set(),
   /** `null` until a list response has been read; `null` again at the end. */
   nextPageToken: null,
   seenAList: false,

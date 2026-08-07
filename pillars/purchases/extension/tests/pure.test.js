@@ -13,6 +13,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createContext, runInContext } from 'node:vm';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -21,11 +22,11 @@ let popsTemplateVault;
 
 beforeAll(() => {
   const source = readFileSync(fileURLToPath(new URL('../pure.js', import.meta.url)), 'utf8');
-  // eslint-disable-next-line no-new-func -- see the file comment: this runs
-  // the shipped script the way Chrome does, without editing it for testing.
-  [popsPure, popsTemplateVault] = new Function(
-    `${source}\nreturn [popsPure, popsTemplateVault];`
-  )();
+  const context = createContext({});
+  [popsPure, popsTemplateVault] = runInContext(
+    `${source}\n[popsPure, popsTemplateVault];`,
+    context
+  );
 });
 
 const listResponse = (key, items, nextPageToken = null) => ({
@@ -95,20 +96,38 @@ describe('finding the list payload', () => {
 });
 
 describe('harvesting rows', () => {
-  it('keeps shops and drops points adjustments', () => {
+  it('keeps every row the API will answer questions about', () => {
+    // Two narrower filters were tried and both lost real purchases:
+    // requiring `receipt` dropped shops that had one, and also requiring
+    // `transactionType === 'purchase'` left 46 rows against a page showing
+    // several hundred. Both were inferred from rows that had already passed
+    // the filter, so the rows that would have disproved them were exactly
+    // the ones being thrown away.
     const { rows } = popsPure.rowsFrom(
       listResponse('activityHomeNextPage', [shop('a'), pointsOnly('b'), shop('c')])
     );
-    expect(rows.map((r) => r.activityDetailsId)).toEqual(['a', 'c']);
+    expect(rows.map((r) => r.activityDetailsId)).toEqual(['a', 'b', 'c']);
   });
 
   it('keeps a purchase whose row states no receipt', () => {
-    // The real export came back with 45 receipts against 44 listed rows.
-    // One wasted request whose answer is not stored costs nothing; a
-    // purchase missing from the year with nothing to say so costs a lot.
     const receiptless = { activityDetailsId: 'x', transactionType: 'purchase', receipt: null };
     const { rows } = popsPure.rowsFrom(listResponse('activityHome', [receiptless]));
     expect(rows.map((r) => r.activityDetailsId)).toEqual(['x']);
+  });
+
+  it('keeps a row that describes itself as nothing in particular', () => {
+    const odd = { activityDetailsId: 'y' };
+    const { rows } = popsPure.rowsFrom(listResponse('activityHome', [odd]));
+    expect(rows.map((r) => r.activityDetailsId)).toEqual(['y']);
+  });
+
+  it('drops only a row there is nothing to ask about', () => {
+    // No id means no request can be made for it, so it is not a decision
+    // about what the row is — it is the absence of a question.
+    const { rows } = popsPure.rowsFrom(
+      listResponse('activityHome', [{ description: 'Points expiry', receipt: null }])
+    );
+    expect(rows).toEqual([]);
   });
 
   it('carries the section it came from, so a row keeps its year', () => {

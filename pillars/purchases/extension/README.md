@@ -25,7 +25,10 @@ tests live in `tests/` rather than the repo's usual `__tests__/`.
 2. **Open any one receipt.** Same reason, for the receipt request.
 3. **Load full history** — walks the list to the end on its own, one page
    token at a time. No more scrolling.
-4. **Fetch remaining receipts** — one request per receipt, ~1/second.
+4. **Fetch remaining receipts** — one request per listed row, ~1/second.
+   A year of shopping is several hundred rows, so this takes minutes, not
+   seconds; not every row has a receipt and the ones that do not are only
+   asked about once.
 5. **Download JSON.**
 
 Leave the tab open while it works; closing the popup is fine, closing the
@@ -68,11 +71,18 @@ nextPageToken: null }`, and treating that as unreadable ends the walk with
 "the list stopped advancing" on the one response that means "that was
 everything".
 
-The receipt id comes from `sectionItems[].activityDetailsId`. A row is kept
-if it has a `receipt` **or** calls itself a `purchase` — either alone is not
-enough. A real export came back with 45 receipts against 44 listed rows, so
-`receipt` is not always set on a row that has one; the cost of keeping a row
-that turns out to have no receipt is one request whose answer is discarded.
+The receipt id comes from `sectionItems[].activityDetailsId`, and **having
+one is the whole test for keeping a row.** Two narrower filters were tried
+and both lost real purchases: requiring `receipt` dropped shops that had
+one, and also requiring `transactionType === 'purchase'` left a list of 46
+against a page showing several hundred rows. Both were inferred from rows
+that had already passed the filter, which is circular — the rows that would
+have disproved them were exactly the ones being discarded.
+
+So nothing is predicted. Every row the API will answer questions about is
+asked about, and whether it has a receipt is decided by the answer. A row
+that turns out to have none costs one request whose result is discarded,
+and is then remembered so it is never asked about again.
 
 The content scripts run in the `MAIN` world because an isolated world gets
 its own `fetch` and `XMLHttpRequest` and would observe nothing.

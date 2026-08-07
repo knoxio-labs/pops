@@ -39,7 +39,13 @@ async function popsPaginate() {
     const { rows, nextPageToken } = popsAbsorbReplay(
       await popsVault.post('page', { pageToken: token })
     );
-    if (rows === null) return;
+    if (rows === null) {
+      // An answer with no list in it is the end. Leaving the cursor set
+      // would keep `moreHistory` true, so the popup would go on insisting
+      // there is history to load after loading all of it.
+      popsState.nextPageToken = null;
+      return;
+    }
     if (nextPageToken === token) {
       throw new Error('the list stopped advancing; its cursor repeated');
     }
@@ -49,10 +55,13 @@ async function popsPaginate() {
 
 /** Fetch every listed receipt not captured yet. */
 async function popsFetchReceipts() {
-  const pending = popsPure.pendingIds(popsState.listRows, popsState.receipts);
+  const pending = popsPure.pendingIds(popsState.listRows, popsState.receipts, popsState.answered);
   popsState.progress = { done: 0, total: pending.length };
   for (const id of pending) {
     popsAbsorbReplay(await popsVault.post('details', { id }), id);
+    // Asked and answered. A row with no receipt — a points adjustment —
+    // must not stay pending, or the popup offers it again forever.
+    popsState.answered.add(id);
     popsState.progress = { done: popsState.progress.done + 1, total: pending.length };
     await popsPause();
   }
@@ -105,7 +114,7 @@ window.__popsEveryday = Object.freeze({
   status: () => ({
     listed: popsState.listRows.size,
     captured: popsState.receipts.size,
-    pending: popsPure.pendingIds(popsState.listRows, popsState.receipts).length,
+    pending: popsPure.pendingIds(popsState.listRows, popsState.receipts, popsState.answered).length,
     hasDetailsTemplate: popsVault.has('details'),
     hasPageTemplate: popsVault.has('page'),
     // Before any list has been read there is no cursor and no knowledge of
