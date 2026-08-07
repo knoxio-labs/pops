@@ -80,6 +80,23 @@ its own `fetch` and `XMLHttpRequest` and would observe nothing.
   card scheme and last four (see `src/ingest/woolworths/`). Treat the
   exported file as sensitive and delete it once ingested.
 
+## Testing
+
+`pure.js` holds every decision the extension makes and nothing it does, so
+it can be tested — `__tests__/pure.test.js` evaluates the shipped file the
+way Chrome does rather than reshaping it for the test. Every bug found in
+this extension so far lived in exactly those functions:
+
+- reading the list by `data.activityHome` name, so the whole paginated
+  history was ignored;
+- replaying without the app's auth headers, which answers `401`;
+- requiring `results.sections` to be an array, so the empty final page was
+  unreadable and the walk ended with an error instead of finishing;
+- requiring a `receipt` on a list row, which dropped a shop that had one.
+
+`observe.js` and `capture.js` are wiring over those decisions and are not
+unit tested; they are exercised by hand against the live site.
+
 ## Failure modes worth knowing
 
 - **A button stays disabled** — the popup says which of the two requests it

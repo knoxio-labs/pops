@@ -91,8 +91,10 @@ function toItem(grouped: ReturnType<typeof groupReceiptRows>['items'][number]): 
     unitPriceCents: grouped.unitPriceCents,
     lineTotalCents: grouped.lineTotalCents,
     // The receipt's own wording for a promotion, kept verbatim rather than
-    // parsed into a discount the merchant never stated as one.
-    tags: grouped.notes,
+    // parsed into a discount the merchant never stated as one, plus the `^`
+    // marker as a tag of its own so "was this on special" is answerable
+    // without re-reading prose.
+    tags: grouped.promotional ? [...grouped.notes, 'promotional-price'] : grouped.notes,
     merchantCategory: grouped.gstApplicable ? 'gst-applicable' : null,
   };
 }
@@ -161,9 +163,13 @@ export function mapReceipt(activityDetailsId: string, page: ReceiptPage): Mapped
 
   const store = readStore(blocks.header);
   const sourceOrderId = `${store.number}-${stamp.pos}-${stamp.transaction}-${stamp.localDate}`;
-  const { items, anomalies: grouping } = groupReceiptRows(blocks.lines);
+  const { items, discounts, anomalies: grouping } = groupReceiptRows(blocks.lines);
   const payment = readPayment(blocks.payments);
-  const discountCents = sumLines(blocks.summary?.discounts);
+  // Two places state a discount and both are real: the summary block, and
+  // negative-amount rows sitting among the items.
+  const discountCents =
+    sumLines(blocks.summary?.discounts) +
+    discounts.reduce((total, discount) => total + discount.amountCents, 0);
   const subtotalCents = items.reduce((total, item) => total + item.lineTotalCents, 0);
   const totals = { subtotalCents, discountCents, totalCents };
   const mappedItems = items.map(toItem);

@@ -41,6 +41,30 @@ the offset per timestamp, because Sydney is +10:00 for part of the year and
 **The date is day-first.** `07/08/2026` is 7 August, not 8 July. Both
 readings parse and both look plausible.
 
+**Weighed goods do the same trick with a different wording.** Fruit,
+vegetables and the deli price by the kilo, and the money is on the weight
+line:
+
+```
+Orange Navel Loose
+0.202 kg NET @ $2.90/kg               0.59
+```
+
+Read as a product that is an item called `0.202 kg NET @ $2.90/kg`, with
+the oranges dropped for having no price — and $0.59 is still exactly what
+was paid. It is not a quantity either: 0.202 is not a count, and coercing
+it gives a bag of oranges a quantity of zero.
+
+**Money coming back is not a product.** `Everyday Extra 10% Discount`,
+`BUY 2 for $4.60`, `CORN HARVEST OFFER`, `MONSTER ENERG OFFER` — four
+wordings across one account with nothing in common but the minus sign,
+which is what the code keys on. Left among the items they become products
+with negative prices, and the receipt still adds up.
+
+All three were found by running this adapter over a real 45-receipt export,
+not by reading the schema. Every one produced a receipt that reconciled
+exactly to its stated total.
+
 ## Decisions worth knowing
 
 **The key is the till transaction, not the API id.**
@@ -77,13 +101,14 @@ one that simply has not settled yet:
 
 Ingested but flagged:
 
-| anomaly             | meaning                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------- |
-| `totals-mismatch`   | The lines do not add up to the stated total. The grouping misread something.                      |
-| `no-amount`         | A named product whose price never arrived on any of its rows. Dropped rather than priced at zero. |
-| `unreadable-amount` | An amount that is not money.                                                                      |
-| `unattached-note`   | A quantity or promotion row with no product above it.                                             |
-| `dropped-receipt`   | Refused, or a second capture of a till transaction already seen.                                  |
+| anomaly               | meaning                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| `totals-mismatch`     | The lines do not add up to the stated total. The grouping misread something.                      |
+| `no-amount`           | A named product whose price never arrived on any of its rows. Dropped rather than priced at zero. |
+| `unreadable-amount`   | An amount that is not money.                                                                      |
+| `unattached-note`     | A quantity or promotion row with no product above it.                                             |
+| `dropped-receipt`     | Refused, or a second capture of a till transaction already seen.                                  |
+| `unreadable-quantity` | `Qty 0 @ ...`. The count is refused (it would divide by zero) and the money on the row is kept.   |
 
 Nothing is ever skipped silently. A shop that happened and did not arrive is
 the one failure mode that leaves no trace of itself.

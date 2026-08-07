@@ -8,7 +8,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.everyday.com.au/*"],
-      "js": ["observe.js", "capture.js"],
+      "js": ["pure.js", "observe.js", "capture.js"],
       "run_at": "document_start",
       "world": "MAIN"
     }

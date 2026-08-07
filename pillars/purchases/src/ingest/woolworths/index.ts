@@ -1,6 +1,6 @@
 /** Everyday Rewards export adapter. See the README beside this file. */
 import { WoolworthsExportSchema } from './blocks.js';
-import { mapReceipt, WOOLWORTHS_SOURCE_ID, type WoolworthsAnomaly } from './receipt.js';
+import { mapReceipt, type WoolworthsAnomaly } from './receipt.js';
 
 import type { CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
@@ -28,7 +28,7 @@ export function parseWoolworthsExport(raw: unknown): WoolworthsParseResult {
   const parsed = WoolworthsExportSchema.safeParse(raw);
   if (!parsed.success) {
     throw new WoolworthsExportShapeError(
-      `not a ${WOOLWORTHS_SOURCE_ID} export file: ${parsed.error.issues[0]?.message ?? 'unknown shape'}`
+      `not a woolworths-everyday-rewards v1 export file: ${parsed.error.issues[0]?.message ?? 'unknown shape'}`
     );
   }
 
