@@ -129,8 +129,8 @@ observed request, and the two replay loops — including all three shapes the
 end of a history has been seen to take, which is where the bugs that
 survived into real use lived.
 
-`popup.js` has no automated test; it is a remote control with no state of
-its own, and is checked by using it.
+`popup.js` has no automated test (POPS-1319); it is a remote control with
+no state of its own, and is checked by using it.
 
 ## Failure modes worth knowing
 

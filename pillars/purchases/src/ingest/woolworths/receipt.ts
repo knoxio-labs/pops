@@ -79,8 +79,13 @@ function checksumFor(purchase: {
   hash.update(`${WOOLWORTHS_SOURCE_ID}:${purchase.sourceOrderId}:${purchase.orderedAt}`);
   hash.update(`:${String(purchase.totalCents)}:${String(purchase.discountCents)}`);
   for (const item of purchase.items) {
+    // Every mapped field, including the ones that carry no money: a
+    // promotion's wording and the GST mark are part of what was read off
+    // the receipt, so a change to either is a change to the purchase.
     hash.update(
-      ` ${item.name}|${String(item.quantity)}|${String(item.unitPriceCents)}|${String(item.lineTotalCents)}`
+      ` ${item.name}|${String(item.quantity)}|${String(item.unitPriceCents)}` +
+        `|${String(item.lineTotalCents)}|${String(item.merchantCategory)}` +
+        `|${(item.tags ?? []).join('~')}`
     );
   }
   return hash.digest('hex');

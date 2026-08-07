@@ -237,6 +237,30 @@ describe('the checksum', () => {
     expect(other?.purchase.checksum).not.toBe(map()?.purchase.checksum);
   });
 
+  it('changes when a promotion or the GST mark changes, not only the money', () => {
+    // Those are part of what was read off the receipt. A checksum that
+    // ignored them would call two different readings of the same shop
+    // identical — and the comment above it would be a lie.
+    const plain = map({
+      lines: [{ prefixChar: null, description: 'A', amount: '1.00' }],
+      total: '$1.00',
+    });
+    const gst = map({
+      lines: [{ prefixChar: '#', description: 'A', amount: '1.00' }],
+      total: '$1.00',
+    });
+    const noted = map({
+      lines: [
+        { prefixChar: null, description: 'A', amount: '1.00' },
+        { prefixChar: null, description: 'PRICE REDUCED BY $1.00 each', amount: '' },
+      ],
+      total: '$1.00',
+    });
+
+    expect(gst?.purchase.checksum).not.toBe(plain?.purchase.checksum);
+    expect(noted?.purchase.checksum).not.toBe(plain?.purchase.checksum);
+  });
+
   it('survives the site reordering its blocks or adding fields nothing reads', () => {
     // Hashing the raw payload would turn the checksum over for a change
     // that changed nothing about the purchase, marking a year of history as
