@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font: 13px/1.45 system-ui, sans-serif;
+        margin: 0;
+        padding: 14px;
+        width: 300px;
+        color: #1b1b1b;
+      }
+      h1 {
+        font-size: 13px;
+        margin: 0 0 10px;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 2px 8px;
+        margin: 0 0 12px;
+      }
+      dt {
+        color: #555;
+      }
+      dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      button {
+        width: 100%;
+        padding: 7px;
+        margin-bottom: 6px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: default;
+        opacity: 0.5;
+      }
+      #message {
+        margin-top: 8px;
+        color: #555;
+      }
+      #message.error {
+        color: #a11;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Everyday Rewards → POPS</h1>
+    <dl>
+      <dt>Receipts seen in the list</dt>
+      <dd id="listed">–</dd>
+      <dt>Fully captured</dt>
+      <dd id="captured">–</dd>
+      <dt>Still to fetch</dt>
+      <dd id="pending">–</dd>
+    </dl>
+    <button id="fetch" disabled>Fetch remaining receipts</button>
+    <button id="download" disabled>Download JSON</button>
+    <p id="message"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>
