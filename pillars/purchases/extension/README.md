@@ -10,20 +10,22 @@ ingests.
 1. `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → select this directory
 3. Open <https://www.everyday.com.au/index.html#/my-activity> and **reload**
-   the page — the content script attaches at `document_start`, so a tab that
+   the page — the content scripts attach at `document_start`, so a tab that
    was already open sees nothing.
 
 ## Using it
 
-1. **Scroll your activity list** as far back as you want history to go. The
-   extension records the list pages the app fetches as you scroll; it never
-   asks for them itself.
-2. **Open any one receipt.** That single request is the template for all the
-   rest — until you do, the extension knows the receipt ids but not the
-   request shape, and the fetch button stays disabled.
-3. **Fetch remaining receipts.** One at a time, ~350 ms apart. Leave the tab
-   open; closing the popup is fine, closing the tab is not.
-4. **Download JSON.**
+1. **Scroll the activity list once.** That single scroll makes the app issue
+   its pagination request, which is the one thing the extension cannot
+   synthesise from nothing.
+2. **Open any one receipt.** Same reason, for the receipt request.
+3. **Load full history** — walks the list to the end on its own, one page
+   token at a time. No more scrolling.
+4. **Fetch remaining receipts** — one request per receipt, ~1/second.
+5. **Download JSON.**
+
+Leave the tab open while it works; closing the popup is fine, closing the
+tab is not.
 
 Ingest the file with:
 
@@ -31,17 +33,26 @@ Ingest the file with:
 pnpm --filter @pops/purchases ingest:woolworths ~/Downloads/everyday-receipts-2026-08-07.json
 ```
 
-## Why it is built this way
+## The contract it depends on
 
-The app talks to `POST https://apigee-prod.api-wr.com/wx/v1/bff/graphql` with
-two operations that get opposite treatment:
+Everything goes to `POST https://apigee-prod.api-wr.com/wx/v1/bff/graphql`,
+over **XMLHttpRequest** rather than `fetch` — verified against the live
+site. Both are patched anyway; assuming one and being wrong captures
+nothing at all.
 
-| operation         | treatment         | why                                                                                                                                                                                                                 |
-| ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `activityHome`    | **observed only** | Its query declares only `$featureFlags` — the page's pagination cursor is not expressible in the query, so the request is not reproducible from the request alone. The page knows how to page; this script watches. |
-| `ActivityDetails` | **replayed**      | Takes `{ id, featureFlags }`. The captured query text is reused verbatim with a substituted id, so no field list is hardcoded here and a schema change arrives in the export rather than breaking the capture.      |
+| operation                     | variables                     | payload                             | how it is used                                                                                    |
+| ----------------------------- | ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `RewardsActivityHome`         | `$featureFlags`               | `data.activityHome.results`         | **Observed only.** It fires once at page load and takes no cursor, so there is nothing to replay. |
+| `RewardsActivityHomeNextPage` | `$pageToken`, `$featureFlags` | `data.activityHomeNextPage.results` | **Replayed.** `results.nextPageToken` feeds the next call until it comes back null.               |
+| `ActivityDetails`             | `$id`, `$featureFlags`        | `data.activityDetails.tabs[]`       | **Replayed** per receipt id, keeping the tab whose page is a `ReceiptDetails`.                    |
 
-The content script runs in the `MAIN` world because an isolated world gets
+The two list operations put their payload under different `data` keys, so
+`observe.js` looks for whichever key carries a `results.sections` instead of
+naming either. The receipt id comes from `sectionItems[].activityDetailsId`,
+and rows without a `receipt` are skipped — those are points adjustments, not
+shops.
+
+The content scripts run in the `MAIN` world because an isolated world gets
 its own `fetch` and `XMLHttpRequest` and would observe nothing.
 
 ## What it does not do
@@ -50,22 +61,25 @@ its own `fetch` and `XMLHttpRequest` and would observe nothing.
   save. There is no host permission for any POPS service, deliberately: an
   extension that could post to your own API is an extension that could post
   somewhere else if it were ever tampered with.
-- **It does not write to Woolworths.** Every request it makes is a read the
-  page itself makes when you open a receipt.
-- **It does not touch payment card data.** The receipt payload carries EFTPOS
-  terminal fields — AID, ARQC, TVR, terminal and merchant ids. Those are
-  exported verbatim in the raw JSON, and the ingest side keeps only the card
-  scheme and last four digits (see `src/ingest/woolworths/`). Treat the
-  exported file as sensitive and delete it after ingesting.
+- **It does not write to Woolworths.** Every request it makes is one the
+  page itself makes when you scroll or open a receipt.
+- **It does not filter payment data.** The receipt payload carries the
+  EFTPOS terminal block verbatim — merchant id, terminal id, AID, ARQC, TVR
+  and the card's last four digits — and it is exported as-is, because the
+  extension's job is to be a faithful copy. The ingest side keeps only the
+  card scheme and last four (see `src/ingest/woolworths/`). Treat the
+  exported file as sensitive and delete it once ingested.
 
 ## Failure modes worth knowing
 
-- **`hasTemplate` never becomes true** — you opened a receipt before
-  reloading the page with the extension installed. Reload, open a receipt.
-- **A fetch stops part-way** — the message names how far it got. Receipts
-  already captured are kept and exportable; pressing fetch again resumes
+- **A button stays disabled** — the popup says which of the two requests it
+  is still missing. Scroll once, or open one receipt.
+- **A run stops part-way** — the message says how far it got. What was
+  captured is kept and exportable, and pressing the button again resumes
   rather than restarting.
+- **"the list stopped advancing; its cursor repeated"** — the server handed
+  back the same page token twice. Stopping beats looping until the account
+  gets rate-limited.
 - **Blank list after scrolling** — the site changed the shape of
-  `activityHome.results.sections[].sectionItems[]`. `content.js` reads
-  `activityDetailsId` there and nowhere else; that is the one field this
-  extension does assume.
+  `results.sections[].sectionItems[]`. `activityDetailsId` there is the one
+  field this extension truly assumes.
