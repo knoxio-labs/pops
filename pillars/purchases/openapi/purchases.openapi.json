@@ -2214,6 +2214,13 @@
           },
           {
             "in": "query",
+            "name": "includeAuto",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "maximum": 500,

@@ -189,6 +189,101 @@ describe('the queue', () => {
     expect(new Set(ids).size).toBe(3);
   });
 
+  it('excludes an auto-link source, so grocery never interrupts', async () => {
+    // The invariant the whole zero-touch promise rests on: ~60 line items a
+    // shop and ~6,000 a year from one merchant. If those asked questions
+    // the queue becomes unusable and gets abandoned — taking the orders
+    // that DO need a decision with it (ADR-042, POPS-239).
+    await request(app)
+      .put('/sources/woolworths')
+      .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
+      .expect(200);
+    createPurchase(opened.db, {
+      source: 'woolworths',
+      sourceOrderId: 'shop-1',
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 8765,
+      checksum: 'shop-1',
+    });
+    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+
+    const queue = await request(app).get('/reconcile/queue').expect(200);
+    expect(queue.body.items).toEqual([]);
+  });
+
+  it('still surfaces an auto-link source when explicitly asked', async () => {
+    // Not hidden, just not interrupting — the merchant lens wants this
+    // bucket even though the daily queue does not.
+    await request(app)
+      .put('/sources/woolworths')
+      .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
+      .expect(200);
+    createPurchase(opened.db, {
+      source: 'woolworths',
+      sourceOrderId: 'shop-1',
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 8765,
+      checksum: 'shop-1',
+    });
+    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+
+    const queue = await request(app).get('/reconcile/queue?includeAuto=true').expect(200);
+    expect(queue.body.items).toHaveLength(1);
+    expect(queue.body.items[0].source).toBe('woolworths');
+  });
+
+  it('treats includeAuto=false as off, not as truthy', async () => {
+    // z.coerce.boolean() uses JS truthiness, so 'false' would arrive as
+    // true and there would be no way to switch the flag back off — failing
+    // in the direction that puts 6,000 grocery charges into the queue.
+    await request(app)
+      .put('/sources/woolworths')
+      .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
+      .expect(200);
+    createPurchase(opened.db, {
+      source: 'woolworths',
+      sourceOrderId: 'shop-1',
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 8765,
+      checksum: 'shop-1',
+    });
+    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+
+    const off = await request(app).get('/reconcile/queue?includeAuto=false').expect(200);
+    expect(off.body.items).toEqual([]);
+
+    const on = await request(app).get('/reconcile/queue?includeAuto=true').expect(200);
+    expect(on.body.items).toHaveLength(1);
+  });
+
+  it('keeps a review-policy source in the queue alongside an auto one', async () => {
+    await request(app)
+      .put('/sources/woolworths')
+      .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
+      .expect(200);
+    createPurchase(opened.db, {
+      source: 'woolworths',
+      sourceOrderId: 'shop-1',
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 8765,
+      checksum: 'shop-1',
+    });
+    order(4128, 'amazon-1');
+    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+
+    const queue = await request(app).get('/reconcile/queue').expect(200);
+    expect(queue.body.items).toHaveLength(1);
+    expect(queue.body.items[0].source).toBe('amazon');
+  });
+
   it('excludes cash orders, which can never be decided', async () => {
     createPurchase(opened.db, {
       source: 'amazon',

@@ -46,6 +46,7 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
           listReconcileQueue(db, {
             ...(query.source === undefined ? {} : { source: query.source }),
             ...(query.kind === undefined ? {} : { kind: query.kind }),
+            ...(query.includeAuto === undefined ? {} : { includeAuto: query.includeAuto }),
             ...(query.limit === undefined ? {} : { limit: query.limit }),
             ...(query.offset === undefined ? {} : { offset: query.offset }),
           })

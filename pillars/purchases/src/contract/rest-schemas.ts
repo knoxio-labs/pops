@@ -34,6 +34,17 @@ export const ErrorBodySchema = z.object({
 export const OkSchema = z.object({ ok: z.literal(true) });
 
 /**
+ * A boolean query parameter.
+ *
+ * NOT `z.coerce.boolean()`, which uses JavaScript truthiness: every
+ * non-empty string coerces to `true`, so `?flag=false` would arrive as
+ * `true` and there would be no way to switch a defaulted-on flag off.
+ * Only the literal `'true'` (or a real `true`) counts. Mirrors `QueryBool`
+ * in `pillars/food/src/contract/rest-schemas.ts`.
+ */
+export const QueryBoolSchema = z.preprocess((v) => v === true || v === 'true', z.boolean());
+
+/**
  * Adapter-local wiring handle, unique within one create call and never
  * persisted. It exists only so a line or charge can point at a delivery
  * the payload has not been given ids for yet.
