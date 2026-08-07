@@ -1,12 +1,9 @@
 /**
  * Backfill an Amazon DSAR bundle through `POST /purchases`.
  *
- * Deliberately a CLI over HTTP rather than a route: the bundle is a
- * multi-hundred-megabyte directory the user downloads and unzips, and the
- * upload surface that would accept it belongs with the receipt drop-zone
- * (POPS-240). Going through the same endpoint every other adapter writes
- * through means this exercises the real validation, dedup and write path
- * rather than a private shortcut into the database.
+ * Deliberately a CLI rather than a route: the bundle is a multi-hundred-
+ * megabyte directory the user downloads and unzips, and the upload surface
+ * that would accept it belongs with the receipt drop-zone (POPS-240).
  *
  *   pnpm ingest:amazon -- "<bundle-root>" [--dry-run]
  *
@@ -18,21 +15,18 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { AMAZON_SOURCE_ID, parseAmazonOrderHistory } from '../src/ingest/amazon/index.js';
-
-import type { AmazonAnomaly } from '../src/ingest/amazon/index.js';
+import {
+  baseUrlFromEnv,
+  postPurchases,
+  reportOutcome,
+  summariseAnomalies,
+  upsertSource,
+} from './backfill.js';
 
 const ORDER_HISTORY_PATH = join('Your Amazon Orders', 'Order History.csv');
 
-const DEFAULT_BASE_URL = 'http://localhost:3013';
-
-interface Args {
-  readonly bundlePath: string;
-  readonly dryRun: boolean;
-}
-
-function readArgs(argv: readonly string[]): Args {
-  const positional = argv.filter((arg) => !arg.startsWith('--'));
-  const bundlePath = positional[0];
+function readBundlePath(argv: readonly string[]): string {
+  const bundlePath = argv.find((arg) => !arg.startsWith('--'));
   if (bundlePath === undefined) {
     throw new Error(
       'usage: pnpm ingest:amazon -- "<bundle-root>" [--dry-run]\n' +
@@ -40,48 +34,12 @@ function readArgs(argv: readonly string[]): Args {
         '"Your Amazon Orders", not that folder itself.'
     );
   }
-  return { bundlePath, dryRun: argv.includes('--dry-run') };
-}
-
-function summarise(anomalies: readonly AmazonAnomaly[]): string {
-  const counts = new Map<string, number>();
-  for (const anomaly of anomalies) {
-    counts.set(anomaly.kind, (counts.get(anomaly.kind) ?? 0) + 1);
-  }
-  return [...counts]
-    .toSorted(([a], [b]) => a.localeCompare(b))
-    .map(([kind, count]) => `${kind}=${String(count)}`)
-    .join(' ');
-}
-
-async function upsertSource(baseUrl: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/sources/${AMAZON_SOURCE_ID}`, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      label: 'Amazon',
-      // A LIKE pattern, not a substring: the trailing `%` is load-bearing.
-      // Without it this is an equality test that matches nothing, because
-      // no bank descriptor is the bare word AMAZON — it is `AMAZON
-      // MKTPLACE AU`, `Amazon AU`, `AMAZON.COM.AU`. See
-      // `src/reconcile/descriptor.ts`.
-      descriptorPattern: 'AMAZON%',
-      // One order routinely settles as several shipment charges days apart,
-      // so Amazon gets review rather than auto-linking.
-      autoLinkPolicy: 'review',
-      ingestAdapter: 'amazon-dsar-export',
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(
-      `could not register the amazon source (${String(response.status)}): ${await response.text()}`
-    );
-  }
+  return bundlePath;
 }
 
 async function main(): Promise<void> {
-  const { bundlePath, dryRun } = readArgs(process.argv.slice(2));
-  const baseUrl = process.env.PURCHASES_BASE_URL ?? DEFAULT_BASE_URL;
+  const argv = process.argv.slice(2);
+  const bundlePath = readBundlePath(argv);
 
   const csvPath = join(bundlePath, ORDER_HISTORY_PATH);
   const { orders, anomalies } = parseAmazonOrderHistory(readFileSync(csvPath, 'utf8'));
@@ -91,43 +49,27 @@ async function main(): Promise<void> {
   console.warn(
     `parsed ${String(orders.length)} orders, ${String(shipments)} shipments, ${String(lines)} lines`
   );
-  if (anomalies.length > 0) console.warn(`anomalies: ${summarise(anomalies)}`);
+  if (anomalies.length > 0) console.warn(`anomalies: ${summariseAnomalies(anomalies)}`);
 
-  if (dryRun) {
+  if (argv.includes('--dry-run')) {
     console.warn('--dry-run: nothing was written');
     return;
   }
 
-  await upsertSource(baseUrl);
+  const baseUrl = baseUrlFromEnv();
+  await upsertSource(baseUrl, {
+    id: AMAZON_SOURCE_ID,
+    label: 'Amazon',
+    // No bank descriptor is the bare word AMAZON — it is `AMAZON MKTPLACE
+    // AU`, `Amazon AU`, `AMAZON.COM.AU`.
+    descriptorPattern: 'AMAZON%',
+    // One order routinely settles as several shipment charges days apart,
+    // so Amazon gets review rather than auto-linking.
+    autoLinkPolicy: 'review',
+    ingestAdapter: 'amazon-dsar-export',
+  });
 
-  let created = 0;
-  let skipped = 0;
-  const failures: string[] = [];
-
-  for (const order of orders) {
-    const response = await fetch(`${baseUrl}/purchases`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(order),
-    });
-
-    if (response.status === 201) created += 1;
-    // A checksum or (source, orderId) that already exists. Re-running a
-    // backfill is expected, so this is the normal path, not an error.
-    else if (response.status === 409) skipped += 1;
-    else {
-      failures.push(
-        `${order.sourceOrderId ?? '?'} -> ${String(response.status)} ${await response.text()}`
-      );
-    }
-  }
-
-  console.warn(
-    `created ${String(created)}, skipped ${String(skipped)}, failed ${String(failures.length)}`
-  );
-  for (const failure of failures.slice(0, 10)) console.error(`  ${failure}`);
-
-  if (failures.length > 0) process.exitCode = 1;
+  reportOutcome(await postPurchases(baseUrl, orders));
 }
 
 await main();

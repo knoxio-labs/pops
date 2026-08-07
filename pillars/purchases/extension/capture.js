@@ -15,18 +15,26 @@ const POPS_REQUEST_GAP_MS = 350;
 /** Backstop against a server that keeps handing back a token forever. */
 const POPS_MAX_PAGES = 200;
 
+/**
+ * Issue one replayed request and feed its answer back through the same
+ * absorber the observed traffic goes through.
+ *
+ * The absorb is explicit because this deliberately uses the ORIGINAL fetch:
+ * going through the patched one would recurse, and would also mean a replay
+ * only worked if the site happened to use `fetch` — which it does not.
+ */
 async function popsPost(template, variables) {
+  const merged = { ...template.variables, ...variables };
   const response = await POPS_FETCH.call(window, template.url, {
     method: 'POST',
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: template.query,
-      variables: { ...template.variables, ...variables },
-    }),
+    body: JSON.stringify({ query: template.query, variables: merged }),
   });
   if (!response.ok) throw new Error(`the site answered HTTP ${String(response.status)}`);
-  return response.json();
+  const json = await response.json();
+  popsAbsorb(template.url, { query: template.query, variables: merged }, json);
+  return json;
 }
 
 function popsPause() {
@@ -48,7 +56,6 @@ async function popsPaginate() {
     const token = popsState.nextPageToken;
     if (token == null) return;
     popsState.progress = { done: popsState.listRows.size, total: 0 };
-    // popsAbsorb, driven by the patched fetch, advances nextPageToken.
     await popsPost(popsState.pageTemplate, { pageToken: token });
     if (popsState.nextPageToken === token) {
       throw new Error('the list stopped advancing; its cursor repeated');
