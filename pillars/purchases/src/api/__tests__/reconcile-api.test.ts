@@ -236,6 +236,32 @@ describe('the queue', () => {
     expect(queue.body.items[0].source).toBe('woolworths');
   });
 
+  it('treats includeAuto=false as off, not as truthy', async () => {
+    // z.coerce.boolean() uses JS truthiness, so 'false' would arrive as
+    // true and there would be no way to switch the flag back off — failing
+    // in the direction that puts 6,000 grocery charges into the queue.
+    await request(app)
+      .put('/sources/woolworths')
+      .send({ label: 'Woolworths', descriptorPattern: 'WOOLWORTHS%', autoLinkPolicy: 'auto' })
+      .expect(200);
+    createPurchase(opened.db, {
+      source: 'woolworths',
+      sourceOrderId: 'shop-1',
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 8765,
+      checksum: 'shop-1',
+    });
+    await runSweep({ db: opened.db, finance: financeWith([]), defaultWindowDays: 21 });
+
+    const off = await request(app).get('/reconcile/queue?includeAuto=false').expect(200);
+    expect(off.body.items).toEqual([]);
+
+    const on = await request(app).get('/reconcile/queue?includeAuto=true').expect(200);
+    expect(on.body.items).toHaveLength(1);
+  });
+
   it('keeps a review-policy source in the queue alongside an auto one', async () => {
     await request(app)
       .put('/sources/woolworths')

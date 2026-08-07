@@ -14,7 +14,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { ErrorBodySchema, OkSchema } from './rest-schemas.js';
+import { ErrorBodySchema, OkSchema, QueryBoolSchema } from './rest-schemas.js';
 import {
   CentsSchema,
   CurrencySchema,
@@ -61,7 +61,7 @@ export const ReconcileQueueQuerySchema = z.object({
    * one of them gets abandoned along with the orders that do need a
    * decision (ADR-042).
    */
-  includeAuto: z.coerce.boolean().optional(),
+  includeAuto: QueryBoolSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
