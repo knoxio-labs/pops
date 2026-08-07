@@ -70,8 +70,17 @@ exactly to its stated total.
 **The key is the till transaction, not the API id.**
 `store-POS-transaction-date`, e.g. `1034-066-3184-24072026`. The
 `activityDetailsId` is an opaque blob whose stability across exports nothing
-guarantees; the till transaction is printed on the paper. It is kept in
-`rawRef` so a receipt can still be traced back.
+guarantees; the till transaction is printed on the paper. `POST /purchases`
+is create-only and answers 409 on a repeat, so this key is what makes a
+second export a no-op rather than a second copy of the year. The API id is
+kept in `rawRef` so a receipt can still be traced back.
+
+The same create-only rule has a consequence worth knowing before a
+backfill: **improving this adapter does not correct what it already
+wrote.** A re-import of the same receipts is rejected on `sourceOrderId`
+regardless of whether the mapping changed, so a fix to the grouping only
+reaches purchases ingested after it. Do a `--dry-run` and read the anomaly
+count before the first real import.
 
 **GST is not carried into `taxCents`.** Australian shelf prices include it,
 so the line totals already contain the GST the receipt states separately.

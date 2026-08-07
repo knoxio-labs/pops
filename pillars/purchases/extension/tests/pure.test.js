@@ -5,6 +5,11 @@
  * exports to import. Rather than reshape it for the test — the file Chrome
  * runs would then not be the file under test — it is evaluated here exactly
  * as the browser evaluates it, and the bindings are lifted out afterwards.
+ *
+ * This directory is `tests/` rather than the repo's usual `__tests__/`
+ * because Chrome refuses to load an unpacked extension containing any path
+ * beginning with an underscore: those are reserved. The extension does not
+ * get to pick its own directory names.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

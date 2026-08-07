@@ -14,8 +14,9 @@
  * `activityDetailsId` is an opaque, base64 blob whose stability across
  * exports nothing guarantees, whereas store/POS/transaction/date is what
  * the receipt itself identifies the purchase by and is printed on the
- * paper. Re-exporting therefore updates the same purchase rather than
- * minting a second copy of it.
+ * paper. `POST /purchases` is create-only and rejects a repeat with 409, so
+ * this is what makes re-exporting a no-op: the second import is recognised
+ * as the same shop and skipped, rather than minting a second copy of it.
  */
 import { createHash } from 'node:crypto';
 

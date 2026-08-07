@@ -5,6 +5,10 @@ Everyday Rewards web app, so this unpacked Chrome extension reads them from
 the session you are already in and writes a JSON file the purchases pillar
 ingests.
 
+Nothing in this directory may be named with a leading underscore — Chrome
+reserves those and refuses to load the extension at all — which is why the
+tests live in `tests/` rather than the repo's usual `__tests__/`.
+
 ## Installing
 
 1. `chrome://extensions` → enable **Developer mode**
@@ -91,7 +95,7 @@ its own `fetch` and `XMLHttpRequest` and would observe nothing.
 ## Testing
 
 `pure.js` holds every decision the extension makes and nothing it does, so
-it can be tested — `__tests__/pure.test.js` evaluates the shipped file the
+it can be tested — `tests/pure.test.js` evaluates the shipped file the
 way Chrome does rather than reshaping it for the test. Every bug found in
 this extension so far lived in exactly those functions:
 
