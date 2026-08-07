@@ -139,6 +139,34 @@ describe('receipts it ingests but flags', () => {
     expect(mapped?.purchase.totalCents).toBe(9999);
   });
 
+  it('counts a discount printed among the items, not just one in the summary', () => {
+    // Everyday Extra and the BUY-2 offers arrive as negative-amount ROWS,
+    // and on the real export they outnumber summary discounts entirely.
+    // Dropping them on the way to `discountCents` makes every receipt
+    // carrying one report a false `totals-mismatch`.
+    const mapped = map({
+      lines: [
+        ...REAL_RECEIPT_LINES,
+        { description: 'Everyday Extra 10% Discount', amount: '-3.26' },
+      ],
+      total: '$29.32',
+    });
+    expect(mapped?.anomalies).toEqual([]);
+    expect(mapped?.purchase.discountCents).toBe(326);
+    expect(mapped?.purchase.subtotalCents).toBe(3258);
+    expect(mapped?.purchase.items?.map((i) => i.name)).not.toContain('Everyday Extra 10% Discount');
+  });
+
+  it('adds up discounts stated in both places', () => {
+    const mapped = map({
+      lines: [...REAL_RECEIPT_LINES, { description: 'BUY 2 for $4.60', amount: '-1.00' }],
+      discounts: [{ description: 'Everyday Extra', amount: '-2.00' }],
+      total: '$29.58',
+    });
+    expect(mapped?.anomalies).toEqual([]);
+    expect(mapped?.purchase.discountCents).toBe(300);
+  });
+
   it('subtracts a stated discount before comparing', () => {
     const mapped = map({
       total: '$30.58',
