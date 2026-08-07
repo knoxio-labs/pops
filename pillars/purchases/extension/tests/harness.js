@@ -15,10 +15,31 @@ import { createContext, runInContext } from 'node:vm';
 
 const SCRIPTS = ['pure.js', 'observe.js', 'capture.js'];
 
-function source() {
-  return SCRIPTS.map((name) =>
+/**
+ * The shipped scripts, with their pacing constants overridden.
+ *
+ * The 350ms courtesy gap and the 200-page backstop are right for someone's
+ * account and wrong for a test suite — walking to the backstop at real
+ * pacing takes over a minute. Only those two literals are substituted, and
+ * each substitution is asserted, so this cannot quietly stop applying or
+ * quietly start rewriting something else.
+ */
+function source({ gapMs = 0, maxPages = 200 } = {}) {
+  const text = SCRIPTS.map((name) =>
     readFileSync(fileURLToPath(new URL(`../${name}`, import.meta.url)), 'utf8')
   ).join('\n');
+
+  const replacements = [
+    ['const POPS_REQUEST_GAP_MS = 350;', `const POPS_REQUEST_GAP_MS = ${String(gapMs)};`],
+    ['const POPS_MAX_PAGES = 200;', `const POPS_MAX_PAGES = ${String(maxPages)};`],
+  ];
+
+  return replacements.reduce((carried, [from, to]) => {
+    if (!carried.includes(from)) {
+      throw new Error(`the harness can no longer find \`${from}\` to override`);
+    }
+    return carried.replace(from, to);
+  }, text);
 }
 
 /** Enough of `XMLHttpRequest` for the patches to have something to patch. */
@@ -56,7 +77,7 @@ function fakeXhrClass(onSend) {
  * `XMLHttpRequest`. Both receive the parsed request so a test can vary its
  * answer by page token or receipt id.
  */
-export function bootExtension({ respond, xhrRespond } = {}) {
+export function bootExtension({ respond, xhrRespond, gapMs, maxPages } = {}) {
   const fetchCalls = [];
   const window = {
     async fetch(url, init) {
@@ -79,7 +100,7 @@ export function bootExtension({ respond, xhrRespond } = {}) {
     Request: class Request {},
     setTimeout,
   });
-  runInContext(source(), context);
+  runInContext(source({ gapMs, maxPages }), context);
 
   return {
     api: window.__popsEveryday,

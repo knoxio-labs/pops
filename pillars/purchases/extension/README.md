@@ -140,6 +140,10 @@ its own, and is checked by using it.
   back the same page token twice. Stopping beats looping until the account
   gets rate-limited. Reaching the end of your history is **not** this: that
   finishes quietly.
+- **"stopped at the 200-page safety limit"** — the history is longer than
+  the backstop allows in one run. Everything read is kept; press the button
+  again to continue from there. It says so rather than stopping silently,
+  because a silent stop is indistinguishable from having read it all.
 - **Fewer receipts than you expected** — check how far back the site's own
   list goes by scrolling it. The extension can only reach what the API
   serves, and Everyday Rewards does not keep activity indefinitely.

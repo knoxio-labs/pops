@@ -175,6 +175,31 @@ describe('walking the history', () => {
     expect(api.status().error).toMatch(/cursor repeated/);
   });
 
+  it('says so rather than stopping quietly at the safety limit', async () => {
+    // A silent stop looks exactly like a completed walk, so a truncated
+    // history would be indistinguishable from a whole one.
+    let page = 0;
+    const booted = bootExtension({
+      respond: async () => {
+        page += 1;
+        return okJson(listPage([`row-${String(page)}`], `token-${String(page + 1)}`));
+      },
+      xhrRespond: () => listPage(['a'], 'token-1'),
+      maxPages: 3,
+    });
+    observeXhr(booted.XMLHttpRequest, {
+      url: GRAPHQL_URL,
+      query: PAGE_QUERY,
+      variables: { pageToken: 'token-0' },
+    });
+
+    await booted.api.loadHistory();
+
+    expect(booted.api.status().error).toMatch(/safety limit with more history left/);
+    // What it did read is kept, so pressing the button again continues.
+    expect(booted.api.status().listed).toBe(4);
+  });
+
   it('keeps the rows it already read when a page fails', async () => {
     const { api } = primed({ pages: { 'token-1': httpError(500) } });
     await api.loadHistory();

@@ -51,6 +51,13 @@ async function popsPaginate() {
     }
     await popsPause();
   }
+  // Falling out of the loop means the cursor was still advancing when the
+  // backstop ran out. Returning quietly here is indistinguishable from
+  // having read everything, which is the one thing this must never look
+  // like: pressing the button again resumes from where it stopped.
+  throw new Error(
+    `stopped at the ${String(POPS_MAX_PAGES)}-page safety limit with more history left`
+  );
 }
 
 /** Fetch every listed receipt not captured yet. */
