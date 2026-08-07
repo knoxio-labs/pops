@@ -106,8 +106,16 @@ this extension so far lived in exactly those functions:
   unreadable and the walk ended with an error instead of finishing;
 - requiring a `receipt` on a list row, which dropped a shop that had one.
 
-`observe.js` and `capture.js` are wiring over those decisions and are not
-unit tested; they are exercised by hand against the live site.
+`tests/capture.test.js` drives `observe.js` and `capture.js` end to end
+against fakes, with `window`, `XMLHttpRequest` and `Request` supplied as
+parameters so the shipped files run unedited. It covers the parts that only
+exist because there is a browser: patching XHR, learning a template from an
+observed request, and the two replay loops — including all three shapes the
+end of a history has been seen to take, which is where the bugs that
+survived into real use lived.
+
+`popup.js` has no automated test; it is a remote control with no state of
+its own, and is checked by using it.
 
 ## Failure modes worth knowing
 
