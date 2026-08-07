@@ -57,10 +57,18 @@ why that is patched too. They stay in page memory and never reach the
 export.
 
 The two list operations put their payload under different `data` keys, so
-`observe.js` looks for whichever key carries a `results.sections` instead of
-naming either. The receipt id comes from `sectionItems[].activityDetailsId`,
-and rows without a `receipt` are skipped — those are points adjustments, not
-shops.
+`pure.js` looks for whichever key carries a `results` object instead of
+naming either. It deliberately does **not** require `results.sections` to be
+an array: the last page of a history answers `{ sections: null,
+nextPageToken: null }`, and treating that as unreadable ends the walk with
+"the list stopped advancing" on the one response that means "that was
+everything".
+
+The receipt id comes from `sectionItems[].activityDetailsId`. A row is kept
+if it has a `receipt` **or** calls itself a `purchase` — either alone is not
+enough. A real export came back with 45 receipts against 44 listed rows, so
+`receipt` is not always set on a row that has one; the cost of keeping a row
+that turns out to have no receipt is one request whose answer is discarded.
 
 The content scripts run in the `MAIN` world because an isolated world gets
 its own `fetch` and `XMLHttpRequest` and would observe nothing.
@@ -108,7 +116,11 @@ unit tested; they are exercised by hand against the live site.
   Reload the page and start again; the capture is per-session by design.
 - **"the list stopped advancing; its cursor repeated"** — the server handed
   back the same page token twice. Stopping beats looping until the account
-  gets rate-limited.
+  gets rate-limited. Reaching the end of your history is **not** this: that
+  finishes quietly.
+- **Fewer receipts than you expected** — check how far back the site's own
+  list goes by scrolling it. The extension can only reach what the API
+  serves, and Everyday Rewards does not keep activity indefinitely.
 - **Blank list after scrolling** — the site changed the shape of
   `results.sections[].sectionItems[]`. `activityDetailsId` there is the one
   field this extension truly assumes.
