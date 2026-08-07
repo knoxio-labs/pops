@@ -46,6 +46,16 @@ nothing at all.
 | `RewardsActivityHomeNextPage` | `$pageToken`, `$featureFlags` | `data.activityHomeNextPage.results` | **Replayed.** `results.nextPageToken` feeds the next call until it comes back null.               |
 | `ActivityDetails`             | `$id`, `$featureFlags`        | `data.activityDetails.tabs[]`       | **Replayed** per receipt id, keeping the tab whose page is a `ReceiptDetails`.                    |
 
+**A replay needs the app's headers, not just its cookies.** The endpoint
+sits behind an API key and a bearer token that the app sets per request —
+`client_id`, `api-version`, `Authorization`, `Accept`. Replaying with
+`credentials: 'include'` alone answers `401 Api Key is empty`. They are
+captured off the real request rather than named in code, because naming
+them means guessing which ones matter and breaking the day one is renamed.
+For an XHR the only place they are visible is `setRequestHeader`, which is
+why that is patched too. They stay in page memory and never reach the
+export.
+
 The two list operations put their payload under different `data` keys, so
 `observe.js` looks for whichever key carries a `results.sections` instead of
 naming either. The receipt id comes from `sectionItems[].activityDetailsId`,
@@ -77,6 +87,8 @@ its own `fetch` and `XMLHttpRequest` and would observe nothing.
 - **A run stops part-way** — the message says how far it got. What was
   captured is kept and exportable, and pressing the button again resumes
   rather than restarting.
+- **"the site answered HTTP 401"** — the captured token has expired.
+  Reload the page and start again; the capture is per-session by design.
 - **"the list stopped advancing; its cursor repeated"** — the server handed
   back the same page token twice. Stopping beats looping until the account
   gets rate-limited.

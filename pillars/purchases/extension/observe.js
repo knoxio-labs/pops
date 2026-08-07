@@ -87,14 +87,42 @@ function popsHarvestList(json) {
   }
 }
 
-function popsRememberTemplates(url, parsed) {
+/**
+ * Headers are part of the template, and not optional.
+ *
+ * The endpoint sits behind an API key and a bearer token that the app sets
+ * per request; replaying with cookies alone gets `401 Api Key is empty`.
+ * They are captured from the real request rather than named here, because
+ * naming them would mean guessing which ones matter and breaking the day
+ * one is renamed.
+ *
+ * They stay in page memory and never reach the export — see
+ * `popsBuildExport` in capture.js.
+ */
+function popsRememberTemplates(url, parsed, headers) {
   const query = parsed?.query ?? '';
+  const template = { url, query, variables: parsed?.variables ?? {}, headers: headers ?? {} };
   if (popsState.detailsTemplate === null && /activityDetails\s*\(/i.test(query)) {
-    popsState.detailsTemplate = { url, query, variables: parsed.variables ?? {} };
+    popsState.detailsTemplate = template;
   }
   if (popsState.pageTemplate === null && /\$pageToken/.test(query)) {
-    popsState.pageTemplate = { url, query, variables: parsed.variables ?? {} };
+    popsState.pageTemplate = template;
   }
+}
+
+function popsHeadersFrom(source) {
+  const headers = {};
+  if (source == null) return headers;
+  if (typeof source.forEach === 'function' && !Array.isArray(source)) {
+    source.forEach((value, name) => {
+      headers[name] = value;
+    });
+    return headers;
+  }
+  for (const [name, value] of Array.isArray(source) ? source : Object.entries(source)) {
+    headers[name] = value;
+  }
+  return headers;
 }
 
 function popsCaptureReceipt(parsed, json) {
@@ -105,9 +133,9 @@ function popsCaptureReceipt(parsed, json) {
   if (page) popsState.receipts.set(id, page);
 }
 
-function popsAbsorb(url, parsed, json) {
+function popsAbsorb(url, parsed, json, headers) {
   popsHarvestList(json);
-  popsRememberTemplates(url, parsed);
+  popsRememberTemplates(url, parsed, headers);
   popsCaptureReceipt(parsed, json);
 }
 
@@ -128,7 +156,10 @@ window.fetch = async function popsPatchedFetch(...args) {
   if (typeof url !== 'string' || !url.includes(POPS_GRAPHQL_MARK)) return response;
   try {
     const parsed = popsReadOperation(await popsRequestBody(request, args[1]));
-    popsAbsorb(url, parsed, await response.clone().json());
+    const headers = popsHeadersFrom(
+      args[1]?.headers ?? (request instanceof Request ? request.headers : null)
+    );
+    popsAbsorb(url, parsed, await response.clone().json(), headers);
   } catch {
     // A GraphQL call this script cannot read is not a reason to break the
     // page it belongs to.
@@ -138,17 +169,26 @@ window.fetch = async function popsPatchedFetch(...args) {
 
 const POPS_XHR_OPEN = XMLHttpRequest.prototype.open;
 const POPS_XHR_SEND = XMLHttpRequest.prototype.send;
+const POPS_XHR_HEADER = XMLHttpRequest.prototype.setRequestHeader;
 
 XMLHttpRequest.prototype.open = function popsPatchedOpen(method, url, ...rest) {
   this.__popsUrl = url;
+  this.__popsHeaders = {};
   return POPS_XHR_OPEN.call(this, method, url, ...rest);
+};
+
+// The only place an XHR's request headers are ever visible.
+XMLHttpRequest.prototype.setRequestHeader = function popsPatchedHeader(name, value) {
+  if (this.__popsHeaders) this.__popsHeaders[name] = value;
+  return POPS_XHR_HEADER.call(this, name, value);
 };
 
 XMLHttpRequest.prototype.send = function popsPatchedSend(body) {
   if (typeof this.__popsUrl === 'string' && this.__popsUrl.includes(POPS_GRAPHQL_MARK)) {
     this.addEventListener('load', () => {
       try {
-        popsAbsorb(this.__popsUrl, popsReadOperation(body), JSON.parse(this.responseText));
+        const json = JSON.parse(this.responseText);
+        popsAbsorb(this.__popsUrl, popsReadOperation(body), json, this.__popsHeaders);
       } catch {
         // As above.
       }

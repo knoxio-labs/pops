@@ -28,12 +28,22 @@ async function popsPost(template, variables) {
   const response = await POPS_FETCH.call(window, template.url, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'content-type': 'application/json' },
+    headers: { ...template.headers, 'content-type': 'application/json' },
     body: JSON.stringify({ query: template.query, variables: merged }),
   });
-  if (!response.ok) throw new Error(`the site answered HTTP ${String(response.status)}`);
+  if (!response.ok) {
+    // 401 here means the token the template captured has expired, which is
+    // a page reload away from fixed and not worth a generic message.
+    const hint = response.status === 401 ? ' — reload the page and start again' : '';
+    throw new Error(`the site answered HTTP ${String(response.status)}${hint}`);
+  }
   const json = await response.json();
-  popsAbsorb(template.url, { query: template.query, variables: merged }, json);
+  // GraphQL answers 200 with an `errors` array. Absorbing that silently
+  // records nothing and looks exactly like a receipt with no items.
+  if (Array.isArray(json?.errors) && json.errors.length > 0) {
+    throw new Error(String(json.errors[0]?.message ?? 'the API returned an error'));
+  }
+  popsAbsorb(template.url, { query: template.query, variables: merged }, json, template.headers);
   return json;
 }
 
