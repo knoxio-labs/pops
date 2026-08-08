@@ -63,14 +63,30 @@ depends = ["build", "build:rust"]
 # re-invoke run-all, recursing infinitely. We therefore only run a unit's
 # task when `mise tasks info` reports its Source as that unit's own
 # mise.toml (i.e. the task is locally defined, not inherited).
+#
+# `clients/*` (ADR-043) is discovered too, but only folded into the run when
+# RUN_ALL_INCLUDE_CLIENTS=1. clients/ios's own build/test/lint tasks shell
+# out to xcodebuild and xcrun, which need a real Xcode install — ADR-043
+# deliberately keeps a client out of the generic unit-discovery machinery
+# ("a client's coverage is its own workflow") and `ios-quality.yml` already
+# runs those tasks on a macOS CI runner. Folding clients into the
+# unqualified default here would make `mise test` and the `build`-task fan-
+# out behind `openapi:generate` fail outright on Linux, and on any
+# developer machine without Xcode, for a unit whose CI coverage already
+# exists elsewhere. Opt in locally on a Mac with Xcode via
+# `RUN_ALL_INCLUDE_CLIENTS=1 mise test`.
 [tasks.run-all]
-description = "Run <task> in every disk-discovered unit that locally defines it"
+description = "Run <task> in every disk-discovered unit that locally defines it (clients/* only with RUN_ALL_INCLUDE_CLIENTS=1 — see comment above)"
 usage = 'arg "<task>"'
 run = '''
 units="$(
   find pillars libs -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/mise.toml' ';' -print
   find pillars -mindepth 2 -maxdepth 2 -type d -name app -exec test -f '{}/mise.toml' ';' -print
 )"
+if [ "${RUN_ALL_INCLUDE_CLIENTS:-}" = "1" ]; then
+  units="$units
+$(find clients -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/mise.toml' ';' -print)"
+fi
 for d in $(echo "$units" | sort); do
   src="$(mise tasks info "$usage_task" -C "$d" 2>/dev/null | sed -n 's/^Source: //p')"
   case "$src" in

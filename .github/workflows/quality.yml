@@ -140,6 +140,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # `run-all-clients-discovery.test.ts` shells out to the real `mise`
+      # binary against a disposable fixture tree, and
+      # `check-mise-tool-overrides.test.ts` runs `mise current -C <dir>
+      # <tool>` against this repo's own units expecting the real root pin
+      # back — so the tools stay installed rather than disabled the way
+      # ios-quality.yml disables them for its Xcode-only job. This job
+      # ends up installing the same node/pnpm actions/setup-node and
+      # pnpm/action-setup would have set up anyway; the two don't fight
+      # over PATH because both resolve to the same pinned major.
+      - uses: jdx/mise-action@v4
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
