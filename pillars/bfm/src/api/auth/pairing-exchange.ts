@@ -138,11 +138,21 @@ export function completePairingExchange(
     throw error;
   }
 
+  // Everything the transaction will write, computed before it opens. The digest
+  // and the expiry arithmetic are here rather than inline below for the same
+  // reason the mint is: the body of the transaction should be writes and
+  // nothing else, so that "the only way to fail in there is a database error"
+  // is a property you can check by reading it.
   const at = now();
   const createdAt = at.toISOString();
   const deviceId = generateDeviceId();
+  // The family starts here. Every token that ever rotates out of the one below
+  // carries this id, which is what device revocation and reuse detection
+  // (POPS-1375) operate on rather than on single rows.
   const familyId = randomUUID();
   const refreshToken = drawRefreshToken();
+  const refreshTokenHash = hashRefreshToken(refreshToken);
+  const refreshTokenExpiresAt = new Date(at.getTime() + refreshTokenTtlMs).toISOString();
   const access = mintAccessToken(deviceId, accessTokenSigningKey);
 
   return db.transaction((tx): PairingExchangeResult => {
@@ -156,14 +166,11 @@ export function completePairingExchange(
       createdAt,
     });
 
-    // The family starts here. Every token that ever rotates out of this one
-    // carries `familyId`, which is what device revocation and reuse detection
-    // (POPS-1375) operate on rather than on single rows.
     insertRefreshToken(tx, {
-      tokenHash: hashRefreshToken(refreshToken),
+      tokenHash: refreshTokenHash,
       deviceId,
       familyId,
-      expiresAt: new Date(at.getTime() + refreshTokenTtlMs).toISOString(),
+      expiresAt: refreshTokenExpiresAt,
       createdAt,
     });
 
