@@ -12,7 +12,7 @@ import Testing
 /// an unexplained 401: every encoding either end could get wrong is compared
 /// against bytes that are known to verify under `node:crypto`.
 @Suite("device signature encoding contract")
-struct DeviceSignatureFixtureTests {
+internal struct DeviceSignatureFixtureTests {
     let fixture: DeviceSignatureFixture
 
     init() throws {

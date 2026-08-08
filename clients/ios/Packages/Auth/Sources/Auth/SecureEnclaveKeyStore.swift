@@ -70,7 +70,8 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
                 &accessControlError
             )
         else {
-            throw DeviceKeyStoreError.secureEnclaveUnavailable(code: Self.code(of: accessControlError))
+            throw DeviceKeyStoreError.secureEnclaveUnavailable(
+                code: Self.code(of: accessControlError))
         }
 
         let attributes: [CFString: Any] = [

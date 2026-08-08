@@ -27,7 +27,7 @@ private struct FailingWipeTokenStore: TokenStore {
 }
 
 @Suite("credential wipe on revocation")
-struct DeviceCredentialStoreTests {
+internal struct DeviceCredentialStoreTests {
     static func tokens() -> DeviceTokens {
         DeviceTokens(
             accessToken: "access",
@@ -36,23 +36,33 @@ struct DeviceCredentialStoreTests {
         )
     }
 
-    static func pairedStore() throws -> (DeviceCredentialStore, InMemoryKeyStore, InMemoryTokenStore) {
+    /// A paired device, with the two fakes kept to hand so a test can assert on
+    /// what is left behind rather than only on what `wipe()` returned.
+    struct PairedFixture {
+        let store: DeviceCredentialStore
+        let keyStore: InMemoryKeyStore
+        let tokenStore: InMemoryTokenStore
+    }
+
+    static func pairedStore() throws -> PairedFixture {
         let keyStore = InMemoryKeyStore()
         let tokenStore = InMemoryTokenStore(initial: tokens())
         try keyStore.createKey()
-        return (
-            DeviceCredentialStore(keyStore: keyStore, tokenStore: tokenStore), keyStore, tokenStore
+        return PairedFixture(
+            store: DeviceCredentialStore(keyStore: keyStore, tokenStore: tokenStore),
+            keyStore: keyStore,
+            tokenStore: tokenStore
         )
     }
 
     @Test("a wipe removes the key and the tokens")
     func wipeRemovesEverything() throws {
-        let (store, keyStore, tokenStore) = try Self.pairedStore()
+        let paired = try Self.pairedStore()
 
-        try store.wipe()
+        try paired.store.wipe()
 
-        #expect(try keyStore.publicKey() == nil)
-        #expect(try tokenStore.load() == nil)
+        #expect(try paired.keyStore.publicKey() == nil)
+        #expect(try paired.tokenStore.load() == nil)
     }
 
     @Test("wiping an already-clean device succeeds")
@@ -125,10 +135,10 @@ struct DeviceCredentialStoreTests {
 
     @Test("a successful wipe reports nothing remaining")
     func successReportsNoFailure() throws {
-        let (store, _, _) = try Self.pairedStore()
+        let paired = try Self.pairedStore()
 
         #expect(throws: Never.self) {
-            try store.wipe()
+            try paired.store.wipe()
         }
     }
 

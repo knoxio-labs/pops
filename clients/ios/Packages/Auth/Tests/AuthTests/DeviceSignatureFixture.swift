@@ -7,7 +7,7 @@ import Foundation
 /// is found through `#filePath` rather than shipped as an SPM resource for the
 /// same reason: a resource would be a copy inside the package, and a copy is
 /// the thing this fixture exists to prevent.
-struct DeviceSignatureFixture: Decodable {
+internal struct DeviceSignatureFixture: Decodable {
     let version: Int
     let curve: String
     let digest: String

@@ -5,7 +5,7 @@ import Testing
 @testable import AuthTestSupport
 
 @Suite("token storage")
-struct TokenStoreTests {
+internal struct TokenStoreTests {
     static func tokens(
         access: String = "access-token-value",
         refresh: String = "refresh-token-value"
@@ -100,7 +100,8 @@ struct TokenStoreTests {
         #expect(DeviceKeyStoreError.keychain(-34018).description.contains("-34018"))
         #expect(DeviceKeyStoreError.signingFailed(code: -25308).description.contains("-25308"))
         #expect(
-            DeviceKeyStoreError.secureEnclaveUnavailable(code: -26275).description.contains("-26275")
+            DeviceKeyStoreError.secureEnclaveUnavailable(code: -26275).description.contains(
+                "-26275")
         )
     }
 

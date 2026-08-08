@@ -6,13 +6,18 @@ import Foundation
 /// and `node:crypto` both speak ECDSA P-256 and neither defaults to the other's
 /// encoding for free, so the pair has to be pinned deliberately:
 ///
-/// | Concern           | Chosen                            | Why this one                                                                                                                              |
-/// | ----------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-/// | Curve             | P-256 (`secp256r1`, `prime256v1`) | The only curve the Secure Enclave generates.                                                                                              |
-/// | Digest            | SHA-256                           | Paired with P-256 by `kSecKeyAlgorithmECDSASignatureMessageX962SHA256`, and the only digest the Enclave's message-signing variants offer.  |
-/// | Signature bytes   | ASN.1 DER (X9.62)                 | What `SecKeyCreateSignature` emits, and `node:crypto`'s default `dsaEncoding`. Choosing raw `r‖s` would mean both ends converting instead of neither. |
-/// | Public key bytes  | SPKI DER                          | `node:crypto`'s `createPublicKey` reads it with no out-of-band curve hint. The Enclave only offers X9.63, so the app converts — see ``DevicePublicKey``. |
-/// | Transport         | base64                            | Both sides of the pairing and refresh payloads are JSON.                                                                                  |
+/// - **Curve — P-256** (`secp256r1`, `prime256v1`). The only curve the Secure
+///   Enclave generates, so this one is not really a choice.
+/// - **Digest — SHA-256.** Paired with P-256 by
+///   `kSecKeyAlgorithmECDSASignatureMessageX962SHA256`, and the only digest the
+///   Enclave's message-signing variants offer.
+/// - **Signature bytes — ASN.1 DER** (X9.62). What `SecKeyCreateSignature`
+///   emits, and `node:crypto`'s default `dsaEncoding`. Choosing raw `r‖s` would
+///   have meant both ends converting rather than neither.
+/// - **Public key bytes — SPKI DER.** `node:crypto`'s `createPublicKey` reads it
+///   with no out-of-band curve hint. The Enclave only offers X9.63, so this is
+///   the one row where the app converts — see ``DevicePublicKey``.
+/// - **Transport — base64.** The pairing and refresh payloads are JSON.
 ///
 /// A mismatch on any row surfaces as an ordinary 401 with nothing in either
 /// log to distinguish it from a wrong token, which is why the choice is

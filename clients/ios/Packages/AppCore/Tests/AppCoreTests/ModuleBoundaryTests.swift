@@ -80,7 +80,8 @@ internal struct ModuleBoundaryTests {
             + swiftFiles(under: appDirectory)
         #expect(!shipping.isEmpty)
 
-        for file in shipping where !fakes.contains(where: { file.path.contains("/Sources/\($0)/") }) {
+        for file in shipping where !fakes.contains(where: { file.path.contains("/Sources/\($0)/") })
+        {
             let forbidden = try importedModules(in: file).intersection(fakes)
             #expect(
                 forbidden.isEmpty,

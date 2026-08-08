@@ -29,7 +29,7 @@ private let hardwareTestsEnabled =
 /// Runs only on a real device. Uses its own application tag so a test run
 /// cannot destroy the key of a genuinely paired app on the same phone.
 @Suite("secure enclave key store", .enabled(if: hardwareTestsEnabled), .serialized)
-struct SecureEnclaveHardwareTests {
+internal struct SecureEnclaveHardwareTests {
     let store = SecureEnclaveKeyStore(applicationTag: "com.knoxiolabs.pops.device-key.tests")
 
     init() throws {
@@ -90,7 +90,7 @@ struct SecureEnclaveHardwareTests {
 /// service, which matters more than usual here: ``KeychainTokenStore/wipe()``
 /// clears its whole service.
 @Suite("keychain token store", .enabled(if: hardwareTestsEnabled), .serialized)
-struct KeychainTokenStoreHardwareTests {
+internal struct KeychainTokenStoreHardwareTests {
     let store = KeychainTokenStore(service: "com.knoxiolabs.pops.auth.tests")
 
     init() throws {

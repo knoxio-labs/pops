@@ -9,7 +9,7 @@ import Testing
 /// implements the same protocol and is covered — only on hardware — by
 /// ``SecureEnclaveHardwareTests``.
 @Suite("device key lifecycle")
-struct DeviceKeyStoreTests {
+internal struct DeviceKeyStoreTests {
     @Test("a created key is retrievable and stable")
     func createThenRead() throws {
         let store = InMemoryKeyStore()
