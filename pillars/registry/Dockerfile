@@ -1,11 +1,7 @@
-# DO NOT EDIT — hand-written for the registry pillar (formerly core).
-# The pillar Dockerfile generator does not yet understand the collapsed shape —
-# until it does, this file is maintained manually. Keep it narrow: only
-# @pops/registry and its transitive @pops/* deps (queried via
+# DO NOT EDIT — hand-written for the registry pillar (formerly core). Every
+# pillar Dockerfile is hand-maintained; nothing regenerates them. Keep it
+# narrow: only @pops/registry and its transitive @pops/* deps (queried via
 # `pnpm m ls --filter "@pops/registry..." --json --depth -1`).
-#
-# NOTE: not build-verified in the authoring environment (no Docker available);
-# mirrors pillars/finance/Dockerfile with the registry dep set + port 3001.
 
 FROM node:24-slim AS builder
 WORKDIR /app
