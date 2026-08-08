@@ -3,7 +3,7 @@
 # Run `mise run <task>` or `mise <task>` to execute
 
 [tools]
-node = "24.5.0"
+node = "24.19.0"
 pnpm = "10.32.1"
 rust = "stable"
 

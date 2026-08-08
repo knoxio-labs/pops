@@ -8,7 +8,7 @@
 # paperless-redis containers, networks, volumes, or secrets. That is a
 # separate, later, prod-gated step (ADR-039 workstream 22).
 
-FROM node:22-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
@@ -47,7 +47,7 @@ RUN pnpm --filter "@pops/documents" build
 # Standalone deployment (production deps only, no symlinks).
 RUN pnpm --filter @pops/documents deploy --prod --legacy /app/deploy
 
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/deploy ./

@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
       - name: Guard self-tests (prove the guards catch violations)
         run: |
           node scripts/ci/check-lib-no-pillar-import.mjs --self-test

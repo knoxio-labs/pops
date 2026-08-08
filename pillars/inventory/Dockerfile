@@ -5,7 +5,7 @@
 # transitive @pops/* deps (queried via
 # `pnpm m ls --filter "@pops/inventory..." --json --depth -1`).
 
-FROM node:22-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
@@ -52,7 +52,7 @@ RUN pnpm --filter "@pops/inventory" build
 # Standalone deployment (production deps only, no symlinks).
 RUN pnpm --filter @pops/inventory deploy --prod --legacy /app/deploy
 
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 

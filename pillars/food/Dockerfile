@@ -12,7 +12,7 @@
 # `@pops/types` requires tsconfig.build.json (lessons-learned from the
 # lists Dockerfile).
 
-FROM node:22-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 
 # Workspace root manifests.
@@ -56,7 +56,7 @@ RUN pnpm --filter "@pops/food" build
 # Standalone deployment (production deps only, no symlinks).
 RUN pnpm --filter @pops/food deploy --prod --legacy /app/deploy
 
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
