@@ -176,16 +176,11 @@ export async function authenticateServiceAccount(
 
 /**
  * Returns true if the procedure path falls under any of the granted scope
- * prefixes. Scopes use dot-prefix matching: a granted scope `cerebrum.ingest`
- * authorises `cerebrum.ingest.quickCapture` but not `cerebrum.query.ask`.
+ * prefixes. Re-exported from `@pops/pillar-sdk/server` rather than defined
+ * here: every producer now applies this rule to the same grants, so a second
+ * definition is a second answer waiting to happen.
  */
-export function hasScopeFor(grantedScopes: string[], procedurePath: string): boolean {
-  for (const scope of grantedScopes) {
-    if (scope === procedurePath) return true;
-    if (procedurePath.startsWith(`${scope}.`)) return true;
-  }
-  return false;
-}
+export { hasScopeFor } from '@pops/pillar-sdk/server';
 
 /** Convenience for tests that need a quick lookup. */
 export function getActiveServiceAccountByPrefix(db: CoreDb, prefix: string): ServiceAccount | null {
