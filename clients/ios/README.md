@@ -13,7 +13,7 @@ mise run generate   # xcodegen generate — writes Pops.xcodeproj
 mise run build      # xcodebuild, iOS Simulator
 ```
 
-`mise run build:packages` type-checks every package with `swift build` alone, without Xcode or a simulator.
+`mise run build:packages` type-checks every package with `swift build` alone, and `mise run test:packages` runs the tests of every package that has any. Both use the host toolchain, without Xcode or a simulator — which means they compile for macOS, not iOS.
 
 Requires an iOS 27 SDK. `mise install` here pins XcodeGen; Xcode itself is not managed by mise.
 
@@ -39,7 +39,7 @@ The dependency direction is one-way:
 
 This is enforced rather than agreed: a package can only `import` what its own `Package.swift` declares, so a forbidden import fails to compile. What is _not_ enforced is a wrong edge being added to a `Package.swift` in the first place, which is a review concern.
 
-Each package is a shell whose placeholder type says what the module is for. Filling them in is one ticket per module.
+`Packages/DesignSystem` is built — every colour, type size and gap in the app resolves through it, and `Packages/DesignSystem/README.md` states the two rules it binds every other module to. The rest are shells whose placeholder type says what the module is for; filling them in is one ticket per module.
 
 ## Known gaps
 

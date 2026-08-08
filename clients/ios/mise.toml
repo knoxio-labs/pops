@@ -17,3 +17,13 @@ for package in Packages/*/; do
   swift build --package-path "$package" || exit 1
 done
 '''
+
+[tasks."test:packages"]
+description = "Run every package's tests on the host toolchain, without a simulator"
+run = '''
+for package in Packages/*/; do
+  if [ -d "$package/Tests" ]; then
+    swift test --package-path "$package" || exit 1
+  fi
+done
+'''
