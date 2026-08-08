@@ -413,6 +413,73 @@ services:
       timeout: 5s
       retries: 3
 
+  # Backend-for-Mobile pillar API (ADR-035 data kind). The single backend the
+  # native iPhone client dials; it fans out to the rest of the federation so
+  # the phone holds one base URL and one credential. Owns bfm.db — the device
+  # allow-list — on port 3014.
+  #
+  # NOT routed by nginx here: the BFM's public entry point is its own
+  # Cloudflare hostname with Access bypassed (POPS-1389), and the compiled
+  # pillar roster is POPS-1386. Both are deliberately separate from this
+  # service, because the compiled-routing seam is the one that has frozen
+  # production nginx before.
+  #
+  # The only pillar mounting its OWN volume rather than the shared
+  # `sqlite-data`: it is greenfield, so the ADR-039 workstream S11 per-pillar
+  # split costs nothing here and makes `bfm-litestream` below the first
+  # sidecar in the fleet that replicates a file something actually writes.
+  bfm-api:
+    build:
+      context: ..
+      dockerfile: pillars/bfm/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-bfm:${POPS_IMAGE_TAG:-main}
+    container_name: pops-bfm
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      # frontend for the proxy, backend for the cross-pillar REST calls that
+      # are the entire reason this pillar exists.
+      - frontend
+      - backend
+    volumes:
+      - pops-bfm-data:/data/sqlite
+    secrets:
+      - pops_bfm_api_key
+    environment:
+      NODE_ENV: production
+      PORT: '3014'
+      BFM_SQLITE_PATH: /data/sqlite/bfm.db
+      BFM_SELF_BASE_URL: http://bfm-api:3014
+      POPS_REGISTRY_ENABLED: 'true'
+      # A PATH, not the key. The file-based secret keeps the credential out of
+      # the process environment and out of `docker inspect`; an env var
+      # carrying the value itself would be readable by anyone who can run
+      # either. Provisioning: infra/secrets.example/bfm/README.md.
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_bfm_api_key
+    expose:
+      - '3014'
+    depends_on:
+      registry-api:
+        condition: service_started
+    # service_started, never service_healthy: bfm listens before it registers
+    # and retries registration in the background, so gating on the registry's
+    # health would convert a slow registry into a fleet cold-start failure
+    # while buying nothing — the pillar serves traffic either way.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3014/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # AI Ops pillar API (PRD-055). Hosts ai.db reads/writes for the AI-ops
   # telemetry slice — observability, providers, model pricing, budgets,
   # alerts — and the cross-pillar ingest `POST /ai-usage/record`
@@ -822,6 +889,25 @@ services:
       CONTACTS_LITESTREAM_REPLICA_URL: ${CONTACTS_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
+  # The exception to the section header above: `pops-bfm-data` IS mounted by an
+  # API container (`bfm-api`), so this sidecar replicates a live database
+  # rather than an empty volume. Still profile-gated like its siblings —
+  # enabling it needs a replica URL, and the restore drill is unexercised.
+  bfm-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-bfm-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-bfm-data:/data/sqlite:ro
+      - ./litestream/bfm.yml:/etc/litestream.yml:ro
+    environment:
+      BFM_LITESTREAM_REPLICA_URL: ${BFM_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
   # Cross-pillar orchestrator (ADR-029, epics 06+07). Federates over the
   # pillars via @pops/pillar-sdk (REST); owns no domain DB. nginx routes
   # /orchestrator-api/ here on port 3009. Built from the app Dockerfile;
@@ -1143,6 +1229,10 @@ volumes:
     name: pops-cerebrum-data
   pops-contacts-data:
     name: pops-contacts-data
+  # Unlike its neighbours above, this one is mounted — by `bfm-api`, which is
+  # greenfield and so was never on the shared `sqlite-data` to be migrated off.
+  pops-bfm-data:
+    name: pops-bfm-data
 
 secrets:
   notion_api_token:
@@ -1159,14 +1249,19 @@ secrets:
     file: ../secrets/finance_api_key
   pops_api_key:
     file: ../secrets/pops_api_key
-  # The bfm pillar's own service account, deliberately NOT the shared
-  # pops_api_key: separate accounts are what make revocation and the audit
-  # trail per-consumer. Declared ahead of the bfm-api service (POPS-1385) so
-  # the secret can be provisioned on the host before the container that mounts
-  # it exists. Compose materialises a secret only for services that reference
-  # one, so this is inert until then.
+  # bfm's own service account, deliberately NOT the shared pops_api_key:
+  # separate accounts are what make revocation and the audit trail
+  # per-consumer. Mounted by `bfm-api`.
   pops_bfm_api_key:
     file: ../secrets/pops_bfm_api_key
+  # The HS256 key bfm signs mobile access tokens with. Declared, not yet
+  # mounted: the minting path and the `requireDevice` guard that verifies
+  # against it are POPS-1370, and no process reads this file until then.
+  # Compose materialises a secret only for services that reference it, so a
+  # declaration is inert — which is what lets the value be provisioned on the
+  # host ahead of the release that starts needing it, rather than during it.
+  bfm_jwt_signing_key:
+    file: ../secrets/bfm_jwt_signing_key
   pops_api_internal_token:
     file: ../secrets/pops_api_internal_token
   instagram_cookies:

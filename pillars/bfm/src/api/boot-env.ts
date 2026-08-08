@@ -14,9 +14,14 @@
  * a sibling; one that refuses to start is discovered immediately.
  */
 
+import { dirname, join } from 'node:path';
+
 import { resolveSelfBaseUrl as resolveFleetSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 export const DEFAULT_PORT = 3014;
+
+/** Where `bfm.db` lands when neither env var says otherwise. */
+export const DEFAULT_SQLITE_PATH = './data/bfm.db';
 
 export class BootEnvError extends Error {
   override readonly name = 'BootEnvError' as const;
@@ -77,4 +82,27 @@ export function resolveSelfBaseUrl(port: number, env: NodeJS.ProcessEnv = proces
     processLabel: 'bfm-api',
     env,
   });
+}
+
+/**
+ * Resolve the on-disk location of `bfm.db`.
+ *
+ * Resolution order, matching every other SQLite pillar's resolver:
+ *   1. `BFM_SQLITE_PATH`, absolute or relative.
+ *   2. `<dirname(SQLITE_PATH)>/bfm.db`, so a deployer who sets only the shared
+ *      path still lands this pillar's database in that directory.
+ *   3. {@link DEFAULT_SQLITE_PATH}.
+ *
+ * Unlike the other resolvers here this one validates nothing beyond
+ * emptiness. A path is only wrong once the filesystem says so, and
+ * `openBfmDb` creates the parent directory — so the failure that matters
+ * (unwritable location) surfaces from the open, with the OS error attached,
+ * which is more informative than anything this function could assert.
+ */
+export function resolveSqlitePath(env: NodeJS.ProcessEnv = process.env): string {
+  const own = env['BFM_SQLITE_PATH'];
+  if (own !== undefined && own.trim() !== '') return own;
+  const shared = env['SQLITE_PATH'];
+  if (shared !== undefined && shared.trim() !== '') return join(dirname(shared), 'bfm.db');
+  return DEFAULT_SQLITE_PATH;
 }

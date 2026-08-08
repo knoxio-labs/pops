@@ -12,15 +12,27 @@
  * serving traffic. SIGTERM triggers `pillarHandle.stop()` so the heartbeat
  * clears and the registry sees an explicit deregister.
  *
- * Outbound cross-pillar auth is the opposite bargain and is configured BEFORE
- * `listen`: a bfm holding no service-account key cannot do the one thing it
- * exists for, so a missing key crashes here rather than surfacing later as a
- * failed call on somebody's phone.
+ * Two things take the opposite bargain and are done BEFORE `listen`, both
+ * because the container healthcheck cannot see them:
+ *
+ *   - Outbound cross-pillar auth. A bfm holding no service-account key cannot
+ *     do the one thing it exists for, so a missing key crashes here rather
+ *     than surfacing later as a failed call on somebody's phone.
+ *   - The database. Migrations run on the way up, and a pillar that answers
+ *     `/health` with an unmigrated or unwritable `bfm.db` would pass its
+ *     healthcheck and fail every device the moment one paired.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 
+import { openBfmDb } from '../db/index.js';
 import { createBfmApiApp } from './app.js';
-import { resolvePort, resolveSelfBaseUrl, resolveVersion, shouldSelfRegister } from './boot-env.js';
+import {
+  resolvePort,
+  resolveSelfBaseUrl,
+  resolveSqlitePath,
+  resolveVersion,
+  shouldSelfRegister,
+} from './boot-env.js';
 import { buildBfmManifest } from './manifest.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 
@@ -33,6 +45,10 @@ const version = resolveVersion();
 const selfBaseUrl = resolveSelfBaseUrl(port);
 
 configureBfmServerSdk();
+
+const sqlitePath = resolveSqlitePath();
+const bfmDb = openBfmDb(sqlitePath);
+console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 
 const app = createBfmApiApp({ version });
 
@@ -53,8 +69,14 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[bfm-api] Shutting down (${signal})`);
+  // The database closes only once the last request has been answered — an
+  // in-flight handler holding the handle would otherwise fail on a closed
+  // connection rather than finish. Closing at all is what checkpoints the WAL,
+  // so the next boot opens a clean file instead of replaying one.
   void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close();
+    server.close(() => {
+      bfmDb.raw.close();
+    });
   });
 }
 
