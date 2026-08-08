@@ -50,6 +50,163 @@
         "tags": []
       }
     },
+    "/mobile/bootstrap": {
+      "get": {
+        "operationId": "mobile.bootstrap",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "device": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "lastSeenAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "name", "lastSeenAt"],
+                      "type": "object"
+                    },
+                    "features": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "enum": ["transactions"],
+                            "type": "string"
+                          },
+                          "reachability": {
+                            "enum": ["healthy", "degraded", "unavailable", "contract-mismatch"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "reachability"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pillars": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "reachability": {
+                            "enum": ["healthy", "degraded", "unavailable", "contract-mismatch"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "reachability"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "registry": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "source": {
+                          "enum": ["fresh", "cached", "stale-fallback", "unavailable"],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["source"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["device", "registry", "pillars", "features"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token", "device_revoked"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token", "device_revoked"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          }
+        },
+        "summary": "What the app should render, and who the federation says it is talking to",
+        "tags": ["mobile"]
+      }
+    },
     "/operator/devices": {
       "get": {
         "operationId": "operator.listDevices",

@@ -75,6 +75,13 @@ export interface TestAppOptions {
    * perimeter would stop noticing if the real one broke.
    */
   mobileRateLimit?: MobileRateLimitOptions;
+  /**
+   * Seams for the bootstrap route. Left unset, the route wires its production
+   * defaults — which means a real registry read and a real probe, so any test
+   * that calls `/mobile/bootstrap` has to supply at least the probe.
+   */
+  bootstrap?: BfmApiDeps['bootstrap'];
+  internalBaseUrls?: BfmApiDeps['internalBaseUrls'];
 }
 
 export function createTestApp(options: TestAppOptions = {}): TestApp {
@@ -95,6 +102,10 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
       ? {}
       : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
     ...(options.mobileRateLimit === undefined ? {} : { mobileRateLimit: options.mobileRateLimit }),
+    ...(options.internalBaseUrls === undefined
+      ? {}
+      : { internalBaseUrls: options.internalBaseUrls }),
+    ...(options.bootstrap === undefined ? {} : { bootstrap: options.bootstrap }),
   };
 
   const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };

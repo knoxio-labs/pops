@@ -7,27 +7,27 @@ It listens on port **3014**.
 
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
-(ADR-035). It has no mobile route yet (POPS-1378, POPS-1379), though the
-perimeter those routes will sit behind is already in place, alongside the
-operator surface that mints the codes a phone pairs with — see
-[The perimeter](#the-perimeter). `/health` is a pure liveness shape rather
-than a DB round-trip, which is deliberate for a container healthcheck and is
-why the database opens **before** `listen`: the probe cannot tell you the
-schema migrated, so boot has to. It carries a shell-side operator surface,
-under [`app/`](./app/README.md).
+(ADR-035). The operator surface that mints the codes a phone pairs with, and
+the device perimeter the phone then calls through, both live here — see
+[The perimeter](#the-perimeter). `/health` is a pure liveness shape rather than
+a DB round-trip, which is deliberate for a container healthcheck and is why the
+database opens **before** `listen`: the probe cannot tell you the schema
+migrated, so boot has to. It carries a shell-side operator surface, under
+[`app/`](./app/README.md).
 
 It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                        | What it does                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| `GET /health`                  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.         |
-| `GET /openapi`                 | The committed contract projection, served verbatim so peers build a route map.             |
-| `POST /operator/pairing/codes` | Mints a single-use pairing code. The plaintext is returned once and never again.           |
-| `GET /operator/devices`        | Paired handsets, revoked ones included. Never returns a token or a key.                    |
-| `DELETE /operator/devices/:id` | Soft-revokes, and kills the device's refresh-token family in the same transaction.         |
-| `/mobile/*`                    | Reserved for the phone and gated by `requireDevice`. No route lives there yet — see below. |
+| Surface                        | What it does                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `GET /health`                  | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.    |
+| `GET /openapi`                 | The committed contract projection, served verbatim so peers build a route map.        |
+| `POST /operator/pairing/codes` | Mints a single-use pairing code. The plaintext is returned once and never again.      |
+| `GET /operator/devices`        | Paired handsets, revoked ones included. Never returns a token or a key.               |
+| `DELETE /operator/devices/:id` | Soft-revokes, and kills the device's refresh-token family in the same transaction.    |
+| `GET /mobile/bootstrap`        | What the app should render, and who bfm says it is talking to. See below.             |
+| `/mobile/*`                    | Everything else the phone reaches, gated by `requireDevice` before it is even routed. |
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
@@ -58,15 +58,15 @@ different axes: one authenticates a **phone**, the other a **human**.
 
 Everything under `/mobile` is behind the access-token guard in
 [`src/api/auth/`](src/api/auth/README.md), mounted as a path prefix in
-`src/api/app.ts`. The routes it protects arrive later (POPS-1374, POPS-1378,
-POPS-1379); the guard is in front of the prefix now so none of them can arrive
-public. A request to an unrouted `/mobile/*` therefore answers `401`, not
-`404`.
+`src/api/app.ts`. The guard is in front of the prefix rather than each route,
+so the surfaces still to come (POPS-1374, POPS-1379) cannot arrive public. A
+request to an unrouted `/mobile/*` therefore answers `401`, not `404`.
 
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
 `401` rather than either, what is never logged, and what is deliberately absent
-(refresh — POPS-1375, rate limiting — POPS-1468, `lastSeenAt` — POPS-1469).
+(refresh — POPS-1375, rate limiting — POPS-1468, `lastSeenAt` on every request
+— POPS-1469).
 
 ### `/operator/*` — the human gate
 
@@ -112,6 +112,19 @@ The gate runs _before_ the limiter, deliberately. Limiting first would let an
 anonymous flood exhaust the real operator's budget and lock them out of pairing
 — a denial of service handed to an unauthenticated caller. A test pins the
 ordering.
+
+## What the phone is told
+
+`GET /mobile/bootstrap` is the app's first authenticated call and the proof
+that bfm can see the whole federation: it lists the pillars the registry
+reports, each with a reachability bfm observed itself, and turns that into the
+feature list the app renders. The phone therefore holds no roster of its own —
+it asks.
+
+`unavailable` and `contract-mismatch` stay separate the whole way out. The
+reasoning, the probe's two-source design, and why a registry outage still
+answers `200` are in
+[`src/api/mobile/README.md`](src/api/mobile/README.md).
 
 ## Persistence
 
@@ -191,13 +204,14 @@ registration is a separate mechanism and still goes through the
 - **Any route that mints an access token.** `mintAccessToken` exists and is
   exercised, but its two callers do not: the pairing exchange (POPS-1374) and
   the refresh route (POPS-1375). Until one lands, no phone can obtain a token
-  and every `/mobile/*` request is a `401` by construction.
-- **The mobile contract and the nginx route.** The mobile-facing routes
-  (POPS-1378, POPS-1379) and the nginx route plus the compiled pillar roster
-  (POPS-1386) are each their own ticket. Revocation here sets
-  `devices.revokedAt`, which is the column `requireDevice` already reads — so
-  "a revoked phone fails its very next request" is live for `/mobile/*` and
-  will extend to every route added under it.
+  and every `/mobile/*` request is a `401` by construction — including
+  `/mobile/bootstrap`, which only a test can currently reach.
+- **Any mobile route that reads a sibling pillar's data.** Bootstrap probes
+  peers but calls none of them; the transactions surface over finance is
+  POPS-1379, and the nginx route plus the compiled pillar roster is POPS-1386.
+  Revocation here sets `devices.revokedAt`, which is the column `requireDevice`
+  already reads — so "a revoked phone fails its very next request" is live for
+  `/mobile/*` and extends to every route added under it.
 - **Any pruning of the credential tables.** Consumed and expired pairing codes
   and dead refresh tokens accumulate; nothing deletes them (POPS-1449).
 - **Any enforcement of what the service account may reach.** The grant is
@@ -295,7 +309,7 @@ pillars/bfm/
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
     ├── contract/                 the wire contract — the only description of it
-    │   ├── rest.ts               health + the operator sub-router
+    │   ├── rest.ts               health + the operator and mobile sub-routers
     │   ├── rest-schemas.ts
     │   ├── rest-operator.ts      the three Access-gated routes, and why /operator
     │   ├── rest-operator-schemas.ts
@@ -316,6 +330,7 @@ pillars/bfm/
         ├── rate-limit.ts          issuance budget — in memory, single-replica
         ├── auth/                  the /mobile perimeter — has its own README
         ├── middleware/identity.ts the operator principal, and the two legs it drops
+        ├── mobile/                what the phone is told — has its own README
         ├── pillars/               calling siblings — has its own README
         ├── shared/errors.ts       HTTP-shaped domain errors
         └── rest/                  ts-rest handler composers

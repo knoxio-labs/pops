@@ -29,8 +29,6 @@ import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js
 
 import type { KeyObject } from 'node:crypto';
 
-import type { BfmDb } from '../db/index.js';
-
 /**
  * The committed OpenAPI projection, served verbatim at `GET /openapi` so the
  * pillar SDK builds its `operationId` route map from the live pillar rather
@@ -63,8 +61,6 @@ const openapiDocument: unknown = JSON.parse(
 export const MOBILE_PATH_PREFIX = '/mobile';
 
 export interface BfmApiDeps extends BfmRestHandlerDeps {
-  /** Backs the guard's device lookup — the allow-list a token is checked against. */
-  db: BfmDb;
   /**
    * Verifies the bearer token on every `/mobile/*` request. Required rather
    * than optional: an app that could be built without one would be an app
@@ -108,12 +104,13 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // an unauthenticated caller never gets bfm to parse a request body — which
   // is the cheapest work an internet-facing pillar can be made to do.
   //
-  // Both are ahead of the contract routes, so they cover the `/mobile/*`
-  // paths that do not exist yet. `/health` and `/openapi` sit outside the
-  // prefix and are deliberately unauthenticated and unlimited — the fleet's
-  // probes and the SDK's route-map build both reach them without a device,
-  // and a liveness probe that a stranger's traffic can rate-limit out of
-  // existence would report this pillar down for the wrong reason.
+  // Both are ahead of the contract routes, so they cover both the `/mobile/*`
+  // routes the contract declares and the ones it does not yet. `/health` and
+  // `/openapi` sit outside the prefix and are deliberately unauthenticated and
+  // unlimited — the fleet's probes and the SDK's route-map build both reach
+  // them without a device, and a liveness probe that a stranger's traffic can
+  // rate-limit out of existence would report this pillar down for the wrong
+  // reason.
   app.use(
     MOBILE_PATH_PREFIX,
     createRequireDevice({ db: deps.db, accessTokenSigningKey: deps.accessTokenSigningKey })

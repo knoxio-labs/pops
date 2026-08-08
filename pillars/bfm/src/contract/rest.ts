@@ -11,16 +11,27 @@
  *
  * - **operator** (`/operator/*`) — behind Cloudflare Access via the shell's
  *   nginx at `/bfm-api/`, gated per route on a resolved principal.
- * - **device** — on bfm's own tunnel hostname with Access bypassed. The
- *   pairing exchange (POPS-1374), refresh (POPS-1375) and the mobile routes
- *   (POPS-1378, POPS-1379) land there, not beside the operator router.
+ * - **device** (`/mobile/*`) — on bfm's own tunnel hostname with Access
+ *   bypassed, behind `requireDevice`. The pairing exchange (POPS-1374) and
+ *   refresh (POPS-1375) land there too, not beside the operator router.
  *
  * `/health` belongs to neither and answers on both.
+ *
+ * Each surface is a sub-router rather than a set of flat keys, so its routes
+ * group under one `<surface>.*` operationId namespace — the same
+ * `<domain>.<proc>` addressing the pillar SDK's route map keys on. Everything
+ * under `mobile` answers below the prefix `requireDevice` is mounted on, so a
+ * route declared there cannot arrive public.
  */
 import { initContract } from '@ts-rest/core';
 
 import { bfmOperatorContract } from './rest-operator.js';
-import { HealthResponseSchema } from './rest-schemas.js';
+import {
+  HealthResponseSchema,
+  MobileAuthErrorSchema,
+  MobileBootstrapResponseSchema,
+  MobileRateLimitErrorSchema,
+} from './rest-schemas.js';
 
 const c = initContract();
 
@@ -33,6 +44,23 @@ export const bfmContract = c.router(
       summary: 'Liveness shape. Answers without a database round-trip',
     },
     operator: bfmOperatorContract,
+    mobile: c.router({
+      bootstrap: {
+        method: 'GET',
+        path: '/mobile/bootstrap',
+        responses: {
+          200: MobileBootstrapResponseSchema,
+          401: MobileAuthErrorSchema,
+          403: MobileAuthErrorSchema,
+          // Answered by the perimeter middleware, never by the handler, but
+          // declared here because the generated Swift client is the only thing
+          // that decides what the phone can parse — and a launching app that
+          // hits the budget receives this and nothing else.
+          429: MobileRateLimitErrorSchema,
+        },
+        summary: 'What the app should render, and who the federation says it is talking to',
+      },
+    }),
   },
   {
     pathPrefix: '',

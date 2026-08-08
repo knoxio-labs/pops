@@ -2,6 +2,7 @@
 
 export {
   health,
+  mobileBootstrap,
   operatorIssuePairingCode,
   operatorListDevices,
   operatorRevokeDevice,
@@ -12,6 +13,11 @@ export type {
   HealthData,
   HealthResponse,
   HealthResponses,
+  MobileBootstrapData,
+  MobileBootstrapError,
+  MobileBootstrapErrors,
+  MobileBootstrapResponse,
+  MobileBootstrapResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeError,
   OperatorIssuePairingCodeErrors,

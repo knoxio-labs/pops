@@ -59,8 +59,8 @@ deployment). Sending the phone through refresh gets it a truthful
 ## Why the guard mounts on a prefix
 
 `app.ts` mounts it as `app.use('/mobile', …)` rather than per route, so it
-covers paths no route has been written for yet. The mobile surfaces land in
-later tickets (POPS-1378, POPS-1379) and none of them can arrive
+covers paths no route has been written for yet. `mobile.bootstrap` sits behind
+it and so will the transactions surface (POPS-1379); neither can arrive
 accidentally public.
 
 The cost is that an unrouted `/mobile/*` answers 401 rather than 404. That is
@@ -138,6 +138,10 @@ not a credential.
   database rows rather than JWTs. A second verification key would buy a
   seamless rotation nobody needs and double the surface an attacker can forge
   against.
-- **Anything about `lastSeenAt`** (POPS-1469). The guard is the natural place
-  to write it and deliberately does not, because a write on every request is a
-  decision for the ticket that adds the first real mobile route.
+- **Anything about `lastSeenAt`** (POPS-1469). `/mobile/bootstrap` writes it,
+  which covers an app launch; the guard still does not, so a device that only
+  ever calls other `/mobile` routes reads as last seen at its last launch. The
+  guard is the natural place to close that, and deliberately has not, because a
+  write on every authenticated request turns the perimeter into a write path on
+  a Litestream-replicated database and the coalescing rule is a decision of its
+  own.
