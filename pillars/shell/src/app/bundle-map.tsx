@@ -26,8 +26,8 @@ import { useEffect } from 'react';
  *                               (`pillars/<id>/src/api/manifest.ts`).
  *                               Values follow the sparse scheme (finance=10,
  *                               media=20, inventory=30, food=40, lists=50,
- *                               cerebrum=60, ai=70) so the app rail renders
- *                               the seven entries in that order.
+ *                               cerebrum=60, ai=70, bfm=80) so the app rail
+ *                               renders the eight entries in that order.
  *   - `captureOverlayBundles` — kebab-case bundle slot → component +
  *                               (optional) hook reference. The shell's
  *                               `CaptureModal` resolves
@@ -46,6 +46,7 @@ import { useEffect } from 'react';
  * the asset-URL loading path in `external-ui.tsx`.
  */
 import { manifest as aiManifest } from '@pops/app-ai';
+import { manifest as bfmManifest } from '@pops/app-bfm';
 import { IngestForm, manifest as cerebrumManifest, useIngestPageModel } from '@pops/app-cerebrum';
 import { manifest as financeManifest } from '@pops/app-finance';
 import { manifest as foodManifest } from '@pops/app-food';
@@ -126,6 +127,7 @@ export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
     },
   },
   ai: { manifest: aiManifest, navOrder: 70 },
+  bfm: { manifest: bfmManifest, navOrder: 80 },
   ego: { manifest: egoManifest, navOrder: Number.POSITIVE_INFINITY },
 };
 

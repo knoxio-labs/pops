@@ -13,6 +13,7 @@ import type { SettingsManifest } from '@pops/types';
 
 export const KNOWN_MODULES = [
   'ai',
+  'bfm',
   'cerebrum',
   'ego',
   'finance',
@@ -170,6 +171,15 @@ export const MODULES = [
         ],
       },
     ] satisfies readonly SettingsManifest[],
+  },
+  {
+    id: 'bfm',
+    name: 'Devices',
+    version: '0.1.0',
+    surfaces: ['app'] as const,
+    description: 'Pair, list and revoke the native mobile clients the bfm pillar serves.',
+    hasBackend: false,
+    hasFrontend: false,
   },
   {
     id: 'cerebrum',
@@ -1708,6 +1718,7 @@ export const MODULES = [
 
 export type GeneratedModuleId =
   | 'ai'
+  | 'bfm'
   | 'cerebrum'
   | 'ego'
   | 'finance'

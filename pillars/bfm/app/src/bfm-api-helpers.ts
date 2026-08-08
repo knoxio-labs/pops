@@ -1,0 +1,48 @@
+/**
+ * Helpers for the generated Hey API bfm SDK.
+ *
+ * Lives outside `src/bfm-api/` because codegen wipes that directory on every
+ * regeneration. Anything hand-authored here is safe.
+ *
+ * `unwrap` turns a Hey API `{ data, error, response }` result into its data
+ * payload, throwing `BfmApiError` (carrying the HTTP status) on failure. The
+ * status lets call sites distinguish a pillar that is down from one that
+ * answered with a refusal.
+ *
+ * Deliberately per-pillar rather than lifted into the SDK: what counts as
+ * "unavailable" is a pillar-local judgement, and the SDK does not own that
+ * classification.
+ */
+
+interface SdkErrorBody {
+  message?: unknown;
+}
+
+export class BfmApiError extends Error {
+  readonly status: number | undefined;
+  constructor(message: string, status: number | undefined) {
+    super(message);
+    this.name = 'BfmApiError';
+    this.status = status;
+  }
+}
+
+export function unwrap<T>(result: { data?: T; error?: unknown; response?: Response }): T {
+  if (result.error !== undefined) {
+    const body = result.error as SdkErrorBody;
+    const message =
+      typeof body.message === 'string' && body.message.length > 0
+        ? body.message
+        : 'bfm API request failed';
+    throw new BfmApiError(message, result.response?.status);
+  }
+  if (result.data === undefined) {
+    throw new BfmApiError('bfm API returned no data', result.response?.status);
+  }
+  return result.data;
+}
+
+/** True when the pillar was unreachable or errored server-side (no status / 5xx). */
+export function isUnavailableError(err: unknown): boolean {
+  return err instanceof BfmApiError && (err.status === undefined || err.status >= 500);
+}

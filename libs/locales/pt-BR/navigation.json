@@ -49,5 +49,7 @@
   "cerebrum.plexus.nav": "Plexo",
   "ai": "IA",
   "ai.usage": "Uso de IA",
-  "ai.cache": "Cache"
+  "ai.cache": "Cache",
+  "bfm": "Dispositivos",
+  "bfm.devices": "Dispositivos"
 }

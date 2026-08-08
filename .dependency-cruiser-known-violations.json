@@ -43,48 +43,6 @@
   },
   {
     "type": "cycle",
-    "from": "libs/overlay-ego/src/ego-api-runtime-config.ts",
-    "to": "libs/overlay-ego/src/ego-api/client.gen.ts",
-    "unresolvedTo": "./ego-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "libs/overlay-ego/src/ego-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "libs/overlay-ego/src/ego-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "libs/overlay-ego/src/ego-api/client/types.gen.ts",
-    "to": "libs/overlay-ego/src/ego-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "libs/overlay-ego/src/ego-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "libs/overlay-ego/src/ego-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "libs/types/src/manifest-assertions.ts",
     "to": "libs/types/src/manifest-frontend-assertions.ts",
     "unresolvedTo": "./manifest-frontend-assertions.js",
@@ -248,48 +206,6 @@
   },
   {
     "type": "cycle",
-    "from": "pillars/ai/app/src/ai-api-runtime-config.ts",
-    "to": "pillars/ai/app/src/ai-api/client.gen.ts",
-    "unresolvedTo": "./ai-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/ai/app/src/ai-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/ai/app/src/ai-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/ai/app/src/ai-api/client/types.gen.ts",
-    "to": "pillars/ai/app/src/ai-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/ai/app/src/ai-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/ai/app/src/ai-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "pillars/ai/src/api/modules/ai-budgets/enforcement.ts",
     "to": "pillars/ai/src/api/modules/ai-budgets/service.ts",
     "unresolvedTo": "./service.js",
@@ -306,48 +222,6 @@
       {
         "name": "pillars/ai/src/api/modules/ai-budgets/enforcement.ts",
         "dependencyTypes": ["local", "export"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/cerebrum/app/src/cerebrum-api-runtime-config.ts",
-    "to": "pillars/cerebrum/app/src/cerebrum-api/client.gen.ts",
-    "unresolvedTo": "./cerebrum-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/cerebrum/app/src/cerebrum-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/cerebrum/app/src/cerebrum-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/cerebrum/app/src/cerebrum-api/client/types.gen.ts",
-    "to": "pillars/cerebrum/app/src/cerebrum-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/cerebrum/app/src/cerebrum-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/cerebrum/app/src/cerebrum-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
       }
     ]
   },
@@ -416,90 +290,6 @@
   },
   {
     "type": "cycle",
-    "from": "pillars/finance/app/src/contacts-api-runtime-config.ts",
-    "to": "pillars/finance/app/src/contacts-api/client.gen.ts",
-    "unresolvedTo": "./contacts-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/finance/app/src/contacts-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/finance/app/src/contacts-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/finance/app/src/contacts-api/client/types.gen.ts",
-    "to": "pillars/finance/app/src/contacts-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/finance/app/src/contacts-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/finance/app/src/contacts-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/finance/app/src/finance-api-runtime-config.ts",
-    "to": "pillars/finance/app/src/finance-api/client.gen.ts",
-    "unresolvedTo": "./finance-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/finance/app/src/finance-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/finance/app/src/finance-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/finance/app/src/finance-api/client/types.gen.ts",
-    "to": "pillars/finance/app/src/finance-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/finance/app/src/finance-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/finance/app/src/finance-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "pillars/food/app/src/components/cook/CookModal.tsx",
     "to": "pillars/food/app/src/components/cook/CookModalShell.tsx",
     "unresolvedTo": "./CookModalShell.js",
@@ -536,90 +326,6 @@
       },
       {
         "name": "pillars/food/app/src/components/cook/CookModal.tsx",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/food/app/src/food-api-runtime-config.ts",
-    "to": "pillars/food/app/src/food-api/client.gen.ts",
-    "unresolvedTo": "./food-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/food/app/src/food-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/food/app/src/food-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/food/app/src/food-api/client/types.gen.ts",
-    "to": "pillars/food/app/src/food-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/food/app/src/food-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/food/app/src/food-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/food/app/src/lists-api-runtime-config.ts",
-    "to": "pillars/food/app/src/lists-api/client.gen.ts",
-    "unresolvedTo": "./lists-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/food/app/src/lists-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/food/app/src/lists-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/food/app/src/lists-api/client/types.gen.ts",
-    "to": "pillars/food/app/src/lists-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/food/app/src/lists-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/food/app/src/lists-api/client/types.gen.ts",
         "dependencyTypes": ["local", "type-only", "import"]
       }
     ]
@@ -810,90 +516,6 @@
       {
         "name": "pillars/inventory/app/src/components/photo-upload/UploadedFileRow.tsx",
         "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/inventory/app/src/inventory-api-runtime-config.ts",
-    "to": "pillars/inventory/app/src/inventory-api/client.gen.ts",
-    "unresolvedTo": "./inventory-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/inventory/app/src/inventory-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/inventory/app/src/inventory-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/inventory/app/src/inventory-api/client/types.gen.ts",
-    "to": "pillars/inventory/app/src/inventory-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/inventory/app/src/inventory-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/inventory/app/src/inventory-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/lists/app/src/lists-api-runtime-config.ts",
-    "to": "pillars/lists/app/src/lists-api/client.gen.ts",
-    "unresolvedTo": "./lists-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/lists/app/src/lists-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/lists/app/src/lists-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/lists/app/src/lists-api/client/types.gen.ts",
-    "to": "pillars/lists/app/src/lists-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/lists/app/src/lists-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/lists/app/src/lists-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
       }
     ]
   },
@@ -1355,48 +977,6 @@
   },
   {
     "type": "cycle",
-    "from": "pillars/media/app/src/media-api-runtime-config.ts",
-    "to": "pillars/media/app/src/media-api/client.gen.ts",
-    "unresolvedTo": "./media-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/media/app/src/media-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/media/app/src/media-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/media/app/src/media-api/client/types.gen.ts",
-    "to": "pillars/media/app/src/media-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/media/app/src/media-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/media/app/src/media-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "pillars/media/app/src/pages/candidate-queue/CandidateActions.tsx",
     "to": "pillars/media/app/src/pages/candidate-queue/CandidateCard.tsx",
     "unresolvedTo": "./CandidateCard",
@@ -1505,52 +1085,21 @@
     ]
   },
   {
-    "type": "cycle",
-    "from": "pillars/shell/src/registry-api-runtime-config.ts",
-    "to": "pillars/shell/src/registry-api/client.gen.ts",
-    "unresolvedTo": "./registry-api/client.gen.js",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/shell/src/registry-api/client.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/shell/src/registry-api-runtime-config.ts",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
-    "from": "pillars/shell/src/registry-api/client/types.gen.ts",
-    "to": "pillars/shell/src/registry-api/client/utils.gen.ts",
-    "unresolvedTo": "./utils.gen",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/shell/src/registry-api/client/utils.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/shell/src/registry-api/client/types.gen.ts",
-        "dependencyTypes": ["local", "type-only", "import"]
-      }
-    ]
-  },
-  {
     "type": "dependency",
     "from": "pillars/shell/src/app/bundle-map.tsx",
     "to": "pillars/ai/app/src/index.ts",
     "unresolvedTo": "@pops/app-ai",
+    "dependencyTypes": ["undetermined", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "pillar-no-cross-internal"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "pillars/shell/src/app/bundle-map.tsx",
+    "to": "pillars/bfm/app/src/index.ts",
+    "unresolvedTo": "@pops/app-bfm",
     "dependencyTypes": ["undetermined", "import"],
     "rule": {
       "severity": "error",
