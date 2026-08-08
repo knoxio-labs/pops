@@ -34,6 +34,25 @@ export const ExtractedReceiptSchema = z.object({
   /** As printed at the top. Unknown is a valid outcome, not a failure. */
   merchantName: z.string().trim().min(1).nullable(),
   /**
+   * The shop's address, verbatim. Transcription, and the evidence behind
+   * {@link ExtractedReceiptSchema.shape.timeZone}.
+   */
+  address: z.string().trim().min(1).nullable().default(null),
+  /**
+   * IANA zone the shop is in, e.g. `Australia/Perth`, `America/Chicago`.
+   *
+   * **The one inference this schema asks for**, and it is deliberate. A
+   * receipt never prints its timezone, but placing a purchase in time needs
+   * one — and a Perth receipt is two hours from a Sydney one, a US receipt
+   * up to fifteen. The alternative is a geo database or asking the user
+   * once per foreign receipt. `address` is kept beside it so the inference
+   * can be checked against what was actually printed.
+   *
+   * Defaulted rather than required: these enrich a reading, and a model
+   * that omits one should not sink an extraction whose money is perfect.
+   */
+  timeZone: z.string().trim().min(1).nullable().default(null),
+  /**
    * ISO-8601 date as printed, `YYYY-MM-DD`. The model is asked to resolve
    * the receipt's own format rather than this layer guessing whether
    * `07/08/2026` is August or July — the paper often names the month.

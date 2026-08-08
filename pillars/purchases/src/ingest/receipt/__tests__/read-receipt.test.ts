@@ -118,6 +118,8 @@ describe('the prompt', () => {
   it('covers every key the extraction schema names', () => {
     const schemaKeys = [
       'merchantName',
+      'address',
+      'timeZone',
       'purchasedOn',
       'purchasedAt',
       'currency',

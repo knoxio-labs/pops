@@ -26,8 +26,11 @@ describe('parseAmountCents', () => {
 
   it('rounds a third decimal rather than truncating it', () => {
     // Per-kilo pricing produces them: 0.202 kg at $2.90/kg is 0.5858.
+    // A grouped thousand cannot lead with zero, so these are fractions —
+    // reading them as grouping turned 58 cents of oranges into $585.
     expect(parseAmountCents('0.585')).toBe(59);
     expect(parseAmountCents('0.584')).toBe(58);
+    expect(parseAmountCents('0,585', { currency: 'EUR' })).toBe(59);
   });
 
   it('reads a thousands separator', () => {
@@ -35,10 +38,38 @@ describe('parseAmountCents', () => {
     expect(parseAmountCents('$1,495.00')).toBe(149500);
   });
 
-  it('refuses a decimal comma rather than guessing which convention it is', () => {
-    // `1,49` is one-forty-nine in most of Europe and unreadable here. A
-    // parser that guesses turns €1.49 into €149.
-    expect(parseAmountCents('1,49')).toBeNull();
+  it('reads a decimal comma, because grouping never takes two digits', () => {
+    // `1,49` cannot be a grouped thousand in any locale — grouping is always
+    // exactly three digits. That settles what looked like it needed to know
+    // where the receipt was from, which matters because the currency is the
+    // field most often missing.
+    expect(parseAmountCents('1,49')).toBe(149);
+    expect(parseAmountCents('12,49')).toBe(1249);
+    expect(parseAmountCents('-12,49')).toBe(-1249);
+  });
+
+  it('reads a number that states its own convention', () => {
+    // Both separators present: the later one is the decimal point, because
+    // nothing groups digits after a decimal separator. No locale needed.
+    expect(parseAmountCents('1.234,56')).toBe(123456);
+    expect(parseAmountCents('1,234.56')).toBe(123456);
+    expect(parseAmountCents('1.234.567,89')).toBe(123456789);
+  });
+
+  it('treats three trailing digits as grouping unless the currency says otherwise', () => {
+    // `1,495` is fifteen hundred on an Australian receipt. It is the one
+    // genuinely ambiguous shape, and grouping is overwhelmingly the common
+    // reading on a till slip.
+    expect(parseAmountCents('1,495')).toBe(149500);
+    expect(parseAmountCents('1.495')).toBe(149500);
+  });
+
+  it('reads a whole European receipt correctly', () => {
+    // The case that produced four unreadable lines and a zero total before.
+    const lines = ['1,20', '3,49', '7,80'].map((a) => parseAmountCents(a, { currency: 'EUR' }));
+    expect(lines).toEqual([120, 349, 780]);
+    expect(parseAmountCents('12,49', { currency: 'EUR' })).toBe(1249);
+    expect(lines.reduce((t, c) => (t ?? 0) + (c ?? 0), 0)).toBe(1249);
   });
 
   it('returns null for blanks and prose rather than guessing', () => {

@@ -49,6 +49,10 @@ export interface ReceiptVision {
  */
 export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
   merchantName: 'the trading name printed at the top, or null if there is none',
+  address:
+    'the shop address exactly as printed, or null. Do not expand abbreviations or add a country the receipt does not state',
+  timeZone:
+    'the IANA timezone the shop is in, inferred from the address — "Australia/Perth", "America/Chicago", "Europe/Paris". Null if the address does not narrow it down. This is the ONE field you may infer rather than transcribe',
   purchasedOn:
     "the date as YYYY-MM-DD, or null. Resolve the receipt's own format — many print the month by name, and where they do not, prefer the day-first reading unless the receipt is clearly American",
   purchasedAt: 'the time as HH:MM in 24-hour form, or null',
@@ -80,7 +84,11 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
  */
 export const EXTRACTION_PROMPT = `You are reading a photograph of a shop receipt. Return ONLY a JSON object — no prose, no code fence.
 
-Transcribe what is printed. Do not interpret, categorise, tidy or expand anything. Every value you return has to be checkable against the photograph by someone holding it.
+Transcribe what is printed. Do not interpret, categorise, tidy or expand anything. Every value you return has to be checkable against the photograph by someone holding it. "timeZone" is the single exception and is marked as such below.
+
+Receipts are not always in English. Transcribe every description in its original language and script, exactly as printed — do NOT translate, transliterate or anglicise. A translated line cannot be checked against the paper, and the same product bought twice must read the same both times.
+
+Transcribe amounts exactly as printed too, including the separators. "1.234,56" and "1,234.56" are both real and mean different things; report the characters you see rather than normalising them.
 
 If you cannot read something, say so in "unreadable" rather than omitting it or guessing. A line you silently drop makes a damaged receipt look like a wrongly-read one.
 
