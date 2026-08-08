@@ -49,3 +49,51 @@ for package in Packages/*/; do
   fi
 done
 '''
+
+[tasks."verify:release-carries-no-host"]
+description = "Assert the Release build names no BFM host"
+depends = ["generate"]
+run = '''
+set -euo pipefail
+
+derived=$(mktemp -d)
+trap 'rm -rf "$derived"' EXIT
+
+# Read the host to look for out of the Debug configuration rather than repeating
+# it here, so the check cannot drift away from the value it is guarding against.
+debug_url=$(xcodebuild -project Pops.xcodeproj -scheme Pops -configuration Debug -showBuildSettings \
+  -destination 'generic/platform=iOS Simulator' \
+  | awk -F ' = ' '$1 ~ /^ *POPS_BFM_BASE_URL$/ { print $2 }')
+if [ -z "$debug_url" ]; then
+  echo "Debug defines no POPS_BFM_BASE_URL, so this check has nothing to look for." >&2
+  exit 1
+fi
+
+# The simulator SDK, so the check needs no signing identity and runs anywhere.
+if ! xcodebuild -project Pops.xcodeproj -scheme Pops -configuration Release \
+  -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" build > "$derived/build.log" 2>&1; then
+  tail -40 "$derived/build.log" >&2
+  exit 1
+fi
+
+app="$derived/Build/Products/Release-iphonesimulator/Pops.app"
+
+# Absence is a failure, not a pass. A key that never reaches the plist — renamed
+# on one side only, or set through an INFOPLIST_KEY_ Xcode silently drops — looks
+# exactly like an empty one, and would make the rest of this check vacuous.
+if ! baked=$(plutil -extract POPSBFMBaseURL raw -o - "$app/Info.plist" 2>/dev/null); then
+  echo "Release Info.plist carries no POPSBFMBaseURL key, so nothing here is being checked." >&2
+  exit 1
+fi
+if [ -n "$baked" ]; then
+  echo "Release bakes a BFM host into Info.plist: $baked" >&2
+  exit 1
+fi
+
+if grep -rqa -- "$debug_url" "$app"; then
+  echo "Release build carries the Debug BFM host ($debug_url)" >&2
+  exit 1
+fi
+
+echo "Release build names no BFM host."
+'''
