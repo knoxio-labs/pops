@@ -17,10 +17,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  configureDiscoveryForTest,
-  failNextRegistryFetches,
-} from '@pops/pillar-sdk/testing/discovery';
+import { configureDiscoveryForTest, failNextRegistryFetches } from '@pops/pillar-sdk/testing';
 
 import { MobileBootstrapResponseSchema } from '../../contract/rest-schemas.js';
 import { deviceRow } from '../../db/__tests__/helpers.js';

@@ -11,6 +11,8 @@ import {
   restFetch,
 } from './fixtures.js';
 
+import type { FinanceRouter } from './fixtures.js';
+
 function resetClients(): void {
   __resetSharedPillarClient();
   __resetSharedOpenApiCache();
@@ -96,7 +98,7 @@ describe('pillar().callDynamic — runtime path dispatch (REST transport)', () =
   it('shares the discovery cache with the typed proxy (single lookup for both)', async () => {
     const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
     const { fetchImpl } = restFetch(() => jsonResponse(null));
-    const finance = pillar('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
     await finance.wishlist.list({});
     await finance.callDynamic('wishlist', 'list', {});
     await finance.callDynamic('budgets', 'list', {});
@@ -119,7 +121,7 @@ describe('pillar().callDynamic — runtime path dispatch (REST transport)', () =
       }
       return jsonResponse(null);
     });
-    const finance = pillar('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
+    const finance = pillar<FinanceRouter>('finance', { transport, fetchImpl, cacheTtlMs: 60_000 });
     await finance.wishlist.list({});
     await finance.callDynamic('budgets', 'list', {});
     expect(openapiFetches).toHaveLength(1);

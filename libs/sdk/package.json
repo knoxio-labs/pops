@@ -41,7 +41,7 @@
       "types": "./dist/discovery/index.d.ts",
       "default": "./dist/discovery/index.js"
     },
-    "./testing/discovery": {
+    "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
     },
