@@ -169,6 +169,12 @@ describe('the live repo', () => {
     const gate = readFileSync(join(workflowsDir, 'ci-gate.yml'), 'utf8');
     expect(gate).toMatch(/name:\s*"CI Gate"/u);
   });
+
+  it('holds at in_progress while a gated workflow is still running', () => {
+    const gate = readFileSync(join(workflowsDir, 'ci-gate.yml'), 'utf8');
+    expect(gate).toMatch(/status:\s*settled\s*\?\s*"completed"\s*:\s*"in_progress"/u);
+    expect(gate).not.toMatch(/status:\s*"completed"\s*,/u);
+  });
 });
 
 describe('the guard catches each way the wiring goes inert', () => {
@@ -201,6 +207,16 @@ describe('the guard catches each way the wiring goes inert', () => {
     patch(root, 'ci-gate.yml', (s) => s.replace(/await github\.rest\.checks\.create\(/u, 'void ('));
     expect(checkCiGateWiring(root).join('\n')).toContain(
       'ci-gate.yml must POST its own check run at the observed head SHA'
+    );
+  });
+
+  it('flags a gate that concludes green while siblings are still running', () => {
+    const root = cloneWorkflows();
+    patch(root, 'ci-gate.yml', (s) =>
+      s.replace(/status: settled \? "completed" : "in_progress",/u, 'status: "completed",')
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'must publish `in_progress` while a gated workflow is still running'
     );
   });
 

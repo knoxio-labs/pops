@@ -41,11 +41,15 @@ name: CI Gate
 # GitHub keeps the most-recent check run per name as the gate state, so the
 # verdict converges on the authoritative one:
 #   - a failure is sticky: the failed run stays at the SHA, so any later re-
-#     evaluation (triggered by a slower sibling finishing) still sees it -> RED;
+#     evaluation (triggered by a slower sibling finishing) still sees it -> RED,
+#     concluded immediately, because nothing can clear it;
+#   - no failure but a sibling still running -> IN PROGRESS, never green. Green
+#     here would let a PR merge minutes before the slowest gated workflow has an
+#     opinion, and take its failure post-merge;
 #   - all-pass: the last sibling to finish triggers a run that sees every gated
 #     workflow success/skipped -> GREEN.
-# Each evaluation posts a COMPLETED check run in a single call, so a run that
-# concurrency cancels mid-flight cannot leave a check run stuck in progress.
+# Only a settled evaluation carries a `conclusion`, and it is posted in a single
+# call, so no evaluation leaves a half-written check run behind.
 #
 # A sibling workflow that did not run at this SHA (path-filtered out) is ABSENT
 # from the API result and treated as non-failing — NOT a missing-required
@@ -145,25 +149,34 @@ jobs:
             core.info("Gated workflow states at this commit:");
             for (const l of lines) core.info(l);
 
-            // A sibling still in flight is NOT a failure: a later completion re-
-            // triggers this gate and produces the authoritative final verdict.
-            // Reporting success here is safe because any subsequent failure is
-            // sticky (its run stays at the SHA) and re-evaluates this context red.
-            if (pending.length > 0) {
-              core.info(`Still in flight: ${pending.join(", ")}. A later completion will re-evaluate.`);
-            }
+            // A failure is conclusive immediately — it is sticky, so no later
+            // evaluation can clear it. Absence of failure is NOT: a sibling
+            // still in flight can fail next. Publishing `success` while one is
+            // pending would let a PR go green, and mergeable, minutes before
+            // the slowest gated workflow has an opinion — the failure would
+            // then arrive after the merge. So a pending gate stays
+            // `in_progress`, which reads as "Expected" and holds the merge
+            // until the last sibling's completion re-fires this and concludes.
+            //
+            // That in-progress check run cannot strand a PR: concurrency
+            // cancels a run only when a NEWER run for the same head SHA starts,
+            // and that successor publishes in turn. The last evaluation for a
+            // commit always concludes.
+            const settled = failed.length > 0 || pending.length === 0;
 
             const verdict = failed.length > 0
               ? `Quality gate FAILED — ${failed.length} gated workflow(s) did not pass: ${failed.join(", ")}`
-              : "Quality gate PASSED — no gated workflow reported a failure at this commit.";
+              : pending.length > 0
+                ? `Quality gate PENDING — no failure yet; still in flight: ${pending.join(", ")}`
+                : "Quality gate PASSED — no gated workflow reported a failure at this commit.";
 
             await github.rest.checks.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: "CI Gate",
               head_sha: headSha,
-              status: "completed",
-              conclusion: failed.length > 0 ? "failure" : "success",
+              status: settled ? "completed" : "in_progress",
+              ...(settled ? { conclusion: failed.length > 0 ? "failure" : "success" } : {}),
               details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               output: {
                 // The checks API caps `title` at 255 characters and rejects a

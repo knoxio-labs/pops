@@ -3,8 +3,8 @@
  * `CI Gate` wiring guard.
  *
  * `ci-gate.yml` collapses eight quality workflows into ONE static context so a
- * branch ruleset can require it. Three separate pieces of that wiring are
- * silently inert if they drift, and none of them fail anything when they do:
+ * branch ruleset can require it. Four separate pieces of that wiring report
+ * green when they drift, and nothing else notices:
  *
  *   1. Each gated workflow name is written TWICE — once in the `workflow_run`
  *      trigger and once in the `gated` array the script reads. A name in the
@@ -19,6 +19,10 @@
  *      request. It does because `Quality` is gated and `quality.yml` carries no
  *      path filter. Adding one would make docs-only PRs emit no `CI Gate` at
  *      all, and a required context that never reports blocks its PR forever.
+ *   4. The verdict must stay `in_progress` while any gated workflow is still
+ *      running. Concluding `success` on the first sibling to pass reports green
+ *      minutes before the slowest one has an opinion, so a PR can merge and
+ *      take the failure afterwards.
  *
  * It also asserts the corollary of aggregating at WORKFLOW level: a
  * `continue-on-error: true` job is erased from its workflow's conclusion and so
@@ -217,6 +221,18 @@ export function checkCiGateWiring(root) {
   }
   if (!/^\s{2}checks:\s*write\s*$/mu.test(gateSource)) {
     violations.push('ci-gate.yml needs `permissions: checks: write` to publish its check run.');
+  }
+  if (
+    /status:\s*"completed"\s*,/u.test(gateSource) ||
+    !/status:\s*settled\s*\?/u.test(gateSource)
+  ) {
+    violations.push(
+      'ci-gate.yml must publish `in_progress` while a gated workflow is still running ' +
+        '(`status: settled ? "completed" : "in_progress"`), and attach a `conclusion` only ' +
+        'when settled. An unconditional `completed` reports green the moment the FIRST ' +
+        'sibling passes, so a PR can merge minutes before the slowest gated workflow has an ' +
+        'opinion and take its failure afterwards.'
+    );
   }
 
   if (!gated.includes(ALWAYS_RUNNING_GATED_WORKFLOW)) {

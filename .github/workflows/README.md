@@ -23,8 +23,10 @@ verdict converges, and for why it publishes its own check run; the rules the
   `action_required` or `stale`.
 - A gated workflow with no run at the SHA is logged as `did not run —
   path-filtered, treated as pass`.
-- A run that is not yet `completed` is reported as pending and does not fail.
-- The verdict is POSTed as a **completed check run named `CI Gate` against
+- A run that is not yet `completed` is pending: it does not fail the gate, but it
+  does hold it at `in_progress`. A failure concludes immediately (nothing can
+  clear it); `success` is only ever published once nothing is left in flight.
+- The verdict is POSTed as a **check run named `CI Gate` against
   `github.event.workflow_run.head_sha`** (hence `permissions: checks: write`).
   That is the context to put in the branch ruleset.
 
@@ -44,9 +46,16 @@ regardless of that job's own name. The only way to make a job advisory is
 comment claiming a job is non-blocking because the ruleset does not list it by
 name is wrong. Nothing in `quality.yml` is advisory today.
 
-`scripts/ci/check-ci-gate-wiring.mjs` asserts both rules, plus the trigger/`gated`
-agreement and that every gated name still resolves to a real workflow. It runs in
-`quality.yml`'s `Scripts tests` job.
+**Green must mean "everything finished and passed", not "nothing has failed
+yet".** The gate fires on each sibling's completion, so the earliest evaluation
+sees seven workflows still running. Concluding `success` there would put the
+context green — and, once it is required, the PR mergeable — minutes before the
+slowest gated workflow has an opinion, and the failure would land after the
+merge. Hence `in_progress` until nothing is pending.
+
+`scripts/ci/check-ci-gate-wiring.mjs` asserts all three rules, plus the
+trigger/`gated` agreement and that every gated name still resolves to a real
+workflow. It runs in `quality.yml`'s `Scripts tests` job.
 
 ### Current state of the ruleset
 
