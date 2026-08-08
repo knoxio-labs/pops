@@ -40,3 +40,11 @@ export {
   type IssuedPairingCode,
   type IssuePairingCodeOptions,
 } from './pairing-codes.js';
+
+export {
+  PAIRING_CODE_RETENTION_MS,
+  pruneDeadRefreshTokens,
+  prunePairingCodes,
+  REFRESH_TOKEN_RETENTION_MS,
+  type PruneOptions,
+} from './prune-credentials.js';

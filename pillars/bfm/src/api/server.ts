@@ -42,6 +42,10 @@ import {
   resolveVersion,
   shouldSelfRegister,
 } from './boot-env.js';
+import {
+  startPruneCredentialsWorker,
+  type PruneCredentialsWorkerHandle,
+} from './cron/prune-credentials.js';
 import { createMobileFinanceClient } from './finance/client.js';
 import { buildBfmManifest } from './manifest.js';
 import { createPillarGateway } from './pillars/gateway.js';
@@ -77,8 +81,28 @@ const app = createBfmApiApp({
   finance,
 });
 
+let pruneCredentialsWorker: PruneCredentialsWorkerHandle | undefined;
 const server = app.listen(port, () => {
   console.warn(`[bfm-api] Listening on port ${port}`);
+  // After listen, like the sweep runner in the purchases pillar: this
+  // worker's first tick is synchronous DB work, not the fire-and-forget
+  // async kind the cross-pillar reconcile crons start with, so running it
+  // before `listen` would put the first prune pass — potentially the
+  // largest one, against a database that has never been swept — on the
+  // boot critical path. Unconditional otherwise: a tick against a table
+  // with nothing to prune is a no-op, so there is no deployment shape
+  // gating this would protect.
+  pruneCredentialsWorker = startPruneCredentialsWorker({
+    db: bfmDb.db,
+    logger: {
+      info: (message, context) => {
+        console.warn(`[bfm-api] ${message}`, context ?? {});
+      },
+      warn: (message, context) => {
+        console.error(`[bfm-api] ${message}`, context ?? {});
+      },
+    },
+  });
 });
 
 let pillarHandle: PillarBootstrapHandle | undefined;
@@ -94,6 +118,7 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[bfm-api] Shutting down (${signal})`);
+  pruneCredentialsWorker?.stop();
   // The database closes only once the last request has been answered — an
   // in-flight handler holding the handle would otherwise fail on a closed
   // connection rather than finish. Closing at all is what checkpoints the WAL,
