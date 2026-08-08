@@ -349,8 +349,7 @@ export function resolvePathClaims(root, claims) {
   const existsWithinRoot = (t) => {
     const resolved = resolve(root, t);
     return (
-      (resolved === resolvedRoot || resolved.startsWith(resolvedRoot + sep)) &&
-      existsSync(resolved)
+      (resolved === resolvedRoot || resolved.startsWith(resolvedRoot + sep)) && existsSync(resolved)
     );
   };
   /** @type {(BrokenPath & { candidates: string[] })[]} */
