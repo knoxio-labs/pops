@@ -45,10 +45,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
 /**
- * Audited wide-surface exceptions to the `"./*"`-catch-all ban
- *. Each entry is a package name mapped to the
- * set of wildcard export *keys* it is permitted to declare. Anything else with
- * a `*` in the key is a violation. Keep this set tiny and justified.
+ * Audited wide-surface exceptions to the `"./*"`-catch-all ban. Each entry is
+ * a package name mapped to the set of wildcard export *keys* it is permitted
+ * to declare. Anything else with a `*` in the key is a violation. Keep this
+ * set tiny and justified.
  *
  *   - `@pops/locales` `./*` — a pure JSON asset tree consumed as
  *     `@pops/locales/<locale>/<ns>.json`; the package *is* its asset surface,

@@ -57,7 +57,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -342,12 +342,23 @@ export function allRepoPaths(root) {
  */
 export function resolvePathClaims(root, claims) {
   const allPaths = allRepoPaths(root);
+  const resolvedRoot = resolve(root);
+  // `join(root, t)` alone would follow a `../../../etc/hostname`-style claim
+  // straight out of the repo and report it "resolved" whenever that host path
+  // happens to exist — a claim is only real if it also stays inside root.
+  const existsWithinRoot = (t) => {
+    const resolved = resolve(root, t);
+    return (
+      (resolved === resolvedRoot || resolved.startsWith(resolvedRoot + sep)) &&
+      existsSync(resolved)
+    );
+  };
   /** @type {(BrokenPath & { candidates: string[] })[]} */
   const misses = [];
   for (const { file, raw, candidates } of claims) {
     const targets = candidates.map((c) => c.replace(/\/$/u, '')).filter((c) => c !== '');
     if (targets.length === 0) continue;
-    if (targets.some((t) => existsSync(join(root, t)))) continue;
+    if (targets.some(existsWithinRoot)) continue;
     // Prose abbreviates cross-unit references — `worker/ai/client.ts` for
     // `pillars/food/src/worker/ai/client.ts`. Accept when some real file
     // ends with the token; only a path matching nothing at all is a lie.
@@ -517,9 +528,12 @@ export function extractComments(source, ext) {
  * A `#` counts only at line start or after whitespace, which is the rule shell,
  * YAML and TOML actually use. Without it, shell parameter expansion
  * (`${LAST_TAG#v}`) reads as a comment and everything after it is scanned as
- * prose. A backtick is a string delimiter only in the C-style languages: in
- * shell it opens command substitution and in YAML and TOML it means nothing, so
- * quoting on it there would swallow real comments that merely contain one.
+ * prose. A backtick is always a string delimiter, including in `#`-comment
+ * languages: in shell it opens command substitution, and a `#` inside one
+ * (`` `echo x #not-a-comment` ``) is code, not the line's real comment start.
+ * YAML and TOML give a backtick no special meaning, but treating it as a
+ * delimiter there too costs nothing — it only ever pairs up around inline
+ * code the same way it does in prose.
  *
  * @param {string} line
  * @param {boolean} slash True for `//` + block comments, false for `#`.
@@ -535,7 +549,7 @@ function findCommentStart(line, slash) {
       else if (ch === quote) quote = null;
       continue;
     }
-    if (ch === "'" || ch === '"' || (slash && ch === '`')) {
+    if (ch === "'" || ch === '"' || ch === '`') {
       quote = ch;
       continue;
     }
@@ -863,10 +877,15 @@ function selfTest() {
     extractComments('pkg = package.json#name # see docs/d.md\n', 'yml').join('|') ===
       'see docs/d.md' &&
     extractComments('V=${LAST_TAG#v} # see docs/d.md\n', 'sh').join('|') === 'see docs/d.md' &&
-    // A backtick is not a string delimiter in a `#` language, so a comment
-    // containing one is still read to the end of the line.
+    // Once a real comment has started, a backtick inside it is just text —
+    // the rest of the line is kept verbatim as comment content.
     extractComments('# a `#!/usr/bin/env node` shim, see docs/e.md\n', 'toml').join('|') ===
-      'a `#!/usr/bin/env node` shim, see docs/e.md';
+      'a `#!/usr/bin/env node` shim, see docs/e.md' &&
+    // A backtick is a string delimiter in `#`-comment languages too, so a `#`
+    // inside shell command substitution is not mistaken for the line's real
+    // comment start.
+    extractComments('val=`echo x #not-a-comment` # see docs/f.md\n', 'sh').join('|') ===
+      'see docs/f.md';
 
   // A URL's `/docs/` tail is not a repo path; a bare nested doc directory is
   // prose; a one-level `docs/x` is a prose slash. A markdown file anywhere
@@ -943,6 +962,32 @@ function selfTest() {
     b.file.endsWith('scripts/ci/check-docs-model.mjs')
   );
 
+  // A claim that escapes the repo root — `../../../etc/hostname` style — must
+  // be reported as broken even when the traversed-to path exists on the host,
+  // rather than treated as resolved because `existsSync` alone can't tell the
+  // difference between "in the repo" and "reached by climbing out of it".
+  const escapeFixtureRoot = mkdtempSync(join(tmpdir(), 'docs-model-escape-'));
+  let ok18 = false;
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: escapeFixtureRoot });
+    const outsideFile = join(tmpdir(), 'docs-model-escape-outside.txt');
+    writeFileSync(outsideFile, 'not part of the repo\n');
+    try {
+      const broken = resolvePathClaims(escapeFixtureRoot, [
+        {
+          file: 'docs/x.md',
+          raw: '../docs-model-escape-outside.txt',
+          candidates: ['../docs-model-escape-outside.txt'],
+        },
+      ]);
+      ok18 = broken.some((b) => b.claim === '../docs-model-escape-outside.txt');
+    } finally {
+      rmSync(outsideFile, { force: true });
+    }
+  } finally {
+    rmSync(escapeFixtureRoot, { recursive: true, force: true });
+  }
+
   if (!ok1) console.error('self-test FAILED: unit discovery missed a known unit');
   if (!ok2) console.error('self-test FAILED: banned-dir walk misbehaved');
   if (!ok3) console.error('self-test FAILED: path-claim extraction wrong');
@@ -962,6 +1007,8 @@ function selfTest() {
     console.error('self-test FAILED: a dangling comment pointer was missed in some file type');
   if (!ok16) console.error("self-test FAILED: this guard's own fixture strings were reported");
   if (!ok17) console.error('self-test FAILED: this guard reports itself against the real tree');
+  if (!ok18)
+    console.error('self-test FAILED: a path claim that escapes the repo root was not caught');
   return (
     ok1 &&
     ok2 &&
@@ -979,7 +1026,8 @@ function selfTest() {
     ok14 &&
     ok15 &&
     ok16 &&
-    ok17
+    ok17 &&
+    ok18
   );
 }
 
