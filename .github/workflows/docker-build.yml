@@ -10,6 +10,7 @@ on:
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
+      - "scripts/ci/smoke-image.mjs"
   push:
     branches: [main]
     paths:
@@ -20,11 +21,16 @@ on:
       - "pnpm-workspace.yaml"
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
+      - "scripts/ci/smoke-image.mjs"
 
 # Workflow-level filter keeps the Docker validation off docs/code-only
 # PRs entirely. Per-pillar full images are also validated by the
 # `*-quality.yml` workflows — this job re-validates every Dockerfile +
 # compose surface in one place, gated on changes. (Theme 13 PRD-220.)
+#
+# `scripts/ci/smoke-image.mjs` is in the trigger set because it IS the gate:
+# a change to the harness that stops it asserting anything must run the
+# harness. Its unit tests run elsewhere and cannot see that.
 #
 # Each Dockerfile is BUILT AND STARTED. Building alone is not a gate: under
 # pnpm 11 `pnpm deploy --legacy` wrote workspace-escaping `@pops/*` symlinks,
@@ -59,6 +65,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'tsconfig.base.json'
               - '.github/workflows/docker-build.yml'
+              - 'scripts/ci/smoke-image.mjs'
             compose:
               - 'infra/docker-compose*.yml'
               - '.github/workflows/docker-build.yml'
