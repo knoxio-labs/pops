@@ -7,10 +7,14 @@ It listens on port **3014**.
 
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
-(ADR-035). It serves `/health` alone: it calls no sibling pillar (POPS-1367)
-and has no mobile surface (POPS-1378, POPS-1379), so `/health` is a pure
-liveness shape rather than a DB round-trip. It does carry a shell-side
-operator surface, under [`app/`](./app/README.md).
+(ADR-035). It serves `/health` alone: it has no mobile surface yet (POPS-1378,
+POPS-1379), so `/health` is a pure liveness shape rather than a DB round-trip.
+It does carry a shell-side operator surface, under
+[`app/`](./app/README.md).
+
+It also holds a service-account credential and one way to spend it — see
+[Reaching sibling pillars](#reaching-sibling-pillars) and
+[`src/api/pillars/README.md`](src/api/pillars/README.md).
 
 | Surface        | What it does                                                                       |
 | -------------- | ---------------------------------------------------------------------------------- |
@@ -95,6 +99,57 @@ registration is a separate mechanism and still goes through the
   routes (POPS-1378, POPS-1379), the Dockerfile and compose service
   (POPS-1385) and the nginx route (POPS-1386) are each their own ticket. This
   pillar currently runs from `pnpm dev` only.
+- **Any enforcement of what the service account may reach.** The grant is
+  narrow and auditable, but the registry pillar is the only one in the fleet
+  that reads `X-API-Key` at all — every other producer serves any in-network
+  caller. Whether that stays the model is POPS-1447.
+
+## Reaching sibling pillars
+
+bfm calls siblings through `pillar()` from `@pops/pillar-sdk/server` — the
+authenticated surface, not the identically-shaped `/client` one — behind a
+gateway that keeps `unavailable`, `degraded` and `contract-mismatch` distinct
+all the way out to the phone. The shape, the trap it avoids, and the test that
+guards it are in [`src/api/pillars/README.md`](src/api/pillars/README.md).
+
+### Provisioning the service account
+
+The registry's service-account admin surface is `userOnly` — it rejects a
+machine principal unconditionally, so a service account can never mint another
+and this is an operator step, done once per environment.
+
+`userOnly` means a Cloudflare Access identity specifically: the handler reads
+`cf-access-jwt-assertion` and verifies it. A bare `curl` carries no identity
+and gets a `401` — mint a token for the app first (`cloudflared access token`)
+and send it in that header, against the registry's admin surface reachable
+externally through the shell proxy:
+
+```bash
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions"]}'
+```
+
+Two deployment shapes let a bare `curl` through, which is why this can work on
+a laptop and then 401 on the real fleet: outside production the registry
+resolves a dev user unconditionally, and a production deployment with no
+`CLOUDFLARE_ACCESS_TEAM_NAME` set resolves a tunnel user. The order is written
+down in exactly one place — `pillars/registry/src/api/middleware/identity.ts`.
+
+The scopes must match `BFM_SERVICE_ACCOUNT_SCOPES` in
+`src/api/pillars/service-account.ts`, which is the source of truth for the
+grant; a test pins the value.
+
+The `201` carries `plaintextKey` (`pops_sa_<prefix>.<secret>`) **once** and
+never again. Write it into the secret file the deployment mounts —
+`pops_bfm_api_key`, shape and first-run steps in
+[`infra/secrets.example/bfm/`](../../infra/secrets.example/bfm/README.md) — and
+point `POPS_INTERNAL_API_KEY_FILE` at it. bfm gets its own account rather than
+sharing `pops_api_key` with moltbot and the MCP gateway, so revoking one
+consumer does not take the others down and `last_used_at` attributes traffic to
+a single process.
+
+Rotate by minting a replacement, swapping the file, restarting, and only then
+revoking the old id (`POST /service-accounts/:id/revoke`) — in that order,
+since revocation takes effect on the next request.
 
 ## Layout
 
@@ -118,9 +173,10 @@ pillars/bfm/
     │   └── schema/                one file per table
     └── api/
         ├── server.ts              HTTP entrypoint (port 3014) — wiring only
-        ├── boot-env.ts            every env var server.ts reads, and its validation
+        ├── boot-env.ts            the env this pillar's own HTTP surface reads
         ├── app.ts                 Express app factory + route wiring
         ├── manifest.ts            the boot-time ManifestPayload
+        ├── pillars/               calling siblings — has its own README
         └── rest/handlers.ts       ts-rest handler composer
 ```
 
@@ -150,17 +206,36 @@ pnpm --filter @pops/bfm build
 
 ## Environment
 
-| Var                     | Default                    | Notes                                                       |
-| ----------------------- | -------------------------- | ----------------------------------------------------------- |
-| `PORT`                  | `3014`                     | HTTP listen port.                                           |
-| `BFM_SELF_BASE_URL`     | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.      |
-| `BUILD_VERSION`         | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below. |
-| `POPS_REGISTRY_ENABLED` | `false`                    | Opt-in self-registration with the `registry` pillar.        |
-| `POPS_REGISTRY_URL`     | `http://registry-api:3001` | Registry base URL.                                          |
+| Var                          | Default                    | Notes                                                                    |
+| ---------------------------- | -------------------------- | ------------------------------------------------------------------------ |
+| `PORT`                       | `3014`                     | HTTP listen port.                                                        |
+| `BFM_SELF_BASE_URL`          | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                   |
+| `BUILD_VERSION`              | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.              |
+| `POPS_REGISTRY_ENABLED`      | `false`                    | Opt-in self-registration with the `registry` pillar.                     |
+| `POPS_REGISTRY_URL`          | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.              |
+| `POPS_INTERNAL_API_KEY_FILE` | —                          | Path to the mounted service-account secret. Preferred over the next row. |
+| `POPS_INTERNAL_API_KEY`      | —                          | The key inline, for local dev. One of these two is **required**.         |
+| `POPS_INTERNAL_BASE_URLS`    | —                          | `id:baseUrl[,…]`. Overrides the discovered base URL for those ids only.  |
 
-A malformed `BFM_SELF_BASE_URL` crashes boot rather than publishing an invalid
-`PillarRegistryEntry.baseUrl` — a base URL carrying a path silently breaks
-every consumer that appends a route to it.
+`POPS_INTERNAL_BASE_URLS` is deliberately not `POPS_PILLARS`, which carries the
+same shape and a different meaning: production stopped plumbing it once the
+registry became the source of truth (ADR-039 E25), while
+`infra/docker-compose.dev.yml` still sets a static six-pillar roster on every
+service. Honouring that here would bypass discovery in dev and nowhere else.
+bfm ignores it.
+
+Boot crashes rather than starting misconfigured, in three places:
+
+- A malformed `BFM_SELF_BASE_URL` would publish an invalid
+  `PillarRegistryEntry.baseUrl`, and a base URL carrying a path silently breaks
+  every consumer that appends a route to it.
+- A malformed `POPS_REGISTRY_URL` or `POPS_INTERNAL_BASE_URLS` entry would
+  surface later as an indistinguishable `unavailable` on every outbound call.
+- **No service-account key at all.** bfm exists to fan out to the federation;
+  a process that starts without a credential looks healthy right up until the
+  first request from a phone. This is why bare `pnpm dev` now needs
+  `POPS_INTERNAL_API_KEY` set — any non-empty string will do until the call
+  actually has to authenticate.
 
 `BUILD_VERSION` reaches two places and they do not agree when it is not semver.
 `/health` reports it verbatim, because `createBfmApiApp` is handed the raw
