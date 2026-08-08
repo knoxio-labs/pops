@@ -19,7 +19,7 @@ Everything in this package exists to avoid weakening it. In particular the fakes
 
 `InMemoryKeyStore` really signs, so tests exercise create → sign → verify → delete rather than counting calls. What it does not do is protect anything: its private key sits in the process heap and vanishes on exit. Wiring it into the composition root by accident would produce an app that pairs, works, and provides none of the guarantees the pairing was for — a failure with no symptom.
 
-Splitting it into its own product is what makes that mistake unavailable rather than merely discouraged: the app target links `Auth` alone, so there is no import statement that reaches the fakes.
+Splitting it into its own product is what makes that mistake unavailable rather than merely discouraged: the app target links `Auth` alone, so there is no import statement that reaches the fakes. `ModuleBoundaryTests` in `AppCore` asserts it, discovering every `*Fakes` / `*TestSupport` module by name rather than from a list — this package's is the second one, and a hand-maintained list would not have grown to cover it.
 
 ## Decisions recorded in the source
 
