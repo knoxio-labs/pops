@@ -1,0 +1,18 @@
+// Signing for the Pops app target. Automatic signing needs a team, and the team
+// is the one part of this configuration that is not the same for everyone who
+// clones a public repo — so it is read from outside the tree rather than
+// committed.
+//
+// `Signing.local.xcconfig` is gitignored and written by `mise run generate` from
+// `~/.config/pops/ios-signing.xcconfig`, which is what lets one file on the
+// machine serve every clone and worktree. It has to be an indirection rather
+// than an include of the home path directly: a project-referenced xcconfig
+// resolves neither `~` nor `$(HOME)` in an include path, and silently includes
+// nothing when it cannot resolve one.
+//
+// The optional form means a machine that has never set this up still builds for
+// the simulator. Setup, and the error you get without it, are in ../README.md.
+
+DEVELOPMENT_TEAM =
+
+#include? "Signing.local.xcconfig"

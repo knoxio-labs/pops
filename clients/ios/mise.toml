@@ -3,12 +3,32 @@ xcodegen = "2.46.0"
 
 [tasks.generate]
 description = "Regenerate Pops.xcodeproj from project.yml"
-run = "xcodegen generate"
+run = '''
+set -euo pipefail
+
+# Point the committed xcconfig at this machine's team, if it has one. A
+# project-referenced xcconfig cannot expand `~` or `$(HOME)` in an include path,
+# so the absolute path is resolved here and written to a gitignored file instead.
+team_config="$HOME/.config/pops/ios-signing.xcconfig"
+if [ -f "$team_config" ]; then
+  printf '#include? "%s"\n' "$team_config" > Config/Signing.local.xcconfig
+fi
+
+xcodegen generate
+'''
 
 [tasks.build]
 description = "Build the app for the iOS Simulator"
 depends = ["generate"]
 run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/platform=iOS Simulator' build"
+
+[tasks."build:device"]
+description = "Build a signed Release for a physical iPhone"
+depends = ["generate"]
+# -allowProvisioningUpdates lets automatic signing register the App ID and fetch
+# a profile, which is what Xcode does on its own when you press Run. Without it
+# the first build on a machine fails with "No profiles for … were found".
+run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/platform=iOS' -configuration Release -allowProvisioningUpdates build"
 
 [tasks."build:packages"]
 description = "Type-check every package on the host toolchain, without Xcode"

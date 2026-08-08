@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Everything Xcode can synthesise is left to GENERATE_INFOPLIST_FILE, which
+	merges its keys on top of this file. Only keys the generator refuses to carry
+	belong here: an INFOPLIST_KEY_ build setting for a key outside Xcode's
+	allowlist is dropped silently, with no warning and no key in the built plist.
+
+	POPS_BFM_BASE_URL is per-configuration and defined in project.yml. Release
+	defines it empty on purpose: a shipped binary carries no hostname, and the
+	base URL it uses arrives with the pairing QR instead.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>POPSBFMBaseURL</key>
+	<string>$(POPS_BFM_BASE_URL)</string>
+</dict>
+</plist>

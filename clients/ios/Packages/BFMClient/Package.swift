@@ -6,6 +6,11 @@ let package = Package(
     platforms: [.iOS("27.0")],
     products: [.library(name: "BFMClient", targets: ["BFMClient"])],
     targets: [
-        .target(name: "BFMClient", swiftSettings: [.swiftLanguageMode(.v6)])
+        .target(name: "BFMClient", swiftSettings: [.swiftLanguageMode(.v6)]),
+        .testTarget(
+            name: "BFMClientTests",
+            dependencies: ["BFMClient"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )

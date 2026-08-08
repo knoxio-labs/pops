@@ -43,13 +43,31 @@ targets:
     # rather than relying on Xcode autocreating one into xcuserdata.
     scheme:
       testTargets: []
+    # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
+    # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,
+    # so doing so would silently win over the developer's own value.
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSCameraUsageDescription: Pops uses the camera to scan pairing QR codes and photograph receipts.
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops
+        MARKETING_VERSION: '0.1.0'
+        CURRENT_PROJECT_VERSION: '1'
         TARGETED_DEVICE_FAMILY: '1'
-        # Signing and a per-configuration BFM base URL are a later change; until
-        # then the only supported destination is the simulator, which needs none.
-        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        # Read through App/Info.plist, which is the only way to reach a key Xcode's
+        # INFOPLIST_KEY_ allowlist does not cover.
+        Debug:
+          POPS_BFM_BASE_URL: http://localhost:3014
+        # Empty on purpose, and asserted by `mise run verify:release-carries-no-host`.
+        # The Release binary names no host: the base URL arrives with the pairing
+        # QR, so re-pointing the app at another deployment needs no rebuild.
+        Release:
+          POPS_BFM_BASE_URL: ''
