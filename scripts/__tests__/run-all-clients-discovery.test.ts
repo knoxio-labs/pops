@@ -75,13 +75,14 @@ describe('extractTaskField', () => {
 });
 
 describe('run-all: clients/* discovery (real mise binary)', () => {
-  let miseAvailable = true;
+  // Fails the suite rather than skipping it: a silent no-op here would make
+  // every test below report green without ever exercising the real `run-all`
+  // guard, which is worse than not having the suite at all. `mise` is a
+  // first-class, mandatory tool for this repo (`mise setup` is step 0 in
+  // AGENTS.md), so its absence is a broken environment, not a hardware-gated
+  // lane to skip past.
   beforeAll(() => {
-    try {
-      execFileSync('mise', ['--version'], { stdio: 'ignore' });
-    } catch {
-      miseAvailable = false;
-    }
+    execFileSync('mise', ['--version'], { stdio: 'ignore' });
   });
 
   let root: string;
@@ -149,22 +150,18 @@ describe('run-all: clients/* discovery (real mise binary)', () => {
   }
 
   it('discovers and runs pillars/* and libs/* units defining the task, unconditionally', () => {
-    if (!miseAvailable) return;
     expect(runAllEcho({})).toEqual(['ran-l1', 'ran-p1']);
   });
 
   it('does not reach clients/* by default', () => {
-    if (!miseAvailable) return;
     expect(runAllEcho({})).not.toContain('ran-c1');
   });
 
   it('includes a clients/* unit defining the task once RUN_ALL_INCLUDE_CLIENTS=1', () => {
-    if (!miseAvailable) return;
     expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).toEqual(['ran-c1', 'ran-l1', 'ran-p1']);
   });
 
   it('still skips a clients/* unit lacking the task even when opted in — the exact case the source guard exists for', () => {
-    if (!miseAvailable) return;
     expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).not.toContain('should-not-run');
   });
 });

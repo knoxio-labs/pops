@@ -138,8 +138,16 @@ jobs:
     # typed `vitest` locally. This job lands in the Quality workflow, which the
     # `CI Gate` aggregator observes, so the scripts suite reaches that context.
     runs-on: ubuntu-latest
+    env:
+      # `run-all-clients-discovery.test.ts` shells out to the real `mise`
+      # binary against a disposable fixture tree — it needs `mise` on PATH,
+      # not the toolchain it manages. node/pnpm already come from the two
+      # steps below; disabling them here (mirrors ios-quality.yml) stops this
+      # job from also provisioning a full rustup toolchain it never uses.
+      MISE_DISABLE_TOOLS: rust,node,pnpm
     steps:
       - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
