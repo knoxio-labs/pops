@@ -7,13 +7,17 @@ export default {
   '*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => {
     const formatFiles = filenames.map(esc).join(' ');
 
-    // 1. oxlint --fix  (auto-fix lint issues; --no-error-on-unmatched-pattern
-    //    so commits touching only lint-ignored files (e.g. *.config.ts)
-    //    still pass through the pre-commit hook)
+    // 1. oxlint --fix  (auto-fix lint issues)
     // 2. oxfmt --write (auto-fix formatting and import sort)
+    //
+    // Both carry --no-error-on-unmatched-pattern: each tool resolves its own
+    // ignore list (`.oxlintrc.json`, `.oxfmtrc.json` `ignorePatterns`) AFTER the
+    // paths are handed to it, so a commit whose staged files are all ignored
+    // leaves the tool with zero targets — which it treats as a usage error and
+    // fails the whole hook.
     return [
       `oxlint --fix --no-error-on-unmatched-pattern ${formatFiles}`,
-      `oxfmt --write ${formatFiles}`,
+      `oxfmt --write --no-error-on-unmatched-pattern ${formatFiles}`,
     ];
   },
 
@@ -42,6 +46,6 @@ export default {
     const formattable = filenames.filter((f) => !isOpenApiSnapshot(f));
     if (formattable.length === 0) return [];
     const formatFiles = formattable.map(esc).join(' ');
-    return [`oxfmt --write ${formatFiles}`];
+    return [`oxfmt --write --no-error-on-unmatched-pattern ${formatFiles}`];
   },
 };

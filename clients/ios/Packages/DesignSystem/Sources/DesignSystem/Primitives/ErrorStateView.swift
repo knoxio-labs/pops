@@ -29,16 +29,8 @@ public struct ErrorStateView: View {
             message: StateMessage.resolve(message, fallback: Self.fallbackMessage),
             messageColor: .popsDestructive
         ) {
-            Button(
+            PopsButton(
                 StateMessage.resolve(retryTitle, fallback: Self.fallbackRetryTitle), action: retry
-            )
-            .font(.popsHeadline)
-            .foregroundStyle(Color.popsAccent)
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.vertical, PopsSpacing.sm)
-            .overlay(
-                RoundedRectangle(cornerRadius: PopsRadius.control)
-                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
             )
         }
     }
