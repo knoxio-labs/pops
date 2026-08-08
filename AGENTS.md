@@ -76,22 +76,23 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 
 ### Pillars and ports
 
-| Pillar         | Port | Owns                                                      | Notes                                             |
-| -------------- | ---- | --------------------------------------------------------- | ------------------------------------------------- |
-| `registry`     | 3001 | registry / settings / users / service-accounts / features | data pillar; formerly `core`                      |
-| `inventory`    | 3002 | items, locations, warranties, insurance                   | data pillar                                       |
-| `media`        | 3003 | movies, TV, watchlist, watch history                      | data pillar; Plex/TMDB/TVDB                       |
-| `finance`      | 3004 | transactions, budgets, wishlists, entities, CSV import    | data pillar                                       |
-| `food`         | 3005 | food domain                                               | data pillar; runs a worker                        |
-| `lists`        | 3006 | lists                                                     | data pillar                                       |
-| `cerebrum`     | 3007 | memory / retrieval / ego                                  | data pillar; runs a worker                        |
-| `ai`           | 3008 | AI-ops: providers, usage/telemetry, ingest                |                                                   |
-| `orchestrator` | 3009 | federated search + AI-tool registry (`GET /ai/tools`)     | stateless, owns **no DB**                         |
-| `contacts`     | 3010 | contacts                                                  | **Rust** (axum + OpenAPI), `src/entities/`        |
-| `mcp`          | 3011 | MCP gateway                                               | **binds :3011 in code** (`MCP_PORT ?? 3011`)      |
-| `documents`    | 3012 | paperless-ngx bridge (status/search proxy, thumbnails)    | bridge pillar (ADR-035), owns **no DB**           |
-| `purchases`    | 3013 | purchase documents, line items, transaction links         | data pillar; ADR-042; no frontend yet             |
-| `shell`        | 5568 | React SPA host                                            | UI pillar; Vite + nginx, **not** the default 5173 |
+| Pillar         | Port | Owns                                                       | Notes                                             |
+| -------------- | ---- | ---------------------------------------------------------- | ------------------------------------------------- |
+| `registry`     | 3001 | registry / settings / users / service-accounts / features  | data pillar; formerly `core`                      |
+| `inventory`    | 3002 | items, locations, warranties, insurance                    | data pillar                                       |
+| `media`        | 3003 | movies, TV, watchlist, watch history                       | data pillar; Plex/TMDB/TVDB                       |
+| `finance`      | 3004 | transactions, budgets, wishlists, entities, CSV import     | data pillar                                       |
+| `food`         | 3005 | food domain                                                | data pillar; runs a worker                        |
+| `lists`        | 3006 | lists                                                      | data pillar                                       |
+| `cerebrum`     | 3007 | memory / retrieval / ego                                   | data pillar; runs a worker                        |
+| `ai`           | 3008 | AI-ops: providers, usage/telemetry, ingest                 |                                                   |
+| `orchestrator` | 3009 | federated search + AI-tool registry (`GET /ai/tools`)      | stateless, owns **no DB**                         |
+| `contacts`     | 3010 | contacts                                                   | **Rust** (axum + OpenAPI), `src/entities/`        |
+| `mcp`          | 3011 | MCP gateway                                                | **binds :3011 in code** (`MCP_PORT ?? 3011`)      |
+| `documents`    | 3012 | paperless-ngx bridge (status/search proxy, thumbnails)     | bridge pillar (ADR-035), owns **no DB**           |
+| `purchases`    | 3013 | purchase documents, line items, transaction links          | data pillar; ADR-042; no frontend yet             |
+| `bfm`          | 3014 | Backend-for-Mobile — the only backend the iPhone app dials | data pillar; owns no schema yet                   |
+| `shell`        | 5568 | React SPA host                                             | UI pillar; Vite + nginx, **not** the default 5173 |
 
 The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
 

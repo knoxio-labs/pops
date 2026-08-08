@@ -636,6 +636,52 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.5)(typescript@6.0.3))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.5)(yaml@2.9.0))
 
+  pillars/bfm:
+    dependencies:
+      '@pops/pillar-sdk':
+        specifier: workspace:*
+        version: link:../../libs/sdk
+      '@ts-rest/core':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@types/node@25.9.5)
+      '@ts-rest/express':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.5))(express@5.2.1)
+      '@ts-rest/open-api':
+        specifier: 3.53.0-rc.1
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.5))(zod@4.4.3)
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.4
+        version: 5.0.6
+      '@types/node':
+        specifier: ^25.9.3
+        version: 25.9.5
+      '@types/supertest':
+        specifier: ^6.0.3
+        version: 6.0.3
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      supertest:
+        specifier: ^7.1.4
+        version: 7.2.2
+      tsx:
+        specifier: ^4.23.5
+        version: 4.23.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@25.9.5)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@25.9.5)(typescript@6.0.3))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.5)(yaml@2.9.0))
+
   pillars/cerebrum:
     dependencies:
       '@anthropic-ai/sdk':
@@ -10448,6 +10494,10 @@ snapshots:
     optionalDependencies:
       '@types/node': 25.9.4
 
+  '@ts-rest/core@3.53.0-rc.1(@types/node@25.9.5)':
+    optionalDependencies:
+      '@types/node': 25.9.5
+
   '@ts-rest/express@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.3))(express@5.2.1)':
     dependencies:
       '@ts-rest/core': 3.53.0-rc.1(@types/node@25.9.3)
@@ -10456,6 +10506,11 @@ snapshots:
   '@ts-rest/express@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.4))(express@5.2.1)':
     dependencies:
       '@ts-rest/core': 3.53.0-rc.1(@types/node@25.9.4)
+      express: 5.2.1
+
+  '@ts-rest/express@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.5))(express@5.2.1)':
+    dependencies:
+      '@ts-rest/core': 3.53.0-rc.1(@types/node@25.9.5)
       express: 5.2.1
 
   '@ts-rest/open-api@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.3))(zod@4.4.3)':
@@ -10469,6 +10524,13 @@ snapshots:
     dependencies:
       '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@4.4.3)
       '@ts-rest/core': 3.53.0-rc.1(@types/node@25.9.4)
+      openapi3-ts: 2.0.2
+      zod: 4.4.3
+
+  '@ts-rest/open-api@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@25.9.5))(zod@4.4.3)':
+    dependencies:
+      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@4.4.3)
+      '@ts-rest/core': 3.53.0-rc.1(@types/node@25.9.5)
       openapi3-ts: 2.0.2
       zod: 4.4.3
 
@@ -10509,7 +10571,7 @@ snapshots:
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
 
   '@types/chai@5.2.3':
     dependencies:
@@ -10518,7 +10580,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
 
   '@types/cookiejar@2.1.5': {}
 
@@ -10569,7 +10631,7 @@ snapshots:
 
   '@types/express-serve-static-core@5.1.1':
     dependencies:
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
       '@types/qs': 6.15.0
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -10590,7 +10652,7 @@ snapshots:
 
   '@types/jsdom@21.1.7':
     dependencies:
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
 
@@ -10620,11 +10682,10 @@ snapshots:
   '@types/node@25.9.5':
     dependencies:
       undici-types: 7.24.6
-    optional: true
 
   '@types/papaparse@5.5.2':
     dependencies:
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
 
   '@types/qs@6.15.0': {}
 
@@ -10642,12 +10703,12 @@ snapshots:
 
   '@types/send@1.2.1':
     dependencies:
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
 
   '@types/serve-static@2.2.0':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
 
   '@types/set-cookie-parser@2.4.10':
     dependencies:
@@ -10661,7 +10722,7 @@ snapshots:
     dependencies:
       '@types/cookiejar': 2.1.5
       '@types/methods': 1.1.4
-      '@types/node': 25.9.4
+      '@types/node': 25.9.5
       form-data: 4.0.5
 
   '@types/supertest@6.0.3':
