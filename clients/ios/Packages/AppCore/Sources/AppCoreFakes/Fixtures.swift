@@ -14,8 +14,18 @@ extension PairedDevice {
 }
 
 extension PairingRequest {
-    public static func fake(baseURL: URL = .fakeBFM, code: String = "ABC123") -> PairingRequest {
-        PairingRequest(baseURL: baseURL, code: code)
+    public static func fake(
+        baseURL: URL = .fakeBFM,
+        code: String = "ABC123",
+        deviceName: String = "Fake iPhone",
+        deviceModel: String = "iPhone17,1"
+    ) -> PairingRequest {
+        PairingRequest(
+            baseURL: baseURL,
+            code: code,
+            deviceName: deviceName,
+            deviceModel: deviceModel
+        )
     }
 }
 

@@ -11,8 +11,19 @@ let package = Package(
         .library(name: "Auth", targets: ["Auth"]),
         .library(name: "AuthTestSupport", targets: ["AuthTestSupport"]),
     ],
+    // `AppCore` for the pairing seam this package implements, `BFMClient` for
+    // the one call that implementation makes. Both are sibling paths; nothing
+    // here reaches outside the repo.
+    dependencies: [
+        .package(path: "../AppCore"),
+        .package(path: "../BFMClient"),
+    ],
     targets: [
-        .target(name: "Auth", swiftSettings: [.swiftLanguageMode(.v6)]),
+        .target(
+            name: "Auth",
+            dependencies: ["AppCore", "BFMClient"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
         .target(
             name: "AuthTestSupport",
             dependencies: ["Auth"],
@@ -20,7 +31,10 @@ let package = Package(
         ),
         .testTarget(
             name: "AuthTests",
-            dependencies: ["Auth", "AuthTestSupport"],
+            dependencies: [
+                "Auth", "AuthTestSupport", "AppCore", "BFMClient",
+                .product(name: "AppCoreFakes", package: "AppCore"),
+            ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
     ]
