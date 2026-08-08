@@ -1,9 +1,12 @@
 /**
- * Every environment variable `server.ts` reads at boot, and the validation
- * each one gets. They live here rather than inline in the entrypoint so the
- * decisions are testable in-process: `server.ts` binds a port and installs
- * signal handlers the moment it is imported, so anything left in it can only
- * be exercised by spawning a child.
+ * The environment `server.ts` reads to stand up its own HTTP surface, and the
+ * validation each variable gets. The variables the cross-pillar SDK needs live
+ * next door in `pillars/env.ts` and share this file's `parseBareOrigin`.
+ *
+ * They live here rather than inline in the entrypoint so the decisions are
+ * testable in-process: `server.ts` binds a port and installs signal handlers
+ * the moment it is imported, so anything left in it can only be exercised by
+ * spawning a child.
  *
  * The bias throughout is to crash at boot. A pillar that starts with a
  * misconfigured value and registers it is discovered days later as a 404 from
