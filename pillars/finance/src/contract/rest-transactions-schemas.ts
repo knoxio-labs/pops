@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 import { TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
-import { LimitQuery, OffsetQuery } from './rest-schemas.js';
+import { LimitQuery, NonEmptyString, OffsetQuery } from './rest-schemas.js';
 
 /** Wire shape served by the transaction handlers. */
 export const TransactionSchema = z.object({
@@ -115,24 +115,31 @@ export const TransactionQuery = z.object({
    * The `.describe()` is not decoration — it is the only way this invariant
    * reaches the OpenAPI document, and the document is all a client author or a
    * generated SDK ever sees. A JSDoc comment here reaches neither.
+   *
+   * Both halves are validated rather than taken as free strings, because an
+   * anchor is compared lexicographically and a bad one changes which rows come
+   * back WITHOUT failing. An empty pair yields `date < ''`, which matches
+   * nothing and reads to a paging caller as "you have reached the end"; a
+   * `beforeDate` that is not a date sorts wherever its characters happen to
+   * fall, silently returning everything or nothing. Neither is a failure the
+   * caller can see, which is what makes rejecting them at the edge worth the
+   * two lines.
    */
   beforeDate: z
     .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/u, 'beforeDate must be a date-only YYYY-MM-DD value')
     .optional()
     .describe(
-      'Keyset anchor: the `date` of the last row you already have. ' +
+      'Keyset anchor: the `date` of the last row you already have, as `YYYY-MM-DD`. ' +
         'Must be sent together with `beforeId` — supplying one without the other is a 400, ' +
         'because a date alone cannot separate rows that share it. ' +
         'Returns rows sorting strictly after that row under `date DESC, id DESC`. ' +
         'Prefer this over `offset` when paging a list that can change underneath you.'
     ),
   /** Keyset anchor — the `id` of the last row the caller already has. Sent with `beforeDate`. */
-  beforeId: z
-    .string()
-    .optional()
-    .describe(
-      'Keyset anchor: the `id` of the last row you already have. ' +
-        'Must be sent together with `beforeDate` — supplying one without the other is a 400. ' +
-        'This half is what separates rows sharing a date.'
-    ),
+  beforeId: NonEmptyString.optional().describe(
+    'Keyset anchor: the `id` of the last row you already have. ' +
+      'Must be sent together with `beforeDate` — supplying one without the other is a 400. ' +
+      'This half is what separates rows sharing a date.'
+  ),
 });

@@ -5143,7 +5143,7 @@ export type TransactionsListData = {
     limit?: number;
     offset?: number;
     /**
-     * Keyset anchor: the `date` of the last row you already have. Must be sent together with `beforeId` — supplying one without the other is a 400, because a date alone cannot separate rows that share it. Returns rows sorting strictly after that row under `date DESC, id DESC`. Prefer this over `offset` when paging a list that can change underneath you.
+     * Keyset anchor: the `date` of the last row you already have, as `YYYY-MM-DD`. Must be sent together with `beforeId` — supplying one without the other is a 400, because a date alone cannot separate rows that share it. Returns rows sorting strictly after that row under `date DESC, id DESC`. Prefer this over `offset` when paging a list that can change underneath you.
      */
     beforeDate?: string;
     /**

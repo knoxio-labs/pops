@@ -180,6 +180,27 @@ describe('transactions — filters & pagination', () => {
     });
   });
 
+  it('refuses an empty anchor rather than silently ending the list', async () => {
+    // `date < ''` matches nothing, so an empty pair would answer 200 with zero
+    // rows — indistinguishable, to a paging caller, from having reached the
+    // end. Verified at the service layer in the db suite; rejected here.
+    await expect(
+      client().transactions.list({ beforeDate: '', beforeId: '' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('refuses an anchor date that is not a date', async () => {
+    // An anchor is compared lexicographically, so a malformed one sorts
+    // wherever its characters fall and silently changes which rows come back.
+    await expect(
+      client().transactions.list({ beforeDate: 'not-a-date', beforeId: 'some-id' })
+    ).rejects.toMatchObject({ status: 400 });
+
+    await expect(
+      client().transactions.list({ beforeDate: '2026-2-15', beforeId: 'some-id' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
   it('names both halves and which one is missing, on the wire', async () => {
     // The invalid state is the pair, so a caller told only that `beforeDate`
     // is wrong has to guess whether to drop it or to supply its partner. It

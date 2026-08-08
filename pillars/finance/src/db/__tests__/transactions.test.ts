@@ -470,6 +470,18 @@ describe('listTransactions ordering and keyset pagination', () => {
     expect(next.map((row) => row.id)).toEqual(filtered.slice(1).map((row) => row.id));
   });
 
+  it('treats an empty anchor as a position before every row, matching nothing', () => {
+    // Documented rather than defended here: `date < ''` is a perfectly valid
+    // predicate that happens to match nothing, so the service cannot tell it
+    // from a genuine end-of-list. That is exactly why the REST layer refuses
+    // an empty anchor instead — see the contract's `beforeId`/`beforeDate`.
+    seedSameDay(3);
+
+    const result = listTransactions(db, { beforeDate: '', beforeId: '' }, 50, 0);
+
+    expect(result.rows).toEqual([]);
+  });
+
   it('ignores a half-supplied anchor at the service layer (the HTTP layer rejects it)', () => {
     seedSameDay(3);
 

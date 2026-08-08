@@ -82,17 +82,29 @@ function isRetryable(status: UpstreamErrorStatus): boolean {
  * For a route that addresses one resource by path, where 404 is a fact about
  * the user's data and the route declares it.
  */
+/**
+ * Compose the operator-facing message.
+ *
+ * `detail` is never rendered — the app draws its own copy from `code`. It is
+ * carried because a contract skew, a rejected service-account key or a
+ * misrouted URL is otherwise invisible from outside this pillar's logs, and a
+ * crash report is often the only place anyone will see it.
+ */
+function describe(summary: string, failure: GatewayFailure): string {
+  return failure.detail === undefined ? summary : `${summary}: ${failure.detail}`;
+}
+
 export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
   const { status, code, summary } = classify(failure);
 
-  // `detail` is operator-facing and never rendered — the app draws its own
-  // copy from `code`. It is carried because a contract skew or a rejected
-  // service-account key is otherwise invisible from outside this pillar's logs.
-  const message = failure.detail === undefined ? summary : `${summary}: ${failure.detail}`;
-
   return {
     status,
-    body: { code, pillar: failure.pillar, retryable: isRetryable(status), message },
+    body: {
+      code,
+      pillar: failure.pillar,
+      retryable: isRetryable(status),
+      message: describe(summary, failure),
+    },
   };
 }
 
@@ -130,7 +142,14 @@ export function toCollectionUpstreamErrorResponse(
       ...mapped.body,
       code: 'upstream_contract_mismatch',
       retryable: false,
-      message: `${failure.pillar} does not serve the collection this pillar asked for`,
+      // Still through `describe`, so the gateway's detail survives the fold.
+      // This is the arm where it matters most: a 404 on a collection usually
+      // means a base URL pointing somewhere unexpected, and the detail is the
+      // only thing that says where.
+      message: describe(
+        `${failure.pillar} does not serve the collection this pillar asked for`,
+        failure
+      ),
     },
   };
 }

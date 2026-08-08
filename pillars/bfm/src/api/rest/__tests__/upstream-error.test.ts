@@ -125,6 +125,20 @@ describe('a collection route', () => {
     }
   });
 
+  it('keeps the gateway detail through the fold, where it matters most', () => {
+    // A 404 on a collection usually means a base URL pointing somewhere
+    // unexpected, and the detail is the only thing that says where. Losing it
+    // exactly here would blind the case it was carried for.
+    const mapped = toCollectionUpstreamErrorResponse({
+      kind: 'not-found',
+      pillar: 'finance',
+      status: 404,
+      detail: 'no route matched GET /transactions',
+    });
+
+    expect(mapped.body.message).toContain('no route matched GET /transactions');
+  });
+
   it('still separates an outage from a contract fault after the fold', () => {
     const down = toCollectionUpstreamErrorResponse({
       kind: 'unavailable',
