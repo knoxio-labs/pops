@@ -38,9 +38,9 @@ registry that refuses every call and asserts `/health` still answers.
   routes (POPS-1378, POPS-1379), the Dockerfile and compose service
   (POPS-1385) and the nginx route (POPS-1386) are each their own ticket. This
   pillar currently runs from `pnpm dev` only.
-- **A shared bare-origin parser.** `src/api/self-base-url.ts` re-implements the
-  rule every pillar's `src/api/pillars/env.ts` carries rather than importing
-  it; lifting it into `@pops/pillar-sdk` across the fleet is POPS-1406.
+- **A shared bare-origin parser.** `src/api/boot-env.ts` re-implements the rule
+  every pillar's `src/api/pillars/env.ts` carries rather than importing it;
+  lifting it into `@pops/pillar-sdk` across the fleet is POPS-1406.
 
 ## Layout
 
@@ -57,12 +57,18 @@ pillars/bfm/
     │   ├── manifest.ts
     │   └── index.ts
     └── api/
-        ├── server.ts              HTTP entrypoint (port 3014)
+        ├── server.ts              HTTP entrypoint (port 3014) — wiring only
+        ├── boot-env.ts            every env var server.ts reads, and its validation
         ├── app.ts                 Express app factory + route wiring
         ├── manifest.ts            the boot-time ManifestPayload
-        ├── self-base-url.ts       BFM_SELF_BASE_URL validation
         └── rest/handlers.ts       ts-rest handler composer
 ```
+
+`server.ts` holds no decisions — importing it binds a port and installs signal
+handlers, so anything in it can only be tested by spawning a child process.
+Every boot-time choice therefore lives in `boot-env.ts`, which is unit-tested;
+`server.ts` is excluded from coverage on exactly that basis. Adding logic back
+to it invalidates the exclusion.
 
 ## Commands
 

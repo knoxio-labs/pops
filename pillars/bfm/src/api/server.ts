@@ -15,23 +15,15 @@
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 
 import { createBfmApiApp } from './app.js';
+import { resolvePort, resolveSelfBaseUrl, resolveVersion, shouldSelfRegister } from './boot-env.js';
 import { buildBfmManifest } from './manifest.js';
-import { resolveSelfBaseUrl } from './self-base-url.js';
-
-const DEFAULT_PORT = 3014;
-
-function resolvePort(): number {
-  const raw = process.env['PORT'];
-  if (raw === undefined || raw === '') return DEFAULT_PORT;
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
-    throw new Error(`[bfm-api] PORT must be a positive integer in 1-65535; got '${raw}'`);
-  }
-  return parsed;
-}
 
 const port = resolvePort();
-const version = process.env['BUILD_VERSION'] ?? 'dev';
+const version = resolveVersion();
+
+// Resolved before `listen` and unconditionally — including when registration
+// is disabled — so a misconfigured origin fails the deploy that introduced it
+// rather than the later one that flips POPS_REGISTRY_ENABLED on.
 const selfBaseUrl = resolveSelfBaseUrl(port);
 
 const app = createBfmApiApp({ version });
@@ -41,7 +33,7 @@ const server = app.listen(port, () => {
 });
 
 let pillarHandle: PillarBootstrapHandle | undefined;
-if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
+if (shouldSelfRegister()) {
   pillarHandle = await bootstrapPillar({
     manifest: buildBfmManifest(version),
     baseUrl: selfBaseUrl,
