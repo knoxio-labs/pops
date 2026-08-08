@@ -16,7 +16,7 @@
  * token keep working until it expires. A crash between them produces one of
  * those two states, so they share a transaction.
  */
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 
 import { devices, refreshTokens } from '../schema.js';
 
@@ -56,9 +56,8 @@ export function listDevices(db: BfmDb): DeviceSummary[] {
       revokedAt: devices.revokedAt,
     })
     .from(devices)
-    .orderBy(devices.createdAt)
-    .all()
-    .toReversed();
+    .orderBy(desc(devices.createdAt))
+    .all();
 }
 
 export type RevokeDeviceResult =
