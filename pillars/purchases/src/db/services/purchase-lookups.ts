@@ -50,16 +50,29 @@ export function findPurchaseBySourceOrderId(
  *
  * The merchant name cannot be part of the key — the same Kmart receipt
  * read twice gave "K MART ASHFIELD" and "K mart" — but the printed
- * timestamp and total were identical every time, and a second genuine
- * purchase in the same minute for the same amount is not a thing that
- * happens to one person.
+ * timestamp, currency and total were identical every time, and a second
+ * genuine purchase in the same minute for the same amount is not a thing
+ * that happens to one person.
+ *
+ * Best-effort by construction. It reads before it writes, so two uploads
+ * racing each other can both pass and both be written. That is deliberate:
+ * the alternative is a unique index over the same columns, which would
+ * turn a rare false positive — two different shops at the same stated
+ * minute for the same amount — from a visible 409 into a write that fails
+ * and loses a real purchase.
  */
+export interface ShopMoment {
+  readonly source: string;
+  readonly orderedAt: string;
+  readonly totalCents: number;
+  readonly currency: string;
+}
+
 export function findPurchaseAtInstantForAmount(
   db: PurchasesDb,
-  source: string,
-  orderedAt: string,
-  totalCents: number
+  moment: ShopMoment
 ): PurchaseRow | undefined {
+  const { source, orderedAt, totalCents, currency } = moment;
   return db
     .select()
     .from(purchases)
@@ -67,7 +80,11 @@ export function findPurchaseAtInstantForAmount(
       and(
         eq(purchases.source, source),
         eq(purchases.orderedAt, orderedAt),
-        eq(purchases.totalCents, totalCents)
+        eq(purchases.totalCents, totalCents),
+        // Cents are a number without one. 3000 is $30.00 and ¥3000, and a
+        // traveller can hold both — refusing the second as a duplicate of
+        // the first would lose a real shop.
+        eq(purchases.currency, currency)
       )
     )
     .all()[0];

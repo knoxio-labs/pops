@@ -274,12 +274,37 @@ describe('re-uploading the same photograph', () => {
   it('keeps two genuine shops that differ only in time', async () => {
     // The case the image key was protecting: two identical coffees, an
     // hour apart. The receipts state different times, so they stay apart.
+    //
+    // One app, so both uploads demonstrably meet the same database and the
+    // second is judged against the first rather than against nothing.
     const later = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedAt: '15:32' });
-    const app = appWith(saying(GOOD_READING));
+    let answer = GOOD_READING;
+    const app = appWith({ read: async () => answer });
+
     const first = await upload(app, JPEG_BASE64);
-    const second = await upload(appWith(saying(later)), OTHER_JPEG_BASE64);
+    answer = later;
+    const second = await upload(app, OTHER_JPEG_BASE64);
 
     expect(first.body.kind).toBe('created');
+    expect(second.status).toBe(200);
+    expect(second.body.kind).toBe('created');
+  });
+
+  it('keeps the same amount at the same instant in another currency', async () => {
+    // 3000 is $30.00 and ¥3000. Cents are a number without a currency, so
+    // a key that omits it would refuse a real shop bought abroad.
+    const abroad = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      currency: 'JPY',
+      total: '¥27.50',
+    });
+    let answer = GOOD_READING;
+    const app = appWith({ read: async () => answer });
+
+    await upload(app, JPEG_BASE64);
+    answer = abroad;
+    const second = await upload(app, OTHER_JPEG_BASE64);
+
     expect(second.status).toBe(200);
     expect(second.body.kind).toBe('created');
   });

@@ -163,12 +163,12 @@ function sameShopAlreadyRecorded(
   purchase: CreatePurchaseInput
 ): { id: string } | undefined {
   if (purchase.tags?.includes(DATE_UNCERTAIN) === true) return undefined;
-  return findPurchaseAtInstantForAmount(
-    db,
-    RECEIPT_SOURCE_ID,
-    purchase.orderedAt,
-    purchase.totalCents
-  );
+  return findPurchaseAtInstantForAmount(db, {
+    source: RECEIPT_SOURCE_ID,
+    orderedAt: purchase.orderedAt,
+    totalCents: purchase.totalCents,
+    currency: purchase.currency,
+  });
 }
 
 function persist(db: PurchasesDb, input: CreatePurchaseInput): Persisted {
