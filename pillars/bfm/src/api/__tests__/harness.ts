@@ -22,6 +22,7 @@ import type { Express } from 'express';
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
+import type { PairingRateLimitOptions } from '../auth/pairing-rate-limit.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
@@ -70,6 +71,7 @@ export interface TestAppOptions {
   env?: NodeJS.ProcessEnv;
   issuanceLimiter?: RateLimiter;
   pairingCodeTtlMs?: number;
+  refreshTokenTtlMs?: number;
   publicBaseUrl?: string;
   accessTokenSigningKey?: KeyObject;
   /**
@@ -92,6 +94,8 @@ export interface TestAppOptions {
    * without saying how fails loudly instead of hanging on a real network call.
    */
   finance?: MobileFinanceClient;
+  /** Same, for the pairing exchange's budget. */
+  pairingRateLimit?: PairingRateLimitOptions;
 }
 
 const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
@@ -119,7 +123,13 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     ...(options.pairingCodeTtlMs === undefined
       ? {}
       : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
+    ...(options.refreshTokenTtlMs === undefined
+      ? {}
+      : { refreshTokenTtlMs: options.refreshTokenTtlMs }),
     ...(options.mobileRateLimit === undefined ? {} : { mobileRateLimit: options.mobileRateLimit }),
+    ...(options.pairingRateLimit === undefined
+      ? {}
+      : { pairingRateLimit: options.pairingRateLimit }),
     ...(options.internalBaseUrls === undefined
       ? {}
       : { internalBaseUrls: options.internalBaseUrls }),

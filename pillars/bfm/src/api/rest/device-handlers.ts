@@ -16,8 +16,9 @@
  */
 import { completePairingExchange } from '../auth/pairing-exchange.js';
 
-import type { ServerInferRequest } from '@ts-rest/core';
 import type { KeyObject } from 'node:crypto';
+
+import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { bfmDeviceContract } from '../../contract/rest-device.js';
 import type { BfmDb } from '../../db/index.js';

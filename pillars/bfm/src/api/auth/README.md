@@ -6,7 +6,25 @@ bfm's hostname has Cloudflare Access bypassed — that is what lets a native app
 reach it without a browser login (POPS-1389) — so this directory is not one
 layer of defence among several. It is the only one.
 
+A phone passes through here twice: once to become a device, and thereafter on
+every request it makes as one.
+
 ```
+an unpaired phone                     bfm
+─────────────────                     ───
+  POST /devices/pair ─────────────►   pairing-rate-limit.ts
+    { code, publicKey, … }                │ route budget spent?        yes ─► 429
+                                          │ this client's spent?       yes ─► 429
+                                          ▼
+                                      pairing-exchange.ts
+                                          │ key parses as P-256?       no  ─► 400
+                                          │ code known + live + unspent?
+                                          │                            no  ─► 403
+                                          ▼
+                                      one transaction: spend, insert, insert
+                                          ▼
+                                      { deviceId, accessToken, refreshToken }
+
 a paired phone                        bfm
 ──────────────                        ───
                      mint  ─────────► access-token.ts   ◄── signing-key.ts
@@ -22,11 +40,18 @@ a paired phone                        bfm
                                       res.locals.device ─► the route
 ```
 
-`device-signature.ts` sits off to one side of that diagram: it is the bytes half
-of proof of possession, not part of the bearer-token path. It decodes the SPKI
-public key stored at pairing and checks an ECDSA P-256 signature the phone
-produced, and nothing else — the refresh route that will call it is POPS-1375,
-and the message format it signs over belongs to that route rather than here.
+Both budgets are the same mechanism with different numbers —
+`api/tiered-rate-limit.ts`, one directory up, because it is not specific to
+authentication. They keep separate counters: sharing one would let ordinary
+phone traffic lock a handset out of pairing.
+
+`device-signature.ts` sits off to one side of both paths. It is the bytes half
+of proof of possession: it decodes an SPKI public key and checks an ECDSA P-256
+signature the phone produced. The pairing exchange uses only the first half of
+that — parsing the key it is about to store, and rejecting anything that is not
+P-256 before a row is written. The signature half has no caller until refresh
+(POPS-1375), and the message format it signs over belongs to that route rather
+than here.
 
 Its tests are the only place in this repo where `node:crypto` is shown to accept
 what CryptoKit actually emits. Everything else about refresh can be exercised
@@ -75,28 +100,19 @@ same prefix and runs first: an over-budget caller costs a map lookup instead of
 an HMAC. It is charged on every `/mobile/*` request, authenticated or not,
 because it sits ahead of the point where those become distinguishable.
 
-Two tiers, because the only usable client key is forgeable. The tunnel's
-ingress points at `bfm-api:3014` directly, so there is no nginx hop on the
-device path and the socket peer is cloudflared's bridge address — identical for
-every phone. `CF-Connecting-IP` is the real client, and it is also settable by
-anything on the LAN or in the compose network, which can reach `/mobile/*`
-through the shell's `/bfm-api/` prefix.
+The two-tier shape it uses, and why the coarse tier is charged first, is
+`api/tiered-rate-limit.ts`. The numbers are in `mobile-rate-limit.ts`, and they
+sit far above what a household of handsets generates.
 
-- A **global** budget across the whole prefix, keyed by nothing. Forging the
-  header buys an attacker at most this.
-- A **per-client** budget on the resolved address, so one hostile source runs
-  out long before it can spend the household's ceiling.
+`pairing-rate-limit.ts` is the same mechanism in front of `POST /devices/pair`,
+mounted the same way and for a related but distinct reason: there the
+credential is a code a human can type, so the budget bounds **guesses** rather
+than work. Its window is one pairing-code lifetime, so a client that spends its
+budget waits only as long as the code it was failing against would have lived.
 
-The global tier is charged first, and that order is load-bearing rather than
-arbitrary: a request refused there never mints a per-client key, which is what
-bounds a map keyed by attacker-chosen input. A value that is not a syntactically
-valid IP is not taken as a key at all — otherwise every request could carry a
-fresh one and the fine tier would be a no-op.
-
-Both limits sit far above what a household of handsets generates; the constants
-in `mobile-rate-limit.ts` say how far. The counters are process-local, which is
-exact for one container and wrong for two — POPS-1474 tracks that, with the
-trigger pinned to whichever change first adds a replica.
+The counters are process-local, which is exact for one container and wrong for
+two — POPS-1474 tracks that, with the trigger pinned to whichever change first
+adds a replica.
 
 ## What is never logged
 
@@ -117,16 +133,18 @@ not a credential.
 
 - **Refresh and rotation** (POPS-1375). Access tokens are deliberately short —
   the TTL constant in `access-token.ts` says why — which only works because
-  something else can mint a replacement. Until that ticket lands, nothing in
-  this pillar issues an access token at all: `mintAccessToken` is called by the
-  pairing exchange (POPS-1374) and the refresh route, neither of which exists.
-  `device-signature.ts` is the primitive that ticket verifies with; the nonce,
-  the signed-message format and the rotation state machine are all its.
-- **A budget on the pairing exchange** (POPS-1374). `mobile-rate-limit.ts`
-  bounds the `/mobile` prefix; the pairing exchange is a separate surface and
-  the more attractive target of the two, because a code short enough to read
-  off a screen is short enough to guess. It should budget redemption on the
-  same `rate-limit.ts` mechanism, keyed by request source, when it lands.
+  something else can mint a replacement. `mintAccessToken` has one caller,
+  `pairing-exchange.ts`, so a handset that lets its ten minutes lapse has to
+  pair again until that ticket lands. It also writes the head of a refresh-token
+  family that nothing yet rotates. `device-signature.ts` is the primitive that
+  ticket verifies with; the nonce, the signed-message format and the rotation
+  state machine are all its.
+- **App Attest binding** (POPS-1394). Pairing trusts that whoever holds the code
+  is the phone the operator meant to pair. Attestation would additionally prove
+  the request came from a genuine build of this app on genuine hardware. It is
+  deferred rather than forgotten: the code is single-use, short-lived and
+  operator-minted, which bounds the window in which an impostor could beat the
+  real handset to it.
 - **A per-device tier** (POPS-1495). The tiers here key on network address
   because they run before the guard and no device identity exists yet at that
   point. One keyed on `res.locals.device` would be a different limit answering
