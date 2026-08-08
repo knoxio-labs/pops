@@ -21,7 +21,7 @@ import { parseAmountCents, type MoneyLocale } from '../money.js';
 import type { ExtractedReceipt } from './extraction.js';
 
 /**
- * Tolerance for `Σ lines − discounts + tax === total`.
+ * Tolerance for the sum, under either tax convention.
  *
  * Zero, and for the same reason as the Woolworths adapter: a receipt prints
  * exactly what was tendered. A tolerance here would be a place for a misread
@@ -46,6 +46,13 @@ export interface GateResult {
   readonly lineTotalCents: number;
   readonly taxCents: number;
   readonly discountCents: number;
+  /**
+   * True when the stated tax was already inside the line prices — which is
+   * what made the sum agree. The figure is then a statement about the
+   * total, not a component of it, and adding it again would overstate the
+   * purchase by exactly the tax.
+   */
+  readonly taxIncluded: boolean;
   /** Everything wrong with it, not just the first thing. */
   readonly failures: readonly GateFailure[];
 }
@@ -102,13 +109,61 @@ function sumLines(
   return total;
 }
 
+interface Totals {
+  readonly totalCents: number | null;
+  readonly lineTotalCents: number;
+  readonly taxCents: number;
+  readonly discountCents: number;
+}
+
+/**
+ * Check the receipt's arithmetic against both conventions for stated tax.
+ *
+ * Two exist and both are ordinary. Australia, the UK and the EU print
+ * prices with tax already in them and state the tax as a fact about the
+ * total — a $30.00 Kmart receipt lists $30.00 of lines and $2.73 of GST,
+ * because 30.00/11 is the GST inside it. The United States prints prices
+ * without tax and adds it, so the lines come to less than the total.
+ *
+ * Which one applies is not something to infer from the merchant, the
+ * currency or the address: the receipt's own numbers say, and exactly one
+ * of the two can reconcile unless the tax is zero, when they are the same
+ * sum. So both are tried and the paper decides.
+ */
+function reconcile(totals: Totals): { taxIncluded: boolean; failure: GateFailure | null } {
+  const { totalCents, lineTotalCents, taxCents, discountCents } = totals;
+  if (totalCents === null) return { taxIncluded: false, failure: null };
+
+  const net = lineTotalCents - discountCents;
+  const inclusiveDelta = net - totalCents;
+  const exclusiveDelta = net + taxCents - totalCents;
+
+  if (Math.abs(inclusiveDelta) <= TOLERANCE_CENTS) return { taxIncluded: true, failure: null };
+  if (Math.abs(exclusiveDelta) <= TOLERANCE_CENTS) return { taxIncluded: false, failure: null };
+
+  // Report against whichever convention came closer, since that is the one
+  // the receipt was probably printed under and the delta a reviewer needs.
+  const closerIsInclusive = Math.abs(inclusiveDelta) <= Math.abs(exclusiveDelta);
+  const delta = closerIsInclusive ? inclusiveDelta : exclusiveDelta;
+  return {
+    taxIncluded: false,
+    failure: {
+      kind: 'sum-mismatch',
+      deltaCents: delta,
+      detail:
+        `lines total ${String(lineTotalCents)}c less ${String(discountCents)}c discounts ` +
+        `is ${String(net)}c, or ${String(net + taxCents)}c with the stated ${String(taxCents)}c ` +
+        `of tax added, but the receipt states ${String(totalCents)}c`,
+    },
+  };
+}
+
 /**
  * Decide whether an extraction may be written as fact.
  *
- * Tax is added rather than assumed included. A receipt that separates tax
- * has lines that exclude it; one that does not separate it reports no tax at
- * all, and the sum works either way without this having to know which
- * country's convention applies.
+ * Stated tax is tried both ways — see {@link reconcile}. Which convention a
+ * receipt was printed under is something its own numbers answer, so nothing
+ * here has to know which country it came from.
  */
 export function gateExtraction(extracted: ExtractedReceipt): GateResult {
   const failures: GateFailure[] = [];
@@ -145,19 +200,8 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     failures.push({ kind: 'damaged', detail: `the model could not read: ${note}` });
   }
 
-  if (totalCents !== null) {
-    const delta = lineTotalCents + taxCents - discountCents - totalCents;
-    if (Math.abs(delta) > TOLERANCE_CENTS) {
-      failures.push({
-        kind: 'sum-mismatch',
-        deltaCents: delta,
-        detail:
-          `lines total ${String(lineTotalCents)}c plus ${String(taxCents)}c tax ` +
-          `less ${String(discountCents)}c discounts is ${String(lineTotalCents + taxCents - discountCents)}c, ` +
-          `but the receipt states ${String(totalCents)}c`,
-      });
-    }
-  }
+  const reconciliation = reconcile({ totalCents, lineTotalCents, taxCents, discountCents });
+  if (reconciliation.failure !== null) failures.push(reconciliation.failure);
 
   return {
     admissible: failures.length === 0,
@@ -165,6 +209,7 @@ export function gateExtraction(extracted: ExtractedReceipt): GateResult {
     lineTotalCents,
     taxCents,
     discountCents,
+    taxIncluded: reconciliation.taxIncluded,
     failures,
   };
 }

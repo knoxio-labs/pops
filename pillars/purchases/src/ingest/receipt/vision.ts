@@ -62,7 +62,11 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
   discounts: 'each stated discount, exactly as printed, as an array',
   lines: 'one entry per product, in printed order',
   description: 'the product text verbatim, including abbreviations. Do not expand or tidy them',
-  amount: 'the money printed for that line, exactly as printed',
+  amount:
+    'the money printed for that line, exactly as printed — but the amount ' +
+    'only. Many receipts print a tax or department code beside it (ALDI ' +
+    'prints a trailing "A", Woolworths a leading "#"); that mark is not ' +
+    'part of the money and must not be included',
   quantity:
     'a whole number ONLY when the receipt states a count. Omit it otherwise — omitted means the paper did not say',
   unitNote:

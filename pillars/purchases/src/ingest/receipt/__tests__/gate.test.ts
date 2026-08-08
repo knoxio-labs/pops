@@ -184,3 +184,60 @@ describe('a discount the model filed among the lines', () => {
     expect(result.failures).toEqual([]);
   });
 });
+
+describe('the two conventions for stated tax', () => {
+  it('accepts a receipt whose prices already contain the tax', () => {
+    // A real Kmart receipt: $30.00 of lines, $30.00 stated, and $2.73 of
+    // GST — which is 30.00/11, the tax already inside the price. Adding it
+    // would overstate the purchase by exactly the tax, and every Australian
+    // receipt sent through the drop-zone failed this way.
+    const inclusive = receipt({
+      total: '$30.00',
+      tax: '$2.73',
+      lines: [
+        { description: 'Towel Bath Ribbed', amount: '$12.00' },
+        { description: 'Storage Basket', amount: '$18.00' },
+      ],
+    });
+
+    const result = gateExtraction(inclusive);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(true);
+  });
+
+  it('accepts a receipt that adds the tax to its lines', () => {
+    // The American convention, where the lines genuinely come to less than
+    // the total. Both have to work without knowing where the shop is.
+    const exclusive = receipt({
+      total: '$32.73',
+      tax: '$2.73',
+      lines: [
+        { description: 'Towel Bath Ribbed', amount: '$12.00' },
+        { description: 'Storage Basket', amount: '$18.00' },
+      ],
+    });
+
+    const result = gateExtraction(exclusive);
+
+    expect(result.admissible).toBe(true);
+    expect(result.taxIncluded).toBe(false);
+  });
+
+  it('still refuses a receipt that reconciles under neither', () => {
+    // Trying both conventions must not become two chances to pass.
+    const wrong = receipt({
+      total: '$40.00',
+      tax: '$2.73',
+      lines: [
+        { description: 'Towel Bath Ribbed', amount: '$12.00' },
+        { description: 'Storage Basket', amount: '$18.00' },
+      ],
+    });
+
+    const result = gateExtraction(wrong);
+
+    expect(result.admissible).toBe(false);
+    expect(result.failures[0]?.kind).toBe('sum-mismatch');
+  });
+});

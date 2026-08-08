@@ -180,7 +180,11 @@ export function receiptToPurchase(
     orderedAt,
     currency: extracted.currency ?? DEFAULT_CURRENCY,
     subtotalCents: gate.lineTotalCents,
-    taxCents: gate.taxCents,
+    // Zero when the price already contained it: the receipt states the tax
+    // as a fact about the total, not as a component to add. Carrying it
+    // here as well would make it appear twice in any sum of parts — the
+    // same reason the Woolworths adapter drops GST.
+    taxCents: gate.taxIncluded ? 0 : gate.taxCents,
     discountCents: gate.discountCents,
     totalCents,
     // Unknown is a valid outcome, not a failure — the escape hatch exists
