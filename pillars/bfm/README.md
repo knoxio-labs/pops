@@ -9,7 +9,9 @@ It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
 (ADR-035). It serves `/health` alone: it has no mobile surface yet (POPS-1378,
 POPS-1379), so `/health` is a pure liveness shape rather than a DB round-trip.
-It does carry a shell-side operator surface, under
+That is deliberate for a container healthcheck, and it is why the database
+opens **before** `listen`: the probe cannot tell you the schema migrated, so
+boot has to. It does carry a shell-side operator surface, under
 [`app/`](./app/README.md).
 
 It also holds a service-account credential and one way to spend it — see
@@ -88,17 +90,15 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **A call to `openBfmDb`.** The schema exists; nothing in `src/api/` opens it,
-  so a running `pnpm dev` creates no `bfm.db` and the tests are its only
-  caller. The handle, the `BFM_SQLITE_PATH` resolver and the boot-time migrate
-  arrive with POPS-1369, the first ticket whose routes need to read a row.
-  Until then the pillar's on-disk footprint is nil, which is also why it has no
-  compose volume or Litestream stream yet (POPS-1385).
-- **Auth, the mobile contract, and the container.** Device pairing and token
+- **A route that reads a row.** `server.ts` opens `bfm.db` and migrates it, but
+  no handler queries it yet — the tables are populated first by the issuance
+  path (POPS-1369). The open happens anyway because the container needs it to:
+  a volume and a Litestream stream that point at a file no process creates are
+  a backup of nothing, and nothing reports that.
+- **Auth, the mobile contract, and the nginx route.** Device pairing and token
   issuance (POPS-1369, POPS-1370, POPS-1374, POPS-1375), the mobile-facing
-  routes (POPS-1378, POPS-1379), the Dockerfile and compose service
-  (POPS-1385) and the nginx route (POPS-1386) are each their own ticket. This
-  pillar currently runs from `pnpm dev` only.
+  routes (POPS-1378, POPS-1379) and the nginx route plus the compiled pillar
+  roster (POPS-1386) are each their own ticket.
 - **Any enforcement of what the service account may reach.** The grant is
   narrow and auditable, but the registry pillar is the only one in the fleet
   that reads `X-API-Key` at all — every other producer serves any in-network
@@ -150,6 +150,36 @@ a single process.
 Rotate by minting a replacement, swapping the file, restarting, and only then
 revoking the old id (`POST /service-accounts/:id/revoke`) — in that order,
 since revocation takes effect on the next request.
+
+## Deployment
+
+`Dockerfile` builds a two-stage image scoped to the `@pops/bfm` subgraph —
+`@pops/pillar-sdk` and `@pops/types` today. Adding a workspace dependency to
+`package.json` without adding it to both COPY phases breaks this image and
+nothing else; no local check catches it, only the Docker Build CI job.
+
+The `bfm-api` service in both compose files mounts **`pops-bfm-data`**, not the
+shared `sqlite-data` every other pillar API writes to. bfm is greenfield, so it
+starts where ADR-039 workstream S11 wants the fleet to end up, and that makes
+`bfm-litestream` the one sidecar replicating a database something writes.
+`infra/litestream/bfm.yml` targets `/data/sqlite/bfm.db`, which is where
+`BFM_SQLITE_PATH` points the container — check the pair together when either
+moves, because a stream aimed at a path nothing writes reports success forever.
+
+`depends_on: registry-api` is `service_started`, never `service_healthy`.
+Registration is already non-blocking, so gating the container on the registry's
+health would turn a slow registry into a fleet cold-start failure and buy
+nothing.
+
+The service-account key arrives as a Docker file-based secret at
+`/run/secrets/pops_bfm_api_key`, named by `POPS_INTERNAL_API_KEY_FILE` — a
+path, never the value, so the credential stays out of the process environment
+and out of `docker inspect`. Provisioning:
+[`infra/secrets.example/bfm/README.md`](../../infra/secrets.example/bfm/README.md).
+
+Not here: the nginx route and the compiled pillar roster (POPS-1386), and the
+Cloudflare hostname with Access bypassed (POPS-1389). The BFM's public entry
+point is that hostname rather than the shell's proxy.
 
 ## Layout
 
@@ -210,6 +240,7 @@ pnpm --filter @pops/bfm build
 | ---------------------------- | -------------------------- | ------------------------------------------------------------------------ |
 | `PORT`                       | `3014`                     | HTTP listen port.                                                        |
 | `BFM_SELF_BASE_URL`          | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                   |
+| `BFM_SQLITE_PATH`            | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.              |
 | `BUILD_VERSION`              | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.              |
 | `POPS_REGISTRY_ENABLED`      | `false`                    | Opt-in self-registration with the `registry` pillar.                     |
 | `POPS_REGISTRY_URL`          | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.              |

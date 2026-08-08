@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PORT,
+  DEFAULT_SQLITE_PATH,
   resolvePort,
   resolveSelfBaseUrl,
+  resolveSqlitePath,
   resolveVersion,
   shouldSelfRegister,
 } from '../boot-env.js';
@@ -93,5 +95,58 @@ describe('resolveSelfBaseUrl', () => {
     expect(resolveSelfBaseUrl(3014, { FOOD_SELF_BASE_URL: 'http://food-api:3005' })).toBe(
       'http://localhost:3014'
     );
+  });
+});
+
+describe('resolveSqlitePath', () => {
+  it('defaults under ./data when nothing is configured', () => {
+    expect(resolveSqlitePath({})).toBe(DEFAULT_SQLITE_PATH);
+    expect(DEFAULT_SQLITE_PATH).toBe('./data/bfm.db');
+  });
+
+  it('prefers BFM_SQLITE_PATH verbatim, absolute or relative', () => {
+    expect(resolveSqlitePath({ BFM_SQLITE_PATH: '/data/sqlite/bfm.db' })).toBe(
+      '/data/sqlite/bfm.db'
+    );
+    expect(resolveSqlitePath({ BFM_SQLITE_PATH: './tmp/other-name.db' })).toBe(
+      './tmp/other-name.db'
+    );
+  });
+
+  // The compose service sets the literal path this asserts. If the two ever
+  // disagree the Litestream stream replicates a file the pillar does not
+  // write, which fails silently — there is no backup, and nothing says so.
+  it('lands bfm.db in the directory the container mounts its volume at', () => {
+    expect(resolveSqlitePath({ BFM_SQLITE_PATH: '/data/sqlite/bfm.db' })).toBe(
+      '/data/sqlite/bfm.db'
+    );
+  });
+
+  it('derives its own file from a fleet-wide SQLITE_PATH', () => {
+    expect(resolveSqlitePath({ SQLITE_PATH: '/data/sqlite/shared.db' })).toBe(
+      '/data/sqlite/bfm.db'
+    );
+  });
+
+  it('never shares a file with the pillar that set SQLITE_PATH', () => {
+    expect(resolveSqlitePath({ SQLITE_PATH: '/data/sqlite/finance.db' })).not.toBe(
+      '/data/sqlite/finance.db'
+    );
+  });
+
+  it('lets its own variable win over the shared one', () => {
+    expect(
+      resolveSqlitePath({ BFM_SQLITE_PATH: '/elsewhere/bfm.db', SQLITE_PATH: '/data/sqlite/x.db' })
+    ).toBe('/elsewhere/bfm.db');
+  });
+
+  // A compose interpolation that resolved to nothing leaves `VAR=` behind.
+  // Honouring that as a path would open a database at the process CWD.
+  it.each([
+    ['empty', ''],
+    ['whitespace', '   '],
+  ])('treats a %s value as unset rather than as a path', (_label, raw) => {
+    expect(resolveSqlitePath({ BFM_SQLITE_PATH: raw })).toBe(DEFAULT_SQLITE_PATH);
+    expect(resolveSqlitePath({ SQLITE_PATH: raw })).toBe(DEFAULT_SQLITE_PATH);
   });
 });

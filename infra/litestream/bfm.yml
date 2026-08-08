@@ -1,0 +1,40 @@
+## Litestream replication config — bfm pillar SQLite (Backend-for-Mobile).
+##
+## Per-pillar replication config (ADR-026 / ADR-039 Invariant 2): each pillar's
+## database streams independently, with no shared database. A pillar without a
+## file here is a pillar with no backup, and nothing anywhere reports that
+## absence — which is why this lands with the container rather than after it.
+##
+## Production deployment lives in the homelab-infra repo (see AGENTS.md for the
+## deployment model); this file is the canonical reference the deployer copies
+## into its own Litestream config. The replica target (bucket name, region,
+## credentials) is provided by the deployer's environment — left as a
+## `${BFM_LITESTREAM_REPLICA_URL}` style placeholder here.
+##
+## Unlike its siblings this stream is NOT a stub: `bfm-api` mounts
+## `pops-bfm-data` at `/data/sqlite` and `bfm-litestream` mounts the same
+## volume read-only, so the path below is a database that exists. Verified
+## against the running container, not inferred from compose:
+##   docker compose exec bfm-api ls -la /data/sqlite
+## Restore drill not yet exercised.
+##
+## Restore drill (single line — safe to copy/paste during an incident):
+##   litestream restore -o /data/sqlite/bfm.db "${BFM_LITESTREAM_REPLICA_URL}"
+## Stop the bfm-api container first so it isn't writing concurrently.
+##
+## Worth backing up despite being small: losing bfm.db does not lose data that
+## exists elsewhere — it revokes every paired handset at once. `devices` holds
+## the public half of a key whose private half is non-extractable inside a
+## phone's Secure Enclave, so a lost row cannot be reconstructed from the
+## phone. Every user re-pairs by hand, in person, with a fresh code.
+
+dbs:
+  - path: /data/sqlite/bfm.db
+    replicas:
+      - url: ${BFM_LITESTREAM_REPLICA_URL}
+        # Per-pillar config so a single-pillar restore doesn't pull in
+        # another pillar's data.
+        sync-interval: 1s
+        retention: 24h
+        snapshot-interval: 1h
+        validation-interval: 12h

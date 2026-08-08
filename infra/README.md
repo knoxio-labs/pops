@@ -1,7 +1,7 @@
 # infra
 
 Two Docker Compose files, the Litestream reference configs, an rclone+age backup
-reference config, and committed templates for the moltbot secret files.
+reference config, and committed templates for the moltbot and bfm secret files.
 
 ## `docker-compose.yml` is a public API
 
@@ -11,31 +11,34 @@ breaking change for every downstream deployer.
 
 **Networks** — three, all `driver: bridge`:
 
-| Key         | Docker name      | On it                                                                                                               |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `frontend`  | `pops-frontend`  | Every pillar API except `documents-api`, plus `pops-orchestrator`, `pops-shell`, `pops-docs`, `metabase`            |
-| `backend`   | `pops-backend`   | Every pillar API, both workers, `pops-orchestrator`, `pops-redis`, `pops-mcp`, `moltbot`, the 9 Litestream sidecars |
-| `documents` | `pops-documents` | `documents-api`, `paperless-ngx`, `paperless-redis` — paperless is on this network only                             |
+| Key         | Docker name      | On it                                                                                                                |
+| ----------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `frontend`  | `pops-frontend`  | Every pillar API except `documents-api`, plus `pops-orchestrator`, `pops-shell`, `pops-docs`, `metabase`             |
+| `backend`   | `pops-backend`   | Every pillar API, both workers, `pops-orchestrator`, `pops-redis`, `pops-mcp`, `moltbot`, the 10 Litestream sidecars |
+| `documents` | `pops-documents` | `documents-api`, `paperless-ngx`, `paperless-redis` — paperless is on this network only                              |
 
 `registry-api` carries the extra alias `core-api` on both `frontend` and
 `backend`.
 
-**Volumes** — 19, each explicitly `name:`d: `pops-sqlite-data`,
+**Volumes** — 20, each explicitly `name:`d: `pops-sqlite-data`,
 `pops-redis-data`, `pops-metabase-data`, `pops-paperless-{data,media,consume}`,
 `pops-paperless-redis`, `pops-food-ingest-data`, `pops-cerebrum-engrams-data`,
-`pops-media-images-data`, plus 9 per-pillar `pops-<id>-data`.
+`pops-media-images-data`, plus 10 per-pillar `pops-<id>-data`. Of those 10 only
+`pops-bfm-data` is mounted by an API container; the other 9 exist for the
+Litestream sidecars and the pillars they belong to still write to the shared
+`pops-sqlite-data`.
 
-**Secrets** — 14, each `file: ../secrets/<name>`, resolved from `infra/` (so the
-gitignored repo-root `secrets/`): `claude_api_key`, `finance_api_key`,
-`instagram_cookies`, `notion_api_token`, `paperless_admin_password`,
-`paperless_secret_key`, `pops_api_internal_token`, `pops_api_key`,
-`pops_bfm_api_key`, `telegram_bot_token`, `thetvdb_api_key`, `tmdb_api_key`,
-`up_bank_token`, `up_webhook_secret`. Only 7 are mounted into a service
-(`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
-`moltbot-validator`); the other 7 are declared and mounted nowhere. A declared
-secret is inert — compose materialises one only for services that reference
-it — which is what lets a value be provisioned on the host before the service
-that will mount it exists (`pops_bfm_api_key`, POPS-1385).
+**Secrets** — 15, each `file: ../secrets/<name>`, resolved from `infra/` (so the
+gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
+`finance_api_key`, `instagram_cookies`, `notion_api_token`,
+`paperless_admin_password`, `paperless_secret_key`, `pops_api_internal_token`,
+`pops_api_key`, `pops_bfm_api_key`, `telegram_bot_token`, `thetvdb_api_key`,
+`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 8 are mounted into a
+service (`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
+`moltbot-validator`, `bfm-api`); the other 7 are declared and mounted nowhere.
+A declared secret is inert — compose materialises one only for services that
+reference it — which is what lets a value be provisioned on the host before the
+service that will mount it exists (`bfm_jwt_signing_key`, POPS-1370).
 
 **Host env vars** — `POPS_IMAGE_TAG`, `POPS_DOMAIN`, `POPS_REGISTRY_URL`,
 `BUILD_VERSION`, `MCP_BIND_ADDR`, `MCP_INBOUND_TOKEN`, `PAPERLESS_BASE_URL`,
@@ -46,9 +49,9 @@ Each pillar's `*_SQLITE_PATH` and `*_SELF_BASE_URL` are inline, not host env.
 ## prod vs dev
 
 Dev builds the same services from `pillars/<id>/Dockerfile` and pins no GHCR
-image except on `media-api`. Prod defines 32 services, dev 20. Profiles keep
+image except on `media-api`. Prod defines 35 services, dev 21. Profiles keep
 `litestream` / `moltbot` / `mcp` out of a plain `up` in prod, `moltbot` / `mcp`
-in dev. 13 services carry
+in dev. 15 services carry
 `com.centurylinklabs.watchtower.enable: 'true'`; `cerebrum-api`,
 `cerebrum-worker` and `pops-orchestrator` do not, despite their GHCR pins.
 
@@ -65,16 +68,20 @@ no such dependency; dev has no food worker at all.
 
 ## `litestream/`
 
-Nine configs — `ai`, `cerebrum`, `contacts`, `finance`, `food`, `inventory`,
-`lists`, `media`, `registry` — each mounted read-only at `/etc/litestream.yml`
-into the matching `<id>-litestream` sidecar. Every one replicates
+Eleven configs — `ai`, `bfm`, `cerebrum`, `contacts`, `finance`, `food`,
+`inventory`, `lists`, `media`, `purchases`, `registry`. Ten are mounted
+read-only at `/etc/litestream.yml` into the matching `<id>-litestream` sidecar;
+`purchases.yml` has no sidecar at all (POPS-1470). Every one replicates
 `/data/sqlite/<id>.db` with `sync-interval: 1s`, `retention: 24h`,
 `snapshot-interval: 1h`, `validation-interval: 12h`, and interpolates one
 `<ID>_LITESTREAM_REPLICA_URL` — except that `registry-litestream` passes
 `CORE_LITESTREAM_REPLICA_URL` while `registry.yml` reads
-`REGISTRY_LITESTREAM_REPLICA_URL`. Each sidecar mounts
-`pops-<id>-data:/data/sqlite:ro`, and no API container mounts those volumes —
-the pillars all write to `pops-sqlite-data`.
+`REGISTRY_LITESTREAM_REPLICA_URL`.
+
+Each sidecar mounts `pops-<id>-data:/data/sqlite:ro`. Only `bfm` has an API
+container writing to that volume; the other nine pillars still write to
+`pops-sqlite-data`, so their sidecars would replicate an empty volume and the
+configs are reference-only until the per-pillar split lands.
 
 `backup/cerebrum-engrams.yml` is the rclone+age counterpart for the cerebrum
 engram Markdown tree, which is files rather than SQLite.

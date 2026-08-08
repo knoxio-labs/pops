@@ -479,6 +479,63 @@ services:
       timeout: 5s
       retries: 3
 
+  # Backend-for-Mobile pillar API (ADR-035 data kind), built from source. The
+  # single backend the native iPhone client dials. Owns bfm.db — the device
+  # allow-list — on port 3014. Mounts its own `pops-bfm-data` volume rather
+  # than the shared `sqlite-data`; see the prod file for why.
+  bfm-api:
+    build:
+      context: ..
+      dockerfile: pillars/bfm/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-bfm
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - pops-bfm-data:/data/sqlite
+    environment:
+      NODE_ENV: production
+      PORT: '3014'
+      BFM_SQLITE_PATH: /data/sqlite/bfm.db
+      BFM_SELF_BASE_URL: http://bfm-api:3014
+      POPS_REGISTRY_ENABLED: 'true'
+      POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
+      # The dev source for the service-account key: inline, where production
+      # mounts a file secret at /run/secrets/pops_bfm_api_key. bfm refuses to
+      # boot without one, so the placeholder is what keeps `up -d bfm-api`
+      # working on a clean checkout with no secrets provisioned.
+      #
+      # It is a real string and not a real key: nothing in the fleet verifies
+      # `X-API-Key` except the registry, and bfm calls no sibling yet. Export
+      # POPS_INTERNAL_API_KEY with a minted key before exercising anything
+      # cross-pillar, or the first such call 401s rather than failing at boot.
+      #
+      # Deliberately NOT given POPS_PILLARS, which every service above sets to
+      # a static six-pillar roster. bfm discovers through the registry; reading
+      # that roster as overrides would bypass discovery in dev and nowhere
+      # else, which is the routing-seam disagreement this fleet has already
+      # paid for once.
+      POPS_INTERNAL_API_KEY: ${POPS_INTERNAL_API_KEY:-pops_sa_dev.unprovisioned-placeholder}
+    expose:
+      - '3014'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3014/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Cross-pillar orchestrator (ADR-029, epics 06+07). Federates over the
   # pillars via @pops/pillar-sdk (REST); owns no domain DB. nginx routes
   # /orchestrator-api/ here on port 3009. Built from the app Dockerfile;
@@ -802,6 +859,10 @@ volumes:
     name: pops-food-ingest-data
   media-images-data:
     name: pops-media-images-data
+  # Per-pillar rather than the shared `sqlite-data` above — bfm is greenfield,
+  # so it starts where ADR-039 workstream S11 wants every pillar to end up.
+  pops-bfm-data:
+    name: pops-bfm-data
 
 secrets:
   notion_api_token:
