@@ -16,10 +16,8 @@ mkdir -p secrets
 chmod 700 secrets
 for f in infra/secrets.example/moltbot/*.example; do
   name=$(basename "$f" .example)
-  if [ ! -f "secrets/$name" ]; then
-    cp "$f" "secrets/$name"
-    chmod 600 "secrets/$name"
-  fi
+  [ -f "secrets/$name" ] || cp "$f" "secrets/$name"
+  chmod 600 "secrets/$name"
 done
 $EDITOR secrets/telegram_bot_token secrets/claude_api_key secrets/pops_api_key
 ```

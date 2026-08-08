@@ -53,10 +53,11 @@ When the food ingest pipeline reports "Instagram cookies need refresh", this run
    For each item with `partialReason='auth-dead'`, re-enqueue it with fresh cookies:
 
    ```bash
+   SOURCE_ID=123   # replace with the id from the list above
    docker compose -f infra/docker-compose.yml exec food-api \
      curl -sS -X POST http://localhost:3005/ingest/retry \
      -H 'Content-Type: application/json' \
-     -d '{ "sourceId": <id from the list above> }'
+     -d "{ \"sourceId\": $SOURCE_ID }"
    ```
 
 6. **Verify a fresh ingest.** Submit one new Instagram URL via `POST /ingest/start`. Confirm it completes with `state='completed'` (not `'partial'`).
