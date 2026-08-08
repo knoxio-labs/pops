@@ -46,9 +46,12 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
     alreadyStored: z.boolean(),
   }),
   /**
-   * Read, but the figures disagree — or the receipt states no date. A real
+   * Read, but the figures disagree with the total the paper states. A real
    * purchase that a human has to settle, returned in full so the reviewer
    * sees what the model saw. Nothing is written.
+   *
+   * A receipt that merely states no DATE is not this: it is created, dated
+   * from the upload, and tagged `date-uncertain`.
    */
   z.object({
     kind: z.literal('needs-review'),

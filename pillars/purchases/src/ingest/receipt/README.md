@@ -96,11 +96,11 @@ ts-rest contract as everything else.
 **The response is a discriminated union, not a purchase.** Collapsing the
 three outcomes would lose the distinction the whole feature rests on:
 
-| `kind`         | meaning                                     | written?                           |
-| -------------- | ------------------------------------------- | ---------------------------------- |
-| `created`      | the reading agreed with the paper           | yes                                |
-| `needs-review` | read, but the figures disagree — or no date | no; the photo is kept and returned |
-| `unreadable`   | nothing usable came back                    | no; the photo is kept              |
+| `kind`         | meaning                                              | written?                           |
+| -------------- | ---------------------------------------------------- | ---------------------------------- |
+| `created`      | the reading agreed with the paper                    | yes                                |
+| `needs-review` | read, but the figures disagree with the stated total | no; the photo is kept and returned |
+| `unreadable`   | nothing usable came back                             | no; the photo is kept              |
 
 Two refusals happen before a model call is spent: `503` when no vision
 model is configured, and `400` when the upload is not the image type it
@@ -112,8 +112,15 @@ reads it wrongly, or the figures disagree, the image is still on disk and
 addressable — so a failed upload leaves evidence. Reading first and storing
 only on success would discard exactly the receipts a human needs to see.
 
-Re-uploading the same photograph is a `409`, because `sourceOrderId` is the
-image's SHA-256. A merchant order id would be better and does not exist: a
+A receipt that merely states no **date** is not `needs-review`: it is
+created, dated from the upload, and tagged `date-uncertain`, because losing
+a shop that happened is worse than carrying an inferred date the tag stops
+anyone mistaking for a stated one.
+
+Re-uploading the same photograph is a `409`, and the check happens **before
+the model is asked** — the hash is the key, so the duplicate is knowable
+without paying for an answer whose only outcome is 409. Because
+`sourceOrderId` is the image's SHA-256. A merchant order id would be better and does not exist: a
 till slip carries a transaction number in a different place and format for
 every chain, and a date-plus-total key would merge two identical coffees
 bought an hour apart.

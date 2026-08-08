@@ -7,7 +7,12 @@
  * leaves evidence rather than nothing. Reading first and storing only on
  * success would discard exactly the receipts a human needs to look at.
  */
-import { createPurchase, getPurchase, upsertSource } from '../../db/index.js';
+import {
+  createPurchase,
+  findPurchaseBySourceOrderId,
+  getPurchase,
+  upsertSource,
+} from '../../db/index.js';
 import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purchase.js';
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import { looksLikeImage, storeReceiptImage } from '../../ingest/receipt/store.js';
@@ -175,6 +180,23 @@ export function makeReceiptHandlers(
 
       const image = { mediaType: body.mediaType, dataBase64: body.dataBase64 };
       const stored = storeReceiptImage(image);
+
+      // Before the model, not after. The photograph's hash IS the key, so a
+      // re-upload is already knowable here — and letting it reach the vision
+      // call means paying for an answer whose only possible outcome is 409.
+      // Re-photographing a receipt you already sent is an ordinary mistake,
+      // and it should be free.
+      const existing = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, stored.sha256);
+      if (existing !== undefined) {
+        return {
+          status: 409 as const,
+          body: {
+            message: `This photograph has already been read as purchase ${existing.id}`,
+            code: 'ALREADY_IMPORTED',
+          },
+        };
+      }
+
       const outcome = await readReceipt(vision, image);
 
       if (outcome.kind === 'unreadable') {

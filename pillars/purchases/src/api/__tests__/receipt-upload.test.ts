@@ -181,6 +181,25 @@ describe('re-uploading the same photograph', () => {
     expect(second.status).toBe(409);
   });
 
+  it('does not pay for a vision call to discover the duplicate', async () => {
+    // The photograph's hash IS the key, so a re-upload is knowable before
+    // the model is asked. Re-photographing a receipt you already sent is an
+    // ordinary mistake and should be free.
+    let calls = 0;
+    const counting: ReceiptVision = {
+      read: async () => {
+        calls += 1;
+        return GOOD_READING;
+      },
+    };
+    const app = appWith(counting);
+    await upload(app);
+    await upload(app);
+    await upload(app);
+
+    expect(calls).toBe(1);
+  });
+
   it('does not write the image twice', async () => {
     const app = appWith(saying(GOOD_READING));
     await upload(app);
