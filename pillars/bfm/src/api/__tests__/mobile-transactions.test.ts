@@ -244,11 +244,37 @@ describe('cursor pagination', () => {
   });
 
   it('refuses a limit past the contract cap rather than quietly clamping it', async () => {
-    const { app, token } = openWithRows(seededRows);
+    const { app, token, fake } = openWithRows(seededRows);
 
     const res = await get(app, token, `${LIST_PATH}?limit=500`);
 
     expect(res.status).toBe(400);
+    expect(fake.listCalls).toHaveLength(0);
+  });
+
+  it('answers a rejected query in the 400 shape the route declares', async () => {
+    // ts-rest rejects this before any handler runs and would otherwise answer
+    // its own `{ name: 'ValidationError', issues: [...] }`, which is not the
+    // shape the document promises — so the generated Swift client would have
+    // no case for a 400 reached by something as ordinary as `?limit=500`.
+    const { app, token } = openWithRows(seededRows);
+
+    const res = await get(app, token, `${LIST_PATH}?limit=500`);
+
+    expect(Object.keys(res.body).toSorted()).toEqual(['code', 'message']);
+    expect(res.body.code).toBe('invalid_request');
+  });
+
+  it('keeps a bad cursor distinguishable from a bad query', async () => {
+    // Different recoveries: one means restart the list, the other means the
+    // app built a request this server does not accept.
+    const { app, token } = openWithRows(seededRows);
+
+    const badCursor = await get(app, token, `${LIST_PATH}?cursor=nope`);
+    const badQuery = await get(app, token, `${LIST_PATH}?limit=500`);
+
+    expect(badCursor.body.code).toBe('invalid_cursor');
+    expect(badQuery.body.code).toBe('invalid_request');
   });
 
   it('rejects a cursor it did not issue instead of silently restarting the list', async () => {

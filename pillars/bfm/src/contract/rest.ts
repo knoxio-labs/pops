@@ -63,6 +63,17 @@ const MOBILE_PERIMETER_RESPONSES = {
 } as const;
 
 /**
+ * The request itself was wrong. Declared on every mobile route rather than
+ * only the ones with a query to get wrong: ts-rest rejects contract-level
+ * validation failures before a handler runs, so any route can answer 400 the
+ * moment it grows a validated input, and `app.ts` reshapes those into this
+ * schema so the wire never carries a 400 the document does not describe.
+ */
+const MOBILE_REQUEST_RESPONSES = {
+  400: MobileRequestErrorSchema,
+} as const;
+
+/**
  * A pillar behind bfm could not serve the request. Both statuses carry the
  * same shape and are told apart by it: 503 is worth retrying, 502 is not.
  */
@@ -93,7 +104,7 @@ const mobileFinanceContract = c.router({
     }),
     responses: {
       200: MobileTransactionsPageSchema,
-      400: MobileRequestErrorSchema,
+      ...MOBILE_REQUEST_RESPONSES,
       ...MOBILE_PERIMETER_RESPONSES,
       ...MOBILE_UPSTREAM_RESPONSES,
     },
@@ -105,6 +116,7 @@ const mobileFinanceContract = c.router({
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: MobileTransactionDetailSchema,
+      ...MOBILE_REQUEST_RESPONSES,
       ...MOBILE_PERIMETER_RESPONSES,
       404: MobileUpstreamErrorSchema,
       ...MOBILE_UPSTREAM_RESPONSES,

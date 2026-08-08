@@ -25,7 +25,9 @@ import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
+import { MOBILE_PATH_PREFIX } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
+import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
 import type { KeyObject } from 'node:crypto';
 
@@ -52,15 +54,8 @@ const openapiDocument: unknown = JSON.parse(
   )
 );
 
-/**
- * The path prefix every route the phone calls lives under, and therefore the
- * one the perimeter mounts on.
- *
- * A single prefix rather than a per-route list is the point: `app.use` matches
- * on whole path segments, so everything below `/mobile` is gated the moment it
- * exists and nothing below it can be added ungated by accident.
- */
-export const MOBILE_PATH_PREFIX = '/mobile';
+/** Re-exported so existing callers keep one import; defined in `paths.ts`. */
+export { MOBILE_PATH_PREFIX } from './paths.js';
 
 export interface BfmApiDeps extends BfmRestHandlerDeps {
   /** Backs the guard's device lookup — the allow-list a token is checked against. */
@@ -134,7 +129,13 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // job.
   app.use(createIdentityMiddleware(options.env));
 
-  createExpressEndpoints(bfmContract, makeBfmRestHandlers(deps), app);
+  createExpressEndpoints(bfmContract, makeBfmRestHandlers(deps), app, {
+    // ts-rest answers a schema mismatch itself, before any handler, with its
+    // own error body. Left alone, a `/mobile` route would promise one 400
+    // shape in the document the iOS client is generated from and emit
+    // another — see `rest/request-validation.ts`.
+    requestValidationErrorHandler: createRequestValidationErrorHandler(),
+  });
 
   return app;
 }

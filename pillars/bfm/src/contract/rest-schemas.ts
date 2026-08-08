@@ -63,9 +63,20 @@ export type MobileRateLimitError = z.infer<typeof MobileRateLimitErrorSchema>;
  * What a `/mobile` route answers when the request itself is wrong — as opposed
  * to unauthenticated (`MobileAuthErrorSchema`) or upstream-broken
  * (`MobileUpstreamErrorSchema`). Always a 400, and always the app's own bug.
+ *
+ * Two codes because the app can act on one of them and not the other.
+ * `invalid_cursor` means restart the list from the top — a recovery the app
+ * can perform. `invalid_request` means it built a request this server does not
+ * accept, which no retry fixes.
+ *
+ * Both arrive here even though only one comes from a handler: contract-level
+ * validation (`limit` past its cap, say) is rejected by ts-rest before any
+ * handler runs, and its native error body is nothing like this shape. `app.ts`
+ * reshapes those, because a 400 that does not match the one the route declares
+ * is a 400 the generated client cannot decode.
  */
 export const MobileRequestErrorSchema = z.object({
-  code: z.enum(['invalid_cursor']),
+  code: z.enum(['invalid_cursor', 'invalid_request']),
   message: z.string(),
 });
 

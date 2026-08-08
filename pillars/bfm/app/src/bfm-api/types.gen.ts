@@ -41,7 +41,7 @@ export type MobileFinanceListTransactionsErrors = {
    * 400
    */
   400: {
-    code: 'invalid_cursor';
+    code: 'invalid_cursor' | 'invalid_request';
     message: string;
   };
   /**
@@ -135,6 +135,13 @@ export type MobileFinanceGetTransactionData = {
 };
 
 export type MobileFinanceGetTransactionErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
   /**
    * 401
    */

@@ -146,7 +146,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "code": {
-                      "enum": ["invalid_cursor"],
+                      "enum": ["invalid_cursor", "invalid_request"],
                       "type": "string"
                     },
                     "message": {
@@ -402,6 +402,27 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           },
           "401": {
             "content": {
