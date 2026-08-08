@@ -83,7 +83,11 @@ import {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
 } from '../../db/index.js';
 import { mintAccessToken } from './access-token.js';
-import { parseDevicePublicKey, verifyDeviceSignature } from './device-signature.js';
+import {
+  DevicePublicKeyError,
+  parseDevicePublicKey,
+  verifyDeviceSignature,
+} from './device-signature.js';
 
 import type { KeyObject } from 'node:crypto';
 
@@ -182,8 +186,53 @@ export type RefreshExchangeResult =
  */
 function burnFamily(db: BfmDb, token: RefreshTokenRecord, at: string): void {
   const killed = revokeRefreshTokenFamily(db, token.familyId, at);
+  // "not already revoked", not "live". `revokeRefreshTokenFamily` kills every
+  // row in the family whose `revokedAt` was null — spent ones included, which
+  // is the point of burning a lineage rather than a token. Calling that count
+  // "live" would overstate it to whoever is reading this during an incident.
   console.warn(
-    `[bfm-api] refresh-token reuse detected for device ${token.deviceId} — revoked family ${token.familyId} (${killed} live token(s)). This device must pair again.`
+    `[bfm-api] refresh-token reuse detected for device ${token.deviceId} — revoked family ${token.familyId} (${killed} token(s) that were not already revoked, spent ones included). This device must pair again.`
+  );
+}
+
+/**
+ * Does the caller hold the phone?
+ *
+ * Both ways of answering no collapse to `false`, because the exchange has one
+ * response for them and an operator has one question. They are told apart in
+ * the log, not on the wire.
+ *
+ * An unreadable stored key means this pillar's own data is wrong: pairing
+ * parses and re-encodes before it writes the column, so only a restore or a
+ * hand-edited file can produce one. It was tempting to let that throw and
+ * surface as a 500 — loud, and honest about whose fault it is. It is the wrong
+ * call, because of who each option strands. A 500 leaves the handset looping
+ * forever on a condition it cannot fix, on a status the contract does not
+ * declare. Answering `rejected` sends it to pair again, and pairing WRITES A
+ * FRESH PARSED KEY — so the recovery genuinely repairs the row rather than
+ * papering over it. The `console.error` is what keeps the operator informed,
+ * which is the only thing the 500 was really buying.
+ */
+function provesPossession(
+  device: DeviceRow,
+  nonce: string,
+  presentedHash: string,
+  signatureBase64: string
+): boolean {
+  let publicKey: KeyObject;
+  try {
+    publicKey = parseDevicePublicKey(device.publicKeyDer);
+  } catch (error) {
+    if (!(error instanceof DevicePublicKeyError)) throw error;
+    console.error(
+      `[bfm-api] device ${device.id} has a stored public key that no longer parses — refusing its refresh. Re-pair this device; the row is repaired by pairing. (${error.message})`
+    );
+    return false;
+  }
+  return verifyDeviceSignature(
+    publicKey,
+    refreshSignatureMessage(nonce, presentedHash),
+    Buffer.from(signatureBase64, 'base64')
   );
 }
 
@@ -255,15 +304,7 @@ export function completeRefreshExchange(
   if (screened.verdict === 'refused') return { outcome: screened.outcome };
   const { token: presented, device } = screened;
 
-  // Deliberately unguarded. `parseDevicePublicKey` throws only for a stored key
-  // that is not a P-256 SPKI key, and the pairing exchange parses and re-encodes
-  // before it writes the column — so reaching that throw means this pillar's own
-  // data is wrong, not that the request is. A 500 says so; catching it here
-  // would report a corrupt row to the handset as a rejected credential and send
-  // it to pair again, which cannot fix it.
-  const publicKey = parseDevicePublicKey(device.publicKeyDer);
-  const message = refreshSignatureMessage(input.nonce, presentedHash);
-  if (!verifyDeviceSignature(publicKey, message, Buffer.from(input.signature, 'base64'))) {
+  if (!provesPossession(device, input.nonce, presentedHash, input.signature)) {
     return { outcome: 'rejected' };
   }
 

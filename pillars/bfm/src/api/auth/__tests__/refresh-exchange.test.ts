@@ -300,6 +300,27 @@ describe('proof of possession', () => {
     expect(rowFor(handset.refreshToken).consumedAt).toBeNull();
   });
 
+  it('refuses when the STORED key no longer parses, and says so to the operator', () => {
+    // Only reachable through a restore or a hand-edited file: pairing parses
+    // and re-encodes before it writes the column. Answering `rejected` rather
+    // than letting the parse throw is what keeps the handset recoverable —
+    // pairing writes a fresh parsed key, so re-pairing repairs the row.
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const handset = pairHandset();
+    db()
+      .update(devices)
+      .set({ publicKeyDer: 'bm90LWEta2V5' })
+      .where(eq(devices.id, handset.deviceId))
+      .run();
+
+    expect(refreshWith(handset)).toEqual({ outcome: 'rejected' });
+
+    // The operator signal the 500 would have provided, without stranding the
+    // phone on a status the contract does not declare.
+    expect(error.mock.calls[0]?.[0]).toContain(handset.deviceId);
+    expect(error.mock.calls[0]?.[0]).toContain('no longer parses');
+  });
+
   it('refuses a signature that is not a signature at all', () => {
     // Malformed DER reaches the same 401 as a well-formed wrong one. A caller
     // able to choose between a 401 and a 500 with 40 arbitrary bytes would have
@@ -360,6 +381,21 @@ describe('reuse detection', () => {
     expect(rowFor(handset.refreshToken).revokedAt).not.toBeNull();
     expect(rowFor(first.refreshToken).revokedAt).not.toBeNull();
     expect(warn.mock.calls[0]?.[0]).toContain('reuse detected');
+  });
+
+  it('counts what it revoked without calling spent tokens live', () => {
+    // The count includes the CONSUMED predecessor — burning a lineage is the
+    // point — so describing it as "live tokens" would overstate it to whoever
+    // is reading this line during an incident.
+    const warn = captureWarnings();
+    const handset = pairHandset();
+    refreshWith(handset);
+
+    refreshWith(handset);
+
+    const line = String(warn.mock.calls[0]?.[0]);
+    expect(line).toContain('2 token(s) that were not already revoked');
+    expect(line).not.toContain('live token');
   });
 
   it('stops the successor working, which is the point of burning the family', () => {
