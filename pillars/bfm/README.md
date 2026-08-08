@@ -113,6 +113,7 @@ The gate runs _before_ the limiter, deliberately. Limiting first would let an
 anonymous flood exhaust the real operator's budget and lock them out of pairing
 — a denial of service handed to an unauthenticated caller. A test pins the
 ordering.
+
 ## The mobile shape
 
 `/mobile/finance/*` is a **mobile-shaped contract, not a proxy**. Three
