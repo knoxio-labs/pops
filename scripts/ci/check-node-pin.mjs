@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 /**
- * Node pin coherence guard (ADR-039 E34, alongside check-mise-tool-overrides).
+ * Node pin coherence guard — see [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md)
+ * on the toolchain pin, and `check-mise-tool-overrides.mjs` next door.
+ *
+ * Scope is the fleet-level pins only. A unit may still override `[tools] node`
+ * in its own `mise.toml` to trial or lag a bump — that escape hatch belongs to
+ * the sibling guard, and nothing here reads a unit config.
  *
  * The Node major is declared in five independent places, and nothing used to
  * make them agree:
