@@ -1,0 +1,19 @@
+[tools]
+xcodegen = "2.46.0"
+
+[tasks.generate]
+description = "Regenerate Pops.xcodeproj from project.yml"
+run = "xcodegen generate"
+
+[tasks.build]
+description = "Build the app for the iOS Simulator"
+depends = ["generate"]
+run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/platform=iOS Simulator' build"
+
+[tasks."build:packages"]
+description = "Type-check every package on the host toolchain, without Xcode"
+run = '''
+for package in Packages/*/; do
+  swift build --package-path "$package" || exit 1
+done
+'''
