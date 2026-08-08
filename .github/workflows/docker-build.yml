@@ -21,10 +21,16 @@ on:
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
 
-# Workflow-level filter keeps `Validate Docker builds` off docs/code-only
+# Workflow-level filter keeps the Docker validation off docs/code-only
 # PRs entirely. Per-pillar full images are also validated by the
 # `*-quality.yml` workflows — this job re-validates every Dockerfile +
 # compose surface in one place, gated on changes. (Theme 13 PRD-220.)
+#
+# One job per Dockerfile, in parallel. Building all fifteen in sequence
+# took ~12 minutes and was the long pole on every push, while each one
+# alone takes a minute or two — the work was never the problem, the queue
+# was. `fail-fast: false` so one broken Dockerfile does not hide the rest,
+# which is the whole point of validating them together.
 
 jobs:
   changes:
@@ -51,34 +57,51 @@ jobs:
               - 'infra/docker-compose*.yml'
               - '.github/workflows/docker-build.yml'
 
-  docker-build:
-    name: Validate Docker builds
+  discover:
+    name: Discover Dockerfiles
     runs-on: ubuntu-latest
     needs: [changes]
     if: always()
+    outputs:
+      dockerfiles: ${{ steps.list.outputs.dockerfiles }}
     steps:
-      - name: Skip — no relevant changes
-        if: github.event_name == 'pull_request' && needs.changes.outputs.relevant != 'true'
-        run: echo "No Docker-relevant changes detected — skipping"
-
       - uses: actions/checkout@v7
         if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
 
-      - name: Build app Dockerfiles + every pillar Dockerfile (builder stage)
-        if: github.event_name == 'push' || needs.changes.outputs.relevant == 'true'
-        # Pillars are discovered from disk (`pillars/<x>/Dockerfile`) rather
-        # than a static list, so adding or removing a pillar needs no edit
-        # here. The builder stage is enough to surface a broken Dockerfile;
-        # the `*-quality.yml` workflows + publish-images own the full image.
+      - name: List every pillar Dockerfile
+        id: list
+        # Discovered from disk rather than a static list, so adding or
+        # removing a pillar needs no edit here. An empty list is how a PR
+        # with no Docker-relevant changes skips the builds entirely.
         run: |
           set -euo pipefail
-          docker build --target builder -f pillars/shell/Dockerfile .
-          docker build --target builder -f pillars/mcp/Dockerfile .
-          for dockerfile in pillars/*/Dockerfile; do
-            echo "::group::build ${dockerfile}"
-            docker build --target builder -f "${dockerfile}" .
-            echo "::endgroup::"
-          done
+          if [ "${{ github.event_name }}" != "push" ] && \
+             [ "${{ needs.changes.outputs.relevant }}" != "true" ]; then
+            echo "No Docker-relevant changes detected — skipping"
+            echo 'dockerfiles=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          found=$(find pillars -maxdepth 2 -name Dockerfile | sort |
+            jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "found ${found}"
+          echo "dockerfiles=${found}" >> "$GITHUB_OUTPUT"
+
+  docker-build:
+    name: Validate Docker build
+    runs-on: ubuntu-latest
+    needs: [discover]
+    if: always() && needs.discover.outputs.dockerfiles != '[]' && needs.discover.outputs.dockerfiles != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: ${{ fromJson(needs.discover.outputs.dockerfiles) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The builder stage is enough to surface a broken Dockerfile; the
+      # `*-quality.yml` workflows + publish-images own the full image.
+      - name: Build ${{ matrix.dockerfile }} (builder stage)
+        run: docker build --target builder -f "${{ matrix.dockerfile }}" .
 
   compose-validate:
     name: Validate docker-compose
