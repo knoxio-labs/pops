@@ -1,13 +1,15 @@
 # @pops/bfm
 
-The **bfm** pillar — Backend-for-Mobile. It is the single backend the native
-iPhone client talks to: the client dials bfm and nothing else, and bfm fans out
-to the rest of the federation on its behalf. It listens on port **3014**.
+The **bfm** pillar — Backend-for-Mobile. It exists to be the one backend the
+native iPhone client dials, fanning out to the rest of the federation on the
+client's behalf so the client holds exactly one base URL and one credential.
+It listens on port **3014**.
 
-A data pillar by kind (ADR-035) — it will own device and token rows — but it
-ships no schema yet, so there is no `src/db/`, no `migrations/`, and `/health`
-is a pure liveness shape rather than a DB round-trip. Persistence is
-POPS-1366.
+Today it is a scaffold and serves `/health` alone. It owns no database, calls
+no sibling pillar (POPS-1367), and has no mobile surface (POPS-1378,
+POPS-1379) — so `/health` is a pure liveness shape rather than a DB round-trip,
+and there is no `src/db/` or `migrations/`. Device and token rows arrive with
+POPS-1366, which is what makes it a data pillar by kind (ADR-035).
 
 | Surface        | What it does                                                                       |
 | -------------- | ---------------------------------------------------------------------------------- |
