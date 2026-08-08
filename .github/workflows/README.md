@@ -58,11 +58,18 @@ against a healthy tree.** Everything above shares one shape — a check that
 looked fine precisely because it was never put in the state it was built for.
 The implicit check run was green on `main` while judging nothing. A premature
 `success` was green while seven workflows were still running. The wiring guard
-first threw a `TypeError` instead of reporting when `Quality` was renamed, and
-then matched only `paths:` at end-of-line, so it was blind to the inline
-`paths: ["**"]` form this repo already uses in `unit-quality.yml` — a filter
-added that way to `Quality` would have slipped straight past it. Green from a
-check that was never made to fail is not evidence.
+threw a `TypeError` instead of reporting when `Quality` was renamed. And it
+matched keys with regexes anchored at end-of-line, so every one of them was
+blind to an inline value or a trailing comment — including the
+`paths: ["**"] # …` form this repo already uses in `unit-quality.yml`, meaning a
+path filter added to `Quality` that way would have slipped straight past. Green
+from a check that was never made to fail is not evidence.
+
+Concretely, when matching YAML by text here: **never anchor a key match on
+end-of-line.** `key:`, `key: value` and `key: value # note` are all the same
+declaration, and a matcher that only accepts the first silently matches nothing
+and reports success. `matchKey` in the wiring guard is the single place that
+rule lives; route new checks through it rather than writing another regex.
 
 `scripts/ci/check-ci-gate-wiring.mjs` asserts the rules above, plus the
 trigger/`gated` agreement and that every gated name still resolves to a real

@@ -50,6 +50,42 @@ const repoRoot = resolve(here, '..', '..');
 export const ALWAYS_RUNNING_GATED_WORKFLOW = 'Quality';
 
 /**
+ * Read a YAML mapping key declared at an exact indent, returning its inline
+ * value (`''` when the value is a nested block).
+ *
+ * EVERY key match in this file goes through here, on purpose. Matching a key
+ * with a regex anchored at end-of-line — `/^ {4}paths:\s*$/` — silently sees
+ * only the block form and misses both `paths: ["**"]` and a trailing
+ * `# comment`, and this repo writes both (`unit-quality.yml` has
+ * `paths: ["**"] # main rebuilds via the changed-set`). A guard that quietly
+ * matches nothing reports green, which is the failure mode this whole file
+ * exists to prevent, so the anchoring rule is centralised rather than repeated.
+ *
+ * @param {string} line
+ * @param {number} indent Exact number of leading spaces the key must carry.
+ * @param {string} [key] Restrict to this key; any key when omitted.
+ * @returns {{ key: string, value: string } | undefined}
+ */
+export function matchKey(line, indent, key) {
+  const match = new RegExp(`^ {${indent}}([A-Za-z0-9_-]+):(.*)$`, 'u').exec(line);
+  if (!match) return undefined;
+  if (key !== undefined && match[1] !== key) return undefined;
+  return { key: match[1], value: stripComment(match[2]).trim() };
+}
+
+/**
+ * Drop a YAML trailing comment. A `#` opens one only at line start or after
+ * whitespace, so `node:24#5` keeps its hash.
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+function stripComment(raw) {
+  const at = raw.search(/(^|\s)#/u);
+  return at === -1 ? raw : raw.slice(0, at);
+}
+
+/**
  * Read the `on.workflow_run.workflows:` sequence from a workflow source.
  *
  * @param {string} source
@@ -57,14 +93,14 @@ export const ALWAYS_RUNNING_GATED_WORKFLOW = 'Quality';
  */
 export function parseWorkflowRunTriggers(source) {
   const lines = source.split('\n');
-  const start = lines.findIndex((line) => /^\s{4}workflows:\s*$/u.test(line));
+  const start = lines.findIndex((line) => matchKey(line, 4, 'workflows') !== undefined);
   if (start === -1) return [];
   /** @type {string[]} */
   const names = [];
   for (const line of lines.slice(start + 1)) {
-    const item = /^\s{6}-\s*(.+?)\s*$/u.exec(line);
+    const item = /^ {6}-\s*(.+?)\s*$/u.exec(line);
     if (!item) break;
-    names.push(unquote(item[1]));
+    names.push(unquote(stripComment(item[1]).trim()));
   }
   return names;
 }
@@ -106,28 +142,27 @@ function unquote(raw) {
  * @returns {string | undefined}
  */
 export function parseWorkflowName(source) {
-  const match = /^name:\s*(.+?)\s*$/mu.exec(source);
-  return match ? unquote(match[1]) : undefined;
+  for (const line of source.split('\n')) {
+    const match = matchKey(line, 0, 'name');
+    if (match) return unquote(match.value);
+  }
+  return undefined;
 }
 
 /**
  * True when the workflow's `pull_request:` trigger narrows to a path filter —
  * which would stop it running on docs-only PRs.
  *
- * Matches the block form (`paths:` then a sequence) and the inline form
- * (`paths: ["**"] # …`), which this repo already uses in `unit-quality.yml`.
- * Anchoring on end-of-line would see only the first and miss the second.
- *
  * @param {string} source
  * @returns {boolean}
  */
 export function hasPullRequestPathFilter(source) {
   const lines = source.split('\n');
-  const start = lines.findIndex((line) => /^\s{2}pull_request:\s*$/u.test(line));
+  const start = lines.findIndex((line) => matchKey(line, 2, 'pull_request') !== undefined);
   if (start === -1) return false;
   for (const line of lines.slice(start + 1)) {
-    if (/^\s{0,2}\S/u.test(line)) break;
-    if (/^\s{4}paths(-ignore)?:/u.test(line)) return true;
+    if (matchKey(line, 0) !== undefined || matchKey(line, 2) !== undefined) break;
+    if (matchKey(line, 4, 'paths') ?? matchKey(line, 4, 'paths-ignore')) return true;
   }
   return false;
 }
@@ -140,19 +175,29 @@ export function hasPullRequestPathFilter(source) {
  * @returns {string[]}
  */
 export function findContinueOnErrorJobs(source) {
-  const lines = source.split('\n');
   /** @type {string[]} */
   const found = [];
   let job;
-  for (const line of lines) {
-    const jobKey = /^ {2}([A-Za-z0-9_-]+):\s*$/u.exec(line);
+  for (const line of source.split('\n')) {
+    const jobKey = matchKey(line, 2);
     if (jobKey) {
-      job = jobKey[1];
+      job = jobKey.key;
       continue;
     }
-    if (job && /^ {4}continue-on-error:\s*true\s*$/u.test(line)) found.push(job);
+    const flag = matchKey(line, 4, 'continue-on-error');
+    if (job !== undefined && flag?.value === 'true') found.push(job);
   }
   return found;
+}
+
+/**
+ * True when the workflow grants `permissions: checks: write`.
+ *
+ * @param {string} source
+ * @returns {boolean}
+ */
+export function grantsChecksWrite(source) {
+  return source.split('\n').some((line) => matchKey(line, 2, 'checks')?.value === 'write');
 }
 
 /**
@@ -223,7 +268,7 @@ export function checkCiGateWiring(root) {
         'verdict never appears on the pull request it judges.'
     );
   }
-  if (!/^\s{2}checks:\s*write\s*$/mu.test(gateSource)) {
+  if (!grantsChecksWrite(gateSource)) {
     violations.push('ci-gate.yml needs `permissions: checks: write` to publish its check run.');
   }
   if (
@@ -300,31 +345,44 @@ function main() {
   process.exit(1);
 }
 
-/** @returns {boolean} */
+/**
+ * Every case here carries a trailing comment or an inline value, because
+ * end-of-line anchoring is the one mistake this file keeps having to unlearn.
+ *
+ * @returns {boolean}
+ */
 function selfTest() {
   const triggers = parseWorkflowRunTriggers(
     [
       'on:',
       '  workflow_run:',
-      '    workflows:',
+      '    workflows: # the gated eight',
       '      - "A"',
-      '      - "B"',
+      '      - "B" # slowest',
       '    types: [x]',
     ].join('\n')
   );
   const gated = parseGatedArray('const gated = [\n  "A",\n  "B",\n];\n');
-  const advisory = findContinueOnErrorJobs('jobs:\n  lint:\n    continue-on-error: true\n');
-  const filtered = hasPullRequestPathFilter('on:\n  pull_request:\n    paths:\n      - "a/**"\n');
+  const advisory = findContinueOnErrorJobs(
+    'jobs:\n  lint: # tidy\n    continue-on-error: true # flaky\n'
+  );
+  const filtered = hasPullRequestPathFilter(
+    'on:\n  pull_request: # every PR\n    paths: ["**"] # inline\n'
+  );
   const unfiltered = hasPullRequestPathFilter(
     'on:\n  pull_request:\n  push:\n    paths:\n      - "a"\n'
   );
+  const named = parseWorkflowName('name: Quality # the big one\n');
+  const writes = grantsChecksWrite('permissions:\n  checks: write # publishes the verdict\n');
 
   const ok =
     triggers.join() === 'A,B' &&
     gated.join() === 'A,B' &&
     advisory.join() === 'lint' &&
     filtered &&
-    !unfiltered;
+    !unfiltered &&
+    named === 'Quality' &&
+    writes;
   if (!ok) console.error('self-test FAILED');
   return ok;
 }
