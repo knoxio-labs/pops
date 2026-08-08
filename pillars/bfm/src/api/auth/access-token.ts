@@ -37,25 +37,35 @@ export const ACCESS_TOKEN_ALGORITHM = 'HS256' as const;
 export const ACCESS_TOKEN_TTL_SECONDS = 600;
 
 /**
- * Pins what kind of token this is, so a signature check can never be mistaken
- * for a purpose check.
+ * The JWT `typ` header, pinning what kind of token this is so a signature
+ * check can never be mistaken for a purpose check.
  *
- * Nothing else is signed with this key today. The claim is here because the
- * cost of adding it later is a flag day: every live token would have to keep
- * verifying without it, which is the same as not having it. At ten-minute
- * lifetimes the cost of having it from the start is nothing.
+ * The header rather than a payload claim, for two reasons. `typ` is a
+ * spec-defined header parameter (RFC 7519 §5.1) and a payload claim of the
+ * same name would shadow it for every reader and every tool; and RFC 9068
+ * puts exactly this on JWT access tokens, as `at+jwt`. The value here is
+ * bfm-specific so a token minted by some other service could never be
+ * mistaken for one of these even if it shared the key.
+ *
+ * Trusting the header is safe: it is part of the JWS signing input, so
+ * altering it invalidates the signature. It is not an extension of trust to
+ * `alg`, which is pinned separately and independently below.
+ *
+ * Nothing else is signed with this key today. It is here from the start
+ * because adding it later is a flag day — every live token would have to keep
+ * verifying without it, which is the same as not having it.
  */
-export const ACCESS_TOKEN_TYPE = 'bfm-access' as const;
+export const ACCESS_TOKEN_TYPE = 'bfm-at+jwt' as const;
 
 /**
- * The whole claim set. Four fields, three of them registered: this rides on
- * every request over cellular, and anything a handler needs beyond the device
- * id can be read from the device row the guard already loads.
+ * The whole payload: the device id, an issued-at and an expiry. All three are
+ * registered claims and there are no private ones, because this rides on every
+ * request over cellular and anything a handler needs beyond the device id can
+ * be read from the device row the guard already loads.
  */
 export interface AccessTokenClaims {
   /** The `devices.id` this token speaks for. */
   sub: string;
-  typ: typeof ACCESS_TOKEN_TYPE;
   /** Seconds since the epoch. */
   iat: number;
   /** Seconds since the epoch. */
@@ -93,10 +103,11 @@ export function mintAccessToken(deviceId: string, signingKey: KeyObject): Minted
   if (deviceId.trim() === '') {
     throw new AccessTokenError('[bfm-api] refusing to mint an access token without a device id');
   }
-  const token = jwt.sign({ typ: ACCESS_TOKEN_TYPE }, signingKey, {
+  const token = jwt.sign({}, signingKey, {
     algorithm: ACCESS_TOKEN_ALGORITHM,
     subject: deviceId,
     expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+    header: { alg: ACCESS_TOKEN_ALGORITHM, typ: ACCESS_TOKEN_TYPE },
   });
   return { token, expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS };
 }
@@ -112,17 +123,14 @@ function narrowClaims(payload: unknown): AccessTokenClaims {
   if (payload === null || typeof payload !== 'object') {
     throw new AccessTokenError('[bfm-api] access token payload is not an object');
   }
-  const { sub, typ, iat, exp } = payload as Record<string, unknown>;
+  const { sub, iat, exp } = payload as Record<string, unknown>;
   if (typeof sub !== 'string' || sub === '') {
     throw new AccessTokenError('[bfm-api] access token carries no device id');
-  }
-  if (typ !== ACCESS_TOKEN_TYPE) {
-    throw new AccessTokenError('[bfm-api] token is not an access token');
   }
   if (typeof iat !== 'number' || typeof exp !== 'number') {
     throw new AccessTokenError('[bfm-api] access token carries no issued-at or expiry');
   }
-  return { sub, typ, iat, exp };
+  return { sub, iat, exp };
 }
 
 /**
@@ -132,13 +140,20 @@ function narrowClaims(payload: unknown): AccessTokenClaims {
  * The token itself is never interpolated into it.
  */
 export function verifyAccessToken(token: string, signingKey: KeyObject): AccessTokenClaims {
-  let payload: unknown;
+  let verified: jwt.Jwt;
   try {
-    payload = jwt.verify(token, signingKey, { algorithms: [ACCESS_TOKEN_ALGORITHM] });
+    verified = jwt.verify(token, signingKey, {
+      algorithms: [ACCESS_TOKEN_ALGORITHM],
+      // `complete` so the signed header is available to check `typ` against.
+      complete: true,
+    });
   } catch (error) {
     throw new AccessTokenError(
       `[bfm-api] access token rejected: ${error instanceof Error ? error.message : String(error)}`
     );
   }
-  return narrowClaims(payload);
+  if (verified.header.typ !== ACCESS_TOKEN_TYPE) {
+    throw new AccessTokenError('[bfm-api] token is not a bfm access token');
+  }
+  return narrowClaims(verified.payload);
 }

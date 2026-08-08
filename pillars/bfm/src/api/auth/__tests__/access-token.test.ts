@@ -36,16 +36,19 @@ describe('mintAccessToken', () => {
   it('produces a token that verifies and names the device', () => {
     const { token } = mintAccessToken(DEVICE_ID, signingKey);
 
-    expect(verifyAccessToken(token, signingKey)).toMatchObject({
-      sub: DEVICE_ID,
-      typ: ACCESS_TOKEN_TYPE,
-    });
+    expect(verifyAccessToken(token, signingKey)).toMatchObject({ sub: DEVICE_ID });
   });
 
   it('pins HS256 in the header rather than letting the library pick', () => {
     const { token } = mintAccessToken(DEVICE_ID, signingKey);
 
     expect(decodedHeader(token)['alg']).toBe('HS256');
+  });
+
+  it('stamps the bfm-specific token type in the header, RFC 9068 style', () => {
+    const { token } = mintAccessToken(DEVICE_ID, signingKey);
+
+    expect(decodedHeader(token)['typ']).toBe(ACCESS_TOKEN_TYPE);
   });
 
   it('expires in minutes, not hours', () => {
@@ -57,11 +60,13 @@ describe('mintAccessToken', () => {
     expect(ACCESS_TOKEN_TTL_SECONDS).toBeLessThanOrEqual(30 * 60);
   });
 
-  it('carries nothing beyond the four claims the guard reads', () => {
+  it('carries the three registered claims and no private ones', () => {
+    // The token rides on every request over cellular; the ticket's claim set
+    // is the device id, an issued-at and an expiry, and this pins it.
     const { token } = mintAccessToken(DEVICE_ID, signingKey);
 
     const payload = jwt.decode(token);
-    expect(Object.keys(payload as object).toSorted()).toEqual(['exp', 'iat', 'sub', 'typ']);
+    expect(Object.keys(payload as object).toSorted()).toEqual(['exp', 'iat', 'sub']);
   });
 
   it('refuses to mint a token that names no device', () => {
@@ -122,11 +127,12 @@ describe('verifyAccessToken', () => {
     // The classic bypass: strip the signature, claim the algorithm is `none`,
     // and hope the verifier trusts the header.
     const forged = `${[
-      Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' }), 'utf8').toString('base64url'),
+      Buffer.from(JSON.stringify({ alg: 'none', typ: ACCESS_TOKEN_TYPE }), 'utf8').toString(
+        'base64url'
+      ),
       Buffer.from(
         JSON.stringify({
           sub: DEVICE_ID,
-          typ: ACCESS_TOKEN_TYPE,
           iat: Math.floor(Date.now() / 1000),
           exp: Math.floor(Date.now() / 1000) + 3600,
         }),
@@ -138,10 +144,11 @@ describe('verifyAccessToken', () => {
   });
 
   it('rejects a token whose header claims a stronger HMAC than we pin', () => {
-    const forged = jwt.sign({ typ: ACCESS_TOKEN_TYPE }, signingKey, {
+    const forged = jwt.sign({}, signingKey, {
       algorithm: 'HS512',
       subject: DEVICE_ID,
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+      header: { alg: 'HS512', typ: ACCESS_TOKEN_TYPE },
     });
 
     expect(() => verifyAccessToken(forged, signingKey)).toThrow(AccessTokenError);
@@ -149,10 +156,11 @@ describe('verifyAccessToken', () => {
 
   it('rejects an RS256 token, the HS-versus-RS confusion case', () => {
     const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-    const forged = jwt.sign({ typ: ACCESS_TOKEN_TYPE }, privateKey, {
+    const forged = jwt.sign({}, privateKey, {
       algorithm: 'RS256',
       subject: DEVICE_ID,
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+      header: { alg: 'RS256', typ: ACCESS_TOKEN_TYPE },
     });
 
     expect(() => verifyAccessToken(forged, signingKey)).toThrow(AccessTokenError);
@@ -161,28 +169,36 @@ describe('verifyAccessToken', () => {
   it('rejects a correctly signed token that carries no expiry', () => {
     // `jwt.verify` treats `exp` as optional, so without an explicit check this
     // is a permanent credential.
-    const forged = jwt.sign({ typ: ACCESS_TOKEN_TYPE, sub: DEVICE_ID }, signingKey, {
+    const forged = jwt.sign({ sub: DEVICE_ID }, signingKey, {
       algorithm: 'HS256',
       noTimestamp: true,
+      header: { alg: 'HS256', typ: ACCESS_TOKEN_TYPE },
     });
 
     expect(() => verifyAccessToken(forged, signingKey)).toThrow(AccessTokenError);
   });
 
-  it('rejects a correctly signed token of another kind', () => {
-    const forged = jwt.sign({ typ: 'bfm-refresh' }, signingKey, {
+  it.each([
+    ['another bfm token kind', 'bfm-refresh+jwt'],
+    ['the library default, which every other JWT in the world carries', 'JWT'],
+  ])('rejects a correctly signed token typed as %s', (_label, typ) => {
+    // A signature check is not a purpose check. Whatever else this key ever
+    // signs, only a token stamped as an access token gets past the guard.
+    const forged = jwt.sign({}, signingKey, {
       algorithm: 'HS256',
       subject: DEVICE_ID,
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+      header: { alg: 'HS256', typ },
     });
 
     expect(() => verifyAccessToken(forged, signingKey)).toThrow(AccessTokenError);
   });
 
   it('rejects a correctly signed token that names no device', () => {
-    const forged = jwt.sign({ typ: ACCESS_TOKEN_TYPE, sub: '' }, signingKey, {
+    const forged = jwt.sign({ sub: '' }, signingKey, {
       algorithm: 'HS256',
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+      header: { alg: 'HS256', typ: ACCESS_TOKEN_TYPE },
     });
 
     expect(() => verifyAccessToken(forged, signingKey)).toThrow(AccessTokenError);
