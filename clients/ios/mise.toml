@@ -110,21 +110,36 @@ fi
 echo "Release build names no BFM host."
 '''
 
-# The one entry point. CI runs this exact task, not a hand-copied pair of
-# commands, because the moment the two are written out separately they drift and
-# a green local run stops meaning anything.
-[tasks.lint]
-description = "swift-format + SwiftLint over the Swift sources — what CI runs"
+# swift-format, in whichever of its two modes. Both go through here so the check
+# and the fix cannot disagree about which files they cover or which config they
+# read. `xcrun` rather than a bare name: swift-format ships inside the Xcode
+# toolchain and is not otherwise on PATH.
+[tasks."swift-format"]
+description = "swift-format over the Swift sources — `lint` to check, `format` to rewrite"
+hide = true
+usage = 'arg "<mode>"'
 run = '''
 set -u
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
 
-# `swift-format --recursive` exits 0 when a path it was given does not exist,
-# and again when it exists but holds no Swift files. Renaming a directory would
-# therefore turn the formatter into a no-op that reports success. Verified
-# against swift-format from Xcode 27; count first, and refuse to pass on zero.
-count="$(find $SWIFT_SOURCES -name '*.swift' -not -path '*/.build/*' | wc -l | tr -d ' ')"
-if [ "${count:-0}" -eq 0 ]; then
-  echo "lint: no Swift sources under '$SWIFT_SOURCES' — SWIFT_SOURCES is stale." >&2
+# The file set, enumerated rather than left to `--recursive`. swift-format walks
+# past dot-directories on its own today, so `.build` happens not to be visited —
+# but the failure mode if that ever changes is `format` rewriting SwiftPM's
+# dependency checkouts in place, which is not a bet worth taking to save a
+# `find`. Naming the exclusion also keeps this honest against `.swiftlint.yml`,
+# which excludes `.build` explicitly; the two now describe the same set.
+# `|| true` so a missing directory falls through to the check below rather than
+# aborting on find's exit status — mise runs task scripts under errexit, and the
+# bare find would kill the task before the message that explains it.
+find $SWIFT_SOURCES -name '*.swift' -not -path '*/.build/*' -print0 > "$work/sources" || true
+
+# swift-format exits 0 when handed a path that does not exist, and again when a
+# directory holds no Swift files — no message either time. A renamed directory
+# would therefore turn both modes into no-ops that report success. Verified
+# against swift-format from Xcode 27.
+if [ ! -s "$work/sources" ]; then
+  echo "swift-format: no Swift sources under '$SWIFT_SOURCES' — SWIFT_SOURCES is stale." >&2
   exit 1
 fi
 
@@ -132,28 +147,41 @@ fi
 # them, so a rule the file does not name is a rule that is off. A toolchain bump
 # that introduced one would disable it silently while the config still looked
 # complete. Compare what this swift-format ships against what the file lists and
-# refuse to lint on a mismatch; the fix is to add the rule, deliberately, with a
+# refuse to run on a mismatch; the fix is to add the rule, deliberately, with a
 # reason next to it.
-work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
 xcrun swift-format dump-configuration | jq -r '.rules | keys[]' > "$work/shipped"
 xcrun swift-format dump-configuration --effective | jq -r '.rules | keys[]' > "$work/listed"
 if ! diff -u "$work/shipped" "$work/listed" > "$work/drift"; then
-  echo "lint: .swift-format does not list every rule this swift-format ships." >&2
+  echo "swift-format: .swift-format does not list every rule this toolchain ships." >&2
   echo "      '-' shipped but unlisted (silently off); '+' listed but withdrawn." >&2
   sed -n '4,$p' "$work/drift" >&2
   exit 1
 fi
 
+case "$usage_mode" in
+  lint) xargs -0 xcrun swift-format lint --strict --parallel < "$work/sources" ;;
+  format) xargs -0 xcrun swift-format format --in-place --parallel < "$work/sources" ;;
+  *)
+    echo "swift-format: unknown mode '$usage_mode' — expected 'lint' or 'format'." >&2
+    exit 1
+    ;;
+esac
+'''
+
+# The one entry point. CI runs this exact task, not a hand-copied pair of
+# commands, because the moment the two are written out separately they drift and
+# a green local run stops meaning anything.
+[tasks.lint]
+description = "swift-format + SwiftLint over the Swift sources — what CI runs"
+run = '''
+set -u
 # Both run even when the first fails, so one invocation reports every problem.
-# `xcrun` rather than a bare name: swift-format ships inside the Xcode
-# toolchain and is not otherwise on PATH.
 status=0
-xcrun swift-format lint --strict --parallel --recursive $SWIFT_SOURCES || status=1
+mise run swift-format lint || status=1
 swiftlint lint --strict --quiet || status=1
 exit $status
 '''
 
 [tasks.format]
-description = "Rewrite the Swift sources with swift-format (the fixer for `lint`)"
-run = "xcrun swift-format format --in-place --parallel --recursive $SWIFT_SOURCES"
+description = "Rewrite the Swift sources with swift-format (the fixer for half of `lint`)"
+run = "mise run swift-format format"

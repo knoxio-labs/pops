@@ -64,7 +64,11 @@
   "orderedImports": { "includeConditionalImports": false, "shouldGroupImports": true },
 
   "rules": {
-    // ---- Layout and literal form: this tool's actual job. All on. ----
+    // ---- Mechanical rewrites: this tool's actual job. All on. ----
+    // Layout, literal form, and the two access-level normalisations that are
+    // pure rewrites — `fileprivate` to `private` where they already mean the
+    // same thing, and an extension's access level pushed down onto its members
+    // rather than left implicit on the extension.
     "AlwaysUseLiteralForEmptyCollectionInit": true,
     "DoNotUseSemicolons": true,
     "FileScopedDeclarationPrivacy": true,
