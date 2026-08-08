@@ -23,11 +23,11 @@ Requires an iOS 27 SDK. `mise install` here pins XcodeGen; Xcode itself is not m
 ## Linting and formatting
 
 ```bash
-mise run lint     # what CI runs, byte for byte
+mise run lint     # both tools; the single command the CI job will invoke
 mise run format   # rewrites the sources; the fixer for the half of `lint` that has one
 ```
 
-`mise run lint` is a single task rather than a documented pair of commands on purpose: CI invokes this task, so there is no second copy to drift from. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
+`mise run lint` is a single task rather than a documented pair of commands on purpose. The iOS CI job (POPS-1376, not yet written) is meant to invoke this task and nothing else, so that there is never a second copy of the command to drift from — a hand-copied pair in a workflow file is how a green local run stops meaning anything. It runs two tools, both of them, even when the first has already failed, so one run tells you everything.
 
 They divide the work along a line worth knowing before adding a rule to either: **`.swift-format` owns what the code looks like** and rewrites it; **`.swiftlint.yml` owns what the code may do** and rewrites nothing. A defect belongs to exactly one of them, and where both had an opinion the loser was switched off rather than left to report the same thing twice.
 

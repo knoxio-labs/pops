@@ -123,21 +123,31 @@ set -u
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+# Every root, checked individually and before anything else. Checking only the
+# combined result is not enough: with two roots and one of them renamed, `find`
+# still returns the other's files, so a non-empty result would say "fine" while
+# an entire directory went unlinted. Each root is asserted by name so the
+# message names the one that moved.
+for root in $SWIFT_SOURCES; do
+  if [ ! -d "$root" ]; then
+    echo "swift-format: '$root' from SWIFT_SOURCES is not a directory." >&2
+    exit 1
+  fi
+done
+
 # The file set, enumerated rather than left to `--recursive`. swift-format walks
 # past dot-directories on its own today, so `.build` happens not to be visited —
 # but the failure mode if that ever changes is `format` rewriting SwiftPM's
 # dependency checkouts in place, which is not a bet worth taking to save a
 # `find`. Naming the exclusion also keeps this honest against `.swiftlint.yml`,
-# which excludes `.build` explicitly; the two now describe the same set.
-# `|| true` so a missing directory falls through to the check below rather than
-# aborting on find's exit status — mise runs task scripts under errexit, and the
-# bare find would kill the task before the message that explains it.
-find $SWIFT_SOURCES -name '*.swift' -not -path '*/.build/*' -print0 > "$work/sources" || true
+# which excludes `.build` explicitly; the two now describe the same set. `-prune`
+# rather than a path filter, so a large checkout is skipped rather than walked.
+find $SWIFT_SOURCES -name '.build' -type d -prune -o -name '*.swift' -print0 > "$work/sources"
 
-# swift-format exits 0 when handed a path that does not exist, and again when a
-# directory holds no Swift files — no message either time. A renamed directory
-# would therefore turn both modes into no-ops that report success. Verified
-# against swift-format from Xcode 27.
+# The roots exist by now, so an empty result means they hold no Swift at all.
+# swift-format exits 0 both on a path that does not exist and on one with
+# nothing to check — no message either time — so without this the tools would
+# report success having read nothing. Verified against swift-format from Xcode 27.
 if [ ! -s "$work/sources" ]; then
   echo "swift-format: no Swift sources under '$SWIFT_SOURCES' — SWIFT_SOURCES is stale." >&2
   exit 1
@@ -168,11 +178,11 @@ case "$usage_mode" in
 esac
 '''
 
-# The one entry point. CI runs this exact task, not a hand-copied pair of
-# commands, because the moment the two are written out separately they drift and
-# a green local run stops meaning anything.
+# The one entry point. The iOS CI job does not exist yet; when it does it is to
+# invoke this task rather than restate the commands, because the moment the two
+# are written out separately they drift and a green local run means nothing.
 [tasks.lint]
-description = "swift-format + SwiftLint over the Swift sources — what CI runs"
+description = "swift-format + SwiftLint over the Swift sources"
 run = '''
 set -u
 # Both run even when the first fails, so one invocation reports every problem.
