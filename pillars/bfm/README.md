@@ -151,6 +151,36 @@ Rotate by minting a replacement, swapping the file, restarting, and only then
 revoking the old id (`POST /service-accounts/:id/revoke`) — in that order,
 since revocation takes effect on the next request.
 
+## Deployment
+
+`Dockerfile` builds a two-stage image scoped to the `@pops/bfm` subgraph —
+`@pops/pillar-sdk` and `@pops/types` today. Adding a workspace dependency to
+`package.json` without adding it to both COPY phases breaks this image and
+nothing else; no local check catches it, only the Docker Build CI job.
+
+The `bfm-api` service in both compose files mounts **`pops-bfm-data`**, not the
+shared `sqlite-data` every other pillar API writes to. bfm is greenfield, so it
+starts where ADR-039 workstream S11 wants the fleet to end up, and that makes
+`bfm-litestream` the one sidecar replicating a database something writes.
+`infra/litestream/bfm.yml` targets `/data/sqlite/bfm.db`, which is where
+`BFM_SQLITE_PATH` points the container — check the pair together when either
+moves, because a stream aimed at a path nothing writes reports success forever.
+
+`depends_on: registry-api` is `service_started`, never `service_healthy`.
+Registration is already non-blocking, so gating the container on the registry's
+health would turn a slow registry into a fleet cold-start failure and buy
+nothing.
+
+The service-account key arrives as a Docker file-based secret at
+`/run/secrets/pops_bfm_api_key`, named by `POPS_INTERNAL_API_KEY_FILE` — a
+path, never the value, so the credential stays out of the process environment
+and out of `docker inspect`. Provisioning:
+[`infra/secrets.example/bfm/README.md`](../../infra/secrets.example/bfm/README.md).
+
+Not here: the nginx route and the compiled pillar roster (POPS-1386), and the
+Cloudflare hostname with Access bypassed (POPS-1389). The BFM's public entry
+point is that hostname rather than the shell's proxy.
+
 ## Layout
 
 ```

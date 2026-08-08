@@ -26,7 +26,7 @@ on:
 # `*-quality.yml` workflows — this job re-validates every Dockerfile +
 # compose surface in one place, gated on changes. (Theme 13 PRD-220.)
 #
-# One job per Dockerfile, in parallel. Building all fifteen in sequence
+# One job per Dockerfile, in parallel. Building all sixteen in sequence
 # took ~12 minutes and was the long pole on every push, while each one
 # alone takes a minute or two — the work was never the problem, the queue
 # was. `fail-fast: false` so one broken Dockerfile does not hide the rest,
