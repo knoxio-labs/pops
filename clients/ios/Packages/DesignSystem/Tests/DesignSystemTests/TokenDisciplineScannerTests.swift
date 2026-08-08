@@ -171,4 +171,69 @@ internal struct TokenDisciplineScannerTests {
 
         #expect(violations.map(\.file) == ["Extra/\(duplicatedRoot)/Nested.swift"])
     }
+
+    /// `swiftFiles` used to ask `enumerator(at:)` for a walker and, on `nil`,
+    /// report the directory as missing regardless of the real cause — `nil`
+    /// carries no error of its own to check. A directory that exists but
+    /// cannot be listed proves the two are different: this one has to fail
+    /// loudly rather than read as "not found".
+    @Test("a directory that cannot be listed fails loudly, not as missing")
+    func unlistableDirectoryPropagatesTheRealError() throws {
+        let directory = URL(filePath: NSTemporaryDirectory())
+            .appending(path: "unlistable-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: directory.path)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o000], ofItemAtPath: directory.path)
+
+        #expect(throws: (any Error).self) {
+            try TokenDisciplineScanner.swiftFiles(under: directory)
+        }
+    }
+
+    /// A directory that never existed is the one case `swiftFiles` is allowed
+    /// to have an opinion about beyond "something went wrong" — proving it
+    /// still throws, now via the up-front existence check rather than the
+    /// old hard-coded guess.
+    @Test("a directory that was never there throws rather than reporting no source")
+    func missingDirectoryThrows() {
+        let missing = URL(filePath: NSTemporaryDirectory())
+            .appending(path: "missing-\(UUID().uuidString)")
+
+        #expect(throws: (any Error).self) {
+            try TokenDisciplineScanner.swiftFiles(under: missing)
+        }
+    }
+
+    /// The failure `errorHandler` exists to catch: without it, `enumerator`
+    /// stops silently at the first fault it hits and the walk looks
+    /// identical to one that finished cleanly — a `Visible.swift` sitting
+    /// next to the blocked subdirectory would still be found, so a scan that
+    /// quietly lost everything under `Blocked/` would report success.
+    @Test("a fault partway through the walk fails loudly, not as a truncated scan")
+    func midWalkFaultPropagates() throws {
+        let root = URL(filePath: NSTemporaryDirectory())
+            .appending(path: "walkfault-\(UUID().uuidString)")
+        let blocked = root.appending(path: "Blocked")
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: blocked.path)
+            try? FileManager.default.removeItem(at: root)
+        }
+        try FileManager.default.createDirectory(at: blocked, withIntermediateDirectories: true)
+        try "let ok = true\n"
+            .write(to: root.appending(path: "Visible.swift"), atomically: true, encoding: .utf8)
+        try "let ok = true\n"
+            .write(to: blocked.appending(path: "Hidden.swift"), atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o000], ofItemAtPath: blocked.path)
+
+        #expect(throws: (any Error).self) {
+            try TokenDisciplineScanner.swiftFiles(under: root)
+        }
+    }
 }

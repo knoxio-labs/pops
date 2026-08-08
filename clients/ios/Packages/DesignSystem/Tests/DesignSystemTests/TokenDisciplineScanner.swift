@@ -62,6 +62,22 @@ internal enum TokenDisciplineScanner {
     /// way `scripts/swift-sources.sh` and `.swiftlint.yml` spell it.
     static let generatedDirectoryName = "Generated"
 
+    /// Whether `error` means "the path in question does not exist", as
+    /// opposed to a permission or IO fault encountered while checking.
+    ///
+    /// `.fileReadNoSuchFile` is the direct case. The other is asking about a
+    /// path *underneath* an entry that turns out not to be a directory at
+    /// all — a stray file where a module was expected — which `stat` reports
+    /// as `ENOTDIR`, not "no such file", even though the honest answer is
+    /// the same "no". Anything else is a real fault and has to propagate as
+    /// one; this is the one place that distinction is made, so every caller
+    /// that has to draw it calls here instead of re-deriving it.
+    static func meansPathDoesNotExist(_ error: Error) -> Bool {
+        if case CocoaError.fileReadNoSuchFile = error { return true }
+        let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
+        return underlying?.domain == NSPOSIXErrorDomain && underlying?.code == Int(ENOTDIR)
+    }
+
     /// Every hand-written `.swift` file under `directory`, sorted for a stable
     /// report.
     ///
@@ -73,11 +89,28 @@ internal enum TokenDisciplineScanner {
     /// only because `scripts/swift-sources.sh check` fails on hand-written code
     /// inside a `Generated` directory, so this cannot become somewhere to hide.
     static func swiftFiles(under directory: URL) throws -> [URL] {
+        // `enumerator(at:)` returns `nil` for more than one reason, and `nil`
+        // carries no error to tell them apart — the ambiguity `try?` caused
+        // elsewhere in this scan, reached a different way. Asking the
+        // filesystem directly first trades that guess for the real error.
+        _ = try FileManager.default.attributesOfItem(atPath: directory.path)
+
+        // Without an `errorHandler`, a fault partway through the walk — a
+        // permission-denied subdirectory two levels down, say — stops
+        // enumeration with no signal at all: the scan looks identical to one
+        // that reached the end cleanly. Capturing the error here and
+        // rethrowing after the walk is what turns that silence into a
+        // failure.
+        var walkError: Error?
         guard
             let walker = FileManager.default.enumerator(
-                at: directory, includingPropertiesForKeys: nil)
+                at: directory, includingPropertiesForKeys: nil,
+                errorHandler: { _, error in
+                    walkError = error
+                    return false
+                })
         else {
-            throw CocoaError(.fileNoSuchFile)
+            throw CocoaError(.fileReadUnknown)
         }
         var files: [URL] = []
         for element in walker {
@@ -91,6 +124,7 @@ internal enum TokenDisciplineScanner {
             else { continue }
             files.append(file)
         }
+        if let walkError { throw walkError }
         return files.sorted { $0.path < $1.path }
     }
 

@@ -32,22 +32,6 @@ internal struct TokenDisciplineTests {
         let violations: [TokenDisciplineScanner.Violation]
     }
 
-    /// Whether `error` means "the path in question does not exist", as
-    /// opposed to a permission or IO fault that happened while checking.
-    ///
-    /// `.fileReadNoSuchFile` is the direct case. The other is asking for a
-    /// path *underneath* an entry that turns out not to be a directory at
-    /// all — `loose.txt/Package.swift` for a stray file sitting in
-    /// `Packages/` — which `stat` reports as `ENOTDIR`, not "no such file",
-    /// even though the honest answer is the same "no" a real module scan
-    /// would give a plain file. Anything else is a real fault and has to
-    /// propagate as one.
-    private static func meansPathDoesNotExist(_ error: Error) -> Bool {
-        if case CocoaError.fileReadNoSuchFile = error { return true }
-        let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
-        return underlying?.domain == NSPOSIXErrorDomain && underlying?.code == Int(ENOTDIR)
-    }
-
     /// Scans every module under a `Packages` directory, discovering them rather
     /// than working from a list: a module added tomorrow is in scope without
     /// anyone remembering to add it, which is the failure this suite exists to
@@ -86,7 +70,7 @@ internal struct TokenDisciplineTests {
                     atPath: entry.appending(path: "Package.swift").path)
                 return true
             } catch {
-                guard Self.meansPathDoesNotExist(error) else { throw error }
+                guard TokenDisciplineScanner.meansPathDoesNotExist(error) else { throw error }
                 return false
             }
         }
@@ -111,7 +95,7 @@ internal struct TokenDisciplineTests {
             do {
                 _ = try FileManager.default.attributesOfItem(atPath: root.path)
             } catch {
-                guard Self.meansPathDoesNotExist(error) else { throw error }
+                guard TokenDisciplineScanner.meansPathDoesNotExist(error) else { throw error }
                 emptyRoots.append(root)
                 continue
             }
