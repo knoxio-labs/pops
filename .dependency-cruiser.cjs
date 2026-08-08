@@ -12,8 +12,11 @@
  * Shared workspace packages available to pillar frontends: @pops/ui,
  * @pops/navigation, @pops/types.
  *
- * See docs/themes/01-foundation/prds/097-module-import-boundaries/ and
- * docs/themes/13-pillar-finale/prds/156-consumer-import-discipline/.
+ * See docs/architecture/adr-026-pillar-architecture.md (what a pillar owns),
+ * adr-039-pillar-isolation.md (why isolation is enforced, not assumed) and
+ * adr-040-cross-pillar-contract-discipline.md (how a pillar may consume a
+ * sibling). The `ISO-R*` labels on the rules below are defined by the rules
+ * themselves — they are not a doc reference.
  */
 /**
  * A generated Hey API client directory (`src/<name>-api/`) and the hand-authored
