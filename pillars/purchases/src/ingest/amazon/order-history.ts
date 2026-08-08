@@ -20,8 +20,10 @@ import {
   type Row,
 } from './columns.js';
 import { readText, readTimestamp } from './fields.js';
+import { buildRefundCharges, reportOrphanRefunds } from './refund-charges.js';
+import { parseAmazonRefundDetails, type AmazonRefund } from './refunds.js';
 
-import type { CreatePurchaseInput } from '../../db/services/purchase-input.js';
+import type { CreateChargeInput, CreatePurchaseInput } from '../../db/services/purchase-input.js';
 
 /** `purchase_sources.id` this adapter writes under. */
 export const AMAZON_SOURCE_ID = 'amazon';
@@ -43,10 +45,25 @@ export interface AmazonParseResult {
  * the second — without the source document's own ordering there is nothing
  * stable to sort by, and the deterministic candidate ordering the
  * reconciliation engine needs would not hold.
+ *
+ * `refundDetailsCsv` is the text of `Refund Details.csv` when the bundle
+ * carries it. Refunds join here rather than in a later pass because both
+ * files arrive in the same download and `POST /purchases` is the only write
+ * path this pillar has: an order is created once, with everything the
+ * bundle says about it, and a re-ingest skips it (see the README).
  */
-export function parseAmazonOrderHistory(csvText: string): AmazonParseResult {
+export function parseAmazonOrderHistory(
+  csvText: string,
+  refundDetailsCsv?: string
+): AmazonParseResult {
   const orders: CreatePurchaseInput[] = [];
   const anomalies: AmazonAnomaly[] = [];
+
+  const refunds =
+    refundDetailsCsv === undefined
+      ? { refundsByOrderId: new Map<string, readonly AmazonRefund[]>(), anomalies: [] }
+      : parseAmazonRefundDetails(refundDetailsCsv);
+  anomalies.push(...refunds.anomalies);
 
   const byOrderId = new Map<string, Row[]>();
   for (const row of parseRows(csvText)) {
@@ -66,10 +83,16 @@ export function parseAmazonOrderHistory(csvText: string): AmazonParseResult {
     else existing.push(row);
   }
 
+  const attached = new Set<string>();
   for (const [orderId, orderRows] of byOrderId) {
-    const order = buildOrder(orderId, orderRows, anomalies);
-    if (order !== null) orders.push(order);
+    const orderRefunds = refunds.refundsByOrderId.get(orderId) ?? [];
+    const order = buildOrder(orderId, orderRows, orderRefunds, anomalies);
+    if (order === null) continue;
+    orders.push(order);
+    attached.add(orderId);
   }
+
+  reportOrphanRefunds(refunds.refundsByOrderId, attached, anomalies);
 
   return { orders, anomalies };
 }
@@ -114,6 +137,7 @@ function parseRows(csvText: string): Row[] {
 function buildOrder(
   sourceOrderId: string,
   rows: readonly Row[],
+  refunds: readonly AmazonRefund[],
   anomalies: AmazonAnomaly[]
 ): CreatePurchaseInput | null {
   const firstRow = rows[0];
@@ -122,6 +146,7 @@ function buildOrder(
   const header = readOrderHeader(firstRow, sourceOrderId, anomalies);
   if (header === null) return null;
   const { orderedAt, currency } = header;
+  const orderCurrency = currency.toUpperCase();
 
   const built = [...groupShipmentRows(rows)]
     .map(([key, shipmentRows]) =>
@@ -141,13 +166,14 @@ function buildOrder(
   }
 
   const paymentHint = readText(firstRow['Payment Method Type']);
+  const charges = buildRefundCharges(sourceOrderId, orderCurrency, refunds, anomalies);
 
   return {
     source: AMAZON_SOURCE_ID,
     sourceOrderId,
     ingestMethod: 'export',
     orderedAt,
-    currency: currency.toUpperCase(),
+    currency: orderCurrency,
     subtotalCents: Math.max(
       sum((s) => s.subtotalCents),
       0
@@ -173,9 +199,10 @@ function buildOrder(
     settlementMode: paymentHint === null ? 'unknown' : 'card',
     paymentHint,
     rawRef: `${ORDER_HISTORY_FILENAME}#${sourceOrderId}`,
-    checksum: checksumFor(sourceOrderId, rows),
+    checksum: checksumFor(sourceOrderId, rows, charges),
     shipments: built.map((shipment) => shipment.shipment),
     items: built.flatMap((shipment) => [...shipment.items]),
+    ...(charges.length > 0 ? { charges } : {}),
   };
 }
 
@@ -226,18 +253,32 @@ function groupShipmentRows(rows: readonly Row[]): Map<string, Row[]> {
 }
 
 /**
- * Content hash over the order's rows, so re-ingesting an unchanged bundle
- * is a no-op. The `(source, sourceOrderId)` unique index is the stronger
- * guard — it catches a re-import even if this recipe changes — so this only
- * has to be stable, not clever.
+ * Content hash over everything the bundle says about the order, so
+ * re-ingesting an unchanged bundle is a no-op. The `(source,
+ * sourceOrderId)` unique index is the stronger guard — it catches a
+ * re-import even if this recipe changes — so this only has to be stable,
+ * not clever.
+ *
+ * The refunds are hashed alongside the rows because a later download that
+ * adds a refund to an order describes different content, and a checksum
+ * that read as unchanged would assert the opposite.
  */
-function checksumFor(sourceOrderId: string, rows: readonly Row[]): string {
+function checksumFor(
+  sourceOrderId: string,
+  rows: readonly Row[],
+  charges: readonly CreateChargeInput[]
+): string {
   const hash = createHash('sha256');
   hash.update(`${AMAZON_SOURCE_ID}:${sourceOrderId}`);
   for (const row of rows) {
     for (const column of REQUIRED_COLUMNS) {
       hash.update(` ${column}=${row[column] ?? ''}`);
     }
+  }
+  for (const charge of charges) {
+    hash.update(
+      ` refund=${String(charge.amountCents)}${charge.currency ?? ''}@${charge.chargedAt ?? ''}`
+    );
   }
   return hash.digest('hex');
 }

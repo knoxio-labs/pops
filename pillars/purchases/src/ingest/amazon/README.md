@@ -1,6 +1,6 @@
 # Amazon DSAR export adapter
 
-Parses `Your Amazon Orders/Order History.csv` from the Amazon "Request My Data" bundle into orders for `POST /purchases`. Ingest only — nothing here links, matches or sweeps.
+Parses `Your Amazon Orders/Order History.csv` and `Your Returns & Refunds/Refund Details.csv` from the Amazon "Request My Data" bundle into orders for `POST /purchases`. Ingest only — nothing here links, matches or sweeps.
 
 The self-serve Order History Report was retired in most regions; the DSAR bundle is the surviving path, and its layout differs by region and has changed over time. This parser was written against a real 943-row Australian bundle, and the numbers quoted below are measurements from it rather than estimates.
 
@@ -48,15 +48,40 @@ Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one 
 
 An order is dropped only when its `Order Date` or `Currency` is unreadable. Skipping is correct there — `orderedAt` is what the reconciliation window is measured against, so an order without one could never match a transaction — but it is reported, because a backfill that quietly lands 700 of 748 orders is indistinguishable from one that landed everything.
 
+## Refunds
+
+`Refund Details.csv` is the one returns file that states money. Sixteen rows, sixteen distinct orders, all sixteen joining to `Order History.csv`, one refund each. Each becomes a single charge with `role='refund'`, a negative `amountCents`, and `chargedAt` set to `Refund Date` — the disbursement instant, which is the only date a bank transaction could ever settle against. `Creation Date` is when Amazon wrote the record, minutes to hours later on every row, and is not a substitute.
+
+**Order-level only.** The feed names an order and never a line, so `purchase_items.refundedCents` is left alone and no charge carries allocations. Spreading an order-level refund across lines pro rata would be a guess presented as a measurement; a refund that is visibly attributed to the order beats one that is invisibly attributed to the wrong line.
+
+The measurements behind reading one file and not five:
+
+| file                        | rows | what it adds                                                                                                        |
+| --------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------- |
+| `Refund Details.csv`        | 16   | the disbursements. All 16 join                                                                                      |
+| `Returns Status.csv`        | 21   | **no money.** 12 of its orders overlap `Refund Details` and agree exactly on all 12; the 8 it adds read `No Refund` |
+| `Replacement Orders.csv`    | 22   | 3 of its replacement ids appear in `Order History`, all with a `$0` total                                           |
+| `Your Orders.Returns.3.csv` | 3    | an `Order Item ID` in `miq://document…` form. `Order History.csv` has no such column, so it joins to nothing        |
+| `Return Requests.csv`       | 1    | one ASIN — per-line attribution for 1 refund of 16                                                                  |
+
+A replacement order is a second order for goods already paid for, so counting one as fresh spend would double-count the purchase. That does not happen on this bundle: of the 22 replacements, only three appear in `Order History` at all and all three carry a `$0` total — they are exactly the three `Return Resolution: Exchange` rows. Nothing here guards against a replacement that does carry money, because no such row exists to write the guard against.
+
+**A refund can never raise the residual.** `computeAccounting` keeps refunds out of the `matched`/`awaitingImport`/`residual` identity entirely (ADR-042), so a refunded order still reports its full total as residual until a capture is matched. That reads oddly on a fresh backfill and is the point: the alternative, folding refunds into the residual, made receiving a refund push the "something is wrong" number up.
+
+Two rows are refused rather than recorded:
+
+- **Reversal not `Completed`.** All 16 reference rows are `Completed`, so gating changes nothing there. It is gated because the errors are asymmetric — the order parser ingests a cancelled line because dropping it would lose money really spent, whereas recording an incomplete reversal would _invent_ money coming back.
+- **A currency the order is not in.** `orderAmountCents` is the unit the residual is computed in and the bundle carries no rate, so a mismatch is reported instead of converted.
+
+Both are anomalies, never silent: an unrecorded refund leaves the order reporting its full total as spent, which is indistinguishable from an order that was never refunded.
+
 ## What this adapter does not produce
 
-**No charges.** The export publishes no per-charge breakdown, so every order lands at `awaiting_settlement` with its full total as residual until the reconciliation engine mints a derived charge for the transaction it matches. A first backfill therefore reads as 748 orders, 100% unexplained. That is correct, not broken.
+**No captures.** The export publishes no per-charge breakdown of what was _paid_, so every order lands at `awaiting_settlement` with its full total as residual until the reconciliation engine mints a derived charge for the transaction it matches. A first backfill therefore reads as 748 orders, 100% unexplained. That is correct, not broken. Refunds are the sole exception, and they do not reduce the residual.
 
 **No documents.** The bundle ships 325 tax-invoice PDFs, but their filenames carry no order id — mapping one to an order needs text extraction from the PDF.
 
-**No digital orders.** `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, so it needs its own path rather than a widened parser.
-
-**No refunds.** Five returns/refunds CSVs join on `Order ID` and would net against line items.
+**No digital orders.** `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, so it needs its own path rather than a widened parser. `Digital Returns.csv` belongs with it, not here.
 
 ## Running it
 
@@ -70,4 +95,6 @@ cd pillars/purchases && pnpm ingest:amazon -- "<bundle-root>" --dry-run
 pnpm ingest:amazon -- ~/Downloads/"Your Orders"
 ```
 
-Re-running is safe: each order carries a content checksum, and `(source, sourceOrderId)` is unique, so a second run reports every order as a skip. Neither guard _updates_ an order whose bundle has since gained a shipment — a re-download that extends an existing order is skipped, not merged.
+`Your Returns & Refunds/Refund Details.csv` is read from the same root. A bundle from an account that never returned anything does not carry it, and its absence is reported and tolerated; a file that exists and cannot be read is not, because proceeding would land every refunded order at its full total.
+
+Re-running is safe: each order carries a content checksum covering its rows _and_ its refunds, and `(source, sourceOrderId)` is unique, so a second run reports every order as a skip. Neither guard _updates_ an order whose bundle has since gained a shipment or a refund — a re-download that extends an existing order is skipped, not merged. This is why refunds are attached at creation rather than in a second pass: `POST /purchases` is the only write path, and an order is written once with everything the bundle says about it.
