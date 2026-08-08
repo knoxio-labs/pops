@@ -9,6 +9,7 @@ import {
   checkAllCopies,
   checkFixture,
   FIXTURE_COPIES,
+  isFileNotFound,
 } from '../check-device-signature-fixture.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -33,14 +34,19 @@ const vendored = copyUnder('pillars/bfm/');
 
 /**
  * Reads a committed copy under the same `string | null` contract
- * {@link checkAllCopies} is given in production, so a copy that goes missing
- * fails as the guard's own "missing" message rather than as an ENOENT stack.
+ * {@link checkAllCopies} is given in production — `null` means absent, and only
+ * absent. It shares the production reader's predicate rather than repeating the
+ * errno check, so the two cannot drift into disagreeing about what `null` means:
+ * a copy that goes missing fails as the guard's own "missing" message, while a
+ * copy that is present but unreadable surfaces the real error instead of being
+ * misreported as one that was never there.
  */
 const readCommitted = (repoRelativePath: string) => {
   try {
     return readFileSync(join(repoRoot, repoRelativePath), 'utf8');
-  } catch {
-    return null;
+  } catch (error) {
+    if (isFileNotFound(error)) return null;
+    throw error;
   }
 };
 

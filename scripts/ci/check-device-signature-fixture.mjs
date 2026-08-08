@@ -242,6 +242,24 @@ export function checkFixture(fixture) {
 }
 
 /**
+ * Whether a `readFileSync` rejection means the file is absent, as opposed to
+ * present but unreadable.
+ *
+ * Exported because {@link checkAllCopies}'s `null` means "absent" and nothing
+ * else, and every reader handed to it has to agree — including the one in the
+ * unit suite. A reader that also returns `null` for EACCES turns a permissions
+ * problem into a "missing" report, which is the misdirection this predicate
+ * exists to prevent; sharing it makes that agreement structural rather than a
+ * convention two files are each expected to remember.
+ *
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export function isFileNotFound(error) {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
+}
+
+/**
  * Check every copy of the fixture: each one present, each one byte-identical
  * to the canonical copy, and each one passing {@link checkFixture} on its own.
  *
@@ -408,14 +426,7 @@ function main() {
     try {
       return readFileSync(join(repoRoot, repoRelativePath), 'utf8');
     } catch (error) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'ENOENT'
-      ) {
-        return null;
-      }
+      if (isFileNotFound(error)) return null;
       console.error(`FAIL — cannot read ${repoRelativePath}: ${String(error)}`);
       process.exit(1);
     }
