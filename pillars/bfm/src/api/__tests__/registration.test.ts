@@ -8,7 +8,6 @@
  * The registry is stubbed rather than reached: what is under test is this
  * pillar's boot contract, not the SDK's HTTP transport.
  */
-import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -20,6 +19,7 @@ import {
 
 import { buildBfmManifest } from '../manifest.js';
 import { createTestApp, type TestApp, type TestAppOptions } from './harness.js';
+import { requestOn } from './test-http.js';
 
 function recordingRegistry(): RegistryTransport & {
   lastRegister: () => RegisterRequest | undefined;
@@ -98,7 +98,7 @@ describe('self-registration against an unavailable registry', () => {
       registerMaxBackoffMs: 10_000,
     });
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ ok: true, pillar: 'bfm' });
@@ -192,7 +192,7 @@ describe('BUILD_VERSION on the wire', () => {
   it('reports the raw value on /health, which is why the two can disagree', async () => {
     const { app } = open({ version: 'dev' });
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     expect(res.body.version).toBe('dev');
   });

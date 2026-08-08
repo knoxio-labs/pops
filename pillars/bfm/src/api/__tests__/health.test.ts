@@ -1,8 +1,8 @@
-import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { HealthResponseSchema } from '../../contract/rest-schemas.js';
 import { createTestApp, type TestApp, type TestAppOptions } from './harness.js';
+import { requestOn } from './test-http.js';
 
 const apps: TestApp[] = [];
 
@@ -22,7 +22,7 @@ describe('GET /health', () => {
   it('returns a body that satisfies the contract schema', async () => {
     const { app } = open();
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
     const parsed = HealthResponseSchema.safeParse(res.body);
@@ -33,7 +33,7 @@ describe('GET /health', () => {
   it('reports the build version it was constructed with', async () => {
     const { app } = open({ version: '9.9.9-fixture' });
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     expect(res.body).toMatchObject({
       ok: true,
@@ -49,7 +49,7 @@ describe('GET /health', () => {
     const { app, cleanup } = createTestApp();
     cleanup();
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
   });
@@ -57,7 +57,7 @@ describe('GET /health', () => {
   it('stamps a round-trippable ISO-8601 UTC timestamp', async () => {
     const { app } = open();
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     const ts = res.body.ts as string;
     expect(new Date(ts).toISOString()).toBe(ts);
@@ -66,7 +66,7 @@ describe('GET /health', () => {
   it('does not serve a route the contract never declared', async () => {
     const { app } = open();
 
-    const res = await request(app).get('/pillars');
+    const res = await requestOn(app, (r) => r.get('/pillars'));
 
     expect(res.status).toBe(404);
   });
@@ -80,7 +80,7 @@ describe('GET /health', () => {
   it('answers an anonymous probe, unlike the operator routes', async () => {
     const { app } = open({ env: { NODE_ENV: 'production' } });
 
-    const res = await request(app).get('/health');
+    const res = await requestOn(app, (r) => r.get('/health'));
 
     expect(res.status).toBe(200);
   });

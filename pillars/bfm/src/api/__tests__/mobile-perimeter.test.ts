@@ -13,7 +13,6 @@
  * caller over its budget never reaches the signature check it was there to
  * make expensive.
  */
-import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { deviceRow } from '../../db/__tests__/helpers.js';
@@ -21,6 +20,7 @@ import { devices } from '../../db/index.js';
 import { MOBILE_PATH_PREFIX } from '../app.js';
 import { mintAccessToken } from '../auth/access-token.js';
 import { createTestApp, type TestApp } from './harness.js';
+import { requestOn } from './test-http.js';
 
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
 
@@ -42,7 +42,7 @@ describe('the unauthenticated surface', () => {
   it.each(['/health', '/openapi'])('serves %s without a token', async (path) => {
     const { app } = open();
 
-    const res = await request(app).get(path);
+    const res = await requestOn(app, (r) => r.get(path));
 
     expect(res.status).toBe(200);
   });
@@ -50,7 +50,9 @@ describe('the unauthenticated surface', () => {
   it('still serves /health when a caller sends a token that would fail the guard', async () => {
     const { app } = open();
 
-    const res = await request(app).get('/health').set('Authorization', 'Bearer garbage');
+    const res = await requestOn(app, (r) =>
+      r.get('/health').set('Authorization', 'Bearer garbage')
+    );
 
     expect(res.status).toBe(200);
   });
@@ -63,7 +65,7 @@ describe('the /mobile perimeter', () => {
     // claim.
     const { app } = open();
 
-    const res = await request(app).get('/mobile/transactions');
+    const res = await requestOn(app, (r) => r.get('/mobile/transactions'));
 
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('invalid_token');
@@ -74,7 +76,7 @@ describe('the /mobile perimeter', () => {
     async (method) => {
       const { app } = open();
 
-      const res = await request(app)[method]('/mobile/anything');
+      const res = await requestOn(app, (r) => r[method]('/mobile/anything'));
 
       expect(res.status).toBe(401);
     }
@@ -83,7 +85,7 @@ describe('the /mobile perimeter', () => {
   it('gates the prefix itself', async () => {
     const { app } = open();
 
-    const res = await request(app).get(MOBILE_PATH_PREFIX);
+    const res = await requestOn(app, (r) => r.get(MOBILE_PATH_PREFIX));
 
     expect(res.status).toBe(401);
   });
@@ -95,10 +97,12 @@ describe('the /mobile perimeter', () => {
     // read, given nothing yet limits how often one may arrive (POPS-1468).
     const { app } = open();
 
-    const res = await request(app)
-      .post('/mobile/transactions')
-      .set('Content-Type', 'application/json')
-      .send('{"unterminated":');
+    const res = await requestOn(app, (r) =>
+      r
+        .post('/mobile/transactions')
+        .set('Content-Type', 'application/json')
+        .send('{"unterminated":')
+    );
 
     expect(res.status).toBe(401);
   });
@@ -110,7 +114,7 @@ describe('the /mobile perimeter', () => {
     // reordered the mount.
     const { app } = open();
 
-    const res = await request(app).get('/mobiles');
+    const res = await requestOn(app, (r) => r.get('/mobiles'));
 
     expect(res.status).toBe(404);
   });
@@ -123,9 +127,9 @@ describe('the /mobile perimeter', () => {
 
     // Past the guard, and now genuinely absent — so an authenticated caller
     // sees the real shape of the surface and an unauthenticated one does not.
-    const res = await request(app)
-      .get('/mobile/transactions')
-      .set('Authorization', `Bearer ${token}`);
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/transactions').set('Authorization', `Bearer ${token}`)
+    );
 
     expect(res.status).toBe(404);
   });
@@ -135,9 +139,9 @@ describe('the request budget in front of the guard', () => {
   it('answers 429 once an anonymous caller exceeds its budget', async () => {
     const { app } = open({ perClientLimit: 2, globalLimit: 100 });
 
-    const first = await request(app).get('/mobile/transactions');
-    const second = await request(app).get('/mobile/transactions');
-    const third = await request(app).get('/mobile/transactions');
+    const first = await requestOn(app, (r) => r.get('/mobile/transactions'));
+    const second = await requestOn(app, (r) => r.get('/mobile/transactions'));
+    const third = await requestOn(app, (r) => r.get('/mobile/transactions'));
 
     expect([first.status, second.status]).toEqual([401, 401]);
     expect(third.status).toBe(429);
@@ -151,11 +155,13 @@ describe('the request budget in front of the guard', () => {
     // answer 401 here, having paid for the HMAC first — which is precisely
     // the unbounded work this exists to bound.
     const { app } = open({ perClientLimit: 1, globalLimit: 100 });
-    await request(app).get('/mobile/transactions').set('Authorization', 'Bearer garbage');
+    await requestOn(app, (r) =>
+      r.get('/mobile/transactions').set('Authorization', 'Bearer garbage')
+    );
 
-    const res = await request(app)
-      .get('/mobile/transactions')
-      .set('Authorization', 'Bearer garbage');
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/transactions').set('Authorization', 'Bearer garbage')
+    );
 
     expect(res.status).toBe(429);
   });
@@ -168,8 +174,8 @@ describe('the request budget in front of the guard', () => {
     const row = deviceRow();
     db.insert(devices).values(row).run();
     const { token } = mintAccessToken(row.id, accessTokenSigningKey);
-    const authorized = (): request.Test =>
-      request(app).get('/mobile/transactions').set('Authorization', `Bearer ${token}`);
+    const authorized = () =>
+      requestOn(app, (r) => r.get('/mobile/transactions').set('Authorization', `Bearer ${token}`));
 
     const first = await authorized();
     const second = await authorized();
@@ -183,19 +189,19 @@ describe('the request budget in front of the guard', () => {
     // existence reports this pillar down for someone else's reason, and the
     // fleet would take it out of rotation over it.
     const { app } = open({ perClientLimit: 1, globalLimit: 1 });
-    const exhausted = await request(app).get('/mobile/transactions');
+    const exhausted = await requestOn(app, (r) => r.get('/mobile/transactions'));
     expect(exhausted.status).toBe(401);
-    expect((await request(app).get('/mobile/transactions')).status).toBe(429);
+    expect((await requestOn(app, (r) => r.get('/mobile/transactions'))).status).toBe(429);
 
-    expect((await request(app).get('/health')).status).toBe(200);
-    expect((await request(app).get('/openapi')).status).toBe(200);
+    expect((await requestOn(app, (r) => r.get('/health'))).status).toBe(200);
+    expect((await requestOn(app, (r) => r.get('/openapi'))).status).toBe(200);
   });
 
   it('does not budget a sibling path outside the prefix', async () => {
     const { app } = open({ perClientLimit: 1, globalLimit: 1 });
-    await request(app).get('/mobile/transactions');
+    await requestOn(app, (r) => r.get('/mobile/transactions'));
 
-    const res = await request(app).get('/mobiles');
+    const res = await requestOn(app, (r) => r.get('/mobiles'));
 
     expect(res.status).toBe(404);
   });
@@ -208,7 +214,7 @@ describe('the request budget in front of the guard', () => {
 
     const statuses: number[] = [];
     for (let i = 0; i < 20; i += 1) {
-      statuses.push((await request(app).get('/mobile/transactions')).status);
+      statuses.push((await requestOn(app, (r) => r.get('/mobile/transactions'))).status);
     }
 
     expect(statuses.every((status) => status === 401)).toBe(true);

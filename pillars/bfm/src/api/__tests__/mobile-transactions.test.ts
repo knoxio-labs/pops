@@ -16,7 +16,6 @@
  * The iOS client is generated from this document, so an accidental field is a
  * change to a shipped app — it must fail here, deliberately and loudly.
  */
-import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { deviceRow } from '../../db/__tests__/helpers.js';
@@ -32,6 +31,7 @@ import {
   type FinanceFakeRow,
 } from './finance-fake.js';
 import { createTestApp, type TestApp } from './harness.js';
+import { requestOn } from './test-http.js';
 
 import type { Express } from 'express';
 
@@ -71,7 +71,7 @@ function openWithRows(rows: readonly FinanceFakeRow[]): {
 }
 
 function get(app: Express, token: string, path: string) {
-  return request(app).get(path).set('Authorization', `Bearer ${token}`);
+  return requestOn(app, (r) => r.get(path).set('Authorization', `Bearer ${token}`));
 }
 
 /** Three rows sharing one date plus an older one — ties are the normal case. */
@@ -478,7 +478,7 @@ describe('the perimeter still applies', () => {
   it.each([LIST_PATH, `${LIST_PATH}/txn-1`])('401s %s without a token', async (path) => {
     const { app, fake } = openWithRows(seededRows);
 
-    const res = await request(app).get(path);
+    const res = await requestOn(app, (r) => r.get(path));
 
     expect(res.status).toBe(401);
     expect(fake.listCalls).toHaveLength(0);

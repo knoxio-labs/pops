@@ -6,11 +6,11 @@
  * that drifted to 3.1 would break *consumers* rather than failing this
  * pillar's own build. See AGENTS.md "The OpenAPI version pin".
  */
-import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { bfmContract } from '../../contract/rest.js';
 import { createTestApp, type TestApp } from './harness.js';
+import { requestOn } from './test-http.js';
 
 type Operation = { operationId?: unknown };
 type OpenApiBody = {
@@ -30,7 +30,7 @@ afterEach(() => {
 async function fetchDocument(): Promise<OpenApiBody> {
   const created = createTestApp();
   apps.push(created);
-  const res = await request(created.app).get('/openapi');
+  const res = await requestOn(created.app, (r) => r.get('/openapi'));
   expect(res.status).toBe(200);
   return res.body as OpenApiBody;
 }
