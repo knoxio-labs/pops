@@ -8,22 +8,33 @@ Failure is a value, never a throw. Every call returns `CallResult<T>` and the ca
 
 `pillar()` is **not** on the root barrel. Import the surface matching where the code runs.
 
-| Subpath            | What it is                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/server`          | backend-to-backend `pillar()` (service-account key, memoised handles) **and** `authenticateInternal`, the inbound guard for internal-only routes |
-| `/client`          | the unauthenticated `pillar()` underneath it, plus `CallResult` / `PillarHandle`                                                                 |
-| `/bootstrap`       | `bootstrapPillar()` — register with backoff, heartbeat, `/health`, deregister                                                                    |
-| `/manifest-schema` | `ManifestPayload` + `validateManifestPayload` — the register wire format                                                                         |
-| `/discovery`       | the registry snapshot cache and its SSE reconnect helper                                                                                         |
-| `/settings`        | `discoverSettings()` — flattens the per-pillar settings contributions                                                                            |
-| `/access`          | Cloudflare Access JWT verification — the operator half of a pillar's identity. Node-only; see below                                              |
-| `/react`           | `PillarSdkProvider`, query-key derivation, SSE→React-Query invalidation                                                                          |
+| Subpath            | What it is                                                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/server`          | backend-to-backend `pillar()` (service-account key, memoised handles) **and** the two inbound guards — `authenticateInternal` and the service-account scope gate below |
+| `/client`          | the unauthenticated `pillar()` underneath it, plus `CallResult` / `PillarHandle`                                                                                       |
+| `/bootstrap`       | `bootstrapPillar()` — register with backoff, heartbeat, `/health`, deregister                                                                                          |
+| `/manifest-schema` | `ManifestPayload` + `validateManifestPayload` — the register wire format                                                                                               |
+| `/discovery`       | the registry snapshot cache and its SSE reconnect helper                                                                                                               |
+| `/settings`        | `discoverSettings()` — flattens the per-pillar settings contributions                                                                                                  |
+| `/access`          | Cloudflare Access JWT verification — the operator half of a pillar's identity. Node-only; see below                                                                    |
+| `/react`           | `PillarSdkProvider`, query-key derivation, SSE→React-Query invalidation                                                                                                |
 
 `/access` is the outlier in this table: it is not about reaching the federation at all. It verifies the `cf-access-jwt-assertion` header Cloudflare Access forwards after terminating a human login at the edge, which is how a pillar answers "is this a real operator". It lives here because the alternative is a copy per pillar, and a signature check that exists twice drifts in the copy nobody is reading. `registry` and `bfm` both consume it.
 
 Three properties in `createCloudflareAccessVerifier` are load-bearing, each with its own way of being lost, and the file states them at length: the algorithm is **pinned** to RS256 rather than read from the token header (the `alg: none` and HMAC-with-the-public-key confusion classes); the `aud` is checked whenever one is configured, because Access mints one JWT per application off the same team keys, so a token for a _sibling_ protected app carries a perfectly valid signature; and the JWKS cache is per-verifier rather than module-global. Widening any of them is a security change, not a refactor — `src/access/__tests__/cloudflare-jwt.test.ts` asserts each against real generated keypairs.
 
 It is the only subpath that pulls a non-`zod` runtime dependency (`jsonwebtoken`), and it is Node-only. Import it from a pillar's API layer, never from a frontend app.
+
+## The two inbound guards
+
+`/server` sends a credential and, since [ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md), also checks one. They are different credentials and answer different questions, so a producer picks by what it is protecting:
+
+- **`authenticateInternal`** — a static, compiled caller list. The callee names the callers it accepts, each presenting `name.secret` in `x-pops-internal-credential`, and blanking the secret's env var revokes one. Right for a handful of paths siblings may reach and nobody else, where the caller set is a fact of the architecture: `ai`'s telemetry sink, `food`'s worker callbacks.
+- **The service-account scope gate** — `buildContractScopeMap` + `authorizeServiceAccountRequest` + `createRegistryServiceAccountVerifier`. The credential is the same `X-API-Key` `pillar()` already attaches, resolved against the registry's account table, so grants are central and auditable and revocation lands everywhere. Right for a producer's whole contract surface.
+
+The scope gate splits into three pieces so a producer can replace any one of them. `buildContractScopeMap(router, pillarId)` derives `(method, path) → dotted scope` from the ts-rest contract itself — a new route is gated the moment it exists, which a hand-kept path list cannot promise. `authorizeServiceAccountRequest` is pure over an already-read header, so the SDK stays free of any HTTP framework; the producer writes the ~20 lines of Express binding, as `pillars/finance/src/api/middleware/service-account-scope.ts` does. `createRegistryServiceAccountVerifier` does the lookup against `GET /service-accounts/self` and caches by key digest, because a registry round-trip per inbound request would put the registry on the critical path of every cross-pillar call.
+
+Two behaviours are deliberate and should not be softened without revisiting the ADR. A presented key that cannot be verified yields `503` rather than admission — the guard never falls back to network trust once a credential is in play, so the registry being down degrades an adopting producer instead of opening it. And a request presenting **no** key is not gated by default: browser traffic arrives through the shell's nginx with no `X-API-Key`, so `requireCredential` is opt-in, for a producer whose callers are all credentialled.
 
 ## Who depends on it
 
@@ -34,6 +45,7 @@ It is the only subpath that pulls a non-`zod` runtime dependency (`jsonwebtoken`
 - **`orchestrator`** — `/discovery` + `/server` for federated search; the root `buildToolList` for `GET /ai/tools`.
 - **Cross-pillar reads** — `/client`: `finance` → contacts (`api/contacts/client.ts`), `finance` → registry (`api/cron/pillar-lookup.ts`), `inventory` → documents (`api/documents/client.ts`), `ai` nudge dispatch (`api/modules/ai-alerts/dispatchers/nudge.ts`). `/server`: `inventory`'s nightly URI reconciler (`api/cron/reconcile-cross-pillar.ts`) and `pillars/finance/scripts/migrate-core-entities.ts`. `inventory` therefore straddles both surfaces.
 - **`food`, `ai`** — `/server` for `authenticateInternal` on their internal-only routes. They are its only call sites.
+- **`finance`** — `/server` for the service-account scope gate over its whole contract surface (`api/middleware/service-account-scope.ts`). It is that guard's only call site; the remaining producers adopt under their own Huly issues.
 - **`libs/navigation`** — the `PillarId` type only.
 
 ## Constraints

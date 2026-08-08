@@ -25,6 +25,23 @@ export type {
   InternalAuthResult,
   InternalAuthRequest,
 } from './internal-token.js';
+export {
+  buildContractScopeMap,
+  hasScopeFor,
+  resolveContractScope,
+} from './service-account-scope.js';
+export type { ContractScopeMap, ContractScopeRoute } from './service-account-scope.js';
+export { authorizeServiceAccountRequest } from './service-account-auth.js';
+export type {
+  ServiceAccountAuthReason,
+  ServiceAccountAuthRequest,
+  ServiceAccountAuthResult,
+  ServiceAccountPrincipal,
+  ServiceAccountVerification,
+  ServiceAccountVerifier,
+} from './service-account-auth.js';
+export { createRegistryServiceAccountVerifier } from './service-account-verifier.js';
+export type { RegistryServiceAccountVerifierOptions } from './service-account-verifier.js';
 
 export type {
   PillarHandle,
