@@ -42,8 +42,21 @@ impl From<sqlx::Error> for RepoError {
     }
 }
 
-const SELECT_COLUMNS: &str = "id, name, type, abn, aliases, default_transaction_type, \
-     default_tags, notes, last_edited_time";
+/// `SELECT <columns> FROM entities <tail>` as a single `&'static str`.
+///
+/// A macro rather than a `const` joined with `format!` so the whole statement
+/// is a literal: sqlx 0.9 only accepts `&'static str` (or an explicit
+/// `AssertSqlSafe`), and building these with `format!` would force the
+/// assertion on queries that have no reason to need it.
+macro_rules! select_entities {
+    ($tail:expr) => {
+        concat!(
+            "SELECT id, name, type, abn, aliases, default_transaction_type, ",
+            "default_tags, notes, last_edited_time FROM entities ",
+            $tail
+        )
+    };
+}
 
 /// List entities filtered by an optional case-insensitive name `search` and an
 /// optional exact `type`, ordered case-insensitively by name, with `limit` /
@@ -57,18 +70,16 @@ pub async fn list(
 ) -> Result<(Vec<EntityRow>, i64), sqlx::Error> {
     let like = search.map(|s| format!("%{s}%"));
 
-    let rows_sql = format!(
-        "SELECT {SELECT_COLUMNS} FROM entities \
-         WHERE (?1 IS NULL OR name LIKE ?1) AND (?2 IS NULL OR type = ?2) \
+    let rows = sqlx::query_as::<_, EntityRow>(select_entities!(
+        "WHERE (?1 IS NULL OR name LIKE ?1) AND (?2 IS NULL OR type = ?2) \
          ORDER BY name COLLATE NOCASE LIMIT ?3 OFFSET ?4"
-    );
-    let rows = sqlx::query_as::<_, EntityRow>(&rows_sql)
-        .bind(like.as_deref())
-        .bind(ty)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(pool)
-        .await?;
+    ))
+    .bind(like.as_deref())
+    .bind(ty)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
 
     let total: i64 = sqlx::query(
         "SELECT COUNT(*) AS total FROM entities \
@@ -85,8 +96,7 @@ pub async fn list(
 
 /// Fetch one entity by id, or `None` if it does not exist.
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<EntityRow>, sqlx::Error> {
-    let sql = format!("SELECT {SELECT_COLUMNS} FROM entities WHERE id = ?1");
-    sqlx::query_as::<_, EntityRow>(&sql)
+    sqlx::query_as::<_, EntityRow>(select_entities!("WHERE id = ?1"))
         .bind(id)
         .fetch_optional(pool)
         .await
@@ -98,8 +108,7 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<EntityRow>, sqlx:
 /// `409` raised by a case-variant create resolves to the row that already owns
 /// that name.
 pub async fn find_by_name(pool: &SqlitePool, name: &str) -> Result<Option<EntityRow>, sqlx::Error> {
-    let sql = format!("SELECT {SELECT_COLUMNS} FROM entities WHERE name COLLATE NOCASE = ?1");
-    sqlx::query_as::<_, EntityRow>(&sql)
+    sqlx::query_as::<_, EntityRow>(select_entities!("WHERE name COLLATE NOCASE = ?1"))
         .bind(name)
         .fetch_optional(pool)
         .await
@@ -334,7 +343,13 @@ impl UpdateBuilder {
             .collect();
         ordered.sort_by_key(|(i, _)| *i);
 
-        let mut query = sqlx::query(&sql);
+        // The only runtime-assembled statement in this module, so the only one
+        // that needs sqlx 0.9's explicit assertion. It is safe by construction:
+        // every `SET` fragment comes from `set_text`/`set_nullable`, whose
+        // `column` argument is a literal at all seven call sites, and the
+        // placeholder indices are generated. No caller value reaches the string
+        // — values are bound below.
+        let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
         for (_, value) in ordered {
             query = query.bind(value);
         }
