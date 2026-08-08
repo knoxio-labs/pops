@@ -50,7 +50,16 @@ internal struct TokenDisciplineTests {
         var emptyRoots: [URL] = []
         var violations: [TokenDisciplineScanner.Violation] = []
         for root in roots {
-            let files = (try? TokenDisciplineScanner.swiftFiles(under: root)) ?? []
+            // An absent `Sources` is the only failure this launders into "this
+            // module contributed nothing", because that is the module a rename
+            // left behind. Anything else the filesystem objects to is a real
+            // error and has to arrive as one, or the report says a module is
+            // empty when what happened was a permission or an IO fault.
+            guard FileManager.default.fileExists(atPath: root.path) else {
+                emptyRoots.append(root)
+                continue
+            }
+            let files = try TokenDisciplineScanner.swiftFiles(under: root)
             if files.isEmpty {
                 emptyRoots.append(root)
                 continue
