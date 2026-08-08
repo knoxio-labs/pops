@@ -22,6 +22,7 @@ import type { Express } from 'express';
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
+import type { PairingRateLimitOptions } from '../auth/pairing-rate-limit.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
@@ -70,6 +71,7 @@ export interface TestAppOptions {
   env?: NodeJS.ProcessEnv;
   issuanceLimiter?: RateLimiter;
   pairingCodeTtlMs?: number;
+  refreshTokenTtlMs?: number;
   publicBaseUrl?: string;
   accessTokenSigningKey?: KeyObject;
   /**
@@ -92,6 +94,8 @@ export interface TestAppOptions {
    * without saying how fails loudly instead of hanging on a real network call.
    */
   finance?: MobileFinanceClient;
+  /** Same, for the pairing exchange's budget. */
+  pairingRateLimit?: PairingRateLimitOptions;
 }
 
 const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
@@ -99,6 +103,35 @@ const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
     `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` to createTestApp`
   );
 };
+
+/**
+ * The options this harness forwards untouched, minus the ones nobody set.
+ *
+ * `exactOptionalPropertyTypes` makes "absent" and "present and `undefined`"
+ * different types, so each of these needs its own conditional spread rather
+ * than a plain assignment. Six of them inline in `createTestApp` is six
+ * branches in a function whose actual job is three lines, which the complexity
+ * rule flags — correctly. They live here so that function reads as what it
+ * does: open a database, fill in the defaults, build the app.
+ */
+function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
+  return {
+    ...(options.pairingCodeTtlMs === undefined
+      ? {}
+      : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
+    ...(options.refreshTokenTtlMs === undefined
+      ? {}
+      : { refreshTokenTtlMs: options.refreshTokenTtlMs }),
+    ...(options.mobileRateLimit === undefined ? {} : { mobileRateLimit: options.mobileRateLimit }),
+    ...(options.pairingRateLimit === undefined
+      ? {}
+      : { pairingRateLimit: options.pairingRateLimit }),
+    ...(options.internalBaseUrls === undefined
+      ? {}
+      : { internalBaseUrls: options.internalBaseUrls }),
+    ...(options.bootstrap === undefined ? {} : { bootstrap: options.bootstrap }),
+  };
+}
 
 export function createTestApp(options: TestAppOptions = {}): TestApp {
   const { opened, cleanup } = openTempDb();
@@ -116,14 +149,7 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
       // Generous by default so a suite that is not about rate limiting never
       // trips it; the limiting suite injects its own.
       createRateLimiter({ limit: 1_000, windowMs: 60_000 }),
-    ...(options.pairingCodeTtlMs === undefined
-      ? {}
-      : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
-    ...(options.mobileRateLimit === undefined ? {} : { mobileRateLimit: options.mobileRateLimit }),
-    ...(options.internalBaseUrls === undefined
-      ? {}
-      : { internalBaseUrls: options.internalBaseUrls }),
-    ...(options.bootstrap === undefined ? {} : { bootstrap: options.bootstrap }),
+    ...passthroughDeps(options),
   };
 
   const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };

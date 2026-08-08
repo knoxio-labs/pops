@@ -90,6 +90,12 @@ describe('GET /openapi', () => {
     expect(body.paths?.['/health']?.['get']?.operationId).toBe('health');
   });
 
+  it('namespaces the device sub-router in its operationIds', async () => {
+    const body = await fetchDocument();
+
+    expect(body.paths?.['/devices/pair']?.['post']?.operationId).toBe('device.pair');
+  });
+
   it('namespaces the operator sub-router in its operationIds', async () => {
     const body = await fetchDocument();
 

@@ -4,6 +4,9 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  DevicePairData,
+  DevicePairErrors,
+  DevicePairResponses,
   HealthData,
   HealthResponses,
   MobileBootstrapData,
@@ -43,6 +46,21 @@ export type Options<
    */
   meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * Spend a pairing code for a device identity. The tokens are returned once
+ */
+export const devicePair = <ThrowOnError extends boolean = false>(
+  options?: Options<DevicePairData, ThrowOnError>
+): RequestResult<DevicePairResponses, DevicePairErrors, ThrowOnError> =>
+  (options?.client ?? client).post<DevicePairResponses, DevicePairErrors, ThrowOnError>({
+    url: '/devices/pair',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * Liveness shape. Answers without a database round-trip

@@ -60,6 +60,47 @@ export function listDevices(db: BfmDb): DeviceSummary[] {
     .all();
 }
 
+export interface InsertDeviceValues {
+  /**
+   * Chosen by the caller rather than by the column's `$defaultFn`.
+   *
+   * The pairing exchange mints an access token whose `sub` is this id, and it
+   * does that before it opens its transaction so that nothing fallible runs
+   * inside one. That ordering needs the id to exist first — reading it back
+   * from an insert would put the mint after the write it is supposed to be
+   * atomic with.
+   */
+  id: string;
+  name: string;
+  model: string;
+  /** Base64 SPKI/DER. Already parsed as P-256 by the caller — see the column's own note. */
+  publicKeyDer: string;
+  /**
+   * Written explicitly, and written to `lastSeenAt` as well.
+   *
+   * A row exists because a device completed the pairing exchange, which is
+   * itself contact, so the two columns start equal and that equality is what
+   * "not heard from since pairing" reads as. Letting them default would fill
+   * them from SQLite's clock instead of the caller's, and two `strftime` calls
+   * either side of an insert are not guaranteed to agree.
+   */
+  createdAt: string;
+}
+
+/** Write one device row. Takes a {@link BfmDb}, so a transaction handle composes. */
+export function insertDevice(db: BfmDb, values: InsertDeviceValues): void {
+  db.insert(devices)
+    .values({
+      id: values.id,
+      name: values.name,
+      model: values.model,
+      publicKeyDer: values.publicKeyDer,
+      createdAt: values.createdAt,
+      lastSeenAt: values.createdAt,
+    })
+    .run();
+}
+
 export type RevokeDeviceResult =
   | { outcome: 'revoked'; revokedAt: string; refreshTokensRevoked: number }
   | { outcome: 'already-revoked'; revokedAt: string }

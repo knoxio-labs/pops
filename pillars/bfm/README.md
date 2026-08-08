@@ -8,8 +8,10 @@ It listens on port **3014**.
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
 (ADR-035). Its first mobile surface is the transaction list and detail under
-`/mobile/finance/*`, behind the perimeter that guards it and alongside the
-operator surface that mints the codes a phone pairs with — see
+`/mobile/finance/*`, behind the perimeter that guards it — and the whole path a
+phone takes to get behind that perimeter is here too: the operator surface that
+mints a pairing code, and the exchange that spends it for a device identity.
+See
 [The perimeter](#the-perimeter). `/health` is a pure liveness shape rather
 than a DB round-trip, which is deliberate for a container healthcheck and is
 why the database opens **before** `listen`: the probe cannot tell you the
@@ -24,6 +26,7 @@ It also holds a service-account credential and one way to spend it — see
 | -------------------------------------- | ----------------------------------------------------------------------------------- |
 | `GET /health`                          | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.  |
 | `GET /openapi`                         | The committed contract projection, served verbatim so peers build a route map.      |
+| `POST /devices/pair`                   | Spends a pairing code for a device identity. Unauthenticated by definition.         |
 | `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.    |
 | `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.             |
 | `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.  |
@@ -51,11 +54,12 @@ Access.**
 - The shell's nginx reaches it at `/bfm-api/`, behind Access. That is where an
   operator arrives.
 - Its own Cloudflare Tunnel hostname has Access **bypassed** (POPS-1389),
-  because the phone has to reach the pairing exchange (POPS-1374) and refresh
-  (POPS-1375) without an Access session.
+  because the phone has to reach the pairing exchange and refresh (POPS-1375)
+  without an Access session.
 
 One Express app serves both, so it carries two independent gates on two
-different axes: one authenticates a **phone**, the other a **human**.
+different axes: one authenticates a **phone**, the other a **human**. A third
+surface has neither, on purpose — see [Pairing](#post-devicespair--the-way-in).
 
 ### `/mobile/*` — the device gate
 
@@ -68,7 +72,36 @@ not `404`.
 That directory's README carries the whole of the reasoning: why a rejected
 token is a `401` and a revoked device a `403`, why a missing device row is a
 `401` rather than either, what is never logged, and what is deliberately absent
-(refresh — POPS-1375, rate limiting — POPS-1468, `lastSeenAt` — POPS-1469).
+(refresh — POPS-1375, `lastSeenAt` — POPS-1469).
+
+### `POST /devices/pair` — the way in
+
+The one route with no gate at all, and that is the design rather than a hole:
+it is how a caller _becomes_ someone, so it cannot require being someone first.
+A phone arriving here has no Access session, no device row and no token.
+Possession of a live pairing code is the entire credential.
+
+Two things carry the weight the gates carry elsewhere. The code's own entropy —
+~59 bits over a five-minute life, see [Persistence](#persistence) — is what
+makes guessing pointless. A per-source budget in
+`src/api/auth/pairing-rate-limit.ts` is what makes it slow if that argument
+ever stops holding.
+
+Two properties are worth knowing before reading the handler, because both look
+like details and are neither:
+
+- **Unknown, expired and already-consumed codes produce byte-identical
+  responses.** A distinguishable one answers "was that a real code?" once per
+  request, which is exactly the question the entropy exists to make
+  unanswerable. A test compares the three as raw text, not as parsed bodies.
+- **The public key is validated before the code is touched.** The route has two
+  failure statuses — `400` for a request that is wrong, `403` for a code that
+  did not work — and that split is only safe in this order. Reversed, an
+  attacker posts a deliberately malformed key with a guessed code and reads the
+  status as the answer.
+
+`src/api/auth/pairing-exchange.ts` states the rest, including why nothing
+fallible runs inside the transaction.
 
 ### `/operator/*` — the human gate
 
@@ -101,19 +134,33 @@ both reach them without a device or a session.
 
 ### Rate limiting
 
-Pairing-code issuance is budgeted per operator — five per fifteen minutes, in
-`src/api/rate-limit.ts`. A code short enough to type is short enough to guess if
-the endpoint will mint unlimited attempts against it.
+Three budgets, on three different keys, because they answer three different
+questions. All three count with `src/api/rate-limit.ts`.
 
-The counter is **in memory**, which is correct for a single-container pillar and
-wrong the moment there are two: the limit would become per-replica and the
+| Surface              | Key                            | Bounds                                          |
+| -------------------- | ------------------------------ | ----------------------------------------------- |
+| Code issuance        | the operator's email           | how many codes one human can mint               |
+| `POST /devices/pair` | client address, plus a ceiling | how many **guesses** the code space takes       |
+| `/mobile/*`          | client address, plus a ceiling | how much **work** an unauthenticated flood buys |
+
+The latter two share `src/api/tiered-rate-limit.ts` — the same two-tier shape,
+a coarse unkeyed ceiling charged before a fine per-address one, because
+`CF-Connecting-IP` is both the only usable client identity on a bypassed
+hostname and forgeable by anything on the LAN. They keep separate counters on
+purpose: one shared counter would let ordinary phone traffic lock a handset out
+of pairing, and a pairing flood degrade every device already paired.
+
+Every counter is **in memory**, which is correct for a single-container pillar
+and wrong the moment there are two: each limit would become per-replica and the
 effective budget would multiply. POPS-1474 holds that, and names whichever
 change adds a second replica as the trigger.
 
-The gate runs _before_ the limiter, deliberately. Limiting first would let an
-anonymous flood exhaust the real operator's budget and lock them out of pairing
-— a denial of service handed to an unauthenticated caller. A test pins the
-ordering.
+On the issuance route the gate runs _before_ the limiter, deliberately.
+Limiting first would let an anonymous flood exhaust the real operator's budget
+and lock them out of pairing — a denial of service handed to an unauthenticated
+caller. A test pins the ordering. The device-facing budgets have no gate to run
+after, which is why they are mounted as middleware on the path instead: a
+refused caller never reaches the body parser.
 
 ## What the phone is told first
 
@@ -242,19 +289,12 @@ registration is a separate mechanism and still goes through the
 
 ## What deliberately does not live here
 
-- **The device-side exchange.** `POST /devices/pair` is POPS-1374 and lands on
-  the Access-bypassed surface. The pieces it needs from here already exist:
-  `redeemPairingCode` in `src/db/services/pairing-codes.ts` spends a code
-  atomically — the whole check is the `WHERE` clause of one `UPDATE`, so two
-  requests racing the same code cannot both win — and it takes a `BfmDb`, which
-  a transaction handle also satisfies, so the exchange can compose it into the
-  same transaction as its device insert. Tests drive exactly that, in both
-  directions: a rolled-back transaction leaves the code spendable, a committed
-  one does not.
-- **Any route that mints an access token.** `mintAccessToken` exists and is
-  exercised, but its two callers do not: the pairing exchange (POPS-1374) and
-  the refresh route (POPS-1375). Until one lands, no phone can obtain a token
-  and every `/mobile/*` request is a `401` by construction.
+- **Refresh.** `POST /auth/challenge` and `POST /auth/refresh` are POPS-1375,
+  with the proof-of-possession signature, the rotation and the reuse detection
+  the `refresh_tokens` columns were shaped for. Pairing opens a family and
+  writes its head; nothing yet rotates it, so a handset that lets its ten
+  minutes lapse has to pair again. `src/api/auth/device-signature.ts` is the
+  primitive that ticket verifies with.
 - **Writes.** The mobile surface is read-only; mutations are tracked
   separately. Nothing under `/mobile` uses a verb other than `GET`.
 - **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
@@ -360,8 +400,10 @@ pillars/bfm/
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
     ├── contract/                 the wire contract — the only description of it
-    │   ├── rest.ts               health + the operator and mobile sub-routers
+    │   ├── rest.ts               health + the device, operator and mobile sub-routers
     │   ├── rest-schemas.ts        the mobile shapes + the error envelopes
+    │   ├── rest-device.ts        the pairing exchange, and what guards it instead
+    │   ├── rest-device-schemas.ts
     │   ├── rest-operator.ts      the three Access-gated routes, and why /operator
     │   ├── rest-operator-schemas.ts
     │   ├── manifest.ts
@@ -372,14 +414,17 @@ pillars/bfm/
     │   ├── schema/                one file per table
     │   └── services/              what the API does to those tables
     │       ├── pairing-codes.ts   mint, normalize, redeem-exactly-once
-    │       └── devices.ts         list, and the transactional revoke
+    │       ├── refresh-tokens.ts  draw, digest, insert the head of a family
+    │       └── devices.ts         insert, list, and the transactional revoke
     └── api/
         ├── server.ts              HTTP entrypoint (port 3014) — wiring only
         ├── boot-env.ts            the env this pillar's own HTTP surface reads
         ├── app.ts                 Express app factory + route wiring
         ├── manifest.ts            the boot-time ManifestPayload
-        ├── rate-limit.ts          issuance budget — in memory, single-replica
-        ├── auth/                  the /mobile perimeter — has its own README
+        ├── rate-limit.ts          the fixed-window counter every budget uses
+        ├── tiered-rate-limit.ts   the shape the device-facing budgets use it in
+        ├── paths.ts               the paths middleware mounts on, off the contract
+        ├── auth/                  the perimeter and the exchange — has its own README
         ├── mobile/                what the phone is told — has its own README
         ├── middleware/identity.ts the operator principal, and the two legs it drops
         ├── pillars/               calling siblings — has its own README

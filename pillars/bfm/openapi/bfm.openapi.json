@@ -6,6 +6,150 @@
   },
   "openapi": "3.0.2",
   "paths": {
+    "/devices/pair": {
+      "post": {
+        "operationId": "device.pair",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "deviceModel": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "deviceName": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "publicKey": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["code", "publicKey", "deviceName", "deviceModel"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "deviceId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["deviceId", "accessToken", "refreshToken", "expiresIn"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["pairing_rejected"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          }
+        },
+        "summary": "Spend a pairing code for a device identity. The tokens are returned once",
+        "tags": ["device"]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health",

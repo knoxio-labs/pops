@@ -5,18 +5,25 @@
  * `openapi/bfm.openapi.json`, which the pillar serves verbatim at
  * `GET /openapi`. Nothing else in the tree describes the bfm wire format:
  * don't hand-author OpenAPI, and don't hand-author paths in `app.ts`.
+ * Three surfaces live here, on two hostnames, and the split is the pillar's
+ * whole security model. Each is named below by its **sub-router key**, which
+ * is also the prefix of the `operationId`s it projects and therefore the name
+ * a generated client will call it by:
  *
-
- * Two surfaces live here, on two hostnames, and the split is the pillar's
- * whole security model:
- *
- * - **operator** (`/operator/*`) — behind Cloudflare Access via the shell's
+ * - **`operator`** (`/operator/*`) — behind Cloudflare Access via the shell's
  *   nginx at `/bfm-api/`, gated per route on a resolved principal.
- * - **device** (`/mobile/*`) — on bfm's own tunnel hostname with Access
- *   bypassed, behind `requireDevice`. The pairing exchange (POPS-1374) and
- *   refresh (POPS-1375) land there too, not beside the operator router.
+ * - **`device`** (`/devices/*`) — on bfm's own tunnel hostname with Access
+ *   bypassed, and gated by nothing that resolves an identity, because this is
+ *   how a caller acquires one. Just the pairing exchange today; refresh
+ *   (POPS-1375) joins it. `rest-device.ts` says what stands in for a gate.
+ * - **`mobile` / `mobileFinance`** (`/mobile/*`) — the same bypassed hostname,
+ *   behind `requireDevice`. Everything a phone calls once it has paired.
  *
- * `/health` belongs to neither and answers on both.
+ * The two device-facing surfaces are one hostname but not one gate, and the
+ * naming keeps them apart on purpose: `/devices/*` is what a caller reaches
+ * *without* a device, `/mobile/*` is what it reaches *with* one.
+ *
+ * `/health` belongs to none of them and answers on both hostnames.
  *
  * The iOS client is generated from the projection of this file, so a field
  * renamed under `/mobile` renames it on a handset. That is the intended
@@ -32,17 +39,18 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { bfmDeviceContract } from './rest-device.js';
 import { bfmOperatorContract } from './rest-operator.js';
 import {
   HealthResponseSchema,
   MobileBootstrapResponseSchema,
   MobileDeviceRevokedErrorSchema,
   MobileInvalidTokenErrorSchema,
-  MobileRateLimitErrorSchema,
   MobileRequestErrorSchema,
   MobileTransactionDetailSchema,
   MobileTransactionsPageSchema,
   MobileUpstreamErrorSchema,
+  RateLimitErrorSchema,
 } from './rest-schemas.js';
 
 const c = initContract();
@@ -66,7 +74,7 @@ const MOBILE_PERIMETER_RESPONSES = {
   // point the response is built, which is the half a schema cannot enforce.
   401: MobileInvalidTokenErrorSchema,
   403: MobileDeviceRevokedErrorSchema,
-  429: MobileRateLimitErrorSchema,
+  429: RateLimitErrorSchema,
 } as const;
 
 /**
@@ -158,6 +166,7 @@ export const bfmContract = c.router(
       responses: { 200: HealthResponseSchema },
       summary: 'Liveness shape. Answers without a database round-trip',
     },
+    device: bfmDeviceContract,
     operator: bfmOperatorContract,
     mobile: mobileContract,
     mobileFinance: mobileFinanceContract,

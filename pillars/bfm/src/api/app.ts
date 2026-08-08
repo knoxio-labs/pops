@@ -23,13 +23,12 @@ import express, { type Express, type Request, type Response } from 'express';
 
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
+import { createPairingRateLimit, type PairingRateLimitOptions } from './auth/pairing-rate-limit.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
-import { MOBILE_PATH_PREFIX } from './paths.js';
+import { MOBILE_PATH_PREFIX, PAIRING_PATH } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
-
-import type { KeyObject } from 'node:crypto';
 
 /**
  * The committed OpenAPI projection, served verbatim at `GET /openapi` so the
@@ -53,15 +52,9 @@ const openapiDocument: unknown = JSON.parse(
 );
 
 /** Re-exported so existing callers keep one import; defined in `paths.ts`. */
-export { MOBILE_PATH_PREFIX } from './paths.js';
+export { MOBILE_PATH_PREFIX, PAIRING_PATH } from './paths.js';
 
 export interface BfmApiDeps extends BfmRestHandlerDeps {
-  /**
-   * Verifies the bearer token on every `/mobile/*` request. Required rather
-   * than optional: an app that could be built without one would be an app
-   * whose perimeter can go missing silently.
-   */
-  accessTokenSigningKey: KeyObject;
   /**
    * Overrides for the perimeter's request budget. Optional because *whether*
    * the limiter runs is not a choice — it is mounted unconditionally below —
@@ -69,6 +62,8 @@ export interface BfmApiDeps extends BfmRestHandlerDeps {
    * the limit rather than assert the configuration object.
    */
   mobileRateLimit?: MobileRateLimitOptions;
+  /** Same, for the pairing exchange's budget. See {@link PAIRING_PATH}. */
+  pairingRateLimit?: PairingRateLimitOptions;
 }
 
 export interface CreateBfmApiAppOptions {
@@ -94,6 +89,14 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // limiter stands in front of it (POPS-1468). A refused request costs a map
   // lookup instead of a signature check.
   app.use(MOBILE_PATH_PREFIX, createMobileRateLimit(deps.mobileRateLimit).handler);
+
+  // The pairing exchange's own budget, on the same footing and ahead of the
+  // body parser for the same reason. A separate limiter rather than a wider
+  // mount of the one above: they answer different questions — that one bounds
+  // work against a 256-bit HMAC, this one bounds guesses against a code a
+  // human can type — so sharing a counter would let ordinary phone traffic
+  // spend the pairing budget and lock out a handset trying to pair.
+  app.use(PAIRING_PATH, createPairingRateLimit(deps.pairingRateLimit).handler);
 
   // Then the guard, still ahead of the body parser. It reads headers only, so
   // an unauthenticated caller never gets bfm to parse a request body — which
