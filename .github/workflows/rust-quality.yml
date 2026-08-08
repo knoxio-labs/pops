@@ -58,7 +58,7 @@ jobs:
       # check-cargo-deps.mjs). Pinned to 22 to match the TS lanes.
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Cache cargo registry + workspace target + installed tools
         uses: actions/cache@v6

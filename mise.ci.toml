@@ -1,5 +1,11 @@
 # CI toolchain override (activated by `MISE_ENV=ci`).
-# Local `mise.toml` pins node 24 (HARD CONSTRAINT); CI pins node 22.
-# jdx/mise-action@v2 is the sole Node manager — no setup-node anywhere.
+#
+# Pinned to the same Node major as `mise.toml` and as the pillar Dockerfiles,
+# so local, CI and the deployed runtime agree. They previously did not: local
+# was 24 while CI and every image ran 22.
+#
+# Node 22 entered security-only maintenance on 2025-10-21; 24 is Active LTS
+# until 2028-04-30. Note 24 itself enters maintenance on 2026-10-20, eight days
+# before 26 becomes LTS (2026-10-28) — that is the window to look at 26.
 [tools]
-node = "22"
+node = "24"
