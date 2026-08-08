@@ -174,8 +174,13 @@ vi.mock('@pops/ui', async () => {
         { 'data-testid': 'collapsible', 'data-open': open, onClick: () => onOpenChange(!open) },
         children
       ),
-    CollapsibleTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
-      asChild ? children : React.createElement('button', null, children),
+    CollapsibleTrigger: ({
+      children,
+      asChild,
+    }: {
+      children: React.ReactNode;
+      asChild?: boolean;
+    }) => (asChild ? children : React.createElement('button', null, children)),
     CollapsibleContent: ({ children }: { children: React.ReactNode }) =>
       React.createElement('div', { 'data-testid': 'collapsible-content' }, children),
     cn: (...args: unknown[]) =>

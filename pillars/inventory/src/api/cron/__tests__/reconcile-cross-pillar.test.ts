@@ -260,9 +260,10 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
       purchaseTransactionUri: 'pops://finance/transaction/tx-3',
     });
     const finance: PillarHandle<FinanceRouter> = {
-      callDynamic: vi.fn(
-        async (): Promise<CallResult<unknown>> => ({ kind: 'unavailable', pillar: 'finance' })
-      ),
+      callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
+        kind: 'unavailable',
+        pillar: 'finance',
+      })),
     } as unknown as PillarHandle<FinanceRouter>;
     const registry = makeRegistryProxy({});
     const warn = vi.fn();
@@ -338,13 +339,11 @@ describe('runReconciliation — bad-URI', () => {
       purchaseTransactionUri: 'pops://finance/transaction/refused',
     });
     const finance: PillarHandle<FinanceRouter> = {
-      callDynamic: vi.fn(
-        async (): Promise<CallResult<unknown>> => ({
-          kind: 'bad-request',
-          pillar: 'finance',
-          message: 'no such id format',
-        })
-      ),
+      callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
+        kind: 'bad-request',
+        pillar: 'finance',
+        message: 'no such id format',
+      })),
     } as unknown as PillarHandle<FinanceRouter>;
     const registry = makeRegistryProxy({});
 

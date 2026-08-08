@@ -97,9 +97,8 @@ describe('createContactsClient.createOrFetchByName — robust against case-sensi
       listCalls += 1;
       return listCalls === 1 ? page([], false) : page([existing], false);
     });
-    const create = vi.fn(
-      async (): Promise<CallResult<{ data: ContactEntity; message: string }>> =>
-        conflict("Entity with name 'Globex' already exists")
+    const create = vi.fn(async (): Promise<CallResult<{ data: ContactEntity; message: string }>> =>
+      conflict("Entity with name 'Globex' already exists")
     );
     const client = createContactsClient(() => stubHandle({ list, create }));
 
@@ -112,8 +111,8 @@ describe('createContactsClient.createOrFetchByName — robust against case-sensi
 
   it('throws when a 409 is reported but no existing contact can be re-fetched', async () => {
     const list = vi.fn(async () => page([], false));
-    const create = vi.fn(
-      async (): Promise<CallResult<{ data: ContactEntity; message: string }>> => conflict('phantom')
+    const create = vi.fn(async (): Promise<CallResult<{ data: ContactEntity; message: string }>> =>
+      conflict('phantom')
     );
     const client = createContactsClient(() => stubHandle({ list, create }));
 
