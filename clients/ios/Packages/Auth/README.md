@@ -61,7 +61,7 @@ swift test --package-path Packages/Auth
 `SecureEnclaveKeyStore` and `KeychainTokenStore` are the only implementations that will ever run in production, and **neither has a suite in this package**. Not an oversight — this package's tests cannot reach either type:
 
 - The data-protection keychain requires the process to carry a keychain-access-group entitlement. A `swift test` binary has none, and neither does an unhosted `xcodebuild test` bundle; both get `errSecMissingEntitlement` (-34018).
-- The Secure Enclave does not exist in a simulator at all, so `SecKeyCreateRandomKey` with `kSecAttrTokenIDSecureEnclave` fails outright, and a Mac's Enclave is not reachable from an unsigned test binary either.
+- The Secure Enclave key is also created `kSecAttrIsPermanent`, so creating one hits the same wall as above rather than a hardware one. On an Apple Silicon host the simulator does reach the host Mac's Enclave — see below — but `SecItemAdd` fails on the missing entitlement before a package test ever gets that far.
 
 Both suites therefore live in the app's test target, [`clients/ios/AppTests`](../../AppTests), which is hosted by the app and so runs with the app's bundle and entitlements. **Both run on every CI run**:
 

@@ -134,7 +134,7 @@ The formatter treats the two **oppositely**, and the `.openapi` infix is what se
 
 Two things about it are worth knowing before you touch either side:
 
-- **It is path-filtered to `clients/ios/**`and`pillars/bfm/openapi/**`.** The BFM contract is the input the Swift client is generated from, so a contract change has to re-run this job or the generated client rots with nothing red to show for it. That filter is what makes the regenerate-and-diff step above reachable from a change on the producer's side.
+- **It is path-filtered to `clients/ios/**` and `pillars/bfm/openapi/**`.** The BFM contract is the input the Swift client is generated from, so a contract change has to re-run this job or the generated client rots with nothing red to show for it. That filter is what makes the regenerate-and-diff step above reachable from a change on the producer's side.
 - **It is wired into `ci-gate.yml`, which is what makes it block a merge.** The gate is the one static required context in the branch ruleset; `iOS Quality` appears in both the `on.workflow_run.workflows` trigger array and the `gated` array inside the script, and either one alone is inert — trigger-only is never evaluated, gated-only never fires. A TypeScript-only PR is unaffected: this job is path-filtered out, and the gate reads an absent workflow as passing.
 
 `mise install` is run with `MISE_DISABLE_TOOLS=rust,node,pnpm` there. mise merges config up the tree, so without it the job would download a full Rust toolchain to compile Swift.

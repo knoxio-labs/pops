@@ -89,9 +89,9 @@ internal struct SecureEnclaveKeyStoreTests {
     func privateKeyIsNonExtractable() throws {
         try store.createKey()
 
+        let privateKey = try storedPrivateKey()
         var exportError: Unmanaged<CFError>?
-        let exported = SecKeyCopyExternalRepresentation(try storedPrivateKey(), &exportError)
-            as Data?
+        let exported = SecKeyCopyExternalRepresentation(privateKey, &exportError) as Data?
         exportError?.release()
 
         #expect(
@@ -143,7 +143,10 @@ internal struct SecureEnclaveKeyStoreTests {
 
         let tokenID = try storedKeyAttributes()[kSecAttrTokenID as String] as? String
 
-        #expect(tokenID == kSecAttrTokenIDSecureEnclave as String, "token id is \(tokenID ?? "unset")")
+        #expect(
+            tokenID == kSecAttrTokenIDSecureEnclave as String,
+            "token id is \(tokenID ?? "unset")"
+        )
 
         try store.deleteKey()
     }

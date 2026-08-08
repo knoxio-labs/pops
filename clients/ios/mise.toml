@@ -210,6 +210,13 @@ exit $status
 
 # Reached through `test` rather than run on its own in CI, but nameable so a
 # developer changing the app target can run this lane alone.
+#
+# `--forbid-skips` here, not just on `test:device` below: this is the lane CI
+# runs on every push, and app-test-lane.sh's own reasoning for the flag —
+# "nobody re-reads a green check" — describes an automatic, unattended run far
+# more than it describes a manual one. Without it, the Secure Enclave and
+# Keychain suites this target exists for could start skipping on the runner
+# and CI would stay green.
 [tasks."test:app"]
 description = "Run the app's test target on the iOS Simulator, and assert it ran something"
 depends = ["generate"]
@@ -219,7 +226,8 @@ set -o pipefail
 
 mise run verify:app-test-target
 
-scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest"
+scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest" \
+  --forbid-skips
 '''
 
 # The same target on real hardware. Not reachable from `test` and never run in
@@ -231,9 +239,10 @@ scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=lat
 # a particular phone. Worth keeping for exactly that, and for the pairing QA on
 # a device.
 #
-# `--forbid-skips` because a device run is rare and manual, so a skip in one is
-# a skip nobody will notice. Nothing in the app target skips today and nothing
-# should start without arguing for it here.
+# `--forbid-skips` here too, for the same reason as `test:app`: nothing in the
+# app target skips today, and a lane that starts skipping should have to argue
+# for it here rather than pass unnoticed — a device run being rare and manual
+# is, if anything, more reason a skip would go unremarked, not less.
 [tasks."test:device"]
 description = "Run the app's test target on a physical iPhone"
 depends = ["generate"]
