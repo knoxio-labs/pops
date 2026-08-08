@@ -5142,9 +5142,40 @@ export type TransactionsListData = {
     type?: 'purchase' | 'transfer' | 'income' | 'refund' | 'reversal' | 'loan' | 'rebate' | 'tax';
     limit?: number;
     offset?: number;
+    beforeDate?: string;
+    beforeId?: string;
   };
   url: '/transactions';
 };
+
+export type TransactionsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TransactionsListError = TransactionsListErrors[keyof TransactionsListErrors];
 
 export type TransactionsListResponses = {
   /**

@@ -168,6 +168,7 @@ import type {
   TransactionsGetErrors,
   TransactionsGetResponses,
   TransactionsListData,
+  TransactionsListErrors,
   TransactionsListResponses,
   TransactionsRestoreData,
   TransactionsRestoreErrors,
@@ -1081,8 +1082,8 @@ export const tagRulesDisable = <ThrowOnError extends boolean = false>(
  */
 export const transactionsList = <ThrowOnError extends boolean = false>(
   options?: Options<TransactionsListData, ThrowOnError>
-): RequestResult<TransactionsListResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<TransactionsListResponses, unknown, ThrowOnError>({
+): RequestResult<TransactionsListResponses, TransactionsListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<TransactionsListResponses, TransactionsListErrors, ThrowOnError>({
     url: '/transactions',
     ...options,
   });

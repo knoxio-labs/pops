@@ -103,6 +103,20 @@ const TransactionQuery = z.object({
   type: TransactionTypeSchema.optional(),
   limit: LimitQuery,
   offset: OffsetQuery,
+  /**
+   * Keyset anchor — the `date` of the last row the caller already has. Sent
+   * with {@link beforeId}; the pair selects rows sorting strictly after that
+   * row under the list's `date DESC, id DESC` order.
+   *
+   * Prefer this over `offset` for anything that pages a list which can change
+   * underneath it: an insertion shifts every offset by one, so an infinite
+   * scroll re-shows one row and never shows another. A keyset anchor names a
+   * position in the data rather than a distance from the start, so it is
+   * unaffected. `offset` stays for callers that jump to a page.
+   */
+  beforeDate: z.string().optional(),
+  /** Keyset anchor — the `id` of the last row the caller already has. Sent with {@link beforeDate}. */
+  beforeId: z.string().optional(),
 });
 
 export const financeTransactionsContract = c.router({
@@ -120,6 +134,7 @@ export const financeTransactionsContract = c.router({
           hasMore: z.boolean(),
         }),
       }),
+      ...ERR_RESPONSES,
     },
     summary: 'List transactions with optional filters and pagination',
   },

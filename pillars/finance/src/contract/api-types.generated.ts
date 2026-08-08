@@ -7160,6 +7160,8 @@ export interface operations {
           | 'tax';
         limit?: number;
         offset?: number;
+        beforeDate?: string;
+        beforeId?: string;
       };
       header?: never;
       path?: never;
@@ -7205,6 +7207,45 @@ export interface operations {
               offset: number;
               total: number;
             };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
           };
         };
       };

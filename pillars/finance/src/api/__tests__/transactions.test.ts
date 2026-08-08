@@ -156,6 +156,29 @@ describe('transactions — filters & pagination', () => {
     expect(page.data).toHaveLength(2);
     expect(page.pagination).toMatchObject({ total: 3, limit: 2, offset: 0, hasMore: true });
   });
+
+  it('paginates with a beforeDate/beforeId keyset anchor', async () => {
+    const first = await client().transactions.list({ limit: 1 });
+    const anchor = first.data[0];
+    expect(anchor?.description).toBe('Rent');
+
+    const next = await client().transactions.list({
+      limit: 2,
+      beforeDate: anchor?.date,
+      beforeId: anchor?.id,
+    });
+
+    expect(next.data.map((t) => t.description)).toEqual(['Salary', 'Coffee']);
+  });
+
+  it('400s a keyset anchor missing its other half', async () => {
+    await expect(client().transactions.list({ beforeDate: '2026-02-15' })).rejects.toMatchObject({
+      status: 400,
+    });
+    await expect(client().transactions.list({ beforeId: 'some-id' })).rejects.toMatchObject({
+      status: 400,
+    });
+  });
 });
 
 describe('transactions — error mapping', () => {
