@@ -110,7 +110,7 @@ function refreshTokenRows(app: TestApp) {
 }
 
 /** `POST /devices/pair` with an arbitrary body — every case in this file but the QR round trip. */
-function pair(app: TestApp, body: unknown) {
+function pair(app: TestApp, body: object) {
   return requestOn(app.app, (r) => r.post(PAIRING_PATH).send(body));
 }
 

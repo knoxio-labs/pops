@@ -18,7 +18,9 @@ import { requestOn } from './test-http.js';
 function echoingApp(seenPorts: number[], seenAddresses: string[]): Express {
   const app = express();
   app.get('/ping', (req, res) => {
-    seenPorts.push(req.socket.localPort);
+    const { localPort } = req.socket;
+    if (localPort === undefined) throw new Error('a live request socket has no local port');
+    seenPorts.push(localPort);
     seenAddresses.push(req.socket.localAddress ?? '');
     res.status(200).json({ ok: true });
   });
