@@ -1,0 +1,142 @@
+# SwiftLint — defects and size. `.swift-format` is the formatter.
+#
+# The division of labour, because it decides where a new rule belongs:
+# swift-format owns what the code LOOKS like and rewrites it; SwiftLint owns
+# what the code may DO and rewrites nothing. A defect is reported once, by its
+# owner. The two run as separate commands from `mise run lint`, so a
+# reformatting diff can never bury a lint regression.
+#
+# Every violation here fails: `mise run lint` passes `--strict`, which turns
+# warnings into a non-zero exit. That is why each limit below sets `warning`
+# and nothing else — a two-tier limit means the first tier is advisory, and an
+# advisory limit is one nobody fixes.
+#
+# There are no `swiftlint:disable` comments in this tree and there should never
+# be one. A rule that turns out to be wrong for this codebase gets deleted from
+# this file, in a commit, with the reason written next to it — the same standard
+# the TypeScript side holds against `eslint-disable`.
+
+included:
+  - App
+  - Packages
+
+excluded:
+  # SwiftPM checkout and build products.
+  - '**/.build'
+  # A `Package.swift` is build configuration that happens to be written in
+  # Swift. It declares no module boundary, its length says nothing about its
+  # readability, and the rules below are all about application code. The
+  # formatter still covers it.
+  - 'Packages/*/Package.swift'
+
+# ---------------------------------------------------------------------------
+# Size
+#
+# The numbers are the TypeScript side's numbers (.oxlintrc.json) unless Swift's
+# grammar makes them mean something different, in which case they are adjusted
+# and the adjustment is explained. One repo, one idea of "too big".
+# ---------------------------------------------------------------------------
+
+# oxlint `max-lines` is 200 counting neither blanks nor comments. SwiftLint can
+# discount comment-only lines but has no equivalent for blank ones, so 250 is
+# the same 200-line code budget plus the vertical space Swift's one-declaration-
+# per-line layout spends.
+file_length:
+  warning: 250
+  ignore_comment_only_lines: true
+
+# Just under file_length. Swift convention is one primary type per file, so the
+# type is nearly the whole file; the 50-line gap is what is left for imports,
+# the doc comment above the type, and extensions below it. A type that needs
+# more than this is several types.
+type_body_length:
+  warning: 200
+
+# Tighter than oxlint's `max-lines-per-function` of 60, and the counting rule is
+# identical (SwiftLint excludes comments and whitespace here too). 60 on the TS
+# side has to accommodate React components, which are functions that contain
+# their own markup. In Swift the markup lives in `var body`, a computed property
+# — see the note under type_body_length — so every `func` this rule sees is
+# logic, and 40 lines of logic is already a lot.
+function_body_length:
+  warning: 40
+
+# oxlint `max-params`. SwiftLint exempts initialisers from this rule, which is
+# the right exemption to have: a value type with six stored properties needs a
+# six-parameter `init` and that says nothing bad about the type.
+function_parameter_count:
+  warning: 4
+
+# oxlint `complexity`, unchanged. Branching is branching in either language.
+cyclomatic_complexity:
+  warning: 12
+
+# This rule counts nested *declarations*, not statement or closure depth — a
+# SwiftUI view tree twelve closures deep does not register, and there is no
+# SwiftLint equivalent of oxlint's `max-depth`. So the numbers are about
+# declarations only.
+#
+# One nested type is a `CodingKeys` or a `State` enum, which belong to their
+# parent. Two is a namespace pretending to be a type.
+#
+# One nested function is a local helper, which is a readable factoring. Two is a
+# helper inside a helper, which is a type that has not admitted it exists yet.
+# This is tighter than SwiftLint's default of 2 on purpose.
+nesting:
+  type_level:
+    warning: 1
+  function_level:
+    warning: 1
+
+# The hard ceiling, not the day-to-day width. swift-format wraps at 100 (the
+# same column oxfmt uses) and is what actually shapes the code — but it gives up
+# silently on anything it cannot break, so a 135-character string literal exits
+# the formatter clean. Verified, not assumed. This catches that residue; the
+# 20-column gap is the tolerance for it. Past 120 the literal gets split by hand.
+line_length:
+  warning: 120
+  ignores_urls: true
+
+# ---------------------------------------------------------------------------
+# Correctness
+# ---------------------------------------------------------------------------
+
+opt_in_rules:
+  # The three ways to convert "this might not be here" into a crash.
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  # `Bool?` has three states and every reader assumes two.
+  - discouraged_optional_boolean
+  # `count == 0` on a Collection is O(n) for some conformances; `isEmpty` is not.
+  - empty_count
+  # `[unowned self]` is a dangling pointer the moment the assumption behind it
+  # stops holding. `[weak self]` fails visibly instead.
+  - unowned_variable_capture
+  - redundant_nil_coalescing
+  # Every top-level declaration states its access level, so a module's public
+  # surface is something someone wrote rather than something that defaulted.
+  # `explicit_acl` — its whole-file sibling — was considered and rejected: it
+  # demands the keyword on every member of every type, which buries the two
+  # places the boundary is actually decided in a hundred that it is not.
+  - explicit_top_level_acl
+
+# `force_cast` and `force_try` are on by default and stay on; they are the same
+# category as `force_unwrapping` above.
+
+# An orphan TODO is a finding that will never be done — this repo's rule is that
+# a finding is a Huly issue or it is nothing. Error, so the comment cannot be
+# committed with the intention of coming back to it.
+todo:
+  severity: error
+
+disabled_rules:
+  # Contradicts the formatter outright. swift-format is configured to ADD a
+  # trailing comma to every multi-element literal (smaller diffs); this rule's
+  # default is to reject exactly those commas. Not a preference to reconcile —
+  # with both on, formatted code is unlintable and linted code is unformatted.
+  - trailing_comma
+
+# Not enabled: the analyzer rules (`unused_declaration`, `unused_import`). They
+# need a full xcodebuild compiler log, which would make linting depend on a
+# successful build — and a linter you cannot run while the build is broken is
+# one you cannot use to fix it. Revisiting them is tracked in Huly.

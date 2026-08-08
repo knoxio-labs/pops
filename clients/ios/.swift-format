@@ -1,0 +1,145 @@
+// swift-format — layout only. SwiftLint (.swiftlint.yml) is the linter.
+//
+// The split is deliberate and load-bearing: this tool decides what the code
+// LOOKS like and rewrites it in place; SwiftLint decides what the code may DO
+// and never rewrites anything. Where both ship an opinion on the same defect,
+// it is turned off here and left on there, so a defect is reported once, by
+// the tool that owns it. They also run as two separate commands with two exit
+// codes, so reformatting can never drown out a lint regression.
+//
+// `rules` REPLACES the defaults — it does not merge into them. Naming three
+// rules here silently disables the other forty, including semicolon removal
+// and import sorting, with no warning. Every rule is therefore listed
+// explicitly below, and a swift-format release that adds a rule leaves it off
+// until someone adds it here on purpose. `mise run lint` compares this list
+// against the running toolchain's and fails on a mismatch, so that bump is
+// caught rather than remembered.
+//
+// This file is JSON with `//` comments — swift-format's config parser accepts
+// them. It still rejects genuinely malformed JSON with a non-zero exit, so a
+// broken config fails the build rather than silently reverting to defaults.
+{
+  "version": 1,
+
+  // 100, the same width oxfmt enforces on the TypeScript side (.oxfmtrc.json
+  // `printWidth`). One repo, one column budget — a reviewer reading a Swift
+  // diff and a TS diff side by side gets the same wrapping.
+  "lineLength": 100,
+
+  // 4, not swift-format's default of 2. Xcode's own editor indents by 4, and
+  // so does every Swift file already in this tree; picking 2 would mean every
+  // line typed in Xcode arrives needing reformatting. The TS side uses 2
+  // because Prettier-lineage tooling does — matching the language's own
+  // toolchain beats matching the other language's.
+  "indentation": { "spaces": 4 },
+  "tabWidth": 4,
+
+  "maximumBlankLines": 1,
+  "spacesBeforeEndOfLineComments": 2,
+  "indentBlankLines": false,
+  "indentConditionalCompilationBlocks": true,
+  "indentSwitchCaseLabels": false,
+
+  // Trailing commas on every multi-element literal: adding an element then
+  // touches one line instead of two, so the diff shows the element that
+  // changed and nothing else.
+  "multiElementCollectionTrailingCommas": true,
+  "multilineTrailingCommaBehavior": "keptAsWritten",
+
+  // Honour the author's line breaks where they are legal. swift-format is
+  // allowed to normalise layout, not to re-wrap a deliberately-broken
+  // expression into one dense line.
+  "respectsExistingLineBreaks": true,
+  "lineBreakAroundMultilineExpressionChainComponents": false,
+  "lineBreakBeforeControlFlowKeywords": false,
+  "lineBreakBeforeEachArgument": false,
+  "lineBreakBeforeEachGenericRequirement": false,
+  "lineBreakBetweenDeclarationAttributes": false,
+  "prioritizeKeepingFunctionOutputTogether": false,
+  "reflowMultilineStringLiterals": "never",
+  "spacesAroundRangeFormationOperators": false,
+
+  "fileScopedDeclarationPrivacy": { "accessLevel": "private" },
+  "noAssignmentInExpressions": { "allowedFunctions": ["XCTAssertNoThrow"] },
+  "orderedImports": { "includeConditionalImports": false, "shouldGroupImports": true },
+
+  "rules": {
+    // ---- Layout and literal form: this tool's actual job. All on. ----
+    "AlwaysUseLiteralForEmptyCollectionInit": true,
+    "DoNotUseSemicolons": true,
+    "FileScopedDeclarationPrivacy": true,
+    "GroupNumericLiterals": true,
+    "NoAccessLevelOnExtensionDeclaration": true,
+    "NoBlockComments": true,
+    "NoEmptyLinesOpeningClosingBraces": true,
+    "NoEmptyTrailingClosureParentheses": true,
+    "NoLabelsInCasePatterns": true,
+    "NoParensAroundConditions": true,
+    "NoVoidReturnOnFunctionSignature": true,
+    "OneCasePerLine": true,
+    "OneVariableDeclarationPerLine": true,
+    "OrderedImports": true,
+    "ReturnVoidInsteadOfEmptyTuple": true,
+    "UseShorthandTypeNames": true,
+    "UseSingleLinePropertyGetter": true,
+    "UseTripleSlashForDocumentationComments": true,
+
+    // ---- Defects only swift-format can see. On: SwiftLint has no equivalent. ----
+    "AmbiguousTrailingClosureOverload": true,
+    "AvoidRetroactiveConformances": true,
+    "DontRepeatTypeInStaticProperties": true,
+    "FullyIndirectEnum": true,
+    "IdentifiersMustBeASCII": true,
+    "NoAssignmentInExpressions": true,
+    "NoCasesWithOnlyFallthrough": true,
+    "NoPlaygroundLiterals": true,
+    "OnlyOneTrailingClosureArgument": true,
+    "ReplaceForEachWithForLoop": true,
+    "UseExplicitNilCheckInConditions": true,
+    "UseLetInEveryBoundCaseVariable": true,
+    "UseSynthesizedInitializer": true,
+
+    // Checks that a doc comment which exists agrees with the signature it sits
+    // above — parameters named, return documented, no phantom parameters. It
+    // does not demand that any doc comment exist, so it costs nothing on
+    // undocumented code and catches the stale-docstring case, which is the one
+    // that actively misleads.
+    "ValidateDocumentationComments": true,
+
+    // ---- Off: SwiftLint owns these. Reporting twice is noise, not rigour. ----
+    // force_unwrapping, force_try, implicitly_unwrapped_optional.
+    "NeverForceUnwrap": false,
+    "NeverUseForceTry": false,
+    "NeverUseImplicitlyUnwrappedOptionals": false,
+    // identifier_name, type_name.
+    "AlwaysUseLowerCamelCase": false,
+    "TypeNamesShouldBeCapitalized": false,
+
+    // ---- Off: rewrites control flow, which is not layout. ----
+    // Both turn a correct construct into a differently-shaped correct one.
+    // Whether an early exit or a `where` clause reads better is a review
+    // judgement about the code's intent; a formatter that silently takes that
+    // decision makes its own diffs indistinguishable from someone's opinion.
+    "UseEarlyExits": false,
+    "UseWhereClausesInForLoops": false,
+    // Same reason, narrower: `return` is a keyword the author chose to write.
+    "OmitExplicitReturns": false,
+
+    // ---- Off: would demand comments this repo does not want written. ----
+    // A doc comment on every public declaration means a doc comment on
+    // `public static let moduleName = "AppCore"`, and the only sentence
+    // available for it restates the code. The repo's rule is that comments
+    // carry the reason, never the mechanics — so what to document is a review
+    // call, and a tool that forces the trivial cases produces exactly the
+    // comments the rule bans.
+    "AllPublicDeclarationsHaveDocumentation": false,
+    // Prescribes prose shape (one-sentence summary paragraph). Same objection.
+    "BeginDocumentationCommentWithOneLineSummary": false,
+
+    // ---- Off: wrong for SwiftUI. ----
+    // `@State private var x` synthesises `_x`, and property-wrapper storage is
+    // referenced by that name. The rule cannot tell generated storage from a
+    // hand-written underscore, so on a SwiftUI target it is false positives.
+    "NoLeadingUnderscores": false
+  }
+}

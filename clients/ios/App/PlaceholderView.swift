@@ -8,7 +8,7 @@ import SwiftUI
 /// The app target is the only place that imports every module, and this view is
 /// the only thing asserting they all link. The real session-routing root
 /// replaces it (POPS-1391).
-struct PlaceholderView: View {
+internal struct PlaceholderView: View {
     private let linkedModules = [
         Auth.moduleName,
         BFMClient.moduleName,

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct PopsApp: App {
+internal struct PopsApp: App {
     var body: some Scene {
         WindowGroup {
             PlaceholderView()
