@@ -203,6 +203,41 @@ describe('POST /devices/refresh', () => {
     expect(RefreshErrorSchema.parse(res.body).code).toBe('invalid_grant');
   });
 
+  it('sends the challenge RFC 9110 requires on a 401', async () => {
+    // A 401 without `WWW-Authenticate` is non-conforming, and unlike the
+    // pairing route this one has an honest scheme to name: the credential it
+    // refused is a bearer token, carried in the body as RFC 6750 §2.2 allows.
+    const app = open();
+    const handset = await pair(app);
+    const impostor = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey;
+
+    const rejected = await refresh(app, {
+      refreshToken: handset.refreshToken,
+      privateKey: impostor,
+    });
+    const staleChallenge = await request(app.app).post(REFRESH_PATH).send({
+      refreshToken: handset.refreshToken,
+      nonce: 'never-issued',
+      signature: 'bm90LWEtc2lnbmF0dXJl',
+    });
+
+    // Both 401 codes, not just one.
+    expect(rejected.headers['www-authenticate']).toBe('Bearer error="invalid_token"');
+    expect(staleChallenge.headers['www-authenticate']).toBe('Bearer error="invalid_token"');
+  });
+
+  it('sends no challenge on the statuses that are not 401', async () => {
+    const app = open();
+    const handset = await pair(app);
+    revokeDevice(app.db, handset.deviceId);
+
+    const revoked = await refresh(app, handset);
+    const ok = await request(app.app).post(CHALLENGE_PATH).send({});
+
+    expect(revoked.headers['www-authenticate']).toBeUndefined();
+    expect(ok.headers['www-authenticate']).toBeUndefined();
+  });
+
   it('answers 401 invalid_grant for a token nobody issued, in the same words', async () => {
     // Byte-identical to the wrong-signature refusal above. A response that told
     // them apart would answer "does this token exist" for whoever asked.

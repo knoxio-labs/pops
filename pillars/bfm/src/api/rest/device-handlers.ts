@@ -23,6 +23,7 @@ import { completeRefreshExchange } from '../auth/refresh-exchange.js';
 import type { KeyObject } from 'node:crypto';
 
 import type { ServerInferRequest } from '@ts-rest/core';
+import type { Response } from 'express';
 
 import type { bfmDeviceContract } from '../../contract/rest-device.js';
 import type { BfmDb } from '../../db/index.js';
@@ -45,6 +46,26 @@ export interface DeviceHandlerDeps {
    * rotation issues. Defaults to the service's own TTL.
    */
   refreshTokenTtlMs?: number;
+}
+
+/**
+ * RFC 9110 §15.5.2 makes `WWW-Authenticate` mandatory on a 401, and this route
+ * — unlike the pairing exchange beside it — has a real challenge to send.
+ *
+ * That asymmetry is principled rather than an oversight. A pairing code is not
+ * an HTTP authentication scheme, so `POST /devices/pair` has nothing to name
+ * and answers 403 instead, which its schema's own note argues from §15.5.4. A
+ * refresh token IS a bearer token; RFC 6750 §2.2 allows one to travel in the
+ * request body, and §3 defines exactly this challenge for it. So the header is
+ * accurate here, and it is the same one `require-device.ts` sends for the same
+ * reason.
+ *
+ * Deliberately no `error_description`. The reason belongs in the body, where
+ * it cannot be mistaken for a machine-readable hint, and the two 401 codes are
+ * already the machine-readable part.
+ */
+function challengeBearer(res: Response): void {
+  res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
 }
 
 export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
@@ -107,7 +128,7 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
       };
     },
 
-    refresh: async ({ body }: Req['refresh']) => {
+    refresh: async ({ body, res }: Req['refresh'] & { res: Response }) => {
       const result = completeRefreshExchange(body, {
         db: deps.db,
         accessTokenSigningKey: deps.accessTokenSigningKey,
@@ -118,6 +139,7 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
       });
 
       if (result.outcome === 'challenge-expired') {
+        challengeBearer(res);
         return {
           status: 401 as const,
           body: {
@@ -138,6 +160,7 @@ export function makeDeviceHandlers(deps: DeviceHandlerDeps) {
       }
 
       if (result.outcome === 'rejected') {
+        challengeBearer(res);
         return {
           status: 401 as const,
           body: {
