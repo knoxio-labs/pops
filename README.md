@@ -206,7 +206,7 @@ Server provisioning (Docker, secrets, Cloudflare Tunnel, backups, github runner)
 
 ## Repo Structure
 
-There are exactly **two unit kinds**: `pillars/` (services) and `libs/` (shared libraries). No `apps/`, no `packages/`, no turbo, no central API monolith.
+There are exactly **three unit kinds**: `pillars/` (services), `libs/` (shared libraries) and `clients/` (distributable end-user binaries that consume the federation over HTTP and are imported by nothing here — [ADR-043](docs/architecture/adr-043-clients-as-a-unit-kind.md)). No `apps/`, no `packages/`, no turbo, no central API monolith.
 
 ```
 pillars/<id>/              # One pillar per folder. Run `ls pillars/` for the current fleet.
@@ -219,6 +219,10 @@ pillars/<id>/              # One pillar per folder. Run `ls pillars/` for the cu
 
 libs/<name>/               # Shared libraries — no service, no DB, and never imports a pillar.
                            #   Each carries a README saying what it is and who depends on it.
+
+clients/<name>/            # Distributable end-user binaries — outside the pnpm and cargo
+                           #   workspaces, so nothing here builds, imports or deploys one.
+                           #   Distributed through a store, not rolled forward by an operator.
 
 infra/
 ├── docker-compose.yml     # Production (ghcr.io/knoxio-labs/pops-<id> images + Watchtower)

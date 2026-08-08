@@ -174,7 +174,7 @@ pops ships code, per-pillar Dockerfiles, and `infra/docker-compose.yml`. Pushing
 
 ## Repo Structure
 
-Exactly **two unit kinds**: `pillars/` (services) and `libs/` (shared libraries, no service, no DB).
+Exactly **three unit kinds**: `pillars/` (services), `libs/` (shared libraries, no service, no DB) and `clients/` (distributable end-user binaries — [ADR-043](docs/architecture/adr-043-clients-as-a-unit-kind.md)).
 
 ```
 pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (src/db),
@@ -193,6 +193,18 @@ libs/                      # Shared libraries — no service, no DB, and a lib m
 │                          #   import from a pillar (enforced: scripts/ci/check-lib-no-pillar-import.mjs).
 │                          # Each lib's own README states what it is and who depends on it;
 │                          #   `ls libs/` is the inventory.
+
+clients/                   # Distributable end-user binaries. Membership needs BOTH halves:
+│                          #   consumes the federation over HTTP through one pillar's published
+│                          #   contract, and is imported by NOTHING in this repo (the lib rule
+│                          #   pointed the other way). Serves no contract, owns no store,
+│                          #   registers nothing with the registry.
+│                          # Outside the pnpm and cargo workspaces, so mise fan-out, unit
+│                          #   discovery and image publishing all skip it — a client either has
+│                          #   its own workflow or it has no CI at all.
+│                          # Distributed, not deployed: a shipped build runs on hardware the
+│                          #   operator cannot roll forward, so its pillar's contract is
+│                          #   additive-first. `ls clients/` is the inventory.
 
 infra/
 ├── docker-compose.yml     # Production compose (ghcr.io/knoxio-labs/pops-<id> images + Watchtower)
