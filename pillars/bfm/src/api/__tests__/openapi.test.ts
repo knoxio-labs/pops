@@ -26,6 +26,20 @@ async function fetchDocument(): Promise<OpenApiBody> {
   return res.body as OpenApiBody;
 }
 
+/**
+ * A ts-rest router's values are `AppRoute | AppRouter` — a nested sub-router
+ * carries no `path`/`method` of its own. bfm's contract is flat today, so this
+ * narrows rather than recurses; it exists so that adding a sub-router makes
+ * these assertions skip it instead of reading `undefined` as a match.
+ */
+function isLeafRoute(value: unknown): value is { path: string; method: string } {
+  if (value === null || typeof value !== 'object') return false;
+  const candidate = value as { path?: unknown; method?: unknown };
+  return typeof candidate.path === 'string' && typeof candidate.method === 'string';
+}
+
+const contractRoutes = Object.values(bfmContract).filter(isLeafRoute);
+
 describe('GET /openapi', () => {
   it('declares OpenAPI 3.0.x — 3.1 would break consumer codegen', async () => {
     const body = await fetchDocument();
@@ -42,8 +56,8 @@ describe('GET /openapi', () => {
   it('covers every route the ts-rest contract declares', async () => {
     const body = await fetchDocument();
 
-    for (const route of Object.values(bfmContract)) {
-      const { path, method } = route as { path: string; method: string };
+    expect(contractRoutes.length).toBeGreaterThan(0);
+    for (const { path, method } of contractRoutes) {
       expect(body.paths?.[path]?.[method.toLowerCase()]).toBeDefined();
     }
   });
@@ -57,9 +71,7 @@ describe('GET /openapi', () => {
   it('declares no route the contract does not, so the document cannot over-promise', async () => {
     const body = await fetchDocument();
 
-    const contractPaths = Object.values(bfmContract).map(
-      (route) => (route as { path: string }).path
-    );
+    const contractPaths = contractRoutes.map((route) => route.path);
     expect(Object.keys(body.paths ?? {}).toSorted()).toEqual(contractPaths.toSorted());
   });
 });
