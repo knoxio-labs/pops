@@ -9,6 +9,7 @@
  * code that only misbehaves in front of a real phone.
  */
 import QRCode from 'qrcode';
+import { useMemo } from 'react';
 
 import { cn } from '../lib/utils';
 
@@ -78,22 +79,21 @@ export function QrCode({
   errorCorrectionLevel = 'M',
   className,
 }: QrCodeProps): ReactElement {
-  const { modules } = QRCode.create(value, { errorCorrectionLevel });
-  const runs = toModuleRuns(modules);
-  const extent = modules.size + QUIET_ZONE_MODULES * 2;
-
-  return (
-    <svg
-      role="img"
-      aria-label={title}
-      viewBox={`0 0 ${extent} ${extent}`}
-      shapeRendering="crispEdges"
-      data-qr-size={modules.size}
-      data-qr-quiet-zone={QUIET_ZONE_MODULES}
-      className={cn('h-auto w-full max-w-64', className)}
-    >
-      <rect width={extent} height={extent} className="fill-qr-quiet-zone" />
-      {runs.map((run) => (
+  /**
+   * Keyed on the payload, not on render.
+   *
+   * The natural consumer of this component is a screen with a countdown on it
+   * — the bfm pairing dialog re-renders once a second for its TTL — and the
+   * symbol does not change between those ticks. Memoising the encode also
+   * memoises the element array, so React can skip reconciling a few hundred
+   * `<rect>` children it would otherwise walk every second.
+   */
+  const symbol = useMemo(() => {
+    const { modules } = QRCode.create(value, { errorCorrectionLevel });
+    return {
+      size: modules.size,
+      extent: modules.size + QUIET_ZONE_MODULES * 2,
+      rects: toModuleRuns(modules).map((run) => (
         <rect
           key={`${run.y}-${run.x}`}
           data-qr-module=""
@@ -103,7 +103,22 @@ export function QrCode({
           height={1}
           className="fill-qr-module"
         />
-      ))}
+      )),
+    };
+  }, [value, errorCorrectionLevel]);
+
+  return (
+    <svg
+      role="img"
+      aria-label={title}
+      viewBox={`0 0 ${symbol.extent} ${symbol.extent}`}
+      shapeRendering="crispEdges"
+      data-qr-size={symbol.size}
+      data-qr-quiet-zone={QUIET_ZONE_MODULES}
+      className={cn('h-auto w-full max-w-64', className)}
+    >
+      <rect width={symbol.extent} height={symbol.extent} className="fill-qr-quiet-zone" />
+      {symbol.rects}
     </svg>
   );
 }

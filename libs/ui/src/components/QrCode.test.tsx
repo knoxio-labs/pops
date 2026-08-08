@@ -10,7 +10,7 @@
  */
 import { render, screen } from '@testing-library/react';
 import QRCode from 'qrcode';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '../testing/decode-qr';
 import { QrCode, toModuleRuns } from './QrCode';
@@ -115,6 +115,59 @@ describe('QrCode', () => {
     render(<QrCode value="labelled" title="Scan to pair this device" />);
 
     expect(screen.getByRole('img', { name: 'Scan to pair this device' })).toBeInTheDocument();
+  });
+
+  /**
+   * The natural consumer renders a countdown beside the symbol, so the parent
+   * re-renders once a second for as long as the code is alive. Re-encoding on
+   * every one of those ticks is pure waste — and it also hands React a fresh
+   * array of a few hundred `<rect>` elements to reconcile each time.
+   */
+  it('encodes once per payload, not once per render', () => {
+    const encode = vi.spyOn(QRCode, 'create');
+    const payload = 'https://bfm.example.com/devices/pair?code=7QK4-9M2X-P3ND';
+
+    const { rerender } = render(<QrCode value={payload} title="Pairing QR code" />);
+    const callsAfterFirstPaint = encode.mock.calls.length;
+
+    rerender(<QrCode value={payload} title="Pairing QR code" />);
+    rerender(<QrCode value={payload} title="Pairing QR code" />);
+
+    expect(encode.mock.calls.length).toBe(callsAfterFirstPaint);
+    encode.mockRestore();
+  });
+
+  it('re-encodes when the payload actually changes', () => {
+    const encode = vi.spyOn(QRCode, 'create');
+
+    const { rerender } = render(<QrCode value="first" title="Pairing QR code" />);
+    const callsAfterFirstPaint = encode.mock.calls.length;
+
+    rerender(<QrCode value="second" title="Pairing QR code" />);
+
+    expect(encode.mock.calls.length).toBeGreaterThan(callsAfterFirstPaint);
+    expect(decodeQrSvg(renderedSvg())).toBe('second');
+    encode.mockRestore();
+  });
+
+  /**
+   * Asserted on the encoder call rather than on `qrSize`: a short payload fits
+   * version 1 at every level, so the symbol can legitimately come back the
+   * same size while still having been re-encoded.
+   */
+  it('re-encodes when the error-correction level changes', () => {
+    const encode = vi.spyOn(QRCode, 'create');
+
+    const { rerender } = render(
+      <QrCode value="ecc" title="Pairing QR code" errorCorrectionLevel="L" />
+    );
+    encode.mockClear();
+
+    rerender(<QrCode value="ecc" title="Pairing QR code" errorCorrectionLevel="H" />);
+
+    expect(encode).toHaveBeenCalledWith('ecc', { errorCorrectionLevel: 'H' });
+    expect(decodeQrSvg(renderedSvg())).toBe('ecc');
+    encode.mockRestore();
   });
 
   it('paints a light quiet-zone backdrop under the dark modules', () => {
