@@ -59,11 +59,16 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
   currency: 'the ISO-4217 code, inferred from the symbol if unprinted, or null',
   total: 'the total the receipt states, exactly as printed',
   tax: 'tax stated as a separate line, exactly as printed, or null. Do NOT report tax that the receipt says is already included in the prices',
-  discounts: 'each stated discount, exactly as printed, as an array',
+  discounts:
+    'each stated discount as an array — the amount only, without the wording ' +
+    'printed beside it. A receipt that lists a discount and then repeats it ' +
+    'in a totals line has stated one discount, so report it once',
   surcharges:
-    'each fee the merchant added, exactly as printed, as an array — a card ' +
-    'or credit surcharge, a small-order fee. These are added to the total, ' +
-    'not subtracted like a discount. Do not include tax here',
+    'each fee the merchant added as an array — a card or credit surcharge, ' +
+    'a small-order fee. The amount only, without the wording printed beside ' +
+    'it. These are added to the total, not subtracted like a discount, and ' +
+    'tax does not belong here. A receipt that names a fee and then repeats ' +
+    'it in a totals line has charged one fee, so report it once',
   lines: 'one entry per product, in printed order',
   description: 'the product text verbatim, including abbreviations. Do not expand or tidy them',
   amount:
