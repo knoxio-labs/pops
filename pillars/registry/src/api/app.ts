@@ -25,7 +25,11 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
-import { LEGACY_REGISTRY_PATHS, REGISTRY_PATHS } from '@pops/pillar-sdk';
+import {
+  LEGACY_REGISTRY_PATHS,
+  REGISTRY_PATHS,
+  REGISTRY_SERVICE_ACCOUNT_SELF_PATH,
+} from '@pops/pillar-sdk';
 
 import { coreContract } from '../contract/rest.js';
 import { type CoreApiDeps, makeRequestHandler } from './handlers.js';
@@ -36,6 +40,7 @@ import { createExternalRegisterHandler } from './modules/external-registry/regis
 import { makeLegacyPathMetric } from './modules/registry/legacy-path-metric.js';
 import { createRegistrySnapshotHandler } from './modules/registry/snapshot.js';
 import { createRegistrySubscribeHandler } from './modules/registry/subscribe.js';
+import { createServiceAccountSelfHandler } from './modules/service-accounts/self.js';
 import { makeCoreRestHandlers } from './rest/handlers.js';
 
 import type { CoreDb } from '../db/index.js';
@@ -156,6 +161,12 @@ export function createCoreApiApp(deps: CoreApiDeps): Express {
   // handlers. Mounted BEFORE `createExpressEndpoints` so every REST handler
   // sees the principal.
   app.use(createIdentityMiddleware(deps.coreDb.db));
+
+  // Service-account introspection for sibling pillars. Raw route, mounted
+  // after the identity middleware (it reads the resolved principal) and before
+  // the contract surface (whose `GET /service-accounts` list is a different,
+  // `userOnly` route).
+  app.get(REGISTRY_SERVICE_ACCOUNT_SELF_PATH, createServiceAccountSelfHandler());
 
   // ts-rest REST surface — the canonical wire for every domain. Mounted
   // root-relative (e.g. `/settings/:key`, `/users`) AFTER the raw
