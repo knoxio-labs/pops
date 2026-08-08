@@ -23,9 +23,10 @@ afterEach(() => {
 });
 
 /**
- * Rotate `previous` into a fresh token of the same family, exactly as
- * POPS-1375's refresh handler will: the new row is inserted first, then the
- * old one is marked consumed and pointed at its successor.
+ * Rotate `previous` into a fresh token of the same family, in the order the
+ * refresh handler has to use: the successor is inserted first, then the old
+ * row is marked consumed and pointed at it. The reverse order would set
+ * `replacedBy` to a row that does not exist yet and trip the self-FK.
  */
 function rotate(previous: RefreshTokenInsert): RefreshTokenInsert {
   const next = refreshTokenRow(previous.deviceId, { familyId: previous.familyId });

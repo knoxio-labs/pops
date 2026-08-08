@@ -20,8 +20,10 @@
  * both hold a live token. Presenting an already-consumed token means one of
  * them replayed, so the whole family dies and the phone re-pairs.
  *
- * As with pairing codes, only the hash is persisted — a database read yields
- * no usable bearer credential.
+ * Only the hash is persisted. Unlike the pairing code next door, that alone
+ * is sufficient here: a refresh token is CSPRNG-generated at full width and
+ * never read by a human, so there is no candidate set for someone holding
+ * `bfm.db` to enumerate offline.
  */
 import { sql } from 'drizzle-orm';
 import { check, index, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';

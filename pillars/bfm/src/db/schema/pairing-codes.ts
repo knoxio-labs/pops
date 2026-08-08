@@ -2,22 +2,37 @@
  * `pairing_codes` — the one-time secret that turns an unpaired phone into a
  * `devices` row.
  *
- * A pairing code is short enough for a human to read off a screen and type
- * into a handset, which means it is short enough to guess. Three properties
- * compensate, and all three are enforced here rather than left to a handler:
+ * The plaintext is never written here. It is returned exactly once, at
+ * issuance, and only a digest of it lands in this table.
  *
- * **Only the hash is stored.** The plaintext is returned exactly once, at
- * issuance, and never again. Someone holding a copy of `bfm.db` holds no
- * usable credential.
+ * **That is not the same as "a stolen `bfm.db` is harmless", and nothing in
+ * this file should be read as claiming it.** A pairing code is short enough
+ * for a human to read off a screen and type into a handset, which makes it
+ * short enough to *enumerate*: someone holding this table can hash guesses
+ * offline until one matches `codeHash`, with no rate limit to slow them and
+ * no request to log. The refresh-token digests next door carry no such gap —
+ * those values are CSPRNG-generated at full width, so there is no candidate
+ * set to walk.
  *
- * **Single use.** `consumedAt` is set inside the same transaction that
- * inserts the device, so a replay of the same code cannot mint a second
- * device.
+ * Closing it belongs to the code path that mints the code, which does not
+ * exist yet, and needs one of two things: enough entropy in the code that
+ * offline enumeration is infeasible, or a **keyed** digest under a pepper
+ * held outside the database — a mounted secret, not a column — so that this
+ * table is inert without the key. Either way the invariant to hold to is
+ * that `bfm.db` alone must not be enough to recover a live code.
  *
- * **Short-lived.** `expiresAt` is minutes out, not hours, which bounds the
- * window a brute force has to work in. The CHECK below is the guard against
- * a TTL calculation that silently produces a code already dead on arrival —
- * or, worse, one that never expires because the arithmetic went the wrong way.
+ * Of the properties above, the database enforces exactly one:
+ *
+ * **`consumedAt` — single use.** A column, not a guarantee. Setting it in the
+ * same transaction that inserts the device is what stops a replay minting a
+ * second one, and that atomicity lives in the pairing handler; nothing here
+ * can impose it.
+ *
+ * **`expiresAt` — short-lived.** Minutes out, not hours, which is what bounds
+ * the enumeration window above. The CHECK below *is* enforced: it rejects a
+ * code that expires before it was created — the signature of TTL arithmetic
+ * that went the wrong way, and the same slip in the other direction produces
+ * a code that never expires at all.
  */
 import { sql } from 'drizzle-orm';
 import { check, sqliteTable, text } from 'drizzle-orm/sqlite-core';

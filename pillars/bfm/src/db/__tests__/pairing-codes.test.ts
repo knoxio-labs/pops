@@ -70,12 +70,16 @@ describe('a pairing code row', () => {
   });
 });
 
-describe('what a stolen copy of bfm.db yields', () => {
+describe('what a stolen copy of bfm.db contains', () => {
   it('holds no trace of the plaintext behind a stored code hash', () => {
-    // The invariant the table exists to hold: a database read must never
-    // produce a usable credential. Asserted against the file's bytes rather
-    // than the row, because a row assertion only covers the columns that
-    // exist today — a plaintext column added later would pass it.
+    // Scoped deliberately: this proves the plaintext is absent, NOT that the
+    // digest is unrecoverable — a short code can still be enumerated offline
+    // against its hash, which is the issuance path's problem to solve and is
+    // spelled out in the table's file header.
+    //
+    // Asserted against the file's bytes rather than the row, because a row
+    // assertion only covers the columns that exist today: a plaintext column
+    // added later would sail past it.
     const plaintext = 'PAIR-XKCD-7Q4M';
     opened.db
       .insert(pairingCodes)

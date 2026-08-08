@@ -31,10 +31,20 @@ an operator reads out, `devices` is the handset it turned into, and
 `refresh_tokens` is a rotating chain per pairing. Each file states its own
 reasoning; the properties that span them are these:
 
-- **A read of this database yields no usable credential.** Both bearer-shaped
-  values — the pairing code and the refresh token — are stored as hashes, and
+- **No plaintext credential is written.** Both bearer-shaped values — the
+  pairing code and the refresh token — are stored as digests, and
   `devices.publicKeyDer` is the public half of a key whose private half is
   non-extractable inside the phone's Secure Enclave.
+
+  That makes `bfm.db` inert for the refresh tokens, which are CSPRNG-generated
+  at full width. It does **not** yet make it inert for pairing codes: a code
+  short enough to read off a screen and type is short enough to enumerate
+  offline against `pairing_codes.codeHash`, bounded only by the minutes until
+  it expires. Closing that means either a code with enough entropy to make
+  enumeration infeasible, or keying the digest under a pepper mounted outside
+  the database — a decision that belongs with the issuance path (POPS-1369),
+  not with the column.
+
 - **Nothing is destroyed to express distrust.** Revoking a device sets
   `devices.revokedAt` and leaves the row; killing a token sets
   `refresh_tokens.revokedAt`, which is deliberately a different column from the
