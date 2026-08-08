@@ -1,13 +1,17 @@
 /**
- * `POPS_PILLARS` environment variable parser inside the cerebrum-api process.
+ * `POPS_PILLARS` environment-variable parser.
  *
  * Format: `id:baseUrl[,id:baseUrl,...]`
  *   - `id` lowercase kebab-case pillar slug (`food`, `finance`, …)
  *   - `baseUrl` fully-qualified http(s) origin (trailing slashes stripped)
  *   - whitespace around `:` and `,` tolerated
  *
- * Strict: malformed input throws rather than silently dropping entries.
+ * Strict: malformed input throws rather than silently dropping entries,
+ * because a dropped entry surfaces later as an unexplained "pillar
+ * unavailable" with no clue where it went.
  */
+
+import { BareOriginParseError, parseBareOrigin } from './bare-origin.js';
 
 import type { PillarRegistryEntry } from '@pops/types';
 
@@ -23,10 +27,9 @@ export interface ParsePillarsEnvOptions {
 }
 
 export class PillarsEnvParseError extends Error {
-  override readonly name = 'PillarsEnvParseError' as const;
-
-  constructor(message: string) {
-    super(`POPS_PILLARS: ${message}`);
+  constructor(message: string, options?: ErrorOptions) {
+    super(`POPS_PILLARS: ${message}`, options);
+    this.name = 'PillarsEnvParseError';
   }
 }
 
@@ -77,32 +80,22 @@ function parsePillarEntry(rawPair: string, seenIds: ReadonlySet<string>): Pillar
   if (baseUrlRaw.length === 0) {
     throw new PillarsEnvParseError(`entry "${pair}" is missing the baseUrl half`);
   }
-  return { id, baseUrl: parseBareOrigin(`pillar '${id}'`, baseUrlRaw) };
+  return { id, baseUrl: parseEntryBaseUrl(id, baseUrlRaw) };
 }
 
 /**
- * Parse `raw` as a bare http(s) origin. Throws if it carries a path, query,
- * or fragment so consumers can append URL paths cleanly without silently
- * routing through a prefix. Reused by `selfBaseUrl` validation and the
- * per-entry parser above so both surfaces enforce the same
- * `PillarRegistryEntry.baseUrl` contract.
+ * Restate a bare-origin rejection as a `POPS_PILLARS` failure. The origin rule
+ * is shared with the self-base-url surfaces, whose errors must NOT claim the
+ * variable at fault is `POPS_PILLARS` — so the prefix is added here, at the
+ * one call site where it is true, rather than inside `parseBareOrigin`.
  */
-export function parseBareOrigin(label: string, raw: string): string {
-  let url: URL;
+function parseEntryBaseUrl(id: string, raw: string): string {
   try {
-    url = new URL(raw);
-  } catch {
-    throw new PillarsEnvParseError(`${label} baseUrl "${raw}" is not a valid URL`);
+    return parseBareOrigin(`pillar '${id}' baseUrl`, raw);
+  } catch (err) {
+    if (err instanceof BareOriginParseError) {
+      throw new PillarsEnvParseError(err.message, { cause: err });
+    }
+    throw err;
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new PillarsEnvParseError(
-      `${label} baseUrl "${raw}" must use http or https; got ${url.protocol}`
-    );
-  }
-  if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
-    throw new PillarsEnvParseError(
-      `${label} baseUrl "${raw}" must be a bare origin (no path, query, or fragment)`
-    );
-  }
-  return url.origin;
 }

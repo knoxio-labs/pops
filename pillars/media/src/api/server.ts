@@ -14,6 +14,7 @@
  * explicit deregister.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openMediaDb } from '../db/index.js';
 import { createMediaApiApp } from './app.js';
@@ -21,7 +22,6 @@ import { plexScheduler } from './cron/plex-scheduler.js';
 import { rotationScheduler } from './cron/rotation-scheduler.js';
 import { buildMediaCapabilityReporter, buildMediaManifest } from './manifest.js';
 import { resolveMediaSqlitePath } from './media-sqlite-path.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -36,21 +36,11 @@ function resolvePort(): number {
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
-// Normalise MEDIA_SELF_BASE_URL (or the localhost fallback) through the
-// shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['MEDIA_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('MEDIA_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[media-api] MEDIA_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'MEDIA_SELF_BASE_URL',
+  port,
+  processLabel: 'media-api',
+});
 
 const mediaDb = openMediaDb(resolveMediaSqlitePath());
 const app = createMediaApiApp({ mediaDb, version, selfBaseUrl });

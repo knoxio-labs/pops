@@ -5,7 +5,7 @@
  * synthetic `documents` entry so consumers see the host pillar in the
  * `/pillars` listing without having to special-case the call site.
  */
-import { parseBareOrigin, parsePillarsEnv } from './env.js';
+import { parseBareOrigin, parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
 import type { PillarRegistryEntry } from '@pops/types';
 

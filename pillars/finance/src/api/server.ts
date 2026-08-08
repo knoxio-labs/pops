@@ -13,6 +13,7 @@
  * registry sees an explicit deregister.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openFinanceDb } from '../db/index.js';
 import { createFinanceApiApp } from './app.js';
@@ -24,7 +25,6 @@ import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orpha
 import { startReconcilePairedTransfersWorker } from './cron/reconcile-paired-transfers.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -39,21 +39,11 @@ function resolvePort(): number {
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
-// Normalise FINANCE_SELF_BASE_URL (or the localhost fallback) through the
-// shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['FINANCE_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('FINANCE_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[finance-api] FINANCE_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'FINANCE_SELF_BASE_URL',
+  port,
+  processLabel: 'finance-api',
+});
 
 const financeDb = openFinanceDb(resolveFinanceSqlitePath());
 const contacts = createContactsClient();

@@ -14,13 +14,13 @@
  * explicit deregister.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
 import { createDocumentsClient } from './documents/client.js';
 import { resolveInventorySqlitePath } from './inventory-sqlite-path.js';
 import { buildInventoryCapabilityReporter, buildInventoryManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -34,27 +34,11 @@ function resolvePort(): number {
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
-// Normalise INVENTORY_SELF_BASE_URL (or the localhost fallback) through
-// the shared bare-origin parser so a misconfigured env crashes boot
-// loudly instead of publishing an invalid PillarRegistryEntry.baseUrl
-// that breaks downstream consumers appending `/uri/resolve`, `/health`,
-// etc. parseBareOrigin throws a PillarsEnvParseError prefixed with
-// `POPS_PILLARS:` — fine when the parser is consulted from
-// parsePillarsEnv, but misleading when the failing env is actually
-// INVENTORY_SELF_BASE_URL. Wrap + rethrow with an inventory-api-scoped
-// message so operators look at the right env var.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['INVENTORY_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('INVENTORY_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[inventory-api] INVENTORY_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'INVENTORY_SELF_BASE_URL',
+  port,
+  processLabel: 'inventory-api',
+});
 
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
 const app = createInventoryApiApp({

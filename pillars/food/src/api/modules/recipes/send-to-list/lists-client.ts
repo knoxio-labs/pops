@@ -8,7 +8,7 @@
  * consistency, so there is no single cross-pillar transaction. `upsertByRef`
  * makes the merge-or-insert atomic per item so retries are idempotent.
  */
-import { parsePillarsEnv } from '../../../pillars/env.js';
+import { parsePillarsEnv } from '@pops/pillar-sdk/pillar-env';
 
 export interface ListHeader {
   id: number;

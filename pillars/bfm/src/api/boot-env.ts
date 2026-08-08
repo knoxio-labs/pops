@@ -8,11 +8,10 @@
  * The bias throughout is to crash at boot. A pillar that starts with a
  * misconfigured value and registers it is discovered days later as a 404 from
  * a sibling; one that refuses to start is discovered immediately.
- *
- * The bare-origin rule below is re-implemented in every pillar's
- * `src/api/pillars/env.ts` rather than shared through the SDK — this copy
- * keeps bfm's boot behaviour identical to the rest of the fleet.
  */
+
+import { resolveSelfBaseUrl as resolveFleetSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
+
 export const DEFAULT_PORT = 3014;
 
 export class BootEnvError extends Error {
@@ -61,37 +60,17 @@ export function resolveVersion(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 /**
- * Parse `raw` as a bare http(s) origin, returning the normalised origin.
- *
- * @param label Env var name, embedded in the error so an operator knows which
- *   variable to fix.
- */
-export function parseBareOrigin(label: string, raw: string): string {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new BootEnvError(`${label} "${raw}" is not a valid URL`);
-  }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new BootEnvError(`${label} "${raw}" must use http or https; got ${url.protocol}`);
-  }
-  if ((url.pathname !== '/' && url.pathname !== '') || url.search !== '' || url.hash !== '') {
-    throw new BootEnvError(`${label} "${raw}" must be a bare origin (no path, query, or fragment)`);
-  }
-  return url.origin;
-}
-
-/**
  * Resolve `BFM_SELF_BASE_URL`, falling back to the loopback origin for the
  * port the process is listening on.
+ *
+ * The bare-origin rule it enforces is the fleet's, not bfm's — every pillar
+ * advertises a `PillarRegistryEntry.baseUrl` through the same parser.
  */
 export function resolveSelfBaseUrl(port: number, env: NodeJS.ProcessEnv = process.env): string {
-  const raw = env['BFM_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('BFM_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[bfm-api] ${message}`, { cause: err });
-  }
+  return resolveFleetSelfBaseUrl({
+    envVar: 'BFM_SELF_BASE_URL',
+    port,
+    processLabel: 'bfm-api',
+    env,
+  });
 }

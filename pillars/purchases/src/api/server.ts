@@ -1,4 +1,5 @@
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { DEFAULT_SETTLEMENT_WINDOW_DAYS } from '../contract/constants.js';
 /**
@@ -23,7 +24,6 @@ import { createSweepRunner } from '../reconcile/runner.js';
 import { createPurchasesApiApp } from './app.js';
 import { createFinanceClient } from './finance/client.js';
 import { buildPurchasesManifest } from './manifest.js';
-import { parseBareOrigin } from './pillars/env.js';
 import { resolvePurchasesSqlitePath } from './purchases-sqlite-path.js';
 
 function resolvePort(): number {
@@ -39,24 +39,11 @@ function resolvePort(): number {
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
-// Normalise PURCHASES_SELF_BASE_URL (or the localhost fallback) through the
-// shared bare-origin parser so a misconfigured env crashes boot loudly
-// instead of publishing an invalid PillarRegistryEntry.baseUrl. The
-// parser's own error is prefixed `POPS_PILLARS:`, which misleads when the
-// failing env is PURCHASES_SELF_BASE_URL — wrap + rethrow with a
-// purchases-api-scoped message so operators look at the right env var.
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['PURCHASES_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('PURCHASES_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[purchases-api] PURCHASES_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'PURCHASES_SELF_BASE_URL',
+  port,
+  processLabel: 'purchases-api',
+});
 
 const purchasesDb = openPurchasesDb(resolvePurchasesSqlitePath());
 

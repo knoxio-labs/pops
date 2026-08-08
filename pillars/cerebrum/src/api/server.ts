@@ -17,6 +17,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openCerebrumDb } from '../db/index.js';
 import { createCerebrumApiApp } from './app.js';
@@ -35,7 +36,6 @@ import { TemplateRegistry } from './modules/templates/registry.js';
 import { startThalamusWatcher, stopThalamusWatcher } from './modules/thalamus/instance.js';
 import { closeCerebrumEmbeddingsQueue, getEmbeddingsQueue } from './modules/thalamus/queue.js';
 import { AnthropicContradictionDetector } from './modules/workers/llm.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -50,18 +50,11 @@ function resolvePort(): number {
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
-function resolveSelfBaseUrl(): string {
-  const raw = process.env['CEREBRUM_SELF_BASE_URL'] ?? `http://localhost:${port}`;
-  try {
-    return parseBareOrigin('CEREBRUM_SELF_BASE_URL', raw);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[cerebrum-api] CEREBRUM_SELF_BASE_URL ${raw} is invalid — ${message}`, {
-      cause: err,
-    });
-  }
-}
-const selfBaseUrl = resolveSelfBaseUrl();
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'CEREBRUM_SELF_BASE_URL',
+  port,
+  processLabel: 'cerebrum-api',
+});
 
 function resolveTemplatesDir(): string {
   const envDir = process.env['CEREBRUM_TEMPLATES_DIR'];

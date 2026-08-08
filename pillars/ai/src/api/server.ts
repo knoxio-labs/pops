@@ -9,6 +9,7 @@
  * stop the schedulers, deregister, then close the HTTP server and DB.
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openAiDb } from '../db/index.js';
 import { buildAiCapabilityReporter, buildAiManifest } from './ai-manifest.js';
@@ -16,7 +17,6 @@ import { resolveAiSqlitePath } from './ai-sqlite-path.js';
 import { createAiApiApp } from './app.js';
 import { startAlertsScheduler } from './modules/ai-alerts/scheduler.js';
 import { startObservabilityScheduler } from './modules/ai-observability/scheduler.js';
-import { parseBareOrigin } from './pillars/env.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -30,10 +30,11 @@ function resolvePort(): number {
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
-const selfBaseUrl = parseBareOrigin(
-  'AI_SELF_BASE_URL',
-  process.env['AI_SELF_BASE_URL'] ?? `http://localhost:${port}`
-);
+const selfBaseUrl = resolveSelfBaseUrl({
+  envVar: 'AI_SELF_BASE_URL',
+  port,
+  processLabel: 'ai-api',
+});
 
 const aiDb = openAiDb(resolveAiSqlitePath());
 
