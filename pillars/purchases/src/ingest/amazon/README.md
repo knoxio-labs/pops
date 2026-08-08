@@ -64,7 +64,7 @@ The measurements behind reading one file and not five:
 | `Your Orders.Returns.3.csv` | 3    | an `Order Item ID` in `miq://document…` form. `Order History.csv` has no such column, so it joins to nothing        |
 | `Return Requests.csv`       | 1    | one ASIN — per-line attribution for 1 refund of 16                                                                  |
 
-A replacement order is a second order for goods already paid for, so counting one as fresh spend would double-count the purchase. That does not happen on this bundle: of the 22 replacements, only three appear in `Order History` at all and all three carry a `$0` total — they are exactly the three `Return Resolution: Exchange` rows. Nothing here guards against a replacement that does carry money, because no such row exists to write the guard against.
+A replacement order is a second order for goods already paid for, so counting one as fresh spend would double-count the purchase. That does not happen on this bundle: of the 22 replacements, only three appear in `Order History` at all and all three carry a `$0` total — they are exactly the three `Return Resolution: Exchange` rows. There is no guard against a replacement that does carry money (POPS-1466), because no such row exists to write one against.
 
 **A refund can never raise the residual.** `computeAccounting` keeps refunds out of the `matched`/`awaitingImport`/`residual` identity entirely (ADR-042), so a refunded order still reports its full total as residual until a capture is matched. That reads oddly on a fresh backfill and is the point: the alternative, folding refunds into the residual, made receiving a refund push the "something is wrong" number up.
 
@@ -79,9 +79,9 @@ Both are anomalies, never silent: an unrecorded refund leaves the order reportin
 
 **No captures.** The export publishes no per-charge breakdown of what was _paid_, so every order lands at `awaiting_settlement` with its full total as residual until the reconciliation engine mints a derived charge for the transaction it matches. A first backfill therefore reads as 748 orders, 100% unexplained. That is correct, not broken. Refunds are the sole exception, and they do not reduce the residual.
 
-**No documents.** The bundle ships 325 tax-invoice PDFs, but their filenames carry no order id — mapping one to an order needs text extraction from the PDF.
+**No documents** (POPS-1304). The bundle ships 325 tax-invoice PDFs, but their filenames carry no order id — mapping one to an order needs text extraction from the PDF.
 
-**No digital orders.** `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, so it needs its own path rather than a widened parser. `Digital Returns.csv` belongs with it, not here.
+**No digital orders** (POPS-1306). `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, so it needs its own path rather than a widened parser. `Digital Returns.csv` belongs with it, not here.
 
 ## Running it
 
