@@ -180,13 +180,20 @@ describe('revokeDevice', () => {
    * The acceptance criterion, driven by an induced failure rather than by
    * inspection: if the two writes were not in one transaction, the device
    * would stay revoked here while its tokens came back to life.
+   *
+   * `revokeDevice` is handed the `tx` handle, not the outer `db`. That is both
+   * how a caller composing it into a larger transaction will really call it,
+   * and the only version that proves anything — passing the outer handle would
+   * leave whether the writes are scoped to this transaction up to driver
+   * behaviour, so a green result would not distinguish "rolled back" from
+   * "never enrolled in the transaction at all".
    */
   it('rolls the device revocation back with the token revocation when the transaction fails', () => {
     const id = pairDevice();
 
     expect(() =>
-      opened.db.transaction(() => {
-        revokeDevice(opened.db, id, new Date('2026-08-08T10:00:00.000Z'));
+      opened.db.transaction((tx) => {
+        revokeDevice(tx, id, new Date('2026-08-08T10:00:00.000Z'));
         throw new Error('later step failed');
       })
     ).toThrow('later step failed');
@@ -194,6 +201,27 @@ describe('revokeDevice', () => {
     expect(requireRow(opened.db.select().from(devices).get(), 'device').revokedAt).toBeNull();
     for (const token of opened.db.select().from(refreshTokens).all()) {
       expect(token.revokedAt).toBeNull();
+    }
+  });
+
+  /**
+   * The committed counterpart of the case above. Rollback proving nothing is
+   * written is only half the property — a caller composing this into its own
+   * transaction also needs the writes to survive when that transaction commits.
+   */
+  it('commits through an enclosing transaction that succeeds', () => {
+    const id = pairDevice();
+
+    const result = opened.db.transaction((tx) =>
+      revokeDevice(tx, id, new Date('2026-08-08T10:00:00.000Z'))
+    );
+
+    expect(result).toMatchObject({ outcome: 'revoked' });
+    expect(requireRow(opened.db.select().from(devices).get(), 'device').revokedAt).toBe(
+      '2026-08-08T10:00:00.000Z'
+    );
+    for (const token of opened.db.select().from(refreshTokens).all()) {
+      expect(token.revokedAt).toBe('2026-08-08T10:00:00.000Z');
     }
   });
 });

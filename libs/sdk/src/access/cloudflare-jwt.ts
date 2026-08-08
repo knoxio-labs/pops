@@ -204,7 +204,11 @@ export async function verifyCloudflareAccessJwt(
   if (!config) {
     throw new CloudflareAccessError('CLOUDFLARE_ACCESS_TEAM_NAME not configured');
   }
-  const cacheKey = `${config.teamName} ${config.audience ?? ''}`;
+  // `\0` written as an escape, never as a raw byte. It is the right separator
+  // — neither a team name nor an audience can contain one, so no two distinct
+  // configurations can collide onto one key — but a literal control character
+  // in source is invisible in review and mangled by tooling.
+  const cacheKey = `${config.teamName}\0${config.audience ?? ''}`;
   let verifier = verifiersByConfig.get(cacheKey);
   if (!verifier) {
     verifier = createCloudflareAccessVerifier(config);
