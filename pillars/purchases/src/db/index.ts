@@ -31,6 +31,7 @@ export { type PurchaseChargeDetail } from './services/purchase-read-charges.js';
 
 export {
   findPurchaseByChecksum,
+  findPurchaseAtInstantForAmount,
   findPurchaseBySourceOrderId,
 } from './services/purchase-lookups.js';
 

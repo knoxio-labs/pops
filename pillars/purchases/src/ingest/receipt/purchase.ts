@@ -7,11 +7,20 @@
  * figures are believable — only about how to shape them.
  *
  * **The natural key is the photograph.** `sourceOrderId` is the image's
- * SHA-256, which is what makes a re-upload a 409 from the existing write
- * path rather than a twin. A merchant order id would be better and does not
- * exist: a till slip carries a transaction number in a different place and
- * format for every chain, and inventing a key from date-plus-total would
- * merge two identical coffees bought an hour apart.
+ * SHA-256, which is what makes re-sending the same file a 409 rather than a
+ * twin. A merchant order id would be better and does not exist: a till slip
+ * carries a transaction number in a different place and format for every
+ * chain.
+ *
+ * The hash is necessary and not sufficient. It identifies a *file*, and
+ * what people actually do is photograph the same paper twice — three shots
+ * of one Salvos receipt wrote three $66.00 purchases at the same minute.
+ * So the write path also refuses a shop it already holds at the same stated
+ * instant for the same amount, which is a check on the receipt rather than
+ * on the bytes. It cannot use the merchant name: the same Kmart receipt
+ * read twice gave "K MART ASHFIELD" and "K mart". Date-plus-total alone
+ * would merge two identical coffees bought an hour apart — the stated
+ * *time* is what keeps them separate.
  */
 import { createHash } from 'node:crypto';
 

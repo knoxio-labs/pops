@@ -257,14 +257,68 @@ describe('re-uploading the same photograph', () => {
     expect(readdirSync(receiptDir)).toHaveLength(1);
   });
 
-  it('still creates a second purchase from a different photograph', async () => {
-    // Two identical coffees an hour apart are two purchases. Keying on the
-    // image rather than on date-plus-total is what keeps them apart.
+  it('refuses a second photograph of the same receipt', async () => {
+    // What people actually do: take another picture of the same paper from
+    // a slightly different angle. The bytes differ, so the image hash sees
+    // nothing, and three photos of one Salvos receipt wrote three
+    // purchases of $66.00 at the same minute.
     const app = appWith(saying(GOOD_READING));
     const first = await upload(app, JPEG_BASE64);
     const second = await upload(app, OTHER_JPEG_BASE64);
+
     expect(first.status).toBe(200);
+    expect(second.status).toBe(409);
+    expect(second.body.code).toBe('ALREADY_IMPORTED');
+  });
+
+  it('keeps two genuine shops that differ only in time', async () => {
+    // The case the image key was protecting: two identical coffees, an
+    // hour apart. The receipts state different times, so they stay apart.
+    //
+    // One app, so both uploads demonstrably meet the same database and the
+    // second is judged against the first rather than against nothing.
+    const later = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedAt: '15:32' });
+    let answer = GOOD_READING;
+    const app = appWith({ read: async () => answer });
+
+    const first = await upload(app, JPEG_BASE64);
+    answer = later;
+    const second = await upload(app, OTHER_JPEG_BASE64);
+
+    expect(first.body.kind).toBe('created');
     expect(second.status).toBe(200);
+    expect(second.body.kind).toBe('created');
+  });
+
+  it('keeps the same amount at the same instant in another currency', async () => {
+    // 3000 is $30.00 and ¥3000. Cents are a number without a currency, so
+    // a key that omits it would refuse a real shop bought abroad.
+    const abroad = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      currency: 'JPY',
+      total: '¥27.50',
+    });
+    let answer = GOOD_READING;
+    const app = appWith({ read: async () => answer });
+
+    await upload(app, JPEG_BASE64);
+    answer = abroad;
+    const second = await upload(app, OTHER_JPEG_BASE64);
+
+    expect(second.status).toBe(200);
+    expect(second.body.kind).toBe('created');
+  });
+
+  it('does not conflate two undated receipts uploaded together', async () => {
+    // An inferred date is the upload moment, so two undated receipts sent
+    // in the same second could look identical. They are not one receipt,
+    // and the check is skipped precisely because the date is not stated.
+    const undated = JSON.stringify({ ...JSON.parse(GOOD_READING), purchasedOn: null });
+    const app = appWith(saying(undated));
+    const first = await upload(app, JPEG_BASE64);
+    const second = await upload(app, OTHER_JPEG_BASE64);
+
+    expect(first.body.kind).toBe('created');
     expect(second.body.kind).toBe('created');
   });
 });
