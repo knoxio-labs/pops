@@ -10,4 +10,4 @@ export * from './schema.js';
 export * from './services/index.js';
 
 export { openBfmDb, type BfmDb, type OpenedBfmDb } from './open-bfm-db.js';
-export { findDeviceById, touchDevice } from './queries/devices.js';
+export { findDeviceById, touchDevice, touchDeviceIfStale } from './queries/devices.js';

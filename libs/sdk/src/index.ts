@@ -1,5 +1,10 @@
 export * from './manifest-schema/index.js';
-export { LEGACY_REGISTRY_PATHS, REGISTRY_PATHS, type RegistryPathKey } from './registry-paths.js';
+export {
+  LEGACY_REGISTRY_PATHS,
+  REGISTRY_PATHS,
+  REGISTRY_SERVICE_ACCOUNT_SELF_PATH,
+  type RegistryPathKey,
+} from './registry-paths.js';
 export { createPathResolver, type RegistryPathResolver } from './registry-path-resolver.js';
 export * from './bootstrap/index.js';
 export * from './discovery/index.js';
