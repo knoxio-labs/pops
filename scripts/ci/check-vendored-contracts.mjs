@@ -2,11 +2,11 @@
 /**
  * Vendored-contract drift guard.
  *
- * Some units consume a sibling pillar's OpenAPI contract at codegen time
- * but cannot depend on it through a `@pops/*` package — either the producing
- * pillar has no npm package (e.g. `contacts`, a Rust pillar invisible to pnpm
- * by design, see docs/plans/repo-federation/02-build-system.md) or the consumer
- * is not in the pnpm workspace at all (`clients/ios`, a Swift app; ADR-043).
+ * Some units consume a sibling pillar's OpenAPI contract at codegen time but
+ * cannot depend on it through a `@pops/*` package, because one side of the seam
+ * is not in the pnpm workspace: the producer may be (`contacts`, a Rust pillar
+ * pnpm cannot see), or the consumer may be (`clients/ios`, a Swift app —
+ * ADR-043).
  * Per ADR-033 the OpenAPI snapshot IS that pillar's cross-language contract, so
  * the consumer vendors a copy of the published snapshot inside its OWN unit
  * boundary and generates its client from the local copy. That keeps the unit
