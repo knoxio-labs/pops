@@ -34,6 +34,7 @@ jobs:
           node scripts/ci/check-contract-isolation.mjs --self-test
           node scripts/ci/check-known-pillars-coverage.mjs --self-test
           node scripts/ci/check-mise-tool-overrides.mjs --self-test
+          node scripts/ci/check-node-pin.mjs --self-test
           node scripts/ci/check-homelab-service-isolation.mjs --self-test
           node scripts/ci/check-docs-model.mjs --self-test
       - name: Isolation litmus — no cross-contract reach-behind
@@ -44,6 +45,8 @@ jobs:
         run: node scripts/ci/check-known-pillars-coverage.mjs
       - name: Mise toolchain override guard (root pin intact; only node/rust overridable per unit)
         run: node scripts/ci/check-mise-tool-overrides.mjs
+      - name: Node pin coherence guard (mise/CI/engines/workflows/images agree on one major)
+        run: node scripts/ci/check-node-pin.mjs
       - name: Homelab-service isolation guard (ADR-039 Inv 4 — HA/MQTT/Zigbee2MQTT/Matter never a pops service)
         run: node scripts/ci/check-homelab-service-isolation.mjs
       - name: Docs-model guard (ADR-041 — every unit has a README; no PRD/theme/ideas tree returns)

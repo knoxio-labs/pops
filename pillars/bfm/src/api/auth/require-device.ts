@@ -28,6 +28,7 @@
  * uncoalesced instant because its response promises the exact value it wrote
  * — see `api/mobile/bootstrap.ts`.
  */
+import { DEVICE_REVOKED_ERROR } from '../../contract/rest-schemas.js';
 import { findDeviceById, touchDeviceIfStale } from '../../db/index.js';
 import { AccessTokenError, verifyAccessToken } from './access-token.js';
 
@@ -35,10 +36,7 @@ import type { KeyObject } from 'node:crypto';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
-import type {
-  MobileDeviceRevokedError,
-  MobileInvalidTokenError,
-} from '../../contract/rest-schemas.js';
+import type { DeviceRevokedError, MobileInvalidTokenError } from '../../contract/rest-schemas.js';
 import type { BfmDb, DeviceRow } from '../../db/index.js';
 
 export interface RequireDeviceDeps {
@@ -76,7 +74,7 @@ function readBearerToken(req: Request): string | null {
  */
 type MobileRefusal =
   | { readonly status: 401; readonly body: MobileInvalidTokenError }
-  | { readonly status: 403; readonly body: MobileDeviceRevokedError };
+  | { readonly status: 403; readonly body: DeviceRevokedError };
 
 function refuse(res: Response, refusal: MobileRefusal): void {
   if (refusal.status === 401) {
@@ -158,10 +156,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       console.warn(
         `[bfm-api] rejected a request from revoked device ${device.id} (revoked at ${device.revokedAt})`
       );
-      refuse(res, {
-        status: 403,
-        body: { code: 'device_revoked', message: 'This device has been revoked. Pair again.' },
-      });
+      refuse(res, { status: 403, body: DEVICE_REVOKED_ERROR });
       return;
     }
 

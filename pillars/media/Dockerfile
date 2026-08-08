@@ -1,8 +1,6 @@
-# DO NOT EDIT — hand-written for the collapsed media pillar.
-# The pillar Dockerfile generator (scripts/generate-pillar-dockerfile.mjs)
-# does not yet understand the collapsed shape — until it does, this file
-# is maintained manually. Keep it narrow: only @pops/media and its
-# transitive @pops/* deps (queried via
+# DO NOT EDIT — hand-written for the collapsed media pillar. Every pillar
+# Dockerfile is hand-maintained; nothing regenerates them. Keep it narrow:
+# only @pops/media and its transitive @pops/* deps (queried via
 # `pnpm m ls --filter "@pops/media..." --json --depth -1`).
 
 FROM node:24-slim AS builder

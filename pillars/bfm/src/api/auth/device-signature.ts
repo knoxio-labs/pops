@@ -23,8 +23,8 @@
  *
  * What is deliberately NOT here: the refresh message format — what the phone
  * puts in front of the nonce and the refresh token before signing. That is the
- * BFM's to define and it belongs with the route that consumes it (POPS-1375).
- * This module takes opaque bytes.
+ * BFM's to define, and it lives with the route that consumes it, in
+ * `refresh-exchange.ts`'s header. This module takes opaque bytes.
  */
 import { createPublicKey, verify, type KeyObject } from 'node:crypto';
 

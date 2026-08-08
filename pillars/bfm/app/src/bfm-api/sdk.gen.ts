@@ -4,9 +4,15 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  DeviceChallengeData,
+  DeviceChallengeErrors,
+  DeviceChallengeResponses,
   DevicePairData,
   DevicePairErrors,
   DevicePairResponses,
+  DeviceRefreshData,
+  DeviceRefreshErrors,
+  DeviceRefreshResponses,
   HealthData,
   HealthResponses,
   MobileBootstrapData,
@@ -48,6 +54,21 @@ export type Options<
 };
 
 /**
+ * Mint a single-use nonce for a refresh. Carries no credential and needs none
+ */
+export const deviceChallenge = <ThrowOnError extends boolean = false>(
+  options?: Options<DeviceChallengeData, ThrowOnError>
+): RequestResult<DeviceChallengeResponses, DeviceChallengeErrors, ThrowOnError> =>
+  (options?.client ?? client).post<DeviceChallengeResponses, DeviceChallengeErrors, ThrowOnError>({
+    url: '/devices/challenge',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
  * Spend a pairing code for a device identity. The tokens are returned once
  */
 export const devicePair = <ThrowOnError extends boolean = false>(
@@ -55,6 +76,21 @@ export const devicePair = <ThrowOnError extends boolean = false>(
 ): RequestResult<DevicePairResponses, DevicePairErrors, ThrowOnError> =>
   (options?.client ?? client).post<DevicePairResponses, DevicePairErrors, ThrowOnError>({
     url: '/devices/pair',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Rotate a refresh token, proving possession of the device key. Detects reuse
+ */
+export const deviceRefresh = <ThrowOnError extends boolean = false>(
+  options?: Options<DeviceRefreshData, ThrowOnError>
+): RequestResult<DeviceRefreshResponses, DeviceRefreshErrors, ThrowOnError> =>
+  (options?.client ?? client).post<DeviceRefreshResponses, DeviceRefreshErrors, ThrowOnError>({
+    url: '/devices/refresh',
     ...options,
     headers: {
       'Content-Type': 'application/json',

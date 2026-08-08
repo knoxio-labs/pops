@@ -1,11 +1,15 @@
 /**
  * Runtime config for the generated `@pops/lists` Hey API client.
  *
- * The default base URL points at the shell's `/lists-api` proxy path,
- * which vite (dev) and the production reverse proxy both map onto the
- * deployed lists pillar. Callers wrap the client with a different
- * `baseUrl` via the React provider when running against another host
- * (e.g. e2e harness, storybook).
+ * Forces the base URL to the shell's `/lists-api` proxy path, which vite
+ * (dev) and the production reverse proxy both map onto the deployed lists
+ * pillar on port 3006. This is unconditional — a `baseUrl` passed in here is
+ * discarded, so the default client can never be pointed somewhere else by
+ * accident.
+ *
+ * To run against another host (e2e, storybook), build a separate client with
+ * `createClient({ baseUrl })` and pass it per call as `options.client`; this
+ * hook is not the override seam.
  */
 import type { CreateClientConfig } from './lists-api/client.gen.js';
 

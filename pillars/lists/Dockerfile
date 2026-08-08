@@ -1,9 +1,7 @@
-# DO NOT EDIT — hand-written for the collapsed lists pillar pilot.
-# The pillar Dockerfile generator (scripts/generate-pillar-dockerfile.mjs)
-# does not yet understand the collapsed shape — until it does, this file
-# is maintained manually. Keep Phase 1 narrow: only @pops/lists and its
-# transitive @pops/* deps (queried via
-# `pnpm m ls --filter "@pops/lists..." --json --depth -1`).
+# DO NOT EDIT — hand-written for the collapsed lists pillar pilot. Every
+# pillar Dockerfile is hand-maintained; nothing regenerates them. Keep
+# Phase 1 narrow: only @pops/lists and its transitive @pops/* deps (queried
+# via `pnpm m ls --filter "@pops/lists..." --json --depth -1`).
 
 FROM node:24-slim AS builder
 WORKDIR /app
