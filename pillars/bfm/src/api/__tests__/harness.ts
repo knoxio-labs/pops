@@ -80,6 +80,13 @@ export interface TestAppOptions {
    */
   mobileRateLimit?: MobileRateLimitOptions;
   /**
+   * Seams for the bootstrap route. Left unset, the route wires its production
+   * defaults — which means a real registry read and a real probe, so any test
+   * that calls `/mobile/bootstrap` has to supply at least the probe.
+   */
+  bootstrap?: BfmApiDeps['bootstrap'];
+  internalBaseUrls?: BfmApiDeps['internalBaseUrls'];
+  /**
    * Where the `/mobile/finance/*` routes get their data. Defaults to a client
    * over a gateway whose handle factory throws — a test that reaches finance
    * without saying how fails loudly instead of hanging on a real network call.
@@ -113,6 +120,10 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
       ? {}
       : { pairingCodeTtlMs: options.pairingCodeTtlMs }),
     ...(options.mobileRateLimit === undefined ? {} : { mobileRateLimit: options.mobileRateLimit }),
+    ...(options.internalBaseUrls === undefined
+      ? {}
+      : { internalBaseUrls: options.internalBaseUrls }),
+    ...(options.bootstrap === undefined ? {} : { bootstrap: options.bootstrap }),
   };
 
   const appOptions: CreateBfmApiAppOptions = options.env === undefined ? {} : { env: options.env };

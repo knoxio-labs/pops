@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { lookupPillar, pillarRegistry } from '../api.js';
 import {
   configureCache,
+  DEFAULT_REGISTRY_URL,
   disposeDiscoveryClient,
   invalidateRegistryCache,
   type RegistryFetcher,
@@ -241,5 +242,40 @@ describe('discovery cache singleton', () => {
 
     clock.advance(60_000);
     expect(calls).toBe(1);
+  });
+
+  /**
+   * The teardown contract. Every caller of `disposeDiscoveryClient` is a test
+   * afterEach, so leaving configuration behind hands the next test a client
+   * still pointed at the previous one's fixture — which fails as a wrong answer
+   * rather than as a missing one.
+   */
+  it('disposeDiscoveryClient() also forgets the injected fetcher and registry origin', async () => {
+    let disposedFetcherCalls = 0;
+    configureCache({
+      registryUrl: 'http://registry-under-test:9999',
+      fetcher: async () => {
+        disposedFetcherCalls += 1;
+        return fetchResult(pillar('finance', 'http://finance-api:3004'));
+      },
+    });
+    await pillarRegistry();
+    expect(disposedFetcherCalls).toBe(1);
+
+    disposeDiscoveryClient();
+
+    const seen: string[] = [];
+    configureCache({
+      fetcher: (registryUrl) => {
+        seen.push(registryUrl);
+        return Promise.resolve(fetchResult());
+      },
+    });
+    await pillarRegistry();
+
+    // The origin came back to the default rather than persisting from the
+    // disposed configuration, and the disposed fetcher was not consulted again.
+    expect(seen).toEqual([DEFAULT_REGISTRY_URL]);
+    expect(disposedFetcherCalls).toBe(1);
   });
 });

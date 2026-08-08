@@ -27,6 +27,7 @@ It also holds a service-account credential and one way to spend it — see
 | `POST /operator/pairing/codes`         | Mints a single-use pairing code. The plaintext is returned once and never again.    |
 | `GET /operator/devices`                | Paired handsets, revoked ones included. Never returns a token or a key.             |
 | `DELETE /operator/devices/:id`         | Soft-revokes, and kills the device's refresh-token family in the same transaction.  |
+| `GET /mobile/bootstrap`                | What the app should render, and who bfm says it is talking to. See below.           |
 | `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape). |
 | `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                            |
 | `/mobile/*`                            | Everything the phone calls, gated by `requireDevice`.                               |
@@ -113,6 +114,22 @@ The gate runs _before_ the limiter, deliberately. Limiting first would let an
 anonymous flood exhaust the real operator's budget and lock them out of pairing
 — a denial of service handed to an unauthenticated caller. A test pins the
 ordering.
+
+## What the phone is told first
+
+`GET /mobile/bootstrap` is the app's first authenticated call and the proof
+that bfm can see the whole federation: it lists the pillars the registry
+reports, each with a reachability bfm observed itself, and turns that into the
+feature list the app renders. The phone therefore holds no roster of its own —
+it asks.
+
+`unavailable` and `contract-mismatch` stay separate the whole way out, the same
+four values the cross-pillar gateway speaks. The probe's two-source design, why
+it reads `/openapi` rather than `/health`, and why a registry outage still
+answers `200` are in [`src/api/mobile/README.md`](src/api/mobile/README.md).
+
+It is also the one route that writes: `devices.lastSeenAt` advances here and
+nowhere else (POPS-1469).
 
 ## The mobile shape
 
@@ -363,6 +380,7 @@ pillars/bfm/
         ├── manifest.ts            the boot-time ManifestPayload
         ├── rate-limit.ts          issuance budget — in memory, single-replica
         ├── auth/                  the /mobile perimeter — has its own README
+        ├── mobile/                what the phone is told — has its own README
         ├── middleware/identity.ts the operator principal, and the two legs it drops
         ├── pillars/               calling siblings — has its own README
         ├── finance/               the finance leg: paging, wire validation, cursor

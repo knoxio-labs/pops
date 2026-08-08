@@ -56,7 +56,7 @@ const version = resolveVersion();
 const selfBaseUrl = resolveSelfBaseUrl(port);
 const publicBaseUrl = resolvePublicBaseUrl(port);
 
-configureBfmServerSdk();
+const sdkConfig = configureBfmServerSdk();
 
 const accessTokenSigningKey = resolveAccessTokenSigningKey();
 
@@ -73,6 +73,7 @@ const app = createBfmApiApp({
   db: bfmDb.db,
   accessTokenSigningKey,
   publicBaseUrl,
+  internalBaseUrls: sdkConfig.internalBaseUrls,
   finance,
 });
 

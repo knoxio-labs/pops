@@ -6,6 +6,9 @@ import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape
 import type {
   HealthData,
   HealthResponses,
+  MobileBootstrapData,
+  MobileBootstrapErrors,
+  MobileBootstrapResponses,
   MobileFinanceGetTransactionData,
   MobileFinanceGetTransactionErrors,
   MobileFinanceGetTransactionResponses,
@@ -49,6 +52,17 @@ export const health = <ThrowOnError extends boolean = false>(
 ): RequestResult<HealthResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<HealthResponses, unknown, ThrowOnError>({
     url: '/health',
+    ...options,
+  });
+
+/**
+ * What the app should render, and who the federation says it is talking to
+ */
+export const mobileBootstrap = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileBootstrapData, ThrowOnError>
+): RequestResult<MobileBootstrapResponses, MobileBootstrapErrors, ThrowOnError> =>
+  (options?.client ?? client).get<MobileBootstrapResponses, MobileBootstrapErrors, ThrowOnError>({
+    url: '/mobile/bootstrap',
     ...options,
   });
 

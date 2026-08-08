@@ -26,6 +26,66 @@ export type HealthResponses = {
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
 
+export type MobileBootstrapData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/mobile/bootstrap';
+};
+
+export type MobileBootstrapErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    code: 'device_revoked';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+};
+
+export type MobileBootstrapError = MobileBootstrapErrors[keyof MobileBootstrapErrors];
+
+export type MobileBootstrapResponses = {
+  /**
+   * 200
+   */
+  200: {
+    device: {
+      id: string;
+      lastSeenAt: string;
+      name: string;
+    };
+    features: Array<{
+      id: 'transactions';
+      reachability: 'healthy' | 'degraded' | 'unavailable' | 'contract-mismatch';
+    }>;
+    pillars: Array<{
+      id: string;
+      reachability: 'healthy' | 'degraded' | 'unavailable' | 'contract-mismatch';
+    }>;
+    registry: {
+      source: 'fresh' | 'cached' | 'stale-fallback' | 'unavailable';
+    };
+  };
+};
+
+export type MobileBootstrapResponse = MobileBootstrapResponses[keyof MobileBootstrapResponses];
+
 export type MobileFinanceListTransactionsData = {
   body?: never;
   path?: never;
@@ -48,14 +108,14 @@ export type MobileFinanceListTransactionsErrors = {
    * 401
    */
   401: {
-    code: 'invalid_token' | 'device_revoked';
+    code: 'invalid_token';
     message: string;
   };
   /**
    * 403
    */
   403: {
-    code: 'invalid_token' | 'device_revoked';
+    code: 'device_revoked';
     message: string;
   };
   /**
@@ -146,14 +206,14 @@ export type MobileFinanceGetTransactionErrors = {
    * 401
    */
   401: {
-    code: 'invalid_token' | 'device_revoked';
+    code: 'invalid_token';
     message: string;
   };
   /**
    * 403
    */
   403: {
-    code: 'invalid_token' | 'device_revoked';
+    code: 'device_revoked';
     message: string;
   };
   /**

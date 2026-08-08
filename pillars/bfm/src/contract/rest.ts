@@ -35,7 +35,9 @@ import { z } from 'zod';
 import { bfmOperatorContract } from './rest-operator.js';
 import {
   HealthResponseSchema,
-  MobileAuthErrorSchema,
+  MobileBootstrapResponseSchema,
+  MobileDeviceRevokedErrorSchema,
+  MobileInvalidTokenErrorSchema,
   MobileRateLimitErrorSchema,
   MobileRequestErrorSchema,
   MobileTransactionDetailSchema,
@@ -57,8 +59,13 @@ const c = initContract();
  * document omits is a status that client has no case for.
  */
 const MOBILE_PERIMETER_RESPONSES = {
-  401: MobileAuthErrorSchema,
-  403: MobileAuthErrorSchema,
+  // A literal `code` per status rather than one two-member enum on both. The
+  // code restates the status by design, so sharing a schema would have the
+  // document promise a `401 device_revoked` the guard cannot produce and make
+  // every generated client branch on it. `require-device.ts` pairs them at the
+  // point the response is built, which is the half a schema cannot enforce.
+  401: MobileInvalidTokenErrorSchema,
+  403: MobileDeviceRevokedErrorSchema,
   429: MobileRateLimitErrorSchema,
 } as const;
 
@@ -125,6 +132,24 @@ const mobileFinanceContract = c.router({
   },
 });
 
+/**
+ * The app's first authenticated call. It answers what the phone should render,
+ * so it declares no upstream statuses: bootstrap probes pillars but calls
+ * none, and a federation that is entirely unreachable is a `200` describing
+ * that rather than an error (see `src/api/mobile/README.md`).
+ */
+const mobileContract = c.router({
+  bootstrap: {
+    method: 'GET',
+    path: '/mobile/bootstrap',
+    responses: {
+      200: MobileBootstrapResponseSchema,
+      ...MOBILE_PERIMETER_RESPONSES,
+    },
+    summary: 'What the app should render, and who the federation says it is talking to',
+  },
+});
+
 export const bfmContract = c.router(
   {
     health: {
@@ -134,6 +159,7 @@ export const bfmContract = c.router(
       summary: 'Liveness shape. Answers without a database round-trip',
     },
     operator: bfmOperatorContract,
+    mobile: mobileContract,
     mobileFinance: mobileFinanceContract,
   },
   {

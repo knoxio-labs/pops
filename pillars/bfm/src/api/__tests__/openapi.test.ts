@@ -38,9 +38,9 @@ async function fetchDocument(): Promise<OpenApiBody> {
 /**
  * A ts-rest router's values are `AppRoute | AppRouter` — a nested sub-router
  * carries no `path`/`method` of its own, so walking the contract has to
- * recurse. It does: `operator` is a sub-router, and treating it as a leaf
- * would silently drop every route under it from the coverage assertions
- * below, which is exactly the drift they exist to catch.
+ * recurse. It does: `operator` and `mobile` are both sub-routers, and treating
+ * either as a leaf would silently drop every route under it from the coverage
+ * assertions below, which is exactly the drift they exist to catch.
  */
 function isLeafRoute(value: unknown): value is { path: string; method: string } {
   if (value === null || typeof value !== 'object') return false;
@@ -102,6 +102,12 @@ describe('GET /openapi', () => {
     );
   });
 
+  it('namespaces the mobile sub-router the same way', async () => {
+    const body = await fetchDocument();
+
+    expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
+  });
+
   it('declares no route the contract does not, so the document cannot over-promise', async () => {
     const body = await fetchDocument();
 
@@ -116,8 +122,18 @@ describe('GET /openapi', () => {
 
     const mobilePaths = Object.keys(body.paths ?? {}).filter((path) => path.startsWith('/mobile'));
     expect(mobilePaths.toSorted()).toEqual([
+      '/mobile/bootstrap',
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
     ]);
+  });
+
+  it('namespaces the mobile sub-routers in their operationIds', async () => {
+    const body = await fetchDocument();
+
+    expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
+    expect(body.paths?.['/mobile/finance/transactions']?.['get']?.operationId).toBe(
+      'mobileFinance.listTransactions'
+    );
   });
 });

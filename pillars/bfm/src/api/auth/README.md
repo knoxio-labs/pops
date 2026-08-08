@@ -137,6 +137,10 @@ not a credential.
   database rows rather than JWTs. A second verification key would buy a
   seamless rotation nobody needs and double the surface an attacker can forge
   against.
-- **Anything about `lastSeenAt`** (POPS-1469). The guard is the natural place
-  to write it and deliberately does not, because a write on every request is a
-  decision for the ticket that adds the first real mobile route.
+- **Anything about `lastSeenAt`** (POPS-1469). `/mobile/bootstrap` writes it,
+  which covers an app launch; the guard still does not, so a device that only
+  ever calls other `/mobile` routes reads as last seen at its last launch. The
+  guard is the natural place to close that, and deliberately has not, because a
+  write on every authenticated request turns the perimeter into a write path on
+  a Litestream-replicated database and the coalescing rule is a decision of its
+  own.

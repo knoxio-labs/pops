@@ -2,6 +2,7 @@
 
 export {
   health,
+  mobileBootstrap,
   mobileFinanceGetTransaction,
   mobileFinanceListTransactions,
   operatorIssuePairingCode,
@@ -14,6 +15,11 @@ export type {
   HealthData,
   HealthResponse,
   HealthResponses,
+  MobileBootstrapData,
+  MobileBootstrapError,
+  MobileBootstrapErrors,
+  MobileBootstrapResponse,
+  MobileBootstrapResponses,
   MobileFinanceGetTransactionData,
   MobileFinanceGetTransactionError,
   MobileFinanceGetTransactionErrors,
