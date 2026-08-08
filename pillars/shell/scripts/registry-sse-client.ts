@@ -1,6 +1,6 @@
 /**
- * Minimal Node-side SSE consumer for `GET /registry/subscribe`
- * (docs/themes/federation/prds/subscription-model), used by the
+ * Minimal Node-side SSE consumer for `GET /registry/subscribe` (served by
+ * `pillars/registry/src/api/modules/registry/subscribe.ts`), used by the
  * event-driven nginx reloader.
  *
  * Uses global `fetch` + `ReadableStream` so the script has no runtime

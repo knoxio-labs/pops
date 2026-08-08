@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Exports/files self-consistency gate (ISO-EXPORTS, P6-T02).
+ * Exports/files self-consistency gate.
  *
- * The resolution-time complement to the ISO-R3 dep-cruiser rule
- * (docs/plans/repo-federation/04-isolation-enforcement.md §3): dep-cruiser
- * rules are advisory unless a package *physically cannot* be imported wrong.
- * The `exports` map + `files` whitelist enforce the contract at resolution
- * time, identically in-workspace and post-extraction. This script proves the
- * manifest is *honest* about that surface — it does not invent or widen it.
+ * The resolution-time complement to the whole-tree boundary rules in
+ * `.dependency-cruiser.cjs`: a lint rule is advisory unless a package
+ * *physically cannot* be imported wrong. The `exports` map + `files`
+ * whitelist enforce the contract at resolution time, identically in-workspace
+ * and post-extraction. This script proves the manifest is *honest* about that
+ * surface — it does not invent or widen it.
  *
  * For every workspace unit (a `libs` dir, a `pillars` dir, or a pillar's
  * nested `app` dir, each carrying a package.json) it asserts:

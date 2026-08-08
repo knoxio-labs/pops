@@ -2,8 +2,9 @@
  * Returns recipes whose **current version** has a `recipe_lines` row
  * matching the batch's `variant_id`. Ordered by `last_cooked_at DESC`
  * (NULLS LAST) then by recipe slug. The variant match is deliberately
- * not prep-aware — the prep-aware solver lives in Epic 06
- * (`pillars/food/docs/epics/06-substitutions.md`).
+ * not prep-aware: prep- and substitution-aware matching is the solver's job
+ * (`pillars/food/src/api/modules/substitutions`, ADR-024), and pulling it in
+ * here would make a fridge listing pay for a graph walk it does not need.
  *
  * `recipeNeedsQty` is summed across matching `recipe_lines` whose
  * `canonical_unit` matches the batch's `unit`. When no matching-unit

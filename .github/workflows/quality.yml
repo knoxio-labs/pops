@@ -155,7 +155,6 @@ jobs:
     # building the full root `tsconfig.build.json` graph + checking every unit,
     # since exports/files self-consistency is a whole-tree invariant and main
     # must never silently accumulate a break the per-PR scoping missed.
-    # See docs/plans/repo-federation/04-isolation-enforcement.md §3.
     needs: scope
     runs-on: ubuntu-latest
     steps:
@@ -262,7 +261,7 @@ jobs:
 
   bundle-map-coverage:
     name: Bundle-map coverage (RD-10)
-    # NON-required gate (P7-T08 / RD-10): asserts every in-repo
+    # NON-required gate: asserts every in-repo
     # `pillars/*/app` package is referenced by the shell's static
     # `bundle-map.tsx`, so adding a pillar app and forgetting its entry fails
     # loudly here instead of silently shipping no UI. ADR-002 keeps the bundle
@@ -270,8 +269,7 @@ jobs:
     # contract); this guard keeps it complete. Intentionally NOT in the
     # required-checks ruleset while the federation phase lands. The guard reads
     # the source tree directly and pulls in no third-party deps, so it skips
-    # `pnpm install`. See docs/plans/repo-federation/06-registry-decoupling.md
-    # RD-10.
+    # `pnpm install`.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

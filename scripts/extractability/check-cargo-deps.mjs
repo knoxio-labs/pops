@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
  * Federation isolation guard for the cargo workspace — the Rust mirror of
- * `scripts/ci/check-lib-no-pillar-import.mjs` (docs/plans/repo-federation/
- * 04-isolation-enforcement.md §8, RUST-2).
+ * `scripts/ci/check-lib-no-pillar-import.mjs`.
  *
  * Rust is structurally stronger than TS — a crate only sees another crate's
  * `pub` surface, there is no path-import escape hatch — but cargo will happily

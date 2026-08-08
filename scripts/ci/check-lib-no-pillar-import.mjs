@@ -2,13 +2,14 @@
 /**
  * Federation isolation guard: **a LIB must never depend on a PILLAR.**
  *
- * The two-kind taxonomy (docs/plans/repo-federation/00-architecture.md §1):
+ * The taxonomy this rests on (ADR-026 for what a pillar is, ADR-043 for the
+ * unit kinds):
  *   - PILLAR — a deployable, self-registering capability provider, consumed
  *     ONLY through its published contract (runtime REST + discovery).
  *   - LIB    — code that facilitates pillars existing; consumed by import of
  *     its published name. Always extractable to its own repo.
  *
- * A lib that imports a pillar fails the extract-to-own-repo litmus (§3): the
+ * A lib that imports a pillar fails the extract-to-own-repo litmus: the
  * pillar would not be present in the extracted repo. So a lib may depend on
  * other libs and on a pillar's *published types* (its `@pops/<pillar>`
  * contract entrypoint is allowed for type-only contract consumption only via
