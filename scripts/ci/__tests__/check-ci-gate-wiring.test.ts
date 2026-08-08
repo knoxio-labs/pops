@@ -252,6 +252,15 @@ describe('the guard catches each way the wiring goes inert', () => {
     );
   });
 
+  it('reports, rather than throws, when the always-running workflow is renamed away', () => {
+    const root = cloneWorkflows();
+    patch(root, 'quality.yml', (s) => s.replace(/^name: .*$/mu, 'name: Repo Quality'));
+    expect(() => checkCiGateWiring(root)).not.toThrow();
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'No workflow under .github/workflows is named "Quality"'
+    );
+  });
+
   it('flags dropping `Quality` from the gate entirely', () => {
     const root = cloneWorkflows();
     patch(root, 'ci-gate.yml', (s) =>

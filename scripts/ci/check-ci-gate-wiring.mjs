@@ -240,23 +240,35 @@ export function checkCiGateWiring(root) {
       `"${ALWAYS_RUNNING_GATED_WORKFLOW}" must stay gated: it is the only gated workflow that ` +
         'runs on every pull request, and so the only reason `CI Gate` always reports.'
     );
-  } else {
-    const file = known.get(ALWAYS_RUNNING_GATED_WORKFLOW);
-    const source = readFileSync(join(workflowsDir, /** @type {string} */ (file)), 'utf8');
-    if (hasPullRequestPathFilter(source)) {
-      violations.push(
-        `${file} added a path filter to its \`pull_request\` trigger. It is the workflow that ` +
-          'guarantees `CI Gate` reports on every pull request; filtered, a docs-only PR emits ' +
-          'no gate verdict, and a required context that never reports blocks its PR forever.'
-      );
-    }
-    for (const job of findContinueOnErrorJobs(source)) {
-      violations.push(
-        `${file} job "${job}" sets \`continue-on-error: true\`. \`CI Gate\` aggregates the ` +
-          'WORKFLOW-level conclusion, so that job can never affect the gate. Make a job ' +
-          'advisory by moving it out of a gated workflow, not by hiding it inside one.'
-      );
-    }
+    return violations;
+  }
+
+  // Renaming this workflow is one of the drifts the guard exists to catch, so
+  // it must report it rather than dereference the file it just proved absent.
+  const file = known.get(ALWAYS_RUNNING_GATED_WORKFLOW);
+  if (file === undefined) {
+    violations.push(
+      `No workflow under .github/workflows is named "${ALWAYS_RUNNING_GATED_WORKFLOW}", so the ` +
+        'gate has no workflow guaranteed to run on every pull request. Whichever workflow now ' +
+        'plays that role must be gated, and ALWAYS_RUNNING_GATED_WORKFLOW updated to match it.'
+    );
+    return violations;
+  }
+
+  const source = readFileSync(join(workflowsDir, file), 'utf8');
+  if (hasPullRequestPathFilter(source)) {
+    violations.push(
+      `${file} added a path filter to its \`pull_request\` trigger. It is the workflow that ` +
+        'guarantees `CI Gate` reports on every pull request; filtered, a docs-only PR emits ' +
+        'no gate verdict, and a required context that never reports blocks its PR forever.'
+    );
+  }
+  for (const job of findContinueOnErrorJobs(source)) {
+    violations.push(
+      `${file} job "${job}" sets \`continue-on-error: true\`. \`CI Gate\` aggregates the ` +
+        'WORKFLOW-level conclusion, so that job can never affect the gate. Make a job ' +
+        'advisory by moving it out of a gated workflow, not by hiding it inside one.'
+    );
   }
 
   return violations;

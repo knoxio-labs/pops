@@ -30,7 +30,7 @@ verdict converges, and for why it publishes its own check run; the rules the
   `github.event.workflow_run.head_sha`** (hence `permissions: checks: write`).
   That is the context to put in the branch ruleset.
 
-### Two rules this file exists to stop people relearning
+### Rules this file exists to stop people relearning
 
 **A `workflow_run` job's implicit check run lands on the default branch's tip,
 not on the head it judged.** Until the gate began POSTing its own check run it
@@ -53,7 +53,16 @@ context green — and, once it is required, the PR mergeable — minutes before 
 slowest gated workflow has an opinion, and the failure would land after the
 merge. Hence `in_progress` until nothing is pending.
 
-`scripts/ci/check-ci-gate-wiring.mjs` asserts all three rules, plus the
+**A guard must behave under the condition it exists to detect.** Every rule
+above shares a shape: something reported green in the state it was built to
+catch. The implicit check run was green on `main` while judging nothing; a
+premature `success` was green while seven workflows were still running; and the
+first version of the wiring guard threw a `TypeError` instead of reporting when
+the `Quality` workflow was renamed — the drift it exists to find. When you write
+a check here, exercise it against the failure it targets, not only against a
+healthy tree.
+
+`scripts/ci/check-ci-gate-wiring.mjs` asserts the rules above, plus the
 trigger/`gated` agreement and that every gated name still resolves to a real
 workflow. It runs in `quality.yml`'s `Scripts tests` job.
 
