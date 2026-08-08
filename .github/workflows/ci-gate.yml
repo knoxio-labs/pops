@@ -44,6 +44,7 @@ on:
       - "Quality"
       - "Registry Generated Quality"
       - "iOS Quality"
+      - "Docker Build"
     types: [completed]
 
 # Key on the observed head SHA, not the gate's own ref: every sibling
@@ -80,6 +81,7 @@ jobs:
               "Quality",
               "Registry Generated Quality",
               "iOS Quality",
+              "Docker Build",
             ];
             const failing = new Set(["failure", "cancelled", "timed_out", "startup_failure", "action_required", "stale"]);
 
