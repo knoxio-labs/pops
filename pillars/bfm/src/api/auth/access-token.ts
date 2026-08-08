@@ -49,7 +49,8 @@ export const ACCESS_TOKEN_TTL_SECONDS = 600;
  *
  * Trusting the header is safe: it is part of the JWS signing input, so
  * altering it invalidates the signature. It is not an extension of trust to
- * `alg`, which is pinned separately and independently below.
+ * `alg`, which {@link ACCESS_TOKEN_ALGORITHM} pins separately and
+ * independently.
  *
  * Nothing else is signed with this key today. It is here from the start
  * because adding it later is a flag day — every live token would have to keep
