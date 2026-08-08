@@ -71,8 +71,7 @@ description = "Run every package's tests on the host toolchain, without Xcode"
 run = '''
 for package in Packages/*/; do
   # `swift test` fails outright on a package with no test target, so a package
-  # whose tests are still a later ticket must not fail the run. Hardware-backed
-  # suites skip themselves — see Packages/Auth/README.md.
+  # whose tests are still a later ticket must not fail the run.
   if [ -d "$package/Tests" ]; then
     swift test --package-path "$package" || exit 1
   fi
@@ -223,23 +222,20 @@ mise run verify:app-test-target
 scripts/app-test-lane.sh "platform=iOS Simulator,name=$POPS_IOS_SIMULATOR,OS=latest"
 '''
 
-# The hardware lane. Not reachable from `test` and never from CI: no runner has
-# a phone attached, and this needs a real one — the Secure Enclave suite in
-# AppTests is gated off precisely because a simulator has no Enclave to fail
-# against honestly.
+# The same target on real hardware. Not reachable from `test` and never run in
+# CI — no runner has a phone attached.
 #
-# `TEST_RUNNER_`-prefixed variables are forwarded by xcodebuild to the test
-# process with the prefix stripped, which is how the gate is opened from the
-# command line without a scheme edit. Setting POPS_IOS_HARDWARE_TESTS directly
-# would set it for xcodebuild and for nothing that runs a test.
+# It is no longer the only place `SecureEnclaveKeyStore` can be exercised: an
+# Apple Silicon simulator reaches the host Mac's Enclave, so `test:app` covers
+# that code on every run and this lane covers the one thing it cannot, which is
+# a particular phone. Worth keeping for exactly that, and for the pairing QA on
+# a device.
 #
-# `--forbid-skips` is the reason this is a task and not a line in a runbook.
-# Enabling the suites and watching a green run is not evidence: the gate is read
-# inside the test process, so a variable that failed to reach it produces a
-# passing run in which every hardware suite skipped. Nothing distinguishes that
-# from a real one except the skip count.
+# `--forbid-skips` because a device run is rare and manual, so a skip in one is
+# a skip nobody will notice. Nothing in the app target skips today and nothing
+# should start without arguing for it here.
 [tasks."test:device"]
-description = "Run the app's test target on a physical iPhone with the hardware-backed suites enabled"
+description = "Run the app's test target on a physical iPhone"
 depends = ["generate"]
 run = '''
 set -eu
@@ -255,8 +251,7 @@ fi
 
 mise run verify:app-test-target
 
-TEST_RUNNER_POPS_IOS_HARDWARE_TESTS=1 \
-  scripts/app-test-lane.sh "platform=iOS,name=$POPS_IOS_DEVICE" \
+scripts/app-test-lane.sh "platform=iOS,name=$POPS_IOS_DEVICE" \
   --forbid-skips --allow-provisioning-updates
 '''
 

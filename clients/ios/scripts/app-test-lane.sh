@@ -29,13 +29,11 @@ allow_provisioning_updates=false
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        # Every test in the target ran. The device lane's whole purpose: the
-        # hardware-backed suites are gated off everywhere else, so a device run
-        # that reports them as skipped has proved nothing while looking green —
-        # which is the failure mode the gate would otherwise introduce. Stated
-        # as "nothing skipped" rather than as a list of suite names so it cannot
-        # rot when one is renamed, and so a NEW gated suite has to justify
-        # itself here rather than arriving unnoticed.
+        # Every test in the target ran. Nothing in the app target skips today;
+        # this is what makes a suite that starts skipping argue for itself
+        # rather than arrive unnoticed inside a green run. Stated as "nothing
+        # skipped" rather than as a list of suite names so it cannot rot when
+        # one is renamed.
         --forbid-skips) forbid_skips=true ;;
         # Lets automatic signing register the App ID and fetch a profile, which
         # is what Xcode does on its own when you press Run. A device lane
@@ -116,9 +114,8 @@ fi
 
 if [ "$forbid_skips" = true ] && [ "$skipped" -ne 0 ]; then
     die "$skipped of $total tests skipped, and this lane exists to run them." \
-        "The hardware-backed suites gate on POPS_IOS_HARDWARE_TESTS=1, which reaches" \
-        "the test process as TEST_RUNNER_POPS_IOS_HARDWARE_TESTS. A run that skipped" \
-        "them proved nothing about the Secure Enclave."
+        "A suite that skips itself inside a passing run is indistinguishable from" \
+        "one that ran, by every signal except this count."
 fi
 
 printf 'app-test-lane: executed %s tests (%s skipped) on %s.\n' "$executed" "$skipped" "$destination"

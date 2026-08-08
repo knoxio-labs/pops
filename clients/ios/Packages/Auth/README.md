@@ -63,16 +63,16 @@ swift test --package-path Packages/Auth
 - The data-protection keychain requires the process to carry a keychain-access-group entitlement. A `swift test` binary has none, and neither does an unhosted `xcodebuild test` bundle; both get `errSecMissingEntitlement` (-34018).
 - The Secure Enclave does not exist in a simulator at all, so `SecKeyCreateRandomKey` with `kSecAttrTokenIDSecureEnclave` fails outright, and a Mac's Enclave is not reachable from an unsigned test binary either.
 
-Both suites therefore live in the app's test target, [`clients/ios/AppTests`](../../AppTests), which is hosted by the app and so runs with the app's bundle and entitlements:
+Both suites therefore live in the app's test target, [`clients/ios/AppTests`](../../AppTests), which is hosted by the app and so runs with the app's bundle and entitlements. **Both run on every CI run**:
 
-| Suite                        | Where it runs                          | Covered by CI            |
-| ---------------------------- | -------------------------------------- | ------------------------ |
-| `KeychainTokenStoreTests`    | any simulator, hosted by the app       | yes, every `iOS Quality` |
-| `SecureEnclaveHardwareTests` | a physical iPhone, gated on an env var | no — nothing to run it   |
+| Suite                        | Exercises                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `KeychainTokenStoreTests`    | accessibility class, synchronizability, the update-then-add branch, wipe scoping |
+| `SecureEnclaveKeyStoreTests` | Enclave residency, non-extractability of the private half, the key lifecycle     |
 
-The Enclave half is the residual gap and it is a hardware one, not a code one. It closes on a real phone through `mise run test:device`, which forwards the gate to the test process and **fails on a run that skipped anything** — because a passing run in which the gated suites quietly skipped is indistinguishable from a real one by every other signal. Until someone runs that, treat `SecureEnclaveKeyStore.swift` as unverified. [`AppTests/README.md`](../../AppTests/README.md) is where that arrangement is argued.
+The second of those was gated off for a long time on the premise that a simulator has no Enclave. That premise no longer holds on an Apple Silicon host — the simulator reaches the host Mac's Enclave — so the gate is gone, and the suite carries a positive control that makes a silent software-key fallback fail rather than pass. [`AppTests/README.md`](../../AppTests/README.md) argues the whole arrangement; the short version is that neither store is unverified any more.
 
-What this package's own suites do cover: the protocol contract, exercised against fakes that really sign; the whole-pair and partial-wipe semantics; redaction; and the encoding contract against bytes independently verified by `node:crypto`.
+What this package's own suites cover: the protocol contract, exercised against fakes that really sign; the whole-pair and partial-wipe semantics; redaction; and the encoding contract against bytes independently verified by `node:crypto`.
 
 ## Logging
 
