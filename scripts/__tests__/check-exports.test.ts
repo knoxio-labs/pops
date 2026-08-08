@@ -85,7 +85,7 @@ describe('checkUnit', () => {
     );
   });
 
-  it('allows the audited @pops/ui ./primitives/* wildcard', () => {
+  it('rejects a @pops/ui ./primitives/* wildcard (no longer an audited exception)', () => {
     const unit: Unit = {
       dir: 'libs/ui',
       name: '@pops/ui',
@@ -101,7 +101,7 @@ describe('checkUnit', () => {
       },
     };
     const errors = checkUnit(unit, allExist).errors;
-    expect(errors.some((e) => e.includes('wildcard catch-all'))).toBe(false);
+    expect(errors).toContainEqual(expect.stringContaining('wildcard catch-all'));
   });
 
   it('allows the audited @pops/locales ./* asset tree', () => {

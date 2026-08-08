@@ -6,6 +6,99 @@
   },
   "openapi": "3.0.2",
   "paths": {
+    "/devices/challenge": {
+      "post": {
+        "operationId": "device.challenge",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expiresIn": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "nonce": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["nonce", "expiresIn"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          }
+        },
+        "summary": "Mint a single-use nonce for a refresh. Carries no credential and needs none",
+        "tags": ["device"]
+      }
+    },
     "/devices/pair": {
       "post": {
         "operationId": "device.pair",
@@ -147,6 +240,161 @@
           }
         },
         "summary": "Spend a pairing code for a device identity. The tokens are returned once",
+        "tags": ["device"]
+      }
+    },
+    "/devices/refresh": {
+      "post": {
+        "operationId": "device.refresh",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "nonce": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "refreshToken": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "signature": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["refreshToken", "nonce", "signature"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["accessToken", "refreshToken", "expiresIn"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["challenge_expired", "invalid_grant"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["device_revoked"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          }
+        },
+        "summary": "Rotate a refresh token, proving possession of the device key. Detects reuse",
         "tags": ["device"]
       }
     },

@@ -12,7 +12,6 @@
       "default": "./src/theme/globals.css"
     },
     "./theme/graph-colors": "./src/theme/graph-colors.ts",
-    "./primitives/*": "./src/primitives/*",
     "./testing/decode-qr": "./src/testing/decode-qr.ts"
   },
   "scripts": {
