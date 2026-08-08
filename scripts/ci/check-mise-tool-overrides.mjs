@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Per-pillar mise toolchain override guard (issue #3688 / ADR-039 E34).
+ * Per-pillar mise toolchain override guard — see
+ * [ADR-039](../../docs/architecture/adr-039-pillar-isolation.md) on why the
+ * toolchain pin must not impose fleet-wide lockstep.
  *
  * The root `mise.toml` `[tools]` table (node/pnpm/rust) is the shared
  * default toolchain. mise merges config **up** the directory tree, so any
