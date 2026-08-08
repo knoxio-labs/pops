@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   MobileAuthErrorSchema,
-  MobileDeviceRevokedErrorSchema,
+  DeviceRevokedErrorSchema,
   MobileInvalidTokenErrorSchema,
 } from '../../../contract/rest-schemas.js';
 import { deviceRow, openTempDb, requireRow } from '../../../db/__tests__/helpers.js';
@@ -259,7 +259,7 @@ describe('the refusal body', () => {
 
     expect(res.status).toBe(401);
     expect(MobileInvalidTokenErrorSchema.safeParse(res.body).success).toBe(true);
-    expect(MobileDeviceRevokedErrorSchema.safeParse(res.body).success).toBe(false);
+    expect(DeviceRevokedErrorSchema.safeParse(res.body).success).toBe(false);
   });
 
   it('pairs 403 with device_revoked and nothing else', async () => {
@@ -271,7 +271,7 @@ describe('the refusal body', () => {
     const res = await request(h.app).get('/mobile/whoami').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(403);
-    expect(MobileDeviceRevokedErrorSchema.safeParse(res.body).success).toBe(true);
+    expect(DeviceRevokedErrorSchema.safeParse(res.body).success).toBe(true);
     expect(MobileInvalidTokenErrorSchema.safeParse(res.body).success).toBe(false);
   });
 });

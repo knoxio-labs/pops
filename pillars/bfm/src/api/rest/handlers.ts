@@ -6,6 +6,7 @@
 import { initServer } from '@ts-rest/express';
 
 import { bfmContract } from '../../contract/rest.js';
+import { createRefreshChallengeStore } from '../auth/refresh-challenge.js';
 import { readDevice } from '../auth/require-device.js';
 import { buildMobileBootstrap, defaultMobileBootstrapDeps } from '../mobile/bootstrap.js';
 import {
@@ -26,6 +27,7 @@ import type { KeyObject } from 'node:crypto';
 import type { Response } from 'express';
 
 import type { BfmDb } from '../../db/index.js';
+import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 
 const server: ReturnType<typeof initServer> = initServer();
@@ -55,8 +57,22 @@ export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps {
   issuanceLimiter?: RateLimiter;
   /** Lifetime of a minted pairing code. Defaults to the service's own TTL. */
   pairingCodeTtlMs?: number;
-  /** Lifetime of the refresh token minted at pairing. Defaults to the service's own TTL. */
+  /**
+   * Lifetime of the refresh token minted at pairing, and of every successor a
+   * rotation issues. Defaults to the service's own TTL.
+   */
   refreshTokenTtlMs?: number;
+  /**
+   * Where refresh nonces live between `POST /devices/challenge` and
+   * `POST /devices/refresh`. Defaults to a fresh in-memory store with the
+   * shipped TTL; injectable so a test can pin the clock and the nonce it is
+   * about to sign over.
+   *
+   * One store per app instance, which is also one per process. See
+   * `auth/refresh-challenge.ts` for what that costs and why it is the right
+   * trade for a value worthless a minute after it is issued.
+   */
+  refreshChallenges?: RefreshChallengeStore;
   /**
    * `pillarId → baseUrl` overrides, as resolved once at boot by
    * `configureBfmServerSdk`. Threaded in rather than re-read from the
@@ -97,6 +113,7 @@ export function makeBfmRestHandlers(
     device: makeDeviceHandlers({
       db: deps.db,
       accessTokenSigningKey: deps.accessTokenSigningKey,
+      refreshChallenges: deps.refreshChallenges ?? createRefreshChallengeStore(),
       ...(deps.refreshTokenTtlMs === undefined
         ? {}
         : { refreshTokenTtlMs: deps.refreshTokenTtlMs }),

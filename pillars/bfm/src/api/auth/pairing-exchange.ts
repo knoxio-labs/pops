@@ -148,7 +148,7 @@ export function completePairingExchange(
   const deviceId = generateDeviceId();
   // The family starts here. Every token that ever rotates out of the one below
   // carries this id, which is what device revocation and reuse detection
-  // (POPS-1375) operate on rather than on single rows.
+  // operate on rather than on single rows — see `refresh-exchange.ts`.
   const familyId = randomUUID();
   const refreshToken = drawRefreshToken();
   const refreshTokenHash = hashRefreshToken(refreshToken);
