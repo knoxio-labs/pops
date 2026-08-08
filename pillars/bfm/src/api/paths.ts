@@ -27,8 +27,28 @@ export const MOBILE_PATH_PREFIX = '/mobile';
  *
  * Exactly one route, not a prefix — the opposite of {@link MOBILE_PATH_PREFIX}
  * and for the opposite reason. There, gating a prefix is what stops a future
- * route being added ungated. Here this is the whole surface that predates
- * having a device, and refresh (POPS-1375) will want its own budget with its
- * own numbers rather than a share of this one's.
+ * route being added ungated. Here the surface that predates having a device is
+ * enumerated by {@link DEVICE_FACING_PATHS} instead, and each member gets the
+ * budget its own reasoning asks for rather than a share of one.
  */
 export const PAIRING_PATH = bfmDeviceContract.pair.path;
+
+/** Where a phone asks for the nonce it is about to sign. Derived, as above. */
+export const CHALLENGE_PATH = bfmDeviceContract.challenge.path;
+
+/** Where it spends that nonce along with its refresh token. Derived, as above. */
+export const REFRESH_PATH = bfmDeviceContract.refresh.path;
+
+/**
+ * Every device-facing route: reachable without an Access session, without a
+ * device row, without a token.
+ *
+ * Enumerated rather than folded into a `/devices` prefix mount on purpose. A
+ * prefix would be the right shape if these shared one treatment, and they do
+ * not — pairing and refresh carry different budgets for different reasons —
+ * but they DO share the rule in `rest/request-validation.ts`: none of them may
+ * answer ts-rest's native validation body, which names this server's schema
+ * fields to whoever asked. Listing them here means a fourth route has one
+ * place to be added rather than several to be remembered.
+ */
+export const DEVICE_FACING_PATHS = [PAIRING_PATH, CHALLENGE_PATH, REFRESH_PATH] as const;

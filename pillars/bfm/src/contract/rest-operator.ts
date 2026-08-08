@@ -9,9 +9,9 @@
  *
  * bfm answers on two hostnames. The shell's nginx reaches it at `/bfm-api/`
  * behind Cloudflare Access; its own tunnel hostname has Access **bypassed**,
- * because the phone has to reach `POST /devices/pair` (POPS-1374) and
- * `POST /auth/refresh` (POPS-1375) without an Access session. One Express app
- * serves both.
+ * because the phone has to reach `POST /devices/pair` and
+ * `POST /devices/refresh` without an Access session. One Express app serves
+ * both.
  *
  * So these three routes are reachable from the public internet, and the
  * `requireOperator` gate in their handlers is the actual perimeter. The prefix

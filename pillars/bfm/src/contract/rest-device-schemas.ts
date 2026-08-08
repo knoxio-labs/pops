@@ -100,8 +100,13 @@ export type PairedDevice = z.infer<typeof PairedDeviceSchema>;
  * `400 pairing_rejected` the handler cannot produce, and every generated client
  * would still have to branch on it. A literal per status removes the impossible
  * half from every consumer's type.
+ *
+ * Only the rejection is `Pairing`-named. "Your request does not match what this
+ * server accepts" is not about pairing at all — `POST /devices/refresh`
+ * answers exactly the same shape, and `rest/request-validation.ts` builds one
+ * constant for both — so the 400 is the surface's, not this route's.
  */
-export const PairingInvalidRequestErrorSchema = z.object({
+export const DeviceInvalidRequestErrorSchema = z.object({
   code: z.literal('invalid_request'),
   message: z.string(),
 });
@@ -116,10 +121,108 @@ export const PairingRejectedErrorSchema = z.object({
  * this — a route knows which status it is describing.
  */
 export const PairingErrorSchema = z.discriminatedUnion('code', [
-  PairingInvalidRequestErrorSchema,
+  DeviceInvalidRequestErrorSchema,
   PairingRejectedErrorSchema,
 ]);
 
-export type PairingInvalidRequestError = z.infer<typeof PairingInvalidRequestErrorSchema>;
+export type DeviceInvalidRequestError = z.infer<typeof DeviceInvalidRequestErrorSchema>;
 export type PairingRejectedError = z.infer<typeof PairingRejectedErrorSchema>;
 export type PairingError = z.infer<typeof PairingErrorSchema>;
+
+/**
+ * The server nonce a refresh is signed over.
+ *
+ * Opaque to the phone: echo it back in the refresh request, and let the app's
+ * signing step fold it into the message. Nothing else is a valid thing to do
+ * with it. Single-use and short-lived — `api/auth/refresh-challenge.ts` says
+ * how short, and why it is not a database row.
+ *
+ * `expiresIn` is here so an app can decide whether a nonce it already holds is
+ * still worth trying, rather than discovering it is not by spending a refresh
+ * token against it. Seconds, matching {@link PairedDeviceSchema}'s field of the
+ * same name.
+ */
+export const RefreshChallengeSchema = z.object({
+  nonce: z.string(),
+  expiresIn: z.number().int().positive(),
+});
+
+export type RefreshChallenge = z.infer<typeof RefreshChallengeSchema>;
+
+/**
+ * What the phone posts to refresh: the credential, the challenge it is bound
+ * to, and the proof it still holds the Secure Enclave key.
+ *
+ * The exact bytes `signature` covers are defined once, in the header of
+ * `api/auth/refresh-exchange.ts`. They are deliberately not restated here: two
+ * descriptions of one byte string is how the Swift side and this one end up
+ * signing different things, and the failure is a 401 that looks like anything
+ * else.
+ *
+ * Bounded like every other field on this surface — see the file header. The
+ * caps sit well above the real widths (a 256-bit token is 43 base64url
+ * characters; a P-256 DER signature is at most 72 bytes, so 96 base64) rather
+ * than at them, so an encoding detail cannot become a rejection that reads as
+ * a malformed request.
+ */
+export const RefreshSessionRequestSchema = z.object({
+  refreshToken: z.string().min(1).max(512),
+  nonce: z.string().min(1).max(256),
+  /** Base64 of the ASN.1 DER ECDSA P-256 signature. */
+  signature: z.string().min(1).max(512),
+});
+
+export type RefreshSessionRequest = z.infer<typeof RefreshSessionRequestSchema>;
+
+/**
+ * What a successful refresh hands back.
+ *
+ * The new refresh token is the only copy, exactly as at pairing — and the
+ * presented one is already dead by the time this is written, so a response the
+ * handset fails to store means pairing again.
+ *
+ * No `deviceId`. The phone already holds one from pairing, and returning a
+ * second copy would invite an app to trust this response over its own
+ * keychain. Pairing returns it because that is where the phone learns it;
+ * repeating it here would only create a value with two sources.
+ */
+export const RefreshedSessionSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  /** Seconds the access token stays valid, counted from this response. */
+  expiresIn: z.number().int().positive(),
+});
+
+export type RefreshedSession = z.infer<typeof RefreshedSessionSchema>;
+
+/**
+ * Why a refresh was refused, on a 401 — two codes, two different recoveries.
+ *
+ * - **`challenge_expired`** — the nonce was unknown, already spent, or past its
+ *   life. Nothing is wrong with the credential: fetch another challenge and
+ *   retry, once.
+ * - **`invalid_grant`** — the refresh token or the signature did not hold.
+ *   Unknown, expired, revoked, already spent, and signed by the wrong key all
+ *   produce this, byte for byte identical, for the same reason
+ *   {@link PairingRejectedErrorSchema} collapses its three: a response that
+ *   told them apart would answer "does this token exist" for whoever asked.
+ *   The recovery is to pair again.
+ *
+ * An enum here rather than a literal per schema, which is the opposite of the
+ * call made for pairing above — and follows the same rule. There, `code`
+ * restated the status, so one schema on two statuses would have described
+ * responses the handler could not produce. Here both codes live on the SAME
+ * status and neither restates it: 401 alone does not say which recovery to
+ * run, which is exactly why the field is worth carrying.
+ *
+ * A 403 on this route carries `DeviceRevokedErrorSchema` from
+ * `rest-schemas.ts` instead — the same shape the `/mobile` perimeter answers
+ * with, because it means the same thing and selects the same recovery: pair
+ * again AND wipe the keychain.
+ */
+export const RefreshErrorSchema = z.object({
+  code: z.enum(['challenge_expired', 'invalid_grant']),
+  message: z.string(),
+});
+
+export type RefreshError = z.infer<typeof RefreshErrorSchema>;
