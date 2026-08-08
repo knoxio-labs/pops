@@ -47,10 +47,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install Rust toolchain (stable + rustfmt + clippy)
+      # Pinned, not `stable`. This lane runs `clippy -- -D warnings`, so a new
+      # or retuned lint in a fresh stable turns CI red with no change on our
+      # side. The version is read from the root `mise.toml` rather than
+      # duplicated here, so there is one pin to bump rather than two to keep
+      # in step. This lane uses rustup directly (not mise), hence the parse.
+      - name: Install Rust toolchain (pinned from mise.toml + rustfmt + clippy)
         run: |
-          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
-          rustup default stable
+          set -euo pipefail
+          version=$(sed -nE 's/^rust *= *"([^"]+)".*/\1/p' mise.toml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error::no rust pin found in mise.toml [tools]"
+            exit 1
+          fi
+          if [ "$version" = "stable" ]; then
+            echo "::error::mise.toml pins rust = \"stable\"; pin an explicit version so clippy -D warnings cannot break on a toolchain release"
+            exit 1
+          fi
+          echo "pinning rust to $version (from mise.toml)"
+          rustup toolchain install "$version" --profile minimal --component rustfmt --component clippy
+          rustup default "$version"
           rustc --version
           cargo --version
 

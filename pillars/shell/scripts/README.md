@@ -1,6 +1,6 @@
 # nginx render pipeline
 
-The shell's production image is `nginx:alpine` plus a node binary — nginx serves
+The shell's production image is `nginx:1.31.3-alpine` plus a node binary — nginx serves
 the requests, Node only renders and reloads the conf — so everything that
 decides nginx routing happens here, at one of the moments below. Each file's own
 header explains what it does; this page is the ordering across them.

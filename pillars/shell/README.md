@@ -10,7 +10,7 @@ UI pillar fills them with empties rather than dropping them.
 The frontend source lives in `pillars/shell/src` — `main.tsx` plus `app/` (the
 boot install-set resolver, router, chrome, pages, overlays), `components/`,
 `store/`, `i18n/` and the generated `registry-api/` client. The production image
-is `nginx:alpine` with a Node binary added (`apk add nodejs`): nginx serves the
+is `nginx:1.31.3-alpine` with a Node binary added (`apk add nodejs`): nginx serves the
 built bundle, Node runs the boot-time conf render and the long-lived registry
 watcher. That pipeline is documented in [`scripts/README.md`](scripts/README.md)
 and in each script's own header.
