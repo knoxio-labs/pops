@@ -36,7 +36,16 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,7 +67,7 @@ export const PATH_ROOTS = [
 ];
 
 /** A backticked token naming a source file, so a directory-relative path is still checked. */
-export const SOURCE_FILE_RE = /\/[\w.-]+\.(?:tsx?|mjs|cjs|jsx?|json|css|md|ya?ml|rs|toml)$/u;
+export const SOURCE_FILE_RE = /\/[\w.-]+\.(?:tsx?|mjs|cjs|jsx?|json|css|md|ya?ml|rs|swift|toml)$/u;
 
 /** Directories never walked. */
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'target', 'coverage', '.next']);
@@ -532,6 +541,39 @@ function selfTest() {
     rootedTokens.includes('libs/ui/src') &&
     rootedTokens.includes('clients/ios/Packages');
 
+  // A backticked Swift path with a slash is extracted as a claim — `.swift`
+  // was missing from SOURCE_FILE_RE, so an iOS README could name a source
+  // file (e.g. `Tests/AuthTests/Foo.swift`) that this guard never checked.
+  const swiftClaim = extractPathClaims(
+    'see `Sources/Foo/Bar.swift`',
+    'clients/ios/Packages/Foo/README.md'
+  ).at(0);
+  const ok11 = swiftClaim !== undefined && swiftClaim.raw === 'Sources/Foo/Bar.swift';
+
+  // End-to-end: against a real tree, a Swift path that exists resolves and
+  // one that doesn't is reported as broken — a dangling Swift path used to
+  // pass silently because SOURCE_FILE_RE never matched `.swift`.
+  const swiftFixtureRoot = mkdtempSync(join(tmpdir(), 'docs-model-swift-'));
+  let ok12 = false;
+  try {
+    // `git init` so gitIgnoredSubset's `check-ignore` call below hits a real
+    // (empty) repo rather than its no-repo fallback path.
+    execFileSync('git', ['init', '-q'], { cwd: swiftFixtureRoot });
+    const pkgDir = join(swiftFixtureRoot, 'clients', 'ios', 'Packages', 'Foo');
+    mkdirSync(join(pkgDir, 'Sources', 'Foo'), { recursive: true });
+    writeFileSync(join(pkgDir, 'Sources', 'Foo', 'Bar.swift'), '// fixture\n');
+    writeFileSync(
+      join(pkgDir, 'README.md'),
+      'Real: `Sources/Foo/Bar.swift`. Dangling: `Sources/Foo/Ghost.swift`.\n'
+    );
+    const broken = findBrokenDocPaths(swiftFixtureRoot);
+    ok12 =
+      broken.some((b) => b.claim === 'Sources/Foo/Ghost.swift') &&
+      !broken.some((b) => b.claim === 'Sources/Foo/Bar.swift');
+  } finally {
+    rmSync(swiftFixtureRoot, { recursive: true, force: true });
+  }
+
   if (!ok1) console.error('self-test FAILED: unit discovery missed a known unit');
   if (!ok2) console.error('self-test FAILED: banned-dir walk misbehaved');
   if (!ok3) console.error('self-test FAILED: path-claim extraction wrong');
@@ -542,7 +584,10 @@ function selfTest() {
   if (!ok8) console.error('self-test FAILED: npm specifier treated as a path claim');
   if (!ok9) console.error('self-test FAILED: absence-heading or Huly-key detection wrong');
   if (!ok10) console.error('self-test FAILED: a unit root no longer yields a path claim');
-  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8 && ok9 && ok10;
+  if (!ok11)
+    console.error('self-test FAILED: a backticked .swift path is not extracted as a claim');
+  if (!ok12) console.error('self-test FAILED: a dangling Swift path was not caught end-to-end');
+  return ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7 && ok8 && ok9 && ok10 && ok11 && ok12;
 }
 
 if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {
