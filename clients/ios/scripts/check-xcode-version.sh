@@ -60,7 +60,9 @@ cmd_check() {
     fi
 
     local raw
-    raw="$(xcodebuild -version)"
+    if ! raw="$(xcodebuild -version 2>&1)"; then
+        die "'xcodebuild -version' failed — no Xcode selected, or its license isn't accepted. It printed:" "$raw"
+    fi
     local actual
     actual="$(parse_installed_version "$raw")"
     if [ -z "$actual" ]; then
