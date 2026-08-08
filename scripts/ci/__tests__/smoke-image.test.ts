@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,13 +6,27 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectStreams,
+  freshVolumeName,
   parseExposedPort,
   parseRuntimeBaseImage,
   planSmoke,
   resolveHealthPath,
+  runtimeStage,
 } from '../smoke-image.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+/** Pillar ids whose directory contains every one of the named entries. */
+function pillarsWith(...entries: readonly string[]): string[] {
+  return readdirSync(join(repoRoot, 'pillars'), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((id) => entries.every((path) => existsSync(join(repoRoot, 'pillars', id, path))));
+}
+
+function readDockerfile(pillarId: string): string {
+  return readFileSync(join(repoRoot, 'pillars', pillarId, 'Dockerfile'), 'utf8');
+}
 
 describe('parseExposedPort', () => {
   it('reads the exposed port', () => {
@@ -44,6 +58,47 @@ describe('parseRuntimeBaseImage', () => {
 
   it('throws on input with no FROM', () => {
     expect(() => parseRuntimeBaseImage('EXPOSE 80\n')).toThrow(/no FROM/u);
+  });
+});
+
+describe('runtimeStage', () => {
+  it('begins at the final FROM, so a builder-stage line is not read as shipped', () => {
+    const dockerfile = [
+      'FROM node:24-slim AS builder',
+      'RUN mkdir -p /data/sqlite && chown -R node:node /data',
+      'FROM node:24-slim',
+      'USER node',
+      '',
+    ].join('\n');
+    const stage = runtimeStage(dockerfile);
+    expect(stage).not.toContain('AS builder');
+    expect(stage).not.toContain('mkdir');
+    expect(stage).toContain('USER node');
+  });
+
+  it('returns the whole file when there is only one stage', () => {
+    expect(runtimeStage('FROM nginx:1.31.3-alpine\nEXPOSE 80\n')).toBe(
+      'FROM nginx:1.31.3-alpine\nEXPOSE 80\n'
+    );
+  });
+
+  it('throws on input with no FROM', () => {
+    expect(() => runtimeStage('EXPOSE 80\n')).toThrow(/no FROM/u);
+  });
+});
+
+describe('freshVolumeName', () => {
+  it('carries the pillar id, so a volume leaked by a crashed run is identifiable', () => {
+    expect(freshVolumeName('pillars/finance/Dockerfile')).toMatch(
+      /^pops-smoke-finance-[0-9a-f]{8}$/u
+    );
+  });
+
+  it('never repeats — a recycled volume carries the very ownership under test', () => {
+    const names = new Set(
+      Array.from({ length: 100 }, () => freshVolumeName('pillars/finance/Dockerfile'))
+    );
+    expect(names.size).toBe(100);
   });
 });
 
@@ -91,24 +146,14 @@ describe('collectStreams', () => {
 });
 
 describe('planSmoke — every pillar Dockerfile on disk', () => {
-  const dockerfiles = readdirSync(join(repoRoot, 'pillars'), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => join('pillars', entry.name, 'Dockerfile'))
-    .filter((relative) => {
-      try {
-        readFileSync(join(repoRoot, relative));
-        return true;
-      } catch {
-        return false;
-      }
-    });
+  const pillars = pillarsWith('Dockerfile');
 
   it('finds Dockerfiles to check (the discovery itself is not silently empty)', () => {
-    expect(dockerfiles.length).toBeGreaterThan(0);
+    expect(pillars.length).toBeGreaterThan(0);
   });
 
-  it.each(dockerfiles)('%s yields a usable smoke plan', (relative) => {
-    const plan = planSmoke(readFileSync(join(repoRoot, relative), 'utf8'));
+  it.each(pillars)('pillars/%s/Dockerfile yields a usable smoke plan', (id) => {
+    const plan = planSmoke(readDockerfile(id));
     expect(plan.port).toBeGreaterThan(0);
     expect(plan.healthPath.startsWith('/')).toBe(true);
   });
@@ -119,26 +164,48 @@ describe('the deploy step every Node pillar image depends on', () => {
   // `@pops/*` symlinks that escape /app/deploy, so the image builds clean and
   // the container dies on its first import. The runtime smoke is the real
   // gate; this is the fast, docker-free half that names the fix.
-  const dockerfiles = readdirSync(join(repoRoot, 'pillars'), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => join(repoRoot, 'pillars', entry.name, 'Dockerfile'))
-    .filter((path) => {
-      try {
-        readFileSync(path);
-        return true;
-      } catch {
-        return false;
-      }
-    });
-
-  it.each(dockerfiles)('%s does not use `pnpm deploy --legacy`', (path) => {
-    const text = readFileSync(path, 'utf8');
-    const deployLines = text
+  it.each(pillarsWith('Dockerfile'))('pillars/%s does not use `pnpm deploy --legacy`', (id) => {
+    const deployLines = readDockerfile(id)
       .split('\n')
       .filter((line) => /^\s*RUN\s.*\bpnpm\b.*\bdeploy\b/u.test(line));
     for (const line of deployLines) {
       expect(line).not.toContain('--legacy');
       expect(line).toContain('--config.inject-workspace-packages=true');
     }
+  });
+});
+
+describe('the fresh-volume contract, for every pillar image that owns a database', () => {
+  // Docker seeds an empty named volume from the image's contents at the mount
+  // point, ownership included. An image that does not create and own
+  // /data/sqlite therefore gets a root:root volume on its first ever mount and
+  // dies on SQLITE_CANTOPEN under `USER node` — invisible against the recycled
+  // volume every pillar shares today, fatal the moment one moves to its own.
+  //
+  // The runtime smoke asserts this for real against a never-before-mounted
+  // volume; this is the fast, docker-free half that names the fix.
+  //
+  // "Owns a database" is derived from shipping migrations rather than listed,
+  // so a new pillar is held to the contract the moment its migrations land.
+  const dbPillars = pillarsWith('Dockerfile', 'migrations');
+
+  it('finds database-owning pillars (the derivation itself is not silently empty)', () => {
+    expect(dbPillars.length).toBeGreaterThan(0);
+  });
+
+  it.each(dbPillars)('pillars/%s creates its data mount point in the runtime stage', (id) => {
+    expect(runtimeStage(readDockerfile(id))).toMatch(/mkdir\s+-p\s+[^\n]*\/data\/sqlite/u);
+  });
+
+  it.each(dbPillars)('pillars/%s hands /data to the runtime user, not root', (id) => {
+    expect(runtimeStage(readDockerfile(id))).toMatch(/chown\s+-R\s+\S+\s+\/data\b/u);
+  });
+
+  it.each(dbPillars)('pillars/%s defaults its database onto that mount point', (id) => {
+    // Without this the image only boots when a deployer supplies a path: the
+    // in-code default is ./data, and /app is root-owned.
+    expect(runtimeStage(readDockerfile(id))).toMatch(
+      /^\s*ENV\s+[A-Z_]*SQLITE_PATH=\/data\/sqlite\/\S+/mu
+    );
   });
 });

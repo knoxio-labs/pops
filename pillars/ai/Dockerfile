@@ -60,6 +60,19 @@ FROM node:24-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
+# The data volume's mount point, created here and owned by the runtime user.
+# Docker seeds an empty named volume from the image's contents at the mount
+# point, ownership included — so a directory missing here arrives root-owned on
+# the volume's FIRST EVER mount, `mkdirSync` no-ops on it, and the pillar dies
+# on SQLITE_CANTOPEN. Same reasoning as pillars/contacts/Dockerfile.
+RUN mkdir -p /data/sqlite && chown -R node:node /data
+
+# The image's own database default, so it boots with no environment at all.
+# `SQLITE_PATH` is the lowest-precedence path the resolver reads (see
+# pillars/ai/src/api/ai-sqlite-path.ts), so compose's per-pillar AI_SQLITE_PATH
+# still wins; on its own it lands on /data/sqlite/ai.db.
+ENV SQLITE_PATH=/data/sqlite/pops.db
+
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/ai/dist ./dist
 COPY --from=builder --chown=node:node /app/pillars/ai/migrations ./migrations

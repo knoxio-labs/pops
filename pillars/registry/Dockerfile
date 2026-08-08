@@ -56,6 +56,23 @@ FROM node:24-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
+# The data volume's mount point, created here and owned by the runtime user.
+# Docker seeds an empty named volume from the image's contents at the mount
+# point, ownership included — so a directory missing here arrives root-owned on
+# the volume's FIRST EVER mount, `mkdirSync` no-ops on it, and the pillar dies
+# on SQLITE_CANTOPEN. Same reasoning as pillars/contacts/Dockerfile.
+RUN mkdir -p /data/sqlite && chown -R node:node /data
+
+# The image's own database default, so it boots with no environment at all.
+# Deliberately the SHARED variable and not REGISTRY_SQLITE_PATH: the pillar is
+# mid-rename core→registry and its resolver ranks REGISTRY_SQLITE_PATH above the
+# legacy CORE_SQLITE_PATH the live compose still sets (see
+# pillars/registry/src/api/core-sqlite-path.ts). Baking the per-pillar variable
+# would outrank that compose value and silently point a running deployment at a
+# different file. SQLITE_PATH is the lowest precedence of the three, so both
+# compose variables still win; on its own it lands on /data/sqlite/registry.db.
+ENV SQLITE_PATH=/data/sqlite/pops.db
+
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/registry/dist ./dist
 COPY --from=builder --chown=node:node /app/pillars/registry/migrations ./migrations

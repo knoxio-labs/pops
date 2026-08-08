@@ -75,6 +75,12 @@ WORKDIR /app
 # SQLITE_CANTOPEN. Same reasoning as pillars/contacts/Dockerfile.
 RUN mkdir -p /data/sqlite && chown -R node:node /data
 
+# The image's own database default, so it boots with no environment at all.
+# `SQLITE_PATH` is the lowest-precedence path resolveSqlitePath reads (see
+# pillars/bfm/src/api/boot-env.ts), so compose's BFM_SQLITE_PATH still wins; on
+# its own it lands on /data/sqlite/bfm.db.
+ENV SQLITE_PATH=/data/sqlite/pops.db
+
 COPY --from=builder --chown=node:node /app/deploy ./
 # `dist/` in full: package.json's `files` list narrows the deploy to
 # `dist/contract/**`, which is the published contract surface and not the
