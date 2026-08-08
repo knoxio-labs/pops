@@ -25,3 +25,130 @@ export type HealthResponses = {
 };
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
+
+export type OperatorListDevicesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/operator/devices';
+};
+
+export type OperatorListDevicesErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code: string;
+    message: string;
+  };
+};
+
+export type OperatorListDevicesError = OperatorListDevicesErrors[keyof OperatorListDevicesErrors];
+
+export type OperatorListDevicesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    devices: Array<{
+      createdAt: string;
+      id: string;
+      lastSeenAt: string;
+      model: string;
+      name: string;
+      revokedAt: string | null;
+    }>;
+  };
+};
+
+export type OperatorListDevicesResponse =
+  OperatorListDevicesResponses[keyof OperatorListDevicesResponses];
+
+export type OperatorRevokeDeviceData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/operator/devices/{id}';
+};
+
+export type OperatorRevokeDeviceErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    message: string;
+  };
+};
+
+export type OperatorRevokeDeviceError =
+  OperatorRevokeDeviceErrors[keyof OperatorRevokeDeviceErrors];
+
+export type OperatorRevokeDeviceResponses = {
+  /**
+   * 200
+   */
+  200: {
+    alreadyRevoked: boolean;
+    id: string;
+    revokedAt: string;
+  };
+};
+
+export type OperatorRevokeDeviceResponse =
+  OperatorRevokeDeviceResponses[keyof OperatorRevokeDeviceResponses];
+
+export type OperatorIssuePairingCodeData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path?: never;
+  query?: never;
+  url: '/operator/pairing/codes';
+};
+
+export type OperatorIssuePairingCodeErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code: string;
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: string;
+    message: string;
+  };
+};
+
+export type OperatorIssuePairingCodeError =
+  OperatorIssuePairingCodeErrors[keyof OperatorIssuePairingCodeErrors];
+
+export type OperatorIssuePairingCodeResponses = {
+  /**
+   * 201
+   */
+  201: {
+    code: string;
+    expiresAt: string;
+    pairingUrl: string;
+  };
+};
+
+export type OperatorIssuePairingCodeResponse =
+  OperatorIssuePairingCodeResponses[keyof OperatorIssuePairingCodeResponses];

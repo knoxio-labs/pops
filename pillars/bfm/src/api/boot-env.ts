@@ -85,6 +85,34 @@ export function resolveSelfBaseUrl(port: number, env: NodeJS.ProcessEnv = proces
 }
 
 /**
+ * The origin the PHONE dials — bfm's own Cloudflare Tunnel hostname, the one
+ * with Access bypassed (POPS-1389). It is baked into the pairing QR, so a
+ * wrong value produces a code that scans and then goes nowhere.
+ *
+ * Distinct from `BFM_SELF_BASE_URL`, which is the in-cluster origin bfm
+ * advertises to the registry. Those are the same host only in dev, and
+ * conflating them would publish a `pops-backend`-internal URL to a handset on
+ * cellular. Falls back to the self base URL for exactly that dev case, where
+ * `http://localhost:3014` is genuinely what a simulator on the same machine
+ * should dial.
+ *
+ * Runs through the fleet's parser, so it inherits the bare-origin rule: a
+ * value carrying a path crashes boot rather than producing a pairing URL with
+ * a doubled prefix.
+ */
+export function resolvePublicBaseUrl(port: number, env: NodeJS.ProcessEnv = process.env): string {
+  if (env['BFM_PUBLIC_BASE_URL'] === undefined || env['BFM_PUBLIC_BASE_URL'] === '') {
+    return resolveSelfBaseUrl(port, env);
+  }
+  return resolveFleetSelfBaseUrl({
+    envVar: 'BFM_PUBLIC_BASE_URL',
+    port,
+    processLabel: 'bfm-api',
+    env,
+  });
+}
+
+/**
  * Resolve the on-disk location of `bfm.db`.
  *
  * Resolution order, matching every other SQLite pillar's resolver:

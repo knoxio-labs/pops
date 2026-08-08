@@ -23,6 +23,7 @@ import express, { type Express, type Request, type Response } from 'express';
 
 import { bfmContract } from '../contract/rest.js';
 import { createRequireDevice } from './auth/require-device.js';
+import { createIdentityMiddleware } from './middleware/identity.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
 
 import type { KeyObject } from 'node:crypto';
@@ -71,7 +72,18 @@ export interface BfmApiDeps extends BfmRestHandlerDeps {
   accessTokenSigningKey: KeyObject;
 }
 
-export function createBfmApiApp(deps: BfmApiDeps): Express {
+export interface CreateBfmApiAppOptions {
+  /**
+   * Environment the operator identity middleware resolves against. A parameter
+   * rather than an ambient `process.env` read so a test can exercise the
+   * production branch — under `NODE_ENV=test` every caller would otherwise
+   * resolve to the dev-fallback operator, and the "an anonymous caller is
+   * refused" cases could not be written at all.
+   */
+  env?: NodeJS.ProcessEnv;
+}
+
+export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOptions = {}): Express {
   const app = express();
   app.disable('x-powered-by');
 
@@ -94,6 +106,15 @@ export function createBfmApiApp(deps: BfmApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  // The OPERATOR principal, a different axis from the `/mobile` guard above:
+  // that one authenticates a phone, this one authenticates a human through
+  // Cloudflare Access for the `/operator/*` routes. Mounted before the
+  // endpoints so every handler sees it on `res.locals`. It resolves and never
+  // rejects — `/health`, `/openapi` and the device-facing pairing exchange
+  // (POPS-1374) are anonymous by design, and per-route gating is the handler's
+  // job.
+  app.use(createIdentityMiddleware(options.env));
 
   createExpressEndpoints(bfmContract, makeBfmRestHandlers(deps), app);
 

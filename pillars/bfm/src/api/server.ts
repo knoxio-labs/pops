@@ -36,6 +36,7 @@ import { createBfmApiApp } from './app.js';
 import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
 import {
   resolvePort,
+  resolvePublicBaseUrl,
   resolveSelfBaseUrl,
   resolveSqlitePath,
   resolveVersion,
@@ -51,6 +52,7 @@ const version = resolveVersion();
 // is disabled — so a misconfigured origin fails the deploy that introduced it
 // rather than the later one that flips POPS_REGISTRY_ENABLED on.
 const selfBaseUrl = resolveSelfBaseUrl(port);
+const publicBaseUrl = resolvePublicBaseUrl(port);
 
 configureBfmServerSdk();
 
@@ -60,7 +62,12 @@ const sqlitePath = resolveSqlitePath();
 const bfmDb = openBfmDb(sqlitePath);
 console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 
-const app = createBfmApiApp({ version, db: bfmDb.db, accessTokenSigningKey });
+const app = createBfmApiApp({
+  version,
+  db: bfmDb.db,
+  accessTokenSigningKey,
+  publicBaseUrl,
+});
 
 const server = app.listen(port, () => {
   console.warn(`[bfm-api] Listening on port ${port}`);

@@ -37,9 +37,10 @@ async function fetchDocument(): Promise<OpenApiBody> {
 
 /**
  * A ts-rest router's values are `AppRoute | AppRouter` — a nested sub-router
- * carries no `path`/`method` of its own. bfm's contract is flat today, so this
- * narrows rather than recurses; it exists so that adding a sub-router makes
- * these assertions skip it instead of reading `undefined` as a match.
+ * carries no `path`/`method` of its own, so walking the contract has to
+ * recurse. It does: `operator` is a sub-router, and treating it as a leaf
+ * would silently drop every route under it from the coverage assertions
+ * below, which is exactly the drift they exist to catch.
  */
 function isLeafRoute(value: unknown): value is { path: string; method: string } {
   if (value === null || typeof value !== 'object') return false;
@@ -47,7 +48,19 @@ function isLeafRoute(value: unknown): value is { path: string; method: string } 
   return typeof candidate.path === 'string' && typeof candidate.method === 'string';
 }
 
-const contractRoutes = Object.values(bfmContract).filter(isLeafRoute);
+function collectRoutes(router: unknown): Array<{ path: string; method: string }> {
+  if (router === null || typeof router !== 'object') return [];
+  return Object.values(router).flatMap((value) =>
+    isLeafRoute(value) ? [value] : collectRoutes(value)
+  );
+}
+
+const contractRoutes = collectRoutes(bfmContract);
+
+/** ts-rest declares path params as `:id`; OpenAPI templates them as `{id}`. */
+function openApiPath(contractPath: string): string {
+  return contractPath.replaceAll(/:(\w+)/gu, '{$1}');
+}
 
 describe('GET /openapi', () => {
   it('declares OpenAPI 3.0.x — 3.1 would break consumer codegen', async () => {
@@ -67,7 +80,7 @@ describe('GET /openapi', () => {
 
     expect(contractRoutes.length).toBeGreaterThan(0);
     for (const { path, method } of contractRoutes) {
-      expect(body.paths?.[path]?.[method.toLowerCase()]).toBeDefined();
+      expect(body.paths?.[openApiPath(path)]?.[method.toLowerCase()]).toBeDefined();
     }
   });
 
@@ -77,10 +90,22 @@ describe('GET /openapi', () => {
     expect(body.paths?.['/health']?.['get']?.operationId).toBe('health');
   });
 
+  it('namespaces the operator sub-router in its operationIds', async () => {
+    const body = await fetchDocument();
+
+    expect(body.paths?.['/operator/pairing/codes']?.['post']?.operationId).toBe(
+      'operator.issuePairingCode'
+    );
+    expect(body.paths?.['/operator/devices']?.['get']?.operationId).toBe('operator.listDevices');
+    expect(body.paths?.['/operator/devices/{id}']?.['delete']?.operationId).toBe(
+      'operator.revokeDevice'
+    );
+  });
+
   it('declares no route the contract does not, so the document cannot over-promise', async () => {
     const body = await fetchDocument();
 
-    const contractPaths = contractRoutes.map((route) => route.path);
+    const contractPaths = contractRoutes.map((route) => openApiPath(route.path));
     expect(Object.keys(body.paths ?? {}).toSorted()).toEqual(contractPaths.toSorted());
   });
 });
