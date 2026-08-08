@@ -80,9 +80,9 @@ where
         .route("/settings/get-many", post(get_many::<S, G>))
         .route("/settings/set-many", post(set_many::<S, G>))
         .route("/settings/reset", post(reset::<S, G>))
-        .route("/settings/:key", get(get_one::<S, G>).put(set::<S, G>))
-        .route("/settings/:key/reset", post(reset_key::<S, G>))
-        .route("/settings/:key/ensure", post(ensure::<S, G>))
+        .route("/settings/{key}", get(get_one::<S, G>).put(set::<S, G>))
+        .route("/settings/{key}/reset", post(reset_key::<S, G>))
+        .route("/settings/{key}/ensure", post(ensure::<S, G>))
 }
 
 /// Maps a handler failure to an HTTP status: a gate denial is `401`, an
