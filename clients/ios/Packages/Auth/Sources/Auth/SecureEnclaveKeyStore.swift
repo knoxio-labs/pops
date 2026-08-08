@@ -81,6 +81,9 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
                 kSecAttrIsPermanent: true,
                 kSecAttrApplicationTag: tag,
                 kSecAttrAccessControl: access,
+                // Must match `baseQuery()`, or the key is written to one
+                // keychain and looked up in the other — see that method.
+                kSecUseDataProtectionKeychain: true,
             ] as [CFString: Any],
         ]
 
@@ -123,6 +126,11 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
         }
     }
 
+    /// Every `SecItem` call and the generation attributes in ``createKey()``
+    /// must name the same keychain. iOS has only the data-protection keychain
+    /// and the flag is a no-op there; a macOS host build has two and defaults
+    /// to the file-based one, so omitting it in one place and not the other
+    /// creates a key that then cannot be found or deleted.
     private func baseQuery() -> [CFString: Any] {
         [
             kSecClass: kSecClassKey,
